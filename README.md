@@ -1,3 +1,5 @@
+**Documentation moved to project [website](qontract.run)**
+
 About the tool
 ==============
 
@@ -66,7 +68,7 @@ These keywords are documented in the contract syntax reference. TODO
 
 All you need at this point is the above qontract file and the jar file which you built (and optionally aliased). You can spin up a stuck server with these two ingredients.
 
-    qontract stub --path="/Users/harikrishnan/.. ../petstore/qontract/service.qontract" \
+    qontract stub --path=".. ../petstore/qontract/service.qontract" \
                     --host="localhost" \
                     --port="8000" \
                start
@@ -83,7 +85,7 @@ The response will contain some auto-generate value that adhere to the datatypes 
 
 Now lets start building the provider. Say suppose you have an empty provider API running at port 8000, we just need to point the contract as test command to it.
 
-    qontract test --path="/Users/harikrishnan/.. ../petstore/contract/service.qontract" \
+    qontract test --path=".. ../petstore/contract/service.qontract" \
                             --host="localhost" \
                             --port="8000" \
                run
@@ -142,8 +144,8 @@ suggestions-staging.qontract
         
 Note: It is mandatory to name the scenario and also scenario names must be unique when using suggestions. This is because test command needs to lookup the scenario by name in the contract and map the Examples in suggestions to it.    
 
-    qontract test --path="/Users/harikrishnan/.. ../petstore/qontract/service.qontract" \
-                    --suggestions="/Users/harikrishnan/.. ../petstore/qontract/suggestions-staging.qontract" \
+    qontract test --path=".. ../petstore/qontract/service.qontract" \
+                    --suggestions=".. ../petstore/qontract/suggestions-staging.qontract" \
                                 --host="staging-server" \
                                 --port="8000" \
                    run

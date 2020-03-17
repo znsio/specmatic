@@ -7,7 +7,7 @@ import run.qontract.core.pattern.asValue
 import run.qontract.core.value.NoValue
 import java.util.*
 
-class HttpHeadersPattern(private val headers: HashMap<String, String?> = HashMap()) {
+data class HttpHeadersPattern(val headers: MutableMap<String, String?> = mutableMapOf()) {
     fun matches(headers: HashMap<String?, String?>, resolver: Resolver) =
             headers to resolver.copy().also {
                 it.addCustomPattern("(number)", NumericStringPattern())

@@ -5,12 +5,7 @@ import run.qontract.test.ContractTestException.Companion.missingParam
 import java.io.UnsupportedEncodingException
 import java.net.URI
 
-class HttpRequestPattern : Cloneable {
-    var headersPattern: HttpHeadersPattern = HttpHeadersPattern()
-    var urlMatcher: URLMatcher? = null
-    private var method: String? = null
-    private var body: Pattern? = NoContentPattern()
-
+data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlMatcher: URLMatcher? = null, private var method: String? = null, private var body: Pattern? = NoContentPattern()) : Cloneable {
     @Throws(UnsupportedEncodingException::class)
     fun updateWith(urlMatcher: URLMatcher) {
         this.urlMatcher = urlMatcher
@@ -69,6 +64,8 @@ class HttpRequestPattern : Cloneable {
     fun updateMethod(method: String) {
         this.method = method.toUpperCase()
     }
+
+    fun bodyPattern(bodyContent: String?) = this.copy(body = parsedPattern(bodyContent!!))
 
     fun setBodyPattern(bodyContent: String?) {
         body = parsedPattern(bodyContent!!)

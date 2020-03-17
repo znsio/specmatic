@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.w3c.dom.Document
 import org.w3c.dom.Node
 import org.xml.sax.SAXException
+import run.qontract.core.value.NumberValue
 import java.io.IOException
 import java.util.*
 import javax.xml.parsers.ParserConfigurationException
@@ -93,7 +94,7 @@ Scenario: GET /balance Error:
 	Header "length" did not match
 	Expected: (number) Actual: abc
 	"abc" is not a Number
-	Request: {path=/balance, method=GET, headers={Content-Type=application/json}, body=}
+	Request: {path=/balance, method=GET, headers={Content-Type=text/plain}, body=}
 	Response: {"status":200,"body":"{calls_left: 10, messages_left: 30}","status-text":"OK","headers":{"length":"abc","token":"test"}}
 """)
     }
@@ -752,6 +753,39 @@ Scenario: Update pet details
             }
         })
         assertEquals("Setup happened", setupStatus[0])
+    }
+
+    @Test
+    fun `A number is generated in the request body and matched in the response`() {
+        val contractGherkin = """
+Feature: Number API
+
+Scenario: GET and POST number
+  When POST /number
+  And request-body (number)
+  Then status 200
+  And response-body (number)
+"""
+        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val flags = mutableMapOf<String, Boolean>()
+
+        val executionInfo = contractBehaviour.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags["executed"] = true
+                assertEquals("/number", request.path)
+                assertEquals("POST", request.method)
+                assertTrue(request.body is NumberValue)
+                return HttpResponse(200, "10")
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        assertTrue(flags["executed"] ?: false)
+        if(executionInfo.unsuccessfulInteractionCount() > 0)
+            executionInfo.print()
+        assertEquals(0, executionInfo.unsuccessfulInteractionCount())
     }
 
     @Test

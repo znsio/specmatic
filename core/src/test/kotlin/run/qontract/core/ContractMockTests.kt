@@ -130,7 +130,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().setMethod("GET").updatePath("/balance_json").setQueryParam("userid", "10")
             val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: 100, smses-left: 200}")
-            Assertions.assertThrows(NoMatchingScenario::class.java) { mock.tryToMockExpectation(MockScenario(expectedRequest, expectedResponse, HashMap())) }
+            Assertions.assertThrows(NoMatchingScenario::class.java) { mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap())) }
         }
     }
 
@@ -204,7 +204,7 @@ Scenario: JSON API to get account details with fact check
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
             val emptyServerState = HashMap<String, Any>()
-            mock.tryToMockExpectation(MockScenario(expectedRequest, expectedResponse, emptyServerState))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, emptyServerState))
         }
     }
 
@@ -217,7 +217,7 @@ Scenario: JSON API to get account details with fact check
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
             val emptyServerState = HashMap<String, Any>()
-            mock.tryToMockExpectation(MockScenario(expectedRequest, expectedResponse, emptyServerState))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, emptyServerState))
         }
     }
 
@@ -232,7 +232,7 @@ Scenario: JSON API to get account details with fact check
                 it.headers["Content-Type"] = "application/json"
             }
             val emptyServerState = HashMap<String, Any>()
-            mock.tryToMockExpectation(MockScenario(expectedRequest, expectedResponse, emptyServerState))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, emptyServerState))
         }
     }
 
@@ -257,7 +257,7 @@ Background:
             val expectedRequest = HttpRequest().setMethod("GET").updatePath("/locations")
             val expectedResponse = HttpResponse(200, "{\"cities\":[{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}] }")
             val serverState: HashMap<String, Any> = hashMapOf("cities_exist" to true)
-            mock.tryToMockExpectation(MockScenario(expectedRequest, expectedResponse, serverState))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, serverState))
         }
     }
 
@@ -265,9 +265,28 @@ Background:
     private fun validateAndRespond(contractGherkinString: String, httpRequest: HttpRequest, httpResponse: HttpResponse, serverState: java.util.HashMap<String, Any>): ResponseEntity<String> {
         ContractMock.fromGherkin(contractGherkinString).use { mock ->
             mock.start()
-            mock.tryToMockExpectation(MockScenario(httpRequest, httpResponse, serverState))
+            mock.createMockScenario(MockScenario(httpRequest, httpResponse, serverState))
             val restTemplate = RestTemplate()
             return restTemplate.exchange(URI.create(httpRequest.getURL("http://localhost:8080")), HttpMethod.GET, null, String::class.java)
         }
     }
+
+    @Test
+    fun `contract mock should be able to match integer in request and response bodies`() {
+        val contractGherkin = """Feature: Contract for /number API
+  Scenario Outline:
+    When POST /number
+    And request-body (number)
+    Then status 200
+    And response-body (number)
+""".trimIndent()
+
+        ContractMock.fromGherkin(contractGherkin).use { mock ->
+            mock.start()
+            val expectedRequest = HttpRequest().setMethod("POST").updatePath("/number").setBody("10")
+            val expectedResponse = HttpResponse(200, "10")
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
+        }
+    }
+
 }

@@ -79,7 +79,6 @@ class ContractTests {
                   Given fact userid
                   When GET /balance?userid=(number)
                   Then status 200
-                  And response-header Content-Type application/json
                   And response-header Content-Length (number)
                   And response-body {call-mins-left: "(number)", sms-messages-left: "(number)"}
                   
@@ -87,7 +86,6 @@ class ContractTests {
                   Given fact no_user
                   When GET /balance?userid=(number)
                   Then status 404
-                  And response-header Content-Type application/json
                   And response-header Content-Length (number)
                 """
         var pathParameterContractGherkin = """
@@ -101,7 +99,6 @@ class ContractTests {
                   Given fact userid
                   When GET /balance/(userid:number)
                   Then status 200
-                  And response-header Content-Type application/json
                   And response-header Content-Length (number)
                   And response-body {call-mins-left: "(number)", sms-messages-left: "(number)"}
                 """

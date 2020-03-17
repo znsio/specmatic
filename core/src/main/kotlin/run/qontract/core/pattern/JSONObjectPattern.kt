@@ -1,6 +1,5 @@
 package run.qontract.core.pattern
 
-import com.ctc.wstx.shaded.msv_core.grammar.Grammar
 import run.qontract.core.Resolver
 import run.qontract.core.utilities.jsonStringToMap
 import run.qontract.core.Result
@@ -26,8 +25,12 @@ class JSONObjectPattern : Pattern {
         if(missingKey != null)
             return Result.Failure("Missing key $missingKey in ${sampleData.jsonObject}")
 
+        val resolverWithNumberType = resolver.copy().also {
+            it.addCustomPattern("(number)", NumberTypePattern())
+        }
+
         flatZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
-            when (val result = asPattern(patternValue, key).matches(asValue(sampleValue), resolver)) {
+            when (val result = asPattern(patternValue, key).matches(asValue(sampleValue), resolverWithNumberType)) {
                 is Result.Failure -> return result.add("Expected: object[$key] to match $patternValue. Actual value: $sampleValue, in JSONObject ${sampleData.jsonObject}")
             }
         }

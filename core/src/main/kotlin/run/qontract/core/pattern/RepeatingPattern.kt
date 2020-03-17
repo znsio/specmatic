@@ -12,8 +12,12 @@ data class RepeatingPattern(val patternSpec: String) : Pattern {
         if(sampleData !is JSONArrayValue)
             return Result.Failure("Expected: JSONArrayValue. Actual: ${sampleData?.javaClass ?: "null"}")
 
+        val resolverWithNumberType = resolver.copy().also {
+            it.addCustomPattern("(number)", NumberTypePattern())
+        }
+
         return sampleData.list.map {
-            resolver.matchesPattern(null, cleanPatternSpec, it ?: "")
+            resolverWithNumberType.matchesPattern(null, cleanPatternSpec, it ?: "")
         }.find { it is Result.Failure }.let { result ->
             when(result) {
                 is Result.Failure -> result.add("Expected: $patternSpec. But one of the values didn't match in ${sampleData.list}")

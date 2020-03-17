@@ -13,6 +13,7 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
     fun copy(): Resolver {
         val newResolver = Resolver(serverStateMatch, false)
         newResolver.customPatterns = HashMap(customPatterns)
+        newResolver.matchPattern = matchPattern
 
         return newResolver
     }

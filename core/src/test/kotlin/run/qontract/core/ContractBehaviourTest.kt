@@ -611,6 +611,36 @@ Feature: Contract for /balance API
         }
     }
 
+    @Test
+    fun `json keyword acts like pattern but reads tabular syntax`() {
+        val contractGherkin = """
+            Feature: Contract for /user API
+            
+            Background:
+            Given json UserData
+            | ids   | (number*) |
+            
+            Scenario: Get info about a user
+            When GET /userdata
+            Then status 200
+                And response-body (UserData)
+        """.trimIndent()
+
+        val behaviour = ContractBehaviour(contractGherkin)
+        val httpRequest = HttpRequest().setMethod("GET").updatePath("/userdata")
+        val httpResponse = behaviour.lookup(httpRequest)
+
+        assertEquals(200, httpResponse.status)
+        val jsonObject = parsedJSON(httpResponse.body ?: "{}")
+
+        assertTrue(jsonObject is JSONObjectValue)
+        if(jsonObject is JSONObjectValue) {
+            for(value in (jsonObject.jsonObject["ids"] as List<Any>)) {
+                assertTrue(value is Number)
+            }
+        }
+    }
+
     companion object {
         @JvmStatic
         private fun singleFeatureContractSource(): Stream<Arguments> {

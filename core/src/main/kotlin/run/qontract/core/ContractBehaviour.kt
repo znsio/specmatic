@@ -176,7 +176,7 @@ private fun lexScenario(steps: MutableList<GherkinDocument.Feature.Step>, exampl
             "RESPONSE-HEADER" -> addToHeaderPattern(step.rest, scenarioInfo.httpResponsePattern.headersPattern)
             "RESPONSE-BODY" -> scenarioInfo.httpResponsePattern.setBodyPattern(step.rest)
             "FACT" -> scenarioInfo.expectedServerState.putAll(toFacts(step.rest, scenarioInfo.fixtures))
-            "PATTERN" -> storePattern(scenarioInfo.patterns, step.rest, step.rowsList)
+            "PATTERN", "JSON" -> storePattern(scenarioInfo.patterns, step.rest, step.rowsList)
             "FIXTURE" -> storeFixture(scenarioInfo.fixtures, step.rest)
             else -> throw ContractParseException("Couldn't recognise the meaning of this command: $step.text")
         }

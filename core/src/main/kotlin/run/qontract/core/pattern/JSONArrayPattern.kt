@@ -5,7 +5,6 @@ import run.qontract.core.utilities.jsonStringToArray
 import run.qontract.core.Result
 import run.qontract.core.value.*
 import java.util.*
-import javax.xml.parsers.ParserConfigurationException
 
 @Throws(Exception::class)
 private fun matchesRepeating(pattern: String, arraySample: List<Any?>, startingIndex: Int, resolver: Resolver): Result {
@@ -67,7 +66,7 @@ class JSONArrayPattern : Pattern {
         return JSONArrayValue(generate(pattern, resolver))
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver) = JSONArrayPattern(newBasedOn(pattern, row, resolver))
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(JSONArrayPattern(newBasedOn(pattern, row, resolver)))
 }
 
 fun newBasedOn(jsonPattern: List<Any?>, row: Row, resolver: Resolver): List<Any?> =

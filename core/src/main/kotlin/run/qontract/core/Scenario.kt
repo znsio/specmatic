@@ -15,7 +15,6 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
                         }
                     }
 
-    @Throws(Exception::class)
     fun matches(httpRequest: HttpRequest, serverState: HashMap<String, Any>): Result {
         val resolver = Resolver(serverState, false).also {
             it.addCustomPatterns(patterns)
@@ -28,7 +27,6 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
-    @Throws(Exception::class)
     fun generateHttpResponse(actualServerState: HashMap<String, Any>): HttpResponse {
         val combinedState = Resolver(actualServerState, false).let { resolver ->
             resolver.customPatterns = patterns
@@ -72,14 +70,12 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         return combinedServerState
     }
 
-    @Throws(Exception::class)
     fun generateHttpRequest(): HttpRequest {
         val resolver = Resolver(expectedState, false)
         resolver.customPatterns = patterns
         return httpRequestPattern.generate(resolver)
     }
 
-    @Throws(Exception::class)
     fun matches(httpResponse: HttpResponse): Result {
         val resolver = Resolver(expectedState, false)
         resolver.customPatterns = patterns
@@ -96,22 +92,21 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
-    private fun newBasedOn(row: Row): Scenario {
+    private fun newBasedOn(row: Row): List<Scenario> {
         val resolver = Resolver(expectedState, false)
         resolver.customPatterns = patterns
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedState, resolver)
-        val httpRequestPattern = httpRequestPattern.newBasedOn(row, resolver)
-
-        return Scenario(name, httpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures)
+        return httpRequestPattern.newBasedOn(row, resolver).map { newHttpRequestPattern ->
+            Scenario(name, newHttpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures)
+        }
     }
 
-    @Throws(Throwable::class)
     fun generateTestScenarios(): List<Scenario> =
             when (examples.size) {
                 0 -> listOf(Row())
                 else -> examples.flatMap { it.rows }
-            }.map { row -> newBasedOn(row) }
+            }.flatMap { row -> newBasedOn(row) }
 
     private fun newExpectedServerStateBasedOn(row: Row, expectedServerState: Map<String, Any>, resolver: Resolver): HashMap<String, Any> {
         return HashMap(expectedServerState.mapValues { (key, value) ->
@@ -143,7 +138,6 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
-    @Throws(Exception::class)
     fun generateHttpResponseFrom(response: HttpResponse?): HttpResponse {
         val resolver = Resolver(expectedState, false)
         resolver.customPatterns = patterns
@@ -159,12 +153,10 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         return scenarioDescription.append("$httpRequestPattern").toString()
     }
 
-    fun newBasedOn(scenario: Scenario): Scenario {
-        //TODO HttpRequestPattern Deep Copy changes body to unknown pattern. Needs investigation.
-        return Scenario(this.name, this.httpRequestPattern, this.httpResponsePattern, this.expectedState, scenario.examples, this.patterns, this.fixtures)
-    }
+    fun newBasedOn(scenario: Scenario): Scenario =
+        Scenario(this.name, this.httpRequestPattern, this.httpResponsePattern, this.expectedState, scenario.examples, this.patterns, this.fixtures)
 
     fun newBasedOn(suggestions: List<Scenario>) =
-            this.newBasedOn(suggestions.firstOrNull { it.name.equals(this.name) } ?: this)
+        this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
 
 }

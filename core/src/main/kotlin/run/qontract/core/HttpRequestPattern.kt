@@ -5,7 +5,7 @@ import run.qontract.test.ContractTestException.Companion.missingParam
 import java.io.UnsupportedEncodingException
 import java.net.URI
 
-data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlMatcher: URLMatcher? = null, private var method: String? = null, private var body: Pattern? = NoContentPattern()) : Cloneable {
+data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlMatcher: URLMatcher? = null, private var method: String? = null, private var body: Pattern? = NoContentPattern()) {
     @Throws(UnsupportedEncodingException::class)
     fun updateWith(urlMatcher: URLMatcher) {
         this.urlMatcher = urlMatcher
@@ -102,17 +102,18 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
         return newRequest
     }
 
-    fun deepCopy(): HttpRequestPattern {
-        return newBasedOn(Row(), Resolver())
-    }
+    fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
+        val newURLMatchers = urlMatcher?.newPatternsBasedOn(row, resolver.copy()) ?: listOf<URLMatcher?>(null)
+        val newBodies = body?.newBasedOn(row, resolver.copy()) ?: listOf<Pattern?>(null)
+        val newHeadersPattern = headersPattern.newBasedOn(row)
 
-    @Throws(Throwable::class)
-    fun newBasedOn(row: Row, resolver: Resolver): HttpRequestPattern {
-        val newPattern = clone() as HttpRequestPattern
-        newPattern.urlMatcher = urlMatcher?.newBasedOn(row, resolver.copy())
-        newPattern.body = body?.newBasedOn(row, resolver.copy())
-        newPattern.headersPattern = headersPattern.newBasedOn(row)
-        return newPattern
+        return newURLMatchers.flatMap { newURLMatcher ->
+            newBodies.flatMap { newBody ->
+                newHeadersPattern.map { newHeadersPattern ->
+                    HttpRequestPattern(newHeadersPattern, newURLMatcher, method, newBody)
+                }
+            }
+        }
     }
 
     override fun toString(): String {

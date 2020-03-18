@@ -15,7 +15,7 @@ class NumberTypePattern : Pattern {
     }
 
     override fun generate(resolver: Resolver): Value = NumberValue(Random().nextInt(1000))
-    override fun newBasedOn(row: Row, resolver: Resolver): Pattern = this
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override val pattern: Any = "(number)"
     override fun toString(): String = pattern.toString()
 }

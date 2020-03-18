@@ -173,10 +173,9 @@ private fun lexScenario(steps: MutableList<GherkinDocument.Feature.Step>, exampl
         when(step.keyword) {
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
-                    acc.copy(
-                            httpRequestPattern = acc.httpRequestPattern.copy(
-                                    urlMatcher = URLMatcher(URI.create(step.rest)),
-                                    method = step.keyword.toUpperCase()))
+                    acc.copy(httpRequestPattern = acc.httpRequestPattern.copy(
+                                            urlMatcher = URLMatcher(URI.create(step.rest)),
+                                            method = step.keyword.toUpperCase()))
                 } ?: throw ContractParseException("Line ${step.line}: $step.text")
             }
             "REQUEST-HEADER" ->
@@ -211,7 +210,7 @@ fun plusHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHea
     }
 }
 
-private fun breakIntoParts(piece: String, parts: Int) = piece.split("\\s+".toRegex(), parts)
+private fun breakIntoParts(whole: String, partCount: Int) = whole.split("\\s+".toRegex(), partCount)
 
 private val HTTP_METHODS = listOf("GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS")
 internal fun parseGherkinString(gherkinData: String): GherkinDocument {
@@ -220,20 +219,21 @@ internal fun parseGherkinString(gherkinData: String): GherkinDocument {
     return parser.parse(gherkinData).build()
 }
 
-internal fun lex(gherkinDocument: GherkinDocument): List<Scenario> {
-    val featureChildren = gherkinDocument.feature.childrenList
+internal fun lex(gherkinDocument: GherkinDocument): List<Scenario> =
+        lex(gherkinDocument.feature.childrenList)
 
-    val scenarioInfo = lexBackground(featureChildren)
+internal fun lex(featureChildren: MutableList<GherkinDocument.Feature.FeatureChild>): List<Scenario> =
+    lex(featureChildren, lexBackground(featureChildren))
 
-    return featureChildren.filter {
+internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, backgroundInfo: ScenarioInfo): List<Scenario> =
+    featureChildren.filter {
         it.valueCase.name != "BACKGROUND"
     }.map { feature ->
-        val info = scenarioInfo.copy(scenarioName = feature.scenario.name)
+        val info = backgroundInfo.copy(scenarioName = feature.scenario.name)
         lexScenario(feature.scenario.stepsList, feature.scenario.examplesList, info)
     }.map { scenarioInfo ->
         Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, HashMap(scenarioInfo.expectedServerState), scenarioInfo.examples, HashMap(scenarioInfo.patterns), HashMap(scenarioInfo.fixtures))
     }
-}
 
 private fun lexBackground(featureChildren: MutableList<GherkinDocument.Feature.FeatureChild>): ScenarioInfo {
     return featureChildren.find { it.valueCase.name == "BACKGROUND" }?.let { feature ->

@@ -169,7 +169,7 @@ Given pattern User
 """.trim()
 
         val pattern = rowsToPattern(getRows(gherkin))
-        val newPattern = pattern.newBasedOn(Row(listOf("id"), listOf("10")), Resolver())
+        val newPattern = pattern.newBasedOn(Row(listOf("id"), listOf("10")), Resolver()).first()
 
         val value = newPattern.generate(Resolver())
         assertTrue(value is JSONObjectValue)
@@ -202,7 +202,7 @@ And pattern Address
         resolver.addCustomPattern("(User)", userPattern)
         resolver.addCustomPattern("(Address)", addressPattern)
 
-        val value = userPattern.newBasedOn(row, resolver).generate(resolver)
+        val value = userPattern.newBasedOn(row, resolver).first().generate(resolver)
 
         assertTrue(value is JSONObjectValue)
         assertEquals(10, value.jsonObject["id"])

@@ -220,12 +220,11 @@ class XMLPattern : Pattern {
         }
     }
 
-    @Throws(Throwable::class)
-    override fun newBasedOn(row: Row, resolver: Resolver): Pattern {
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val newDocument = copyOfDocument()
         val newRoot: Node = newDocument.documentElement
         updateBasedOnRow(newRoot, row, resolver)
-        return XMLPattern(newDocument)
+        return listOf(XMLPattern(newDocument))
     }
 
     @Throws(Throwable::class)

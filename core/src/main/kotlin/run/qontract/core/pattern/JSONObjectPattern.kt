@@ -39,7 +39,7 @@ class JSONObjectPattern : Pattern {
     }
 
     override fun generate(resolver: Resolver) = JSONObjectValue(generate(pattern, resolver))
-    override fun newBasedOn(row: Row, resolver: Resolver) = JSONObjectPattern(newBasedOn(pattern, row, resolver))
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(JSONObjectPattern(newBasedOn(pattern, row, resolver)))
 }
 
 fun newBasedOn(jsonPattern: Map<String, Any?>, row: Row, resolver: Resolver): Map<String, Any?> {
@@ -47,7 +47,7 @@ fun newBasedOn(jsonPattern: Map<String, Any?>, row: Row, resolver: Resolver): Ma
         when (patternValue) {
             is StringValue ->
                 when {
-                    isLazyPattern(patternValue.string) -> LazyPattern(patternValue.string, patternKey).newBasedOn(row, resolver).pattern
+                    isLazyPattern(patternValue.string) -> LazyPattern(patternValue.string, patternKey).newBasedOn(row, resolver).first().pattern
                     row.containsField(cleanupKey(patternKey)) -> {
                         val cleanedUpPatternKey = cleanupKey(patternKey)
                         when {

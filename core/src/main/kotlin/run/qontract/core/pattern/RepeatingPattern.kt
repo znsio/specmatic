@@ -28,8 +28,7 @@ data class RepeatingPattern(val patternSpec: String) : Pattern {
 
     override fun generate(resolver: Resolver): Value = JSONArrayValue(generateMultipleValues(cleanPatternSpec, resolver))
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Pattern =
-        JSONArrayPattern(1.until(randomNumber(10)).map { resolver.getPattern(cleanPatternSpec).newBasedOn(row, resolver).pattern })
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
 
     override val pattern: Any = patternSpec
 }

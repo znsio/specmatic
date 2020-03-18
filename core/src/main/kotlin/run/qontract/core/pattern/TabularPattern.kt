@@ -90,7 +90,7 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
                 }
             }.toMutableMap())
 
-    override fun newBasedOn(row: Row, resolver: Resolver) = TabularPattern(newBasedOn(rows, row, resolver))
+    override fun newBasedOn(row: Row, resolver: Resolver) = listOf(TabularPattern(newBasedOn(rows, row, resolver)))
 
     override val pattern: Any = rows
 }
@@ -99,7 +99,7 @@ fun newBasedOn(jsonPattern: Map<String, Pattern>, row: Row, resolver: Resolver):
     jsonPattern.mapValues { (key, pattern) ->
         val cleanKey = cleanupKey(key)
         when {
-            pattern is LazyPattern -> pattern.copy(key=key).newBasedOn(row, resolver)
+            pattern is LazyPattern -> pattern.copy(key=key).newBasedOn(row, resolver).first()
             row.containsField(cleanKey) -> when {
                 isPrimitivePattern(pattern.pattern) -> ExactMatchPattern(parsePrimitive(pattern.pattern.toString(), row.getField(cleanKey).toString()))
                 else -> ExactMatchPattern(row.getField(key) ?: "")

@@ -50,17 +50,11 @@ data class HttpHeadersPattern(val headers: MutableMap<String, String?> = mutable
         }.toMutableMap())
     }
 
-    fun addAll(headers: MutableMap<String, String?>) {
-        headers.forEach { (key, value) ->
-            this.headers[key] = value
-        }
-    }
-
-    fun newBasedOn(row: Row) =
-        HttpHeadersPattern(HashMap(this.headers.mapValues {
-            when {
-                row.containsField(it.key) && row.getField(it.key) != null -> row.getField(it.key).toString()
-                else -> it.value
-            }
-        }))
+    fun newBasedOn(row: Row): List<HttpHeadersPattern> =
+            listOf(HttpHeadersPattern(HashMap(this.headers.mapValues {
+                when {
+                    row.containsField(it.key) && row.getField(it.key) != null -> row.getField(it.key).toString()
+                    else -> it.value
+                }
+            })))
 }

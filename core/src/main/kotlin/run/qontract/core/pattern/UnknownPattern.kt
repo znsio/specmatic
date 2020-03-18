@@ -9,7 +9,7 @@ class UnknownPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver) = Result.Failure("Unknown pattern $sampleData")
 
     override fun generate(resolver: Resolver): Value = StringValue("")
-    override fun newBasedOn(row: Row, resolver: Resolver): Pattern = this
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override val pattern: Any = ""
     override fun toString(): String = "(Unknown pattern)"
 }

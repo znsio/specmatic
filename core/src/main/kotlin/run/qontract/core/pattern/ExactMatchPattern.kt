@@ -14,5 +14,5 @@ data class ExactMatchPattern(override val pattern: Any) : Pattern {
     }
 
     override fun generate(resolver: Resolver) = OriginalValue(pattern)
-    override fun newBasedOn(row: Row, resolver: Resolver): Pattern = this
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
 }

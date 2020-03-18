@@ -6,6 +6,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm'
+    id 'signing'
 }
 
 repositories {
@@ -81,4 +82,71 @@ jar {
 
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'qontract-core'
+            from components.java
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
+            pom {
+                name = 'Qontract'
+                description = 'A Contract Testing Tool that leverages Gherkin to describe APIs in a human readable and machine enforceable manner'
+                url = '//qontract.run'
+                properties = [
+                        myProp: "value",
+                        "prop.with.dots": "anotherValue"
+                ]
+                licenses {
+                    license {
+                        name = 'MIT'
+                        url = 'https://github.com/qontract/qontract/blob/master/License.md'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'qontractBuilders'
+                        name = 'Qontract Builders'
+                        email = 'info@qontract.run'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git@github.com:qontract/qontract.git'
+                    url = '//qontract.run/'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            // change URLs to point to your repos, e.g. http://my.org/repo
+            def releasesRepoUrl = "$buildDir/repos/releases"
+            def snapshotsRepoUrl = "$buildDir/repos/snapshots"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.mavenJava
+}
+
+
+javadoc {
+    if(JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
 }

@@ -1,4 +1,4 @@
-**Documentation moved to project [website](qontract.run)**
+**Documentation moved to project [website](http://qontract.run)**
 
 About the tool
 ==============

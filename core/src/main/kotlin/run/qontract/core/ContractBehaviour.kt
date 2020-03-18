@@ -119,33 +119,38 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
 
 }
 
-private fun storeFixture(fixtures: HashMap<String, Any>, name: String, info: Any) {
-    fixtures[name] = info
-}
+private fun plusFixture(fixtures: MutableMap<String, Any>, name: String, info: Any) =
+        fixtures.plus(name to info).toMutableMap()
 
-private fun storeFixture(fixtures: HashMap<String, Any>, rest: String) {
-    val fixtureTokens = rest.trim().split("\\s+".toRegex(), 2)
+private fun plusFixture(fixtures: MutableMap<String, Any>, rest: String): MutableMap<String, Any> {
+    val fixtureTokens = breakIntoParts(rest.trim(), 2)
 
-    if (fixtureTokens.size < 2)
-        throw ContractParseException("Couldn't parse fixture data: $rest")
-
-    storeFixture(fixtures, fixtureTokens[0], toFixtureData(fixtureTokens[1]))
+    return when (fixtureTokens.size) {
+        2 -> plusFixture(fixtures, fixtureTokens[0], toFixtureData(fixtureTokens[1]))
+        else -> throw ContractParseException("Couldn't parse fixture data: $rest")
+    }
 }
 
 private fun toFixtureData(rawData: String): Any = parsedJSON(rawData)?.value ?: rawData
-private fun storePattern(patterns: HashMap<String, Pattern>, rest: String, rowsList: List<GherkinDocument.Feature.TableRow>) {
+private fun plusPattern(patterns: MutableMap<String, Pattern>, rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): MutableMap<String, Pattern> {
+    val (patternName, pattern) = toPatternInfo(rest, rowsList)
+    return patterns.plus(patternName to pattern).toMutableMap()
+}
+
+private fun toPatternInfo(rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): Pair<String, Pattern> {
     val tokens = breakIntoParts(rest, 2)
 
     val patternName = nameToPatternSpec(tokens[0])
     val patternSpec = tokens.getOrElse(1) { "" }.trim()
 
-    patterns[patternName] = when {
+    val pattern = when {
         patternSpec.isEmpty() -> rowsToPattern(rowsList)
         else -> parsedPattern(patternSpec)
     }
+    return Pair(patternName, pattern)
 }
 
-private fun toFacts(rest: String, fixtures: HashMap<String, Any>): HashMap<String, Any> {
+private fun toFacts(rest: String, lookupTable: MutableMap<String, Any>): MutableMap<String, Any> {
     val facts = HashMap<String, Any>()
 
     try {
@@ -155,39 +160,55 @@ private fun toFacts(rest: String, fixtures: HashMap<String, Any>): HashMap<Strin
         val name = factTokens[0]
         val data = factTokens.getOrNull(1)
 
-        facts[name] = data?.let { convertStringToCorrectType(it) } ?: fixtures.getOrDefault(name, true)
+        facts[name] = data?.let { convertStringToCorrectType(it) } ?: lookupTable.getOrDefault(name, true)
     }
 
     return facts
 }
 
-private fun lexScenario(steps: MutableList<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, scenarioInfo: ScenarioInfo): Scenario {
-    for (step in steps.map { StepInfo(it.text, it.dataTable.rowsList) }.filterNot { it.isEmpty }) {
-        when (step.keyword) {
+private fun lexScenario(steps: MutableList<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, scenarioInfo: ScenarioInfo): ScenarioInfo {
+    val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList) }.filterNot { it.isEmpty }
+
+    val parsedScenarioInfo = filteredSteps.fold(scenarioInfo) { acc, step ->
+        when(step.keyword) {
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
-                    scenarioInfo.httpRequestPattern.updateWith(URLMatcher(URI.create(step.rest)))
-                    scenarioInfo.httpRequestPattern.updateMethod(step.keyword)
+                    acc.copy(
+                            httpRequestPattern = acc.httpRequestPattern.copy(
+                                    urlMatcher = URLMatcher(URI.create(step.rest)),
+                                    method = step.keyword.toUpperCase()))
                 } ?: throw ContractParseException("Line ${step.line}: $step.text")
             }
-            "REQUEST-HEADER" -> addToHeaderPattern(step.rest, scenarioInfo.httpRequestPattern.headersPattern)
-            "STATUS" -> scenarioInfo.httpResponsePattern.status = Integer.valueOf(step.rest)
-            "REQUEST-BODY" -> scenarioInfo.httpRequestPattern.setBodyPattern(step.rest)
-            "RESPONSE-HEADER" -> addToHeaderPattern(step.rest, scenarioInfo.httpResponsePattern.headersPattern)
-            "RESPONSE-BODY" -> scenarioInfo.httpResponsePattern.setBodyPattern(step.rest)
-            "FACT" -> scenarioInfo.expectedServerState.putAll(toFacts(step.rest, scenarioInfo.fixtures))
-            "PATTERN" -> storePattern(scenarioInfo.patterns, step.rest, step.rowsList)
-            "FIXTURE" -> storeFixture(scenarioInfo.fixtures, step.rest)
+            "REQUEST-HEADER" ->
+                acc.copy(httpRequestPattern = acc.httpRequestPattern.copy(headersPattern = plusHeaderPattern(step.rest, acc.httpRequestPattern.headersPattern)))
+            "RESPONSE-HEADER" ->
+                acc.copy(httpResponsePattern = acc.httpResponsePattern.copy(headersPattern = plusHeaderPattern(step.rest, acc.httpResponsePattern.headersPattern)))
+            "STATUS" ->
+                acc.copy(httpResponsePattern = acc.httpResponsePattern.copy(status = Integer.valueOf(step.rest)))
+            "REQUEST-BODY" ->
+                acc.copy(httpRequestPattern = acc.httpRequestPattern.bodyPattern(step.rest))
+            "RESPONSE-BODY" ->
+                acc.copy(httpResponsePattern = acc.httpResponsePattern.bodyPattern(step.rest))
+            "FACT" ->
+                acc.copy(expectedServerState = acc.expectedServerState.plus(toFacts(step.rest, acc.fixtures)).toMutableMap())
+            "PATTERN", "JSON" ->
+                acc.copy(patterns = plusPattern(acc.patterns, step.rest, step.rowsList))
+            "FIXTURE" ->
+                acc.copy(fixtures = plusFixture(acc.fixtures, step.rest))
             else -> throw ContractParseException("Couldn't recognise the meaning of this command: $step.text")
         }
     }
 
-    scenarioInfo.examples.addAll(examplesFrom(examplesList).toMutableList())
-    return Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, scenarioInfo.expectedServerState, scenarioInfo.examples, scenarioInfo.patterns, scenarioInfo.fixtures)
+    return parsedScenarioInfo.copy(examples = scenarioInfo.examples.plus(examplesFrom(examplesList).toMutableList()).toMutableList())
 }
 
-fun addToHeaderPattern(rest: String, headersPattern: HttpHeadersPattern) {
-    breakIntoParts(rest, 2).takeIf { it.size == 2 }?.let { headersPattern.add(it[0] to it[1]) }
+fun plusHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHeadersPattern {
+    val parts = breakIntoParts(rest, 2)
+
+    return when (parts.size) {
+        2 -> headersPattern.copy(headers = headersPattern.headers.plus(parts[0] to parts[1]).toMutableMap())
+        else -> headersPattern
+    }
 }
 
 private fun breakIntoParts(piece: String, parts: Int) = piece.split("\\s+".toRegex(), parts)
@@ -202,19 +223,28 @@ internal fun parseGherkinString(gherkinData: String): GherkinDocument {
 internal fun lex(gherkinDocument: GherkinDocument): List<Scenario> {
     val featureChildren = gherkinDocument.feature.childrenList
 
-    val scenarioInfo = ScenarioInfo()
+    val scenarioInfo = lexBackground(featureChildren)
 
-    featureChildren.find { it.valueCase.name == "BACKGROUND" }?.let {
-        scenarioInfo.scenarioName = it.scenario.name
-        val backgroundTable = fromPSV(it.background.description)
-        if (!backgroundTable.isEmpty) {
-            scenarioInfo.examples.add(backgroundTable)
+    return featureChildren.filter {
+        it.valueCase.name != "BACKGROUND"
+    }.map { feature ->
+        val info = scenarioInfo.copy(scenarioName = feature.scenario.name)
+        lexScenario(feature.scenario.stepsList, feature.scenario.examplesList, info)
+    }.map { scenarioInfo ->
+        Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, HashMap(scenarioInfo.expectedServerState), scenarioInfo.examples, HashMap(scenarioInfo.patterns), HashMap(scenarioInfo.fixtures))
+    }
+}
+
+private fun lexBackground(featureChildren: MutableList<GherkinDocument.Feature.FeatureChild>): ScenarioInfo {
+    return featureChildren.find { it.valueCase.name == "BACKGROUND" }?.let { feature ->
+        val info = ScenarioInfo(scenarioName = feature.scenario.name).let {
+            val backgroundTable = fromPSV(feature.background.description)
+            when {
+                !backgroundTable.isEmpty -> it.copy(examples = it.examples.plus(backgroundTable).toMutableList())
+                else -> it
+            }
         }
-        lexScenario(it.background.stepsList, listOf(), scenarioInfo)
-    }
 
-    return featureChildren.filter { it.valueCase.name != "BACKGROUND" }.map {
-        scenarioInfo.scenarioName = it.scenario.name
-        lexScenario(it.scenario.stepsList, it.scenario.examplesList, scenarioInfo.deepCopy())
-    }
+        lexScenario(feature.background.stepsList, listOf(), info)
+    } ?: ScenarioInfo()
 }

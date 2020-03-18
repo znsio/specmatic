@@ -2,22 +2,10 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 
-class HttpResponsePattern : Cloneable {
-    var headersPattern: HttpHeadersPattern = HttpHeadersPattern()
+data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var status: Int? = null, private var body: Pattern = NoContentPattern()) : Cloneable {
+    constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers), response.status, parsedPattern(response.body!!))
 
-    @JvmField
-    var status: Int?
-    private var body: Pattern = NoContentPattern()
-
-    constructor() {
-        status = null
-    }
-
-    constructor(response: HttpResponse) {
-        status = response.status
-        headersPattern.addAll(response.headers)
-        body = parsedPattern(response.body!!)
-    }
+    fun bodyPattern(bodyContent: String?) = this.copy(body = parsedPattern(bodyContent!!))
 
     fun setBodyPattern(bodyContent: String?) {
         body = parsedPattern(bodyContent!!)
@@ -70,7 +58,9 @@ class HttpResponsePattern : Cloneable {
 
     private fun matchBody(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
-        when (val result = body.matches(parsedValue(response.body), resolver)) {
+        val resolverWithNumericString = resolver.copy()
+        resolverWithNumericString.addCustomPattern("(number)", NumericStringPattern())
+        when (val result = body.matches(parsedValue(response.body), resolverWithNumericString)) {
             is Result.Failure -> return MatchFailure(result.add("Response body did not match"))
         }
         return MatchSuccess(parameters)

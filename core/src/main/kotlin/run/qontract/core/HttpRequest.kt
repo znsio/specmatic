@@ -44,6 +44,11 @@ open class HttpRequest : Cloneable {
         return this
     }
 
+    fun setBody(body: Value): HttpRequest {
+        this.body = body
+        return this
+    }
+
     fun setBody(body: String?): HttpRequest {
         this.body = parsedValue(body)
         return this

@@ -64,6 +64,10 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
         if(missingKey != null)
             return Result.Failure("Missing key $missingKey in ${sampleData.jsonObject}")
 
+        val resolverWithNumberType = resolver.copy().also {
+            it.addCustomPattern("(number)", NumberTypePattern())
+        }
+
         flatZipPatternValue(rows, sampleData.jsonObject).forEach { (key, pattern, sampleValue) ->
             when (val result = asPattern(pattern, key).matches(sampleValue, resolver)) {
                 is Result.Failure -> return result.add("Expected: $pattern Actual: ${sampleData.jsonObject}")

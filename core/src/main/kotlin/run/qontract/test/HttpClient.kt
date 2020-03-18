@@ -1,45 +1,51 @@
 package run.qontract.test
 
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.request.request
+import io.ktor.client.statement.readText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
+import io.ktor.http.contentType
+import io.ktor.util.KtorExperimentalAPI
+import io.ktor.util.toMap
+import kotlinx.coroutines.runBlocking
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.ServerSetupStateException
 import run.qontract.core.utilities.mapToJsonString
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.request.headers
-import io.ktor.client.request.request
-import io.ktor.client.statement.readText
-import io.ktor.http.HttpStatusCode
-import io.ktor.util.KtorExperimentalAPI
-import io.ktor.util.toMap
-import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
-import java.util.*
 
 class HttpClient(private val baseURL: String) : TestExecutor {
     private val serverStateURL = "/_server_state"
-    @UseExperimental(KtorExperimentalAPI::class)
+    @OptIn(KtorExperimentalAPI::class)
     @Throws(IOException::class, URISyntaxException::class)
     override fun execute(request: HttpRequest): HttpResponse {
         val ktorClient = io.ktor.client.HttpClient(CIO)
         val url = URL(request.getURL(baseURL))
 
-        return runBlocking<HttpResponse> {
+        return runBlocking {
             val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
                 this.method = io.ktor.http.HttpMethod.parse(request.method as String)
 
-                if (request.headers.isNotEmpty()) {
-                    this.headers {
-                        for (header in request.headers) {
-                            this[header.key as String] = header.value as String
-                        }
-                    }
+                val listOfExcludedHeaders = listOf("content-type", "content-length")
+                request.headers
+                        .map {Triple(it.key?.trim() ?: "", it.key?.trim()?.toLowerCase() ?: "", it.value?.trim() ?: "")}
+                        .forEach { (key, loweredKey, value) ->
+                            if(loweredKey !in listOfExcludedHeaders) {
+                                this.headers[key] = value
+                            }
                 }
 
-                if (request.body != null)
-                    this.body = request.bodyString
+                if (request.body != null) {
+                    this.body = when {
+                        request.headers.containsKey("Content-Type") -> TextContent(request.bodyString, ContentType.parse(request.headers["Content-Type"] as String))
+                        else -> request.bodyString
+                    }
+                }
             }
 
             HttpResponse(
@@ -49,7 +55,7 @@ class HttpClient(private val baseURL: String) : TestExecutor {
         }
     }
 
-    @UseExperimental(KtorExperimentalAPI::class)
+    @OptIn(KtorExperimentalAPI::class)
     @Throws(MalformedURLException::class, URISyntaxException::class, ServerSetupStateException::class)
     override fun setServerState(serverState: Map<String, Any?>) {
         if (serverState.isEmpty()) return
@@ -60,7 +66,7 @@ class HttpClient(private val baseURL: String) : TestExecutor {
         runBlocking {
             val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
                 this.method = io.ktor.http.HttpMethod.Post
-                this.headers["Content-Type"] = "application/json"
+                this.contentType(ContentType.Application.Json)
                 this.body = mapToJsonString(serverState)
             }
 

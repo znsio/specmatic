@@ -5,12 +5,7 @@ import run.qontract.test.ContractTestException.Companion.missingParam
 import java.io.UnsupportedEncodingException
 import java.net.URI
 
-class HttpRequestPattern : Cloneable {
-    var headersPattern: HttpHeadersPattern = HttpHeadersPattern()
-    var urlMatcher: URLMatcher? = null
-    private var method: String? = null
-    private var body: Pattern? = NoContentPattern()
-
+data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlMatcher: URLMatcher? = null, private var method: String? = null, private var body: Pattern? = NoContentPattern()) : Cloneable {
     @Throws(UnsupportedEncodingException::class)
     fun updateWith(urlMatcher: URLMatcher) {
         this.urlMatcher = urlMatcher
@@ -37,11 +32,9 @@ class HttpRequestPattern : Cloneable {
 
     private fun matchBody(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
-        body.let {
-            return when (val result = it?.matches(httpRequest.body, resolver.copy().also { it.addCustomPattern("(number)", NumericStringPattern()) })) {
-                is Result.Failure -> MatchFailure(result.add("Request body did not match"))
-                else -> MatchSuccess(parameters)
-            }
+        return when (val result = body?.matches(httpRequest.body, resolver.copy().also { it.addCustomPattern("(number)", NumericStringPattern()) })) {
+            is Result.Failure -> MatchFailure(result.add("Request body did not match"))
+            else -> MatchSuccess(parameters)
         }
     }
 
@@ -72,6 +65,8 @@ class HttpRequestPattern : Cloneable {
         this.method = method.toUpperCase()
     }
 
+    fun bodyPattern(bodyContent: String?) = this.copy(body = parsedPattern(bodyContent!!))
+
     fun setBodyPattern(bodyContent: String?) {
         body = parsedPattern(bodyContent!!)
     }
@@ -93,9 +88,14 @@ class HttpRequestPattern : Cloneable {
             newRequest.setQueryParam(key, queryParams[key] ?: "")
         }
         val headers = headersPattern.generate(resolver)
-        headers.put("Content-Type", "application/json")
+
+        val body = body
         if (body != null) {
-            newRequest.setBody((body as Pattern).generate(resolver).toString())
+            body.generate(resolver).let { value ->
+                newRequest.setBody(value)
+                headers.put("Content-Type", value.httpContentType)
+            }
+
             headers.map { (key, value) -> newRequest.setHeader(key, value) }
         }
 

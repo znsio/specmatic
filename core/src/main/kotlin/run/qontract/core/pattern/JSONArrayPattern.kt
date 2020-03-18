@@ -41,16 +41,20 @@ class JSONArrayPattern : Pattern {
         if(sampleData.list.isEmpty())
             return Result.Success()
 
+        val resolverWithNumberType = resolver.copy().also {
+            it.addCustomPattern("(number)", NumberTypePattern())
+        }
+
         for (index in 0 until pattern.size) {
             if(index == sampleData.list.size) return failed(sampleData)
             val sampleValue = sampleData.list[index]
             val patternValue = pattern[index]
             if (isRepeatingPattern(patternValue)) {
-                when (val result = matchesRepeating(extractPatternFromRepeatingToken(patternValue as Any), sampleData.list, index, resolver)) {
+                when (val result = matchesRepeating(extractPatternFromRepeatingToken(patternValue as Any), sampleData.list, index, resolverWithNumberType)) {
                     is Result.Failure -> return result.add(failedMessage(sampleData))
                 }
             } else {
-                when (val result = asPattern(patternValue, null).matches(asValue(sampleValue?: NoValue()), resolver)) {
+                when (val result = asPattern(patternValue, null).matches(asValue(sampleValue?: NoValue()), resolverWithNumberType)) {
                     is Result.Failure -> return result.add("Expected array[$index] to match $patternValue. Actual value: $sampleValue in ${sampleData.list}")
                 }
             }

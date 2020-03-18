@@ -75,7 +75,7 @@ $expectationsString
                 MockScenario.validate(it)
             }
 
-            tryToMockExpectation(MockScenario.fromJSON(mockSpec))
+            createMockScenario(MockScenario.fromJSON(mockSpec))
 
             call.response.status(HttpStatusCode.OK)
         } catch (e: Exception) {
@@ -139,7 +139,7 @@ $expectationsString
             else -> true
         }
 
-    fun tryToMockExpectation(mocked: MockScenario) {
+    fun createMockScenario(mocked: MockScenario) {
         contractBehaviour.setServerState(mocked.facts)
 
         val mockedResponse = contractBehaviour.getResponseForMock(mocked.request, mocked.response)
@@ -150,7 +150,7 @@ $expectationsString
         httpRequest.path == "/_mock_setup" && httpRequest.method == "POST"
 
     override fun close() {
-        server.stop(0, 0)
+        server.stop(0, 5000)
     }
 
     fun start() {

@@ -39,8 +39,8 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     val textContent = TextContent(httpResponse.body as String, ContentType.Application.Json, HttpStatusCode.fromValue(httpResponse.status))
 
     try {
-        for ((name, value) in httpResponse.headers.filterNot { it.key.toLowerCase() == "content-type" }.
-        filterNot { it.key.toLowerCase() == "content-length" }) {
+        val headersControlledByEngine = listOf("content-type", "content-length")
+        for ((name, value) in httpResponse.headers.filterNot { it.key.toLowerCase() in headersControlledByEngine }) {
             call.response.headers.append(name, value ?: "")
         }
 

@@ -119,20 +119,20 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
 
 }
 
-private fun storeFixture(fixtures: MutableMap<String, Any>, name: String, info: Any) =
+private fun plusFixture(fixtures: MutableMap<String, Any>, name: String, info: Any) =
         fixtures.plus(name to info).toMutableMap()
 
-private fun storeFixture(fixtures: MutableMap<String, Any>, rest: String): MutableMap<String, Any> {
+private fun plusFixture(fixtures: MutableMap<String, Any>, rest: String): MutableMap<String, Any> {
     val fixtureTokens = breakIntoParts(rest.trim(), 2)
 
     return when (fixtureTokens.size) {
-        2 -> storeFixture(fixtures, fixtureTokens[0], toFixtureData(fixtureTokens[1]))
+        2 -> plusFixture(fixtures, fixtureTokens[0], toFixtureData(fixtureTokens[1]))
         else -> throw ContractParseException("Couldn't parse fixture data: $rest")
     }
 }
 
 private fun toFixtureData(rawData: String): Any = parsedJSON(rawData)?.value ?: rawData
-private fun storePattern(patterns: MutableMap<String, Pattern>, rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): MutableMap<String, Pattern> {
+private fun plusPattern(patterns: MutableMap<String, Pattern>, rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): MutableMap<String, Pattern> {
     val (patternName, pattern) = toPatternInfo(rest, rowsList)
     return patterns.plus(patternName to pattern).toMutableMap()
 }
@@ -180,9 +180,9 @@ private fun lexScenario(steps: MutableList<GherkinDocument.Feature.Step>, exampl
                 } ?: throw ContractParseException("Line ${step.line}: $step.text")
             }
             "REQUEST-HEADER" ->
-                acc.copy(httpRequestPattern = acc.httpRequestPattern.copy(headersPattern = addToHeaderPattern(step.rest, acc.httpRequestPattern.headersPattern)))
+                acc.copy(httpRequestPattern = acc.httpRequestPattern.copy(headersPattern = plusHeaderPattern(step.rest, acc.httpRequestPattern.headersPattern)))
             "RESPONSE-HEADER" ->
-                acc.copy(httpResponsePattern = acc.httpResponsePattern.copy(headersPattern = addToHeaderPattern(step.rest, acc.httpResponsePattern.headersPattern)))
+                acc.copy(httpResponsePattern = acc.httpResponsePattern.copy(headersPattern = plusHeaderPattern(step.rest, acc.httpResponsePattern.headersPattern)))
             "STATUS" ->
                 acc.copy(httpResponsePattern = acc.httpResponsePattern.copy(status = Integer.valueOf(step.rest)))
             "REQUEST-BODY" ->
@@ -192,9 +192,9 @@ private fun lexScenario(steps: MutableList<GherkinDocument.Feature.Step>, exampl
             "FACT" ->
                 acc.copy(expectedServerState = acc.expectedServerState.plus(toFacts(step.rest, acc.fixtures)).toMutableMap())
             "PATTERN", "JSON" ->
-                acc.copy(patterns = storePattern(acc.patterns, step.rest, step.rowsList))
+                acc.copy(patterns = plusPattern(acc.patterns, step.rest, step.rowsList))
             "FIXTURE" ->
-                acc.copy(fixtures = storeFixture(acc.fixtures, step.rest))
+                acc.copy(fixtures = plusFixture(acc.fixtures, step.rest))
             else -> throw ContractParseException("Couldn't recognise the meaning of this command: $step.text")
         }
     }
@@ -202,7 +202,7 @@ private fun lexScenario(steps: MutableList<GherkinDocument.Feature.Step>, exampl
     return parsedScenarioInfo.copy(examples = scenarioInfo.examples.plus(examplesFrom(examplesList).toMutableList()).toMutableList())
 }
 
-fun addToHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHeadersPattern {
+fun plusHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHeadersPattern {
     val parts = breakIntoParts(rest, 2)
 
     return when (parts.size) {

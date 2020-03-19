@@ -7,7 +7,7 @@ import run.qontract.core.value.Value
 interface Pattern {
     fun matches(sampleData: Value?, resolver: Resolver): Result
     fun generate(resolver: Resolver): Value
-    fun newBasedOn(row: Row, resolver: Resolver): Pattern
+    fun newBasedOn(row: Row, resolver: Resolver): List<Pattern>
 
     val pattern: Any
 }

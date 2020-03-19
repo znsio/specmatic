@@ -26,12 +26,12 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
                     ::handleError toResult
                     ::returnResult
 
-    fun newBasedOn(row: Row, resolver: Resolver): HttpResponsePattern {
-        val newResponse = clone() as HttpResponsePattern
-        newResponse.body = newResponse.body.newBasedOn(row, resolver.copy())
-        newResponse.headersPattern = this.headersPattern.newBasedOn(row)
-        return newResponse
-    }
+    fun newBasedOn(row: Row, resolver: Resolver): List<HttpResponsePattern> =
+        body.newBasedOn(row, resolver.copy()).flatMap { newBody ->
+            headersPattern.newBasedOn(row).map { newHeadersPattern ->
+                HttpResponsePattern(newHeadersPattern, status, newBody)
+            }
+        }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) =
             matches(response, resolver.copy()
@@ -64,9 +64,5 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
             is Result.Failure -> return MatchFailure(result.add("Response body did not match"))
         }
         return MatchSuccess(parameters)
-    }
-
-    fun deepCopy(): HttpResponsePattern {
-        return newBasedOn(Row(), Resolver())
     }
 }

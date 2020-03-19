@@ -21,7 +21,8 @@ class BooleanPattern : Pattern {
             else -> BooleanValue(true)
         }
 
-    override fun newBasedOn(row: Row, resolver: Resolver) = this
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
+
     override val pattern: Any = "(boolean)"
     override fun toString(): String = pattern.toString()
 }

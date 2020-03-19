@@ -8,8 +8,7 @@ import kotlin.collections.HashMap
 internal class HttpHeadersPatternTest {
     @Test
     fun `should exact match`() {
-        val httpHeaders = HttpHeadersPattern()
-        httpHeaders.add("key" to "value")
+        val httpHeaders = HttpHeadersPattern(mapOf("key" to "value"))
         val headers: HashMap<String?, String?> = HashMap()
         headers["key"] = "value"
         assertThat(httpHeaders.matches(headers, Resolver()) is Result.Success).isTrue()
@@ -17,8 +16,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `should pattern match a numeric string`() {
-        val httpHeaders = HttpHeadersPattern()
-        httpHeaders.add("key" to "(number)")
+        val httpHeaders = HttpHeadersPattern(mapOf("key" to "(number)"))
         val headers: HashMap<String?, String?> = HashMap()
         headers["key"] = "123"
         assertThat(httpHeaders.matches(headers, Resolver()) is Result.Success).isTrue()
@@ -26,8 +24,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `should pattern match string`() {
-        val httpHeaders = HttpHeadersPattern()
-        httpHeaders.add("key" to "(string)")
+        val httpHeaders = HttpHeadersPattern(mapOf("key" to "(string)"))
         val headers: HashMap<String?, String?> = HashMap()
         headers["key"] = "abc123"
         assertThat(httpHeaders.matches(headers, Resolver()) is Result.Success).isTrue()
@@ -35,8 +32,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `should not pattern match a numeric string when value has alphabets`() {
-        val httpHeaders = HttpHeadersPattern()
-        httpHeaders.add("key" to "(number)")
+        val httpHeaders = HttpHeadersPattern(mapOf("key" to "(number)"))
         val headers: HashMap<String?, String?> = HashMap()
         headers["key"] = "abc"
         httpHeaders.matches(headers, Resolver()).let {
@@ -51,8 +47,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `should not match when header is not present`() {
-        val httpHeaders = HttpHeadersPattern()
-        httpHeaders.add("key" to "(number)")
+        val httpHeaders = HttpHeadersPattern(mapOf("key" to "(number)"))
         val headers: HashMap<String?, String?> = HashMap()
         headers["anotherKey"] = "123"
         httpHeaders.matches(headers, Resolver()).let {
@@ -65,8 +60,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `should not add numericString pattern to the resolver`() {
-        val httpHeaders = HttpHeadersPattern()
-        httpHeaders.add("key" to "(string)")
+        val httpHeaders = HttpHeadersPattern(mapOf("key" to "(string)"))
         val resolver = Resolver()
         httpHeaders.matches(HashMap<String?, String?>(), resolver)
         assertThat(resolver.matchesPattern(null, "(number)", "123") is Result.Failure).isTrue()
@@ -74,11 +68,8 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `should generate values`() {
-        val httpHeaders = HttpHeadersPattern()
-        httpHeaders.add("exactKey" to "value")
-        httpHeaders.add("numericKey" to "(number)")
-        httpHeaders.add("stringKey" to "(string)")
-        httpHeaders.add("serverStateKey" to "(string)")
+        val httpHeaders = HttpHeadersPattern(
+                mapOf("exactKey" to "value", "numericKey" to "(number)", "stringKey" to "(string)", "serverStateKey" to "(string)"))
         val resolver = Resolver(serverState = hashMapOf("serverStateKey" to "serverStateValue"))
         val generatedResult = httpHeaders.generate(resolver)
         generatedResult.let {
@@ -91,8 +82,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `should not attempt to validate or match additional headers`() {
-        val expectedHeaders = HttpHeadersPattern()
-        expectedHeaders.add("Content-Type" to "(string)")
+        val expectedHeaders = HttpHeadersPattern(mapOf("Content-Type" to "(string)"))
 
         val actualHeaders = HashMap<String, String?>().apply {
             put("Content-Type", "application/json")

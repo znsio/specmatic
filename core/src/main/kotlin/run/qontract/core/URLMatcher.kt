@@ -98,18 +98,21 @@ class URLMatcher : Cloneable {
         return pathToBeSubstituted
     }
 
-    @Throws(Exception::class)
     fun generateQuery(resolver: Resolver?): HashMap<String, String> {
         return queryPattern.map { (parameterName, parameterPattern) ->
             parameterName to resolver?.generateValue(parameterName, parameterPattern).toString()
         }.toMap(HashMap())
     }
 
-    @Throws(ParserConfigurationException::class)
     fun newBasedOn(row: Row, resolver: Resolver): URLMatcher {
         resolver.addCustomPattern("(number)", NumericStringPattern())
 
         return URLMatcher(this, row, resolver)
+    }
+
+    fun newPatternsBasedOn(row: Row, resolver: Resolver): List<URLMatcher> {
+        resolver.addCustomPattern("(number)", NumericStringPattern())
+        return listOf(URLMatcher(this, row, resolver))
     }
 
     private fun populate(parameters: HashMap<String, String>, row: Row, resolver: Resolver) {

@@ -1,7 +1,6 @@
 package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
-import run.qontract.core.Result
 import run.qontract.core.value.Value
 
 data class LazyPattern(override val pattern: String, val key: String? = null) : Pattern {
@@ -14,5 +13,6 @@ data class LazyPattern(override val pattern: String, val key: String? = null) : 
                 else -> resolver.generate(key, pattern)
             }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Pattern = resolver.getPattern(pattern).newBasedOn(row, resolver)
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
+        resolver.getPattern(pattern).newBasedOn(row, resolver)
 }

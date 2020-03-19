@@ -25,7 +25,7 @@ class StringPattern : Pattern {
         return StringValue(String(array, StandardCharsets.UTF_8))
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Pattern = this
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override val pattern: Any = "(string)"
     override fun toString(): String = pattern.toString()
 }

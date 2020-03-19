@@ -65,16 +65,16 @@ test {
 }
 
 group = 'run.qontract'
-version = '0.0.1-SNAPSHOT'
+version = '0.0.1'
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            artifactId = 'qontract-core'
-            from(components.java)
-        }
-    }
-}
+//publishing {
+//    publications {
+//        maven(MavenPublication) {
+//            artifactId = 'qontract-core'
+//            from(components.java)
+//        }
+//    }
+//}
 
 jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
@@ -94,22 +94,10 @@ publishing {
         mavenJava(MavenPublication) {
             artifactId = 'qontract-core'
             from components.java
-            versionMapping {
-                usage('java-api') {
-                    fromResolutionOf('runtimeClasspath')
-                }
-                usage('java-runtime') {
-                    fromResolutionResult()
-                }
-            }
             pom {
                 name = 'Qontract'
                 description = 'A Contract Testing Tool that leverages Gherkin to describe APIs in a human readable and machine enforceable manner'
-                url = '//qontract.run'
-                properties = [
-                        myProp: "value",
-                        "prop.with.dots": "anotherValue"
-                ]
+                url = 'http://qontract.run'
                 licenses {
                     license {
                         name = 'MIT'
@@ -125,7 +113,7 @@ publishing {
                 }
                 scm {
                     connection = 'scm:git:git@github.com:qontract/qontract.git'
-                    url = '//qontract.run/'
+                    url = 'https://qontract.run/'
                 }
             }
         }
@@ -133,8 +121,8 @@ publishing {
     repositories {
         maven {
             // change URLs to point to your repos, e.g. http://my.org/repo
-            def releasesRepoUrl = "$buildDir/repos/releases"
-            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
             credentials {
                 username = "$ossrhUsername"

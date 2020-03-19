@@ -6,10 +6,11 @@ import run.qontract.core.Result
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
 import io.cucumber.messages.Messages
+import run.qontract.test.ContractTestException
 
 fun flatZipPatternValue(map1: Map<String, Pattern>, map2: Map<String, Any?>): List<Triple<String, Pattern, Value>> {
     return map1.filterKeys { key -> containsKey(map2, key) }.map { entry ->
-        Triple(cleanupKey(entry.key), entry.value, asValue(lookupValue(map2, entry.key)))
+        Triple(withoutOptionality(entry.key), entry.value, asValue(lookupValue(map2, entry.key)))
     }
 }
 
@@ -69,7 +70,7 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
         }
 
         flatZipPatternValue(rows, sampleData.jsonObject).forEach { (key, pattern, sampleValue) ->
-            when (val result = asPattern(pattern, key).matches(sampleValue, resolver)) {
+            when (val result = asPattern(pattern, key).matches(sampleValue, resolverWithNumberType)) {
                 is Result.Failure -> return result.add("Expected: $pattern Actual: ${sampleData.jsonObject}")
             }
         }
@@ -78,10 +79,10 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
     }
 
     override fun generate(resolver: Resolver) =
-            JSONObjectValue(rows.mapKeys { entry -> cleanupKey(entry.key) }.mapValues { (key, pattern) ->
+            JSONObjectValue(rows.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
                 if(resolver.serverStateMatch.contains(key)) {
                     val stateValue = resolver.serverStateMatch.get(key)
-                    when(val result = pattern.matches(asValue(resolver.serverStateMatch.get(key)), resolver)) {
+                    when(pattern.matches(asValue(resolver.serverStateMatch.get(key)), resolver)) {
                         is Result.Failure -> throw ContractParseException("Server state $stateValue didn't match pattern ${pattern.pattern}")
                         else -> stateValue
                     }
@@ -90,20 +91,63 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
                 }
             }.toMutableMap())
 
-    override fun newBasedOn(row: Row, resolver: Resolver) = listOf(TabularPattern(newBasedOn(rows, row, resolver)))
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
+        multipleValidKeys(rows, row) { pattern ->
+            multipleValidPatterns(pattern, row, resolver)
+        }.map { TabularPattern(it) }
 
     override val pattern: Any = rows
 }
 
-fun newBasedOn(jsonPattern: Map<String, Pattern>, row: Row, resolver: Resolver): Map<String, Pattern> =
-    jsonPattern.mapValues { (key, pattern) ->
-        val cleanKey = cleanupKey(key)
+fun multipleValidPatterns(jsonPattern: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
+    val patternCollection = jsonPattern.mapValues { (key, pattern) ->
+        val cleanKey = withoutOptionality(key)
         when {
-            pattern is LazyPattern -> pattern.copy(key=key).newBasedOn(row, resolver).first()
+            pattern is LazyPattern -> pattern.copy(key=key).newBasedOn(row, resolver)
             row.containsField(cleanKey) -> when {
-                isPrimitivePattern(pattern.pattern) -> ExactMatchPattern(parsePrimitive(pattern.pattern.toString(), row.getField(cleanKey).toString()))
-                else -> ExactMatchPattern(row.getField(key) ?: "")
+                isPrimitivePattern(pattern.pattern) -> listOf(ExactMatchPattern(parsePrimitive(pattern.pattern.toString(), row.getField(cleanKey).toString())))
+                else -> listOf(ExactMatchPattern(row.getField(key) ?: ""))
             }
-            else -> pattern
+            else -> listOf(pattern)
         }
     }
+
+    return patternList<Pattern>(patternCollection)
+}
+
+fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): List<Map<String, ValueType>> {
+    if(patternCollection.isEmpty())
+        return listOf(emptyMap())
+
+    val key = patternCollection.keys.first()
+
+    return (patternCollection[key] ?: throw ContractTestException("key $key should not be empty in $patternCollection"))
+            .flatMap { pattern ->
+                val subLists = patternList<ValueType>(patternCollection - key)
+                subLists.map { generatedPatternMap ->
+                    generatedPatternMap.plus(Pair(key, pattern))
+                }
+            }
+}
+
+fun <ValueType> multipleValidKeys(jsonPattern: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
+    keySets(jsonPattern.keys.toList(), row).map { keySet ->
+        jsonPattern.filterKeys { key -> key in keySet }
+    }.map { newJsonPattern ->
+        creator(newJsonPattern)
+    }.flatten()
+
+internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {
+    if(listOfKeys.isEmpty())
+        return listOf(listOfKeys)
+
+    val key = listOfKeys.last()
+    val subLists = keySets(listOfKeys.dropLast(1), row)
+
+    return subLists.flatMap { subList ->
+        when {
+            !row.containsField(key) && isOptional(key) -> listOf(subList, subList + key)
+            else -> listOf(subList + key)
+        }
+    }
+}

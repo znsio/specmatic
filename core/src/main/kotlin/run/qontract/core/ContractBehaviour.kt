@@ -117,6 +117,10 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
                 scenario.newBasedOn(suggestions)
             }.flatMap { it.generateTestScenarios() }.toList()
 
+    fun generateContractTests(): List<Scenario> =
+        scenarios.flatMap { scenario ->
+            scenario.copy(examples = emptyList()).generateTestScenarios()
+        }
 }
 
 private fun plusFixture(fixtures: MutableMap<String, Any>, name: String, info: Any) =

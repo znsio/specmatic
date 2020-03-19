@@ -10,7 +10,10 @@ import run.qontract.core.utilities.brokerURL
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import run.qontract.core.value.JSONObjectValue
+import run.qontract.test.TestExecutor
 import java.io.IOException
+import kotlin.test.assertEquals
 
 class ContractTests {
     @Test
@@ -65,6 +68,191 @@ class ContractTests {
     fun shouldBeAbleToTestFakeObjectWithPath() {
         val contract = fromGherkin(pathParameterContractGherkin, 1, 0)
         contract.startFake(8080).use { fake -> contract.test(fake) }
+    }
+
+    @Test
+    fun `contract with one optional key and no examples should generate two tests` () {
+        val gherkin = """
+Feature: Older contract API
+
+Scenario:
+Given json Value
+| value     | (number) |
+| optional? | (number) |
+When POST /value
+And request-body (Value)
+Then status 200
+    """.trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableMapOf<String, Int>()
+
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val requestBody = request.body
+                if(requestBody is JSONObjectValue) {
+                    when("optional") {
+                        in requestBody.jsonObject.keys -> "with"
+                        else -> "without"
+                    }.let { flags[it] = flags.getOrDefault(it, 0) + 1 }
+                }
+
+                return HttpResponse(200)
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        assertEquals(1, flags["with"])
+        assertEquals(1, flags["without"])
+    }
+
+    @Test
+    fun `contract with one optional key and one examples should generate one test` () {
+        val gherkin = """
+Feature: Older contract API
+
+Scenario:
+Given json Value
+| value     | (number) |
+| optional? | (number) |
+When POST /value
+And request-body (Value)
+Then status 200
+
+Examples:
+| optional |
+| 10       |
+    """.trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableMapOf<String, Int>()
+
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val requestBody = request.body
+                if(requestBody is JSONObjectValue) {
+                    flags["optional"] = requestBody.jsonObject.getOrDefault("optional", 0).toString().toInt()
+                }
+
+                return HttpResponse(200)
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        assertEquals(10, flags["optional"])
+    }
+
+
+    @Test
+    fun `contract backward compatibility should break when one has an optional key and the other does not` () {
+        val gherkin1 = """
+Feature: Older contract API
+
+Scenario:
+Given json Value
+| value     | (number) |
+| optional? | (number) |
+When POST /value
+And request-body (Value)
+Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: Older contract API
+
+Scenario:
+Given json Value
+| value    | (number) |
+| optional | (number) |
+When POST /value
+And request-body (Value)
+Then status 200
+    """.trim()
+
+        val olderContract = ContractBehaviour(gherkin1)
+        val newerContract = ContractBehaviour(gherkin2)
+
+        val result: ExecutionInfo = testBackwardCompatibility(olderContract, newerContract)
+
+        assertEquals(1, result.failureCount)
+        assertEquals(1, result.successCount)
+    }
+
+    @Test
+    fun `contract backward compatibility should not break when both have an optional keys` () {
+        val gherkin1 = """
+Feature: Older contract API
+
+Scenario:
+Given json Value
+| value     | (number) |
+| optional? | (number) |
+And fact id 10
+When POST /value/(id:number)
+And request-body (Value)
+Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: Older contract API
+
+Scenario:
+Given json Value
+| value    | (number) |
+| optional? | (number) |
+And fact id 10
+When POST /value/(id:number)
+And request-body (Value)
+Then status 200
+    """.trim()
+
+        val olderContract = ContractBehaviour(gherkin1)
+        val newerContract = ContractBehaviour(gherkin2)
+
+        val result: ExecutionInfo = testBackwardCompatibility(olderContract, newerContract)
+
+        assertEquals(2, result.successCount)
+        assertEquals(0, result.failureCount)
+    }
+
+    @Test
+    fun `contract backward compatibility should break when a new fact is added` () {
+        val gherkin1 = """
+Feature: Older contract API
+
+Scenario:
+Given json Value
+| value     | (number) |
+| optional? | (number) |
+When POST /value/(id:number)
+And request-body (Value)
+Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: Older contract API
+
+Scenario:
+Given json Value
+| value    | (number) |
+| optional? | (number) |
+And fact id 10
+When POST /value/(id:number)
+And request-body (Value)
+Then status 200
+    """.trim()
+
+        val olderContract = ContractBehaviour(gherkin1)
+        val newerContract = ContractBehaviour(gherkin2)
+
+        val result: ExecutionInfo = testBackwardCompatibility(olderContract, newerContract)
+
+        assertEquals(0, result.successCount)
+        assertEquals(2, result.failureCount)
     }
 
     companion object {

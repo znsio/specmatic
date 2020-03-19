@@ -39,36 +39,44 @@ class JSONObjectPattern : Pattern {
     }
 
     override fun generate(resolver: Resolver) = JSONObjectValue(generate(pattern, resolver))
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(JSONObjectPattern(newBasedOn(pattern, row, resolver)))
+
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = newBasedOn(pattern, row, resolver)
 }
 
-fun newBasedOn(jsonPattern: Map<String, Any?>, row: Row, resolver: Resolver): Map<String, Any?> {
-    return jsonPattern.mapValues { asValue(it.value) }.mapValues { (patternKey, patternValue) ->
+fun newBasedOn(jsonPattern: Map<String, Any?>, row: Row, resolver: Resolver): List<JSONObjectPattern> {
+    return multipleValidKeys(jsonPattern, row) { pattern ->
+        multipleValidValues(pattern, row, resolver)
+    }.map { JSONObjectPattern(it) }
+}
+
+fun multipleValidValues(jsonPattern: Map<String, Any?>, row: Row, resolver: Resolver): List<Map<String, Any?>> {
+    val patternCollection = jsonPattern.mapValues { asValue(it.value) }.mapValues { (patternKey, patternValue) ->
         when (patternValue) {
             is StringValue ->
                 when {
-                    isLazyPattern(patternValue.string) -> LazyPattern(patternValue.string, patternKey).newBasedOn(row, resolver).first().pattern
-                    row.containsField(cleanupKey(patternKey)) -> {
-                        val cleanedUpPatternKey = cleanupKey(patternKey)
+                    isLazyPattern(patternValue.string) -> LazyPattern(patternValue.string, patternKey).newBasedOn(row, resolver).map { it.pattern }
+                    row.containsField(withoutOptionality(patternKey)) -> {
+                        val cleanedUpPatternKey = withoutOptionality(patternKey)
                         when {
                             isPatternToken(patternValue.string) -> {
                                 val rowField = row.getField(cleanedUpPatternKey)?.toString() ?: ""
-                                parsePrimitive(patternValue.string, rowField)
+                                listOf(parsePrimitive(patternValue.string, rowField))
                             }
-                            else -> row.getField(cleanedUpPatternKey)
+                            else -> listOf(row.getField(cleanedUpPatternKey))
                         }
                     }
-                    else -> patternValue.string
+                    else -> listOf(patternValue.string)
                 }
-            is JSONObjectValue -> newBasedOn(patternValue.jsonObject, row, resolver)
+            is JSONObjectValue -> multipleValidValues(patternValue.jsonObject, row, resolver)
             is JSONArrayValue -> newBasedOn(patternValue.list, row, resolver)
-            else -> patternValue.value
+            else -> listOf(patternValue.value)
         }
     }
+
+    return patternList(patternCollection)
 }
 
 fun generate(jsonPattern: MutableMap<String, Any?>, resolver: Resolver): MutableMap<String, Any?> =
-    jsonPattern.mapKeys { entry -> cleanupKey(entry.key) }.mapValues { (key, value) ->
+    jsonPattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, value) ->
         asPattern(asValue(value).value, key).generate(resolver).value
     }.toMutableMap()
-

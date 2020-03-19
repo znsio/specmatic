@@ -3,7 +3,7 @@ package run.qontract.core
 import java.util.*
 import kotlin.collections.HashMap
 
-class ExecutionInfo {
+class ExecutionInfo(results: List<Triple<Result, HttpRequest?, HttpResponse?>> = emptyList()) {
     private val mismatchInformation: HashMap<Scenario, Stack<String>> = HashMap()
     private val erroneousRequestResponse: HashMap<Scenario, Pair<HttpRequest, HttpResponse?>> = HashMap()
     private val errorInformation: HashMap<Scenario, Throwable> = HashMap()
@@ -26,6 +26,12 @@ class ExecutionInfo {
         }
         return message.toString()
     }
+
+    val successCount
+        get() = success
+
+    val failureCount
+        get() = mismatchInformation.size + errorInformation.size
 
     val hasErrors
         get() = mismatchInformation.size > 0 || errorInformation.size > 0
@@ -67,5 +73,14 @@ class ExecutionInfo {
 
     fun unsuccessfulInteractionCount(): Int {
         return mismatchInformation.size
+    }
+
+    init {
+        results.forEach { (result, request, response) ->
+            when(result) {
+                is Result.Failure -> this.recordUnsuccessfulInteraction(result.scenario, result.stackTrace(), request!!, response!!)
+                else -> this.recordSuccessfulInteraction()
+            }
+        }
     }
 }

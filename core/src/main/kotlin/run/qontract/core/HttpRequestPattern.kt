@@ -51,7 +51,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     private fun matchUrl(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
         urlMatcher.let {
-            val result = urlMatcher!!.matches(URI(httpRequest.path),
+            val result = urlMatcher!!.matches(URI(httpRequest.path!!),
                     httpRequest.queryParams,
                     resolver.copy())
             return if (result is Result.Failure)
@@ -103,7 +103,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
-        val newURLMatchers = urlMatcher?.newPatternsBasedOn(row, resolver.copy()) ?: listOf<URLMatcher?>(null)
+        val newURLMatchers = urlMatcher?.newBasedOn(row, resolver.copy()) ?: listOf<URLMatcher?>(null)
         val newBodies = body?.newBasedOn(row, resolver.copy()) ?: listOf<Pattern?>(null)
         val newHeadersPattern = headersPattern.newBasedOn(row)
 

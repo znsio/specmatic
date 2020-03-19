@@ -5,10 +5,12 @@ import run.qontract.core.Result
 import run.qontract.core.mustMatch
 import run.qontract.core.value.JSONObjectValue
 import org.assertj.core.api.Assertions.assertThat
+import org.json.JSONObject
 import org.junit.jupiter.api.Test
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 internal class JSONObjectPatternTest {
@@ -48,14 +50,16 @@ internal class JSONObjectPatternTest {
     @Test
     fun `Given an optional key, the unsuffixed key should be looked up in the row when generating a pattern`() {
         val row = Row(listOf("id"), listOf("12345"))
-        val pattern = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(row, Resolver()).first()
+        val patterns = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(row, Resolver())
 
-        if (pattern !is JSONObjectPattern)
-            throw Exception("Expected JSONObjectPattern, got ${pattern.javaClass}")
+        val value = patterns.map { it.generate(Resolver()) }.map {
+            if(it !is JSONObjectValue)
+                throw Exception("Expected JSONObjectValue, got ${it.javaClass}")
 
-        val value = pattern.generate(Resolver())
+            it.jsonObject.getOrDefault("id", 0)
+        }.find { it == 12345 }
 
-        assertEquals(12345, value.jsonObject["id"])
+        assertEquals(12345, value)
     }
 
     @Test
@@ -116,19 +120,16 @@ internal class JSONObjectPatternTest {
 
     @Test
     fun `should return errors with id field`() {
-        val pattern = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(Row(), Resolver()).first()
+        val patterns = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(Row(), Resolver())
 
-        if (pattern !is JSONObjectPattern)
-            throw Exception("Expected JSONObjectValue, got ${pattern.javaClass}")
-
-        pattern.matches(JSONObjectValue(hashMapOf("id" to "abc")), Resolver()).let {
-            assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).stackTrace()).isEqualTo(Stack<String>().also { stack ->
+        assertNotNull(patterns.find { pattern ->
+            val result = pattern.matches(JSONObjectValue(hashMapOf("id" to "abc")), Resolver())
+            result is Result.Failure && result.stackTrace() == Stack<String>().also { stack ->
                 stack.push("abc is not a Number")
                 stack.push("""Expected: (number) Actual: abc""")
                 stack.push("Expected: object[id] to match (number). Actual value: abc, in JSONObject {id=abc}")
-            })
-        }
+            }
+        })
     }
 
     @Test

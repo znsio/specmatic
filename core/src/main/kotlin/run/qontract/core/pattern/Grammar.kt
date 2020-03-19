@@ -4,7 +4,9 @@ import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 
 internal fun lookupValue(map: Map<String, Any?>, key: String): Any? = map[key.removeSuffix("?")]
-internal fun cleanupKey(key: String) = key.removeSuffix("?")
+internal fun withoutOptionality(key: String) = key.removeSuffix("?")
+internal fun isOptional(key: String): Boolean = key.endsWith("?")
+
 internal fun isMissingKey(jsonObject: Map<String, Any?>, key: String) =
         when {
             key.endsWith("?") -> false

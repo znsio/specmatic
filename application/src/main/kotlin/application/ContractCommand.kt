@@ -6,10 +6,14 @@ import run.qontract.core.utilities.*
 import run.qontract.core.utilities.BrokerClient.readFromURL
 import picocli.CommandLine
 import picocli.CommandLine.HelpCommand
+import run.qontract.core.ContractBehaviour
+import run.qontract.core.testBackwardCompatibility
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.Callable
+import kotlin.system.exitProcess
 
-@CommandLine.Command(name = "contract", description = ["Publishes and shows contracts"], subcommands = [HelpCommand::class])
+@CommandLine.Command(name = "contract", description = ["Manages contracts"], subcommands = [HelpCommand::class])
 class ContractCommand : Callable<Void?> {
     @CommandLine.Command
     @Throws(IOException::class)
@@ -57,6 +61,20 @@ class ContractCommand : Callable<Void?> {
         val message = "Version: " + majorVersion + "." + minorVersion + "\n" +
                 spec + "\n"
         println(message)
+    }
+
+    @CommandLine.Command
+    fun compare(@CommandLine.Option(names = ["--older"], description = ["Name of the older contract"], paramLabel = "<older file path>", required = true) olderFilePath: String, @CommandLine.Option(names = ["--newer"], description = ["Name of the newer contract"], paramLabel = "<newer file path>") newerFilePath: String) {
+        val older = ContractBehaviour(File(olderFilePath).readText())
+        val newer = ContractBehaviour(File(newerFilePath).readText())
+        val executionInfo = testBackwardCompatibility(older, newer)
+
+        if(executionInfo.failureCount > 0) {
+            executionInfo.print()
+            exitProcess(1)
+        } else {
+            println("Older and newer contracts are compatible.")
+        }
     }
 
     override fun call(): Void? {

@@ -66,17 +66,37 @@ class JSONArrayPattern : Pattern {
         return JSONArrayValue(generate(pattern, resolver))
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(JSONArrayPattern(newBasedOn(pattern, row, resolver)))
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = newBasedOn(pattern, row, resolver)
 }
 
-fun newBasedOn(jsonPattern: List<Any?>, row: Row, resolver: Resolver): List<Any?> =
-    jsonPattern.map(::asValue).map {
-        when(it) {
-            is JSONObjectValue -> newBasedOn(it.jsonObject, row, resolver)
-            is JSONArrayValue -> newBasedOn(it.list, row, resolver)
-            else -> it.value
+fun newBasedOn(jsonPattern: List<Any?>, row: Row, resolver: Resolver): List<JSONArrayPattern> {
+    val values = jsonPattern.map(::asValue).map { patternValue ->
+        when(patternValue) {
+            is StringValue ->
+                when {
+                    isLazyPattern(patternValue.string) -> LazyPattern(patternValue.string, null).newBasedOn(row, resolver).map { it.pattern }
+                    else -> listOf(patternValue.string)
+                }
+            is JSONObjectValue -> newBasedOn(patternValue.jsonObject, row, resolver)
+            is JSONArrayValue -> newBasedOn(patternValue.list, row, resolver)
+            else -> listOf(patternValue.value)
         }
     }
+
+    return multipleValidValues(values).map { JSONArrayPattern(it) }
+}
+
+fun multipleValidValues(values: List<List<Any?>>): List<List<Any?>> {
+    if(values.isEmpty())
+        return listOf(values)
+
+    val value = values.takeLast(1)
+    val subLists = multipleValidValues(values.dropLast(1))
+
+    return subLists.map { list ->
+        list + value
+    }
+}
 
 fun generate(jsonPattern: List<Any?>, resolver: Resolver): MutableList<Any?> =
     jsonPattern.flatMap {

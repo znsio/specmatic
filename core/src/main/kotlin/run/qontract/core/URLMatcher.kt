@@ -104,13 +104,7 @@ class URLMatcher : Cloneable {
         }.toMap(HashMap())
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): URLMatcher {
-        resolver.addCustomPattern("(number)", NumericStringPattern())
-
-        return URLMatcher(this, row, resolver)
-    }
-
-    fun newPatternsBasedOn(row: Row, resolver: Resolver): List<URLMatcher> {
+    fun newBasedOn(row: Row, resolver: Resolver): List<URLMatcher> {
         resolver.addCustomPattern("(number)", NumericStringPattern())
         return listOf(URLMatcher(this, row, resolver))
     }

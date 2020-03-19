@@ -1,9 +1,6 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.NumericStringPattern
-import run.qontract.core.pattern.Row
-import run.qontract.core.pattern.asPattern
-import run.qontract.core.pattern.asValue
+import run.qontract.core.pattern.*
 import run.qontract.core.value.NoValue
 import java.util.*
 
@@ -45,11 +42,16 @@ data class HttpHeadersPattern(val headers: Map<String, String?> = mapOf()) {
         }.toMutableMap())
     }
 
-    fun newBasedOn(row: Row): List<HttpHeadersPattern> =
-            listOf(HttpHeadersPattern(HashMap(this.headers.mapValues {
+    private fun newBasedOn(row: Row, headers: Map<String, String?>): Map<String, String?> =
+            HashMap(headers.mapValues {
                 when {
                     row.containsField(it.key) && row.getField(it.key) != null -> row.getField(it.key).toString()
                     else -> it.value
                 }
-            })))
+            })
+
+    fun newBasedOn(row: Row): List<HttpHeadersPattern> =
+        multipleValidKeys(headers, row) { pattern ->
+            listOf(newBasedOn(row, pattern))
+        }.map { HttpHeadersPattern(it) }
 }

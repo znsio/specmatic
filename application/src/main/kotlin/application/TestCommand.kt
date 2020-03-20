@@ -1,10 +1,11 @@
 package application
 
-import run.qontract.core.ContractBehaviour
-import run.qontract.core.Suggestions
-import run.qontract.core.utilities.readFile
-import run.qontract.fake.ContractFake
-import run.qontract.test.HttpClient
+import run.qontract.test.QontractJUnitSupport
+import run.qontract.test.ContractExecutionListener
+import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
+import org.junit.platform.launcher.LauncherDiscoveryRequest
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
+import org.junit.platform.launcher.core.LauncherFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -12,9 +13,8 @@ import java.util.concurrent.Callable
 
 @Command(name = "test", version = ["0.1.0"],
         mixinStandardHelpOptions = true,
-        description = ["Run contract as test"])
+        description = ["Run contract as junit tests"])
 class TestCommand : Callable<Void> {
-    lateinit var contractFake: ContractFake
 
     @Option(names = ["--path"], description = ["Contract location"], required = true)
     lateinit var path: String
@@ -30,21 +30,23 @@ class TestCommand : Callable<Void> {
 
     @Command
     fun run() {
-        val contractGherkin = readFile(path)
-        val contractBehaviour = ContractBehaviour(contractGherkin)
-        if (suggestionsPath.isEmpty()) {
-            val executionInfo = contractBehaviour.executeTests(HttpClient("http://$host:$port"))
-            executionInfo.print()
-        } else {
-            val suggestionsGherkin = readFile(suggestionsPath)
-            val suggestions = Suggestions(suggestionsGherkin).scenarios
-            val executionInfo = contractBehaviour.executeTests(suggestions, HttpClient("http://$host:$port"))
-            executionInfo.print()
-        }
+        System.setProperty("path", path)
+        System.setProperty("host", host)
+        System.setProperty("port", port.toString())
+        System.setProperty("suggestions", suggestionsPath)
+        val launcher = LauncherFactory.create()
+        val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
+                .selectors(selectClass(QontractJUnitSupport::class.java))
+                .build()
+        launcher.discover(request)
+        val contractExecutionListener = ContractExecutionListener()
+        launcher.registerTestExecutionListeners(contractExecutionListener)
+        launcher.execute(request)
+        contractExecutionListener.exitProcess()
     }
 
     override fun call(): Void? {
-        CommandLine(StubCommand()).usage(System.out)
+        CommandLine(TestCommand()).usage(System.out)
         return null
     }
 

@@ -11,8 +11,7 @@ import picocli.CommandLine.Option
 import java.util.concurrent.Callable
 
 @Command(name = "test-deprecated", version = ["0.1.0"],
-        mixinStandardHelpOptions = true,
-        description = ["Run contract as test"])
+        mixinStandardHelpOptions = true)
 class TestCommandDeprecated : Callable<Void> {
     lateinit var contractFake: ContractFake
 

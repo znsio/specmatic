@@ -13,7 +13,7 @@ import java.util.concurrent.Callable
 
 @Command(name = "test", version = ["0.1.0"],
         mixinStandardHelpOptions = true,
-        description = ["Run contract as junit tests"])
+        description = ["Run contract as tests"])
 class TestCommand : Callable<Void> {
 
     @Option(names = ["--path"], description = ["Contract location"], required = true)

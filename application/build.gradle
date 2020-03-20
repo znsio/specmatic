@@ -46,4 +46,3 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
-8

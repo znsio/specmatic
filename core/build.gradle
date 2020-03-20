@@ -67,15 +67,6 @@ test {
 group = 'run.qontract'
 version = '0.0.1'
 
-//publishing {
-//    publications {
-//        maven(MavenPublication) {
-//            artifactId = 'qontract-core'
-//            from(components.java)
-//        }
-//    }
-//}
-
 jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
 }
@@ -125,8 +116,8 @@ publishing {
             def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
             credentials {
-                username = "$ossrhUsername"
-                password = "$ossrhPassword"
+                username = project.hasProperty("ossrhUsername") ? project.getProperty("ossrhUsername") : ""
+                password = project.hasProperty("ossrhPassword") ? project.getProperty("ossrhPassword") : ""
             }
         }
     }
@@ -136,6 +127,9 @@ signing {
     sign publishing.publications.mavenJava
 }
 
+tasks.withType(Sign) {
+    onlyIf { project.hasProperty("signing.keyId") }
+}
 
 javadoc {
     if(JavaVersion.current().isJava9Compatible()) {

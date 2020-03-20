@@ -24,6 +24,15 @@ class ExecutionInfo(results: List<Triple<Result, HttpRequest?, HttpResponse?>> =
                 }
             }
         }
+
+        if(errorInformation.isNotEmpty()) {
+            message.append("\n\nExceptions thrown:\n")
+
+            for((scenario, exception) in errorInformation) {
+                message.append("${scenario.name}\n${exception.javaClass}: $exception\n\n")
+            }
+        }
+
         return message.toString()
     }
 

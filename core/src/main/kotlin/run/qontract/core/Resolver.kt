@@ -68,11 +68,12 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
     fun generate(key: String, patternValue: Any): Value {
         if (serverStateMatch.contains(key)) {
             val value = serverStateMatch.get(key)
-            if (value != null)
+            if (value != null && value != true) {
                 when (matchesPattern(null, patternValue, value)) {
                     is Result.Success -> return asValue(value)
                     else -> throw ContractParseException("$value doesn't match $patternValue")
                 }
+            }
         }
 
         return generate(patternValue)
@@ -89,7 +90,7 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
         val parameterValue = parameterPattern as String
         if (serverStateMatch.contains(key)) {
             val value = serverStateMatch.get(key)
-            if (isPatternToken(parameterValue) && value != null)
+            if (isPatternToken(parameterValue) && value != null && value != true)
                 when (matchesPattern(null, parameterValue, value)) {
                     is Result.Success -> return asValue(value)
                     else -> throw ContractParseException("$value doesn't match $parameterPattern")

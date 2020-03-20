@@ -3,15 +3,23 @@ package run.qontract.core
 fun testBackwardCompatibility(older: ContractBehaviour, newer: ContractBehaviour): ExecutionInfo {
     val contractTests: List<Scenario> = older.generateContractTests()
 
-    val results = contractTests.map { testScenario ->
+     val executionInfo = ExecutionInfo()
+
+    contractTests.forEach { testScenario ->
         newer.setServerState(testScenario.expectedState)
 
-        val request = testScenario.generateHttpRequest()
-        val response = newer.lookup(request)
-        val result = testScenario.matches(response)
+        try {
+            val request = testScenario.generateHttpRequest()
+            val response = newer.lookup(request)
+            when(val result = testScenario.matches(response)) {
+                is Result.Failure -> executionInfo.recordUnsuccessfulInteraction(result.scenario, result.stackTrace(), request, response)
+                else -> executionInfo.recordSuccessfulInteraction()
+            }
+        } catch (e: Throwable) {
+            executionInfo.recordInteractionError(testScenario, e)
+        }
 
-        Triple(result, request, response)
     }
 
-    return ExecutionInfo(results)
+    return executionInfo
 }

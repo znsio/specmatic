@@ -80,7 +80,7 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
 
     override fun generate(resolver: Resolver) =
             JSONObjectValue(rows.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
-                if(resolver.serverStateMatch.contains(key)) {
+                if(resolver.serverStateMatch.contains(key) && resolver.serverStateMatch.get(key) != true) {
                     val stateValue = resolver.serverStateMatch.get(key)
                     when(pattern.matches(asValue(resolver.serverStateMatch.get(key)), resolver)) {
                         is Result.Failure -> throw ContractParseException("Server state $stateValue didn't match pattern ${pattern.pattern}")

@@ -20,7 +20,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
             it.addCustomPatterns(patterns)
         }
         if (!serverStateMatches(serverState, resolver.copy())) {
-            return Result.Failure("Server State mismtach").also { it.updateScenario(this) }
+            return Result.Failure("Server State mismatch").also { it.updateScenario(this) }
         }
         return httpRequestPattern.matches(httpRequest, resolver).also {
             it.updateScenario(this)

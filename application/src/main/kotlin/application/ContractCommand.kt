@@ -15,7 +15,7 @@ import kotlin.system.exitProcess
 
 @CommandLine.Command(name = "contract", description = ["Manages contracts"], subcommands = [HelpCommand::class])
 class ContractCommand : Callable<Void?> {
-    @CommandLine.Command
+    @CommandLine.Command(description = ["Publish a contract to the broker"])
     @Throws(IOException::class)
     fun publish(@CommandLine.Option(names = ["--majorVersion"], required = true, description = ["Major version of the contract"], paramLabel = "<major version>") majorVersion: String?, @CommandLine.Option(names = ["--name"], description = ["Name of the contract"], paramLabel = "<name>") contractName: String?, @CommandLine.Option(names = ["--file"], description = ["Path to the file containing the contract"], paramLabel = "<file path>") contractFilePath: String?) {
         if (contractFilePath != null && contractName == null ||
@@ -35,7 +35,7 @@ class ContractCommand : Callable<Void?> {
         writeToAPI(io.ktor.http.HttpMethod.Put, "$brokerURL/contracts", jsonMessage)
     }
 
-    @CommandLine.Command
+    @CommandLine.Command(description = ["Show all version numbers of a contract available with the broker"])
     @Throws(IOException::class)
     fun list(@CommandLine.Option(names = ["--name"], description = ["Name of the contracts whose versions should be listed"], paramLabel = "<name>", required = true) contractName: String) {
         val url = "$brokerURL/contract-versions?provider=$contractName"
@@ -50,7 +50,7 @@ class ContractCommand : Callable<Void?> {
         }
     }
 
-    @CommandLine.Command
+    @CommandLine.Command(description = ["Fetch a contract from the broker and show it"])
     fun show(@CommandLine.Option(names = ["--name"], description = ["Name of the contract to show"], paramLabel = "<name>", required = true) contractName: String, @CommandLine.Option(names = ["--version"], description = ["Version of the contract to show"], paramLabel = "<version>") versionSpec: String?) {
         val version = toVersion(versionSpec)
         val response = readFromAPI(brokerURL + "/contracts?provider=" + contractName + version.toQueryParams())
@@ -63,8 +63,8 @@ class ContractCommand : Callable<Void?> {
         println(message)
     }
 
-    @CommandLine.Command
-    fun compare(@CommandLine.Option(names = ["--older"], description = ["Name of the older contract"], paramLabel = "<older file path>", required = true) olderFilePath: String, @CommandLine.Option(names = ["--newer"], description = ["Name of the newer contract"], paramLabel = "<newer file path>") newerFilePath: String) {
+    @CommandLine.Command(description = ["Test backward compatibility of a new contract"] )
+    fun compare(@CommandLine.Option(names = ["--older"], description = ["Name of the older contract"], paramLabel = "<older file path>", required = true) olderFilePath: String, @CommandLine.Option(names = ["--newer"], description = ["Name of the newer contract"], paramLabel = "<newer file path>", required=true) newerFilePath: String) {
         val older = ContractBehaviour(File(olderFilePath).readText())
         val newer = ContractBehaviour(File(newerFilePath).readText())
         val executionInfo = testBackwardCompatibility(older, newer)

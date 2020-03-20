@@ -10,7 +10,8 @@ class ContractExecutionListener : TestExecutionListener {
     private var failure: Int = 0
 
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
-        if (listOf("testFactory", "ContractAsATest", "JUnit Jupiter").any {
+
+        if (listOf("QontractJUnitSupport", "contractAsTest()", "JUnit Jupiter").any {
                     testIdentifier!!.displayName.contains(it)
                 }) return
 

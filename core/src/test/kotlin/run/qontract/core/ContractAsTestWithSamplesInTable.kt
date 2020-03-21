@@ -22,26 +22,6 @@ import kotlin.test.assertTrue
 
 class ContractAsTestWithSamplesInTable {
     @Test
-    fun parseTabularBackground() {
-        val scenarioOutlineGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Background: \n" +
-                "    | account_id | calls_left | messages_left | \n" +
-                "    | 10 | 20 | 30 | \n\n" +
-                "  Scenario: \n\n" +
-                "    When GET /balance?account_id=10\n" +
-                "    Then status 200\n" +
-                "    And response-body {calls_left: 20, messages_left: 30}\n\n" +
-                "    Examples:\n" +
-                "    | account-id | calls-left | messages-left | \n" +
-                "    | 10 | 20 | 30 | " +
-                ""
-        val background = toGherkinDocument(scenarioOutlineGherkin).feature.childrenList[0].background
-        val description = background.description
-        val table = fromPSV(description)
-        Assertions.assertEquals("10", table.getRow(0).getField("account_id"))
-    }
-
-    @Test
     fun tabularDataParsing() {
         val background = "" +
                 "    | account-id | calls-left | messages-left | \n" +
@@ -54,16 +34,18 @@ class ContractAsTestWithSamplesInTable {
     @Test
     @Throws(Throwable::class)
     fun GETAndResponseBodyGeneratedThroughDataTableWithPathParams() {
-        val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Background: \n" +
-                "    | account_id | calls_left | messages_left | \n" +
-                "    | 10 | 20 | 30 | \n" +
-                "    | hello | 30 | 40 | \n" +
-                "  Scenario: \n" +
-                "    When GET /balance/(account_id:number)\n" +
-                "    Then status 200\n" +
-                "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}" +
-                ""
+        val contractGherkin = """Feature: Contract for /balance API
+
+  Scenario Outline: 
+    When GET /balance/(account_id:number)
+    Then status 200
+    And response-body {calls_left: "(number)", messages_left: "(number)"}
+
+  Examples:
+  | account_id | calls_left | messages_left | 
+  | 10 | 20 | 30 | 
+  | hello | 30 | 40 | 
+    """
         Assertions.assertThrows(ContractParseException::class.java) { jsonResponsesTestsShouldBeVerifiedAgainstTable(contractGherkin) }
     }
 
@@ -236,17 +218,18 @@ Feature: Contract for /balance API
     @Test
     @Throws(Throwable::class)
     fun POSTBodyAndResponseXMLGeneratedThroughDataTable() {
-        val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Background: \n" +
-                "    | account_id | name | city | \n" +
-                "    | 10 | John Doe | Mumbai | \n" +
-                "    | 20 | Jane Doe | Bangalore | \n" +
-                "  Scenario: \n" +
-                "    When POST /account\n" +
-                "    And request-body <account><name>(string)</name><city>(string)</city></account>\n" +
-                "    Then status 200\n" +
-                "    And response-body <account><account_id>(number)</account_id></account>" +
-                ""
+        val contractGherkin = """Feature: Contract for /balance API
+
+  Scenario Outline: 
+    When POST /account
+    And request-body <account><name>(string)</name><city>(string)</city></account>
+    Then status 200
+    And response-body <account><account_id>(number)</account_id></account>
+  Examples: 
+    | account_id | name | city | 
+    | 10 | John Doe | Mumbai | 
+    | 20 | Jane Doe | Bangalore | 
+    """
         xmlRequestAndResponseTest(contractGherkin)
     }
 
@@ -281,13 +264,5 @@ Feature: Contract for /balance API
 
             override fun setServerState(serverState: Map<String, Any?>) {}
         })
-    }
-
-    companion object {
-        private fun toGherkinDocument(gherkinData: String): GherkinDocument {
-            val idGenerator: IdGenerator = Incrementing()
-            val parser = Parser(GherkinDocumentBuilder(idGenerator))
-            return parser.parse(gherkinData).build()
-        }
     }
 }

@@ -293,18 +293,19 @@ Feature: Contract for /balance API
     @Test
     @Throws(Throwable::class)
     fun scenarioMatchesWhenFactIsSetupWithoutFixtureData() {
-        val contractGherkin = "Feature: Contract for /locations API\n" +
-                "Background:\n" +
-                "| cities_exist | \n" +
-                "| city_list | \n" +
-                "  Scenario: \n" +
-                "    * fixture city_list {\"cities\": [{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}]}\n" +
-                "    * pattern City {\"city\": \"(string)\"}\n" +
-                "    * pattern Cities {\"cities\": [\"(City*)\"]}\n" +
-                "    Given fact cities_exist \n" +
-                "    When GET /locations\n" +
-                "    Then status 200\n" +
-                "    And response-body (Cities)"
+        val contractGherkin = """Feature: Contract for /locations API
+  Scenario Outline: 
+    * fixture city_list {"cities": [{"city": "Mumbai"}, {"city": "Bangalore"}]}
+    * pattern City {"city": "(string)"}
+    * pattern Cities {"cities": ["(City*)"]}
+    Given fact cities_exist 
+    When GET /locations
+    Then status 200
+    And response-body (Cities)
+  Examples:
+  | cities_exist | 
+  | city_list | 
+    """
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val httpResponse: HttpResponse
         val httpRequest: HttpRequest = HttpRequest().setMethod("GET").updatePath("/locations")

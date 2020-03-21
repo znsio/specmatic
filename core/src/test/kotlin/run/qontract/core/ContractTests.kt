@@ -149,10 +149,6 @@ Examples:
     companion object {
         var contractGherkin = """
             Feature: Contract for the balance service
-            
-                Background:
-                | userid |
-                | 12345 |
                 
                 Scenario: Should be able to get the balance for an individual
                   Given fact userid
@@ -160,26 +156,34 @@ Examples:
                   Then status 200
                   And response-header Content-Length (number)
                   And response-body {call-mins-left: "(number)", sms-messages-left: "(number)"}
+            
+                Examples:
+                | userid |
+                | 12345 |
                   
                 Scenario: Should be able to get the balance for an individual
                   Given fact no_user
                   When GET /balance?userid=(number)
                   Then status 404
                   And response-header Content-Length (number)
+            
+                Examples:
+                | userid |
+                | 12345 |
                 """
         var pathParameterContractGherkin = """
                 Feature: Contract for the balance service
                 
-                Background:
-                | userid |
-                | 12345  |
-                
-                Scenario: Should be able to get the balance for an individual
+                Scenario Outline: Should be able to get the balance for an individual
                   Given fact userid
                   When GET /balance/(userid:number)
                   Then status 200
                   And response-header Content-Length (number)
                   And response-body {call-mins-left: "(number)", sms-messages-left: "(number)"}
+
+                Examples:
+                | userid |
+                | 12345  |
                 """
     }
 }

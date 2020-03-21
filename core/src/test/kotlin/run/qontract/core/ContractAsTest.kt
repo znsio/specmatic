@@ -409,17 +409,18 @@ Scenario: GET /balance Error:
     @Test
     @Throws(Throwable::class)
     fun dataInDatatablesPassedAsFactsDuringSetup() {
-        val contractGherkin = "Feature: Contract for /balance API\n" +
-                "\n" +
-                "  Background:\n" +
-                "  | userid | name |\n" +
-                "  | 10       | jack    |\n" +
-                "\n" +
-                "  Scenario: \n" +
-                "    Given fact userid\n" +
-                "    When GET /accounts?userid=(number)\n" +
-                "    Then status 200\n" +
-                "    And response-body {\"name\": \"(string)\"}\n"
+        val contractGherkin = """Feature: Contract for /balance API
+
+  Scenario Outline: 
+    Given fact userid
+    When GET /accounts?userid=(number)
+    Then status 200
+    And response-body {"name": "(string)"}
+
+  Examples:
+  | userid | name |
+  | 10       | jack    |
+"""
         val contractBehaviour = ContractBehaviour(contractGherkin)
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -651,18 +652,19 @@ Scenario: GET /balance Error:
     @Test
     @Throws(Throwable::class)
     fun serverSetupDoneUsingFixtureDataWithTables() {
-        val contractGherkin = "Feature: Contract for /locations API\n" +
-                "Background:\n" +
-                "| cities_exist | \n" +
-                "| city_list | \n" +
-                "  Scenario: \n" +
-                "    * fixture city_list {\"cities\": [{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}]}\n" +
-                "    * pattern City {\"city\": \"(string)\"}\n" +
-                "    * pattern Cities {\"cities\": [\"(City*)\"]}\n" +
-                "    Given fact cities_exist \n" +
-                "    When GET /locations\n" +
-                "    Then status 200\n" +
-                "    And response-body (Cities)"
+        val contractGherkin = """Feature: Contract for /locations API
+  Scenario Outline: 
+    * fixture city_list {"cities": [{"city": "Mumbai"}, {"city": "Bangalore"}]}
+    * pattern City {"city": "(string)"}
+    * pattern Cities {"cities": ["(City*)"]}
+    Given fact cities_exist 
+    When GET /locations
+    Then status 200
+    And response-body (Cities)
+  Examples:
+  | cities_exist | 
+  | city_list | 
+    """
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val setupStatus = arrayOf("Setup didn\"t happen")
         val setupSuccess = "Setup happened"

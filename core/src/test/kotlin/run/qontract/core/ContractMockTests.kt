@@ -237,13 +237,9 @@ Scenario: JSON API to get account details with fact check
     }
 
     @Test
-    @Throws(Throwable::class)
     fun `contract mock should function without needing complex fixture setup`() {
         val contractGherkin = """Feature: Contract for /locations API
-Background:
-| cities_exist | 
-| city_list | 
-  Scenario: 
+  Scenario Outline: 
     * fixture city_list {"cities": [{"city": "Mumbai"}, {"city": "Bangalore"}]}
     * pattern City {"city": "(string)"}
     * pattern Cities {"cities": ["(City*)"]}
@@ -251,7 +247,12 @@ Background:
     When GET /locations
     Then status 200
     And response-body (Cities)
-    And response-header Content-Type text/plain"""
+    And response-header Content-Type text/plain
+    
+  Examples:
+  | cities_exist | 
+  | city_list | 
+    """
         ContractMock.fromGherkin(contractGherkin).use { mock ->
             mock.start()
             val expectedRequest = HttpRequest().setMethod("GET").updatePath("/locations")

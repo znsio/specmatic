@@ -7,7 +7,6 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.Messages.GherkinDocument
 import run.qontract.core.pattern.*
 import run.qontract.core.pattern.PatternTable.Companion.examplesFrom
-import run.qontract.core.pattern.PatternTable.Companion.fromPSV
 import run.qontract.core.utilities.jsonStringToMap
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.test.TestExecutor
@@ -233,22 +232,13 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, ba
     featureChildren.filter {
         it.valueCase.name != "BACKGROUND"
     }.map { feature ->
-        val info = backgroundInfo.copy(scenarioName = feature.scenario.name)
-        lexScenario(feature.scenario.stepsList, feature.scenario.examplesList, info)
+        val backgroundInfoCopy = backgroundInfo.copy(scenarioName = feature.scenario.name)
+        lexScenario(feature.scenario.stepsList, feature.scenario.examplesList, backgroundInfoCopy)
     }.map { scenarioInfo ->
         Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, HashMap(scenarioInfo.expectedServerState), scenarioInfo.examples, HashMap(scenarioInfo.patterns), HashMap(scenarioInfo.fixtures))
     }
 
-private fun lexBackground(featureChildren: MutableList<GherkinDocument.Feature.FeatureChild>): ScenarioInfo {
-    return featureChildren.find { it.valueCase.name == "BACKGROUND" }?.let { feature ->
-        val info = ScenarioInfo(scenarioName = feature.scenario.name).let {
-            val backgroundTable = fromPSV(feature.background.description)
-            when {
-                !backgroundTable.isEmpty -> it.copy(examples = it.examples.plus(backgroundTable).toMutableList())
-                else -> it
-            }
-        }
-
-        lexScenario(feature.background.stepsList, listOf(), info)
+private fun lexBackground(featureChildren: MutableList<GherkinDocument.Feature.FeatureChild>): ScenarioInfo =
+    featureChildren.find { it.valueCase.name == "BACKGROUND" }?.let { feature ->
+        lexScenario(feature.background.stepsList, listOf(), ScenarioInfo())
     } ?: ScenarioInfo()
-}

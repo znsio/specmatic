@@ -9,5 +9,7 @@ interface Pattern {
     fun generate(resolver: Resolver): Value
     fun newBasedOn(row: Row, resolver: Resolver): List<Pattern>
 
+    fun parse(value: String, resolver: Resolver): Value
+
     val pattern: Any
 }

@@ -15,4 +15,7 @@ data class LazyPattern(override val pattern: String, val key: String? = null) : 
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
         resolver.getPattern(pattern).newBasedOn(row, resolver)
+
+    override fun parse(value: String, resolver: Resolver): Value =
+        resolver.getPattern(pattern).parse(value, resolver)
 }

@@ -45,7 +45,7 @@ class SetupServerState {
     @Throws(Throwable::class)
     private fun setupServerStateTest(contractGherkin: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("GET").updatePath("/balance").setQueryParam("account_id", "54321")
+        val request = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account_id", "54321")
         contractBehaviour.setServerState(object : HashMap<String, Any>() {
             init {
                 put("account_id", 54321)
@@ -208,7 +208,7 @@ Feature: Contract for /balance API
                 "    Then status 200\n" +
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val httpRequest = HttpRequest().setMethod("GET").updatePath("/accounts").setQueryParam("userid", "10")
+        val httpRequest = HttpRequest().updateMethod("GET").updatePath("/accounts").updateQueryParam("userid", "10")
         contractBehaviour.setServerState(object : HashMap<String, Any>() {
             init {
                 put("userid", 10)
@@ -240,7 +240,7 @@ Feature: Contract for /balance API
             }
         }
         contractBehaviour.setServerState(serverState)
-        val request = HttpRequest().setMethod("POST").updatePath("/account").setBody("{\"account_id\": 10}")
+        val request = HttpRequest().updateMethod("POST").updatePath("/account").updateBody("{\"account_id\": 10}")
         val response = contractBehaviour.lookup(request)
         Assertions.assertNotNull(response)
         assertEquals(200, response.status)
@@ -266,7 +266,7 @@ Feature: Contract for /balance API
             }
         }
         contractBehaviour.setServerState(serverState)
-        val request = HttpRequest().setMethod("POST").updatePath("/account").setBody("<account_id>10</account_id>")
+        val request = HttpRequest().updateMethod("POST").updatePath("/account").updateBody("<account_id>10</account_id>")
         val response = contractBehaviour.lookup(request)
         Assertions.assertNotNull(response)
         assertEquals(200, response.status)
@@ -292,7 +292,7 @@ Feature: Contract for /balance API
             }
         }
         contractBehaviour.setServerState(serverState)
-        val request = HttpRequest().setMethod("POST").updatePath("/account").setBody("<account account_id=\"10\">(string)</account>")
+        val request = HttpRequest().updateMethod("POST").updatePath("/account").updateBody("<account account_id=\"10\">(string)</account>")
         val response = contractBehaviour.lookup(request)
         Assertions.assertNotNull(response)
         assertEquals(200, response.status)

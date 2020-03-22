@@ -227,6 +227,8 @@ class XMLPattern : Pattern {
         return listOf(XMLPattern(newDocument))
     }
 
+    override fun parse(value: String, resolver: Resolver): Value = XMLValue(parseXML(value))
+
     @Throws(Throwable::class)
     private fun updateBasedOnRow(node: Node, row: Row, resolver: Resolver) {
         if (node.hasAttributes()) {

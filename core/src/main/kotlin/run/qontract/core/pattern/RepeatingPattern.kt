@@ -1,5 +1,6 @@
 package run.qontract.core.pattern
 
+import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.value.JSONArrayValue
@@ -28,6 +29,7 @@ data class RepeatingPattern(val patternSpec: String) : Pattern {
 
     override fun generate(resolver: Resolver): Value = JSONArrayValue(generateMultipleValues(cleanPatternSpec, resolver))
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = newBasedOn(listOf(patternSpec), row, resolver)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
 
     override val pattern: Any = patternSpec
 }

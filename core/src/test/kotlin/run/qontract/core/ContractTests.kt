@@ -10,10 +10,14 @@ import run.qontract.core.utilities.brokerURL
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.NumberValue
 import run.qontract.test.TestExecutor
 import java.io.IOException
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ContractTests {
     @Test
@@ -144,6 +148,106 @@ Examples:
         })
 
         assertEquals(10, flags["optional"])
+    }
+
+    @Test
+    fun `when form fields exist in request, the corresponding content-type should exist in the headers` () {
+        val gherkin = """
+Feature: Math API
+
+Scenario:
+When POST /square
+    And form-field number (number)
+Then status 200
+    And response-body (number)
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableMapOf<String, Boolean>()
+
+        val executionInfo = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertEquals("application/x-www-form-urlencoded", request.headers.getOrDefault("Content-Type", ""))
+                flags["parsed number"] = true
+                return HttpResponse(200, "100")
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        if(executionInfo.hasErrors)
+            executionInfo.print()
+
+        assertFalse(executionInfo.hasErrors)
+        assertTrue(flags.getValue("parsed number"))
+    }
+
+    @Test
+    fun `form fields should be generated in a test` () {
+        val gherkin = """
+Feature: Math API
+
+Scenario:
+When POST /square
+    And form-field number (number)
+Then status 200
+    And response-body (number)
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableMapOf<String, Boolean>()
+
+        val executionInfo = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertTrue(NumberTypePattern().parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
+                flags["parsed number"] = true
+                return HttpResponse(200, "100")
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        if(executionInfo.hasErrors)
+            executionInfo.print()
+
+        assertFalse(executionInfo.hasErrors)
+        assertTrue(flags.getValue("parsed number"))
+    }
+
+    @Test
+    fun `form fields specified as a table should be generated in a test` () {
+        val gherkin = """
+Feature: Math API
+
+Scenario:
+When POST /square
+    And form-field
+    | number | (number) |
+Then status 200
+    And response-body (number)
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableMapOf<String, Boolean>()
+
+        val executionInfo = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertTrue(NumberTypePattern().parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
+                flags["parsed number"] = true
+                return HttpResponse(200, "100")
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        if(executionInfo.hasErrors)
+            executionInfo.print()
+
+        assertFalse(executionInfo.hasErrors)
+        assertTrue(flags.getValue("parsed number"))
     }
 
     companion object {

@@ -19,7 +19,7 @@ class XMLMatching {
                 "    And response-body <account type=\"(string)\"><name>(string)</name><address>(string)</address><age>(number)</age></account>\n" +
                 ""
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("GET").updatePath("/balance").setQueryParam("account_id", "10")
+        val request = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account_id", "10")
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
         val root = parseXML(response.body ?: "").documentElement
@@ -44,7 +44,7 @@ class XMLMatching {
                 "    Then status 200\n" +
                 ""
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("POST").updatePath("/balance").setBody("<account type=\"user\"><name>John</name><address>Mumbai</address><age>25</age></account>")
+        val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("<account type=\"user\"><name>John</name><address>Mumbai</address><age>25</age></account>")
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
     }

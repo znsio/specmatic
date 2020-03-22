@@ -22,6 +22,7 @@ class NumericStringPattern : Pattern {
     override fun generate(resolver: Resolver): Value = NumberValue(Random().nextInt(1000))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
+    override fun parse(value: String, resolver: Resolver): Value = NumberValue(convertToNumber(value))
 
     override val pattern: Any = "(number)"
 }

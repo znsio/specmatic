@@ -93,14 +93,16 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
         multipleValidKeys(rows, row) { pattern ->
-            multipleValidPatterns(pattern, row, resolver)
+            newBasedOn(pattern, row, resolver)
         }.map { TabularPattern(it) }
+
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
 
     override val pattern: Any = rows
 }
 
-fun multipleValidPatterns(jsonPattern: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
-    val patternCollection = jsonPattern.mapValues { (key, pattern) ->
+fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
+    val patternCollection = patternMap.mapValues { (key, pattern) ->
         val cleanKey = withoutOptionality(key)
         when {
             pattern is LazyPattern -> pattern.copy(key=key).newBasedOn(row, resolver)
@@ -130,11 +132,11 @@ fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): Li
             }
 }
 
-fun <ValueType> multipleValidKeys(jsonPattern: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
-    keySets(jsonPattern.keys.toList(), row).map { keySet ->
-        jsonPattern.filterKeys { key -> key in keySet }
-    }.map { newJsonPattern ->
-        creator(newJsonPattern)
+fun <ValueType> multipleValidKeys(patternMap: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
+    keySets(patternMap.keys.toList(), row).map { keySet ->
+        patternMap.filterKeys { key -> key in keySet }
+    }.map { newPattern ->
+        creator(newPattern)
     }.flatten()
 
 internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {

@@ -11,7 +11,7 @@ class TestHttpClient {
     @Test
     @Throws(Throwable::class)
     fun clientShouldGenerateRequestAndParseResponse() {
-        val request = HttpRequest().setMethod("POST").updatePath("/balance").setQueryParam("account-id", "10").setBody("{name: \"Sherlock\", address: \"221 Baker Street\"}")
+        val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateQueryParam("account-id", "10").updateBody("{name: \"Sherlock\", address: \"221 Baker Street\"}")
         val contractGherkin = "" +
                 "Feature: Unit test\n\n" +
                 "  Scenario: Unit test\n" +
@@ -35,7 +35,7 @@ class TestHttpClient {
     @Test
     @Throws(Throwable::class)
     fun clientShouldPerformServerSetup() {
-        val request = HttpRequest().setMethod("POST").updatePath("/balance").setQueryParam("account-id", "10").setBody("{name: \"Sherlock\", address: \"221 Baker Street\"}")
+        val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateQueryParam("account-id", "10").updateBody("{name: \"Sherlock\", address: \"221 Baker Street\"}")
         val contractGherkin = "" +
                 "Feature: Unit test\n\n" +
                 "  Scenario: Unit test\n" +

@@ -14,15 +14,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-open class HttpRequest : Cloneable {
-    var path: String? = null
-    var method: String? = null
-        private set
-    val headers: HashMap<String?, String?> = HashMap()
-    var body: Value? = NoValue()
-        private set
-    var queryParams: HashMap<String, String> = HashMap()
-
+data class HttpRequest(var method: String? = null, var path: String? = null, val headers: HashMap<String?, String?> = HashMap(), var body: Value? = NoValue(), var queryParams: HashMap<String, String> = HashMap(), val formFields: Map<String, String> = emptyMap()) {
     private fun updateQueryParams(queryParams: Map<String, String>) {
         this.queryParams.putAll(queryParams)
     }
@@ -39,50 +31,43 @@ open class HttpRequest : Cloneable {
         return this
     }
 
-    fun setQueryParam(key: String, value: String): HttpRequest {
+    fun updateQueryParam(key: String, value: String): HttpRequest {
         queryParams[key] = value
         return this
     }
 
-    fun setBody(body: Value): HttpRequest {
+    fun updateBody(body: Value): HttpRequest {
         this.body = body
         return this
     }
 
-    fun setBody(body: String?): HttpRequest {
+    fun updateBody(body: String?): HttpRequest {
         this.body = parsedValue(body)
         return this
     }
 
-    @Throws(UnsupportedEncodingException::class)
     fun updateWith(url: URI) {
         path = url.path
         queryParams = parseQuery(url.query)
     }
 
-    @Throws(CloneNotSupportedException::class)
-    public override fun clone(): Any {
-        return super.clone()
-    }
-
-    fun setMethod(name: String): HttpRequest {
+    fun updateMethod(name: String): HttpRequest {
         method = name.toUpperCase()
         return this
     }
 
-    private fun setBody(contentBuffer: ByteBuf) {
+    private fun updateBody(contentBuffer: ByteBuf) {
         val bodyString = contentBuffer.toString(Charset.defaultCharset())
-        setBody(bodyString)
+        updateBody(bodyString)
     }
 
-    fun setHeader(key: String?, value: String?) {
+    fun updateHeader(key: String?, value: String?) {
         headers[key] = value
     }
 
     val bodyString: String
         get() = body.toString()
 
-    @Throws(UnsupportedEncodingException::class)
     fun getURL(baseURL: String?): String {
         val url = StringBuilder().append(baseURL).append(path)
         if (!queryParams.isEmpty()) {
@@ -98,7 +83,6 @@ open class HttpRequest : Cloneable {
         return url.toString()
     }
 
-    @Throws(HttpMockException::class)
     fun toJSON(): Map<String, Any?> {
         val requestMap = mutableMapOf<String, Any?>()
 
@@ -115,44 +99,17 @@ open class HttpRequest : Cloneable {
         headers.putAll(addedHeaders)
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (other !is HttpRequest) return false
-        val otherRequest = other as HttpRequest?
-        if (method != otherRequest!!.method
-                || path != otherRequest.path
-                || queryParams != otherRequest.queryParams
-                || headers != otherRequest.headers) return false
-        return if (body is NoValue && otherRequest.body is NoValue) true else body == otherRequest.body
-    }
-
-    override fun toString(): String {
-        return try {
-            toJSON().toString()
-        } catch (e: HttpMockException) {
-            "FAILED TO CONVERT RESPONSE TO JSON"
-        }
-    }
-
-    override fun hashCode(): Int {
-        var result = path?.hashCode() ?: 0
-        result = 31 * result + (method?.hashCode() ?: 0)
-        result = 31 * result + headers.hashCode()
-        result = 31 * result + (body?.hashCode() ?: 0)
-        result = 31 * result + queryParams.hashCode()
-        return result
-    }
-
     companion object {
         fun fromJSON(json: Map<String, Any?>): HttpRequest {
             val httpRequest = HttpRequest()
-            httpRequest.setMethod(json["method"] as String)
+            httpRequest.updateMethod(json["method"] as String)
             httpRequest.updatePath(if ("path" in json) json["path"] as String else "/")
             httpRequest.updateQueryParams(if ("query" in json)
                 (json["query"] as Map<String, Any>).mapValues { it.value.toString() }
             else HashMap())
             httpRequest.setHeaders(if ("headers" in json) json["headers"] as Map<String, String> else HashMap())
             if ("body" in json) {
-                httpRequest.setBody(json["body"] as String)
+                httpRequest.updateBody(json["body"] as String)
             }
             return httpRequest
         }

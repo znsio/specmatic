@@ -1,5 +1,6 @@
 package run.qontract.core.pattern
 
+import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.utilities.jsonStringToMap
 import run.qontract.core.Result
@@ -41,6 +42,7 @@ class JSONObjectPattern : Pattern {
     override fun generate(resolver: Resolver) = JSONObjectValue(generate(pattern, resolver))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = newBasedOn(pattern, row, resolver)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
 }
 
 fun newBasedOn(jsonPattern: Map<String, Any?>, row: Row, resolver: Resolver): List<JSONObjectPattern> {

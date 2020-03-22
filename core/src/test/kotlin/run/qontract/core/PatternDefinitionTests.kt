@@ -24,7 +24,7 @@ class PatternDefinitionTests {
                 "    Then status 200\n" +
                 "    And response-body {\"name\": \"(string)\"}"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("GET").updatePath("/accounts").setQueryParam("id", "10")
+        val request = HttpRequest().updateMethod("GET").updatePath("/accounts").updateQueryParam("id", "10")
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body)
@@ -41,7 +41,7 @@ class PatternDefinitionTests {
                 "    And request-body {\"name\": \"(string)\", \"address\": \"(Address)\"}\n" +
                 "    Then status 200\n"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("POST").updatePath("/accounts").setBody("{\"name\": \"Jerry\", \"address\": {\"city\": \"Mumbai\"}}")
+        val request = HttpRequest().updateMethod("POST").updatePath("/accounts").updateBody("{\"name\": \"Jerry\", \"address\": {\"city\": \"Mumbai\"}}")
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
     }
@@ -56,7 +56,7 @@ class PatternDefinitionTests {
                 "    And request-body <location>(Location)</location> \n" +
                 "    Then status 200\n"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("POST").updatePath("/locations").setBody("<location><city>Mumbai</city></location>")
+        val request = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody("<location><city>Mumbai</city></location>")
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
     }
@@ -72,7 +72,7 @@ class PatternDefinitionTests {
                 "    Then status 200\n"
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val requestBody = "{\"addresses\": [{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}]}"
-        val request = HttpRequest().setMethod("POST").updatePath("/addresses").setBody(requestBody)
+        val request = HttpRequest().updateMethod("POST").updatePath("/addresses").updateBody(requestBody)
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
     }
@@ -88,7 +88,7 @@ class PatternDefinitionTests {
                 "    Then status 200\n"
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val requestBody = "<locations><city>Mumbai></city><city>Bangalore</city></locations>"
-        val request = HttpRequest().setMethod("POST").updatePath("/locations").setBody(requestBody)
+        val request = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody(requestBody)
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
     }
@@ -103,7 +103,7 @@ class PatternDefinitionTests {
                 "    Then status 200\n" +
                 "    And response-body {\"addresses\": [\"(Address*)\"]}"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("GET").updatePath("/addresses")
+        val request = HttpRequest().updateMethod("GET").updatePath("/addresses")
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
         val responseObject = JSONObject(response.body)
@@ -125,7 +125,7 @@ class PatternDefinitionTests {
                 "    Then status 200\n" +
                 "    And response-body <locations>(Location*)</locations>\n"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("GET").updatePath("/locations")
+        val request = HttpRequest().updateMethod("GET").updatePath("/locations")
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
         val document = parseXML(response.body ?: "")
@@ -150,7 +150,7 @@ class PatternDefinitionTests {
                 "    And request-body (Person)\n" +
                 "    Then status 200"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("POST").updatePath("/accounts").setBody("{\"id\": 10, \"name\": \"John Doe\"}")
+        val request = HttpRequest().updateMethod("POST").updatePath("/accounts").updateBody("{\"id\": 10, \"name\": \"John Doe\"}")
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
     }
@@ -165,7 +165,7 @@ class PatternDefinitionTests {
                 "    Then status 200\n" +
                 "    And response-body (Person)"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("GET").updatePath("/accounts").setQueryParam("id", "10")
+        val request = HttpRequest().updateMethod("GET").updatePath("/accounts").updateQueryParam("id", "10")
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body)
@@ -186,7 +186,7 @@ class PatternDefinitionTests {
                 "    Then status 200\n" +
                 "    And response-body (Ids)"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val request = HttpRequest().setMethod("POST").updatePath("/accounts").setBody("[{\"id\": 10, \"name\": \"John Doe\"}, {\"id\": 20, \"name\": \"Jane Doe\"}]")
+        val request = HttpRequest().updateMethod("POST").updatePath("/accounts").updateBody("[{\"id\": 10, \"name\": \"John Doe\"}, {\"id\": 20, \"name\": \"Jane Doe\"}]")
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
         val responseArray = JSONArray(response.body)

@@ -35,7 +35,7 @@ internal class HttpRequestPatternTest {
         }
         val httpRequest = HttpRequest().also {
             it.updateWith(URI("/matching_path"))
-            it.setMethod("GET")
+            it.updateMethod("GET")
         }
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
@@ -55,8 +55,8 @@ internal class HttpRequestPatternTest {
         }
         val httpRequest = HttpRequest().also {
             it.updateWith(URI("/matching_path"))
-            it.setMethod("POST")
-            it.setBody("{unmatchedKey: unmatchedValue}")
+            it.updateMethod("POST")
+            it.updateBody("{unmatchedKey: unmatchedValue}")
         }
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Result.Failure::class.java)
@@ -77,8 +77,8 @@ internal class HttpRequestPatternTest {
         }
         val httpRequest = HttpRequest().also {
             it.updateWith(URI("/matching_path"))
-            it.setMethod("POST")
-            it.setBody("{name: Krishnan}")
+            it.updateMethod("POST")
+            it.updateBody("{name: Krishnan}")
         }
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Result.Success::class.java)

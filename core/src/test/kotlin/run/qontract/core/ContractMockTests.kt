@@ -94,8 +94,8 @@ Scenario: JSON API to get account details with fact check
 
     @TestFactory
     fun `mock should validate expectations and serve json`() = listOf(
-            queryParamJsonContract to HttpRequest().setMethod("GET").updatePath("/balance_json").setQueryParam("userid", "10"),
-            pathParametersJsonContract to HttpRequest().setMethod("GET").updatePath("/balance_json/10")
+            queryParamJsonContract to HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10"),
+            pathParametersJsonContract to HttpRequest().updateMethod("GET").updatePath("/balance_json/10")
     ).map { (contractGherkinString, httpRequest) ->
         DynamicTest.dynamicTest("when url is ${httpRequest.getURL("")}") {
             val httpResponse = HttpResponse.jsonResponse("{call-mins-left: 100, sms-messages-left: 200}")
@@ -109,8 +109,8 @@ Scenario: JSON API to get account details with fact check
 
     @TestFactory
     fun `mock should validate expectations and serve xml`() = listOf(
-            queryParameterXmlContract to HttpRequest().setMethod("GET").updatePath("/balance_xml").setQueryParam("userid", "10"),
-            pathParametersXmlContract to HttpRequest().setMethod("GET").updatePath("/balance_xml/10")
+            queryParameterXmlContract to HttpRequest().updateMethod("GET").updatePath("/balance_xml").updateQueryParam("userid", "10"),
+            pathParametersXmlContract to HttpRequest().updateMethod("GET").updatePath("/balance_xml/10")
     ).map { (contractGherkinString, httpRequest) ->
         DynamicTest.dynamicTest("when url is ${httpRequest.getURL("")}") {
             val expectedResponse = HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>200</sms_messages_left></balance>")
@@ -128,7 +128,7 @@ Scenario: JSON API to get account details with fact check
     fun `contract mock should fail to match invalid body`() {
         ContractMock.fromGherkin(queryParamJsonContract).use { mock ->
             mock.start()
-            val expectedRequest = HttpRequest().setMethod("GET").updatePath("/balance_json").setQueryParam("userid", "10")
+            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
             val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: 100, smses-left: 200}")
             Assertions.assertThrows(NoMatchingScenario::class.java) { mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap())) }
         }
@@ -137,7 +137,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract mock should validate expectations and serve generated json`() {
-        val expectedRequest = HttpRequest().setMethod("GET").updatePath("/balance_json").setQueryParam("userid", "10")
+        val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: \"(number)\", sms-messages-left: 200}")
         val response = validateAndRespond(queryParamJsonContract, expectedRequest, expectedResponse, HashMap())
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
@@ -149,7 +149,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract mock should validate and serve response headers`() {
-        val expectedRequest = HttpRequest().setMethod("GET").updatePath("/balance_json").setQueryParam("userid", "10")
+        val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: \"(number)\", sms-messages-left: 200}").also {
             it.headers["token"] = "test"
         }
@@ -172,7 +172,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract mock should validate expectations and serve generated xml`() {
-        val expectedRequest = HttpRequest().setMethod("GET").updatePath("/balance_xml").setQueryParam("userid", "10")
+        val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_xml").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>(number)</sms_messages_left></balance>")
         val response = validateAndRespond(queryParameterXmlContract, expectedRequest, expectedResponse, HashMap())
         val xmlResponse = parseXML(response.body)
@@ -186,7 +186,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract should mock server state`() {
-        val expectedRequest = HttpRequest().setMethod("GET").updatePath("/account_json").setQueryParam("userid", "10")
+        val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/account_json").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.jsonResponse("{\"name\": \"John Doe\"}")
         val serverState: HashMap<String, Any> = hashMapOf("userid" to 10)
         val response = validateAndRespond(contractGherkin, expectedRequest, expectedResponse, serverState)
@@ -200,7 +200,7 @@ Scenario: JSON API to get account details with fact check
     fun `contract should mock multi valued arrays in request body`() {
         ContractMock.fromGherkin(contractGherkin).use { mock ->
             mock.start()
-            val expectedRequest = HttpRequest().setMethod("GET").updatePath("/locations")
+            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
             val emptyServerState = HashMap<String, Any>()
@@ -213,7 +213,7 @@ Scenario: JSON API to get account details with fact check
     fun `contract should mock multi valued arrays using pattern in request body`() {
         ContractMock.fromGherkin(contractGherkin).use { mock ->
             mock.start()
-            val expectedRequest = HttpRequest().setMethod("GET").updatePath("/special_locations")
+            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/special_locations")
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
             val emptyServerState = HashMap<String, Any>()
@@ -227,7 +227,7 @@ Scenario: JSON API to get account details with fact check
         ContractMock.fromGherkin(contractGherkin).use { mock ->
             mock.start()
             val requestBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
-            val expectedRequest = HttpRequest().setMethod("POST").updatePath("/locations").setBody(requestBody)
+            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody(requestBody)
             val expectedResponse = HttpResponse.EMPTY_200.also {
                 it.headers["Content-Type"] = "application/json"
             }
@@ -255,7 +255,7 @@ Scenario: JSON API to get account details with fact check
     """
         ContractMock.fromGherkin(contractGherkin).use { mock ->
             mock.start()
-            val expectedRequest = HttpRequest().setMethod("GET").updatePath("/locations")
+            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val expectedResponse = HttpResponse(200, "{\"cities\":[{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}] }")
             val serverState: HashMap<String, Any> = hashMapOf("cities_exist" to true)
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, serverState))
@@ -284,7 +284,7 @@ Scenario: JSON API to get account details with fact check
 
         ContractMock.fromGherkin(contractGherkin).use { mock ->
             mock.start()
-            val expectedRequest = HttpRequest().setMethod("POST").updatePath("/number").setBody("10")
+            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody("10")
             val expectedResponse = HttpResponse(200, "10")
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
         }

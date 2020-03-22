@@ -94,7 +94,7 @@ Scenario: GET /balance Error:
 	Header "length" did not match
 	Expected: (number) Actual: abc
 	"abc" is not a Number
-	Request: {path=/balance, method=GET, headers={Content-Type=text/plain}, body=}
+	Request: HttpRequest(method=GET, path=/balance, headers={Content-Type=text/plain}, body=, queryParams={}, formFields={})
 	Response: {"status":200,"body":"{calls_left: 10, messages_left: 30}","status-text":"OK","headers":{"length":"abc","token":"test"}}
 """)
     }

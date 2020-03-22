@@ -13,25 +13,36 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.http.content.TextContent
-import io.ktor.request.httpMethod
-import io.ktor.request.path
-import io.ktor.request.receiveText
+import io.ktor.request.*
 import io.ktor.response.respond
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
+import run.qontract.core.pattern.parsedValue
+import run.qontract.core.value.NoValue
+import run.qontract.core.value.Value
 import java.io.Closeable
 import java.util.*
 
-internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall) =
-    HttpRequest().apply {
-        setMethod(call.request.httpMethod.value)
-        updatePath(call.request.path())
-        queryParams = toParams(call.request.queryParameters)
-        setBody(call.receiveText())
-    }
+internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
+    val(body, formFields) = bodyFromCall(call)
+
+    return HttpRequest(method = call.request.httpMethod.value,
+            path = call.request.path(),
+            headers = HashMap(),
+            body = body,
+            queryParams = toParams(call.request.queryParameters),
+            formFields = formFields)
+}
+
+private suspend fun bodyFromCall(call: ApplicationCall): Pair<Value, Map<String, String>> {
+    return if (call.request.contentType().match(ContentType.Application.FormUrlEncoded))
+        Pair(NoValue(), call.receiveParameters().toMap().mapValues { (_, values) -> values.first() })
+    else
+        Pair(parsedValue(call.receiveText()), emptyMap<String, String>())
+}
 
 internal fun toParams(queryParameters: Parameters) = HashMap(queryParameters.toMap().mapValues { it.value.first() })
 

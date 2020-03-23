@@ -15,7 +15,5 @@ Systems interact with each other through several means. Qontract hopes to addres
 * Libraries, SDK 
 * OS Level Pipes
 
-[Get started now](//qontract.run/documentation/getting_started.html)
+[Get started now](http://qontract.run/documentation/getting_started.html)
 ---
-
-

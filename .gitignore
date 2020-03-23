@@ -3,11 +3,8 @@ dependency-reduced-pom.xml
 *.iml
 target/*
 .DS_Store
-gradle/*
 .gradle/*
 **/build/*
 gen/*
 *.class
-gradlew
-gradlew.bat
 **/.zookeeper/*

@@ -5,7 +5,7 @@ import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.json.*
 import kotlinx.serialization.stringify
 
-@UseExperimental(ImplicitReflectionSerializer::class)
+@OptIn(ImplicitReflectionSerializer::class)
 fun arrayToJsonString(value: List<Any?>): String {
     val data = listToElements(value)
     return Json.nonstrict.stringify(data)
@@ -13,7 +13,7 @@ fun arrayToJsonString(value: List<Any?>): String {
 fun toMap(bytes: ByteArray) = jsonStringToMap(String(bytes))
 fun toMap(value: Value?) = jsonStringToMap(value.toString())
 
-@UseExperimental(ImplicitReflectionSerializer::class)
+@OptIn(ImplicitReflectionSerializer::class)
 fun jsonStringToMap(stringContent: String): MutableMap<String, Any?>  {
     val data = Json.nonstrict.parseJson(stringContent).jsonObject.toMap()
     return convertToMapAny(data)
@@ -35,7 +35,7 @@ fun convertToArrayAny(data: List<JsonElement>): List<Any?> {
     return data.map { toAnyValue(it) }
 }
 
-@UseExperimental(ImplicitReflectionSerializer::class)
+@OptIn(ImplicitReflectionSerializer::class)
 fun mapToJsonString(value: Map<String, Any?>): String {
     val data = mapToStringElement(value)
     return Json.nonstrict.stringify(data)

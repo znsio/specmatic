@@ -37,7 +37,7 @@ open class QontractJUnitSupport {
                     response = httpClient.execute(request)
                     it.matches(response)
                 } catch (exception: Throwable) {
-                    Result.Failure("Error: ${exception.message}")
+                    Result.Failure("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
                             .also { failure -> failure.updateScenario(it) }
                 }
                 ResultAssert.assertThat(result).isSuccess(request, response)

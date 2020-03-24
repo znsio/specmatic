@@ -30,19 +30,23 @@ class TestCommand : Callable<Void> {
 
     @Command
     fun run() {
-        System.setProperty("path", path)
-        System.setProperty("host", host)
-        System.setProperty("port", port.toString())
-        System.setProperty("suggestions", suggestionsPath)
-        val launcher = LauncherFactory.create()
-        val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
-                .selectors(selectClass(QontractJUnitSupport::class.java))
-                .build()
-        launcher.discover(request)
-        val contractExecutionListener = ContractExecutionListener()
-        launcher.registerTestExecutionListeners(contractExecutionListener)
-        launcher.execute(request)
-        contractExecutionListener.exitProcess()
+        try {
+            System.setProperty("path", path)
+            System.setProperty("host", host)
+            System.setProperty("port", port.toString())
+            System.setProperty("suggestions", suggestionsPath)
+            val launcher = LauncherFactory.create()
+            val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
+                    .selectors(selectClass(QontractJUnitSupport::class.java))
+                    .build()
+            launcher.discover(request)
+            val contractExecutionListener = ContractExecutionListener()
+            launcher.registerTestExecutionListeners(contractExecutionListener)
+            launcher.execute(request)
+            contractExecutionListener.exitProcess()
+        } catch (exception: Exception) {
+            println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
+        }
     }
 
     override fun call(): Void? {

@@ -6,4 +6,5 @@ rootProject.name = 'qontract'
 
 include 'application'
 include 'core'
+include 'junit5-support'
 

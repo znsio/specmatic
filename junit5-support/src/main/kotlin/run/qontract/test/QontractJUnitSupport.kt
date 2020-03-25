@@ -1,10 +1,9 @@
 package run.qontract.test
 
-import run.qontract.core.*
-import run.qontract.core.utilities.readFile
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
+import run.qontract.core.*
+import run.qontract.core.utilities.readFile
 import java.util.*
 
 open class QontractJUnitSupport {

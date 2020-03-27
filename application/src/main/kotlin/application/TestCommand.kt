@@ -44,7 +44,7 @@ class TestCommand : Callable<Void> {
             launcher.registerTestExecutionListeners(contractExecutionListener)
             launcher.execute(request)
             contractExecutionListener.exitProcess()
-        } catch (exception: Exception) {
+        } catch (exception: Throwable) {
             println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
         }
     }

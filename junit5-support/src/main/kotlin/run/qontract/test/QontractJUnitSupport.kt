@@ -13,8 +13,20 @@ open class QontractJUnitSupport {
         var testScenarios: List<Scenario>
         val path = System.getProperty("path")
         val suggestionsPath = System.getProperty("suggestions")
-        val contractGherkin = readFile(path)
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+
+        val contractGherkin = try {
+            readFile(path)
+        } catch (exception: Throwable) {
+            println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
+            throw exception
+        }
+
+        val contractBehaviour = try {
+            ContractBehaviour(contractGherkin)
+        } catch (exception: Throwable) {
+            println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
+            throw exception
+        }
 
         testScenarios = if (suggestionsPath.isNullOrEmpty()) {
             contractBehaviour.generateTestScenarios(LinkedList())

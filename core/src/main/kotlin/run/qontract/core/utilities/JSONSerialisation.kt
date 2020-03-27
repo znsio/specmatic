@@ -1,9 +1,10 @@
 package run.qontract.core.utilities
 
-import run.qontract.core.value.Value
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.json.*
 import kotlinx.serialization.stringify
+import run.qontract.core.ContractParseException
+import run.qontract.core.value.*
 
 @OptIn(ImplicitReflectionSerializer::class)
 fun arrayToJsonString(value: List<Any?>): String {
@@ -31,8 +32,27 @@ private fun toAnyValue(value: JsonElement): Any? =
         is JsonArray -> convertToArrayAny(value.toList()).toMutableList()
     }
 
-fun convertToArrayAny(data: List<JsonElement>): List<Any?> {
-    return data.map { toAnyValue(it) }
+private fun toValue(jsonElement: JsonElement): Value =
+    when (jsonElement) {
+        is JsonNull -> NullValue()
+        is JsonObject -> JSONObjectValue2(jsonElement.toMap().mapValues { toValue(it.value) })
+        is JsonArray -> JSONArrayValue2(jsonElement.toList().map { toValue(it) })
+        is JsonLiteral -> toLiteralValue(jsonElement)
+        else -> throw ContractParseException("Unknown value type: ${jsonElement.javaClass.name}")
+    }
+
+fun toLiteralValue(jsonElement: JsonLiteral): Value =
+    when {
+        jsonElement.isString -> StringValue(jsonElement.content)
+        jsonElement.booleanOrNull != null -> BooleanValue(jsonElement.boolean)
+        jsonElement.intOrNull != null -> NumberValue(jsonElement.int)
+        jsonElement.longOrNull != null -> NumberValue(jsonElement.long)
+        jsonElement.floatOrNull != null -> NumberValue(jsonElement.float)
+        else -> NumberValue(jsonElement.double)
+    }
+
+fun convertToArrayAny(data: List<JsonElement>): List<Any> {
+    return data.map { toValue(it) }
 }
 
 @OptIn(ImplicitReflectionSerializer::class)

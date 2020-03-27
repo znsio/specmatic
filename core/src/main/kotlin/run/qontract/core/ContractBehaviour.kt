@@ -153,7 +153,7 @@ private fun toPatternInfo(rest: String, rowsList: List<GherkinDocument.Feature.T
     return Pair(patternName, pattern)
 }
 
-private fun toFacts(rest: String, lookupTable: Map<String, Any>): MutableMap<String, Any> {
+private fun toFacts(rest: String, lookupTable: Map<String, Any>): Map<String, Any> {
     val facts = HashMap<String, Any>()
 
     try {
@@ -169,7 +169,7 @@ private fun toFacts(rest: String, lookupTable: Map<String, Any>): MutableMap<Str
     return facts
 }
 
-private fun lexScenario(steps: MutableList<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, backgroundScenarioInfo: ScenarioInfo): ScenarioInfo {
+private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, backgroundScenarioInfo: ScenarioInfo): ScenarioInfo {
     val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList) }.filterNot { it.isEmpty }
 
     val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo) { scenarioInfo, step ->
@@ -206,7 +206,7 @@ private fun lexScenario(steps: MutableList<GherkinDocument.Feature.Step>, exampl
     return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)))
 }
 
-fun plusFormFields(formFields: Map<String, Pattern>, rest: String, rowsList: MutableList<GherkinDocument.Feature.TableRow>): Map<String, Pattern> =
+fun plusFormFields(formFields: Map<String, Pattern>, rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): Map<String, Pattern> =
     formFields.plus(when(rowsList.size) {
         0 -> toQueryParams(rest).map { (key, value) -> key to value }
         else -> rowsList.map { row -> row.cellsList[0].value to row.cellsList[1].value }
@@ -219,7 +219,7 @@ fun plusHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHea
     val parts = breakIntoParts(rest, 2)
 
     return when (parts.size) {
-        2 -> headersPattern.copy(headers = headersPattern.headers.plus(parts[0] to parts[1]).toMutableMap())
+        2 -> headersPattern.copy(headers = headersPattern.headers.plus(parts[0] to parts[1]))
         else -> headersPattern
     }
 }
@@ -237,20 +237,24 @@ internal fun parseGherkinString(gherkinData: String): GherkinDocument {
 internal fun lex(gherkinDocument: GherkinDocument): List<Scenario> =
         lex(gherkinDocument.feature.childrenList)
 
-internal fun lex(featureChildren: MutableList<GherkinDocument.Feature.FeatureChild>): List<Scenario> =
+internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>): List<Scenario> =
     lex(featureChildren, lexBackground(featureChildren))
 
 internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, backgroundInfo: ScenarioInfo): List<Scenario> =
-    featureChildren.filter {
-        it.valueCase.name != "BACKGROUND"
-    }.map { feature ->
+    scenarios(featureChildren).map { feature ->
         val backgroundInfoCopy = backgroundInfo.copy(scenarioName = feature.scenario.name)
         lexScenario(feature.scenario.stepsList, feature.scenario.examplesList, backgroundInfoCopy)
     }.map { scenarioInfo ->
         Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, HashMap(scenarioInfo.expectedServerState), scenarioInfo.examples, HashMap(scenarioInfo.patterns), HashMap(scenarioInfo.fixtures))
     }
 
-private fun lexBackground(featureChildren: MutableList<GherkinDocument.Feature.FeatureChild>): ScenarioInfo =
-    featureChildren.find { it.valueCase.name == "BACKGROUND" }?.let { feature ->
+private fun lexBackground(featureChildren: List<GherkinDocument.Feature.FeatureChild>): ScenarioInfo =
+    background(featureChildren)?.let { feature ->
         lexScenario(feature.background.stepsList, listOf(), ScenarioInfo())
     } ?: ScenarioInfo()
+
+private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
+    featureChildren.firstOrNull { it.valueCase.name == "BACKGROUND" }
+
+private fun scenarios(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
+        featureChildren.filter { it.valueCase.name != "BACKGROUND" }

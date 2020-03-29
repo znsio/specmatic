@@ -2,32 +2,13 @@ package run.qontract.core.pattern
 
 import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
-import run.qontract.core.utilities.jsonStringToArray
 import run.qontract.core.Result
+import run.qontract.core.utilities.stringTooPatternArray
 import run.qontract.core.value.*
 import java.util.*
 
-@Throws(Exception::class)
-private fun matchesRepeating(pattern: String, arraySample: List<Any?>, startingIndex: Int, resolver: Resolver): Result {
-    for (index in startingIndex until arraySample.size) {
-        when (val result = asPattern(pattern, null).matches(asValue(arraySample[index] ?: NoValue()), resolver)) {
-            is Result.Failure -> return result.add("Expected array[$index] to match repeating pattern $pattern. Actual value: ${arraySample[index]} in array $arraySample")
-        }
-    }
-
-    return Result.Success()
-}
-
-class JSONArrayPattern : Pattern {
-    override val pattern = mutableListOf<Any?>()
-
-    constructor(jsonContent: String) {
-        pattern.addAll(jsonStringToArray(jsonContent))
-    }
-
-    constructor(jsonObject: List<Any?>) {
-        pattern.addAll(jsonObject)
-    }
+data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) : Pattern {
+    constructor(jsonString: String) : this(stringTooPatternArray(jsonString))
 
     private fun failedMessage(value: JSONArrayValue) = "JSON Array did not match Expected: $pattern Actual: ${value.list}"
 
@@ -41,21 +22,26 @@ class JSONArrayPattern : Pattern {
         if(sampleData.list.isEmpty())
             return Result.Success()
 
-        val resolverWithNumberType = resolver.copy().also {
-            it.addCustomPattern("(number)", NumberTypePattern())
+        val resolverWithNumberType = resolver.copy().apply {
+            addCustomPattern("(number)", NumberTypePattern())
         }
 
-        for (index in 0 until pattern.size) {
+        for (index in pattern.indices) {
             if(index == sampleData.list.size) return failed(sampleData)
             val sampleValue = sampleData.list[index]
-            val patternValue = pattern[index]
-            if (isRepeatingPattern(patternValue)) {
-                when (val result = matchesRepeating(extractPatternFromRepeatingToken(patternValue as Any), sampleData.list, index, resolverWithNumberType)) {
-                    is Result.Failure -> return result.add(failedMessage(sampleData))
+
+            when(val patternValue = pattern[index]) {
+                is RepeatingPattern -> {
+                    val slice = sampleData.list.slice(index..sampleData.list.lastIndex)
+                    return when (val result = patternValue.matches(JSONArrayValue(slice), resolver)) {
+                        is Result.Failure -> result.add(failedMessage(sampleData))
+                        else -> result
+                    }
                 }
-            } else {
-                when (val result = asPattern(patternValue, null).matches(asValue(sampleValue?: NoValue()), resolverWithNumberType)) {
-                    is Result.Failure -> return result.add("Expected array[$index] to match $patternValue. Actual value: $sampleValue in ${sampleData.list}")
+                else -> {
+                    when (val result = patternValue.matches(sampleValue, resolverWithNumberType)) {
+                        is Result.Failure -> return result.add("Expected value at index $index to match $patternValue. Actual value: $sampleValue in ${sampleData.list}")
+                    }
                 }
             }
         }
@@ -67,54 +53,33 @@ class JSONArrayPattern : Pattern {
         return JSONArrayValue(generate(pattern, resolver))
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = newBasedOn(pattern, row, resolver)
+    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONArrayPattern> = newBasedOn(pattern, row, resolver)
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
 }
 
-fun newBasedOn(jsonPattern: List<Any?>, row: Row, resolver: Resolver): List<JSONArrayPattern> {
-    val values = jsonPattern.map(::asValue).map { patternValue ->
-        when(patternValue) {
-            is StringValue ->
-                when {
-                    isLazyPattern(patternValue.string) -> LazyPattern(patternValue.string, null).newBasedOn(row, resolver).map { it.pattern }
-                    else -> listOf(patternValue.string)
-                }
-            is JSONObjectValue -> newBasedOn(patternValue.jsonObject, row, resolver)
-            is JSONArrayValue -> newBasedOn(patternValue.list, row, resolver)
-            else -> listOf(patternValue.value)
-        }
-    }
-
+fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<JSONArrayPattern> {
+    val values = jsonPattern.map { pattern -> pattern.newBasedOn(row, resolver) }
     return multipleValidValues(values).map { JSONArrayPattern(it) }
 }
 
-fun multipleValidValues(values: List<List<Any?>>): List<List<Any?>> {
+fun multipleValidValues(values: List<List<Pattern>>): List<List<Pattern>> {
     if(values.isEmpty())
-        return listOf(values)
+        return listOf(emptyList())
 
-    val value = values.takeLast(1)
+    val value: List<Pattern> = values.last()
     val subLists = multipleValidValues(values.dropLast(1))
 
-    return subLists.map { list ->
-        list + value
-    }
+    return subLists.map { list -> list.plus(value) }
 }
 
-fun generate(jsonPattern: List<Any?>, resolver: Resolver): MutableList<Any?> =
-    jsonPattern.flatMap {
-        if (isRepeatingPattern(it)) {
-            generateMultipleValues(extractPatternFromRepeatingToken(it as Any), resolver).toList()
-        } else {
-            listOf(asPattern(asValue(it).value, null).generate(resolver).value)
-        }
-    }.toMutableList()
+fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
+    jsonPattern.flatMap { pattern ->
+        when(pattern) {
+            is RepeatingPattern -> pattern.generate(resolver).list
+            else -> listOf(pattern.generate(resolver))
+        }}
 
-internal fun generateMultipleValues(pattern: String, resolver: Resolver): List<Any> =
-    0.until(randomNumber(10)).map {
-        when(val result = asPattern(asValue(pattern).value, null).generate(resolver).value) {
-            is Value -> result.value
-            else -> result
-        }
-    }
+internal fun generateMultipleValues(pattern: Pattern, resolver: Resolver): List<Value> =
+    0.until(randomNumber(10)).map { pattern.generate(resolver) }
 
 internal fun randomNumber(max: Int) = Random().nextInt(max - 1) + 1

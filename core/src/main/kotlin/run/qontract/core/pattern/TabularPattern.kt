@@ -3,9 +3,9 @@ package run.qontract.core.pattern
 import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.Value
 import io.cucumber.messages.Messages
+import run.qontract.core.utilities.NullPattern
+import run.qontract.core.value.*
 import run.qontract.test.ContractTestException
 
 fun flatZipPatternValue(map1: Map<String, Pattern>, map2: Map<String, Any?>): List<Triple<String, Pattern, Value>> {
@@ -14,7 +14,7 @@ fun flatZipPatternValue(map1: Map<String, Pattern>, map2: Map<String, Any?>): Li
     }
 }
 
-fun rowsToPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) =
+fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) =
         TabularPattern(rows.map { it.cellsList }.map { (key, value) ->
             key.value to convertTabularValueToPattern(value.value, null)
         }.toMap())
@@ -26,10 +26,10 @@ fun convertTabularValueToPattern(value: String, key: String?) =
                 isRepeatingPattern(trimmed) -> RepeatingPattern(trimmed)
                 lowered in primitivePatterns -> primitivePatterns.getOrDefault(lowered, UnknownPattern())
                 isPatternToken(trimmed) -> LazyPattern(trimmed, key)
-                trimmed.startsWith("\"") && trimmed.endsWith("\"") -> ExactMatchPattern(trimmed.removeSurrounding("\""))
-                lowered in listOf("true", "false") -> ExactMatchPattern(lowered.toBoolean())
-                lowered == "null" -> NoContentPattern()
-                else -> ExactMatchPattern(convertToNumber(trimmed))
+                trimmed.startsWith("\"") && trimmed.endsWith("\"") -> ExactMatchPattern(StringValue(trimmed.removeSurrounding("\"")))
+                lowered in listOf("true", "false") -> ExactMatchPattern(BooleanValue(lowered.toBoolean()))
+                lowered == "null" -> NullPattern()
+                else -> ExactMatchPattern(NumberValue(convertToNumber(trimmed)))
             }
         }
 
@@ -80,16 +80,12 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
 
     override fun generate(resolver: Resolver) =
             JSONObjectValue(rows.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
-                if(resolver.serverStateMatch.contains(key) && resolver.serverStateMatch.get(key) != true) {
-                    val stateValue = resolver.serverStateMatch.get(key)
-                    when(pattern.matches(asValue(resolver.serverStateMatch.get(key)), resolver)) {
-                        is Result.Failure -> throw ContractParseException("Server state $stateValue didn't match pattern ${pattern.pattern}")
-                        else -> stateValue
-                    }
-                } else {
-                    asPattern(pattern, key).generate(resolver).value
+                when {
+                    resolver.serverStateMatch.contains(key) && resolver.serverStateMatch.get(key) != true ->
+                        pattern.parse(resolver.serverStateMatch.get(key).toString(), resolver)
+                    else -> asPattern(pattern, key).generate(resolver)
                 }
-            }.toMutableMap())
+            })
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
         multipleValidKeys(rows, row) { pattern ->
@@ -103,18 +99,22 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
 
 fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
     val patternCollection = patternMap.mapValues { (key, pattern) ->
-        val cleanKey = withoutOptionality(key)
+        val keyWithoutOptionality = withoutOptionality(key)
+
         when {
-            pattern is LazyPattern -> pattern.copy(key=key).newBasedOn(row, resolver)
-            row.containsField(cleanKey) -> when {
-                isPrimitivePattern(pattern.pattern) -> listOf(ExactMatchPattern(parsePrimitive(pattern.pattern.toString(), row.getField(cleanKey).toString())))
-                else -> listOf(ExactMatchPattern(row.getField(key) ?: ""))
+            row.containsField(keyWithoutOptionality) -> {
+                val rowField = row.getField(keyWithoutOptionality).toString()
+                listOf(ExactMatchPattern(pattern.parse(rowField, resolver)))
             }
-            else -> listOf(pattern)
+            else ->
+                when (pattern) {
+                    is LazyPattern -> pattern.copy(key=key)
+                    else -> pattern
+                }.newBasedOn(row, resolver)
         }
     }
 
-    return patternList<Pattern>(patternCollection)
+    return patternList(patternCollection)
 }
 
 fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): List<Map<String, ValueType>> {

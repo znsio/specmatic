@@ -3,7 +3,6 @@ package run.qontract.mock
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
-import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.*
 import run.qontract.fake.ktorHttpRequestToHttpRequest
 import run.qontract.fake.respondToKtorHttpResponse
@@ -20,6 +19,7 @@ import kotlinx.coroutines.runBlocking
 import run.qontract.core.value.*
 import org.w3c.dom.Document
 import org.xml.sax.SAXException
+import run.qontract.core.pattern.parsedValue
 import java.io.Closeable
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
@@ -92,15 +92,8 @@ $expectationsString
 
     private fun matchesBody(actual: HttpRequest, expected: HttpRequest): Boolean {
         when(parsedValue(actual.body.toString())) {
-            is JSONObjectValue -> {
-                val mockedJSON = toMap(expected.body)
-                val requestJSON = toMap(actual.body)
-                if (mockedJSON != requestJSON) return false
-            }
-            is JSONArrayValue -> {
-                val mockedJSON = jsonStringToArray(expected.body?.toString() ?: "[]")
-                val requestJSON = jsonStringToArray(actual.body?.toString() ?: "")
-                if (mockedJSON != requestJSON) return false
+            is JSONObjectValue, is JSONArrayValue -> {
+                if(expected.body != actual.body) return false
             }
             is XMLValue -> {
                 try {
@@ -132,6 +125,49 @@ $expectationsString
 
         return true
     }
+
+//    private fun matchesBody(actual: HttpRequest, expected: HttpRequest): Boolean {
+//        when(parsedValue(actual.body.toString())) {
+//            is JSONObjectValue2 -> {
+//                val mockedJSON = toMap(expected.body)
+//                val requestJSON = toMap(actual.body)
+//                if (mockedJSON != requestJSON) return false
+//            }
+//            is JSONArrayValue -> {
+//                val mockedJSON = jsonStringToArray(expected.body?.toString() ?: "[]")
+//                val requestJSON = jsonStringToArray(actual.body?.toString() ?: "")
+//                if (mockedJSON != requestJSON) return false
+//            }
+//            is XMLValue -> {
+//                try {
+//                    val mockedXML = expected.body?.value as Document
+//                    val requestXML = parseXML(actual.body?.toString() ?: "")
+//
+//                    return mockedXML == requestXML
+//                } catch (e: ParserConfigurationException) {
+//                    e.printStackTrace()
+//                } catch (e: SAXException) {
+//                    e.printStackTrace()
+//                } catch (e: IOException) {
+//                    e.printStackTrace()
+//                }
+//
+//                return false
+//            }
+//            else -> {
+//                if(expected.body is NoValue && actual.body is StringValue) {
+//                    return actual.bodyString.isEmpty()
+//                } else if(expected.body is StringValue && actual.body is NoValue) {
+//                    return expected.bodyString.isEmpty()
+//                }
+//                else if(expected.body != actual.body) {
+//                    return false
+//                }
+//            }
+//        }
+//
+//        return true
+//    }
 
     private fun validateHttpMockRequest(request: HttpRequest) =
         when (request.body) {

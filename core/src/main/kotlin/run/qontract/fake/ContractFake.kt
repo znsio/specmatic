@@ -5,7 +5,6 @@ import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.utilities.contractGherkinForCurrentComponent
 import run.qontract.core.utilities.getContractGherkin
-import run.qontract.core.utilities.toMap
 import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline
 import io.ktor.application.call
@@ -21,6 +20,7 @@ import io.ktor.server.netty.Netty
 import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
 import run.qontract.core.pattern.parsedValue
+import run.qontract.core.utilities.toMap
 import run.qontract.core.value.NoValue
 import run.qontract.core.value.Value
 import java.io.Closeable

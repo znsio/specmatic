@@ -4,13 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
-import run.qontract.core.Contract.Companion.forService
-import run.qontract.core.Contract.Companion.fromGherkin
-import run.qontract.core.utilities.brokerURL
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import run.qontract.core.Contract.Companion.forService
+import run.qontract.core.Contract.Companion.fromGherkin
 import run.qontract.core.pattern.NumberTypePattern
+import run.qontract.core.utilities.brokerURL
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.test.TestExecutor

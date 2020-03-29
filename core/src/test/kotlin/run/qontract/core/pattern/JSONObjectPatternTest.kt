@@ -1,12 +1,12 @@
 package run.qontract.core.pattern
 
+import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.mustMatch
 import run.qontract.core.value.JSONObjectValue
-import org.assertj.core.api.Assertions.assertThat
-import org.json.JSONObject
-import org.junit.jupiter.api.Test
+import run.qontract.core.value.NumberValue
+import run.qontract.core.value.StringValue
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.test.assertEquals
@@ -42,7 +42,7 @@ internal class JSONObjectPatternTest {
         val resolver = Resolver(data)
 
         when (val value = parsedPattern("""{"id?": "(number)"}""", null).generate(resolver)) {
-            is JSONObjectValue -> assertEquals(12345, value.jsonObject["id"])
+            is JSONObjectValue -> assertEquals(12345, value.jsonObject["id"]?.value)
             else -> Exception("Expected JSONObjectValue, got ${value.javaClass}")
         }
     }
@@ -54,12 +54,14 @@ internal class JSONObjectPatternTest {
 
         val value = patterns.map { it.generate(Resolver()) }.map {
             if(it !is JSONObjectValue)
-                throw Exception("Expected JSONObjectValue, got ${it.javaClass}")
+                throw Exception("Expected JSONObjectValue2, got ${it.javaClass}")
 
-            it.jsonObject.getOrDefault("id", 0)
-        }.find { it == 12345 }
+            it.jsonObject.getOrDefault("id", NumberValue(0))
+        }.find {
+            it.value == 12345
+        }
 
-        assertEquals(12345, value)
+        assertEquals(12345, value?.value)
     }
 
     @Test
@@ -70,7 +72,7 @@ internal class JSONObjectPatternTest {
         if (pattern !is JSONObjectPattern)
             throw Exception("Expected JSONObjectPattern, got ${pattern.javaClass}")
 
-        assertEquals(10, pattern.generate(Resolver()).jsonObject["id"])
+        assertEquals(10, pattern.generate(Resolver()).jsonObject["id"]?.value)
     }
 
     @Test
@@ -87,7 +89,7 @@ internal class JSONObjectPatternTest {
         if (value !is JSONObjectValue)
             throw Exception("Expected JSONObjectValue, got ${value.javaClass}")
 
-        assertEquals(10, value.jsonObject["id"])
+        assertEquals(10, value.jsonObject["id"]?.value)
     }
 
     @Test
@@ -100,10 +102,24 @@ internal class JSONObjectPatternTest {
         val row = Row(listOf("city"), listOf("Mumbai"))
 
         val newPattern = personPattern.newBasedOn(row, resolver).first()
+        if(newPattern !is JSONObjectPattern)
+            throw AssertionError("Expected JSONObjectPattern, got ${newPattern.javaClass.name}")
 
-        val patternValue = newPattern.pattern as Map<String, Any?>
-        assertEquals("(string)", patternValue["name"])
-        assertEquals("Mumbai", (patternValue["address"] as Map<String, Any?>)["city"])
+        assertTrue(newPattern.pattern["name"] is StringPattern)
+
+        val addressPattern = newPattern.pattern["address"]
+        if(addressPattern !is JSONObjectPattern)
+            throw AssertionError("Expected JSONObjectPattern, got ${addressPattern?.javaClass?.name}")
+
+        val cityPattern = addressPattern.pattern["city"]
+        if(cityPattern !is ExactMatchPattern)
+            throw AssertionError("Expected ExactMatchPattern, got ${cityPattern?.javaClass?.name}")
+
+        val cityValue = cityPattern.pattern
+        if(cityValue !is StringValue)
+            throw AssertionError("Expected StringValue, got ${cityValue.javaClass.name}")
+
+        assertEquals("Mumbai", cityValue.string)
     }
 
     @Test
@@ -114,8 +130,10 @@ internal class JSONObjectPatternTest {
 
         val newPattern = personPattern.newBasedOn(Row(), resolver).first()
 
-        val patternValue = newPattern.pattern as Map<String, Any?>
-        assertEquals("(string)", patternValue["name"])
+        if(newPattern !is JSONObjectPattern)
+            throw AssertionError("Expected JSONObjectPattern, got ${newPattern.javaClass.name}")
+
+        assertTrue(newPattern.pattern["name"] is StringPattern)
     }
 
     @Test
@@ -123,10 +141,9 @@ internal class JSONObjectPatternTest {
         val patterns = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(Row(), Resolver())
 
         assertNotNull(patterns.find { pattern ->
-            val result = pattern.matches(JSONObjectValue(hashMapOf("id" to "abc")), Resolver())
+            val result = pattern.matches(JSONObjectValue(mapOf("id" to StringValue("abc"))), Resolver())
             result is Result.Failure && result.stackTrace() == Stack<String>().also { stack ->
                 stack.push("abc is not a Number")
-                stack.push("""Expected: (number) Actual: abc""")
                 stack.push("Expected: object[id] to match (number). Actual value: abc, in JSONObject {id=abc}")
             }
         })

@@ -8,7 +8,7 @@ import java.util.*
 
 class NumberTypePattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        return when(sampleData?.value is Number) {
+        return when(sampleData is NumberValue) {
             true -> Result.Success()
             false -> Result.Failure("${sampleData?.value} is not a Number")
         }

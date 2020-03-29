@@ -147,7 +147,7 @@ private fun toPatternInfo(rest: String, rowsList: List<GherkinDocument.Feature.T
     val patternDefinition = tokens.getOrElse(1) { "" }.trim()
 
     val pattern = when {
-        patternDefinition.isEmpty() -> rowsToPattern(rowsList)
+        patternDefinition.isEmpty() -> rowsToTabularPattern(rowsList)
         else -> parsedPattern(patternDefinition)
     }
     return Pair(patternName, pattern)

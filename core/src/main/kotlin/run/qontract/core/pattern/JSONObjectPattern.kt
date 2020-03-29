@@ -2,21 +2,13 @@ package run.qontract.core.pattern
 
 import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
-import run.qontract.core.utilities.jsonStringToMap
 import run.qontract.core.Result
 import run.qontract.core.utilities.flatZip
+import run.qontract.core.utilities.stringToPatternMap
 import run.qontract.core.value.*
 
-class JSONObjectPattern : Pattern {
-    override val pattern = mutableMapOf<String, Any?>()
-
-    constructor(data: Map<String, Any?>) {
-        pattern.putAll(data)
-    }
-
-    constructor(jsonContent: String) {
-        pattern.putAll(jsonStringToMap(jsonContent))
-    }
+data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap()) : Pattern {
+    constructor(jsonContent: String) : this(stringToPatternMap(jsonContent))
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
@@ -41,44 +33,12 @@ class JSONObjectPattern : Pattern {
 
     override fun generate(resolver: Resolver) = JSONObjectValue(generate(pattern, resolver))
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = newBasedOn(pattern, row, resolver)
+    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> =
+            newBasedOn(pattern, row, resolver).map { JSONObjectPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
 }
 
-fun newBasedOn(jsonPattern: Map<String, Any?>, row: Row, resolver: Resolver): List<JSONObjectPattern> {
-    return multipleValidKeys(jsonPattern, row) { pattern ->
-        multipleValidValues(pattern, row, resolver)
-    }.map { JSONObjectPattern(it) }
-}
-
-fun multipleValidValues(jsonPattern: Map<String, Any?>, row: Row, resolver: Resolver): List<Map<String, Any?>> {
-    val patternCollection = jsonPattern.mapValues { asValue(it.value) }.mapValues { (patternKey, patternValue) ->
-        when (patternValue) {
-            is StringValue ->
-                when {
-                    isLazyPattern(patternValue.string) -> LazyPattern(patternValue.string, patternKey).newBasedOn(row, resolver).map { it.pattern }
-                    row.containsField(withoutOptionality(patternKey)) -> {
-                        val cleanedUpPatternKey = withoutOptionality(patternKey)
-                        when {
-                            isPatternToken(patternValue.string) -> {
-                                val rowField = row.getField(cleanedUpPatternKey)?.toString() ?: ""
-                                listOf(parsePrimitive(patternValue.string, rowField))
-                            }
-                            else -> listOf(row.getField(cleanedUpPatternKey))
-                        }
-                    }
-                    else -> listOf(patternValue.string)
-                }
-            is JSONObjectValue -> multipleValidValues(patternValue.jsonObject, row, resolver)
-            is JSONArrayValue -> newBasedOn(patternValue.list, row, resolver)
-            else -> listOf(patternValue.value)
-        }
-    }
-
-    return patternList(patternCollection)
-}
-
-fun generate(jsonPattern: MutableMap<String, Any?>, resolver: Resolver): MutableMap<String, Any?> =
+fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String, Value> =
     jsonPattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, value) ->
-        asPattern(asValue(value).value, key).generate(resolver).value
-    }.toMutableMap()
+        asPattern(value, key).generate(resolver)
+    }

@@ -1,10 +1,9 @@
 package run.qontract.core.value
 
-import run.qontract.core.utilities.mapToJsonString
+import run.qontract.core.utilities.valueMapToJsonString
 
-data class JSONObjectValue(val jsonObject: Map<String, Any?>) : Value {
+data class JSONObjectValue(val jsonObject: Map<String, Value>) : Value {
     override val httpContentType = "application/json"
     override val value: Any = jsonObject
-
-    override fun toString() = mapToJsonString(jsonObject)
+    override fun toString() = valueMapToJsonString(jsonObject)
 }

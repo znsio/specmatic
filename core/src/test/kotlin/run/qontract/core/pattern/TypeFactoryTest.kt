@@ -1,11 +1,11 @@
 package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
-import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.XMLValue
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import run.qontract.core.value.JSONObjectValue
 
 class TypeFactoryTest {
     @Test

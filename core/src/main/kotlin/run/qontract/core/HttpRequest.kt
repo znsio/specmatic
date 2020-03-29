@@ -1,11 +1,11 @@
 package run.qontract.core
 
 import run.qontract.core.utilities.URIUtils.parseQuery
-import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.NoValue
 import run.qontract.core.value.Value
 import run.qontract.mock.HttpMockException
 import io.netty.buffer.ByteBuf
+import run.qontract.core.pattern.parsedValue
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
@@ -61,8 +61,9 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         updateBody(bodyString)
     }
 
-    fun updateHeader(key: String?, value: String?) {
+    fun updateHeader(key: String?, value: String?): HttpRequest {
         headers[key] = value
+        return this
     }
 
     val bodyString: String

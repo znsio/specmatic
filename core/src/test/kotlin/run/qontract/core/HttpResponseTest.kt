@@ -1,8 +1,9 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.parsedValue
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.parsedValue
+import run.qontract.core.value.JSONObjectValue
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -24,7 +25,12 @@ internal class HttpResponseTest {
     @Test
     fun `updating body with value should automatically set Content-Type header`() {
         HttpResponse().updateBodyWith(parsedValue("""{"name": "John Doe"}""")).let {
-            assertEquals("John Doe", (parsedValue(it.body).value as HashMap<String, Any?>)["name"])
+            val responseBody = parsedValue(it.body)
+
+            if(responseBody !is JSONObjectValue)
+                throw AssertionError("Expected responseBody to be a JSON object, but got ${responseBody.javaClass.name}")
+
+            assertEquals("John Doe", responseBody.jsonObject.getValue("name").value)
             assertEquals("application/json", it.headers.getOrDefault("Content-Type", ""))
         }
     }

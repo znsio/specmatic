@@ -82,7 +82,7 @@ fun writeToAPI(method: io.ktor.http.HttpMethod, url: String?, contractMessage: M
         val ktorResponse: HttpResponse = ktorClient.request(URL(url)) {
             this.method = method
             this.contentType(io.ktor.http.ContentType.Application.Json)
-            this.body = mapToJsonString(contractMessage)
+            this.body = nativeMapToJsonString(contractMessage)
         }
 
         if(ktorResponse.status != HttpStatusCode.OK)

@@ -1,21 +1,16 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.NumericStringPattern
-import run.qontract.core.pattern.PatternMismatchException
-import run.qontract.core.pattern.PatternTable.Companion.fromPSV
-import run.qontract.core.pattern.StringPattern
-import run.qontract.core.pattern.asValue
-import run.qontract.test.TestExecutor
-import io.cucumber.gherkin.GherkinDocumentBuilder
-import io.cucumber.gherkin.Parser
-import io.cucumber.messages.IdGenerator
-import io.cucumber.messages.IdGenerator.Incrementing
-import io.cucumber.messages.Messages.GherkinDocument
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Document
 import org.w3c.dom.Node
-import java.lang.NumberFormatException
+import run.qontract.core.pattern.NumericStringPattern
+import run.qontract.core.pattern.PatternTable.Companion.fromPSV
+import run.qontract.core.pattern.StringPattern
+import run.qontract.core.pattern.asValue
+import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.StringValue
+import run.qontract.test.TestExecutor
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -185,26 +180,35 @@ Feature: Contract for /balance API
 
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val requestJSON = request.body!!.value as Map<String, Any?>
-                val name = requestJSON["name"]
-                val city = requestJSON["city"]
-                Assertions.assertEquals("POST", request.method)
-                Assertions.assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
-                Assertions.assertTrue(StringPattern().matches(asValue(city), Resolver()) is Result.Success)
-                val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
-                    init {
-                        put("Content-Type", "application/json")
+                val requestJSON = request.body!!
+                assert(requestJSON is JSONObjectValue)
+
+                if(requestJSON is JSONObjectValue) {
+                    val name = requestJSON.jsonObject.getValue("name")
+                    val city = requestJSON.jsonObject.getValue("city")
+
+                    Assertions.assertEquals("POST", request.method)
+                    Assertions.assertTrue(name is StringValue)
+                    Assertions.assertTrue(city is StringValue)
+
+                    val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
                     }
+
+                    var jsonResponseString: String? = null
+                    if (name.value == "John Doe") {
+                        flags["john"] = true;
+                        jsonResponseString = "{account_id: 10}"
+                    } else if (name.value == "Jane Doe") {
+                        flags["jane"] = true;
+                        jsonResponseString = "{account_id: 20}"
+                    }
+                    return HttpResponse(200, jsonResponseString, headers)
+                } else {
+                    return HttpResponse.HTTP_400
                 }
-                var jsonResponseString: String? = null
-                if (name == "John Doe") {
-                    flags["john"] = true;
-                    jsonResponseString = "{account_id: 10}"
-                } else if (name == "Jane Doe") {
-                    flags["jane"] = true;
-                    jsonResponseString = "{account_id: 20}"
-                }
-                return HttpResponse(200, jsonResponseString, headers)
             }
 
             override fun setServerState(serverState: Map<String, Any?>) {

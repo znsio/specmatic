@@ -2,18 +2,17 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
 import run.qontract.core.Result
-import run.qontract.core.value.OriginalValue
 import run.qontract.core.value.Value
 
-data class ExactMatchPattern(override val pattern: Any) : Pattern {
+data class ExactMatchPattern(override val pattern: Value) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        return when (pattern == sampleData?.value) {
+        return when (pattern.value == sampleData?.value) {
             true -> Result.Success()
             else -> Result.Failure("Expected: $pattern Actual: $sampleData")
         }
     }
 
-    override fun generate(resolver: Resolver) = OriginalValue(pattern)
+    override fun generate(resolver: Resolver) = pattern
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
-    override fun parse(value: String, resolver: Resolver): Value = OriginalValue(value)
+    override fun parse(value: String, resolver: Resolver): Value = pattern
 }

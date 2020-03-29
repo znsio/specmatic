@@ -7,7 +7,6 @@ import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.pattern.asValue
 import run.qontract.core.utilities.parseXML
-import run.qontract.core.value.JSONObjectValue
 import run.qontract.fake.ContractFake
 import run.qontract.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -17,9 +16,9 @@ import org.junit.jupiter.api.Test
 import org.w3c.dom.Document
 import org.w3c.dom.Node
 import org.xml.sax.SAXException
+import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import java.io.IOException
-import java.util.*
 import javax.xml.parsers.ParserConfigurationException
 import kotlin.collections.HashMap
 

@@ -50,18 +50,18 @@ internal class HttpRequestPatternTest {
         val httpRequestPattern = HttpRequestPattern().also {
             val urlMatcher = URLMatcher(URI("/matching_path"))
             it.updateMethod("POST")
-            it.setBodyPattern("{name: Hari}")
+            it.setBodyPattern("""{"name": "Hari"}""")
             it.updateWith(urlMatcher)
         }
         val httpRequest = HttpRequest().also {
             it.updateWith(URI("/matching_path"))
             it.updateMethod("POST")
-            it.updateBody("{unmatchedKey: unmatchedValue}")
+            it.updateBody("""{"unmatchedKey": "unmatchedValue"}""")
         }
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Result.Failure::class.java)
             assertThat((it as Result.Failure).stackTrace()).isEqualTo(Stack<String>().also { stack ->
-                stack.push("Missing key name in {unmatchedKey=null}")
+                stack.push("Missing key name in {unmatchedKey=unmatchedValue}")
                 stack.push("Request body did not match")
             })
         }
@@ -72,13 +72,13 @@ internal class HttpRequestPatternTest {
         val httpRequestPattern = HttpRequestPattern().also {
             val urlMatcher = URLMatcher(URI("/matching_path"))
             it.updateMethod("POST")
-            it.setBodyPattern("{name: Hari}")
+            it.setBodyPattern("""{"name": "Hari"}""")
             it.updateWith(urlMatcher)
         }
         val httpRequest = HttpRequest().also {
             it.updateWith(URI("/matching_path"))
             it.updateMethod("POST")
-            it.updateBody("{name: Krishnan}")
+            it.updateBody("""{"name": "Hari"}""")
         }
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Result.Success::class.java)

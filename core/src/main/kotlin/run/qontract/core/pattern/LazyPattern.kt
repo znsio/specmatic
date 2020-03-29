@@ -1,11 +1,12 @@
 package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
+import run.qontract.core.value.NullValue
 import run.qontract.core.value.Value
 
 data class LazyPattern(override val pattern: String, val key: String? = null) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver) =
-            resolver.matchesPattern(key, pattern, sampleData?.value ?: "")
+            resolver.matchesPattern(key, pattern, sampleData ?: NullValue())
 
     override fun generate(resolver: Resolver) =
             when (key) {

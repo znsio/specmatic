@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import run.qontract.core.value.JSONObjectValue
 import java.util.*
 
 class SetupServerState {
@@ -167,20 +168,34 @@ Feature: Contract for /balance API
         val logs: MutableList<String> = ArrayList()
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                return if (serverStateForValidation.containsKey("user")) {
-                    assertEquals("jack", serverStateForValidation["user"])
-                    val jsonBody = request.body!!.value as Map<String, Any?>
-                    assertEquals("jack", jsonBody["name"])
-                    logs.add("user")
-                    HttpResponse(409, null, HashMap())
-                } else if (serverStateForValidation.containsKey("no_user")) {
-                    assertEquals(true, serverStateForValidation["no_user"])
-                    val jsonBody = request.body!!.value as Map<String, Any?>
-                    assertEquals("john", jsonBody["name"])
-                    logs.add("no_user")
-                    HttpResponse(200, null, HashMap())
-                } else {
-                    HttpResponse(400, "Bad Request", HashMap())
+                return when {
+                    serverStateForValidation.containsKey("user") -> {
+                        assertEquals("jack", serverStateForValidation["user"])
+
+                        request.body?.let {
+                            if(it is JSONObjectValue) {
+                                assertEquals("jack", it.jsonObject.getValue("name").value)
+                                logs.add("user")
+                            }
+                        }
+
+                        HttpResponse(409, null, HashMap())
+                    }
+                    serverStateForValidation.containsKey("no_user") -> {
+                        assertEquals(true, serverStateForValidation["no_user"])
+
+                        request.body?.let {
+                            if(it is JSONObjectValue) {
+                                assertEquals("john", it.jsonObject.getValue("name").value)
+                                logs.add("no_user")
+                            }
+                        }
+
+                        HttpResponse(200, null, HashMap())
+                    }
+                    else -> {
+                        HttpResponse(400, "Bad Request", HashMap())
+                    }
                 }
             }
 

@@ -19,7 +19,7 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
     }
 
     fun matchesPattern(serverStateKey: String?, patternValue: Any, sampleValue: Any): Result {
-        if (matchPattern && patternValue == sampleValue)
+        if (matchPattern && sampleValue is Value && patternValue == sampleValue.value)
             return Result.Success()
 
         if (patternValue is String && isPatternToken(patternValue)) {

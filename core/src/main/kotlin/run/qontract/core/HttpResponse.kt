@@ -1,9 +1,9 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.parsedValue
-import run.qontract.core.utilities.mapToJsonString
-import run.qontract.core.value.*
 import io.ktor.http.HttpStatusCode
+import run.qontract.core.pattern.parsedValue
+import run.qontract.core.utilities.nativeMapToJsonString
+import run.qontract.core.value.Value
 import java.util.*
 
 data class HttpResponse(var status: Int = 0, var body: String? = "", val headers: MutableMap<String, String?> = mutableMapOf("Content-Type" to "text/plain")) {
@@ -28,7 +28,7 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
             if (headers.isNotEmpty()) it["headers"] = headers
         }
 
-    override fun toString() = mapToJsonString(toJSON())
+    override fun toString() = nativeMapToJsonString(toJSON())
 
     companion object {
         var HTTP_400 = HttpResponse(400, "This request did not match any scenario.", HashMap())

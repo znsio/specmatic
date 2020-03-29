@@ -27,8 +27,8 @@ data class RepeatingPattern(val patternSpec: String) : Pattern {
         }
     }
 
-    override fun generate(resolver: Resolver): Value = JSONArrayValue(generateMultipleValues(cleanPatternSpec, resolver))
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = newBasedOn(listOf(patternSpec), row, resolver)
+    override fun generate(resolver: Resolver): JSONArrayValue = JSONArrayValue(generateMultipleValues(resolver.getPattern(cleanPatternSpec), resolver))
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = resolver.getPattern(patternSpec).newBasedOn(row, resolver)
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
 
     override val pattern: Any = patternSpec

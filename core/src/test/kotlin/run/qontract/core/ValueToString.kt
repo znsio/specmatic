@@ -1,7 +1,6 @@
 package run.qontract.core
 
 import run.qontract.core.utilities.parseXML
-import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NoValue
 import run.qontract.core.value.Value
 import run.qontract.core.value.XMLValue
@@ -10,6 +9,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Document
 import org.xml.sax.SAXException
+import run.qontract.core.pattern.parsedJSON
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
 
@@ -22,8 +22,9 @@ class ValueToString {
 
     @Test
     fun jsonStringTest() {
-        val jsonObject = JSONObject("{a: 1, b: 2}")
-        val body: Value = JSONObjectValue(jsonObject.toMap())
+        val jsonString = """{"a": 1, "b": 2}"""
+        val jsonObject = JSONObject(jsonString)
+        val body: Value = parsedJSON(jsonString) ?: NoValue()
         val jsonObject2 = JSONObject(body.toString())
         Assertions.assertEquals(jsonObject.getInt("a"), jsonObject2.getInt("a"))
         Assertions.assertEquals(jsonObject.getInt("b"), jsonObject2.getInt("b"))

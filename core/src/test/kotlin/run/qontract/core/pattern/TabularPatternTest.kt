@@ -4,8 +4,8 @@ import run.qontract.core.Resolver
 import run.qontract.core.mustMatch
 import run.qontract.core.mustNotMatch
 import run.qontract.core.parseGherkinString
-import run.qontract.core.value.JSONObjectValue
 import org.junit.jupiter.api.Test
+import run.qontract.core.value.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -21,7 +21,7 @@ Given pattern Id
 """.trim()
 
         val value = parsedValue("""{"id": 10}""")
-        val pattern = rowsToPattern(getRows(gherkin))
+        val pattern = rowsToTabularPattern(getRows(gherkin))
 
         value mustMatch pattern
     }
@@ -37,7 +37,7 @@ Given pattern Id
 """.trim()
 
         val value = parsedValue("""{"id": 10}""")
-        val pattern = rowsToPattern(getRows(gherkin))
+        val pattern = rowsToTabularPattern(getRows(gherkin))
 
         value mustMatch pattern
     }
@@ -53,7 +53,7 @@ Given pattern Id
 """.trim()
 
         val value = parsedValue("""{"id": 10}""")
-        val pattern = rowsToPattern(getRows(gherkin))
+        val pattern = rowsToTabularPattern(getRows(gherkin))
 
         value mustNotMatch pattern
     }
@@ -70,7 +70,7 @@ Given pattern Status
 """.trim()
 
         val value = parsedValue("""{"status1": true, "status2": false}""")
-        val pattern = rowsToPattern(getRows(gherkin))
+        val pattern = rowsToTabularPattern(getRows(gherkin))
 
         value mustMatch pattern
     }
@@ -86,7 +86,7 @@ Given pattern Id
 """.trim()
 
         val value = parsedValue("""{"id": "12345"}""")
-        val pattern = rowsToPattern(getRows(gherkin))
+        val pattern = rowsToTabularPattern(getRows(gherkin))
 
         value mustMatch pattern
     }
@@ -107,8 +107,8 @@ Given pattern Id
         val value = parsedValue("""{"ids": [{"id": 12345}, {"id": 12345}]}""")
         val scenario = getScenario(gherkin)
 
-        val idsPattern = rowsToPattern(scenario.stepsList[0].dataTable.rowsList)
-        val idPattern = rowsToPattern(scenario.stepsList[1].dataTable.rowsList)
+        val idsPattern = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val idPattern = rowsToTabularPattern(scenario.stepsList[1].dataTable.rowsList)
 
         val resolver = Resolver(HashMap(), false)
         resolver.addCustomPattern("(Ids)", idsPattern)
@@ -131,7 +131,7 @@ Given pattern Ids
         val value = parsedValue("""{"ids": [12345, 98765]}""")
         val scenario = getScenario(gherkin)
 
-        val idsPattern = rowsToPattern(scenario.stepsList[0].dataTable.rowsList)
+        val idsPattern = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
 
         val resolver = Resolver(HashMap(), false)
         resolver.addCustomPattern("(Ids)", idsPattern)
@@ -151,10 +151,9 @@ Given pattern User
 | name | (string) |
 """.trim()
 
-        val value = rowsToPattern(getRows(gherkin)).generate(Resolver())
-        assertTrue(value is JSONObjectValue)
-        assertTrue(value.jsonObject["id"] is Number)
-        assertTrue(value.jsonObject["name"] is String)
+        val value = rowsToTabularPattern(getRows(gherkin)).generate(Resolver())
+        assertTrue(value.jsonObject["id"] is NumberValue)
+        assertTrue(value.jsonObject["name"] is StringValue)
     }
 
     @Test
@@ -168,12 +167,12 @@ Given pattern User
 | name | (string) |
 """.trim()
 
-        val pattern = rowsToPattern(getRows(gherkin))
+        val pattern = rowsToTabularPattern(getRows(gherkin))
         val newPattern = pattern.newBasedOn(Row(listOf("id"), listOf("10")), Resolver()).first()
 
         val value = newPattern.generate(Resolver())
         assertTrue(value is JSONObjectValue)
-        assertEquals(10, value.jsonObject["id"])
+        value.jsonObject.getValue("id").let { assertEquals(10, it.value) }
     }
 
     @Test
@@ -193,8 +192,8 @@ And pattern Address
 """.trim()
 
         val scenario = getScenario(gherkin)
-        val userPattern = rowsToPattern(scenario.stepsList[0].dataTable.rowsList)
-        val addressPattern = rowsToPattern(scenario.stepsList[1].dataTable.rowsList)
+        val userPattern = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val addressPattern = rowsToTabularPattern(scenario.stepsList[1].dataTable.rowsList)
 
         val row = Row(listOf("id", "flat"), listOf("10", "100"))
 
@@ -205,10 +204,11 @@ And pattern Address
         val value = userPattern.newBasedOn(row, resolver).first().generate(resolver)
 
         assertTrue(value is JSONObjectValue)
-        assertEquals(10, value.jsonObject["id"])
+        assertEquals(10, value.jsonObject["id"]?.value)
 
         val address = value.jsonObject["address"]
-        assertEquals(100, (address as Map<String, Any>)["flat"])
+        assertTrue(address is JSONObjectValue)
+        address.jsonObject.getValue("flat").let { assertEquals(100, it.value) }
     }
 }
 

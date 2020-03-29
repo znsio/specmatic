@@ -2,9 +2,7 @@
 
 package run.qontract.core.pattern
 
-import run.qontract.core.utilities.jsonStringToArray
-import run.qontract.core.utilities.jsonStringToMap
-import run.qontract.core.utilities.parseXML
+import run.qontract.core.utilities.*
 import run.qontract.core.value.*
 
 fun asPattern(patternValue: Any?, key: String?): Pattern =
@@ -12,10 +10,8 @@ fun asPattern(patternValue: Any?, key: String?): Pattern =
         patternValue is LazyPattern -> patternValue.copy(key=key)
         patternValue is Pattern -> patternValue
         patternValue is String && isPatternToken(patternValue) -> LazyPattern(patternValue, key)
-        patternValue is Map<*, *> -> JSONObjectPattern(patternValue as MutableMap<String, Any?>)
-        patternValue is List<*> -> JSONArrayPattern(patternValue as MutableList<Any?>)
         patternValue == null -> NoContentPattern()
-        else -> ExactMatchPattern(patternValue)
+        else -> ExactMatchPattern(asValue(patternValue))
     }
 
 fun parsedPattern(rawContent: String, key: String? = null): Pattern {
@@ -26,8 +22,10 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             it.startsWith("[") -> JSONArrayPattern(it)
             it.startsWith("<") -> XMLPattern(it)
             isRepeatingPattern(it) -> RepeatingPattern(it)
+            it == "(number)" -> LazyPattern(it, null)
+            isPrimitivePattern(it) -> primitivePatterns.getValue(it)
             isPatternToken(it) -> LazyPattern(it, key)
-            else -> ExactMatchPattern(it)
+            else -> ExactMatchPattern(StringValue(it))
         }
     }
 }
@@ -35,18 +33,16 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
 fun asValue(value: Any?): Value = when(value) {
     is Value -> value
     is Number -> NumberValue(value)
-    is Map<*,*> -> JSONObjectValue((value as Map<String, Any?>).toMutableMap())
-    is List<*> -> JSONArrayValue((value as List<Any?>).toMutableList())
     is Boolean -> BooleanValue(value)
-    null -> NoValue()
+    null -> NullValue()
     else -> StringValue(value.toString())
 }
 
 fun parsedJSON(content: String): Value? {
     return content.trim().let {
         when {
-            it.startsWith("{") -> JSONObjectValue(jsonStringToMap(it))
-            it.startsWith("[") -> JSONArrayValue(jsonStringToArray(it))
+            it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
+            it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
             else -> null
         }
     }
@@ -55,8 +51,8 @@ fun parsedJSON(content: String): Value? {
 fun parsedValue(content: String?): Value {
     return content?.trim()?.let {
         when {
-            it.startsWith("{") -> JSONObjectValue(jsonStringToMap(it))
-            it.startsWith("[") -> JSONArrayValue(jsonStringToArray(it))
+            it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
+            it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
             it.startsWith("<") -> XMLValue(parseXML(it))
             it == "true" -> BooleanValue(true)
             it == "false" -> BooleanValue(false)

@@ -1,9 +1,10 @@
 package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
-import run.qontract.core.value.JSONArrayValue
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import run.qontract.core.value.JSONArrayValue
+import run.qontract.core.value.NumberValue
 
 internal class RepeatingPatternTest {
     @Test
@@ -25,7 +26,7 @@ Given pattern Id
 """.trim()
 
         val value = parsedValue("""[{"id": 12345}, {"id": 98765}]""")
-        val idPattern = rowsToPattern(getRows(gherkin))
+        val idPattern = rowsToTabularPattern(getRows(gherkin))
         val resolver = Resolver()
         resolver.customPatterns["(Id)"] = idPattern
 
@@ -42,7 +43,7 @@ Given pattern Id
         if(jsonArray is JSONArrayValue)
         {
             for(value in jsonArray.list) {
-                assertTrue(value is Number)
+                assertTrue(value is NumberValue)
             }
         }
     }

@@ -2,6 +2,7 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 import run.qontract.core.value.NoValue
+import run.qontract.core.value.NullValue
 import java.util.*
 
 data class HttpHeadersPattern(val headers: Map<String, String?> = mapOf()) {
@@ -25,7 +26,7 @@ data class HttpHeadersPattern(val headers: Map<String, String?> = mapOf()) {
         val (headers, resolver) = parameters
         this.headers.forEach { (key, value) ->
             val sampleValue = asValue(headers[key])
-            if (sampleValue is NoValue)
+            if (sampleValue is NullValue)
                 return MatchFailure(Result.Failure("""Header "$key" was not available"""))
             when (val result = asPattern(value, key).matches(asValue(headers[key]), resolver)) {
                 is Result.Failure -> {

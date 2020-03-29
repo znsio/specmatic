@@ -5,14 +5,10 @@ import run.qontract.core.Resolver
 import run.qontract.core.Result
 import io.cucumber.messages.Messages
 import run.qontract.core.utilities.NullPattern
+import run.qontract.core.utilities.flatZip
+import run.qontract.core.utilities.lookupValue
 import run.qontract.core.value.*
 import run.qontract.test.ContractTestException
-
-fun flatZipPatternValue(map1: Map<String, Pattern>, map2: Map<String, Any?>): List<Triple<String, Pattern, Value>> {
-    return map1.filterKeys { key -> containsKey(map2, key) }.map { entry ->
-        Triple(withoutOptionality(entry.key), entry.value, asValue(lookupValue(map2, entry.key)))
-    }
-}
 
 fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) =
         TabularPattern(rows.map { it.cellsList }.map { (key, value) ->
@@ -69,7 +65,7 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
             it.addCustomPattern("(number)", NumberTypePattern())
         }
 
-        flatZipPatternValue(rows, sampleData.jsonObject).forEach { (key, pattern, sampleValue) ->
+        flatZip(rows, sampleData.jsonObject).forEach { (key, pattern, sampleValue) ->
             when (val result = asPattern(pattern, key).matches(sampleValue, resolverWithNumberType)) {
                 is Result.Failure -> return result.add("Expected: $pattern Actual: ${sampleData.jsonObject}")
             }

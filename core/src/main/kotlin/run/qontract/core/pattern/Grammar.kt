@@ -3,7 +3,6 @@ package run.qontract.core.pattern
 import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 
-internal fun lookupValue(map: Map<String, Any?>, key: String): Any? = map[key.removeSuffix("?")]
 internal fun withoutOptionality(key: String) = key.removeSuffix("?")
 internal fun isOptional(key: String): Boolean = key.endsWith("?")
 
@@ -25,49 +24,11 @@ internal val primitivePatterns = mapOf(
     "(string)" to StringPattern(),
     "(boolean)" to BooleanPattern())
 
-internal val primitiveParsers = mapOf<String, (String)->Any>(
-    "(number)" to { value: String ->
-        try {
-            value.toInt()
-        } catch (ignored: Exception) {
-            try {
-                value.toBigInteger()
-            } catch (ignored: Exception) {
-                try {
-                    value.toFloat()
-                } catch (ignored: Exception) {
-                    value.toDouble()
-                }
-            }
-        }
-    },
-    "(numericstring)" to { value: String ->
-        try {
-            value.toInt()
-        } catch (ignored: Exception) {
-            try {
-                value.toBigInteger()
-            } catch (ignored: Exception) {
-                try {
-                    value.toFloat()
-                } catch (ignored: Exception) {
-                    value.toDouble()
-                }
-            }
-        }
-    },
-    "(string)" to { value: String -> value },
-    "(boolean)" to { value: String -> value.toBoolean() }
-)
-
 fun isPrimitivePattern(pattern: Any): Boolean =
     when(pattern) {
         is String -> pattern in primitivePatterns
         else -> false
     }
-
-fun parsePrimitive(type: String, value: String): Any =
-        primitiveParsers.getOrElse(type) { throw ContractParseException("Couldn't parse $value to $type") }.invoke(value)
 
 fun isPatternToken(patternValue: Any?) =
     when(patternValue) {

@@ -39,7 +39,7 @@ internal class HttpHeadersPatternTest {
             assertThat(it is Result.Failure).isTrue()
             assertThat((it as Result.Failure).stackTrace()).isEqualTo(Stack<String>().also { stack ->
                 stack.push(""""abc" is not a Number""")
-                stack.push("""Expected: (number) Actual: abc""")
+                stack.push("""Expected (number), actual abc""")
                 stack.push("""Header "key" did not match""")
             })
         }

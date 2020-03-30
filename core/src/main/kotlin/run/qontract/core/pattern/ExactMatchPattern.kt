@@ -8,7 +8,7 @@ data class ExactMatchPattern(override val pattern: Value) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (pattern.value == sampleData?.value) {
             true -> Result.Success()
-            else -> Result.Failure("Expected: $pattern Actual: $sampleData")
+            else -> Result.Failure("Expected $pattern, actual $sampleData")
         }
     }
 

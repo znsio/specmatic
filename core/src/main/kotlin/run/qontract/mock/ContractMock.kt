@@ -126,49 +126,6 @@ $expectationsString
         return true
     }
 
-//    private fun matchesBody(actual: HttpRequest, expected: HttpRequest): Boolean {
-//        when(parsedValue(actual.body.toString())) {
-//            is JSONObjectValue2 -> {
-//                val mockedJSON = toMap(expected.body)
-//                val requestJSON = toMap(actual.body)
-//                if (mockedJSON != requestJSON) return false
-//            }
-//            is JSONArrayValue -> {
-//                val mockedJSON = jsonStringToArray(expected.body?.toString() ?: "[]")
-//                val requestJSON = jsonStringToArray(actual.body?.toString() ?: "")
-//                if (mockedJSON != requestJSON) return false
-//            }
-//            is XMLValue -> {
-//                try {
-//                    val mockedXML = expected.body?.value as Document
-//                    val requestXML = parseXML(actual.body?.toString() ?: "")
-//
-//                    return mockedXML == requestXML
-//                } catch (e: ParserConfigurationException) {
-//                    e.printStackTrace()
-//                } catch (e: SAXException) {
-//                    e.printStackTrace()
-//                } catch (e: IOException) {
-//                    e.printStackTrace()
-//                }
-//
-//                return false
-//            }
-//            else -> {
-//                if(expected.body is NoValue && actual.body is StringValue) {
-//                    return actual.bodyString.isEmpty()
-//                } else if(expected.body is StringValue && actual.body is NoValue) {
-//                    return expected.bodyString.isEmpty()
-//                }
-//                else if(expected.body != actual.body) {
-//                    return false
-//                }
-//            }
-//        }
-//
-//        return true
-//    }
-
     private fun validateHttpMockRequest(request: HttpRequest) =
         when (request.body) {
             null -> throw Exception("Mock request body can't be empty")

@@ -67,7 +67,7 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
 
         flatZip(rows, sampleData.jsonObject).forEach { (key, pattern, sampleValue) ->
             when (val result = asPattern(pattern, key).matches(sampleValue, resolverWithNumberType)) {
-                is Result.Failure -> return result.add("Expected: $pattern Actual: ${sampleData.jsonObject}")
+                is Result.Failure -> return result.add("Expected value at $key to match $pattern, actual value $sampleValue in JSONObject ${sampleData.jsonObject}")
             }
         }
 

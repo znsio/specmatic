@@ -21,7 +21,7 @@ data class RepeatingPattern(val patternSpec: String) : Pattern {
             resolverWithNumberType.matchesPattern(null, cleanPatternSpec, it ?: "")
         }.find { it is Result.Failure }.let { result ->
             when(result) {
-                is Result.Failure -> result.add("Expected: $patternSpec. But one of the values didn't match in ${sampleData.list}")
+                is Result.Failure -> result.add("Expected multiple values of type $patternSpec. But one of the values didn't match in ${sampleData.list}")
                 else -> Result.Success()
             }
         }

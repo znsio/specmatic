@@ -148,7 +148,7 @@ class ContractBehaviourTest {
         assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
 Scenario: POST /balance Error:
 	Request body did not match
-	Expected: object[calls_made] to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), ExactMatchPattern(pattern=2)]). Actual value: [3,10], in JSONObject {calls_made=[3,10]}
+	Expected value at calls_made to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), ExactMatchPattern(pattern=2)]), actual value [3,10] in JSONObject {calls_made=[3,10]}
 	JSON Array did not match Expected: [ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), ExactMatchPattern(pattern=2)] Actual: [3, 10]
 	Request: HttpRequest(method=POST, path=/balance, headers={}, body={"calls_made":[3,10]}, queryParams={}, formFields={})
 """)
@@ -171,9 +171,9 @@ Scenario: POST /balance Error:
         assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
 Scenario: POST /balance Error:
 	Request body did not match
-	Expected: object[calls_made] to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), LazyPattern(pattern=(number), key=null)]). Actual value: [3,10,"test"], in JSONObject {calls_made=[3,10,"test"]}
+	Expected value at calls_made to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), LazyPattern(pattern=(number), key=null)]), actual value [3,10,"test"] in JSONObject {calls_made=[3,10,"test"]}
 	Expected value at index 2 to match LazyPattern(pattern=(number), key=null). Actual value: test in [3, 10, test]
-	Expected: (number) Actual: test
+	Expected (number), actual test
 	test is not a Number
 	Request: HttpRequest(method=POST, path=/balance, headers={}, body={"calls_made":[3,10,"test"]}, queryParams={}, formFields={})
 """)
@@ -211,7 +211,14 @@ Scenario: POST /balance Error:
         val httpRequest = HttpRequest().updatePath("/balance").updateQueryParam("account-id", "abc").updateMethod("GET")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("This request did not match any scenario.\nScenario: GET /balance?account-id=(number) Error:\n\tURL did not match\n\tQuery parameter did not match\n\tExpected: (number) Actual: abc\n\t\"abc\" is not a Number\n\tRequest: HttpRequest(method=GET, path=/balance, headers={}, body=, queryParams={account-id=abc}, formFields={})\n")
+        assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
+Scenario: GET /balance?account-id=(number) Error:
+	URL did not match
+	Query parameter did not match
+	Expected (number), actual abc
+	"abc" is not a Number
+	Request: HttpRequest(method=GET, path=/balance, headers={}, body=, queryParams={account-id=abc}, formFields={})
+""")
     }
 
     @Test

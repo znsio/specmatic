@@ -24,7 +24,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
         flatZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = asPattern(patternValue, key).matches(asValue(sampleValue), resolverWithNumberType)) {
-                is Result.Failure -> return result.add("Expected: object[$key] to match $patternValue. Actual value: $sampleValue, in JSONObject ${sampleData.jsonObject}")
+                is Result.Failure -> return result.add("Expected value at $key to match $patternValue, actual value $sampleValue in JSONObject ${sampleData.jsonObject}")
             }
         }
 

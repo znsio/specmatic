@@ -30,7 +30,7 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
 
             when (val result = pattern?.matches(asValue(sampleValue), this)) {
                 is Result.Failure -> {
-                    return result.add("""Expected: $patternValue Actual: $sampleValue""")
+                    return result.add("""Expected $patternValue, actual $sampleValue""")
                 }
             }
 
@@ -45,7 +45,7 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
 
         return when ((patternValue == sampleValue)) {
             true -> Result.Success()
-            else -> Result.Failure("Resolver did not match. Expected: $patternValue Actual: $sampleValue")
+            else -> Result.Failure("Expected $patternValue, actual $sampleValue")
         }
     }
 

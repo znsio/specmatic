@@ -144,7 +144,7 @@ internal class JSONObjectPatternTest {
             val result = pattern.matches(JSONObjectValue(mapOf("id" to StringValue("abc"))), Resolver())
             result is Result.Failure && result.stackTrace() == Stack<String>().also { stack ->
                 stack.push("abc is not a Number")
-                stack.push("Expected: object[id] to match (number). Actual value: abc, in JSONObject {id=abc}")
+                stack.push("Expected value at id to match (number), actual value abc in JSONObject {id=abc}")
             }
         })
     }

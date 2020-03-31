@@ -30,12 +30,12 @@ Scenario: JSON API to get list of locations
   Given pattern Location {"id": "(number)", "name": "(string)"}
   When GET /locations
   Then status 200
-  And response-body {"locations": ["(Location*)"]}
+  And response-body {"locations": ["(Location...)"]}
   And response-header Content-Type application/json
 
 Scenario: JSON API to get list of special locations
   Given pattern Location {"id": "(number)", "name": "(string)"}
-  And pattern Locations {"locations": ["(Location*)"]}
+  And pattern Locations {"locations": ["(Location...)"]}
   When GET /special_locations
   Then status 200
   And response-header Content-Type application/json
@@ -43,7 +43,7 @@ Scenario: JSON API to get list of special locations
 
 Scenario: JSON API to create list of locations
   Given pattern Location {"id": "(number)", "name": "(string)"}
-  And pattern Locations {"locations": ["(Location*)"]}
+  And pattern Locations {"locations": ["(Location...)"]}
   When POST /locations
   And request-body (Locations)
   Then status 200
@@ -242,7 +242,7 @@ Scenario: JSON API to get account details with fact check
   Scenario Outline: 
     * fixture city_list {"cities": [{"city": "Mumbai"}, {"city": "Bangalore"}]}
     * pattern City {"city": "(string)"}
-    * pattern Cities {"cities": ["(City*)"]}
+    * pattern Cities {"cities": ["(City...)"]}
     Given fact cities_exist 
     When GET /locations
     Then status 200

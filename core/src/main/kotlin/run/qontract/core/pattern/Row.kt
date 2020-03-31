@@ -1,6 +1,6 @@
 package run.qontract.core.pattern
 
-class Row constructor(columnNames: List<String> = mutableListOf(), values: List<String> = mutableListOf()) {
+data class Row constructor(val columnNames: List<String> = emptyList(), val values: List<String> = emptyList()) {
     private val cells = columnNames.zip(values.map { it }).toMap().toMutableMap()
 
     fun getField(columnName: String): Any = cells.getValue(columnName)

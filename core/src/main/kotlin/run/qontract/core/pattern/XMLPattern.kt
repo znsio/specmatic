@@ -117,7 +117,7 @@ class XMLPattern : Pattern {
     private fun matchManyNodes(pattern: Node, sample: Node, resolver: Resolver): Result {
         val sampleChildNodes = sample.childNodes
         val newPattern = pattern.cloneNode(true)
-        newPattern.nodeValue = extractPatternFromRepeatingToken(newPattern.nodeValue)
+        newPattern.nodeValue = withoutRepeatingToken(newPattern.nodeValue)
         for (index in 0 until sampleChildNodes.length) {
             when (val result = matchesNode(newPattern, sampleChildNodes.item(index), resolver)) {
                 is Result.Failure -> return result
@@ -184,7 +184,7 @@ class XMLPattern : Pattern {
         if (childNodes.length > 0 && isRepeatingPattern(childNodes.item(0).nodeValue)) {
             val repeatingPattern = childNodes.item(0)
             parentNode.removeChild(repeatingPattern)
-            val pattern = extractPatternFromRepeatingToken(repeatingPattern.nodeValue)
+            val pattern = withoutRepeatingToken(repeatingPattern.nodeValue)
             val random = Random()
             val count = random.nextInt(9) + 1
             for (i in 0 until count) {
@@ -243,7 +243,7 @@ class XMLPattern : Pattern {
             val parentNodeName = node.parentNode.nodeName
             if (row.containsField(parentNodeName)) {
                 if (isPatternToken(node.nodeValue)) {
-                    when (val result = findPattern(node.nodeValue).matches(asValue(row.getField(parentNodeName) ?: NoValue()), resolver)) {
+                    when (val result = findPattern(node.nodeValue).matches(asValue(row.getField(parentNodeName)), resolver)) {
                         is Result.Failure -> result.add("\"The value \" + row.getField(parentNodeName) + \" does not match the pattern \" + node.nodeValue")
                         else -> {
                         }

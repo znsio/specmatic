@@ -171,9 +171,8 @@ Scenario: POST /balance Error:
         assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
 Scenario: POST /balance Error:
 	Request body did not match
-	Expected value at calls_made to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), LazyPattern(pattern=(number), key=null)]), actual value [3,10,"test"] in JSONObject {calls_made=[3,10,"test"]}
-	Expected value at index 2 to match LazyPattern(pattern=(number), key=null). Actual value: test in [3, 10, test]
-	Expected (number), actual test
+	Expected value at calls_made to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), LookupPattern(pattern=(number), key=null)]), actual value [3,10,"test"] in JSONObject {calls_made=[3,10,"test"]}
+	Expected value at index 2 to match (number). Actual value: test in [3, 10, test]
 	test is not a Number
 	Request: HttpRequest(method=POST, path=/balance, headers={}, body={"calls_made":[3,10,"test"]}, queryParams={}, formFields={})
 """)
@@ -298,7 +297,7 @@ Feature: Contract for /balance API
   Scenario Outline: 
     * fixture city_list {"cities": [{"city": "Mumbai"}, {"city": "Bangalore"}]}
     * pattern City {"city": "(string)"}
-    * pattern Cities {"cities": ["(City*)"]}
+    * pattern Cities {"cities": ["(City...)"]}
     Given fact cities_exist 
     When GET /locations
     Then status 200

@@ -6,8 +6,8 @@ import run.qontract.core.Result
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.Value
 
-data class RepeatingPattern(val patternSpec: String) : Pattern {
-    private val cleanPatternSpec = extractPatternFromRepeatingToken(patternSpec)
+data class ListPattern(val patternSpec: String) : Pattern {
+    private val cleanPatternSpec = withoutRepeatingToken(patternSpec)
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONArrayValue)
@@ -18,7 +18,7 @@ data class RepeatingPattern(val patternSpec: String) : Pattern {
         }
 
         return sampleData.list.map {
-            resolverWithNumberType.matchesPattern(null, cleanPatternSpec, it ?: "")
+            resolverWithNumberType.matchesPattern(null, cleanPatternSpec, it)
         }.find { it is Result.Failure }.let { result ->
             when(result) {
                 is Result.Failure -> result.add("Expected multiple values of type $patternSpec. But one of the values didn't match in ${sampleData.list}")

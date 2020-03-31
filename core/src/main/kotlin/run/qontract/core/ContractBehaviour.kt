@@ -150,12 +150,12 @@ private fun toPatternInfo(rest: String, rowsList: List<GherkinDocument.Feature.T
     val tokens = breakIntoParts(rest, 2)
 
     val patternName = nameToPatternSpec(tokens[0])
-    val patternDefinition = tokens.getOrElse(1) { "" }.trim()
 
-    val pattern = when {
-        patternDefinition.isEmpty() -> rowsToTabularPattern(rowsList)
+    val pattern = when(val patternDefinition = tokens.getOrElse(1) { "" }.trim()) {
+        "" -> rowsToTabularPattern(rowsList)
         else -> parsedPattern(patternDefinition)
     }
+
     return Pair(patternName, pattern)
 }
 

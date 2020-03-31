@@ -1,7 +1,7 @@
 package run.qontract.core.utilities
 
 import run.qontract.core.pattern.isPatternToken
-import run.qontract.core.pattern.removePatternDelimiter
+import run.qontract.core.pattern.withoutPatternDelimiter
 import java.io.UnsupportedEncodingException
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
@@ -33,6 +33,6 @@ object URIUtils {
     }
 
     private fun getNameAndType(placeHolder: String): Array<String> {
-        return removePatternDelimiter(placeHolder).split(":".toRegex()).toTypedArray()
+        return withoutPatternDelimiter(placeHolder).split(":".toRegex()).toTypedArray()
     }
 }

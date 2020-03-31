@@ -26,12 +26,12 @@ class ContractFakeShouldRunOverTCP {
                     "    Given pattern Location {\"id\": \"(number)\", \"city\": \"(string)\"}\n" +
                     "    When GET /locations_json\n" +
                     "    Then status 200\n" +
-                    "    And response-body {\"locations\": [\"(Location*)\"]}\n" +
+                    "    And response-body {\"locations\": [\"(Location...)\"]}\n" +
                     "  \n" +
                     "  Scenario: JSON API to create locations\n" +
                     "    Given pattern Location {\"city\": \"(string)\"}\n" +
                     "    When POST /locations_json\n" +
-                    "    And request-body {\"locations\": [\"(Location*)\"]}\n" +
+                    "    And request-body {\"locations\": [\"(Location...)\"]}\n" +
                     "    Then status 200\n" +
                     "  Scenario: XML API to get list of locations\n" +
                     "    Given pattern Location <city><id>(number)</id><name>(string)</name></city>\n" +
@@ -42,7 +42,7 @@ class ContractFakeShouldRunOverTCP {
                     "  Scenario: XML API to create locations\n" +
                     "    Given pattern Location <city><id>(number)</id><name>(string)</name></city>\n" +
                     "    When POST /locations_xml\n" +
-                    "    And request-body <locations>(Location*)</locations>\n" +
+                    "    And request-body <locations>(Location...)</locations>\n" +
                     "    Then status 200\n" +
                     "  Scenario: \n\n" +
                     "    Given fact account_id 10\n" +

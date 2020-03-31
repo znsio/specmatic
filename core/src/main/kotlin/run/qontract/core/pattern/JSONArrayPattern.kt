@@ -26,12 +26,19 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
             addCustomPattern("(number)", NumberTypePattern())
         }
 
-        for (index in pattern.indices) {
+        val resolvedPattern = pattern.map {
+            when(it) {
+                is LookupPattern -> it.resolvePattern(resolver)
+                else -> it
+            }
+        }
+
+        for (index in resolvedPattern.indices) {
             if(index == sampleData.list.size) return failed(sampleData)
             val sampleValue = sampleData.list[index]
 
-            when(val patternValue = pattern[index]) {
-                is RepeatingPattern -> {
+            when(val patternValue = resolvedPattern[index]) {
+                is SlicePattern -> {
                     val slice = sampleData.list.slice(index..sampleData.list.lastIndex)
                     return when (val result = patternValue.matches(JSONArrayValue(slice), resolver)) {
                         is Result.Failure -> result.add(failedMessage(sampleData))
@@ -75,7 +82,7 @@ fun multipleValidValues(values: List<List<Pattern>>): List<List<Pattern>> {
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
     jsonPattern.flatMap { pattern ->
         when(pattern) {
-            is RepeatingPattern -> pattern.generate(resolver).list
+            is SlicePattern -> pattern.generate(resolver).list
             else -> listOf(pattern.generate(resolver))
         }}
 

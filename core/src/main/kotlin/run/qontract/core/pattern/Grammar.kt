@@ -1,6 +1,5 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 
 internal fun withoutOptionality(key: String) = key.removeSuffix("?")
@@ -68,20 +67,17 @@ fun generateValue(value: Any, resolver: Resolver): Any {
     } else value
 }
 
-fun isRepeatingPattern(patternValue: Any?): Boolean {
-    return patternValue != null && isPatternToken(patternValue) && (patternValue as String).endsWith("*)")
-}
-
 fun findPattern(matcherDescriptor: String) =
     primitivePatterns.getOrDefault(matcherDescriptor, UnknownPattern())
 
-fun isLazyPattern(candidate: String): Boolean = isPatternToken(candidate) && candidate !in primitivePatterns
-fun removePatternDelimiter(patternValue: String) = patternValue.removeSurrounding("(", ")")
-fun nameToPatternSpec(name: String): String {
-    return "($name)"
+fun withoutPatternDelimiter(patternValue: String) = patternValue.removeSurrounding("(", ")")
+fun nameToPatternSpec(name: String): String = "($name)"
+
+fun withoutRepeatingToken(patternValue: Any): String {
+    val patternString = (patternValue as String).trim()
+    return "(" + withoutPatternDelimiter(patternString).removeSuffix("*") + ")"
+//    return StringBuilder(patternString).deleteCharAt(patternString.length - 2).toString()
 }
 
-fun extractPatternFromRepeatingToken(patternValue: Any): String {
-    val patternString = patternValue as String
-    return StringBuilder(patternString).deleteCharAt(patternString.length - 2).toString()
-}
+fun isRepeatingPattern(patternValue: Any?): Boolean =
+        patternValue != null && isPatternToken(patternValue) && (patternValue as String).endsWith("*)")

@@ -18,9 +18,9 @@ fun convertTabularValueToPattern(value: String, key: String?) =
         Pair(value.trim(), value.trim().toLowerCase()).let { (trimmed, lowered) ->
             when {
                 trimmed.isEmpty() -> NoContentPattern()
-                isRepeatingPattern(trimmed) -> RepeatingPattern(trimmed)
+                isRepeatingPattern(trimmed) -> ListPattern(trimmed)
                 lowered in primitivePatterns -> primitivePatterns.getOrDefault(lowered, UnknownPattern())
-                isPatternToken(trimmed) -> LazyPattern(trimmed, key)
+                isPatternToken(trimmed) -> LookupPattern(trimmed, key)
                 trimmed.startsWith("\"") && trimmed.endsWith("\"") -> ExactMatchPattern(StringValue(trimmed.removeSurrounding("\"")))
                 lowered in listOf("true", "false") -> ExactMatchPattern(BooleanValue(lowered.toBoolean()))
                 lowered == "null" -> NullPattern()
@@ -101,7 +101,7 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
             }
             else ->
                 when (pattern) {
-                    is LazyPattern -> pattern.copy(key=key)
+                    is LookupPattern -> pattern.copy(key=key)
                     else -> pattern
                 }.newBasedOn(row, resolver)
         }

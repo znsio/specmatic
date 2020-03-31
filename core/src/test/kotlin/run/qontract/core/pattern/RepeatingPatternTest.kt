@@ -36,7 +36,7 @@ Given pattern Id
 
     @Test
     fun `Array spec should generate a list of random length`() {
-        val numbersPattern = RepeatingPattern("(number*)")
+        val numbersPattern = ListPattern("(number*)")
         val jsonArray = numbersPattern.generate(Resolver())
 
         assertTrue(jsonArray is JSONArrayValue)

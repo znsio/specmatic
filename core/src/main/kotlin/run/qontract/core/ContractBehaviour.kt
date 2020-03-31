@@ -129,16 +129,22 @@ private fun plusFixture(fixtures: Map<String, Any>, rest: String): Map<String, A
     val fixtureTokens = breakIntoParts(rest.trim(), 2)
 
     return when (fixtureTokens.size) {
-        2 -> plusFixture(fixtures, fixtureTokens[0], toFixtureData(fixtureTokens[1]))
+        2 -> fixtures.plus(fixtureTokens[0] to toFixtureData(fixtureTokens[1]))
+//        plusFixture(fixtures, fixtureTokens[0], toFixtureData(fixtureTokens[1]))
+        else -> throw ContractParseException("Couldn't parse fixture data: $rest")
+    }
+}
+
+private fun toFixtureInfo(rest: String): Pair<String, Any> {
+    val fixtureTokens = breakIntoParts(rest.trim(), 2)
+
+    return when (fixtureTokens.size) {
+        2 -> fixtureTokens[0] to toFixtureData(fixtureTokens[1])
         else -> throw ContractParseException("Couldn't parse fixture data: $rest")
     }
 }
 
 private fun toFixtureData(rawData: String): Any = parsedJSON(rawData)?.value ?: rawData
-private fun plusPattern(patterns: Map<String, Pattern>, rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): Map<String, Pattern> {
-    val (patternName, pattern) = toPatternInfo(rest, rowsList)
-    return patterns.plus(patternName to pattern)
-}
 
 private fun toPatternInfo(rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): Pair<String, Pattern> {
     val tokens = breakIntoParts(rest, 2)
@@ -194,9 +200,9 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             "FACT" ->
                 scenarioInfo.copy(expectedServerState = scenarioInfo.expectedServerState.plus(toFacts(step.rest, scenarioInfo.fixtures)))
             "PATTERN", "JSON" ->
-                scenarioInfo.copy(patterns = plusPattern(scenarioInfo.patterns, step.rest, step.rowsList))
+                scenarioInfo.copy(patterns = scenarioInfo.patterns.plus(toPatternInfo(step.rest, step.rowsList)))
             "FIXTURE" ->
-                scenarioInfo.copy(fixtures = plusFixture(scenarioInfo.fixtures, step.rest))
+                scenarioInfo.copy(fixtures = scenarioInfo.fixtures.plus(toFixtureInfo(step.rest)))
             "FORM-FIELD" ->
                 scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(formFieldsPattern = plusFormFields(scenarioInfo.httpRequestPattern.formFieldsPattern, step.rest, step.rowsList)))
             else -> throw ContractParseException("Couldn't recognise the meaning of this command: $step.text")

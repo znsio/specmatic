@@ -6,7 +6,6 @@ import run.qontract.core.Result
 import io.cucumber.messages.Messages
 import run.qontract.core.utilities.NullPattern
 import run.qontract.core.utilities.flatZip
-import run.qontract.core.utilities.lookupValue
 import run.qontract.core.value.*
 import run.qontract.test.ContractTestException
 
@@ -52,12 +51,12 @@ fun convertToNumber(value: String): Number {
     }
 }
 
-class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
+class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
             return Result.Failure("Expected: JSONObjectValue. Actual: ${sampleData?.javaClass ?: "null"}")
 
-        val missingKey = rows.keys.find { key -> isMissingKey(sampleData.jsonObject, key) }
+        val missingKey = pattern.keys.find { key -> isMissingKey(sampleData.jsonObject, key) }
         if(missingKey != null)
             return Result.Failure("Missing key $missingKey in ${sampleData.jsonObject}")
 
@@ -65,9 +64,9 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
             it.addCustomPattern("(number)", NumberTypePattern())
         }
 
-        flatZip(rows, sampleData.jsonObject).forEach { (key, pattern, sampleValue) ->
-            when (val result = asPattern(pattern, key).matches(sampleValue, resolverWithNumberType)) {
-                is Result.Failure -> return result.add("Expected value at $key to match $pattern, actual value $sampleValue in JSONObject ${sampleData.jsonObject}")
+        flatZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
+            when (val result = asPattern(patternValue, key).matches(sampleValue, resolverWithNumberType)) {
+                is Result.Failure -> return result.add("Expected value at $key to match $patternValue, actual value $sampleValue in JSONObject ${sampleData.jsonObject}")
             }
         }
 
@@ -75,7 +74,7 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
     }
 
     override fun generate(resolver: Resolver) =
-            JSONObjectValue(rows.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
+            JSONObjectValue(pattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
                 when {
                     resolver.serverStateMatch.contains(key) && resolver.serverStateMatch.get(key) != true ->
                         pattern.parse(resolver.serverStateMatch.get(key).toString(), resolver)
@@ -84,13 +83,11 @@ class TabularPattern(private val rows: Map<String, Pattern>) : Pattern {
             })
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
-        multipleValidKeys(rows, row) { pattern ->
+        multipleValidKeys(pattern, row) { pattern ->
             newBasedOn(pattern, row, resolver)
         }.map { TabularPattern(it) }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
-
-    override val pattern: Any = rows
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {

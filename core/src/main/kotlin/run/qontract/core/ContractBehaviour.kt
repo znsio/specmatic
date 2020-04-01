@@ -122,19 +122,6 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
         }
 }
 
-private fun plusFixture(fixtures: Map<String, Any>, name: String, info: Any) =
-        fixtures.plus(name to info)
-
-private fun plusFixture(fixtures: Map<String, Any>, rest: String): Map<String, Any> {
-    val fixtureTokens = breakIntoParts(rest.trim(), 2)
-
-    return when (fixtureTokens.size) {
-        2 -> fixtures.plus(fixtureTokens[0] to toFixtureData(fixtureTokens[1]))
-//        plusFixture(fixtures, fixtureTokens[0], toFixtureData(fixtureTokens[1]))
-        else -> throw ContractParseException("Couldn't parse fixture data: $rest")
-    }
-}
-
 private fun toFixtureInfo(rest: String): Pair<String, Any> {
     val fixtureTokens = breakIntoParts(rest.trim(), 2)
 
@@ -199,7 +186,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
                 scenarioInfo.copy(httpResponsePattern = scenarioInfo.httpResponsePattern.bodyPattern(step.rest))
             "FACT" ->
                 scenarioInfo.copy(expectedServerState = scenarioInfo.expectedServerState.plus(toFacts(step.rest, scenarioInfo.fixtures)))
-            "PATTERN", "JSON" ->
+            "TYPE", "PATTERN", "JSON" ->
                 scenarioInfo.copy(patterns = scenarioInfo.patterns.plus(toPatternInfo(step.rest, step.rowsList)))
             "FIXTURE" ->
                 scenarioInfo.copy(fixtures = scenarioInfo.fixtures.plus(toFixtureInfo(step.rest)))

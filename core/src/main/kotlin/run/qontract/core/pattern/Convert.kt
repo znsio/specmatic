@@ -22,7 +22,7 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             it.startsWith("[") -> JSONArrayPattern(it)
             it.startsWith("<") -> XMLPattern(it)
             isNullablePattern(it) -> AnyPattern(listOf(NullPattern, parsedPattern(withoutNullToken(it))))
-            isSlicePattern(it) -> SlicePattern(parsedPattern(withoutSliceToken(it)))
+            isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
             isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutRepeatingToken(it)))
             it == "(number)" -> LookupPattern(it, null)
             isPrimitivePattern(it) -> primitivePatterns.getValue(it)

@@ -68,7 +68,7 @@ class XMLPattern : Pattern {
     private fun matchesNode(pattern: Node, sample: Node, resolver: Resolver): Result {
         if (pattern.nodeName != sample.nodeName) {
             return if (isPatternToken(pattern.nodeValue)) {
-                when (val result = resolver.matchesPatternValue(sample.nodeName, withoutSliceTokenForXML(pattern.nodeValue), sample)) {
+                when (val result = resolver.matchesPatternValue(sample.nodeName, withoutRestTokenForXML(pattern.nodeValue), sample)) {
                     is Result.Failure -> result.add("Node ${sample.nodeName} did not match. Expected: ${pattern.nodeValue} Actual: ${sample.nodeValue}")
                     else -> result
                 }
@@ -252,16 +252,16 @@ class XMLPattern : Pattern {
             } else {
                 val value = node.nodeValue
                 node.nodeValue = when {
-                    isPatternToken(value) -> resolver.generateFromAny(withoutSliceTokenForXML(value), resolver).toString()
+                    isPatternToken(value) -> resolver.generateFromAny(withoutRestTokenForXML(value), resolver).toString()
                     else -> value
                 }
             }
         }
     }
 
-    private fun withoutSliceTokenForXML(value: String): String =
+    private fun withoutRestTokenForXML(value: String): String =
         when {
-            isPatternToken(value) -> withoutSliceToken(value)
+            isPatternToken(value) -> withoutRestToken(value)
             else -> value
         }
 

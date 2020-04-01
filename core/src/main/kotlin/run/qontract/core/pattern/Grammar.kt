@@ -1,5 +1,6 @@
 package run.qontract.core.pattern
 
+import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 
 internal fun withoutOptionality(key: String) = key.removeSuffix("?")
@@ -67,8 +68,9 @@ fun generateValue(value: Any, resolver: Resolver): Any {
     } else value
 }
 
-fun findPattern(matcherDescriptor: String) =
-    primitivePatterns.getOrDefault(matcherDescriptor, UnknownPattern())
+fun findPattern(matcherDescriptor: String): Pattern =
+        primitivePatterns.getOrElse(matcherDescriptor) { throw ContractParseException("Pattern $matcherDescriptor does not exist.") }
+
 
 fun withoutPatternDelimiter(patternValue: String) = patternValue.removeSurrounding("(", ")")
 fun nameToPatternSpec(name: String): String = "($name)"

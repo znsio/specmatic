@@ -7,7 +7,7 @@ import run.qontract.core.value.*
 
 fun asPattern(patternValue: Any?, key: String?): Pattern =
     when {
-        patternValue is LookupPattern -> patternValue.copy(key=key)
+        patternValue is Keyed -> patternValue.withKey(key)
         patternValue is Pattern -> patternValue
         patternValue is String && isPatternToken(patternValue) -> LookupPattern(patternValue, key)
         patternValue == null -> NoContentPattern()
@@ -21,8 +21,9 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             it.startsWith("{") -> JSONObjectPattern(it)
             it.startsWith("[") -> JSONArrayPattern(it)
             it.startsWith("<") -> XMLPattern(it)
-            isSlicePattern(it) -> SlicePattern(it)
-            isRepeatingPattern(it) -> ListPattern(it)
+            isNullablePattern(it) -> AnyPattern(listOf(NullPattern, parsedPattern(withoutNullToken(it))))
+            isSlicePattern(it) -> SlicePattern(parsedPattern(withoutSliceToken(it)))
+            isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutRepeatingToken(it)))
             it == "(number)" -> LookupPattern(it, null)
             isPrimitivePattern(it) -> primitivePatterns.getValue(it)
             isPatternToken(it) -> LookupPattern(it, key)
@@ -35,7 +36,7 @@ fun asValue(value: Any?): Value = when(value) {
     is Value -> value
     is Number -> NumberValue(value)
     is Boolean -> BooleanValue(value)
-    null -> NullValue()
+    null -> NullValue
     else -> StringValue(value.toString())
 }
 

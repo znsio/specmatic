@@ -4,29 +4,30 @@ import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import io.cucumber.messages.Messages
-import run.qontract.core.utilities.NullPattern
 import run.qontract.core.utilities.flatZip
 import run.qontract.core.value.*
 import run.qontract.test.ContractTestException
 
 fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) =
         TabularPattern(rows.map { it.cellsList }.map { (key, value) ->
-            key.value to convertTabularValueToPattern(value.value, null)
+            key.value to toJSONValue(value.value, null)
         }.toMap())
 
-fun convertTabularValueToPattern(value: String, key: String?) =
-        Pair(value.trim(), value.trim().toLowerCase()).let { (trimmed, lowered) ->
-            when {
-                trimmed.isEmpty() -> NoContentPattern()
-                isRepeatingPattern(trimmed) -> ListPattern(trimmed)
-                lowered in primitivePatterns -> primitivePatterns.getOrDefault(lowered, UnknownPattern())
-                isPatternToken(trimmed) -> LookupPattern(trimmed, key)
-                trimmed.startsWith("\"") && trimmed.endsWith("\"") -> ExactMatchPattern(StringValue(trimmed.removeSurrounding("\"")))
-                lowered in listOf("true", "false") -> ExactMatchPattern(BooleanValue(lowered.toBoolean()))
-                lowered == "null" -> NullPattern()
-                else -> ExactMatchPattern(NumberValue(convertToNumber(trimmed)))
-            }
+fun toJSONValue(value: String, key: String?): Pattern {
+    return value.trim().let {
+        val asNumber: Number? = try { convertToNumber(value) } catch (e: ContractParseException) { null }
+
+        when {
+            asNumber != null -> ExactMatchPattern(NumberValue(asNumber))
+            it.startsWith("\"") && it.endsWith("\"") ->
+                ExactMatchPattern(StringValue(it.removeSurrounding("\"")))
+            it == "null" -> ExactMatchPattern(NullValue)
+            it == "true" -> ExactMatchPattern(BooleanValue(true))
+            it == "false" -> ExactMatchPattern(BooleanValue(false))
+            else -> parsedPattern(value)
         }
+    }
+}
 
 fun convertToNumber(value: String): Number {
     value.trim().let {

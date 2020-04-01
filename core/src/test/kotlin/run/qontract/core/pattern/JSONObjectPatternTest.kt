@@ -3,7 +3,7 @@ package run.qontract.core.pattern
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.Result
-import run.qontract.core.mustMatch
+import run.qontract.core.shouldMatch
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
@@ -154,6 +154,6 @@ internal class JSONObjectPatternTest {
         val value = parsedValue("""{"expected": 10, "unexpected": 20}""")
         val pattern = parsedPattern("""{"expected": "(number)"}""")
 
-        value mustMatch pattern
+        value shouldMatch pattern
     }
 }

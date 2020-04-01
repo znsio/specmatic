@@ -527,7 +527,7 @@ Scenario: GET /balance Error:
                 "  Scenario: \n" +
                 "    Given pattern Location <city>(string)</city>\n" +
                 "    When POST /locations\n" +
-                "    And request-body <locations>(Location*)</locations>\n" +
+                "    And request-body <locations>(Location...)</locations>\n" +
                 "    Then status 200\n"
         verifyXMLArrayGenerationInRequestBody(contractGherkin)
     }
@@ -538,7 +538,7 @@ Scenario: GET /balance Error:
         val contractGherkin = "Feature: Contract for /locations API\n" +
                 "  Scenario: \n" +
                 "    Given pattern Location <city>(string)</city>\n" +
-                "    And pattern Locations <locations>(Location*)</locations>\n" +
+                "    And pattern Locations <locations>(Location...)</locations>\n" +
                 "    When POST /locations\n" +
                 "    And request-body (Locations)\n" +
                 "    Then status 200\n"

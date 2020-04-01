@@ -1,8 +1,8 @@
 package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
-import run.qontract.core.mustMatch
-import run.qontract.core.mustNotMatch
+import run.qontract.core.shouldMatch
+import run.qontract.core.shouldNotMatch
 import run.qontract.core.parseGherkinString
 import org.junit.jupiter.api.Test
 import run.qontract.core.value.*
@@ -23,7 +23,7 @@ Given pattern Id
         val value = parsedValue("""{"id": 10}""")
         val pattern = rowsToTabularPattern(getRows(gherkin))
 
-        value mustMatch pattern
+        value shouldMatch pattern
     }
 
     @Test
@@ -39,7 +39,7 @@ Given pattern Id
         val value = parsedValue("""{"id": 10}""")
         val pattern = rowsToTabularPattern(getRows(gherkin))
 
-        value mustMatch pattern
+        value shouldMatch pattern
     }
 
     @Test
@@ -55,11 +55,11 @@ Given pattern Id
         val value = parsedValue("""{"id": 10}""")
         val pattern = rowsToTabularPattern(getRows(gherkin))
 
-        value mustNotMatch pattern
+        value shouldNotMatch pattern
     }
 
     @Test
-    fun `A number in a tabular pattern value can match boolean patterns and concrete values`() {
+    fun `tabular pattern value can match boolean patterns and concrete values`() {
         val gherkin = """
 Feature: test feature
 
@@ -72,11 +72,11 @@ Given pattern Status
         val value = parsedValue("""{"status1": true, "status2": false}""")
         val pattern = rowsToTabularPattern(getRows(gherkin))
 
-        value mustMatch pattern
+        value shouldMatch pattern
     }
 
     @Test
-    fun `A number in a tabular pattern value can match strings`() {
+    fun `A concrete string can match strings`() {
         val gherkin = """
 Feature: test feature
 
@@ -88,7 +88,7 @@ Given pattern Id
         val value = parsedValue("""{"id": "12345"}""")
         val pattern = rowsToTabularPattern(getRows(gherkin))
 
-        value mustMatch pattern
+        value shouldMatch pattern
     }
 
     @Test
@@ -115,7 +115,7 @@ Given pattern Id
         resolver.addCustomPattern("(Id)", idPattern)
 
         assertTrue(idsPattern.matches(value, resolver).toBoolean())
-        assertTrue(resolver.matchesPattern(null, "(Ids)", value).toBoolean())
+        assertTrue(resolver.matchesPatternValue(null, "(Ids)", value).toBoolean())
     }
 
     @Test
@@ -137,7 +137,7 @@ Given pattern Ids
         resolver.addCustomPattern("(Ids)", idsPattern)
 
         assertTrue(idsPattern.matches(value, resolver).toBoolean())
-        assertTrue(resolver.matchesPattern(null, "(Ids)", value).toBoolean())
+        assertTrue(resolver.matchesPatternValue(null, "(Ids)", value).toBoolean())
     }
 
     @Test

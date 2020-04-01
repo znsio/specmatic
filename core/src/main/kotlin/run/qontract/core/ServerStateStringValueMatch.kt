@@ -1,11 +1,15 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.convertStringToCorrectType
+import run.qontract.core.value.Value
 
 class ServerStateStringValueMatch(serverState: HashMap<String, Any> = HashMap()) : ServerStateMatch(serverState) {
     override fun match(sampleValue: Any, key: String): Result {
         val serverStateValue = convertStringToCorrectType(serverState[key])
-        val typedSampleValue = convertStringToCorrectType(sampleValue)
+        val typedSampleValue = when(sampleValue) {
+            is Value -> sampleValue.value
+            else -> convertStringToCorrectType(sampleValue)
+        }
 
         return when(typedSampleValue == serverStateValue) {
             true -> Result.Success()

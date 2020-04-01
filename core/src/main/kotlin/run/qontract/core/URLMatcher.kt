@@ -3,7 +3,6 @@ package run.qontract.core
 import run.qontract.core.pattern.*
 import run.qontract.core.utilities.URIUtils
 import java.net.URI
-import javax.xml.parsers.ParserConfigurationException
 
 class URLMatcher : Cloneable {
     private val queryPattern: HashMap<String, String>
@@ -51,7 +50,7 @@ class URLMatcher : Cloneable {
         for (position in pathPatternParts.indices) {
             if (pathPatternParts[position].contains("(")) {
                 val partPattern = pathPatternParts[position].removeSurrounding("(", ")").split(":".toRegex()).toTypedArray()[1]
-                when (val result = resolver.matchesPattern(null, "($partPattern)", pathParts[position])) {
+                when (val result = resolver.matchesPatternValue(null, "($partPattern)", pathParts[position])) {
                     is Result.Failure -> return result.add("Path part did not match. Expected: $partPattern Actual: ${pathParts[position]}")
                 }
             } else {
@@ -71,7 +70,7 @@ class URLMatcher : Cloneable {
             }
             val patternValue = queryPattern[key]
             val sampleValue = sampleQuery[key]
-            when (val result = resolver.matchesPattern(key, patternValue!!, sampleValue!!)) {
+            when (val result = resolver.matchesPatternValue(key, patternValue!!, sampleValue!!)) {
                 is Result.Failure -> return result.add("Query parameter did not match")
             }
         }
@@ -87,7 +86,7 @@ class URLMatcher : Cloneable {
             try {
                 var parameterValue = parameterPattern
                 if (parameterValue.contains("(")) {
-                    parameterValue = resolver?.generate(parameterName, parameterValue).toString()
+                    parameterValue = resolver?.generateFromAny(parameterName, parameterValue).toString()
                 }
                 pathToBeSubstituted = pathToBeSubstituted.replaceFirst(Regex("\\($parameterName:.*\\)"), parameterValue)
             } catch (e: Exception) {
@@ -115,7 +114,7 @@ class URLMatcher : Cloneable {
                 .forEach { (key, mapValue) ->
                     val rowValue = row.getField(key).toString()
                     if(isPatternToken(mapValue)) {
-                        if (!resolver.matchesPattern(key, mapValue, rowValue).toBoolean()) {
+                        if (!resolver.matchesPatternValue(key, mapValue, rowValue).toBoolean()) {
                             throw ContractParseException("Example has $rowValue. But expected pattern $mapValue")
                         }
                     }

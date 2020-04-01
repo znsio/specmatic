@@ -10,7 +10,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
                     flatZipNullable(expectedState, actualState).all { (key, patternValue, stateValue) ->
                         when {
                             stateValue == true || patternValue == true -> true
-                            isPatternToken(patternValue) -> resolver.matchesPattern(key, patternValue, stateValue) is Result.Success
+                            isPatternToken(patternValue) -> resolver.matchesPatternValue(key, patternValue, stateValue) is Result.Success
                             else -> patternValue == stateValue
                         }
                     }
@@ -57,7 +57,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
                             combinedServerState[key] = actualValue
                         else if (isPatternToken(expectedValue)) {
                             //TODO: remove toBoolean and pass the result
-                            if (resolver.matchesPattern(key, expectedValue, actualValue).toBoolean())
+                            if (resolver.matchesPatternValue(key, expectedValue, actualValue).toBoolean())
                                 combinedServerState.put(key, actualValue)
                         }
                     }

@@ -18,7 +18,7 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
         return newResolver
     }
 
-    fun matchesPattern(serverStateKey: String?, patternValue: Any, sampleValue: Any): Result {
+    fun matchesPatternValue(serverStateKey: String?, patternValue: Any, sampleValue: Any): Result {
         if (matchPattern && sampleValue is Value && patternValue == sampleValue.value)
             return Result.Success()
 
@@ -49,6 +49,25 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
         }
     }
 
+    fun matchesPattern(serverStateKey: String?, pattern: Pattern, sampleValue: Value): Result {
+        if (matchPattern && sampleValue is StringValue && pattern == parsedPattern(sampleValue.string))
+            return Result.Success()
+
+        when (val result = pattern.matches(sampleValue, this)) {
+            is Result.Failure -> {
+                return result.add("""Expected $pattern, actual $sampleValue""")
+            }
+        }
+
+        if (serverStateKey != null && serverStateKey in serverStateMatch) {
+            when(val result = serverStateMatch.match(sampleValue, serverStateKey)) {
+                is Result.Failure -> result.add("Resolver was not able to match $serverStateKey with value $sampleValue")
+            }
+        }
+
+        return Result.Success()
+    }
+
     fun addCustomPattern(spec: String, pattern: Pattern) {
         this.customPatterns[spec] = pattern
     }
@@ -62,24 +81,40 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
             return customPatterns[patternValue] ?: findPattern(patternValue)
         }
 
-        return UnknownPattern()
+        throw ContractParseException("Pattern $patternValue does not exit.")
     }
 
-    fun generate(key: String, patternValue: Any): Value {
+    fun generate(key: String, pattern: Pattern): Value {
+        if (serverStateMatch.contains(key)) {
+            val nativeValue = serverStateMatch.get(key)
+
+            if (nativeValue != null && nativeValue != true) {
+                val value = pattern.parse(nativeValue as String, this)
+                when (matchesPattern(null, pattern, value)) {
+                    is Result.Success -> return value
+                    else -> throw ContractParseException("$nativeValue doesn't match $pattern")
+                }
+            }
+        }
+
+        return pattern.generate(this)
+    }
+
+    fun generateFromAny(key: String, patternValue: Any): Value {
         if (serverStateMatch.contains(key)) {
             val value = serverStateMatch.get(key)
             if (value != null && value != true) {
-                when (matchesPattern(null, patternValue, value)) {
+                when (matchesPatternValue(null, patternValue, value)) {
                     is Result.Success -> return asValue(value)
                     else -> throw ContractParseException("$value doesn't match $patternValue")
                 }
             }
         }
 
-        return generate(patternValue)
+        return generateFromAny(patternValue)
     }
 
-    fun generate(patternValue: Any): Value {
+    fun generateFromAny(patternValue: Any): Value {
         if (patternValue !is String)
             return StringValue()
 
@@ -91,7 +126,7 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
         if (serverStateMatch.contains(key)) {
             val value = serverStateMatch.get(key)
             if (isPatternToken(parameterValue) && value != null && value != true)
-                when (matchesPattern(null, parameterValue, value)) {
+                when (matchesPatternValue(null, parameterValue, value)) {
                     is Result.Success -> return asValue(value)
                     else -> throw ContractParseException("$value doesn't match $parameterPattern")
                 }

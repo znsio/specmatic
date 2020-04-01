@@ -12,12 +12,14 @@ import run.qontract.core.Contract.Companion.fromGherkin
 import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.utilities.brokerURL
 import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.NullValue
 import run.qontract.core.value.NumberValue
 import run.qontract.test.TestExecutor
 import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class ContractTests {
     @Test
@@ -113,7 +115,7 @@ Then status 200
     }
 
     @Test
-    fun `contract with one optional key and one examples should generate one test` () {
+    fun `contract with one optional key and one example should generate one test` () {
         val gherkin = """
 Feature: Older contract API
 
@@ -148,6 +150,46 @@ Examples:
         })
 
         assertEquals(10, flags["optional"])
+    }
+
+    @Test
+    fun `contract with one optional value should generate two tests` () {
+        val gherkin = """
+Feature: Contract API
+
+Scenario:
+Given json Value
+| value     | (number?) |
+When POST /value
+And request-body (Value)
+Then status 200
+    """.trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableSetOf<String>()
+
+        val executionInfo = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val requestBody = request.body
+                if (requestBody is JSONObjectValue) {
+                    flags.add(when(val value = requestBody.jsonObject.getOrDefault("value", null)) {
+                        is NumberValue -> "number"
+                        is NullValue -> "null"
+                        else -> fail("Expected number or null")
+                    })
+                } else fail("Expected JSON object")
+
+                return HttpResponse(200)
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        if(executionInfo.hasErrors)
+            executionInfo.print()
+
+        assertEquals(mutableSetOf("null", "number"), flags)
     }
 
     @Test
@@ -289,5 +331,204 @@ Then status 200
                 | userid |
                 | 12345  |
                 """
+    }
+
+    @Test
+    fun `AnyPattern should generate the right type in a json value in a test` () {
+        val gherkin = """
+Feature: Math API
+
+Scenario:
+Given json Input
+| value | (number?) |
+When POST /square
+    And request-body (Input)
+Then status 200
+    And response-body (number)
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableSetOf<String>()
+
+        val executionInfo = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body
+                if(body is JSONObjectValue) {
+                    val value = body.jsonObject.getValue("value")
+
+                    flags.add(when (value) {
+                        is NumberValue -> "json"
+                        is NullValue -> "null"
+                        else -> fail("Expected only json or null, got ${value.javaClass}")
+                    })
+                } else fail("Expected JSON object")
+
+                return HttpResponse(200, "100")
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        if(executionInfo.hasErrors)
+            executionInfo.print()
+
+        assertEquals(mutableSetOf("null", "json"), flags)
+        assertFalse(executionInfo.hasErrors)
+    }
+
+    @Test
+    fun `AnyPattern should generate a null value for a null body` () {
+        val gherkin = """
+Feature: Math API
+
+Scenario:
+When POST /square
+    And request-body (number?)
+Then status 200
+    And response-body (number)
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableSetOf<String>()
+
+        val executionInfo = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body
+
+                when (body) {
+                    is NumberValue -> "json"
+                    is NullValue -> "null"
+                    else -> fail("Expected only json or null, got ${body?.javaClass}")
+                }.let { flags.add(it) }
+
+                return HttpResponse(200, "100")
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        if(executionInfo.hasErrors)
+            executionInfo.print()
+
+        assertEquals(mutableSetOf("null", "json"), flags)
+        assertFalse(executionInfo.hasErrors)
+    }
+
+    @Test
+    fun `AnyPattern should match a null value in the response body` () {
+        val gherkin = """
+Feature: Math API
+
+Scenario:
+When POST /square
+    And request-body (number)
+Then status 200
+    And response-body (number?)
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+
+        val executionInfo = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse(200, "")
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        if(executionInfo.hasErrors)
+            executionInfo.print()
+
+        assertFalse(executionInfo.hasErrors)
+    }
+
+    @Test
+    fun `AnyPattern should pick up examples` () {
+        val gherkin = """
+Feature: Math API
+
+Scenario:
+Given json Input
+| number | (number) |
+When POST /square
+    And request-body (Input)
+Then status 200
+    And response-body (number?)
+Examples:
+| number |
+| 10 |
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        var invocationCount = 0
+
+        val executionInfo = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                invocationCount = invocationCount.inc()
+
+                val body = request.body
+
+                if(body is JSONObjectValue) {
+                    assertEquals(NumberValue(10), body.jsonObject.getValue("number"))
+                } else fail("Expected JSON object")
+
+                return HttpResponse(200, "")
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        if(executionInfo.hasErrors)
+            executionInfo.print()
+
+        assertEquals(1, invocationCount)
+        assertFalse(executionInfo.hasErrors)
+    }
+
+    @Test
+    fun `should be able to pass null in example to AnyPattern` () {
+        val gherkin = """
+Feature: Math API
+
+Scenario:
+Given json Input
+| number | (number?) |
+When POST /square
+    And request-body (Input)
+Then status 200
+Examples:
+| number |
+| (null) |
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        var invocationCount = 0
+
+        val executionInfo = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                invocationCount = invocationCount.inc()
+
+                val body = request.body
+
+                if(body is JSONObjectValue) {
+                    assertEquals(NullValue, body.jsonObject.getValue("number"))
+                } else fail("Expected JSON object")
+
+                return HttpResponse(200, "")
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        if(executionInfo.hasErrors)
+            executionInfo.print()
+
+        assertEquals(1, invocationCount)
+        assertFalse(executionInfo.hasErrors)
     }
 }

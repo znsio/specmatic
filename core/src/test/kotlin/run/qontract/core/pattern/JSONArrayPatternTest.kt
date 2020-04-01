@@ -1,7 +1,7 @@
 package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
-import run.qontract.core.mustMatch
+import run.qontract.core.shouldMatch
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFalse
 
@@ -11,7 +11,7 @@ internal class JSONArrayPatternTest {
         val value = parsedValue("[]")
         val pattern = parsedPattern("""["(number*)"]""")
 
-        value mustMatch pattern
+        value shouldMatch pattern
     }
 
     @Test

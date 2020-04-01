@@ -5,8 +5,8 @@ import run.qontract.core.Result
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.Value
 
-data class SlicePattern(override val pattern: String) : Pattern {
-    private val listPattern = ListPattern(withoutSliceToken(pattern))
+data class SlicePattern(override val pattern: Pattern) : Pattern {
+    private val listPattern = ListPattern(pattern)
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
             listPattern.matches(sampleData, resolver)

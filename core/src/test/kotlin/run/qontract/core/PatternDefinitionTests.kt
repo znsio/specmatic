@@ -211,7 +211,7 @@ class PatternDefinitionTests {
         val boolValue = true
         val boolPattern = BooleanPattern()
 
-        BooleanValue(boolValue) mustMatch  boolPattern
+        BooleanValue(boolValue) shouldMatch  boolPattern
     }
 
     @Test
@@ -219,7 +219,7 @@ class PatternDefinitionTests {
         val jsonString = """{"result": true}"""
         val jsonPattern = """{"result": "(boolean)"}"""
 
-        parsedValue(jsonString) mustMatch parsedPattern(jsonPattern, null)
+        parsedValue(jsonString) shouldMatch parsedPattern(jsonPattern, null)
     }
 
     @Test
@@ -227,7 +227,7 @@ class PatternDefinitionTests {
         val value = 10.5
         val pattern = NumberTypePattern()
 
-        NumberValue(value) mustMatch pattern
+        NumberValue(value) shouldMatch pattern
     }
 
     @Test
@@ -235,7 +235,7 @@ class PatternDefinitionTests {
         val jsonString = """{"result": 10.1}"""
         val jsonPattern = """{"result": "(number)"}"""
 
-        parsedValue(jsonString) mustMatch parsedPattern(jsonPattern, null)
+        parsedValue(jsonString) shouldMatch parsedPattern(jsonPattern, null)
     }
 
     @Test
@@ -243,7 +243,7 @@ class PatternDefinitionTests {
         val jsonString = """{"result": 10.1, "id": 10}"""
         val jsonPattern = """{"result": "(number)", "id?": "(number)"}"""
 
-        parsedValue(jsonString) mustMatch parsedPattern(jsonPattern, null)
+        parsedValue(jsonString) shouldMatch parsedPattern(jsonPattern, null)
     }
 
     @Test
@@ -251,14 +251,14 @@ class PatternDefinitionTests {
         val jsonString = """{"result": 10.1}"""
         val jsonPattern = """{"result": "(number)", "id?": "(number)"}"""
 
-        parsedValue(jsonString) mustMatch parsedPattern(jsonPattern, null)
+        parsedValue(jsonString) shouldMatch parsedPattern(jsonPattern, null)
     }
 }
 
-infix fun Value.mustMatch(pattern: Pattern) {
+infix fun Value.shouldMatch(pattern: Pattern) {
     assertTrue(pattern.matches(this, Resolver()).toBoolean())
 }
 
-infix fun Value.mustNotMatch(pattern: Pattern) {
+infix fun Value.shouldNotMatch(pattern: Pattern) {
     assertFalse(pattern.matches(this, Resolver()).toBoolean())
 }

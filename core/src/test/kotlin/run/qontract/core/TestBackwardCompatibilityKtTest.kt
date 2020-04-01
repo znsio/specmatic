@@ -154,4 +154,96 @@ Then status 200
         kotlin.test.assertEquals(1, executionInfo.successCount)
         kotlin.test.assertEquals(0, executionInfo.failureCount)
     }
+
+    @Test
+    fun `should be able to validate new contract compatibility with optional request body`() {
+        val gherkin = """
+Feature: Contract API
+
+Scenario:
+When POST /number
+And request-body (number?)
+Then status 200
+    """.trim()
+
+        val contract = ContractBehaviour(gherkin)
+
+        val executionInfo: ExecutionInfo = testBackwardCompatibility(contract, contract)
+
+        if(executionInfo.failureCount > 0)
+            executionInfo.print()
+
+        kotlin.test.assertEquals(2, executionInfo.successCount)
+        kotlin.test.assertEquals(0, executionInfo.failureCount)
+    }
+
+    @Test
+    fun `should be able to validate new contract compatibility with optional key in request body`() {
+        val gherkin = """
+Feature: Contract API
+
+Scenario:
+Given json Number
+| number | (number?) |
+When POST /number
+And request-body (Number)
+Then status 200
+    """.trim()
+
+        val contract = ContractBehaviour(gherkin)
+
+        val executionInfo: ExecutionInfo = testBackwardCompatibility(contract, contract)
+
+        if(executionInfo.failureCount > 0)
+            executionInfo.print()
+
+        kotlin.test.assertEquals(2, executionInfo.successCount)
+        kotlin.test.assertEquals(0, executionInfo.failureCount)
+    }
+
+    @Test
+    fun `should be able to validate new contract compatibility with optional response body`() {
+        val gherkin = """
+Feature: Contract API
+
+Scenario:
+When POST /number
+Then status 200
+And response-body (number?)
+    """.trim()
+
+        val contract = ContractBehaviour(gherkin)
+
+        val executionInfo: ExecutionInfo = testBackwardCompatibility(contract, contract)
+
+        if(executionInfo.failureCount > 0)
+            executionInfo.print()
+
+        kotlin.test.assertEquals(1, executionInfo.successCount)
+        kotlin.test.assertEquals(0, executionInfo.failureCount)
+    }
+
+    @Test
+    fun `should be able to validate new contract compatibility with optional key in response body`() {
+        val gherkin = """
+Feature: Contract API
+
+Scenario:
+Given json Number
+| number | (number?) |
+When POST /number
+Then status 200
+And response-body (Number)
+    """.trim()
+
+        val contract = ContractBehaviour(gherkin)
+
+        val executionInfo: ExecutionInfo = testBackwardCompatibility(contract, contract)
+
+        if(executionInfo.failureCount > 0)
+            executionInfo.print()
+
+        kotlin.test.assertEquals(1, executionInfo.successCount)
+        kotlin.test.assertEquals(0, executionInfo.failureCount)
+    }
 }

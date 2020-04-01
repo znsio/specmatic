@@ -12,7 +12,7 @@ import java.util.*
 class StringPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when(sampleData) {
-            is StringValue, is NoValue, is NullValue -> Result.Success()
+            is StringValue, is NoValue -> Result.Success()
             else -> Result.Failure("${sampleData?.value} is not a String")
         }
     }

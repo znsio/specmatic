@@ -49,7 +49,7 @@ internal class URLMatcherTest {
         val urlMatcher = URLMatcher(URI("/pets?petid=(number)"))
         val queryParameters = hashMapOf("petid" to "text")
         val resolver = mockk<Resolver>(relaxed = true).also {
-            every { it.matchesPattern("petid", "(number)", "text") } returns Result.Failure("resolver error message")
+            every { it.matchesPatternValue("petid", "(number)", "text") } returns Result.Failure("resolver error message")
         }
         urlMatcher.matches(URI("/pets"), queryParameters, resolver).let { it ->
             assertThat(it is Result.Failure).isTrue()
@@ -102,15 +102,15 @@ internal class URLMatcherTest {
         urlMatcher.generatePath(resolver).let {
             assertThat(it).isEqualTo("/pets")
         }
-        verify(exactly = 0) { resolver.generate(any(), any()) }
+        verify(exactly = 0) { resolver.generateFromAny(any(), any()) }
     }
 
     @Test
     fun `should generate path when url has only path parameters`() {
         val urlMatcher = URLMatcher(URI("/pets/(petid:number)/owner/(owner:string)"))
         val resolver = mockk<Resolver>().also {
-            every { it.generate("petid", "(number)") } returns NumberValue(123)
-            every { it.generate("owner", "(string)") } returns StringValue("hari")
+            every { it.generateFromAny("petid", "(number)") } returns NumberValue(123)
+            every { it.generateFromAny("owner", "(string)") } returns StringValue("hari")
         }
         urlMatcher.generatePath(resolver).let{
             assertThat(it).isEqualTo("/pets/123/owner/hari")

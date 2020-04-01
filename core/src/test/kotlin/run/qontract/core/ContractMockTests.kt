@@ -18,6 +18,8 @@ import org.springframework.http.HttpMethod
 import org.springframework.http.ResponseEntity
 import org.springframework.web.client.RestTemplate
 import org.w3c.dom.Node
+import run.qontract.core.value.NullValue
+import run.qontract.core.value.NumberValue
 import java.net.URI
 import java.util.*
 import kotlin.collections.HashMap
@@ -290,4 +292,71 @@ Scenario: JSON API to get account details with fact check
         }
     }
 
+    @Test
+    fun `should be able to mock out a number in the request for AnyPattern with number or null`() {
+        val contractGherkin = """Feature: Contract for /number API
+  Scenario Outline:
+    When POST /number
+    And request-body (number?)
+    Then status 200
+""".trimIndent()
+
+        ContractMock.fromGherkin(contractGherkin).use { mock ->
+            mock.start()
+            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NumberValue(10))
+            val expectedResponse = HttpResponse(200)
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
+        }
+    }
+
+    @Test
+    fun `should be able to mock out a null in the request for AnyPattern with number or null`() {
+        val contractGherkin = """Feature: Contract for /number API
+  Scenario Outline:
+    When POST /number
+    And request-body (number?)
+    Then status 200
+""".trimIndent()
+
+        ContractMock.fromGherkin(contractGherkin).use { mock ->
+            mock.start()
+            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NullValue)
+            val expectedResponse = HttpResponse(200)
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
+        }
+    }
+
+    @Test
+    fun `should be able to mock out a number in the response for AnyPattern with number or null`() {
+        val contractGherkin = """Feature: Contract for /number API
+  Scenario Outline:
+    When GET /number
+    Then status 200
+    And response-body (number)
+""".trimIndent()
+
+        ContractMock.fromGherkin(contractGherkin).use { mock ->
+            mock.start()
+            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
+            val expectedResponse = HttpResponse(200, "10")
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
+        }
+    }
+
+    @Test
+    fun `should be able to mock out an empty response for AnyPattern with number or null`() {
+        val contractGherkin = """Feature: Contract for /number API
+  Scenario Outline:
+    When GET /number
+    Then status 200
+    And response-body (number?)
+""".trimIndent()
+
+        ContractMock.fromGherkin(contractGherkin).use { mock ->
+            mock.start()
+            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
+            val expectedResponse = HttpResponse(200, "")
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
+        }
+    }
 }

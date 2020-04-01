@@ -1,24 +1,24 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.mustMatch
+import run.qontract.core.shouldMatch
 import run.qontract.core.parseGherkinString
 import org.junit.jupiter.api.Test
 
 class StringMatchTest {
     @Test
     fun `string pattern should match null`() {
-        val pattern = parsedPattern("""{"id": "(string)"}""")
+        val pattern = parsedPattern("""{"id": "(string?)"}""")
         val value = parsedValue("""{"id": null}""")
 
-        value mustMatch pattern
+        value shouldMatch pattern
     }
 
     @Test
     fun `array of nulls should match json array pattern`() {
-        val pattern = parsedPattern("""{"id": ["(string...)"]}""")
+        val pattern = parsedPattern("""{"id": ["(string?...)"]}""")
         val value = parsedValue("""{"id": [null, null]}""")
 
-        value mustMatch pattern
+        value shouldMatch pattern
     }
 
     @Test
@@ -29,11 +29,11 @@ class StringMatchTest {
             Scenario: test
             Given pattern Person
             | id   | (number) |
-            | name | (string) |
+            | name | (string?) |
         """.trimIndent()
         val pattern = rowsToTabularPattern(parseGherkinString(gherkin).feature.childrenList[0].scenario.stepsList[0].dataTable.rowsList)
         val value = parsedValue("""{"id": 10, "name": null}""")
 
-        value mustMatch pattern
+        value shouldMatch pattern
     }
 }

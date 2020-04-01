@@ -63,7 +63,7 @@ internal class HttpHeadersPatternTest {
         val httpHeaders = HttpHeadersPattern(mapOf("key" to "(string)"))
         val resolver = Resolver()
         httpHeaders.matches(HashMap<String?, String?>(), resolver)
-        assertThat(resolver.matchesPattern(null, "(number)", "123") is Result.Failure).isTrue()
+        assertThat(resolver.matchesPatternValue(null, "(number)", "123") is Result.Failure).isTrue()
     }
 
     @Test

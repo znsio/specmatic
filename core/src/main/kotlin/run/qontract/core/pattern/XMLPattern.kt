@@ -4,7 +4,6 @@ import run.qontract.core.Resolver
 import run.qontract.core.value.Value
 import run.qontract.core.Result
 import run.qontract.core.utilities.xmlToString
-import run.qontract.core.value.NoValue
 import run.qontract.core.value.XMLValue
 import org.w3c.dom.Document
 import org.w3c.dom.NamedNodeMap
@@ -69,7 +68,7 @@ class XMLPattern : Pattern {
     private fun matchesNode(pattern: Node, sample: Node, resolver: Resolver): Result {
         if (pattern.nodeName != sample.nodeName) {
             return if (isPatternToken(pattern.nodeValue)) {
-                when (val result = resolver.matchesPattern(sample.nodeName, pattern.nodeValue, sample)) {
+                when (val result = resolver.matchesPatternValue(sample.nodeName, withoutSliceTokenForXML(pattern.nodeValue), sample)) {
                     is Result.Failure -> result.add("Node ${sample.nodeName} did not match. Expected: ${pattern.nodeValue} Actual: ${sample.nodeValue}")
                     else -> result
                 }
@@ -108,7 +107,7 @@ class XMLPattern : Pattern {
         val sampleValue = sample.nodeValue
         val key = pattern.parentNode.nodeName
         //TODO: looks repetitive
-        return when (val result = resolver.matchesPattern(key, patternValue, sampleValue)) {
+        return when (val result = resolver.matchesPatternValue(key, patternValue, sampleValue)) {
             is Result.Failure -> result.add("Node $key did not match. Expected: $patternValue Actual: $sampleValue")
             else -> result
         }
@@ -137,7 +136,7 @@ class XMLPattern : Pattern {
             val patternValue = patternItem.nodeValue
             val sampleValue = sampleItem.nodeValue
             //TODO: remove toBoolean and return result
-            if (!resolver.matchesPattern(name, patternValue, sampleValue).toBoolean()) return false
+            if (!resolver.matchesPatternValue(name, patternValue, sampleValue).toBoolean()) return false
         }
         return true
     }
@@ -188,7 +187,7 @@ class XMLPattern : Pattern {
             val random = Random()
             val count = random.nextInt(9) + 1
             for (i in 0 until count) {
-                val result = resolver.generate(pattern)
+                val result = resolver.generateFromAny(pattern)
                 val newNode = getXMLNodeFrom(result)
                 parentNode.ownerDocument.adoptNode(newNode)
                 val first = parentNode.firstChild
@@ -252,10 +251,19 @@ class XMLPattern : Pattern {
                 node.nodeValue = row.getField(parentNodeName).toString()
             } else {
                 val value = node.nodeValue
-                node.nodeValue = generateValue(value, resolver).toString()
+                node.nodeValue = when {
+                    isPatternToken(value) -> resolver.generateFromAny(withoutSliceTokenForXML(value), resolver).toString()
+                    else -> value
+                }
             }
         }
     }
+
+    private fun withoutSliceTokenForXML(value: String): String =
+        when {
+            isPatternToken(value) -> withoutSliceToken(value)
+            else -> value
+        }
 
     @Throws(Exception::class)
     private fun updateAttributesBasedOnRow(node: Node, row: Row, resolver: Resolver) {

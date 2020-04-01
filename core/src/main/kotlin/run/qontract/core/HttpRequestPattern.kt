@@ -92,6 +92,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     }
 
     fun bodyPattern(bodyContent: String?) = this.copy(body = parsedPattern(bodyContent!!))
+    fun bodyPattern(newBody: Pattern) = this.copy(body = newBody)
 
     fun setBodyPattern(bodyContent: String?) {
         body = parsedPattern(bodyContent!!)

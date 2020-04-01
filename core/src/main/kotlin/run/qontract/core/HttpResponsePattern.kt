@@ -65,4 +65,6 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
         }
         return MatchSuccess(parameters)
     }
+
+    fun bodyPattern(newBody: Pattern): HttpResponsePattern = this.copy(body = newBody)
 }

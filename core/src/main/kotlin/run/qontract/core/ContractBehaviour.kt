@@ -5,6 +5,7 @@ import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.Messages.GherkinDocument
+import io.cucumber.messages.internal.com.google.protobuf.Value
 import run.qontract.core.pattern.*
 import run.qontract.core.pattern.PatternTable.Companion.examplesFrom
 import run.qontract.core.utilities.jsonStringToMap
@@ -181,9 +182,9 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             "STATUS" ->
                 scenarioInfo.copy(httpResponsePattern = scenarioInfo.httpResponsePattern.copy(status = Integer.valueOf(step.rest)))
             "REQUEST-BODY" ->
-                scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.bodyPattern(step.rest))
+                scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.bodyPattern(toPattern(step)))
             "RESPONSE-BODY" ->
-                scenarioInfo.copy(httpResponsePattern = scenarioInfo.httpResponsePattern.bodyPattern(step.rest))
+                scenarioInfo.copy(httpResponsePattern = scenarioInfo.httpResponsePattern.bodyPattern(toPattern(step)))
             "FACT" ->
                 scenarioInfo.copy(expectedServerState = scenarioInfo.expectedServerState.plus(toFacts(step.rest, scenarioInfo.fixtures)))
             "TYPE", "PATTERN", "JSON" ->
@@ -197,6 +198,16 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
     }
 
     return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)))
+}
+
+fun toPattern(step: StepInfo): Pattern {
+    return when(val trimmedRest = step.rest.trim()) {
+        "" -> {
+            if(step.rowsList.isEmpty()) throw ContractParseException("Not enough information to describe a type in $step")
+            rowsToTabularPattern(step.rowsList)
+        }
+        else -> parsedPattern(trimmedRest)
+    }
 }
 
 fun plusFormFields(formFields: Map<String, Pattern>, rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): Map<String, Pattern> =

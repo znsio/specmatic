@@ -8,6 +8,7 @@ import run.qontract.core.utilities.getContractGherkin
 import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline
 import io.ktor.application.call
+import io.ktor.application.install
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
@@ -49,7 +50,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Pair<Value, Map<String,
 internal fun toParams(queryParameters: Parameters) = HashMap(queryParameters.toMap().mapValues { it.value.first() })
 
 internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse) {
-    println(httpResponse.toLogString())
+    println(httpResponse.toLogString("< "))
     println()
 
     val textContent = TextContent(httpResponse.body as String, ContentType.Application.Json, HttpStatusCode.fromValue(httpResponse.status))
@@ -76,14 +77,13 @@ class ContractFake(gherkinData: String, host: String, port: Int) : Closeable {
         intercept(ApplicationCallPipeline.Call) {
             val httpRequest = ktorHttpRequestToHttpRequest(call)
 
-            println(httpRequest.toLogString())
-            println()
-
             if (isSetupRequest(httpRequest)) {
+                println(httpRequest.toLogString("| "))
                 setupServerState(httpRequest)
-                println(HttpResponse(200).toLogString())
+                println(HttpResponse(200).toLogString("| "))
                 call.response.status(HttpStatusCode.OK)
             } else {
+                println(httpRequest.toLogString("> "))
                 respondToKtorHttpResponse(call, contractBehaviour.lookup(httpRequest))
             }
         }

@@ -100,7 +100,7 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         headers.putAll(addedHeaders)
     }
 
-    fun toLogString(): String {
+    fun toLogString(prefix: String): String {
         val methodString = method ?: "NO_METHOD"
 
         val pathString = path ?: "NO_PATH"
@@ -116,7 +116,7 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
 
         val firstPart = listOf(firstLine, headerString).joinToString("\n").trim()
         val requestString = listOf(firstPart, "", bodyString).joinToString("\n")
-        return startLinesWith(requestString, ">")
+        return startLinesWith(requestString, prefix)
     }
 
     companion object {

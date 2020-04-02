@@ -22,7 +22,8 @@ internal val primitivePatterns = mapOf(
     "(number)" to NumberTypePattern(),
     "(numericstring)" to NumericStringPattern(),
     "(string)" to StringPattern(),
-    "(boolean)" to BooleanPattern())
+    "(boolean)" to BooleanPattern(),
+    "(null)" to NullPattern)
 
 fun isPrimitivePattern(pattern: Any): Boolean =
     when(pattern) {

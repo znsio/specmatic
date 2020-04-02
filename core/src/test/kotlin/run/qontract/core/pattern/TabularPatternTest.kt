@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.value.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class TabularPatternTest {
     @Test
@@ -209,6 +210,93 @@ And pattern Address
         val address = value.jsonObject["address"]
         assertTrue(address is JSONObjectValue)
         address.jsonObject.getValue("flat").let { assertEquals(100, it.value) }
+    }
+
+    @Test
+    fun `tabular pattern can match null`() {
+        val gherkin = """
+Feature: test feature
+
+Scenario:
+Given request-body
+| nothing | (null) |
+""".trim()
+
+        val scenario = getScenario(gherkin)
+
+        val patternWithNullValue = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val value = parsedValue("""{"nothing": null}""")
+        value shouldMatch patternWithNullValue
+    }
+
+    @Test
+    fun `tabular pattern can generate null`() {
+        val gherkin = """
+Feature: test feature
+
+Scenario:
+Given request-body
+| nothing | (null) |
+""".trim()
+
+        val scenario = getScenario(gherkin)
+
+        val patternWithNullValue = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val value = patternWithNullValue.generate(Resolver())
+
+        assertTrue(value.jsonObject.getValue("nothing") is NullValue)
+    }
+
+    @Test
+    fun `tabular pattern can pick up null values from examples`() {
+        val gherkin = """
+Feature: test feature
+
+Scenario:
+Given request-body
+| nothing | (string?) |
+""".trim()
+
+        val scenario = getScenario(gherkin)
+
+        val patternWithNullValue = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val example = Row(listOf("nothing"), listOf("(null)"))
+        val newPatterns = patternWithNullValue.newBasedOn(example, Resolver())
+
+        assertEquals(1, newPatterns.size)
+
+        val value = newPatterns[0].generate(Resolver())
+
+        if(value !is JSONObjectValue) fail("Expected JSON object")
+
+        assertTrue(value.jsonObject.getValue("nothing") is NullValue)
+    }
+
+    @Test
+    fun `tabular pattern should pick up null values from examples but fail with non nullable pattern`() {
+        val gherkin = """
+Feature: test feature
+
+Scenario:
+Given request-body
+| nothing | (string) |
+""".trim()
+
+        val scenario = getScenario(gherkin)
+
+        val patternWithNullValue = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val example = Row(listOf("nothing"), listOf("(null)"))
+        val newPatterns = patternWithNullValue.newBasedOn(example, Resolver())
+
+        assertEquals(1, newPatterns.size)
+
+        val value = newPatterns[0].generate(Resolver())
+        if(value !is JSONObjectValue) fail("Expected JSON object")
+
+        val nothingValue = value.jsonObject.getValue("nothing")
+        if(nothingValue !is StringValue) fail("Expected string")
+
+        assertEquals("(null)", nothingValue.string)
     }
 }
 

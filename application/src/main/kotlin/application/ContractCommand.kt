@@ -84,51 +84,6 @@ class ContractCommand : Callable<Void?> {
         }
     }
 
-    @Command(description = ["Run the contract in stub mode"] )
-    fun stub(@Option(names = ["--path"], description = ["Contract location"], paramLabel = "<contract file path>", required = true) path: String, @Option(names = ["--host"], description = ["Host"], paramLabel = "<host>", defaultValue = "localhost") host: String, @Option(names = ["--port"], description = ["Port"], paramLabel = "<port>", defaultValue = "9000") port: Int) {
-        val contractGherkin = readFile(path)
-        val contractFake = ContractFake(contractGherkin, host, port.toInt())
-        addShutdownHook(contractFake)
-        println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
-        while (true) {
-            Thread.sleep(1000)
-        }
-    }
-
-    private fun addShutdownHook(contractFake: ContractFake) {
-        Runtime.getRuntime().addShutdownHook(object : Thread() {
-            override fun run() {
-                try {
-                    println("Shutting down stub server")
-                    contractFake.close()
-                } catch (e: InterruptedException) {
-                    currentThread().interrupt()
-                }
-            }
-        })
-    }
-
-    @Command(description = ["Run the contract in test mode"] )
-    fun test(@Option(names = ["--path"], description = ["Contract location"], paramLabel = "<contract file path>", required = true) path: String, @Option(names = ["--host"], description = ["Host"], paramLabel = "<host>", defaultValue = "localhost") host: String, @Option(names = ["--port"], description = ["Port"], paramLabel = "<port>", defaultValue = "9000") port: Int, @Option(names = ["--suggestions"], description = ["run.qontract.core.Suggestions location"], paramLabel = "<suggestions file path>", defaultValue = "") suggestionsPath: String) {
-        try {
-            System.setProperty("path", path)
-            System.setProperty("host", host)
-            System.setProperty("port", port.toString())
-            System.setProperty("suggestions", suggestionsPath)
-            val launcher = LauncherFactory.create()
-            val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
-                    .selectors(DiscoverySelectors.selectClass(QontractJUnitSupport::class.java))
-                    .build()
-            launcher.discover(request)
-            val contractExecutionListener = ContractExecutionListener()
-            launcher.registerTestExecutionListeners(contractExecutionListener)
-            launcher.execute(request)
-            contractExecutionListener.exitProcess()
-        } catch (exception: Throwable) {
-            println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
-        }
-    }
-
     override fun call(): Void? {
         CommandLine(ContractCommand()).usage(System.out)
         return null

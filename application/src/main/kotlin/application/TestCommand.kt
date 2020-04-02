@@ -28,8 +28,7 @@ class TestCommand : Callable<Void> {
     @Option(names = ["--suggestions"], description = ["run.qontract.core.Suggestions location"], defaultValue = "")
     lateinit var suggestionsPath: String
 
-    @Command
-    fun run() {
+    override fun call(): Void? {
         try {
             System.setProperty("path", path)
             System.setProperty("host", host)
@@ -47,10 +46,6 @@ class TestCommand : Callable<Void> {
         } catch (exception: Throwable) {
             println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
         }
-    }
-
-    override fun call(): Void? {
-        CommandLine(TestCommand()).usage(System.out)
         return null
     }
 

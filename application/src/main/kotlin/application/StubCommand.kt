@@ -22,8 +22,7 @@ class StubCommand : Callable<Void> {
     @Option(names = ["--port"], description = ["Port"], defaultValue = "9000")
     lateinit var port: Integer
 
-    @Command
-    fun start() {
+    override fun call(): Void? {
         val contractGherkin = readFile(path)
         addShutdownHook()
         contractFake = ContractFake(contractGherkin, host, port.toInt())
@@ -31,10 +30,7 @@ class StubCommand : Callable<Void> {
         while (true) {
             Thread.sleep(1000)
         }
-    }
 
-    override fun call(): Void? {
-        CommandLine(StubCommand()).usage(System.out)
         return null
     }
 

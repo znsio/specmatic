@@ -11,6 +11,7 @@ import run.qontract.core.Contract.Companion.forService
 import run.qontract.core.Contract.Companion.fromGherkin
 import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.utilities.brokerURL
+import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.NumberValue
@@ -517,6 +518,45 @@ Examples:
                 if(body is JSONObjectValue) {
                     assertEquals(NullValue, body.jsonObject.getValue("number"))
                 } else fail("Expected JSON object")
+
+                return HttpResponse(200, "")
+            }
+
+            override fun setServerState(serverState: Map<String, Any?>) {
+            }
+        })
+
+        if(executionInfo.hasErrors)
+            executionInfo.print()
+
+        assertEquals(1, invocationCount)
+        assertFalse(executionInfo.hasErrors)
+    }
+
+    @Test
+    fun `should generate a list when list operator is used` () {
+        val gherkin = """
+Feature: Dumb API
+
+Scenario:
+When POST /acceptNumber
+And request-body (number*)
+Then status 200
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        var invocationCount = 0
+
+        val executionInfo = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                invocationCount = invocationCount.inc()
+
+                val body = request.body
+
+                if(body !is JSONArrayValue) fail("Expected JSON array")
+
+                assertTrue(body.list[0] is NumberValue)
+                assertTrue(body.list[1] is NumberValue)
 
                 return HttpResponse(200, "")
             }

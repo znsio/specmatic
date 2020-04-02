@@ -1,9 +1,12 @@
 package run.qontract.core.pattern
 
+import org.json.JSONArray
 import run.qontract.core.Resolver
 import run.qontract.core.shouldMatch
 import org.junit.jupiter.api.Test
+import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.JSONArrayValue
+import run.qontract.core.value.NullValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import kotlin.test.assertFalse
@@ -32,5 +35,10 @@ internal class JSONArrayPatternTest {
         val value = JSONArrayValue(listOf(StringValue("hello")))
 
         value shouldMatch pattern
+    }
+
+    @Test
+    fun `should fail to match nulls gracefully`() {
+        NullValue shouldNotMatch JSONArrayPattern(listOf(StringPattern(), StringPattern()))
     }
 }

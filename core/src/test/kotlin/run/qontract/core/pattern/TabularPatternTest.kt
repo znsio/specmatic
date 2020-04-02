@@ -298,6 +298,11 @@ Given request-body
 
         assertEquals("(null)", nothingValue.string)
     }
+
+    @Test
+    fun `should fail to match nulls gracefully`() {
+        NullValue shouldNotMatch TabularPattern(mapOf("name" to StringPattern()))
+    }
 }
 
 internal fun getRows(gherkin: String) = getScenario(gherkin).stepsList[0].dataTable.rowsList

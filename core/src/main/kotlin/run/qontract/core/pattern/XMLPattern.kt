@@ -9,6 +9,7 @@ import org.w3c.dom.Document
 import org.w3c.dom.NamedNodeMap
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
+import run.qontract.core.value.NullValue
 import java.io.StringReader
 import java.util.*
 import javax.xml.parsers.DocumentBuilderFactory
@@ -35,6 +36,10 @@ class XMLPattern : Pattern {
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if(sampleData is NullValue)
+            return Result.Failure("Got null, but expected xml of the form $pattern")
+
+
         resolver.addCustomPattern("(number)", NumericStringPattern())
         return when (val result = matchesXMLData(sampleData, resolver)) {
             is Result.Failure -> result.add("XML did not match")

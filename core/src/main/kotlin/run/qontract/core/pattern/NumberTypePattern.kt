@@ -2,15 +2,19 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.value.NullValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.Value
 import java.util.*
 
 class NumberTypePattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if(sampleData is NullValue)
+            return Result.Failure("Expected number, got null")
+
         return when(sampleData is NumberValue) {
             true -> Result.Success()
-            false -> Result.Failure("${sampleData?.value} is not a Number")
+            false -> Result.Failure("${sampleData?.value} should be a Number")
         }
     }
 

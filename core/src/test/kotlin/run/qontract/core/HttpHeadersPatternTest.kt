@@ -2,8 +2,10 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.Row
 import java.util.*
 import kotlin.collections.HashMap
+import kotlin.test.assertEquals
 
 internal class HttpHeadersPatternTest {
     @Test
@@ -90,5 +92,12 @@ internal class HttpHeadersPatternTest {
         }
 
         assertThat(expectedHeaders.matches(actualHeaders, Resolver()).toBoolean()).isTrue()
+    }
+
+    @Test
+    fun `should generate new header objects given a row`() {
+        val headers = HttpHeadersPattern(mapOf("Content-Type" to "(string)"))
+        val newHeaders = headers.newBasedOn(Row())
+        assertEquals("(string)", newHeaders[0].headers.getValue("Content-Type"))
     }
 }

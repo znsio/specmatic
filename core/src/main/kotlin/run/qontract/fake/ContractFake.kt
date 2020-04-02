@@ -29,9 +29,11 @@ import java.util.*
 internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
     val(body, formFields) = bodyFromCall(call)
 
+    val requestHeaders = HashMap(call.request.headers.toMap().mapValues { it.value[0] })
+
     return HttpRequest(method = call.request.httpMethod.value,
             path = call.request.path(),
-            headers = HashMap(),
+            headers = requestHeaders,
             body = body,
             queryParams = toParams(call.request.queryParameters),
             formFields = formFields)

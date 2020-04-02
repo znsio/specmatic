@@ -1,15 +1,14 @@
 package run.qontract.test
 
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.request.forms.FormPart
-import io.ktor.client.request.forms.MultiPartFormDataContent
-import io.ktor.client.request.forms.formData
+import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.request
 import io.ktor.client.statement.readText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.contentType
+import io.ktor.http.parametersOf
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
@@ -44,11 +43,8 @@ class HttpClient(private val baseURL: String) : TestExecutor {
                 }
 
                 if(request.formFields.isNotEmpty()) {
-                    request.formFields.forEach { (key, value) ->
-                        this.body = MultiPartFormDataContent(formData {
-                            this.append(FormPart(key, value))
-                        })
-                    }
+                    val parameters = request.formFields.mapValues { listOf(it.value) }.toList()
+                    this.body = FormDataContent(parametersOf(*parameters.toTypedArray()))
                 }
                 else if (request.body != null) {
                     this.body = when {

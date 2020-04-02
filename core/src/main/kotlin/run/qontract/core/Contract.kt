@@ -13,14 +13,13 @@ data class Contract constructor(val contractGherkin: String, val majorVersion: I
 
     fun test(endPoint: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(HttpClient(endPoint))
+        val executionInfo = contractBehaviour.executeTests(HttpClient(endPoint))
+        if(executionInfo.hasErrors)
+            throw ContractTestException("These contracts are incompatible.\n${executionInfo.generateErrorMessage()}")
     }
 
     fun test(fake: ContractFake) {
-        val contractBehaviour = ContractBehaviour(contractGherkin)
-        val executionInfo = contractBehaviour.executeTests(HttpClient(fake.endPoint))
-        if(executionInfo.hasErrors)
-            throw ContractTestException("These contracts are incompatible.\n${executionInfo.generateErrorMessage()}")
+        test(fake.endPoint)
     }
 
     companion object {

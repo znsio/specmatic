@@ -145,7 +145,12 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
             newBodies.flatMap { newBody ->
                 newHeadersPattern.flatMap { newHeadersPattern ->
                     newFormFieldsPatterns.map { newFormFieldsPattern ->
-                        HttpRequestPattern(newHeadersPattern, newURLMatcher, method, newBody, newFormFieldsPattern )
+                        HttpRequestPattern(
+                                headersPattern = newHeadersPattern,
+                                urlMatcher = newURLMatcher,
+                                method = method,
+                                body = newBody,
+                                formFieldsPattern = newFormFieldsPattern)
                     }
                 }
             }

@@ -1,12 +1,5 @@
 package application
 
-import run.qontract.test.QontractJUnitSupport
-import run.qontract.test.ContractExecutionListener
-import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
-import org.junit.platform.launcher.LauncherDiscoveryRequest
-import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
-import org.junit.platform.launcher.core.LauncherFactory
-import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import run.qontract.core.Contract
@@ -16,7 +9,7 @@ import java.util.concurrent.Callable
 
 @Command(name = "samples", version = ["0.1.0"],
         mixinStandardHelpOptions = true,
-        description = ["Run contract as tests"])
+        description = ["Generate samples of the API requests and responses for all scenarios"])
 class SamplesCommand : Callable<Void> {
 
     @Option(names = ["--path"], description = ["Contract location"], required = true)

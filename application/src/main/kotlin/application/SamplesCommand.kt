@@ -1,7 +1,7 @@
 package application
 
-import picocli.CommandLine.Command
-import picocli.CommandLine.Option
+import picocli.CommandLine
+import picocli.CommandLine.*
 import run.qontract.core.Contract
 import run.qontract.core.utilities.readFile
 import run.qontract.fake.ContractFake
@@ -11,8 +11,7 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Generate samples of the API requests and responses for all scenarios"])
 class SamplesCommand : Callable<Void> {
-
-    @Option(names = ["--path"], description = ["Contract location"], required = true)
+    @Parameters(index = "0", description = ["Contract file path"])
     var path: String = ""
 
     @Option(names = ["--host"], description = ["Host"], defaultValue = "localhost")

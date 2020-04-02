@@ -3,8 +3,7 @@ package application
 import run.qontract.core.utilities.readFile
 import run.qontract.fake.ContractFake
 import picocli.CommandLine
-import picocli.CommandLine.Command
-import picocli.CommandLine.Option
+import picocli.CommandLine.*
 import java.util.concurrent.Callable
 
 @Command(name = "stub", version = ["0.1.0"],
@@ -13,14 +12,14 @@ import java.util.concurrent.Callable
 class StubCommand : Callable<Void> {
     lateinit var contractFake: ContractFake
 
-    @Option(names = ["--path"], description = ["Contract location"], required = true)
+    @Parameters(index = "0", description = ["Contract file path"])
     lateinit var path: String
 
     @Option(names = ["--host"], description = ["Host"], defaultValue = "localhost")
     lateinit var host: String
 
     @Option(names = ["--port"], description = ["Port"], defaultValue = "9000")
-    lateinit var port: Integer
+    var port: Int = 9000
 
     override fun call(): Void? {
         val contractGherkin = readFile(path)
@@ -30,8 +29,6 @@ class StubCommand : Callable<Void> {
         while (true) {
             Thread.sleep(1000)
         }
-
-        return null
     }
 
     private fun addShutdownHook() {

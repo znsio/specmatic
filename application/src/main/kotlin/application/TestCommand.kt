@@ -15,15 +15,14 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
 class TestCommand : Callable<Void> {
-
-    @Option(names = ["--path"], description = ["Contract location"], required = true)
+    @CommandLine.Parameters(index = "0", description = ["Contract file path"])
     lateinit var path: String
 
     @Option(names = ["--host"], description = ["Host"], defaultValue = "localhost")
     lateinit var host: String
 
     @Option(names = ["--port"], description = ["Port"], defaultValue = "9000")
-    lateinit var port: Integer
+    var port: Int = 0
 
     @Option(names = ["--suggestions"], description = ["run.qontract.core.Suggestions location"], defaultValue = "")
     lateinit var suggestionsPath: String

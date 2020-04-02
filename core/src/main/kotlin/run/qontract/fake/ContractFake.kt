@@ -41,12 +41,15 @@ private suspend fun bodyFromCall(call: ApplicationCall): Pair<Value, Map<String,
     return if (call.request.contentType().match(ContentType.Application.FormUrlEncoded))
         Pair(NoValue(), call.receiveParameters().toMap().mapValues { (_, values) -> values.first() })
     else
-        Pair(parsedValue(call.receiveText()), emptyMap<String, String>())
+        Pair(parsedValue(call.receiveText()), emptyMap())
 }
 
 internal fun toParams(queryParameters: Parameters) = HashMap(queryParameters.toMap().mapValues { it.value.first() })
 
 internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse) {
+    println(httpResponse.toLogString())
+    println()
+
     val textContent = TextContent(httpResponse.body as String, ContentType.Application.Json, HttpStatusCode.fromValue(httpResponse.status))
 
     try {
@@ -71,8 +74,12 @@ class ContractFake(gherkinData: String, host: String, port: Int) : Closeable {
         intercept(ApplicationCallPipeline.Call) {
             val httpRequest = ktorHttpRequestToHttpRequest(call)
 
+            println(httpRequest.toLogString())
+            println()
+
             if (isSetupRequest(httpRequest)) {
                 setupServerState(httpRequest)
+                println(HttpResponse(200).toLogString())
                 call.response.status(HttpStatusCode.OK)
             } else {
                 respondToKtorHttpResponse(call, contractBehaviour.lookup(httpRequest))

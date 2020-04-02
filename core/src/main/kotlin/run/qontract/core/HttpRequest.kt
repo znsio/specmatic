@@ -100,6 +100,25 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         headers.putAll(addedHeaders)
     }
 
+    fun toLogString(): String {
+        val methodString = method ?: "NO_METHOD"
+
+        val pathString = path ?: "NO_PATH"
+        val queryParamString = queryParams.map { "${it.key}=${it.value}"}.joinToString("&").let { if(it.isNotEmpty()) "?$it" else it }
+        val urlString = "$pathString$queryParamString"
+
+        val firstLine = "$methodString $urlString"
+        val headerString = headers.map { "${it.key}: ${it.value}" }.joinToString("\n")
+        val bodyString = when {
+            formFields.isNotEmpty() -> formFields.map { "${it.key}=${it.value}"}.joinToString("&")
+            else -> body.toString()
+        }
+
+        val firstPart = listOf(firstLine, headerString).joinToString("\n").trim()
+        val requestString = listOf(firstPart, "", bodyString).joinToString("\n")
+        return startLinesWith(requestString, ">")
+    }
+
     companion object {
         fun fromJSON(json: Map<String, Any?>): HttpRequest {
             val httpRequest = HttpRequest()
@@ -116,3 +135,8 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         }
     }
 }
+
+internal fun startLinesWith(str: String, startValue: String): String {
+    return str.split("\n").map { "$startValue$it" }.joinToString("\n")
+}
+

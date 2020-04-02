@@ -30,6 +30,16 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
 
     override fun toString() = nativeMapToJsonString(toJSON())
 
+    fun toLogString(): String {
+        val statusLine = "$status $statusText"
+        val headerString = headers.map { "${it.key}: ${it.value}" }.joinToString("\n")
+
+        val firstPart = listOf(statusLine, headerString).joinToString("\n").trim()
+
+        val responseString = listOf(firstPart, "", body).joinToString("\n")
+        return startLinesWith(responseString, "<")
+    }
+
     companion object {
         var HTTP_400 = HttpResponse(400, "This request did not match any scenario.", HashMap())
         var EMPTY_200 = HttpResponse(200, "", HashMap())

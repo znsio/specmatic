@@ -93,6 +93,7 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         requestMap["method"] = method
         if (headers.size > 0) requestMap["headers"] = headers
         if (body != null) requestMap["body"] = body.toString()
+
         return requestMap
     }
 

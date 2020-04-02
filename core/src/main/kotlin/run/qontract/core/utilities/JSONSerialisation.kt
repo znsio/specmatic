@@ -10,13 +10,13 @@ import run.qontract.core.value.*
 @OptIn(ImplicitReflectionSerializer::class)
 fun valueArrayToJsonString(value: List<Value>): String {
     val data = valueListToElements(value)
-    return Json.nonstrict.stringify(data)
+    return Json.indented.stringify(data)
 }
 
 fun toMap(value: Value?) = jsonStringToMap(value.toString())
 
 fun jsonStringToMap(stringContent: String): MutableMap<String, Any?>  {
-    val data = Json.nonstrict.parseJson(stringContent).jsonObject.toMap()
+    val data = Json.plain.parseJson(stringContent).jsonObject.toMap()
     return convertToMapAny(data)
 }
 
@@ -100,13 +100,13 @@ fun convertToArrayPattern(data: List<JsonElement>): List<Pattern> =
 @OptIn(ImplicitReflectionSerializer::class)
 fun nativeMapToJsonString(value: Map<String, Any?>): String {
     val data = nativeMapToStringElement(value)
-    return Json.nonstrict.stringify(data)
+    return Json.indented.stringify(data)
 }
 
 @OptIn(ImplicitReflectionSerializer::class)
-fun valueMapToJsonString(value: Map<String, Value>): String {
+fun valueMapToPrettyJsonString(value: Map<String, Value>): String {
     val data = mapToStringElement(value)
-    return Json.nonstrict.stringify(data)
+    return Json.indented.stringify(data)
 }
 
 fun nativeMapToStringElement(data: Map<String, Any?>): Map<String, JsonElement> {

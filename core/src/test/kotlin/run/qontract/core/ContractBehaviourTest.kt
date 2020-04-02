@@ -148,9 +148,20 @@ class ContractBehaviourTest {
         assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
 Scenario: POST /balance Error:
 	Request body did not match
-	Expected value at calls_made to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), ExactMatchPattern(pattern=2)]), actual value [3,10] in JSONObject {calls_made=[3,10]}
+	Expected value at calls_made to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), ExactMatchPattern(pattern=2)]), actual value [
+    3,
+    10
+] in JSONObject {calls_made=[
+    3,
+    10
+]}
 	JSON Array did not match Expected: [ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), ExactMatchPattern(pattern=2)] Actual: [3, 10]
-	Request: HttpRequest(method=POST, path=/balance, headers={}, body={"calls_made":[3,10]}, queryParams={}, formFields={})
+	Request: HttpRequest(method=POST, path=/balance, headers={}, body={
+    "calls_made": [
+        3,
+        10
+    ]
+}, queryParams={}, formFields={})
 """)
     }
 
@@ -161,7 +172,7 @@ Scenario: POST /balance Error:
                 Feature: Contract for /balance API
                   Scenario:
                     When POST /balance
-                    And request-body {calls_made: [3, 10, "(number)"]}
+                    And request-body {"calls_made": [3, 10, "(number)"]}
                     Then status 200
                 """
         val contractBehaviour = ContractBehaviour(contractGherkin)
@@ -171,10 +182,24 @@ Scenario: POST /balance Error:
         assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
 Scenario: POST /balance Error:
 	Request body did not match
-	Expected value at calls_made to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), LookupPattern(pattern=(number), key=null)]), actual value [3,10,"test"] in JSONObject {calls_made=[3,10,"test"]}
+	Expected value at calls_made to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), LookupPattern(pattern=(number), key=null)]), actual value [
+    3,
+    10,
+    "test"
+] in JSONObject {calls_made=[
+    3,
+    10,
+    "test"
+]}
 	Expected value at index 2 to match (number). Actual value: test in [3, 10, test]
 	test should be a Number
-	Request: HttpRequest(method=POST, path=/balance, headers={}, body={"calls_made":[3,10,"test"]}, queryParams={}, formFields={})
+	Request: HttpRequest(method=POST, path=/balance, headers={}, body={
+    "calls_made": [
+        3,
+        10,
+        "test"
+    ]
+}, queryParams={}, formFields={})
 """)
     }
 

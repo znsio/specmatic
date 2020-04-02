@@ -94,7 +94,15 @@ Scenario: GET /balance Error:
 	Expected (number), actual abc
 	"abc" is not a Number
 	Request: HttpRequest(method=GET, path=/balance, headers={Content-Type=text/plain}, body=, queryParams={}, formFields={})
-	Response: {"status":200,"body":"{calls_left: 10, messages_left: 30}","status-text":"OK","headers":{"length":"abc","token":"test"}}
+	Response: {
+    "status": 200,
+    "body": "{calls_left: 10, messages_left: 30}",
+    "status-text": "OK",
+    "headers": {
+        "length": "abc",
+        "token": "test"
+    }
+}
 """)
     }
 

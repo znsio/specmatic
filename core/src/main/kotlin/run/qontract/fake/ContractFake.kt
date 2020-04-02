@@ -1,14 +1,11 @@
 package run.qontract.fake
 
+import io.ktor.application.*
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.utilities.contractGherkinForCurrentComponent
 import run.qontract.core.utilities.getContractGherkin
-import io.ktor.application.ApplicationCall
-import io.ktor.application.ApplicationCallPipeline
-import io.ktor.application.call
-import io.ktor.application.install
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters

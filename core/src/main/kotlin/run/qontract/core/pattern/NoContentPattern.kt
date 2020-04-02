@@ -4,6 +4,7 @@ import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.value.NoValue
+import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
@@ -14,7 +15,7 @@ class NoContentPattern : Pattern {
                 true -> Result.Success()
                 else -> Result.Failure("Expected content to be empty. However it was $sampleData.")
             }
-            is NoValue -> Result.Success()
+            is NoValue, is NullValue -> Result.Success()
             null -> Result.Success()
             else -> Result.Failure("${sampleData.value} is not empty.")
         }

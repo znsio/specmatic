@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.Result
 import run.qontract.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
+import run.qontract.core.shouldNotMatch
+import run.qontract.core.value.NullValue
 import java.util.*
 
 internal class NumericStringPatternTest {
@@ -31,5 +33,10 @@ internal class NumericStringPatternTest {
                 stack.push(""""text" is not a Number""")
             })
         }
+    }
+
+    @Test
+    fun `should fail to match nulls gracefully`() {
+        NullValue shouldNotMatch NumberTypePattern()
     }
 }

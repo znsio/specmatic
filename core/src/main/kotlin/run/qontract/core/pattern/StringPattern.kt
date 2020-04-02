@@ -13,6 +13,7 @@ class StringPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when(sampleData) {
             is StringValue, is NoValue -> Result.Success()
+            is NullValue -> Result.Failure("null is not  String")
             else -> Result.Failure("${sampleData?.value} is not a String")
         }
     }

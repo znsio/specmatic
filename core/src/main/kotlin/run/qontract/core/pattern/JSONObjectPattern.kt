@@ -11,6 +11,8 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
     constructor(jsonContent: String) : this(stringToPatternMap(jsonContent))
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if(sampleData is NullValue)
+            return Result.Failure("Expected $pattern but got null")
         if(sampleData !is JSONObjectValue)
             return Result.Failure("Unable to interpret ${sampleData?.value} as JSON")
 

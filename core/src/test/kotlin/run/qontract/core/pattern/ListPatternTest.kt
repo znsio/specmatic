@@ -3,6 +3,8 @@ package run.qontract.core.pattern
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
+import run.qontract.core.shouldNotMatch
+import run.qontract.core.value.NullValue
 
 internal class ListPatternTest {
     @Test
@@ -12,5 +14,10 @@ internal class ListPatternTest {
         for(pattern in patterns) {
             assertTrue(pattern is ListPattern)
         }
+    }
+
+    @Test
+    fun `should fail to match nulls gracefully`() {
+        NullValue shouldNotMatch ListPattern(StringPattern())
     }
 }

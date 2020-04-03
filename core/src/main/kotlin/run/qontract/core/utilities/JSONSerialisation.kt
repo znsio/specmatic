@@ -32,6 +32,9 @@ private fun toAnyValue(value: JsonElement): Any? =
             is JsonArray -> convertToArrayAny(value.toList()).toMutableList()
         }
 
+@OptIn(ImplicitReflectionSerializer::class)
+internal fun prettifyJsonString(content: String): String = Json.indented.stringify(Json.plain.parseJson(content))
+
 fun stringToPatternMap(stringContent: String): Map<String, Pattern>  {
     val data = Json.nonstrict.parseJson(stringContent).jsonObject.toMap()
     return convertToMapPattern(data)

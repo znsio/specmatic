@@ -3,6 +3,7 @@ package run.qontract.core
 import io.ktor.http.HttpStatusCode
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.nativeMapToJsonString
+import run.qontract.core.utilities.prettifyJsonString
 import run.qontract.core.value.Value
 import java.util.*
 
@@ -36,7 +37,10 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
 
         val firstPart = listOf(statusLine, headerString).joinToString("\n").trim()
 
-        val responseString = listOf(firstPart, "", body).joinToString("\n")
+        val trimmedBody = body?.trim() ?: ""
+        val formattedBody = if(trimmedBody.startsWith("{") || trimmedBody.startsWith("[")) prettifyJsonString(trimmedBody) else trimmedBody
+
+        val responseString = listOf(firstPart, "", formattedBody).joinToString("\n")
         return startLinesWith(responseString, prefix)
     }
 

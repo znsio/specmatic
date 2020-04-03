@@ -115,8 +115,8 @@ Given pattern Id
         resolver.addCustomPattern("(Ids)", idsPattern)
         resolver.addCustomPattern("(Id)", idPattern)
 
-        assertTrue(idsPattern.matches(value, resolver).toBoolean())
-        assertTrue(resolver.matchesPatternValue(null, "(Ids)", value).toBoolean())
+        assertTrue(idsPattern.matches(value, resolver).isTrue())
+        assertTrue(resolver.matchesPatternValue(null, "(Ids)", value).isTrue())
     }
 
     @Test
@@ -137,8 +137,8 @@ Given pattern Ids
         val resolver = Resolver(HashMap(), false)
         resolver.addCustomPattern("(Ids)", idsPattern)
 
-        assertTrue(idsPattern.matches(value, resolver).toBoolean())
-        assertTrue(resolver.matchesPatternValue(null, "(Ids)", value).toBoolean())
+        assertTrue(idsPattern.matches(value, resolver).isTrue())
+        assertTrue(resolver.matchesPatternValue(null, "(Ids)", value).isTrue())
     }
 
     @Test

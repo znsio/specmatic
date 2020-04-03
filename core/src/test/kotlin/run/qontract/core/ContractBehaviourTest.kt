@@ -43,14 +43,14 @@ class ContractBehaviourTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance2").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""
-            This request did not match any scenario.
-            Scenario: GET /balance?account-id=(number) Error:
-            	URL did not match
-            	Path part did not match. Expected: balance Actual: balance2
-            	Request: HttpRequest(method=GET, path=/balance2, headers={}, body=, queryParams={account-id=10}, formFields={})
-
-        """.trimIndent())
+        assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
+Scenario: GET /balance?account-id=LookupPattern(pattern=(number), key=account-id) Error:
+	URL did not match
+	Path part did not match in /balance2. Expected: ExactMatchPattern(pattern=balance) Actual: balance2
+	Expected ExactMatchPattern(pattern=balance), actual balance2
+	Expected balance, actual balance2
+	Request: HttpRequest(method=GET, path=/balance2, headers={}, body=, queryParams={account-id=10}, formFields={})
+""")
     }
 
     @Test
@@ -236,9 +236,10 @@ Scenario: POST /balance Error:
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
         assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
-Scenario: GET /balance?account-id=(number) Error:
+Scenario: GET /balance?account-id=LookupPattern(pattern=(number), key=account-id) Error:
 	URL did not match
 	Query parameter did not match
+	Expected LookupPattern(pattern=(number), key=account-id), actual abc
 	Expected (number), actual abc
 	"abc" is not a Number
 	Request: HttpRequest(method=GET, path=/balance, headers={}, body=, queryParams={account-id=abc}, formFields={})
@@ -671,7 +672,7 @@ Feature: Contract for /balance API
 
         assertTrue(jsonObject is JSONObjectValue)
         assertTrue(if(jsonObject is JSONObjectValue) {
-            val ids = jsonObject.jsonObject["ids"] ?: NoValue()
+            val ids = jsonObject.jsonObject["ids"] ?: NoValue
             assertTrue(ids is JSONArrayValue)
 
             if(ids is JSONArrayValue) {

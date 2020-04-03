@@ -14,7 +14,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-data class HttpRequest(var method: String? = null, var path: String? = null, val headers: HashMap<String?, String?> = HashMap(), var body: Value? = NoValue(), var queryParams: HashMap<String, String> = HashMap(), val formFields: Map<String, String> = emptyMap()) {
+data class HttpRequest(var method: String? = null, var path: String? = null, val headers: HashMap<String?, String?> = HashMap(), var body: Value? = NoValue, var queryParams: HashMap<String, String> = HashMap(), val formFields: Map<String, String> = emptyMap()) {
     private fun updateQueryParams(queryParams: Map<String, String>) {
         this.queryParams.putAll(queryParams)
     }

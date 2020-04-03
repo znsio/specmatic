@@ -25,7 +25,7 @@ class NoContentPattern : Pattern {
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value {
         return when {
-            value.isEmpty() -> NoValue()
+            value.isEmpty() -> NoValue
             else -> throw ContractParseException("""Parsing to $javaClass, but "$value" is not empty""")
         }
     }

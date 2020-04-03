@@ -31,8 +31,8 @@ internal class JSONObjectPatternTest {
         val objectWithId = parsedValue("""{"id": 10}""")
         val emptyObject = parsedValue("""{}""")
 
-        assertTrue(newPattern.matches(objectWithId, Resolver()).toBoolean())
-        assertTrue(newPattern.matches(emptyObject, Resolver()).toBoolean())
+        assertTrue(newPattern.matches(objectWithId, Resolver()).isTrue())
+        assertTrue(newPattern.matches(emptyObject, Resolver()).isTrue())
     }
 
     @Test

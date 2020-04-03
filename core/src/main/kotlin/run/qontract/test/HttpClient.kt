@@ -109,8 +109,8 @@ class HttpClient(private val baseURL: String) : TestExecutor {
 private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpRequest, qontractRequest: HttpRequest): HttpRequest {
     val(body, formFields) =
         when(request.content) {
-            is FormDataContent -> Pair(NoValue(), qontractRequest.formFields)
-            is TextContent -> Pair(qontractRequest.body ?: NoValue(), emptyMap<String, String>())
+            is FormDataContent -> Pair(NoValue, qontractRequest.formFields)
+            is TextContent -> Pair(qontractRequest.body ?: NoValue, emptyMap<String, String>())
             else -> throw ContractHTTPException("Unknown type of body content sent in the request")
         }
 

@@ -60,5 +60,5 @@ fun parsedValue(content: String?): Value {
             it == "false" -> BooleanValue(false)
             else -> StringValue(it)
         }
-    } ?: NoValue()
+    } ?: NoValue
 }

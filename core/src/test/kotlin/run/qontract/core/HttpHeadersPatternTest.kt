@@ -91,7 +91,7 @@ internal class HttpHeadersPatternTest {
             put("X-Unspecified-Header", "We don't care")
         }
 
-        assertThat(expectedHeaders.matches(actualHeaders, Resolver()).toBoolean()).isTrue()
+        assertThat(expectedHeaders.matches(actualHeaders, Resolver()).isTrue()).isTrue()
     }
 
     @Test

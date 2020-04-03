@@ -19,6 +19,6 @@ data class RestPattern(override val pattern: Pattern) : Pattern {
 private const val REST_SUFFIX = "..."
 
 fun withoutRestToken(pattern: String): String =
-        "(" + withoutPatternDelimiter(pattern.trim()).removeSuffix((REST_SUFFIX)) + ")"
+        "(" + withoutPatternDelimiters(pattern.trim()).removeSuffix((REST_SUFFIX)) + ")"
 
 fun isRestPattern(it: String): Boolean = it.trim().removePrefix("(").removeSuffix(")").endsWith(REST_SUFFIX)

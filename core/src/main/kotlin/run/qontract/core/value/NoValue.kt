@@ -1,7 +1,8 @@
 package run.qontract.core.value
 
-class NoValue : Value {
+object NoValue : Value {
     override val value: Any = ""
     override val httpContentType = "text/plain"
+    override fun toStringValue() = ""
     override fun toString() = ""
 }

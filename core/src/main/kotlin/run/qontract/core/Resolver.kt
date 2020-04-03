@@ -89,7 +89,7 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
             val nativeValue = serverStateMatch.get(key)
 
             if (nativeValue != null && nativeValue != true) {
-                val value = pattern.parse(nativeValue as String, this)
+                val value = pattern.parse(nativeValue.toString(), this)
                 when (matchesPattern(null, pattern, value)) {
                     is Result.Success -> return value
                     else -> throw ContractParseException("$nativeValue doesn't match $pattern")
@@ -98,40 +98,5 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
         }
 
         return pattern.generate(this)
-    }
-
-    fun generateFromAny(key: String, patternValue: Any): Value {
-        if (serverStateMatch.contains(key)) {
-            val value = serverStateMatch.get(key)
-            if (value != null && value != true) {
-                when (matchesPatternValue(null, patternValue, value)) {
-                    is Result.Success -> return asValue(value)
-                    else -> throw ContractParseException("$value doesn't match $patternValue")
-                }
-            }
-        }
-
-        return generateFromAny(patternValue)
-    }
-
-    fun generateFromAny(patternValue: Any): Value {
-        if (patternValue !is String)
-            return StringValue()
-
-        return getPattern(patternValue).generate(this)
-    }
-
-    fun generateValue(key: String, parameterPattern: String?): Any {
-        val parameterValue = parameterPattern as String
-        if (serverStateMatch.contains(key)) {
-            val value = serverStateMatch.get(key)
-            if (isPatternToken(parameterValue) && value != null && value != true)
-                when (matchesPatternValue(null, parameterValue, value)) {
-                    is Result.Success -> return asValue(value)
-                    else -> throw ContractParseException("$value doesn't match $parameterPattern")
-                }
-        }
-
-        return generateValue(parameterPattern, this)
     }
 }

@@ -6,12 +6,12 @@ import run.qontract.core.Result
 import run.qontract.core.value.NoValue
 import run.qontract.core.value.Value
 
-data class AnyPattern(override val pattern: List<Pattern>, val key: String? = null) : Pattern, Keyed {
+data class AnyPattern(override val pattern: List<Pattern>, override val key: String? = null) : Pattern, Keyed {
     override fun withKey(key: String?): Pattern = this.copy(key = key)
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
         pattern.asSequence().map {
-            resolver.matchesPattern(key, it, sampleData ?: NoValue())
+            resolver.matchesPattern(key, it, sampleData ?: NoValue)
         }.let { results ->
             results.find { it is Result.Success } ?: failedToFindAny(pattern, results.toList(), sampleData)
         }

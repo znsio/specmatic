@@ -555,8 +555,9 @@ Then status 200
 
                 if(body !is JSONArrayValue) fail("Expected JSON array")
 
-                assertTrue(body.list[0] is NumberValue)
-                assertTrue(body.list[1] is NumberValue)
+                for(value in body.list) {
+                    assertTrue(value is NumberValue)
+                }
 
                 return HttpResponse(200, "")
             }

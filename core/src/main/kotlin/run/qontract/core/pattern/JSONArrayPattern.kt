@@ -60,13 +60,13 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
         return JSONArrayValue(generate(pattern, resolver))
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONArrayPattern> = newBasedOn(pattern, row, resolver)
+    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONArrayPattern> = newBasedOn(pattern, row, resolver).map { JSONArrayPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
 }
 
-fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<JSONArrayPattern> {
+fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
     val values = jsonPattern.map { pattern -> pattern.newBasedOn(row, resolver) }
-    return multipleValidValues(values).map { JSONArrayPattern(it) }
+    return multipleValidValues(values)
 }
 
 fun multipleValidValues(values: List<List<Pattern>>): List<List<Pattern>> {

@@ -1,13 +1,11 @@
 package run.qontract.core.pattern
 
-import org.json.JSONArray
 import run.qontract.core.Resolver
 import run.qontract.core.shouldMatch
 import org.junit.jupiter.api.Test
 import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.NullValue
-import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import kotlin.test.assertFalse
 
@@ -25,7 +23,7 @@ internal class JSONArrayPatternTest {
         val value = parsedValue("[1,2]")
         val pattern = parsedPattern("""[1,2,3]""")
 
-        assertFalse(pattern.matches(value, Resolver()).toBoolean())
+        assertFalse(pattern.matches(value, Resolver()).isTrue())
 
     }
 

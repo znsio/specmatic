@@ -31,7 +31,7 @@ Given pattern Id
         resolver.customPatterns["(Id)"] = idPattern
 
         val idArrayPattern = parsedPattern("(Id*)")
-        assertTrue(idArrayPattern.matches(value, resolver).toBoolean())
+        assertTrue(idArrayPattern.matches(value, resolver).isTrue())
     }
 
     @Test

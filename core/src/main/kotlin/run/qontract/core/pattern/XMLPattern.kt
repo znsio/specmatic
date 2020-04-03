@@ -141,7 +141,7 @@ class XMLPattern : Pattern {
             val patternValue = patternItem.nodeValue
             val sampleValue = sampleItem.nodeValue
             //TODO: remove toBoolean and return result
-            if (!resolver.matchesPatternValue(name, patternValue, sampleValue).toBoolean()) return false
+            if (!resolver.matchesPatternValue(name, patternValue, sampleValue).isTrue()) return false
         }
         return true
     }
@@ -192,7 +192,7 @@ class XMLPattern : Pattern {
             val random = Random()
             val count = random.nextInt(9) + 1
             for (i in 0 until count) {
-                val result = resolver.generateFromAny(pattern)
+                val result = resolver.getPattern(pattern).generate(resolver)
                 val newNode = getXMLNodeFrom(result)
                 parentNode.ownerDocument.adoptNode(newNode)
                 val first = parentNode.firstChild
@@ -257,7 +257,7 @@ class XMLPattern : Pattern {
             } else {
                 val value = node.nodeValue
                 node.nodeValue = when {
-                    isPatternToken(value) -> resolver.generateFromAny(withoutRestTokenForXML(value), resolver).toString()
+                    isPatternToken(value) -> resolver.getPattern(withoutRestTokenForXML(value)).generate(resolver).toString()
                     else -> value
                 }
             }

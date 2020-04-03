@@ -11,14 +11,14 @@ sealed class Result {
         this.scenario = scenario
     }
 
-    abstract fun toBoolean(): Boolean
+    abstract fun isTrue(): Boolean
 
     class Success : Result() {
         override fun record(executionInfo: ExecutionInfo, request: HttpRequest, response: HttpResponse?) {
             executionInfo.recordSuccessfulInteraction()
         }
 
-        override fun toBoolean() = true
+        override fun isTrue() = true
     }
 
     class Failure : Result {
@@ -53,6 +53,6 @@ sealed class Result {
             executionInfo.recordUnsuccessfulInteraction(this.scenario, this.stackTrace(), request, response)
         }
 
-        override fun toBoolean() = false
+        override fun isTrue() = false
     }
 }

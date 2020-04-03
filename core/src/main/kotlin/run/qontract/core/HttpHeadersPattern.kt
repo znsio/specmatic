@@ -39,7 +39,8 @@ data class HttpHeadersPattern(val headers: Map<String, String?> = mapOf()) {
 
     fun generate(resolver: Resolver): HashMap<String, String?> {
         return HashMap(headers.mapValues { (key, value) ->
-            asPattern(value, key).generate(resolver).value.toString()
+//            asPattern(value, key).generate(resolver).value.toString()
+            asPattern(value, key).generate(resolver).toStringValue()
         }.toMutableMap())
     }
 

@@ -73,12 +73,12 @@ fun findPattern(matcherDescriptor: String): Pattern =
         primitivePatterns.getOrElse(matcherDescriptor) { throw ContractParseException("Pattern $matcherDescriptor does not exist.") }
 
 
-fun withoutPatternDelimiter(patternValue: String) = patternValue.removeSurrounding("(", ")")
-fun nameToPatternSpec(name: String): String = "($name)"
+fun withoutPatternDelimiters(patternValue: String) = patternValue.removeSurrounding("(", ")")
+fun withPatternDelimiters(name: String): String = "($name)"
 
 fun withoutRepeatingToken(patternValue: Any): String {
     val patternString = (patternValue as String).trim()
-    return "(" + withoutPatternDelimiter(patternString).removeSuffix("*") + ")"
+    return "(" + withoutPatternDelimiters(patternString).removeSuffix("*") + ")"
 //    return StringBuilder(patternString).deleteCharAt(patternString.length - 2).toString()
 }
 

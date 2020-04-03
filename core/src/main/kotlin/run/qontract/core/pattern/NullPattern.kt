@@ -30,7 +30,7 @@ object NullPattern : Pattern {
     override val pattern: Any = "(null)"
 }
 
-internal fun isNullablePattern(patternSpec: String): Boolean = withoutPatternDelimiter(patternSpec.trim()).endsWith("?")
+internal fun isNullablePattern(patternSpec: String): Boolean = withoutPatternDelimiters(patternSpec.trim()).endsWith("?")
 internal fun withoutNullToken(patternSpec: String): String {
-    return "(" + withoutPatternDelimiter(patternSpec.trim()).trim().removeSuffix("?") + ")"
+    return "(" + withoutPatternDelimiters(patternSpec.trim()).trim().removeSuffix("?") + ")"
 }

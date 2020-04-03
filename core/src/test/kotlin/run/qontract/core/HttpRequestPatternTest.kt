@@ -11,7 +11,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should not match when url does not match`() {
         val httpRequestPattern = HttpRequestPattern().also {
-            val urlMatcher = URLMatcher(URI("/matching_path"))
+            val urlMatcher = toURLPattern(URI("/matching_path"))
             it.updateWith(urlMatcher)
         }
         val httpRequest = HttpRequest().also {
@@ -21,7 +21,9 @@ internal class HttpRequestPatternTest {
             assertThat(it).isInstanceOf(Result.Failure::class.java)
             assertThat((it as Result.Failure).stackTrace()).isEqualTo(
                     Stack<String>().also { stack ->
-                        stack.push("Path part did not match. Expected: matching_path Actual: unmatched_path")
+                        stack.push("Expected matching_path, actual unmatched_path")
+                        stack.push("Expected ExactMatchPattern(pattern=matching_path), actual unmatched_path")
+                        stack.push("Path part did not match in /unmatched_path. Expected: ExactMatchPattern(pattern=matching_path) Actual: unmatched_path")
                         stack.push("URL did not match")
                     }
             )
@@ -31,7 +33,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should not match when method does not match`() {
         val httpRequestPattern = HttpRequestPattern().also {
-            val urlMatcher = URLMatcher(URI("/matching_path"))
+            val urlMatcher = toURLPattern(URI("/matching_path"))
             it.updateMethod("POST")
             it.updateWith(urlMatcher)
         }
@@ -50,7 +52,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should not match when body does not match`() {
         val httpRequestPattern = HttpRequestPattern().also {
-            val urlMatcher = URLMatcher(URI("/matching_path"))
+            val urlMatcher = toURLPattern(URI("/matching_path"))
             it.updateMethod("POST")
             it.setBodyPattern("""{"name": "Hari"}""")
             it.updateWith(urlMatcher)
@@ -72,7 +74,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should match when request matches url, method and body`() {
         val httpRequestPattern = HttpRequestPattern().also {
-            val urlMatcher = URLMatcher(URI("/matching_path"))
+            val urlMatcher = toURLPattern(URI("/matching_path"))
             it.updateMethod("POST")
             it.setBodyPattern("""{"name": "Hari"}""")
             it.updateWith(urlMatcher)
@@ -91,7 +93,7 @@ internal class HttpRequestPatternTest {
     fun `a clone request pattern request should include the headers specified`() {
         val pattern = HttpRequestPattern(
                 headersPattern = HttpHeadersPattern(mapOf("Test-Header" to "(string)")),
-                urlMatcher = URLMatcher(URI("/")),
+                urlPattern = toURLPattern(URI("/")),
                 method = "GET"
         )
 

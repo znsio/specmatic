@@ -5,7 +5,6 @@ import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.Messages.GherkinDocument
-import io.cucumber.messages.internal.com.google.protobuf.Value
 import run.qontract.core.pattern.*
 import run.qontract.core.pattern.PatternTable.Companion.examplesFrom
 import run.qontract.core.utilities.jsonStringToMap
@@ -137,7 +136,7 @@ private fun toFixtureData(rawData: String): Any = parsedJSON(rawData)?.value ?: 
 private fun toPatternInfo(rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): Pair<String, Pattern> {
     val tokens = breakIntoParts(rest, 2)
 
-    val patternName = nameToPatternSpec(tokens[0])
+    val patternName = withPatternDelimiters(tokens[0])
 
     val pattern = when(val patternDefinition = tokens.getOrElse(1) { "" }.trim()) {
         "" -> rowsToTabularPattern(rowsList)
@@ -171,7 +170,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
                     scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
-                                            urlMatcher = URLMatcher(URI.create(step.rest)),
+                                            urlPattern = toURLPattern(URI.create(step.rest)),
                                             method = step.keyword.toUpperCase()))
                 } ?: throw ContractParseException("Line ${step.line}: $step.text")
             }

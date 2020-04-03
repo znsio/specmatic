@@ -47,23 +47,25 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         val combinedServerState = HashMap<String, Any>()
 
         for (key in expected.keys + actual.keys) {
-            val expectedValue = expected[key]
-            val actualValue = actual[key]
+            val expectedValue = expected.getValue(key)
+            val actualValue = actual.getValue(key)
 
-            if (expectedValue != null && actualValue != null) {
-                when {
-                    key in expected && key in actual -> {
-                        if (expectedValue == actualValue)
-                            combinedServerState[key] = actualValue
-                        else if (isPatternToken(expectedValue)) {
-                            //TODO: remove toBoolean and pass the result
-                            if (resolver.matchesPatternValue(key, expectedValue, actualValue).toBoolean())
+            when {
+                key in expected && key in actual -> {
+                    if(expectedValue == actualValue)
+                        combinedServerState[key] = actualValue
+                    else if(isPatternToken(expectedValue)) {
+                        val expectedPattern = resolver.getPattern(expectedValue.toString())
+                        try {
+                            if(resolver.matchesPattern(key, expectedPattern, expectedPattern.parse(actualValue.toString(), resolver)).isTrue())
                                 combinedServerState.put(key, actualValue)
+                        } catch(e: Throwable) {
+                            throw ContractParseException("Couldn't match state values. Expected $expectedValue in key $key, actual value is $actualValue")
                         }
                     }
-                    key in expected -> combinedServerState.put(key, expectedValue)
-                    key in actual -> combinedServerState[key] = actualValue
                 }
+                key in expected -> combinedServerState[key] = expectedValue
+                key in actual -> combinedServerState[key] = actualValue
             }
         }
 

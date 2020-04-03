@@ -5,10 +5,10 @@ import run.qontract.test.ContractTestException.Companion.missingParam
 import java.io.UnsupportedEncodingException
 import java.net.URI
 
-data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlMatcher: URLMatcher? = null, private var method: String? = null, private var body: Pattern? = NoContentPattern(), val formFieldsPattern: Map<String, Pattern> = emptyMap()) {
+data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlPattern: URLPattern? = null, private var method: String? = null, private var body: Pattern? = NoContentPattern(), val formFieldsPattern: Map<String, Pattern> = emptyMap()) {
     @Throws(UnsupportedEncodingException::class)
-    fun updateWith(urlMatcher: URLMatcher) {
-        this.urlMatcher = urlMatcher
+    fun updateWith(urlPattern: URLPattern) {
+        this.urlPattern = urlPattern
     }
 
     @Throws(Exception::class)
@@ -76,8 +76,8 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
 
     private fun matchUrl(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
-        urlMatcher.let {
-            val result = urlMatcher!!.matches(URI(httpRequest.path!!),
+        urlPattern.let {
+            val result = urlPattern!!.matches(URI(httpRequest.path!!),
                     httpRequest.queryParams,
                     resolver.copy())
             return if (result is Result.Failure)
@@ -104,12 +104,12 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
         if (method == null) {
             throw missingParam("HTTP method")
         }
-        if (urlMatcher == null) {
+        if (urlPattern == null) {
             throw missingParam("URL path pattern")
         }
         newRequest.updateMethod(method!!)
-        newRequest.updatePath(urlMatcher!!.generatePath(resolver.copy()))
-        val queryParams = urlMatcher!!.generateQuery(resolver.copy())
+        newRequest.updatePath(urlPattern!!.generatePath(resolver.copy()))
+        val queryParams = urlPattern!!.generateQuery(resolver.copy())
         for (key in queryParams.keys) {
             newRequest.updateQueryParam(key, queryParams[key] ?: "")
         }
@@ -136,7 +136,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
-        val newURLMatchers = urlMatcher?.newBasedOn(row, resolver.copy()) ?: listOf<URLMatcher?>(null)
+        val newURLMatchers = urlPattern?.newBasedOn(row, resolver.copy()) ?: listOf<URLPattern?>(null)
         val newBodies = body?.newBasedOn(row, resolver.copy()) ?: listOf<Pattern?>(null)
         val newHeadersPattern = headersPattern.newBasedOn(row)
         val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
@@ -147,7 +147,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
                     newFormFieldsPatterns.map { newFormFieldsPattern ->
                         HttpRequestPattern(
                                 headersPattern = newHeadersPattern,
-                                urlMatcher = newURLMatcher,
+                                urlPattern = newURLMatcher,
                                 method = method,
                                 body = newBody,
                                 formFieldsPattern = newFormFieldsPattern)
@@ -158,6 +158,6 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     }
 
     override fun toString(): String {
-        return "$method ${urlMatcher.toString()}"
+        return "$method ${urlPattern.toString()}"
     }
 }

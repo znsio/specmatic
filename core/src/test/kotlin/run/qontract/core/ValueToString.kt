@@ -16,7 +16,7 @@ import javax.xml.parsers.ParserConfigurationException
 class ValueToString {
     @Test
     fun noMessageYieldsEmptyString() {
-        val body: Value = NoValue()
+        val body: Value = NoValue
         Assertions.assertEquals("", body.toString())
     }
 
@@ -24,7 +24,7 @@ class ValueToString {
     fun jsonStringTest() {
         val jsonString = """{"a": 1, "b": 2}"""
         val jsonObject = JSONObject(jsonString)
-        val body: Value = parsedJSON(jsonString) ?: NoValue()
+        val body: Value = parsedJSON(jsonString) ?: NoValue
         val jsonObject2 = JSONObject(body.toString())
         Assertions.assertEquals(jsonObject.getInt("a"), jsonObject2.getInt("a"))
         Assertions.assertEquals(jsonObject.getInt("b"), jsonObject2.getInt("b"))

@@ -203,7 +203,7 @@ class PatternDefinitionTests {
 
         val value = parsedValue(jsonString)
         val pattern = parsedPattern(jsonPattern, null)
-        assertTrue(pattern.matches(value, Resolver()).toBoolean())
+        assertTrue(pattern.matches(value, Resolver()).isTrue())
     }
 
     @Test
@@ -256,9 +256,9 @@ class PatternDefinitionTests {
 }
 
 infix fun Value.shouldMatch(pattern: Pattern) {
-    assertTrue(pattern.matches(this, Resolver()).toBoolean())
+    assertTrue(pattern.matches(this, Resolver()).isTrue())
 }
 
 infix fun Value.shouldNotMatch(pattern: Pattern) {
-    assertFalse(pattern.matches(this, Resolver()).toBoolean())
+    assertFalse(pattern.matches(this, Resolver()).isTrue())
 }

@@ -97,7 +97,7 @@ $expectationsString
             }
             is XMLValue -> {
                 try {
-                    val mockedXML = expected.body?.value as Document
+                    val mockedXML = expected.body as Document
                     val requestXML = parseXML(actual.body?.toString() ?: "")
 
                     return mockedXML == requestXML

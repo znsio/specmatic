@@ -39,7 +39,7 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
 
 private suspend fun bodyFromCall(call: ApplicationCall): Pair<Value, Map<String, String>> {
     return if (call.request.contentType().match(ContentType.Application.FormUrlEncoded))
-        Pair(NoValue(), call.receiveParameters().toMap().mapValues { (_, values) -> values.first() })
+        Pair(NoValue, call.receiveParameters().toMap().mapValues { (_, values) -> values.first() })
     else
         Pair(parsedValue(call.receiveText()), emptyMap())
 }

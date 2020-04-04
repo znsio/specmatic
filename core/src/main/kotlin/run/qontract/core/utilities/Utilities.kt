@@ -18,6 +18,8 @@ import org.w3c.dom.Element
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import org.xml.sax.SAXException
+import run.qontract.core.Resolver
+import run.qontract.core.pattern.NumericStringPattern
 import java.io.*
 import java.net.URL
 import java.util.*

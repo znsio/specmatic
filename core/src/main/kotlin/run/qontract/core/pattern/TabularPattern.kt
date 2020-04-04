@@ -1,19 +1,17 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.ContractParseException
-import run.qontract.core.Resolver
-import run.qontract.core.Result
 import io.cucumber.messages.Messages
+import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.value.*
 import run.qontract.test.ContractTestException
 
 fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) =
         TabularPattern(rows.map { it.cellsList }.map { (key, value) ->
-            key.value to toJSONValue(value.value, null)
+            key.value to toJSONValue(value.value)
         }.toMap())
 
-fun toJSONValue(value: String, key: String?): Pattern {
+fun toJSONValue(value: String): Pattern {
     return value.trim().let {
         val asNumber: Number? = try { convertToNumber(value) } catch (e: ContractParseException) { null }
 
@@ -61,12 +59,8 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
         if(missingKey != null)
             return Result.Failure("Missing key $missingKey in ${sampleData.jsonObject}")
 
-        val resolverWithNumberType = resolver.makeCopy().also {
-            it.addCustomPattern("(number)", NumberTypePattern())
-        }
-
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
-            when (val result = asPattern(patternValue, key).matches(sampleValue, resolverWithNumberType)) {
+            when (val result = asPattern(patternValue, key).matches(sampleValue, withNumberTypePattern(resolver))) {
                 is Result.Failure -> return result.add("Expected value at $key to match $patternValue, actual value $sampleValue in JSONObject ${sampleData.jsonObject}")
             }
         }
@@ -88,7 +82,7 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
             newBasedOn(pattern, row, resolver)
         }.map { TabularPattern(it) }
 
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
@@ -97,7 +91,7 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
 
         when {
             row.containsField(keyWithoutOptionality) -> {
-                val rowField = row.getField(keyWithoutOptionality).toString()
+                val rowField = row.getField(keyWithoutOptionality)
                 listOf(ExactMatchPattern(pattern.parse(rowField, resolver)))
             }
             else ->

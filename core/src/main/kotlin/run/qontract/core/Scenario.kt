@@ -7,10 +7,10 @@ import run.qontract.core.value.True
 import run.qontract.core.value.Value
 import java.lang.StringBuilder
 
-data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedState: HashMap<String, Value>, val examples: List<PatternTable>, val patterns: HashMap<String, Pattern>, val fixtures: HashMap<String, Value>) {
+data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: HashMap<String, Value>, val examples: List<PatternTable>, val patterns: HashMap<String, Pattern>, val fixtures: HashMap<String, Value>) {
     private fun serverStateMatches(actualState: HashMap<String, Value>, resolver: Resolver) =
-            expectedState.keys == actualState.keys &&
-                    mapZip(expectedState, actualState).all { (key, expectedStateValue, actualStateValue) ->
+            expectedFacts.keys == actualState.keys &&
+                    mapZip(expectedFacts, actualState).all { (key, expectedStateValue, actualStateValue) ->
                         when {
                             actualStateValue == True || expectedStateValue == True -> true
                             expectedStateValue is StringValue && expectedStateValue.isPatternToken() -> {
@@ -22,10 +22,8 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
                     }
 
     fun matches(httpRequest: HttpRequest, serverState: HashMap<String, Value>): Result {
-        val resolver = Resolver(serverState, false).also {
-            it.addCustomPatterns(patterns)
-        }
-        if (!serverStateMatches(serverState, resolver.makeCopy())) {
+        val resolver = Resolver(serverState, false, patterns)
+        if (!serverStateMatches(serverState, resolver.copy())) {
             return Result.Failure("Server State mismatch").also { it.updateScenario(this) }
         }
         return httpRequestPattern.matches(httpRequest, resolver).also {
@@ -33,19 +31,19 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
-    fun generateHttpResponse(actualServerState: HashMap<String, Value>): HttpResponse {
-        val combinedState = Resolver(actualServerState, false).let { resolver ->
-            resolver.customPatterns = patterns
-            combineExpectedWithActual(expectedState, actualServerState, resolver)
-        }
+    fun generateHttpResponse(actualFacts: HashMap<String, Value>): HttpResponse {
+        Resolver(HashMap(), false, patterns)
+        val resolver = Resolver(actualFacts, false, patterns)
+        val facts = combineFacts(expectedFacts, actualFacts, resolver)
 
-        return Resolver(combinedState, false).let { resolver ->
-            resolver.customPatterns = patterns
-            httpResponsePattern.generateResponse(resolver)
-        }
+        return httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts)))
+//        return Resolver(combinedState, false).let { resolver ->
+//            resolver.customPatterns = patterns
+//            httpResponsePattern.generateResponse(resolver)
+//        }
     }
 
-    private fun combineExpectedWithActual(
+    private fun combineFacts(
             expected: HashMap<String, Value>,
             actual: HashMap<String, Value>,
             resolver: Resolver
@@ -78,15 +76,11 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         return combinedServerState
     }
 
-    fun generateHttpRequest(): HttpRequest {
-        val resolver = Resolver(expectedState, false)
-        resolver.customPatterns = patterns
-        return httpRequestPattern.generate(resolver)
-    }
+    fun generateHttpRequest(): HttpRequest = httpRequestPattern.generate(Resolver(expectedFacts, false, patterns))
 
     fun matches(httpResponse: HttpResponse): Result {
-        val resolver = Resolver(expectedState, false)
-        resolver.customPatterns = patterns
+        val resolver = Resolver(expectedFacts, false, patterns)
+
         return try {
             httpResponsePattern.matches(httpResponse, resolver).also { it.updateScenario(this) }.let {
                 when (it) {
@@ -101,10 +95,9 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     }
 
     private fun newBasedOn(row: Row): List<Scenario> {
-        val resolver = Resolver(expectedState, false)
-        resolver.customPatterns = patterns
+        val resolver = Resolver(expectedFacts, false, patterns)
 
-        val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedState, resolver)
+        val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, resolver)
         return httpRequestPattern.newBasedOn(row, resolver).map { newHttpRequestPattern ->
             Scenario(name, newHttpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures)
         }
@@ -135,19 +128,17 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     }
 
     val serverState: Map<String, Value>
-        get() = expectedState
+        get() = expectedFacts
 
     fun matchesMock(response: HttpResponse): Result {
-        val resolver = Resolver(IgnoreFacts(), true)
-        resolver.customPatterns = patterns
+        val resolver = Resolver(IgnoreFacts(), true, patterns)
         return httpResponsePattern.matchesMock(response, resolver).also {
             it.updateScenario(this)
         }
     }
 
     fun generateHttpResponseFrom(response: HttpResponse?): HttpResponse {
-        val resolver = Resolver(expectedState, false)
-        resolver.customPatterns = patterns
+        val resolver = Resolver(expectedFacts, false, patterns)
         return HttpResponsePattern(response!!).generateResponse(resolver)
     }
 
@@ -155,13 +146,13 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         val scenarioDescription = StringBuilder()
         scenarioDescription.append("Scenario: ")
         when {
-            !name.isNullOrEmpty() -> scenarioDescription.append("$name ")
+            name.isNotEmpty() -> scenarioDescription.append("$name ")
         }
         return scenarioDescription.append("$httpRequestPattern").toString()
     }
 
     fun newBasedOn(scenario: Scenario): Scenario =
-        Scenario(this.name, this.httpRequestPattern, this.httpResponsePattern, this.expectedState, scenario.examples, this.patterns, this.fixtures)
+        Scenario(this.name, this.httpRequestPattern, this.httpResponsePattern, this.expectedFacts, scenario.examples, this.patterns, this.fixtures)
 
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)

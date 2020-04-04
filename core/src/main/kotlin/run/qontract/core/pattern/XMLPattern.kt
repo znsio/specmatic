@@ -11,6 +11,7 @@ import run.qontract.core.utilities.xmlToString
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.Value
 import run.qontract.core.value.XMLValue
+import run.qontract.core.withNumericStringPattern
 import java.io.StringReader
 import java.util.*
 import javax.xml.parsers.DocumentBuilderFactory
@@ -25,9 +26,7 @@ data class XMLPattern(val node: Node) : Pattern {
         if(sampleData is NullValue)
             return Result.Failure("Got null, but expected xml of the form $pattern")
 
-
-        resolver.addCustomPattern("(number)", NumericStringPattern())
-        return when (val result = matchesXMLData(sampleData, resolver)) {
+        return when (val result = matchesXMLData(sampleData, withNumericStringPattern(resolver))) {
             is Result.Failure -> result.add("XML did not match")
             else -> result
         }
@@ -249,7 +248,7 @@ data class XMLPattern(val node: Node) : Pattern {
                         }
                     }
                 }
-                node.nodeValue = row.getField(parentNodeName).toString()
+                node.nodeValue = row.getField(parentNodeName)
             } else {
                 val value = node.nodeValue
                 node.nodeValue = when {
@@ -272,7 +271,7 @@ data class XMLPattern(val node: Node) : Pattern {
         for (i in 0 until attributes.length) {
             val item = attributes.item(i)
             if (row.containsField(item.nodeName)) {
-                item.nodeValue = row.getField(item.nodeName).toString()
+                item.nodeValue = row.getField(item.nodeName)
             } else {
                 val value = node.nodeValue
                 node.nodeValue = generateValue(value, resolver).toString()

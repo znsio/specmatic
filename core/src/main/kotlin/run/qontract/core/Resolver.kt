@@ -5,12 +5,12 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
 
-data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean = false, var customPatterns: HashMap<String, Pattern> = HashMap()) {
-    constructor(facts: HashMap<String, Value> = HashMap(), matchPattern: Boolean = false) : this(CheckFacts(facts), matchPattern)
-    constructor() : this(HashMap(), false)
+data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean = false, val patterns: Map<String, Pattern> = emptyMap()) {
+    constructor(facts: Map<String, Value> = emptyMap(), matchPattern: Boolean = false, patterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), matchPattern, patterns)
+    constructor() : this(emptyMap(), false)
 
-    fun makeCopy(): Resolver = copy(customPatterns = HashMap(customPatterns))
-    fun makeCopy(matchPattern: Boolean, newPatterns: Map<String, Pattern>): Resolver = copy(matchPatternInValue = matchPattern, customPatterns = HashMap(customPatterns.plus(newPatterns)))
+    fun makeCopy(): Resolver = copy(patterns = patterns)
+    fun makeCopy(matchPattern: Boolean, newPatterns: Map<String, Pattern>): Resolver = copy(matchPatternInValue = matchPattern, patterns = patterns.plus(newPatterns))
 
     fun matchesPattern(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
         if (matchPatternInValue &&
@@ -33,17 +33,17 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
         return Result.Success()
     }
 
-    fun addCustomPattern(spec: String, pattern: Pattern) {
-        this.customPatterns[spec] = pattern
-    }
-
-    fun addCustomPatterns(patterns: java.util.HashMap<String, Pattern>) {
-        customPatterns.putAll(patterns)
-    }
-
+//    fun addCustomPattern(spec: String, pattern: Pattern) {
+//        this.customPatterns[spec] = pattern
+//    }
+//
+//    fun addCustomPatterns(patterns: java.util.HashMap<String, Pattern>) {
+//        customPatterns.putAll(patterns)
+//    }
+//
     fun getPattern(patternValue: String): Pattern {
         if (isPatternToken(patternValue = patternValue)) {
-            return customPatterns[patternValue] ?: findPattern(patternValue)
+            return patterns[patternValue] ?: findPattern(patternValue)
         }
 
         throw ContractParseException("Pattern $patternValue does not exist.")
@@ -65,3 +65,10 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
         }
     }
 }
+
+fun withNumericStringPattern(resolver: Resolver): Resolver =
+        resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern()))
+
+fun withNumberTypePattern(resolver: Resolver): Resolver =
+        resolver.copy(patterns = resolver.patterns.plus("(number)" to NumberTypePattern()))
+

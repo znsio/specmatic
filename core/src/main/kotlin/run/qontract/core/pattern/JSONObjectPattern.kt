@@ -1,8 +1,6 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.ContractParseException
-import run.qontract.core.Resolver
-import run.qontract.core.Result
+import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.stringToPatternMap
 import run.qontract.core.value.*
@@ -20,12 +18,8 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         if(missingKey != null)
             return Result.Failure("Missing key $missingKey in ${sampleData.jsonObject}")
 
-        val resolverWithNumberType = resolver.makeCopy().also {
-            it.addCustomPattern("(number)", NumberTypePattern())
-        }
-
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
-            when (val result = asPattern(patternValue, key).matches(asValue(sampleValue), resolverWithNumberType)) {
+            when (val result = asPattern(patternValue, key).matches(asValue(sampleValue), withNumberTypePattern(resolver))) {
                 is Result.Failure -> return result.add("Expected value at $key to match $patternValue, actual value $sampleValue in JSONObject ${sampleData.jsonObject}")
             }
         }
@@ -37,7 +31,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> =
             newBasedOn(pattern, row, resolver).map { JSONObjectPattern(it) }
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
 }
 
 fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String, Value> =

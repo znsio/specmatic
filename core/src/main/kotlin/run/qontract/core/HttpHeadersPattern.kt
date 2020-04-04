@@ -6,9 +6,7 @@ import java.util.*
 
 data class HttpHeadersPattern(val headers: Map<String, String> = mapOf()) {
     fun matches(headers: HashMap<String, String>, resolver: Resolver) =
-            headers to resolver.makeCopy().also {
-                it.addCustomPattern("(number)", NumericStringPattern())
-            } to
+            headers to resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern())) to
                     ::matchEach otherwise
                     ::handleError toResult
                     ::returnResult
@@ -45,7 +43,7 @@ data class HttpHeadersPattern(val headers: Map<String, String> = mapOf()) {
     private fun newBasedOn(row: Row, headers: Map<String, String>): Map<String, String> =
             HashMap(headers.mapValues {
                 when {
-                    row.containsField(it.key) && row.getField(it.key) != null -> row.getField(it.key).toString()
+                    row.containsField(it.key) -> row.getField(it.key)
                     else -> it.value
                 }
             })

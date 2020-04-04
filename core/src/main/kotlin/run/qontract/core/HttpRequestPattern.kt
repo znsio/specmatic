@@ -58,7 +58,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
 
     private fun matchBody(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
-        return when (val result = body?.matches(httpRequest.body, resolver.makeCopy().also { it.addCustomPattern("(number)", NumericStringPattern()) })) {
+        return when (val result = body?.matches(httpRequest.body, withNumericStringPattern(resolver))) {
             is Result.Failure -> MatchFailure(result.add("Request body did not match"))
             else -> MatchSuccess(parameters)
         }

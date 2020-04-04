@@ -79,8 +79,7 @@ internal class JSONObjectPatternTest {
         val row = Row(listOf("id"), listOf("10"))
         val actualPattern = parsedPattern("""{"id": "(number)"}""", null).newBasedOn(row, Resolver()).first()
 
-        val resolver = Resolver()
-        resolver.customPatterns["(Id)"] = actualPattern
+        val resolver = Resolver(patterns = mapOf("(Id)" to actualPattern))
 
         val lazyPattern = parsedPattern("(Id)")
         val value = lazyPattern.generate(resolver)
@@ -93,8 +92,7 @@ internal class JSONObjectPatternTest {
 
     @Test
     fun `When generating a new pattern based on a row, a json value multiple 1+ lazy levels down must be replaced by the example value`() {
-        val resolver = Resolver()
-        resolver.customPatterns["(Address)"] = parsedPattern("""{"city": "(string)"}""")
+        val resolver = Resolver(patterns = mapOf("(Address)" to parsedPattern("""{"city": "(string)"}""")))
 
         val personPattern = parsedPattern("""{"name": "(string)", "address": "(Address)"}""")
 

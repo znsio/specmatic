@@ -7,12 +7,12 @@ import java.net.URI
 
 data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: List<Pattern>, val path: String) {
     fun matches(uri: URI, sampleQuery: Map<String, String> = emptyMap(), resolver: Resolver = Resolver()): Result {
-        resolver.addCustomPattern("(number)", NumericStringPattern())
+        val newResolver = withNumericStringPattern(resolver)
 
-        matchesPath(uri, resolver).let {
+        matchesPath(uri, newResolver).let {
             return when (it) {
                 is Result.Success -> {
-                    matchesQuery(sampleQuery, resolver)
+                    matchesQuery(sampleQuery, newResolver)
                 }
                 else -> it
             }
@@ -68,17 +68,17 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<URLPattern> {
-        resolver.addCustomPattern("(number)", NumericStringPattern())
+        val newResolver = withNumericStringPattern(resolver)
 
         val newPathPartsList = newBasedOn(pathPattern.map {
             val key = if(it is Keyed) it.key else null
 
             if(key !== null && row.containsField(key)) {
-                val rowValue = row.getField(key).toString()
-                ExactMatchPattern(it.parse(rowValue, resolver))
+                val rowValue = row.getField(key)
+                ExactMatchPattern(it.parse(rowValue, newResolver))
             } else it
-        }, row, resolver)
-        val newQueryParamsList = newBasedOn(queryPattern, row, resolver)
+        }, row, newResolver)
+        val newQueryParamsList = newBasedOn(queryPattern, row, newResolver)
 
         return newPathPartsList.flatMap { newPathParts ->
             newQueryParamsList.map { newQueryParams ->

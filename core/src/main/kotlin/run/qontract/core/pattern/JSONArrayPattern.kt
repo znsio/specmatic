@@ -22,9 +22,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
         if(sampleData.list.isEmpty())
             return Result.Success()
 
-        val resolverWithNumberType = resolver.makeCopy().apply {
-            addCustomPattern("(number)", NumberTypePattern())
-        }
+        val resolverWithNumberType = resolver.copy(patterns = resolver.patterns.plus("(number)" to NumberTypePattern()))
 
         val resolvedPattern = pattern.map {
             when(it) {
@@ -61,7 +59,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONArrayPattern> = newBasedOn(pattern, row, resolver).map { JSONArrayPattern(it) }
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value) ?: throw ContractParseException("""Parsing as $javaClass but failed. Value: $value""")
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
 }
 
 fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {

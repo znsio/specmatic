@@ -54,8 +54,8 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
 
     private fun matchBody(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
-        val resolverWithNumericString = resolver.makeCopy()
-        resolverWithNumericString.addCustomPattern("(number)", NumericStringPattern())
+        val resolverWithNumericString = resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern()))
+//        resolverWithNumericString.addCustomPattern("(number)", NumericStringPattern())
         when (val result = body.matches(parsedValue(response.body), resolverWithNumericString)) {
             is Result.Failure -> return MatchFailure(result.add("Response body did not match"))
         }

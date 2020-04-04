@@ -6,7 +6,7 @@ fun testBackwardCompatibility(older: ContractBehaviour, newer: ContractBehaviour
      val executionInfo = ExecutionInfo()
 
     contractTests.forEach { testScenario ->
-        newer.setServerState(testScenario.expectedState)
+        newer.setServerState(testScenario.expectedFacts)
 
         try {
             val request = testScenario.generateHttpRequest()

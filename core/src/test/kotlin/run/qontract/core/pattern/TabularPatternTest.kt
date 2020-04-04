@@ -111,9 +111,7 @@ Given pattern Id
         val idsPattern = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
         val idPattern = rowsToTabularPattern(scenario.stepsList[1].dataTable.rowsList)
 
-        val resolver = Resolver(HashMap(), false)
-        resolver.addCustomPattern("(Ids)", idsPattern)
-        resolver.addCustomPattern("(Id)", idPattern)
+        val resolver = Resolver(emptyMap(), false, mapOf("(Ids)" to idsPattern, "(Id)" to idPattern))
 
         assertTrue(idsPattern.matches(value, resolver).isTrue())
         assertTrue(resolver.matchesPattern(null, resolver.getPattern("(Ids)"), value).isTrue())
@@ -134,8 +132,7 @@ Given pattern Ids
 
         val idsPattern = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
 
-        val resolver = Resolver(HashMap(), false)
-        resolver.addCustomPattern("(Ids)", idsPattern)
+        val resolver = Resolver(emptyMap(), false, mapOf("(Ids)" to idsPattern))
 
         assertTrue(idsPattern.matches(value, resolver).isTrue())
         assertTrue(resolver.matchesPattern(null, resolver.getPattern("(Ids)"), value).isTrue())
@@ -198,9 +195,7 @@ And pattern Address
 
         val row = Row(listOf("id", "flat"), listOf("10", "100"))
 
-        val resolver = Resolver()
-        resolver.addCustomPattern("(User)", userPattern)
-        resolver.addCustomPattern("(Address)", addressPattern)
+        val resolver = Resolver(patterns = mapOf("(User)" to userPattern, "(Address)" to addressPattern))
 
         val value = userPattern.newBasedOn(row, resolver).first().generate(resolver)
 

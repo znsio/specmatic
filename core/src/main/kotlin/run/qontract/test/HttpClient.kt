@@ -15,8 +15,9 @@ import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.ServerSetupStateException
 import run.qontract.core.startLinesWith
-import run.qontract.core.utilities.nativeMapToJsonString
-import run.qontract.core.value.NoValue
+import run.qontract.core.utilities.valueMapToPlainJsonString
+import run.qontract.core.value.EmptyString
+import run.qontract.core.value.Value
 import run.qontract.fake.toParams
 import java.io.IOException
 import java.net.MalformedURLException
@@ -75,7 +76,7 @@ class HttpClient(private val baseURL: String) : TestExecutor {
 
     @KtorExperimentalAPI
     @Throws(MalformedURLException::class, URISyntaxException::class, ServerSetupStateException::class)
-    override fun setServerState(serverState: Map<String, Any?>) {
+    override fun setServerState(serverState: Map<String, Value>) {
         if (serverState.isEmpty()) return
 
         val ktorClient = io.ktor.client.HttpClient(CIO)
@@ -85,12 +86,12 @@ class HttpClient(private val baseURL: String) : TestExecutor {
 
         runBlocking {
             println("# >> Request Sent At $startTime")
-            println(startLinesWith(nativeMapToJsonString(serverState), "# "))
+            println(startLinesWith(valueMapToPlainJsonString(serverState), "# "))
 
             val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
                 this.method = HttpMethod.Post
                 this.contentType(ContentType.Application.Json)
-                this.body = nativeMapToJsonString(serverState)
+                this.body = valueMapToPlainJsonString(serverState)
             }
 
             val endTime = Date()
@@ -109,8 +110,8 @@ class HttpClient(private val baseURL: String) : TestExecutor {
 private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpRequest, qontractRequest: HttpRequest): HttpRequest {
     val(body, formFields) =
         when(request.content) {
-            is FormDataContent -> Pair(NoValue, qontractRequest.formFields)
-            is TextContent -> Pair(qontractRequest.body ?: NoValue, emptyMap<String, String>())
+            is FormDataContent -> Pair(EmptyString, qontractRequest.formFields)
+            is TextContent -> Pair(qontractRequest.body ?: EmptyString, emptyMap<String, String>())
             else -> throw ContractHTTPException("Unknown type of body content sent in the request")
         }
 

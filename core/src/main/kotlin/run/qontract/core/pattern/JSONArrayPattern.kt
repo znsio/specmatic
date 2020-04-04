@@ -22,7 +22,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
         if(sampleData.list.isEmpty())
             return Result.Success()
 
-        val resolverWithNumberType = resolver.copy().apply {
+        val resolverWithNumberType = resolver.makeCopy().apply {
             addCustomPattern("(number)", NumberTypePattern())
         }
 

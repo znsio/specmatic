@@ -11,10 +11,7 @@ import run.qontract.core.Contract.Companion.forService
 import run.qontract.core.Contract.Companion.fromGherkin
 import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.utilities.brokerURL
-import run.qontract.core.value.JSONArrayValue
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.NullValue
-import run.qontract.core.value.NumberValue
+import run.qontract.core.value.*
 import run.qontract.test.TestExecutor
 import java.io.IOException
 import kotlin.test.assertEquals
@@ -107,7 +104,7 @@ Then status 200
                 return HttpResponse(200)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -146,7 +143,7 @@ Examples:
                 return HttpResponse(200)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -183,7 +180,7 @@ Then status 200
                 return HttpResponse(200)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -215,7 +212,7 @@ Then status 200
                 return HttpResponse(200, "100")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -248,7 +245,7 @@ Then status 200
                 return HttpResponse(200, "100")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -282,7 +279,7 @@ Then status 200
                 return HttpResponse(200, "100")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -367,7 +364,7 @@ Then status 200
                 return HttpResponse(200, "100")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -406,7 +403,7 @@ Then status 200
                 return HttpResponse(200, "100")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -436,7 +433,7 @@ Then status 200
                 return HttpResponse(200, "")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -479,7 +476,7 @@ Examples:
                 return HttpResponse(200, "")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -522,7 +519,7 @@ Examples:
                 return HttpResponse(200, "")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -562,7 +559,7 @@ Then status 200
                 return HttpResponse(200, "")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 

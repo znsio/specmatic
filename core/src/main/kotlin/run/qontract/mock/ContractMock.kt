@@ -20,6 +20,7 @@ import run.qontract.core.value.*
 import org.w3c.dom.Document
 import org.xml.sax.SAXException
 import run.qontract.core.pattern.parsedValue
+import run.qontract.core.value.EmptyString
 import java.io.Closeable
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
@@ -71,11 +72,11 @@ $expectationsString
     private fun registerExpectation(call: ApplicationCall, httpRequest: HttpRequest) {
         try {
             validateHttpMockRequest(httpRequest)
-            val mockSpec = jsonStringToMap(httpRequest.body.toString()).also {
-                MockScenario.validate(it)
+            val mockSpec = jsonStringToValueMap(httpRequest.body.toString()).also {
+                validateMock(it)
             }
 
-            createMockScenario(MockScenario.fromJSON(mockSpec))
+            createMockScenario(mockFromJSON(mockSpec))
 
             call.response.status(HttpStatusCode.OK)
         } catch (e: Exception) {
@@ -112,9 +113,9 @@ $expectationsString
                 return false
             }
             else -> {
-                if(expected.body is NoValue && actual.body is StringValue) {
+                if(expected.body is EmptyString && actual.body is StringValue) {
                     return actual.bodyString.isEmpty()
-                } else if(expected.body is StringValue && actual.body is NoValue) {
+                } else if(expected.body is StringValue && actual.body is EmptyString) {
                     return expected.bodyString.isEmpty()
                 }
                 else if(expected.body != actual.body) {

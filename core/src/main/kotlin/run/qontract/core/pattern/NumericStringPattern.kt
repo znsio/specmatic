@@ -24,5 +24,7 @@ class NumericStringPattern : Pattern {
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = NumberValue(convertToNumber(value))
 
+    override fun toString() = pattern.toString()
+
     override val pattern: Any = "(number)"
 }

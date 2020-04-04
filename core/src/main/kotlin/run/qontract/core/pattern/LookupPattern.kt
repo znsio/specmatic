@@ -1,16 +1,19 @@
 package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
-import run.qontract.core.value.NoValue
-import run.qontract.core.value.NullValue
+import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 
 data class LookupPattern(override val pattern: String, override val key: String? = null) : Pattern, Keyed {
+    override fun equals(other: Any?): Boolean = when(other) {
+        is LookupPattern -> other.pattern == pattern
+        else -> false
+    }
+
     override fun withKey(key: String?): Pattern = this.copy(key = key)
 
     override fun matches(sampleData: Value?, resolver: Resolver) =
-//            resolver.matchesPattern(key, resolver.getPattern(pattern), sampleData ?: NoValue)
-            resolver.matchesPatternValue(key, pattern, sampleData ?: NullValue)
+            resolver.matchesPattern(key, resolver.getPattern(pattern), sampleData ?: EmptyString)
 
     override fun generate(resolver: Resolver) =
             when (key) {

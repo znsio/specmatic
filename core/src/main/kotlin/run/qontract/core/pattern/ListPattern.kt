@@ -11,7 +11,7 @@ data class ListPattern(override val pattern: Pattern) : Pattern {
         if(sampleData !is JSONArrayValue)
             return Result.Failure("Expected: JSONArrayValue. Actual: ${sampleData?.javaClass ?: "null"}")
 
-        val resolverWithNumberType = resolver.copy().also {
+        val resolverWithNumberType = resolver.makeCopy().also {
             it.addCustomPattern("(number)", NumberTypePattern())
         }
 

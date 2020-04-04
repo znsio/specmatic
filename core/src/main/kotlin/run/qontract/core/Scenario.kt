@@ -1,25 +1,31 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.*
-import run.qontract.core.utilities.flatZipNullable
+import run.qontract.core.utilities.mapZip
+import run.qontract.core.value.StringValue
+import run.qontract.core.value.True
+import run.qontract.core.value.Value
 import java.lang.StringBuilder
 
-data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedState: HashMap<String, Any>, val examples: List<PatternTable>, val patterns: HashMap<String, Pattern>, val fixtures: HashMap<String, Any>) {
-    private fun serverStateMatches(actualState: HashMap<String, Any>, resolver: Resolver) =
+data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedState: HashMap<String, Value>, val examples: List<PatternTable>, val patterns: HashMap<String, Pattern>, val fixtures: HashMap<String, Value>) {
+    private fun serverStateMatches(actualState: HashMap<String, Value>, resolver: Resolver) =
             expectedState.keys == actualState.keys &&
-                    flatZipNullable(expectedState, actualState).all { (key, patternValue, stateValue) ->
+                    mapZip(expectedState, actualState).all { (key, expectedStateValue, actualStateValue) ->
                         when {
-                            stateValue == true || patternValue == true -> true
-                            isPatternToken(patternValue) -> resolver.matchesPatternValue(key, patternValue, stateValue) is Result.Success
-                            else -> patternValue == stateValue
+                            actualStateValue == True || expectedStateValue == True -> true
+                            expectedStateValue is StringValue && expectedStateValue.isPatternToken() -> {
+                                val pattern = resolver.getPattern(expectedStateValue.string)
+                                try { resolver.matchesPattern(key, pattern, pattern.parse(actualStateValue.toString(), resolver)).isTrue() } catch (e: Exception) { false }
+                            }
+                            else -> expectedStateValue.toStringValue() == actualStateValue.toStringValue()
                         }
                     }
 
-    fun matches(httpRequest: HttpRequest, serverState: HashMap<String, Any>): Result {
+    fun matches(httpRequest: HttpRequest, serverState: HashMap<String, Value>): Result {
         val resolver = Resolver(serverState, false).also {
             it.addCustomPatterns(patterns)
         }
-        if (!serverStateMatches(serverState, resolver.copy())) {
+        if (!serverStateMatches(serverState, resolver.makeCopy())) {
             return Result.Failure("Server State mismatch").also { it.updateScenario(this) }
         }
         return httpRequestPattern.matches(httpRequest, resolver).also {
@@ -27,7 +33,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
-    fun generateHttpResponse(actualServerState: HashMap<String, Any>): HttpResponse {
+    fun generateHttpResponse(actualServerState: HashMap<String, Value>): HttpResponse {
         val combinedState = Resolver(actualServerState, false).let { resolver ->
             resolver.customPatterns = patterns
             combineExpectedWithActual(expectedState, actualServerState, resolver)
@@ -40,11 +46,11 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     }
 
     private fun combineExpectedWithActual(
-            expected: HashMap<String, Any>,
-            actual: HashMap<String, Any>,
+            expected: HashMap<String, Value>,
+            actual: HashMap<String, Value>,
             resolver: Resolver
-    ): HashMap<String, Any> {
-        val combinedServerState = HashMap<String, Any>()
+    ): HashMap<String, Value> {
+        val combinedServerState = HashMap<String, Value>()
 
         for (key in expected.keys + actual.keys) {
             val expectedValue = expected.getValue(key)
@@ -54,11 +60,11 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
                 key in expected && key in actual -> {
                     if(expectedValue == actualValue)
                         combinedServerState[key] = actualValue
-                    else if(isPatternToken(expectedValue)) {
-                        val expectedPattern = resolver.getPattern(expectedValue.toString())
+                    else if(expectedValue is StringValue && expectedValue.isPatternToken()) {
+                        val expectedPattern = resolver.getPattern(expectedValue.string)
                         try {
                             if(resolver.matchesPattern(key, expectedPattern, expectedPattern.parse(actualValue.toString(), resolver)).isTrue())
-                                combinedServerState.put(key, actualValue)
+                                combinedServerState[key] = actualValue
                         } catch(e: Throwable) {
                             throw ContractParseException("Couldn't match state values. Expected $expectedValue in key $key, actual value is $actualValue")
                         }
@@ -110,30 +116,29 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
                 else -> examples.flatMap { it.rows }
             }.flatMap { row -> newBasedOn(row) }
 
-    private fun newExpectedServerStateBasedOn(row: Row, expectedServerState: Map<String, Any>, resolver: Resolver): HashMap<String, Any> {
+    private fun newExpectedServerStateBasedOn(row: Row, expectedServerState: Map<String, Value>, resolver: Resolver): HashMap<String, Value> {
         return HashMap(expectedServerState.mapValues { (key, value) ->
             when {
                 row.containsField(key) -> {
-                    val fieldValue: Any = row.getField(key) ?: ""
-                    if (fieldValue is String) {
-                        when {
-                            fixtures.containsKey(fieldValue) -> fixtures[fieldValue]
-                            isPatternToken(value) -> generateValue(fieldValue, resolver)
-                            else -> fieldValue
-                        }
-                    } else fieldValue
+                    val fieldValue = row.getField(key)
+
+                    when {
+                        fixtures.containsKey(fieldValue) -> fixtures.getValue(fieldValue)
+                        isPatternToken(fieldValue) -> resolver.getPattern(fieldValue).generate(resolver)
+                        else -> StringValue(fieldValue)
+                    }
                 }
-                isPatternToken(value) -> generateValue(value, resolver)
+                value is StringValue && isPatternToken(value) -> resolver.getPattern(value.string).generate(resolver)
                 else -> value
-            } as Any
+            }
         })
     }
 
-    val serverState: Map<String, Any?>
+    val serverState: Map<String, Value>
         get() = expectedState
 
     fun matchesMock(response: HttpResponse): Result {
-        val resolver = Resolver(IgnoreServerState(), true)
+        val resolver = Resolver(IgnoreFacts(), true)
         resolver.customPatterns = patterns
         return httpResponsePattern.matchesMock(response, resolver).also {
             it.updateScenario(this)

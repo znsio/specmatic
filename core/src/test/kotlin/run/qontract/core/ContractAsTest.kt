@@ -16,8 +16,7 @@ import org.junit.jupiter.api.Test
 import org.w3c.dom.Document
 import org.w3c.dom.Node
 import org.xml.sax.SAXException
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.NumberValue
+import run.qontract.core.value.*
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
 import kotlin.collections.HashMap
@@ -47,7 +46,7 @@ class ContractAsTest {
                 val address = requestBody["address"]
                 assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
                 assertTrue(StringPattern().matches(asValue(address), Resolver()) is Result.Success)
-                val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
+                val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
                     }
@@ -55,7 +54,7 @@ class ContractAsTest {
                 return HttpResponse(200, jsonResponseString, headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -77,14 +76,14 @@ class ContractAsTest {
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val executionInfo = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val headers: HashMap<String, String?> = hashMapOf(
+                val headers: HashMap<String, String> = hashMapOf(
                         "token" to "test",
                         "length" to "abc"
                 )
                 return HttpResponse(200, "{calls_left: 10, messages_left: 30}", headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
         assertThat(executionInfo.generateErrorMessage()).isEqualTo("""This request did not match any scenario.
 Scenario: GET /balance Error:
@@ -94,15 +93,7 @@ Scenario: GET /balance Error:
 	Expected (number), actual abc
 	"abc" is not a Number
 	Request: HttpRequest(method=GET, path=/balance, headers={Content-Type=text/plain}, body=, queryParams={}, formFields={})
-	Response: {
-    "status": 200,
-    "body": "{calls_left: 10, messages_left: 30}",
-    "status-text": "OK",
-    "headers": {
-        "length": "abc",
-        "token": "test"
-    }
-}
+	Response: HttpResponse(status=200, body={calls_left: 10, messages_left: 30}, headers={length=abc, token=test})
 """)
     }
 
@@ -121,11 +112,11 @@ Scenario: GET /balance Error:
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers.keys).contains("test")
                 assertThat(request.headers["test"]).matches("[0-9]+")
-                val headers: HashMap<String, String?> = HashMap()
+                val headers: HashMap<String, String> = HashMap()
                 return HttpResponse(200, "{calls_left: 10, messages_left: 30}", headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -147,11 +138,11 @@ Scenario: GET /balance Error:
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers.keys).contains("x-loginId")
                 assertThat(request.headers["x-loginId"]).isEqualTo("a@b.com")
-                val headers: HashMap<String, String?> = HashMap()
+                val headers: HashMap<String, String> = HashMap()
                 return HttpResponse(200, "{calls_left: 10, messages_left: 30}", headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -181,11 +172,11 @@ Scenario: GET /balance Error:
                 if (body !is JSONObjectValue)
                     throw Exception("Unexpected value type: ${request.body}")
                 assertThat("10").isEqualTo(body.jsonObject["id"])
-                val headers: HashMap<String, String?> = HashMap()
+                val headers: HashMap<String, String> = HashMap()
                 return HttpResponse(200, "", headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) { }
+            override fun setServerState(serverState: Map<String, Value>) { }
         })
 
         assertThat(flags["executed"]).isTrue()
@@ -220,11 +211,11 @@ Scenario: GET /balance Error:
                 assertThat(request.getURL("")).isEqualTo("/balance/123123")
                 assertThat(request.headers.keys).contains("x-loginId")
                 assertThat(request.headers["x-loginId"]).isEqualTo("a@b.com")
-                val headers: HashMap<String, String?> = HashMap()
+                val headers: HashMap<String, String> = HashMap()
                 return HttpResponse(200, "{calls_left: 10, messages_left: 30}", headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
 
         assertThat(flags["executed"]).isTrue()
@@ -245,7 +236,7 @@ Scenario: GET /balance Error:
                 assertEquals("/accounts", request.path)
                 assertTrue(NumericStringPattern()
                         .matches(asValue(request.queryParams["account_id"]), Resolver()) is Result.Success)
-                val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
+                val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
                     }
@@ -253,7 +244,7 @@ Scenario: GET /balance Error:
                 return HttpResponse(200, jsonResponseString, headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -276,7 +267,7 @@ Scenario: GET /balance Error:
                 val address = jsonBody["address"]
                 assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
                 assertTrue(StringPattern().matches(asValue(address), Resolver()) is Result.Success)
-                val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
+                val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
                     }
@@ -285,7 +276,7 @@ Scenario: GET /balance Error:
                 return HttpResponse(200, jsonResponseString, headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
         assertThat(executionInfo.unsuccessfulInteractionCount()).isEqualTo(1)
     }
@@ -309,7 +300,7 @@ Scenario: GET /balance Error:
                 val address = jsonBody["address"]
                 assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
                 assertTrue(StringPattern().matches(asValue(address), Resolver()) is Result.Success)
-                val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
+                val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
                     }
@@ -317,7 +308,7 @@ Scenario: GET /balance Error:
                 return HttpResponse(200, jsonResponseString, headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -341,11 +332,11 @@ Scenario: GET /balance Error:
                 for (i in expectedLinkedIds.indices) {
                     assertEquals(expectedLinkedIds[i], actualLinkedIds[i])
                 }
-                val headers = HashMap<String, String?>()
+                val headers = HashMap<String, String>()
                 return HttpResponse(200, "", headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -372,11 +363,11 @@ Scenario: GET /balance Error:
                 val innerObject = actualLinkedIds[3] as Map<String, Any?>
                 assertTrue(NumberTypePattern().matches(asValue(innerObject["a"]), Resolver()) is Result.Success)
                 assertTrue(StringPattern().matches(asValue(innerObject["b"]), Resolver()) is Result.Success)
-                val headers = HashMap<String, String?>()
+                val headers = HashMap<String, String>()
                 return HttpResponse(200, "", headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -401,7 +392,7 @@ Scenario: GET /balance Error:
                 assertEquals("address", addressItem.nodeName)
                 assertEquals("John Doe", nameItem.firstChild.nodeValue)
                 assertTrue(StringPattern().matches(asValue(addressItem.firstChild.nodeValue), Resolver()) is Result.Success)
-                val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
+                val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/xml")
                     }
@@ -409,7 +400,7 @@ Scenario: GET /balance Error:
                 return HttpResponse(200, xmlResponseString, headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -436,8 +427,8 @@ Scenario: GET /balance Error:
                 return jsonResponse("{\"name\": \"jack\"}")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
-                assertEquals("10", serverState["userid"])
+            override fun setServerState(serverState: Map<String, Value>) {
+                assertEquals("10", serverState["userid"].toString())
             }
         })
     }
@@ -484,7 +475,7 @@ Scenario: GET /balance Error:
                 return HttpResponse.EMPTY_200
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -524,7 +515,7 @@ Scenario: GET /balance Error:
                 return jsonResponse(jsonResponse)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -580,7 +571,7 @@ Scenario: GET /balance Error:
                 return HttpResponse.EMPTY_200
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -620,7 +611,7 @@ Scenario: GET /balance Error:
                 return xmlResponse(xmlResponse)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -647,10 +638,10 @@ Scenario: GET /balance Error:
                 return jsonResponse(jsonResponse)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
                 setupStatus[0] = setupSuccess
                 assertTrue(serverState.containsKey("cities"))
-                assertTrue(serverState["cities"] !is Boolean)
+                assertTrue(serverState["cities"] != True)
             }
         })
         assertEquals("Setup happened", setupStatus[0])
@@ -683,10 +674,10 @@ Scenario: GET /balance Error:
                 return jsonResponse(jsonResponse)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
                 setupStatus[0] = setupSuccess
                 assertTrue(serverState.containsKey("cities_exist"))
-                assertTrue(serverState["cities_exist"] !is Boolean)
+                assertTrue(serverState["cities_exist"] != True)
             }
         })
         assertEquals("Setup happened", setupStatus[0])
@@ -715,7 +706,7 @@ Scenario: GET /balance Error:
                 return HttpResponse.EMPTY_200
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
                 setupStatus[0] = setupSuccess
                 assertTrue(serverState.containsKey("id"))
                 idFound[0] = serverState["id"].toString().toInt()
@@ -755,7 +746,7 @@ Scenario: Update pet details
                 return HttpResponse.EMPTY_200
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
                 setupStatus[0] = setupSuccess
                 assertTrue(serverState.containsKey("id"))
                 idFound[0] = serverState["id"].toString().toInt()
@@ -787,7 +778,7 @@ Scenario: GET and POST number
                 return HttpResponse(200, "10")
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 

@@ -1,39 +1,25 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.Resolver
-import run.qontract.core.value.Value
-import run.qontract.core.Result
-import run.qontract.core.utilities.xmlToString
-import run.qontract.core.value.XMLValue
 import org.w3c.dom.Document
+import org.w3c.dom.Element
 import org.w3c.dom.NamedNodeMap
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
+import run.qontract.core.Resolver
+import run.qontract.core.Result
+import run.qontract.core.utilities.xmlToString
 import run.qontract.core.value.NullValue
+import run.qontract.core.value.Value
+import run.qontract.core.value.XMLValue
 import java.io.StringReader
 import java.util.*
 import javax.xml.parsers.DocumentBuilderFactory
-import javax.xml.parsers.ParserConfigurationException
 
-class XMLPattern : Pattern {
-    private var document: Document = parseXML("<empty/>")
 
-    override val pattern = xmlToString(document)
+data class XMLPattern(val node: Node) : Pattern {
+    override val pattern = xmlToString(node)
 
-    constructor(bodyContent: String) {
-        document = parseXML(bodyContent)
-    }
-
-    constructor(document: Document) {
-        this.document = document
-    }
-
-    @Throws(Exception::class)
-    private fun parseXML(xmlData: String): Document {
-        val builderFactory = DocumentBuilderFactory.newInstance()
-        val builder = builderFactory.newDocumentBuilder()
-        return builder.parse(InputSource(StringReader(xmlData)))
-    }
+    constructor(bodyContent: String): this(parseXML(bodyContent).documentElement)
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData is NullValue)
@@ -53,10 +39,10 @@ class XMLPattern : Pattern {
                 return matchesDocument(sampleXMLValue, resolver)
             }
             is XMLValue -> {
-                return matchesDocument(sampleXMLValue.value as Document, resolver)
+                return matchesNode(node, sampleXMLValue.node, resolver)
             }
             is Node -> {
-                return matchesNode(document.documentElement, sampleXMLValue, resolver)
+                return matchesNode(node, sampleXMLValue, resolver)
             }
             else -> return try {
                 matchesDocument(parseXML(sampleXMLValue as String), resolver)
@@ -67,38 +53,41 @@ class XMLPattern : Pattern {
     }
 
     private fun matchesDocument(sampleXMLDocument: Document, resolver: Resolver): Result {
-        return matchesNode(document.documentElement, sampleXMLDocument.documentElement, resolver)
+        return matchesNode(node, sampleXMLDocument.documentElement, resolver)
     }
 
-    private fun matchesNode(pattern: Node, sample: Node, resolver: Resolver): Result {
-        if (pattern.nodeName != sample.nodeName) {
-            return if (isPatternToken(pattern.nodeValue)) {
-                when (val result = resolver.matchesPatternValue(sample.nodeName, withoutRestTokenForXML(pattern.nodeValue), sample)) {
-                    is Result.Failure -> result.add("Node ${sample.nodeName} did not match. Expected: ${pattern.nodeValue} Actual: ${sample.nodeValue}")
+    private fun matchesNode(patternNode: Node, sampleNode: Node, resolver: Resolver): Result {
+        if (patternNode.nodeName != sampleNode.nodeName) {
+            return if (isPatternToken(patternNode.nodeValue)) {
+                val pattern = resolver.getPattern(withoutRestTokenForXML(patternNode.nodeValue))
+                val sampleValue = XMLValue(sampleNode)
+
+                when (val result = resolver.matchesPattern(sampleNode.nodeName, pattern, sampleValue)) {
+                    is Result.Failure -> result.add("Node ${sampleNode.nodeName} did not match. Expected: ${patternNode.nodeValue} Actual: ${sampleNode.nodeValue}")
                     else -> result
                 }
             } else {
-                Result.Failure("${pattern.nodeValue} is not a pattern token")
+                Result.Failure("${patternNode.nodeValue} is not a pattern token")
             }
         }
-        if (pattern.hasAttributes()) {
-            if (!sample.hasAttributes())
-                return Result.Failure("Node ${sample.nodeName} does not have attributes. Expected: ${pattern.attributes}")
-            if (!matchingAttributes(pattern.attributes, sample.attributes, resolver))
-                return Result.Failure("Node ${sample.nodeName} does not have matching attributes. Expected: ${pattern.attributes} Actual: ${sample.attributes}")
+        if (patternNode.hasAttributes()) {
+            if (!sampleNode.hasAttributes())
+                return Result.Failure("Node ${sampleNode.nodeName} does not have attributes. Expected: ${patternNode.attributes}")
+            if (!matchingAttributes(patternNode.attributes, sampleNode.attributes, resolver))
+                return Result.Failure("Node ${sampleNode.nodeName} does not have matching attributes. Expected: ${patternNode.attributes} Actual: ${sampleNode.attributes}")
         }
-        if (pattern.hasChildNodes()) {
-            if (!sample.hasChildNodes()) {
-                return Result.Failure("Node ${sample.nodeName} does not have child nodes. Expected: ${pattern.childNodes}")
+        if (patternNode.hasChildNodes()) {
+            if (!sampleNode.hasChildNodes()) {
+                return Result.Failure("Node ${sampleNode.nodeName} does not have child nodes. Expected: ${patternNode.childNodes}")
             }
-            val patternChildNodes = pattern.childNodes
-            val sampleChildNodes = sample.childNodes
+            val patternChildNodes = patternNode.childNodes
+            val sampleChildNodes = sampleNode.childNodes
             val firstPatternNode = patternChildNodes.item(0)
             if (isRepeatingPattern(firstPatternNode.nodeValue)) {
-                return matchManyNodes(firstPatternNode, sample, resolver)
+                return matchManyNodes(firstPatternNode, sampleNode, resolver)
             }
             if (patternChildNodes.length != sampleChildNodes.length)
-                return Result.Failure("Node ${sample.nodeName} does not have matching number of children. Expected: ${patternChildNodes.length} Actual: ${sampleChildNodes.length}")
+                return Result.Failure("Node ${sampleNode.nodeName} does not have matching number of children. Expected: ${patternChildNodes.length} Actual: ${sampleChildNodes.length}")
             for (index in 0 until patternChildNodes.length) {
                 when (val result = matchesNode(patternChildNodes.item(index), sampleChildNodes.item(index), resolver)) {
                     is Result.Success -> return result
@@ -108,13 +97,24 @@ class XMLPattern : Pattern {
             }
             return Result.Success()
         }
-        val patternValue = pattern.nodeValue
-        val sampleValue = sample.nodeValue
-        val key = pattern.parentNode.nodeName
-        //TODO: looks repetitive
-        return when (val result = resolver.matchesPatternValue(key, patternValue, sampleValue)) {
-            is Result.Failure -> result.add("Node $key did not match. Expected: $patternValue Actual: $sampleValue")
-            else -> result
+        val patternValue = patternNode.nodeValue
+        val sampleValue = sampleNode.nodeValue
+        val key = patternNode.parentNode.nodeName
+
+        return when {
+            isPatternToken(patternValue) -> {
+                val resolvedPattern = resolver.getPattern(patternValue)
+                val resolvedValue = resolvedPattern.parse(sampleValue, resolver)
+
+                when (val result = resolver.matchesPattern(key, resolvedPattern, resolvedValue)) {
+                    is Result.Failure -> result.add("Node $key did not match. Expected: $patternValue Actual: $sampleValue")
+                    else -> result
+                }
+            }
+            else -> when (patternValue) {
+                sampleValue -> Result.Success()
+                else -> Result.Failure("Expected value $patternValue, but found value $sampleValue")
+            }
         }
     }
 
@@ -140,8 +140,16 @@ class XMLPattern : Pattern {
             val sampleItem = sample.getNamedItem(name) ?: return false
             val patternValue = patternItem.nodeValue
             val sampleValue = sampleItem.nodeValue
-            //TODO: remove toBoolean and return result
-            if (!resolver.matchesPatternValue(name, patternValue, sampleValue).isTrue()) return false
+            when {
+                isPatternToken(patternValue) -> {
+                    val resolvedPattern = resolver.getPattern(patternValue)
+                    val resolvedValue = resolvedPattern.parse(sampleValue, resolver)
+
+                    if(!resolver.matchesPattern(name, resolvedPattern, resolvedValue).isTrue()) return false
+                }
+                else -> if (patternValue != sampleValue) return false
+
+            }
         }
         return true
     }
@@ -149,24 +157,16 @@ class XMLPattern : Pattern {
     @Throws(Exception::class)
     override fun generate(resolver: Resolver): Value {
         val newDocument = copyOfDocument()
-        return XMLValue(generate(newDocument, resolver))
+        updateNodeTemplate(newDocument, resolver)
+        return XMLValue(newDocument)
     }
 
-    @Throws(ParserConfigurationException::class)
-    private fun copyOfDocument(): Document {
-        val builderFactory = DocumentBuilderFactory.newInstance()
-        val builder = builderFactory.newDocumentBuilder()
-        val newDocument = builder.newDocument()
-        val originalRoot = document.documentElement
-        val copiedRoot = newDocument.importNode(originalRoot, true)
-        newDocument.appendChild(copiedRoot)
-        return newDocument
-    }
+    private fun copyOfDocument(): Node = node.cloneNode(true)
 
     @Throws(Exception::class)
-    private fun generate(newDocument: Document, resolver: Resolver): Document {
+    private fun generate(newDocument: Document, resolver: Resolver): Element {
         updateNodeTemplate(newDocument.documentElement, resolver)
-        return newDocument
+        return newDocument.documentElement
     }
 
     @Throws(Exception::class)
@@ -205,17 +205,13 @@ class XMLPattern : Pattern {
     }
 
     @Throws(Exception::class)
-    private fun getXMLNodeFrom(result: Value): Node {
-        var newNode: Node
-        if (result is XMLValue) {
-            val resultDocument = result.value as Document
-            newNode = resultDocument.documentElement
-            newNode = newNode.cloneNode(true)
-        } else newNode = parseXML(result.toString()).documentElement
-        return newNode
+    private fun getXMLNodeFrom(xml: Value): Node {
+        return when(xml) {
+            is XMLValue -> xml.node.cloneNode(true)
+            else -> parseXML(xml.toString())
+        }
     }
 
-    @Throws(Exception::class)
     private fun updateAttributes(attributes: NamedNodeMap, resolver: Resolver) {
         for (index in 0 until attributes.length) {
             val attribute = attributes.item(index)
@@ -226,12 +222,12 @@ class XMLPattern : Pattern {
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val newDocument = copyOfDocument()
-        val newRoot: Node = newDocument.documentElement
+        val newRoot: Node = newDocument
         updateBasedOnRow(newRoot, row, resolver)
         return listOf(XMLPattern(newDocument))
     }
 
-    override fun parse(value: String, resolver: Resolver): Value = XMLValue(parseXML(value))
+    override fun parse(value: String, resolver: Resolver): Value = XMLValue(value)
 
     @Throws(Throwable::class)
     private fun updateBasedOnRow(node: Node, row: Row, resolver: Resolver) {
@@ -283,4 +279,11 @@ class XMLPattern : Pattern {
             }
         }
     }
+}
+
+internal fun parseXML(xmlData: String): Document {
+    val builderFactory = DocumentBuilderFactory.newInstance()
+    val builder = builderFactory.newDocumentBuilder()
+
+    return builder.parse(InputSource(StringReader(xmlData)))
 }

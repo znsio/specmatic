@@ -5,6 +5,8 @@ import run.qontract.test.HttpClient
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import run.qontract.core.value.StringValue
+import run.qontract.core.value.Value
 import java.util.*
 
 class TestHttpClient {
@@ -49,9 +51,9 @@ class TestHttpClient {
         val url = "http://localhost:$port"
         val client = HttpClient(url)
         ContractFake(contractGherkin, host, port).use {
-            client.setServerState(object : HashMap<String, Any>() {
+            client.setServerState(object : HashMap<String, Value>() {
                 init {
-                    put("server", "state")
+                    put("server", StringValue("state"))
                 }
             })
             val response = client.execute(request)

@@ -27,18 +27,14 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
                     ::returnResult
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpResponsePattern> =
-        body.newBasedOn(row, resolver.copy()).flatMap { newBody ->
+        body.newBasedOn(row, resolver.makeCopy()).flatMap { newBody ->
             headersPattern.newBasedOn(row).map { newHeadersPattern ->
                 HttpResponsePattern(newHeadersPattern, status, newBody)
             }
         }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) =
-            matches(response, resolver.copy()
-                    .also {
-                        it.matchPattern = true
-                        it.addCustomPattern("(number)", NumericStringPattern())
-                    })
+            matches(response, resolver.makeCopy(true, mapOf("(number)" to NumericStringPattern())))
 
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, _) = parameters
@@ -58,7 +54,7 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
 
     private fun matchBody(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
-        val resolverWithNumericString = resolver.copy()
+        val resolverWithNumericString = resolver.makeCopy()
         resolverWithNumericString.addCustomPattern("(number)", NumericStringPattern())
         when (val result = body.matches(parsedValue(response.body), resolverWithNumericString)) {
             is Result.Failure -> return MatchFailure(result.add("Response body did not match"))

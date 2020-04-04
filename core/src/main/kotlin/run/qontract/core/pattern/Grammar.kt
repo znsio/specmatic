@@ -2,6 +2,7 @@ package run.qontract.core.pattern
 
 import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
+import run.qontract.core.value.StringValue
 
 internal fun withoutOptionality(key: String) = key.removeSuffix("?")
 internal fun isOptional(key: String): Boolean = key.endsWith("?")
@@ -34,6 +35,7 @@ fun isPrimitivePattern(pattern: Any): Boolean =
 fun isPatternToken(patternValue: Any?) =
     when(patternValue) {
         is String -> patternValue.startsWith("(") && patternValue.endsWith(")")
+        is StringValue -> patternValue.string.startsWith("(") && patternValue.string.endsWith(")")
         else -> false
     }
 

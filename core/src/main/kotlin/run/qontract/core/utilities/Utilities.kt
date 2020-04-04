@@ -14,6 +14,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.coroutines.runBlocking
 import org.w3c.dom.Document
+import org.w3c.dom.Element
+import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import org.xml.sax.SAXException
 import java.io.*
@@ -22,7 +24,6 @@ import java.util.*
 import java.util.stream.Collectors
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.parsers.ParserConfigurationException
-import javax.xml.transform.TransformerException
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
@@ -162,9 +163,11 @@ fun parseXML(xmlData: String): Document {
     return builder.parse(InputSource(StringReader(xmlData)))
 }
 
-@Throws(TransformerException::class)
-fun xmlToString(doc: Document?): String {
-    val domSource = DOMSource(doc)
+fun xmlToString(doc: Document): String = xmlToString(DOMSource(doc))
+fun xmlToString(element: Element): String = xmlToString(DOMSource(element))
+fun xmlToString(node: Node): String = xmlToString(DOMSource(node))
+
+private fun xmlToString(domSource: DOMSource): String {
     val writer = StringWriter()
     val result = StreamResult(writer)
     val tf = TransformerFactory.newInstance()

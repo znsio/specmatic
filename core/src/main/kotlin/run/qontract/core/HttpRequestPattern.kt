@@ -50,7 +50,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     private fun matchHeaders(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
         val headers = httpRequest.headers
-        when (val result = this.headersPattern.matches(headers, resolver.copy())) {
+        when (val result = this.headersPattern.matches(headers, resolver.makeCopy())) {
             is Result.Failure -> return MatchFailure(result.add("Request Headers did not match"))
         }
         return MatchSuccess(parameters)
@@ -58,7 +58,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
 
     private fun matchBody(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
-        return when (val result = body?.matches(httpRequest.body, resolver.copy().also { it.addCustomPattern("(number)", NumericStringPattern()) })) {
+        return when (val result = body?.matches(httpRequest.body, resolver.makeCopy().also { it.addCustomPattern("(number)", NumericStringPattern()) })) {
             is Result.Failure -> MatchFailure(result.add("Request body did not match"))
             else -> MatchSuccess(parameters)
         }
@@ -79,7 +79,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
         urlPattern.let {
             val result = urlPattern!!.matches(URI(httpRequest.path!!),
                     httpRequest.queryParams,
-                    resolver.copy())
+                    resolver.makeCopy())
             return if (result is Result.Failure)
                 MatchFailure(result.add("URL did not match"))
             else
@@ -108,8 +108,8 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
             throw missingParam("URL path pattern")
         }
         newRequest.updateMethod(method!!)
-        newRequest.updatePath(urlPattern!!.generatePath(resolver.copy()))
-        val queryParams = urlPattern!!.generateQuery(resolver.copy())
+        newRequest.updatePath(urlPattern!!.generatePath(resolver.makeCopy()))
+        val queryParams = urlPattern!!.generateQuery(resolver.makeCopy())
         for (key in queryParams.keys) {
             newRequest.updateQueryParam(key, queryParams[key] ?: "")
         }
@@ -136,8 +136,8 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
-        val newURLMatchers = urlPattern?.newBasedOn(row, resolver.copy()) ?: listOf<URLPattern?>(null)
-        val newBodies = body?.newBasedOn(row, resolver.copy()) ?: listOf<Pattern?>(null)
+        val newURLMatchers = urlPattern?.newBasedOn(row, resolver.makeCopy()) ?: listOf<URLPattern?>(null)
+        val newBodies = body?.newBasedOn(row, resolver.makeCopy()) ?: listOf<Pattern?>(null)
         val newHeadersPattern = headersPattern.newBasedOn(row)
         val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
 

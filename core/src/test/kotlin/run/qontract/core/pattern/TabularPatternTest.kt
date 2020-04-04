@@ -116,7 +116,7 @@ Given pattern Id
         resolver.addCustomPattern("(Id)", idPattern)
 
         assertTrue(idsPattern.matches(value, resolver).isTrue())
-        assertTrue(resolver.matchesPatternValue(null, "(Ids)", value).isTrue())
+        assertTrue(resolver.matchesPattern(null, resolver.getPattern("(Ids)"), value).isTrue())
     }
 
     @Test
@@ -138,7 +138,7 @@ Given pattern Ids
         resolver.addCustomPattern("(Ids)", idsPattern)
 
         assertTrue(idsPattern.matches(value, resolver).isTrue())
-        assertTrue(resolver.matchesPatternValue(null, "(Ids)", value).isTrue())
+        assertTrue(resolver.matchesPattern(null, resolver.getPattern("(Ids)"), value).isTrue())
     }
 
     @Test

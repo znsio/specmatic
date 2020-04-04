@@ -335,9 +335,9 @@ Feature: Contract for /balance API
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val httpResponse: HttpResponse
         val httpRequest: HttpRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
-        contractBehaviour.setServerState(object : HashMap<String, Any>() {
+        contractBehaviour.setServerState(object : HashMap<String, Value>() {
             init {
-                put("cities_exist", true)
+                put("cities_exist", True)
             }
         })
         httpResponse = contractBehaviour.lookup(httpRequest)
@@ -424,8 +424,8 @@ Feature: Contract for /balance API
 
         val contractBehaviour = ContractBehaviour(contractGherkin)
 
-        contractBehaviour.setServerState(mutableMapOf<String, Any>().apply {
-            this["id"] = true
+        contractBehaviour.setServerState(mutableMapOf<String, Value>().apply {
+            this["id"] = True
         })
 
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/accounts/10")
@@ -450,8 +450,8 @@ Feature: Contract for /balance API
 
         val contractBehaviour = ContractBehaviour(contractGherkin)
 
-        contractBehaviour.setServerState(mutableMapOf<String, Any>().apply {
-            this["id"] = 10
+        contractBehaviour.setServerState(mutableMapOf<String, Value>().apply {
+            this["id"] = NumberValue(10)
         })
 
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/accounts/10")
@@ -672,7 +672,7 @@ Feature: Contract for /balance API
 
         assertTrue(jsonObject is JSONObjectValue)
         assertTrue(if(jsonObject is JSONObjectValue) {
-            val ids = jsonObject.jsonObject["ids"] ?: NoValue
+            val ids = jsonObject.jsonObject["ids"] ?: EmptyString
             assertTrue(ids is JSONArrayValue)
 
             if(ids is JSONArrayValue) {

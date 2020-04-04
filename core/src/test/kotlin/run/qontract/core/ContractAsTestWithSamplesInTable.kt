@@ -10,6 +10,7 @@ import run.qontract.core.pattern.StringPattern
 import run.qontract.core.pattern.asValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
+import run.qontract.core.value.Value
 import run.qontract.test.TestExecutor
 import java.util.*
 import kotlin.test.assertEquals
@@ -56,7 +57,7 @@ class ContractAsTestWithSamplesInTable {
                 }
                 Assertions.assertEquals("GET", request.method)
                 Assertions.assertTrue(NumericStringPattern().matches(asValue(account_id), Resolver()) is Result.Success)
-                val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
+                val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
                     }
@@ -70,7 +71,7 @@ class ContractAsTestWithSamplesInTable {
                 return HttpResponse(200, jsonResponseString, headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 
@@ -146,7 +147,7 @@ Feature: Contract for /balance API
                 val city = (requestJSON["address"] as Map<String, Any?>)["city"]
                 Assertions.assertEquals("POST", request.method)
                 Assertions.assertTrue(StringPattern().matches(asValue(city), Resolver()) is Result.Success)
-                val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
+                val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
                     }
@@ -168,7 +169,7 @@ Feature: Contract for /balance API
                 return HttpResponse(200, jsonResponseString, headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
     }
@@ -191,7 +192,7 @@ Feature: Contract for /balance API
                     Assertions.assertTrue(name is StringValue)
                     Assertions.assertTrue(city is StringValue)
 
-                    val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
                             put("Content-Type", "application/json")
                         }
@@ -211,7 +212,7 @@ Feature: Contract for /balance API
                 }
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
@@ -252,7 +253,7 @@ Feature: Contract for /balance API
                 Assertions.assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
                 Assertions.assertTrue(StringPattern().matches(asValue(cityItem.firstChild.nodeValue), Resolver()) is Result.Success)
                 Assertions.assertEquals("POST", request.method)
-                val headers: HashMap<String, String?> = object : HashMap<String, String?>() {
+                val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/xml")
                     }
@@ -266,7 +267,7 @@ Feature: Contract for /balance API
                 return HttpResponse(200, xmlResponseString, headers)
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {}
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
     }
 }

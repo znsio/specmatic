@@ -2,55 +2,20 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
+import run.qontract.core.value.True
 import run.qontract.core.value.Value
 
-class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean = false) {
-    var customPatterns: HashMap<String, Pattern> = HashMap()
+data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean = false, var customPatterns: HashMap<String, Pattern> = HashMap()) {
+    constructor(facts: HashMap<String, Value> = HashMap(), matchPattern: Boolean = false) : this(CheckFacts(facts), matchPattern)
+    constructor() : this(HashMap(), false)
 
-    constructor(serverState: HashMap<String, Any> = HashMap(), matchPattern: Boolean = false) : this(ServerStateStringValueMatch(serverState), matchPattern) {}
-    constructor() : this(HashMap<String, Any>(), false)
+    fun makeCopy(): Resolver = copy(customPatterns = HashMap(customPatterns))
+    fun makeCopy(matchPattern: Boolean, newPatterns: Map<String, Pattern>): Resolver = copy(matchPatternInValue = matchPattern, customPatterns = HashMap(customPatterns.plus(newPatterns)))
 
-    fun copy(): Resolver {
-        val newResolver = Resolver(serverStateMatch, false)
-        newResolver.customPatterns = HashMap(customPatterns)
-        newResolver.matchPattern = matchPattern
-
-        return newResolver
-    }
-
-    fun matchesPatternValue(serverStateKey: String?, patternValue: Any, sampleValue: Any): Result {
-        if (matchPattern && sampleValue is Value && patternValue == sampleValue.value)
-            return Result.Success()
-
-        if (patternValue is String && isPatternToken(patternValue)) {
-            val pattern = when (patternValue) {
-                in customPatterns -> customPatterns[patternValue]
-                else -> findPattern(patternValue)
-            }
-
-            when (val result = pattern?.matches(asValue(sampleValue), this)) {
-                is Result.Failure -> {
-                    return result.add("""Expected $patternValue, actual $sampleValue""")
-                }
-            }
-
-            if (serverStateKey != null && serverStateKey in serverStateMatch) {
-                when(val result = serverStateMatch.match(sampleValue, serverStateKey)) {
-                    is Result.Failure -> result.add("Resolver was not able to match $serverStateKey with value $sampleValue")
-                }
-            }
-
-            return Result.Success()
-        }
-
-        return when ((patternValue == sampleValue)) {
-            true -> Result.Success()
-            else -> Result.Failure("Expected $patternValue, actual $sampleValue")
-        }
-    }
-
-    fun matchesPattern(serverStateKey: String?, pattern: Pattern, sampleValue: Value): Result {
-        if (matchPattern && sampleValue is StringValue && pattern == parsedPattern(sampleValue.string))
+    fun matchesPattern(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
+        if (matchPatternInValue &&
+                sampleValue is StringValue && isPatternToken(sampleValue.string) &&
+                pattern == getPattern(sampleValue.string))
             return Result.Success()
 
         when (val result = pattern.matches(sampleValue, this)) {
@@ -59,9 +24,9 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
             }
         }
 
-        if (serverStateKey != null && serverStateKey in serverStateMatch) {
-            when(val result = serverStateMatch.match(sampleValue, serverStateKey)) {
-                is Result.Failure -> result.add("Resolver was not able to match $serverStateKey with value $sampleValue")
+        if (factKey != null && factStore.has(factKey)) {
+            when(val result = factStore.match(sampleValue, factKey)) {
+                is Result.Failure -> result.add("Resolver was not able to match fact $factKey with value $sampleValue.")
             }
         }
 
@@ -81,22 +46,22 @@ class Resolver(val serverStateMatch: ServerStateMatch, var matchPattern: Boolean
             return customPatterns[patternValue] ?: findPattern(patternValue)
         }
 
-        throw ContractParseException("Pattern $patternValue does not exit.")
+        throw ContractParseException("Pattern $patternValue does not exist.")
     }
 
-    fun generate(key: String, pattern: Pattern): Value {
-        if (serverStateMatch.contains(key)) {
-            val nativeValue = serverStateMatch.get(key)
+    fun generate(factKey: String, pattern: Pattern): Value {
+        if (!factStore.has(factKey))
+            return pattern.generate(this)
 
-            if (nativeValue != null && nativeValue != true) {
-                val value = pattern.parse(nativeValue.toString(), this)
-                when (matchesPattern(null, pattern, value)) {
-                    is Result.Success -> return value
-                    else -> throw ContractParseException("$nativeValue doesn't match $pattern")
+        return when(val fact = factStore.get(factKey)) {
+            is StringValue ->
+                try {
+                    pattern.parse(fact.string, this)
+                } catch (e: Throwable) {
+                    throw ContractParseException("Fact $fact against key $factKey is not a $pattern")
                 }
-            }
+            True -> pattern.generate(this)
+            else -> fact
         }
-
-        return pattern.generate(this)
     }
 }

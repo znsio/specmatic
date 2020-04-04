@@ -4,7 +4,7 @@ import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import io.cucumber.messages.Messages
-import run.qontract.core.utilities.flatZip
+import run.qontract.core.utilities.mapZip
 import run.qontract.core.value.*
 import run.qontract.test.ContractTestException
 
@@ -61,11 +61,11 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
         if(missingKey != null)
             return Result.Failure("Missing key $missingKey in ${sampleData.jsonObject}")
 
-        val resolverWithNumberType = resolver.copy().also {
+        val resolverWithNumberType = resolver.makeCopy().also {
             it.addCustomPattern("(number)", NumberTypePattern())
         }
 
-        flatZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
+        mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = asPattern(patternValue, key).matches(sampleValue, resolverWithNumberType)) {
                 is Result.Failure -> return result.add("Expected value at $key to match $patternValue, actual value $sampleValue in JSONObject ${sampleData.jsonObject}")
             }
@@ -77,8 +77,8 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
     override fun generate(resolver: Resolver) =
             JSONObjectValue(pattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
                 when {
-                    resolver.serverStateMatch.contains(key) && resolver.serverStateMatch.get(key) != true ->
-                        pattern.parse(resolver.serverStateMatch.get(key).toString(), resolver)
+                    resolver.factStore.has(key) && resolver.factStore.get(key) != True ->
+                        pattern.parse(resolver.factStore.get(key).toString(), resolver)
                     else -> asPattern(pattern, key).generate(resolver)
                 }
             })

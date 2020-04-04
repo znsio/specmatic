@@ -4,10 +4,11 @@ import io.ktor.http.HttpStatusCode
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.nativeMapToJsonString
 import run.qontract.core.utilities.prettifyJsonString
-import run.qontract.core.value.Value
+import run.qontract.core.utilities.valueMapToPrettyJsonString
+import run.qontract.core.value.*
 import java.util.*
 
-data class HttpResponse(var status: Int = 0, var body: String? = "", val headers: MutableMap<String, String?> = mutableMapOf("Content-Type" to "text/plain")) {
+data class HttpResponse(var status: Int = 0, var body: String? = "", val headers: MutableMap<String, String> = mutableMapOf("Content-Type" to "text/plain")) {
     val statusText: String
         get() =
             when(status) {
@@ -21,15 +22,13 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
         return this
     }
 
-    fun toJSON(): MutableMap<String, Any> =
-        mutableMapOf<String, Any>().also {
-            it["status"] = status
-            if (!body.isNullOrEmpty()) it["body"] = body ?: ""
-            if (statusText.isNotEmpty()) it["status-text"] = statusText
-            if (headers.isNotEmpty()) it["headers"] = headers
+    fun toJSON(): MutableMap<String, Value> =
+        mutableMapOf<String, Value>().also { json ->
+            json["status"] = NumberValue(status)
+            json["body"] = body?.let { StringValue(it) } ?: EmptyString
+            if (statusText.isNotEmpty()) json["status-text"] = StringValue(statusText)
+            if (headers.isNotEmpty()) json["headers"] = JSONObjectValue(headers.mapValues { StringValue(it.value) })
         }
-
-    override fun toString() = nativeMapToJsonString(toJSON())
 
     fun toLogString(prefix: String): String {
         val statusLine = "$status $statusText"
@@ -49,7 +48,7 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
         var EMPTY_200 = HttpResponse(200, "", HashMap())
 
         fun jsonResponse(jsonData: String?): HttpResponse {
-            return HttpResponse(200, jsonData, object : HashMap<String, String?>() {
+            return HttpResponse(200, jsonData, object : HashMap<String, String>() {
                 init {
                     put("Content-Type", "application/json")
                 }
@@ -57,7 +56,7 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
         }
 
         fun xmlResponse(xmlData: String?): HttpResponse {
-            return HttpResponse(200, xmlData, object : HashMap<String, String?>() {
+            return HttpResponse(200, xmlData, object : HashMap<String, String>() {
                 init {
                     put("Content-Type", "application/xml")
                 }
@@ -71,10 +70,15 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
             return HttpResponse(status, bodyValue.toString(), mutableMapOf("Content-Type" to bodyValue.httpContentType))
         }
 
-        fun fromJSON(jsonObject: Map<String, Any?>) =
+        fun fromJSON(jsonObject: Map<String, Value>) =
             HttpResponse(
                 Integer.parseInt(jsonObject["status"].toString()),
-                jsonObject.getOrDefault("body", "").toString(),
-                jsonObject.getOrDefault("headers", mutableMapOf<String, String?>()) as MutableMap<String, String?>)
+                jsonObject.getOrDefault("body", StringValue()).toString(),
+                getHeaders(jsonObject))
     }
 }
+
+fun getHeaders(jsonObject: Map<String, Value>): MutableMap<String, String> =
+        (jsonObject.getOrDefault("headers", JSONObjectValue()) as JSONObjectValue).jsonObject.mapValues {
+            it.value.toString()
+        }.toMutableMap()

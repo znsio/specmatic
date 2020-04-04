@@ -7,15 +7,19 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.Messages.GherkinDocument
 import run.qontract.core.pattern.*
 import run.qontract.core.pattern.PatternTable.Companion.examplesFrom
-import run.qontract.core.utilities.jsonStringToMap
+import run.qontract.core.utilities.jsonStringToValueMap
+import run.qontract.core.value.StringValue
+import run.qontract.core.value.True
+import run.qontract.core.value.Value
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.test.TestExecutor
 import java.net.URI
 import java.util.*
+import kotlin.collections.HashMap
 
 class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
     private val scenarios: List<Scenario> = lex(contractGherkinDocument)
-    private var serverState = HashMap<String, Any>()
+    private var serverState = HashMap<String, Value>()
 
     constructor(gherkinData: String) : this(parseGherkinString(gherkinData))
 
@@ -72,7 +76,7 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
         }
     }
 
-    fun setServerState(serverState: Map<String, Any>) {
+    fun setServerState(serverState: Map<String, Value>) {
         this.serverState.putAll(serverState)
     }
 
@@ -122,16 +126,16 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
         }
 }
 
-private fun toFixtureInfo(rest: String): Pair<String, Any> {
+private fun toFixtureInfo(rest: String): Pair<String, Value> {
     val fixtureTokens = breakIntoParts(rest.trim(), 2)
 
-    return when (fixtureTokens.size) {
-        2 -> fixtureTokens[0] to toFixtureData(fixtureTokens[1])
-        else -> throw ContractParseException("Couldn't parse fixture data: $rest")
-    }
+    if(fixtureTokens.size != 2)
+        throw ContractParseException("Couldn't parse fixture data: $rest")
+
+    return Pair(fixtureTokens[0], toFixtureData(fixtureTokens[1]))
 }
 
-private fun toFixtureData(rawData: String): Any = parsedJSON(rawData)?.value ?: rawData
+private fun toFixtureData(rawData: String): Value = parsedJSON(rawData)
 
 private fun toPatternInfo(rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): Pair<String, Pattern> {
     val tokens = breakIntoParts(rest, 2)
@@ -146,20 +150,16 @@ private fun toPatternInfo(rest: String, rowsList: List<GherkinDocument.Feature.T
     return Pair(patternName, pattern)
 }
 
-private fun toFacts(rest: String, lookupTable: Map<String, Any>): Map<String, Any> {
-    val facts = HashMap<String, Any>()
-
-    try {
-        facts.putAll(jsonStringToMap(rest).mapValues { it.value ?: "" })
+private fun toFacts(rest: String, fixtures: Map<String, Value>): Map<String, Value> {
+    return try {
+        jsonStringToValueMap(rest)
     } catch (notValidJSON: Exception) {
         val factTokens = breakIntoParts(rest, 2)
         val name = factTokens[0]
-        val data = factTokens.getOrNull(1)
+        val data = factTokens.getOrNull(1)?.let { StringValue(it) } ?: fixtures.getOrDefault(name, True)
 
-        facts[name] = data?.let { convertStringToCorrectType(it) } ?: lookupTable.getOrDefault(name, true)
+        mapOf(name to data)
     }
-
-    return facts
 }
 
 private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, backgroundScenarioInfo: ScenarioInfo): ScenarioInfo {

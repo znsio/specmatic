@@ -20,6 +20,8 @@ import org.springframework.web.client.RestTemplate
 import org.w3c.dom.Node
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.NumberValue
+import run.qontract.core.value.True
+import run.qontract.core.value.Value
 import java.net.URI
 import java.util.*
 import kotlin.collections.HashMap
@@ -190,7 +192,7 @@ Scenario: JSON API to get account details with fact check
     fun `contract should mock server state`() {
         val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/account_json").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.jsonResponse("{\"name\": \"John Doe\"}")
-        val serverState: HashMap<String, Any> = hashMapOf("userid" to 10)
+        val serverState: HashMap<String, Value> = hashMapOf("userid" to NumberValue(10))
         val response = validateAndRespond(contractGherkin, expectedRequest, expectedResponse, serverState)
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
         Assertions.assertEquals(200, response.statusCodeValue)
@@ -205,7 +207,7 @@ Scenario: JSON API to get account details with fact check
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
-            val emptyServerState = HashMap<String, Any>()
+            val emptyServerState = emptyMap<String, Value>().toMutableMap()
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, emptyServerState))
         }
     }
@@ -218,7 +220,7 @@ Scenario: JSON API to get account details with fact check
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/special_locations")
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
-            val emptyServerState = HashMap<String, Any>()
+            val emptyServerState = emptyMap<String, Value>().toMutableMap()
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, emptyServerState))
         }
     }
@@ -233,7 +235,7 @@ Scenario: JSON API to get account details with fact check
             val expectedResponse = HttpResponse.EMPTY_200.also {
                 it.headers["Content-Type"] = "application/json"
             }
-            val emptyServerState = HashMap<String, Any>()
+            val emptyServerState = HashMap<String, Value>()
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, emptyServerState))
         }
     }
@@ -259,13 +261,13 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val expectedResponse = HttpResponse(200, "{\"cities\":[{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}] }")
-            val serverState: HashMap<String, Any> = hashMapOf("cities_exist" to true)
+            val serverState: HashMap<String, Value> = hashMapOf("cities_exist" to True)
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, serverState))
         }
     }
 
     @Throws(Throwable::class)
-    private fun validateAndRespond(contractGherkinString: String, httpRequest: HttpRequest, httpResponse: HttpResponse, serverState: java.util.HashMap<String, Any>): ResponseEntity<String> {
+    private fun validateAndRespond(contractGherkinString: String, httpRequest: HttpRequest, httpResponse: HttpResponse, serverState: java.util.HashMap<String, Value>): ResponseEntity<String> {
         ContractMock.fromGherkin(contractGherkinString).use { mock ->
             mock.start()
             mock.createMockScenario(MockScenario(httpRequest, httpResponse, serverState))

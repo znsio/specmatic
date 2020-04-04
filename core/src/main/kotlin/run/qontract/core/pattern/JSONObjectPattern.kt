@@ -3,7 +3,7 @@ package run.qontract.core.pattern
 import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
-import run.qontract.core.utilities.flatZip
+import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.stringToPatternMap
 import run.qontract.core.value.*
 
@@ -20,11 +20,11 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         if(missingKey != null)
             return Result.Failure("Missing key $missingKey in ${sampleData.jsonObject}")
 
-        val resolverWithNumberType = resolver.copy().also {
+        val resolverWithNumberType = resolver.makeCopy().also {
             it.addCustomPattern("(number)", NumberTypePattern())
         }
 
-        flatZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
+        mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = asPattern(patternValue, key).matches(asValue(sampleValue), resolverWithNumberType)) {
                 is Result.Failure -> return result.add("Expected value at $key to match $patternValue, actual value $sampleValue in JSONObject ${sampleData.jsonObject}")
             }

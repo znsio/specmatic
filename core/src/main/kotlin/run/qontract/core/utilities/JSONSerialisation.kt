@@ -13,7 +13,7 @@ fun valueArrayToJsonString(value: List<Value>): String {
     return Json.indented.stringify(data)
 }
 
-fun toMap(value: Value?) = jsonStringToMap(value.toString())
+fun toMap(value: Value?) = jsonStringToValueMap(value.toString())
 
 fun jsonStringToMap(stringContent: String): MutableMap<String, Any?>  {
     val data = Json.plain.parseJson(stringContent).jsonObject.toMap()
@@ -110,6 +110,12 @@ fun nativeMapToJsonString(value: Map<String, Any?>): String {
 fun valueMapToPrettyJsonString(value: Map<String, Value>): String {
     val data = mapToStringElement(value)
     return Json.indented.stringify(data)
+}
+
+@OptIn(ImplicitReflectionSerializer::class)
+fun valueMapToPlainJsonString(value: Map<String, Value>): String {
+    val data = mapToStringElement(value)
+    return Json.plain.stringify(data)
 }
 
 fun nativeMapToStringElement(data: Map<String, Any?>): Map<String, JsonElement> {

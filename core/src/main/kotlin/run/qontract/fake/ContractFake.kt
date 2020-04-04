@@ -19,7 +19,7 @@ import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.toMap
-import run.qontract.core.value.NoValue
+import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import java.io.Closeable
 import java.util.*
@@ -39,7 +39,7 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
 
 private suspend fun bodyFromCall(call: ApplicationCall): Pair<Value, Map<String, String>> {
     return if (call.request.contentType().match(ContentType.Application.FormUrlEncoded))
-        Pair(NoValue, call.receiveParameters().toMap().mapValues { (_, values) -> values.first() })
+        Pair(EmptyString, call.receiveParameters().toMap().mapValues { (_, values) -> values.first() })
     else
         Pair(parsedValue(call.receiveText()), emptyMap())
 }
@@ -101,8 +101,7 @@ class ContractFake(gherkinData: String, host: String, port: Int) : Closeable {
 
     private fun setupServerState(httpRequest: HttpRequest) {
         val body = httpRequest.body
-        val map = body?.let { toMap(it) } ?: mutableMapOf()
-        contractBehaviour.setServerState(map.mapValues { it.value as Any })
+        contractBehaviour.setServerState(body?.let { toMap(it) } ?: mutableMapOf())
     }
 
     private fun isSetupRequest(httpRequest: HttpRequest): Boolean {

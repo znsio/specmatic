@@ -1,18 +1,19 @@
 package run.qontract.core
 
+import org.checkerframework.common.value.qual.StringVal
 import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.pattern.asValue
 import run.qontract.test.TestExecutor
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import run.qontract.core.value.JSONObjectValue
+import org.junit.jupiter.api.fail
+import run.qontract.core.value.*
 import java.util.*
 
-class SetupServerState {
+class SetupFacts {
     @Test
     @Throws(Throwable::class)
     fun setupServerStateUsingJson() {
@@ -47,9 +48,9 @@ class SetupServerState {
     private fun setupServerStateTest(contractGherkin: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val request = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account_id", "54321")
-        contractBehaviour.setServerState(object : HashMap<String, Any>() {
+        contractBehaviour.setServerState(object : HashMap<String, Value>() {
             init {
-                put("account_id", 54321)
+                put("account_id", NumberValue(54321))
             }
         })
         val response = contractBehaviour.lookup(request)
@@ -80,7 +81,7 @@ class SetupServerState {
                 return HttpResponse(409, null, HashMap())
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
                 serverStateForValidation.putAll(serverState)
             }
         })
@@ -110,7 +111,7 @@ Feature: Contract for /balance API
                 return HttpResponse(200, null, HashMap())
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
                 serverStateForValidation.putAll(serverState)
             }
         })
@@ -140,7 +141,7 @@ Feature: Contract for /balance API
                 return HttpResponse(200, null, HashMap())
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
                 serverStateForValidation.putAll(serverState)
             }
         })
@@ -164,17 +165,30 @@ Feature: Contract for /balance API
                 "    Then status 200\n" +
                 ""
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val serverStateForValidation = HashMap<String, Any?>()
-        val logs: MutableList<String> = ArrayList()
+        val serverStateForValidation = emptyMap<String, Value>().toMutableMap()
+        val logs: MutableList<String> = mutableListOf()
+
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 return when {
                     serverStateForValidation.containsKey("user") -> {
-                        assertEquals("jack", serverStateForValidation["user"])
+                        serverStateForValidation["user"].let { user ->
+                            if(user !is StringValue)
+                                fail("Expected user to be a string, got $user")
+
+                            assertEquals("jack", user.string)
+                        }
+
 
                         request.body?.let {
                             if(it is JSONObjectValue) {
-                                assertEquals("jack", it.jsonObject.getValue("name").value)
+                                it.jsonObject.getValue("name").let { name ->
+                                    if(name !is StringValue)
+                                        fail("Expected name to be a string, got $name")
+
+                                    assertEquals("jack", name.string)
+                                }
+
                                 logs.add("user")
                             }
                         }
@@ -182,11 +196,17 @@ Feature: Contract for /balance API
                         HttpResponse(409, null, HashMap())
                     }
                     serverStateForValidation.containsKey("no_user") -> {
-                        assertEquals(true, serverStateForValidation["no_user"])
+                        assertEquals(True, serverStateForValidation["no_user"])
 
                         request.body?.let {
                             if(it is JSONObjectValue) {
-                                assertEquals("john", it.jsonObject.getValue("name").value)
+                                it.jsonObject.getValue("name").let { name ->
+                                    if(name !is StringValue)
+                                        fail("Expected string, but got $name")
+
+                                    assertEquals("john", name.string)
+                                }
+
                                 logs.add("no_user")
                             }
                         }
@@ -199,18 +219,14 @@ Feature: Contract for /balance API
                 }
             }
 
-            override fun setServerState(serverState: Map<String, Any?>) {
+            override fun setServerState(serverState: Map<String, Value>) {
                 serverStateForValidation.clear()
                 serverStateForValidation.putAll(serverState)
             }
         })
-        val expectedLogs: List<String> = object : ArrayList<String>() {
-            init {
-                add("user")
-                add("no_user")
-            }
-        }
-        assertEquals(expectedLogs, logs)
+
+        val expectedLogs = listOf("user", "no_user")
+        assertEquals(expectedLogs, logs.toList())
     }
 
     @Test
@@ -224,9 +240,9 @@ Feature: Contract for /balance API
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/accounts").updateQueryParam("userid", "10")
-        contractBehaviour.setServerState(object : HashMap<String, Any>() {
+        contractBehaviour.setServerState(object : HashMap<String, Value>() {
             init {
-                put("userid", 10)
+                put("userid", NumberValue(10))
             }
         })
         val httpResponse = contractBehaviour.lookup(httpRequest)
@@ -249,9 +265,9 @@ Feature: Contract for /balance API
                 "    And response-body {\"name\": \"(string)\"}" +
                 ""
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val serverState: HashMap<String, Any> = object : HashMap<String, Any>() {
+        val serverState: HashMap<String, Value> = object : HashMap<String, Value>() {
             init {
-                put("account_id", 10)
+                put("account_id", NumberValue(10))
             }
         }
         contractBehaviour.setServerState(serverState)
@@ -275,9 +291,9 @@ Feature: Contract for /balance API
                 "    And response-body {\"name\": \"(string)\"}" +
                 ""
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val serverState: HashMap<String, Any> = object : HashMap<String, Any>() {
+        val serverState: HashMap<String, Value> = object : HashMap<String, Value>() {
             init {
-                put("account_id", 10)
+                put("account_id", NumberValue(10))
             }
         }
         contractBehaviour.setServerState(serverState)
@@ -301,9 +317,9 @@ Feature: Contract for /balance API
                 "    And response-body {\"name\": \"(string)\"}" +
                 ""
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val serverState: HashMap<String, Any> = object : HashMap<String, Any>() {
+        val serverState: HashMap<String, Value> = object : HashMap<String, Value>() {
             init {
-                put("account_id", 10)
+                put("account_id", NumberValue(10))
             }
         }
         contractBehaviour.setServerState(serverState)

@@ -5,10 +5,7 @@ import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.shouldMatch
 import run.qontract.core.shouldNotMatch
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.NullValue
-import run.qontract.core.value.NumberValue
-import run.qontract.core.value.StringValue
+import run.qontract.core.value.*
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.test.assertEquals
@@ -37,11 +34,11 @@ internal class JSONObjectPatternTest {
 
     @Test
     fun `Given an optional key, the unsuffixed key should be looked up in state when generating a value`() {
-        val data = HashMap<String, Any>().apply {
-            put("id", 12345)
+        val facts = HashMap<String, Value>().apply {
+            put("id", NumberValue(12345))
         }
 
-        val resolver = Resolver(data)
+        val resolver = Resolver(facts)
 
         when (val value = parsedPattern("""{"id?": "(number)"}""", null).generate(resolver)) {
             is JSONObjectValue -> assertEquals(12345, value.jsonObject["id"]?.value)

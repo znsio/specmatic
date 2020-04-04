@@ -1,11 +1,13 @@
 package run.qontract.core
 
 import run.qontract.core.utilities.URIUtils.parseQuery
-import run.qontract.core.value.NoValue
+import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import run.qontract.mock.HttpMockException
 import io.netty.buffer.ByteBuf
 import run.qontract.core.pattern.parsedValue
+import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.StringValue
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
@@ -14,8 +16,8 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-data class HttpRequest(var method: String? = null, var path: String? = null, val headers: HashMap<String?, String?> = HashMap(), var body: Value? = NoValue, var queryParams: HashMap<String, String> = HashMap(), val formFields: Map<String, String> = emptyMap()) {
-    private fun updateQueryParams(queryParams: Map<String, String>) {
+data class HttpRequest(var method: String? = null, var path: String? = null, val headers: HashMap<String, String> = HashMap(), var body: Value? = EmptyString, var queryParams: HashMap<String, String> = HashMap(), val formFields: Map<String, String> = emptyMap()) {
+    fun updateQueryParams(queryParams: Map<String, String>) {
         this.queryParams.putAll(queryParams)
     }
 
@@ -61,7 +63,7 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         updateBody(bodyString)
     }
 
-    fun updateHeader(key: String?, value: String?): HttpRequest {
+    fun updateHeader(key: String, value: String): HttpRequest {
         headers[key] = value
         return this
     }
@@ -84,20 +86,20 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         return url.toString()
     }
 
-    fun toJSON(): Map<String, Any?> {
-        val requestMap = mutableMapOf<String, Any?>()
+    fun toJSON(): Map<String, Value> {
+        val requestMap = mutableMapOf<String, Value>()
 
-        if (path != null) requestMap["path"] = path
-        if (queryParams.size > 0) requestMap["query"] = queryParams
-        if (method == null) throw HttpMockException("Can't serialise the request without a method.")
-        requestMap["method"] = method
-        if (headers.size > 0) requestMap["headers"] = headers
-        if (body != null) requestMap["body"] = body.toString()
+        requestMap["path"] = path?.let { StringValue(it) } ?: StringValue("/")
+        method?.let { requestMap["method"] = StringValue(it) } ?: throw HttpMockException("Can't serialise the request without a method.")
+        body?.let { requestMap["body"] = it }
+
+        if (queryParams.size > 0) requestMap["query"] = JSONObjectValue(queryParams.mapValues { StringValue(it.value) })
+        if (headers.size > 0) requestMap["headers"] = JSONObjectValue(headers.mapValues { StringValue(it.value) })
 
         return requestMap
     }
 
-    private fun setHeaders(addedHeaders: Map<String, String>) {
+    fun setHeaders(addedHeaders: Map<String, String>) {
         headers.putAll(addedHeaders)
     }
 
@@ -119,22 +121,23 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         val requestString = listOf(firstPart, "", bodyString).joinToString("\n")
         return startLinesWith(requestString, prefix)
     }
+}
 
-    companion object {
-        fun fromJSON(json: Map<String, Any?>): HttpRequest {
-            val httpRequest = HttpRequest()
-            httpRequest.updateMethod(json["method"] as String)
-            httpRequest.updatePath(if ("path" in json) json["path"] as String else "/")
-            httpRequest.updateQueryParams(if ("query" in json)
-                (json["query"] as Map<String, Any>).mapValues { it.value.toString() }
-            else HashMap())
-            httpRequest.setHeaders(if ("headers" in json) json["headers"] as Map<String, String> else HashMap())
-            if ("body" in json) {
-                httpRequest.updateBody(json["body"] as String)
-            }
-            return httpRequest
-        }
-    }
+fun s(json: Map<String, Value>, key: String): String = (json.getValue(key) as StringValue).string
+
+fun requestFromJSON(json: Map<String, Value>): HttpRequest {
+    val httpRequest = HttpRequest()
+    httpRequest.updateMethod(s(json, "method"))
+    httpRequest.updatePath(if ("path" in json) s(json, "path") else "/")
+    httpRequest.updateQueryParams(if ("query" in json)
+        (json["query"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() }
+    else emptyMap())
+    httpRequest.setHeaders(if ("headers" in json) (json["headers"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() } else emptyMap())
+
+    if ("body" in json)
+        httpRequest.updateBody(json.getValue("body"))
+
+    return httpRequest
 }
 
 internal fun startLinesWith(str: String, startValue: String): String {

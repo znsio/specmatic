@@ -3,6 +3,8 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.Row
+import run.qontract.core.value.StringValue
+import run.qontract.core.value.Value
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.test.assertEquals
@@ -11,7 +13,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should exact match`() {
         val httpHeaders = HttpHeadersPattern(mapOf("key" to "value"))
-        val headers: HashMap<String?, String?> = HashMap()
+        val headers: HashMap<String, String> = HashMap()
         headers["key"] = "value"
         assertThat(httpHeaders.matches(headers, Resolver()) is Result.Success).isTrue()
     }
@@ -19,7 +21,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should pattern match a numeric string`() {
         val httpHeaders = HttpHeadersPattern(mapOf("key" to "(number)"))
-        val headers: HashMap<String?, String?> = HashMap()
+        val headers: HashMap<String, String> = HashMap()
         headers["key"] = "123"
         assertThat(httpHeaders.matches(headers, Resolver()) is Result.Success).isTrue()
     }
@@ -27,7 +29,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should pattern match string`() {
         val httpHeaders = HttpHeadersPattern(mapOf("key" to "(string)"))
-        val headers: HashMap<String?, String?> = HashMap()
+        val headers: HashMap<String, String> = HashMap()
         headers["key"] = "abc123"
         assertThat(httpHeaders.matches(headers, Resolver()) is Result.Success).isTrue()
     }
@@ -35,7 +37,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should not pattern match a numeric string when value has alphabets`() {
         val httpHeaders = HttpHeadersPattern(mapOf("key" to "(number)"))
-        val headers: HashMap<String?, String?> = HashMap()
+        val headers: HashMap<String, String> = HashMap()
         headers["key"] = "abc"
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
@@ -50,7 +52,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should not match when header is not present`() {
         val httpHeaders = HttpHeadersPattern(mapOf("key" to "(number)"))
-        val headers: HashMap<String?, String?> = HashMap()
+        val headers: HashMap<String, String> = HashMap()
         headers["anotherKey"] = "123"
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
@@ -64,15 +66,16 @@ internal class HttpHeadersPatternTest {
     fun `should not add numericString pattern to the resolver`() {
         val httpHeaders = HttpHeadersPattern(mapOf("key" to "(string)"))
         val resolver = Resolver()
-        httpHeaders.matches(HashMap<String?, String?>(), resolver)
-        assertThat(resolver.matchesPatternValue(null, "(number)", "123") is Result.Failure).isTrue()
+        httpHeaders.matches(HashMap(), resolver)
+        assertThat(resolver.matchesPattern(null, resolver.getPattern("(number)"), StringValue("123")) is Result.Failure).isTrue()
     }
 
     @Test
     fun `should generate values`() {
         val httpHeaders = HttpHeadersPattern(
                 mapOf("exactKey" to "value", "numericKey" to "(number)", "stringKey" to "(string)", "serverStateKey" to "(string)"))
-        val resolver = Resolver(serverState = hashMapOf("serverStateKey" to "serverStateValue"))
+        val facts: HashMap<String, Value> = hashMapOf("serverStateKey" to StringValue("serverStateValue"))
+        val resolver = Resolver(facts)
         val generatedResult = httpHeaders.generate(resolver)
         generatedResult.let {
             assertThat(it["exactKey"]).isEqualTo("value")
@@ -86,7 +89,7 @@ internal class HttpHeadersPatternTest {
     fun `should not attempt to validate or match additional headers`() {
         val expectedHeaders = HttpHeadersPattern(mapOf("Content-Type" to "(string)"))
 
-        val actualHeaders = HashMap<String, String?>().apply {
+        val actualHeaders = HashMap<String, String>().apply {
             put("Content-Type", "application/json")
             put("X-Unspecified-Header", "We don't care")
         }

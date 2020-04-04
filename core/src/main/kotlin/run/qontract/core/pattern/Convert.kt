@@ -40,12 +40,12 @@ fun asValue(value: Any?): Value = when(value) {
     else -> StringValue(value.toString())
 }
 
-fun parsedJSON(content: String): Value? {
+fun parsedJSON(content: String): Value {
     return content.trim().let {
         when {
             it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
             it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
-            else -> null
+            else -> NullValue
         }
     }
 }
@@ -55,10 +55,10 @@ fun parsedValue(content: String?): Value {
         when {
             it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
             it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
-            it.startsWith("<") -> XMLValue(parseXML(it))
+            it.startsWith("<") -> XMLValue(it)
             it == "true" -> BooleanValue(true)
             it == "false" -> BooleanValue(false)
             else -> StringValue(it)
         }
-    } ?: NoValue
+    } ?: EmptyString
 }

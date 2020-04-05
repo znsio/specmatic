@@ -1,6 +1,5 @@
 package run.qontract.core
 
-import org.checkerframework.common.value.qual.StringVal
 import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.pattern.asValue
@@ -76,8 +75,9 @@ class SetupFacts {
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("jack", serverStateForValidation["user"])
-                val jsonBody = request.body!!.value as Map<String, Any?>
-                assertEquals("jack", jsonBody["name"])
+                val jsonBody = jsonObject(request.body)
+                val name = jsonBody["name"]
+                assertEquals("jack", name?.toStringValue())
                 return HttpResponse(409, null, HashMap())
             }
 
@@ -106,8 +106,9 @@ Feature: Contract for /balance API
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals(10, serverStateForValidation["id"])
-                val jsonBody = request.body!!.value as Map<String, Any?>
-                assertEquals(10, jsonBody["id"])
+                val jsonBody = jsonObject(request.body)
+                val id = jsonBody["id"] as NumberValue
+                assertEquals(10, id.number)
                 return HttpResponse(200, null, HashMap())
             }
 
@@ -131,13 +132,13 @@ Feature: Contract for /balance API
 """
 
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val serverStateForValidation = HashMap<String, Any?>()
+        val serverStateForValidation = HashMap<String, Value>()
 
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertTrue(NumberTypePattern().matches(asValue(serverStateForValidation["id"]), Resolver()) is Result.Success)
-                val jsonBody = asValue(request.body).value as Map<String, Any?>
-                assertTrue(NumberTypePattern().matches(asValue(jsonBody["id"]), Resolver()) is Result.Success)
+                assertTrue(NumberTypePattern().matches(serverStateForValidation["id"], Resolver()) is Result.Success)
+                val jsonBody = jsonObject(request.body)
+                assertTrue(NumberTypePattern().matches(jsonBody["id"], Resolver()) is Result.Success)
                 return HttpResponse(200, null, HashMap())
             }
 

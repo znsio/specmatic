@@ -12,7 +12,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         if(sampleData is NullValue)
             return Result.Failure("Expected $pattern but got null")
         if(sampleData !is JSONObjectValue)
-            return Result.Failure("Unable to interpret ${sampleData?.value} as JSON")
+            return Result.Failure("Unable to interpret ${sampleData?.toDisplayValue()} as JSON")
 
         val missingKey = pattern.keys.find { key -> isMissingKey(sampleData.jsonObject, key) }
         if(missingKey != null)
@@ -20,7 +20,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = asPattern(patternValue, key).matches(asValue(sampleValue), withNumberTypePattern(resolver))) {
-                is Result.Failure -> return result.add("Expected value at $key to match $patternValue, actual value $sampleValue in JSONObject ${sampleData.jsonObject}")
+                is Result.Failure -> return result.add("Expected value at $key to match $patternValue, actual value ${sampleValue.toDisplayValue()} in JSONObject ${sampleData.jsonObject}")
             }
         }
 

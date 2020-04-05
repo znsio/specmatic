@@ -41,7 +41,10 @@ internal class JSONObjectPatternTest {
         val resolver = Resolver(facts)
 
         when (val value = parsedPattern("""{"id?": "(number)"}""", null).generate(resolver)) {
-            is JSONObjectValue -> assertEquals(12345, value.jsonObject["id"]?.value)
+            is JSONObjectValue -> {
+                val id = value.jsonObject["id"] as NumberValue
+                assertEquals(12345, id.number)
+            }
             else -> Exception("Expected JSONObjectValue, got ${value.javaClass}")
         }
     }
@@ -57,10 +60,10 @@ internal class JSONObjectPatternTest {
 
             it.jsonObject.getOrDefault("id", NumberValue(0))
         }.find {
-            it.value == 12345
+            it is NumberValue && it.number == 12345
         }
 
-        assertEquals(12345, value?.value)
+        assertEquals(12345, (value as NumberValue).number)
     }
 
     @Test
@@ -71,7 +74,8 @@ internal class JSONObjectPatternTest {
         if (pattern !is JSONObjectPattern)
             throw Exception("Expected JSONObjectPattern, got ${pattern.javaClass}")
 
-        assertEquals(10, pattern.generate(Resolver()).jsonObject["id"]?.value)
+        val id = pattern.generate(Resolver()).jsonObject["id"] as NumberValue
+        assertEquals(10, id.number)
     }
 
     @Test
@@ -87,7 +91,8 @@ internal class JSONObjectPatternTest {
         if (value !is JSONObjectValue)
             throw Exception("Expected JSONObjectValue, got ${value.javaClass}")
 
-        assertEquals(10, value.jsonObject["id"]?.value)
+        val id = value.jsonObject["id"] as NumberValue
+        assertEquals(10, id.number)
     }
 
     @Test

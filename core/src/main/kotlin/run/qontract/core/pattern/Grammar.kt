@@ -65,9 +65,9 @@ fun convertStringToCorrectType(valueOfUnknownType: Any?): Any {
     }
 }
 
-fun generateValue(value: Any, resolver: Resolver): Any {
+fun generateValue(value: String, resolver: Resolver): String {
     return if (isPatternToken(value)) {
-        findPattern(value as String).generate(resolver).value
+        findPattern(value).generate(resolver).toStringValue()
     } else value
 }
 

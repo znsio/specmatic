@@ -13,9 +13,9 @@ object NullPattern : Pattern {
             is NullValue -> Result.Success()
             is StringValue -> when(sampleData.string.trim()) {
                 "", "null" -> Result.Success()
-                else -> Result.Failure("Expected null, got ${sampleData.value}")
+                else -> Result.Failure("Expected null, got ${sampleData.toDisplayValue()}")
             }
-            else -> Result.Failure("Expected null, got ${sampleData?.value}")
+            else -> Result.Failure("Expected null, got ${sampleData?.toDisplayValue()}")
         }
 
     override fun generate(resolver: Resolver): Value = NullValue

@@ -170,7 +170,7 @@ Given pattern User
 
         val value = newPattern.generate(Resolver())
         assertTrue(value is JSONObjectValue)
-        value.jsonObject.getValue("id").let { assertEquals(10, it.value) }
+        value.jsonObject.getValue("id").let { assertEquals(10, (it as NumberValue).number) }
     }
 
     @Test
@@ -200,11 +200,12 @@ And pattern Address
         val value = userPattern.newBasedOn(row, resolver).first().generate(resolver)
 
         assertTrue(value is JSONObjectValue)
-        assertEquals(10, value.jsonObject["id"]?.value)
+        val id = value.jsonObject["id"] as NumberValue
+        assertEquals(10, id.number)
 
         val address = value.jsonObject["address"]
         assertTrue(address is JSONObjectValue)
-        address.jsonObject.getValue("flat").let { assertEquals(100, it.value) }
+        address.jsonObject.getValue("flat").let { assertEquals(100, (it as NumberValue).number) }
     }
 
     @Test

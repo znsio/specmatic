@@ -11,6 +11,7 @@ import run.qontract.core.pattern.asValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
+import run.qontract.core.value.XMLValue
 import run.qontract.test.TestExecutor
 import java.util.*
 import kotlin.test.assertEquals
@@ -142,9 +143,9 @@ Feature: Contract for /balance API
 
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val requestJSON = request.body!!.value as Map<String, Any?>
-                val name = requestJSON["name"]
-                val city = (requestJSON["address"] as Map<String, Any?>)["city"]
+                val requestJSON = jsonObject(request.body)
+                val name = requestJSON["name"] as StringValue
+                val city = (requestJSON["address"] as JSONObjectValue).jsonObject["city"] as StringValue
                 Assertions.assertEquals("POST", request.method)
                 Assertions.assertTrue(StringPattern().matches(asValue(city), Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
@@ -153,15 +154,15 @@ Feature: Contract for /balance API
                     }
                 }
 
-                if(name !in listOf("John Doe", "Jane Doe"))
+                if(name.string !in listOf("John Doe", "Jane Doe"))
                     throw Exception("Unexpected name $name")
 
-                when (name) {
-                    "John Doe" -> assertEquals("Mumbai", city)
-                    "Jane Doe" -> assertEquals("Bangalore", city)
+                when (name.string) {
+                    "John Doe" -> assertEquals("Mumbai", city.string)
+                    "Jane Doe" -> assertEquals("Bangalore", city.string)
                 }
 
-                val jsonResponseString: String? = when (name) {
+                val jsonResponseString: String? = when (name.string) {
                     "John Doe" -> "{account_id: 10}"
                     else -> "{account_id: 20}"
                 }
@@ -185,12 +186,10 @@ Feature: Contract for /balance API
                 assert(requestJSON is JSONObjectValue)
 
                 if(requestJSON is JSONObjectValue) {
-                    val name = requestJSON.jsonObject.getValue("name")
-                    val city = requestJSON.jsonObject.getValue("city")
+                    val name = requestJSON.jsonObject.getValue("name") as StringValue
+                    val city = requestJSON.jsonObject.getValue("city") as StringValue
 
                     Assertions.assertEquals("POST", request.method)
-                    Assertions.assertTrue(name is StringValue)
-                    Assertions.assertTrue(city is StringValue)
 
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
@@ -199,10 +198,10 @@ Feature: Contract for /balance API
                     }
 
                     var jsonResponseString: String? = null
-                    if (name.value == "John Doe") {
+                    if (name.string == "John Doe") {
                         flags["john"] = true;
                         jsonResponseString = "{account_id: 10}"
-                    } else if (name.value == "Jane Doe") {
+                    } else if (name.string == "Jane Doe") {
                         flags["jane"] = true;
                         jsonResponseString = "{account_id: 20}"
                     }
@@ -243,8 +242,7 @@ Feature: Contract for /balance API
         val contractBehaviour = ContractBehaviour(contractGherkin)
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val requestXML = request.body!!.value as Document
-                val root: Node = requestXML.documentElement
+                val root = (request.body as XMLValue).node
                 val nameItem = root.childNodes.item(0)
                 val cityItem = root.childNodes.item(1)
                 Assertions.assertEquals("name", nameItem.nodeName)

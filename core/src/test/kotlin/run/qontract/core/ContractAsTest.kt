@@ -1,5 +1,11 @@
 package run.qontract.core
 
+import org.assertj.core.api.Assertions.assertThat
+import org.json.JSONObject
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
+import org.xml.sax.SAXException
 import run.qontract.core.HttpResponse.Companion.jsonResponse
 import run.qontract.core.HttpResponse.Companion.xmlResponse
 import run.qontract.core.pattern.NumberTypePattern
@@ -7,19 +13,11 @@ import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.pattern.asValue
 import run.qontract.core.utilities.parseXML
+import run.qontract.core.value.*
 import run.qontract.fake.ContractFake
 import run.qontract.test.TestExecutor
-import org.assertj.core.api.Assertions.assertThat
-import org.json.JSONObject
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
-import org.w3c.dom.Document
-import org.w3c.dom.Node
-import org.xml.sax.SAXException
-import run.qontract.core.value.*
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
-import kotlin.collections.HashMap
 
 class ContractAsTest {
     @Test
@@ -41,7 +39,7 @@ class ContractAsTest {
             override fun execute(request: HttpRequest): HttpResponse {
                 flags["executed"] = true
                 assertEquals("/accounts", request.path)
-                val requestBody = request.body!!.value as Map<String, Any?>
+                val requestBody = jsonObject(request.body)
                 val name = requestBody["name"]
                 val address = requestBody["address"]
                 assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
@@ -262,7 +260,7 @@ Scenario: GET /balance Error:
         val executionInfo = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
-                val jsonBody = request.body!!.value as Map<String, Any?>
+                val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 val address = jsonBody["address"]
                 assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
@@ -295,7 +293,7 @@ Scenario: GET /balance Error:
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
-                val jsonBody = request.body!!.value as Map<String, Any?>
+                val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 val address = jsonBody["address"]
                 assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
@@ -324,7 +322,7 @@ Scenario: GET /balance Error:
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
-                val jsonBody = request.body!!.value as Map<String, Any?>
+                val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
                 val expectedLinkedIds = arrayOf(1, 2, 3)
@@ -352,7 +350,7 @@ Scenario: GET /balance Error:
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
-                val jsonBody = request.body!!.value as Map<String, Any?>
+                val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
                 val expectedLinkedIds = arrayOf(1, 2, 3)
@@ -384,8 +382,7 @@ Scenario: GET /balance Error:
         val xmlResponseString = "<balance><calls_left>20</calls_left><messages_left>20</messages_left></balance>"
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val document = request.body!!.value as Document
-                val root: Node = document.documentElement
+                val root = (request.body as XMLValue).node
                 val nameItem = root.childNodes.item(0)
                 val addressItem = root.childNodes.item(1)
                 assertEquals("name", nameItem.nodeName)
@@ -465,7 +462,7 @@ Scenario: GET /balance Error:
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
                 assertEquals("POST", request.method)
-                val requestBody = request.body!!.value as Map<String, Any?>
+                val requestBody = jsonObject(request.body)
                 val locations = requestBody["locations"] as List<Any?>
                 for (i in locations.indices) {
                     val location = locations[i] as Map<String, Any?>
@@ -806,3 +803,11 @@ Then status 200"""
         }
     }
 }
+
+internal fun jsonObject(value: Value?): Map<String, Value> {
+    if(value !is JSONObjectValue)
+        fail("Expected JSONObjectValue, got ${value?.javaClass?.name ?: "null"}")
+
+    return value.jsonObject
+}
+

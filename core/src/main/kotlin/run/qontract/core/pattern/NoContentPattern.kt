@@ -17,7 +17,7 @@ class NoContentPattern : Pattern {
             }
             is EmptyString, is NullValue -> Result.Success()
             null -> Result.Success()
-            else -> Result.Failure("${sampleData.value} is not empty.")
+            else -> Result.Failure("${sampleData.toDisplayValue()} is not empty.")
         }
     }
 

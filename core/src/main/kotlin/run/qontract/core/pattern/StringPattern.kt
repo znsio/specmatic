@@ -14,7 +14,7 @@ class StringPattern : Pattern {
         return when(sampleData) {
             is StringValue, is EmptyString -> Result.Success()
             is NullValue -> Result.Failure("null is not  String")
-            else -> Result.Failure("${sampleData?.value} is not a String")
+            else -> Result.Failure("${sampleData?.toDisplayValue()} is not a String")
         }
     }
 

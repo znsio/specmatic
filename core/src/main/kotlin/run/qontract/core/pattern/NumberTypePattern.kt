@@ -14,7 +14,7 @@ class NumberTypePattern : Pattern {
 
         return when(sampleData is NumberValue) {
             true -> Result.Success()
-            false -> Result.Failure("${sampleData?.value} should be a Number")
+            false -> Result.Failure("${sampleData?.toDisplayValue()} should be a Number")
         }
     }
 

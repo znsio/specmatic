@@ -10,13 +10,13 @@ data class ExactMatchPattern(override val pattern: Value) : Pattern {
         if(sampleData is NullValue) {
             return when(pattern) {
                 NullValue -> Result.Success()
-                else -> Result.Failure("Expected ${pattern.value} but got null")
+                else -> Result.Failure("Expected ${pattern.toDisplayValue()} but got null")
             }
         }
 
-        return when (pattern.value == sampleData?.value) {
+        return when (pattern == sampleData) {
             true -> Result.Success()
-            else -> Result.Failure("Expected $pattern, actual $sampleData")
+            else -> Result.Failure("Expected ${pattern.toDisplayValue()}, actual ${sampleData?.toDisplayValue()}")
         }
     }
 

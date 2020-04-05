@@ -30,7 +30,7 @@ internal class HttpResponseTest {
             if(responseBody !is JSONObjectValue)
                 throw AssertionError("Expected responseBody to be a JSON object, but got ${responseBody.javaClass.name}")
 
-            assertEquals("John Doe", responseBody.jsonObject.getValue("name").value)
+            assertEquals("John Doe", responseBody.jsonObject.getValue("name").toStringValue())
             assertEquals("application/json", it.headers.getOrDefault("Content-Type", ""))
         }
     }

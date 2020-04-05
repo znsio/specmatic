@@ -60,7 +60,6 @@ test {
 }
 
 group = 'run.qontract'
-version = '0.2.0'
 
 jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'

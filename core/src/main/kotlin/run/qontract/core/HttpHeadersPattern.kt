@@ -4,14 +4,14 @@ import run.qontract.core.pattern.*
 import run.qontract.core.value.NullValue
 import java.util.*
 
-data class HttpHeadersPattern(val headers: Map<String, String> = mapOf()) {
+data class HttpHeadersPattern(val headers: Map<String, String> = emptyMap()) {
     fun matches(headers: HashMap<String, String>, resolver: Resolver) =
             headers to resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern())) to
                     ::matchEach otherwise
                     ::handleError toResult
                     ::returnResult
 
-    fun matches(headers: MutableMap<String, String>, resolver: Resolver): Result {
+    fun matches(headers: Map<String, String>, resolver: Resolver): Result {
         val hashMap: HashMap<String, String> = HashMap()
         headers.forEach { (key, value) ->
             hashMap[key] = value
@@ -19,7 +19,7 @@ data class HttpHeadersPattern(val headers: Map<String, String> = mapOf()) {
         return matches(hashMap, resolver)
     }
 
-    private fun matchEach(parameters: Pair<HashMap<String, String>, Resolver>): MatchingResult<Pair<HashMap<String, String>, Resolver>> {
+    private fun matchEach(parameters: Pair<Map<String, String>, Resolver>): MatchingResult<Pair<Map<String, String>, Resolver>> {
         val (headers, resolver) = parameters
         this.headers.forEach { (key, value) ->
             val sampleValue = asValue(headers[key])

@@ -5,7 +5,7 @@ import run.qontract.test.ContractTestException.Companion.missingParam
 import java.io.UnsupportedEncodingException
 import java.net.URI
 
-data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlPattern: URLPattern? = null, private var method: String? = null, private var body: Pattern? = NoContentPattern(), val formFieldsPattern: Map<String, Pattern> = emptyMap()) {
+data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlPattern: URLPattern? = null, private var method: String? = null, private var body: Pattern = NoContentPattern(), val formFieldsPattern: Map<String, Pattern> = emptyMap()) {
     @Throws(UnsupportedEncodingException::class)
     fun updateWith(urlPattern: URLPattern) {
         this.urlPattern = urlPattern
@@ -116,14 +116,12 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
         val headers = headersPattern.generate(resolver)
 
         val body = body
-        if (body != null) {
-            body.generate(resolver).let { value ->
-                newRequest.updateBody(value)
-                headers.put("Content-Type", value.httpContentType)
-            }
-
-            headers.map { (key, value) -> newRequest.updateHeader(key, value) }
+        body.generate(resolver).let { value ->
+            newRequest.updateBody(value)
+            headers.put("Content-Type", value.httpContentType)
         }
+
+        headers.map { (key, value) -> newRequest.updateHeader(key, value) }
 
         val formFieldsValue = formFieldsPattern.mapValues { (key, pattern) -> asPattern(pattern, key).generate(resolver).toString() }
         return when(formFieldsValue.size) {
@@ -137,7 +135,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
         val newURLMatchers = urlPattern?.newBasedOn(row, resolver.makeCopy()) ?: listOf<URLPattern?>(null)
-        val newBodies = body?.newBasedOn(row, resolver.makeCopy()) ?: listOf<Pattern?>(null)
+        val newBodies = body.newBasedOn(row, resolver.makeCopy())
         val newHeadersPattern = headersPattern.newBasedOn(row)
         val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
 

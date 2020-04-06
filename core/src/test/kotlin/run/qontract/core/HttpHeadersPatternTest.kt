@@ -41,11 +41,7 @@ internal class HttpHeadersPatternTest {
         headers["key"] = "abc"
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).stackTrace()).isEqualTo(Stack<String>().also { stack ->
-                stack.push(""""abc" is not a Number""")
-                stack.push("""Expected (number), actual abc""")
-                stack.push("""Header "key" did not match""")
-            })
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("key"), listOf("Expected number, actual \"abc\"")))
         }
     }
 
@@ -57,7 +53,7 @@ internal class HttpHeadersPatternTest {
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
             assertThat((it as Result.Failure).stackTrace()).isEqualTo(Stack<String>().also { stack ->
-                stack.push("""Header "key" was not available""")
+                stack.push("""Header key was missing""")
             })
         }
     }

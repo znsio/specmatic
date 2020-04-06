@@ -32,7 +32,7 @@ Then status 200
         val olderContract = ContractBehaviour(gherkin1)
         val newerContract = ContractBehaviour(gherkin2)
 
-        val result: ExecutionInfo = testBackwardCompatibility(olderContract, newerContract)
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
 
         kotlin.test.assertEquals(1, result.failureCount)
         kotlin.test.assertEquals(1, result.successCount)
@@ -69,7 +69,7 @@ Then status 200
         val olderContract = ContractBehaviour(gherkin1)
         val newerContract = ContractBehaviour(gherkin2)
 
-        val result: ExecutionInfo = testBackwardCompatibility(olderContract, newerContract)
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
 
         kotlin.test.assertEquals(2, result.successCount)
         kotlin.test.assertEquals(0, result.failureCount)
@@ -105,10 +105,10 @@ Then status 200
         val olderContract = ContractBehaviour(gherkin1)
         val newerContract = ContractBehaviour(gherkin2)
 
-        val result: ExecutionInfo = testBackwardCompatibility(olderContract, newerContract)
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
 
-        kotlin.test.assertEquals(0, result.successCount)
-        kotlin.test.assertEquals(2, result.failureCount)
+        kotlin.test.assertEquals(0, results.successCount)
+        kotlin.test.assertEquals(2, results.failureCount)
     }
 
     @Test
@@ -124,13 +124,13 @@ Then status 200
 
         val contract = ContractBehaviour(gherkin)
 
-        val executionInfo: ExecutionInfo = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility(contract, contract)
 
-        if(executionInfo.failureCount > 0)
-            executionInfo.print()
+        if(results.failureCount > 0)
+            println(results.report())
 
-        kotlin.test.assertEquals(1, executionInfo.successCount)
-        kotlin.test.assertEquals(0, executionInfo.failureCount)
+        kotlin.test.assertEquals(1, results.successCount)
+        kotlin.test.assertEquals(0, results.failureCount)
     }
 
     @Test
@@ -146,13 +146,13 @@ Then status 200
 
         val contract = ContractBehaviour(gherkin)
 
-        val executionInfo: ExecutionInfo = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility(contract, contract)
 
-        if(executionInfo.failureCount > 0)
-            executionInfo.print()
+        if(results.failureCount > 0)
+            println(results.report())
 
-        kotlin.test.assertEquals(1, executionInfo.successCount)
-        kotlin.test.assertEquals(0, executionInfo.failureCount)
+        kotlin.test.assertEquals(1, results.successCount)
+        kotlin.test.assertEquals(0, results.failureCount)
     }
 
     @Test
@@ -168,13 +168,13 @@ Then status 200
 
         val contract = ContractBehaviour(gherkin)
 
-        val executionInfo: ExecutionInfo = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility(contract, contract)
 
-        if(executionInfo.failureCount > 0)
-            executionInfo.print()
+        if(results.failureCount > 0)
+            println(results.report())
 
-        kotlin.test.assertEquals(2, executionInfo.successCount)
-        kotlin.test.assertEquals(0, executionInfo.failureCount)
+        kotlin.test.assertEquals(2, results.successCount)
+        kotlin.test.assertEquals(0, results.failureCount)
     }
 
     @Test
@@ -192,13 +192,13 @@ Then status 200
 
         val contract = ContractBehaviour(gherkin)
 
-        val executionInfo: ExecutionInfo = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility(contract, contract)
 
-        if(executionInfo.failureCount > 0)
-            executionInfo.print()
+        if(results.failureCount > 0)
+            println(results.report())
 
-        kotlin.test.assertEquals(2, executionInfo.successCount)
-        kotlin.test.assertEquals(0, executionInfo.failureCount)
+        kotlin.test.assertEquals(2, results.successCount)
+        kotlin.test.assertEquals(0, results.failureCount)
     }
 
     @Test
@@ -214,13 +214,13 @@ And response-body (number?)
 
         val contract = ContractBehaviour(gherkin)
 
-        val executionInfo: ExecutionInfo = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility(contract, contract)
 
-        if(executionInfo.failureCount > 0)
-            executionInfo.print()
+        if(results.failureCount > 0)
+            println(results.report())
 
-        kotlin.test.assertEquals(1, executionInfo.successCount)
-        kotlin.test.assertEquals(0, executionInfo.failureCount)
+        kotlin.test.assertEquals(1, results.successCount)
+        kotlin.test.assertEquals(0, results.failureCount)
     }
 
     @Test
@@ -238,12 +238,12 @@ And response-body (Number)
 
         val contract = ContractBehaviour(gherkin)
 
-        val executionInfo: ExecutionInfo = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility(contract, contract)
 
-        if(executionInfo.failureCount > 0)
-            executionInfo.print()
+        if(results.failureCount > 0)
+            println(results.report())
 
-        kotlin.test.assertEquals(1, executionInfo.successCount)
-        kotlin.test.assertEquals(0, executionInfo.failureCount)
+        kotlin.test.assertEquals(1, results.successCount)
+        kotlin.test.assertEquals(0, results.failureCount)
     }
 }

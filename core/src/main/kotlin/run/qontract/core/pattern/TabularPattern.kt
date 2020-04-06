@@ -53,15 +53,15 @@ fun convertToNumber(value: String): Number {
 class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
-            return Result.Failure("Expected: JSONObjectValue. Actual: ${sampleData?.javaClass ?: "null"}")
+            return mismatchResult("JSON object", sampleData)
 
         val missingKey = pattern.keys.find { key -> isMissingKey(sampleData.jsonObject, key) }
         if(missingKey != null)
-            return Result.Failure("Missing key $missingKey in ${sampleData.jsonObject}")
+            return Result.Failure("Missing key $missingKey")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = asPattern(patternValue, key).matches(sampleValue, withNumberTypePattern(resolver))) {
-                is Result.Failure -> return result.add("Expected value at $key to match $patternValue, actual value $sampleValue in JSONObject ${sampleData.jsonObject}")
+                is Result.Failure -> return result.breadCrumb(key)
             }
         }
 

@@ -18,6 +18,7 @@ import run.qontract.fake.ContractFake
 import run.qontract.test.TestExecutor
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
+import kotlin.test.assertFalse
 
 class ContractAsTest {
     @Test
@@ -72,7 +73,7 @@ class ContractAsTest {
                     And response-body {calls_left: 10, messages_left: 30}
         """
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val executionInfo = contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val headers: HashMap<String, String> = hashMapOf(
                         "token" to "test",
@@ -83,16 +84,23 @@ class ContractAsTest {
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
-        assertThat(executionInfo.generateErrorMessage()).isEqualTo("""This request did not match any scenario.
-Scenario: GET /balance Error:
-	Response did not match
-	Response headers did not match
-	Header "length" did not match
-	Expected (number), actual abc
-	"abc" is not a Number
-	Request: HttpRequest(method=GET, path=/balance, headers={Content-Type=text/plain}, body=, queryParams={}, formFields={})
-	Response: HttpResponse(status=200, body={calls_left: 10, messages_left: 30}, headers={length=abc, token=test})
-""")
+        assertThat(results.report()).isEqualTo("""In Scenario: GET /balance
+>> RESPONSE.HEADERS.length
+
+Expected number, actual "abc"
+
+Request: GET /balance
+Content-Type: text/plain
+
+
+Response: 200 OK
+length: abc
+token: test
+
+{
+    "calls_left": 10,
+    "messages_left": 30
+}""")
     }
 
     @Test
@@ -202,7 +210,7 @@ Scenario: GET /balance Error:
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val suggestions = lex(parseGherkinString(parameters))
 
-        contractBehaviour.executeTests(suggestions, object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 flags["executed"] = true
 
@@ -210,13 +218,14 @@ Scenario: GET /balance Error:
                 assertThat(request.headers.keys).contains("x-loginId")
                 assertThat(request.headers["x-loginId"]).isEqualTo("a@b.com")
                 val headers: HashMap<String, String> = HashMap()
-                return HttpResponse(200, "{calls_left: 10, messages_left: 30}", headers)
+                return HttpResponse(200, "", headers)
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
-        })
+        }, suggestions)
 
         assertThat(flags["executed"]).isTrue()
+        assertFalse(results.hasFailures(), results.report())
     }
 
     @Test
@@ -229,7 +238,7 @@ Scenario: GET /balance Error:
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val jsonResponseString = "{calls_left: 20, messages_left: 20}"
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
                 assertTrue(NumericStringPattern()
@@ -244,6 +253,8 @@ Scenario: GET /balance Error:
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -257,7 +268,7 @@ Scenario: GET /balance Error:
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val jsonResponseString = "{calls_left: 20, messages_left: \"20\"}"
-        val executionInfo = contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
                 val jsonBody = jsonObject(request.body)
@@ -276,7 +287,8 @@ Scenario: GET /balance Error:
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
-        assertThat(executionInfo.unsuccessfulInteractionCount()).isEqualTo(1)
+
+        assertTrue(results.hasFailures(), results.report())
     }
 
     @Test
@@ -766,7 +778,7 @@ Scenario: GET and POST number
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val flags = mutableMapOf<String, Boolean>()
 
-        val executionInfo = contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 flags["executed"] = true
                 assertEquals("/number", request.path)
@@ -780,9 +792,7 @@ Scenario: GET and POST number
         })
 
         assertTrue(flags["executed"] ?: false)
-        if(executionInfo.unsuccessfulInteractionCount() > 0)
-            executionInfo.print()
-        assertEquals(0, executionInfo.unsuccessfulInteractionCount())
+        assertFalse(results.hasFailures(), results.report())
     }
 
     @Test

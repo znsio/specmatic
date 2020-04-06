@@ -103,7 +103,7 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         headers.putAll(addedHeaders)
     }
 
-    fun toLogString(prefix: String): String {
+    fun toLogString(prefix: String = ""): String {
         val methodString = method ?: "NO_METHOD"
 
         val pathString = path ?: "NO_PATH"

@@ -12,8 +12,8 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     }
 
     @Throws(Exception::class)
-    fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver) =
-        incomingHttpRequest to resolver to
+    fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver): Result {
+        val result = incomingHttpRequest to resolver to
                 ::matchUrl then
                 ::matchMethod then
                 ::matchHeaders then
@@ -22,27 +22,36 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
                 ::handleError toResult
                 ::returnResult
 
+        return when(result) {
+            is Result.Failure -> result.breadCrumb("REQUEST")
+            else -> result
+        }
+    }
+
     fun matchFormFields(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
 
         val keys: List<String> = formFieldsPattern.keys.filter { key -> isOptional(key) && withoutOptionality(key) !in httpRequest.formFields }
         if(keys.isNotEmpty())
-            return MatchFailure(Result.Failure("Keys $keys not found in request form fields ${httpRequest.formFields}"))
+            return MatchFailure(Result.Failure(message = "Fields $keys not found", breadCrumb = "FORM FIELDS"))
 
         val result: Result? = formFieldsPattern
             .filterKeys { key -> withoutOptionality(key) in httpRequest.formFields }
             .map { (key, pattern) -> Triple(withoutOptionality(key), pattern, httpRequest.formFields.getValue(key)) }
             .map { (key, pattern, value) ->
                 try {
-                    asPattern(pattern, key).matches(pattern.parse(value, resolver), resolver)
+                    when (val result = asPattern(pattern, key).matches(pattern.parse(value, resolver), resolver)) {
+                        is Result.Failure -> result.breadCrumb("FORM FIELDS").breadCrumb(key)
+                        else -> result
+                    }
                 } catch(e: ContractParseException) {
-                    Result.Failure("""Failed to parse "$value" as ${pattern.javaClass}""")
+                    mismatchResult(pattern, value).breadCrumb("FORM FIELDS").breadCrumb(key)
                 }
             }
             .firstOrNull { it is Result.Failure }
 
         return when(result) {
-            is Result.Failure -> MatchFailure(result.add("Form fields did not match"))
+            is Result.Failure -> MatchFailure(result)
             else -> MatchSuccess(parameters)
         }
     }
@@ -51,7 +60,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
         val (httpRequest, resolver) = parameters
         val headers = httpRequest.headers
         when (val result = this.headersPattern.matches(headers, resolver.makeCopy())) {
-            is Result.Failure -> return MatchFailure(result.add("Request Headers did not match"))
+            is Result.Failure -> return MatchFailure(result.breadCrumb("HEADERS"))
         }
         return MatchSuccess(parameters)
     }
@@ -59,7 +68,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     private fun matchBody(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
         return when (val result = body?.matches(httpRequest.body, withNumericStringPattern(resolver))) {
-            is Result.Failure -> MatchFailure(result.add("Request body did not match"))
+            is Result.Failure -> MatchFailure(result.breadCrumb("PAYLOAD"))
             else -> MatchSuccess(parameters)
         }
     }
@@ -68,7 +77,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
         val (httpRequest, _) = parameters
         method.let {
             return if (it != httpRequest.method)
-                MatchFailure(Result.Failure("Method did not match. Expected: $method Actual: ${httpRequest.method}"))
+                MatchFailure(mismatchResult(method ?: "", httpRequest.method ?: "").breadCrumb("METHOD"))
             else
                 MatchSuccess(parameters)
         }
@@ -81,7 +90,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
                     httpRequest.queryParams,
                     resolver.makeCopy())
             return if (result is Result.Failure)
-                MatchFailure(result.add("URL did not match"))
+                MatchFailure(result.breadCrumb("URL"))
             else
                 MatchSuccess(parameters)
         }

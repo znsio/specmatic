@@ -9,6 +9,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.FailureReport
 import run.qontract.core.toURLPattern
 import run.qontract.core.pattern.LookupPattern
 import java.io.UnsupportedEncodingException
@@ -52,14 +53,7 @@ internal class URLPatternTest {
 
         urlMatcher.matches(URI("/pets"), queryParameters, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).stackTrace()).isEqualTo(
-                    Stack<String>().also { stack ->
-                        stack.push("\"text\" is not a Number")
-                        stack.push("Expected (number), actual text")
-                        stack.push("Expected LookupPattern(pattern=(number), key=petid), actual text")
-                        stack.push("Query parameter did not match")
-                    }
-            )
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("petid", "QUERY PARAMS"), listOf("""Expected number, actual "text"""")))
         }
     }
 
@@ -79,11 +73,7 @@ internal class URLPatternTest {
         val queryParameters = HashMap<String, String>()
         urlMatcher.matches(URI("/owners/123123"), queryParameters, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).stackTrace()).isEqualTo(Stack<String>().also { stack ->
-                stack.push("Expected pets, actual owners")
-                stack.push("Expected ExactMatchPattern(pattern=pets), actual owners")
-                stack.push("Path part did not match in /owners/123123. Expected: ExactMatchPattern(pattern=pets) Actual: owners")
-            })
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("PATH (/owners/123123)"), listOf("""Expected "pets", actual "owners"""")))
         }
     }
 

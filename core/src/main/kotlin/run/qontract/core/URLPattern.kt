@@ -23,7 +23,7 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
         val pathParts = uri.path.split("/".toRegex()).filter { it.isNotEmpty() }.toTypedArray()
 
         if (pathPattern.size != pathParts.size)
-            return Result.Failure("Expected $uri to have ${pathPattern.size} parts, but it has ${pathParts.size} parts.")
+            return Result.Failure("Expected $uri to have ${pathPattern.size} parts, but it has ${pathParts.size} parts.", breadCrumb = "PATH")
 
         pathPattern.zip(pathParts).forEach { (pattern, token) ->
             val key = when (pattern) {
@@ -32,7 +32,10 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
             }
 
             when (val result = resolver.matchesPattern(key, pattern, StringValue(token))) {
-                is Result.Failure -> return result.add("Path part did not match in $uri. Expected: $pattern Actual: $token")
+                is Result.Failure -> return when(key) {
+                    null -> result.breadCrumb("PATH ($uri)")
+                    else -> result.breadCrumb("PATH ($uri)").breadCrumb(key)
+                }
             }
         }
 
@@ -42,13 +45,13 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
     private fun matchesQuery(sampleQuery: Map<String, String>, resolver: Resolver): Result {
         for (key in queryPattern.keys) {
             if (!sampleQuery.containsKey(key)) {
-                return Result.Failure("Query parameter not present. Expected: $key Actual: ")
+                return Result.Failure("Query parameter $key not present", breadCrumb = "QUERY PARAMS")
             }
             val patternValue = queryPattern.getValue(key)
             val sampleValue = sampleQuery.getValue(key)
 
             when (val result = resolver.matchesPattern(key, patternValue, StringValue(sampleValue))) {
-                is Result.Failure -> return result.add("Query parameter did not match")
+                is Result.Failure -> return result.breadCrumb("QUERY PARAMS").breadCrumb(key)
             }
         }
         return Result.Success()

@@ -1,6 +1,7 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Fail
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.Row
 import java.net.URI
@@ -19,14 +20,7 @@ internal class HttpRequestPatternTest {
         }
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Result.Failure::class.java)
-            assertThat((it as Result.Failure).stackTrace()).isEqualTo(
-                    Stack<String>().also { stack ->
-                        stack.push("Expected matching_path, actual unmatched_path")
-                        stack.push("Expected ExactMatchPattern(pattern=matching_path), actual unmatched_path")
-                        stack.push("Path part did not match in /unmatched_path. Expected: ExactMatchPattern(pattern=matching_path) Actual: unmatched_path")
-                        stack.push("URL did not match")
-                    }
-            )
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "URL", "PATH (/unmatched_path)"), listOf("""Expected "matching_path", actual "unmatched_path"""")))
         }
     }
 
@@ -43,9 +37,7 @@ internal class HttpRequestPatternTest {
         }
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).stackTrace()).isEqualTo(Stack<String>().also{ stack ->
-                stack.push("Method did not match. Expected: POST Actual: GET")
-            })
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "METHOD"), listOf("Expected POST, actual GET")))
         }
     }
 
@@ -64,10 +56,7 @@ internal class HttpRequestPatternTest {
         }
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Result.Failure::class.java)
-            assertThat((it as Result.Failure).stackTrace()).isEqualTo(Stack<String>().also { stack ->
-                stack.push("Missing key name in {unmatchedKey=unmatchedValue}")
-                stack.push("Request body did not match")
-            })
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "PAYLOAD"), listOf("Missing key name")))
         }
     }
 

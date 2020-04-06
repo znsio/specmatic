@@ -30,7 +30,7 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
             if (headers.isNotEmpty()) json["headers"] = JSONObjectValue(headers.mapValues { StringValue(it.value) })
         }
 
-    fun toLogString(prefix: String): String {
+    fun toLogString(prefix: String = ""): String {
         val statusLine = "$status $statusText"
         val headerString = headers.map { "${it.key}: ${it.value}" }.joinToString("\n")
 

@@ -3,19 +3,17 @@ package run.qontract.core.pattern
 import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.mismatchResult
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
 object NullPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
-        when(sampleData) {
-            is NullValue -> Result.Success()
-            is StringValue -> when(sampleData.string.trim()) {
-                "", "null" -> Result.Success()
-                else -> Result.Failure("Expected null, got ${sampleData.toDisplayValue()}")
-            }
-            else -> Result.Failure("Expected null, got ${sampleData?.toDisplayValue()}")
+        when {
+            sampleData is NullValue || sampleData is StringValue && sampleData.string.trim() == "" ->
+                Result.Success()
+            else -> mismatchResult("null", sampleData)
         }
 
     override fun generate(resolver: Resolver): Value = NullValue

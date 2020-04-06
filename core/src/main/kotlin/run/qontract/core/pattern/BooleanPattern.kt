@@ -2,6 +2,7 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.mismatchResult
 import run.qontract.core.value.BooleanValue
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
@@ -13,7 +14,7 @@ class BooleanPattern : Pattern {
         when(sampleData) {
             is BooleanValue -> Result.Success()
             is StringValue -> matches(parsedValue(sampleData.string), resolver)
-            else -> Result.Failure("Expected: BooleanValue. Actual: $sampleData")
+            else -> mismatchResult("boolean", sampleData)
         }
 
     override fun generate(resolver: Resolver): Value =

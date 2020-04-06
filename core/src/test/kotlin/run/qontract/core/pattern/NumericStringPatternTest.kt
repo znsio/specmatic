@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.Result
 import run.qontract.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
+import run.qontract.core.FailureReport
 import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.NullValue
 import java.util.*
@@ -29,9 +30,7 @@ internal class NumericStringPatternTest {
     fun `should not match String Value that is not a number`() {
         NumericStringPattern().matches(StringValue("text"), Resolver()).let {
             assertThat(it is Result.Success).isFalse()
-            assertThat((it as Result.Failure).stackTrace()).isEqualTo(Stack<String>().also { stack ->
-                stack.push(""""text" is not a Number""")
-            })
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(emptyList(), listOf("""Expected number, actual "text"""")))
         }
     }
 

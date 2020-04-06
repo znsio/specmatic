@@ -1,8 +1,8 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.mismatchResult
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.Value
 import run.qontract.core.withNumericStringPattern
@@ -10,13 +10,13 @@ import run.qontract.core.withNumericStringPattern
 data class ListPattern(override val pattern: Pattern) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONArrayValue)
-            return Result.Failure("Expected: JSONArrayValue. Actual: ${sampleData?.javaClass ?: "null"}")
+            return mismatchResult("JSON array", sampleData)
 
         return sampleData.list.asSequence().map {
             pattern.matches(it, withNumericStringPattern(resolver))
         }.find { it is Result.Failure }.let { result ->
             when(result) {
-                is Result.Failure -> result.add("Expected multiple values of type $pattern, but one of the values didn't match in ${sampleData.list}")
+                is Result.Failure -> result.reason("Expected multiple values of type $pattern, but one of the values didn't match in ${sampleData.list}")
                 else -> Result.Success()
             }
         }

@@ -37,9 +37,7 @@ internal class ScenarioTest {
         val scenario = Scenario("test", HttpRequestPattern(), httpResponsePattern, HashMap(), LinkedList(), HashMap(), HashMap())
         scenario.matches(HttpResponse()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).stackTrace()).isEqualTo(Stack<String>().also { stack ->
-                stack.push("Error: message")
-            })
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf(), listOf("Exception: message")))
         }
     }
 }

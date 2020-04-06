@@ -1,20 +1,10 @@
 package application
 
-import org.junit.platform.engine.discovery.DiscoverySelectors
-import org.junit.platform.launcher.LauncherDiscoveryRequest
-import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
-import org.junit.platform.launcher.core.LauncherFactory
-import run.qontract.core.ComponentManifest
-import run.qontract.core.toVersion
 import run.qontract.core.utilities.*
 import run.qontract.core.utilities.BrokerClient.readFromURL
 import picocli.CommandLine
 import picocli.CommandLine.*
-import run.qontract.core.ContractBehaviour
-import run.qontract.core.testBackwardCompatibility
-import run.qontract.fake.ContractFake
-import run.qontract.test.ContractExecutionListener
-import run.qontract.test.QontractJUnitSupport
+import run.qontract.core.*
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.Callable
@@ -74,10 +64,10 @@ class ContractCommand : Callable<Void?> {
     fun compare(@Option(names = ["--older"], description = ["Name of the older contract"], paramLabel = "<older file path>", required = true) olderFilePath: String, @Option(names = ["--newer"], description = ["Name of the newer contract"], paramLabel = "<newer file path>", required=true) newerFilePath: String) {
         val older = ContractBehaviour(File(olderFilePath).readText())
         val newer = ContractBehaviour(File(newerFilePath).readText())
-        val executionInfo = testBackwardCompatibility(older, newer)
+        val results = testBackwardCompatibility(older, newer)
 
-        if(executionInfo.failureCount > 0) {
-            executionInfo.print()
+        if(results.failureCount > 0) {
+            println(results.report())
             exitProcess(1)
         } else {
             println("Older and newer contracts are compatible.")

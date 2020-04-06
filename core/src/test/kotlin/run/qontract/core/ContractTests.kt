@@ -166,11 +166,11 @@ Then status 200
         val contract = ContractBehaviour(gherkin)
         val flags = mutableSetOf<String>()
 
-        val executionInfo = contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val requestBody = request.body
                 if (requestBody is JSONObjectValue) {
-                    flags.add(when(val value = requestBody.jsonObject.getOrDefault("value", null)) {
+                    flags.add(when(requestBody.jsonObject.getOrDefault("value", null)) {
                         is NumberValue -> "number"
                         is NullValue -> "null"
                         else -> fail("Expected number or null")
@@ -184,9 +184,7 @@ Then status 200
             }
         })
 
-        if(executionInfo.hasErrors)
-            executionInfo.print()
-
+        assertFalse(results.hasFailures(), results.report())
         assertEquals(mutableSetOf("null", "number"), flags)
     }
 
@@ -205,7 +203,7 @@ Then status 200
         val contract = ContractBehaviour(gherkin)
         val flags = mutableMapOf<String, Boolean>()
 
-        val executionInfo = contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("application/x-www-form-urlencoded", request.headers.getOrDefault("Content-Type", ""))
                 flags["parsed number"] = true
@@ -216,10 +214,7 @@ Then status 200
             }
         })
 
-        if(executionInfo.hasErrors)
-            executionInfo.print()
-
-        assertFalse(executionInfo.hasErrors)
+        assertFalse(results.hasFailures(), results.report())
         assertTrue(flags.getValue("parsed number"))
     }
 
@@ -238,7 +233,7 @@ Then status 200
         val contract = ContractBehaviour(gherkin)
         val flags = mutableMapOf<String, Boolean>()
 
-        val executionInfo = contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertTrue(NumberTypePattern().parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
                 flags["parsed number"] = true
@@ -249,10 +244,7 @@ Then status 200
             }
         })
 
-        if(executionInfo.hasErrors)
-            executionInfo.print()
-
-        assertFalse(executionInfo.hasErrors)
+        assertFalse(results.hasFailures(), results.report())
         assertTrue(flags.getValue("parsed number"))
     }
 
@@ -272,7 +264,7 @@ Then status 200
         val contract = ContractBehaviour(gherkin)
         val flags = mutableMapOf<String, Boolean>()
 
-        val executionInfo = contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertTrue(NumberTypePattern().parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
                 flags["parsed number"] = true
@@ -283,10 +275,7 @@ Then status 200
             }
         })
 
-        if(executionInfo.hasErrors)
-            executionInfo.print()
-
-        assertFalse(executionInfo.hasErrors)
+        assertFalse(results.hasFailures(), results.report())
         assertTrue(flags.getValue("parsed number"))
     }
 
@@ -348,7 +337,7 @@ Then status 200
         val contract = ContractBehaviour(gherkin)
         val flags = mutableSetOf<String>()
 
-        val executionInfo = contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val body = request.body
                 if(body is JSONObjectValue) {
@@ -368,11 +357,8 @@ Then status 200
             }
         })
 
-        if(executionInfo.hasErrors)
-            executionInfo.print()
-
         assertEquals(mutableSetOf("null", "json"), flags)
-        assertFalse(executionInfo.hasErrors)
+        assertFalse(results.hasFailures(), results.report())
     }
 
     @Test
@@ -390,7 +376,7 @@ Then status 200
         val contract = ContractBehaviour(gherkin)
         val flags = mutableSetOf<String>()
 
-        val executionInfo = contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val body = request.body
 
@@ -407,11 +393,8 @@ Then status 200
             }
         })
 
-        if(executionInfo.hasErrors)
-            executionInfo.print()
-
         assertEquals(mutableSetOf("null", "json"), flags)
-        assertFalse(executionInfo.hasErrors)
+        assertFalse(results.hasFailures(), results.report())
     }
 
     @Test
@@ -428,7 +411,7 @@ Then status 200
 
         val contract = ContractBehaviour(gherkin)
 
-        val executionInfo = contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 return HttpResponse(200, "")
             }
@@ -437,10 +420,7 @@ Then status 200
             }
         })
 
-        if(executionInfo.hasErrors)
-            executionInfo.print()
-
-        assertFalse(executionInfo.hasErrors)
+        assertFalse(results.hasFailures(), results.report())
     }
 
     @Test
@@ -463,7 +443,7 @@ Examples:
         val contract = ContractBehaviour(gherkin)
         var invocationCount = 0
 
-        val executionInfo = contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 invocationCount = invocationCount.inc()
 
@@ -480,11 +460,8 @@ Examples:
             }
         })
 
-        if(executionInfo.hasErrors)
-            executionInfo.print()
-
         assertEquals(1, invocationCount)
-        assertFalse(executionInfo.hasErrors)
+        assertFalse(results.hasFailures(), results.report())
     }
 
     @Test
@@ -506,7 +483,7 @@ Examples:
         val contract = ContractBehaviour(gherkin)
         var invocationCount = 0
 
-        val executionInfo = contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 invocationCount = invocationCount.inc()
 
@@ -523,11 +500,8 @@ Examples:
             }
         })
 
-        if(executionInfo.hasErrors)
-            executionInfo.print()
-
         assertEquals(1, invocationCount)
-        assertFalse(executionInfo.hasErrors)
+        assertFalse(results.hasFailures(), results.report())
     }
 
     @Test
@@ -544,7 +518,7 @@ Then status 200
         val contract = ContractBehaviour(gherkin)
         var invocationCount = 0
 
-        val executionInfo = contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 invocationCount = invocationCount.inc()
 
@@ -563,10 +537,7 @@ Then status 200
             }
         })
 
-        if(executionInfo.hasErrors)
-            executionInfo.print()
-
         assertEquals(1, invocationCount)
-        assertFalse(executionInfo.hasErrors)
+        assertFalse(results.hasFailures(), results.report())
     }
 }

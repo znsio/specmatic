@@ -1,6 +1,5 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.utilities.stringTooPatternArray
@@ -12,12 +11,10 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
 
     private fun failedMessage(value: JSONArrayValue) = "JSON Array did not match Expected: $pattern Actual: ${value.list}"
 
-    private fun failed(value: JSONArrayValue) = Result.Failure(failedMessage(value))
-
     @Throws(Exception::class)
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONArrayValue)
-            return Result.Failure("$sampleData is not JSON")
+            return Result.Failure("Value is not a JSON array")
 
         if(sampleData.list.isEmpty())
             return Result.Success()
@@ -36,16 +33,17 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
                 is RestPattern -> {
                     val rest = if(index == sampleData.list.size) emptyList() else sampleData.list.slice(index..sampleData.list.lastIndex)
                     return when (val result = patternValue.matches(JSONArrayValue(rest), resolver)) {
-                        is Result.Failure -> result.add(failedMessage(sampleData))
+                        is Result.Failure -> result.breadCrumb("[$index...${sampleData.list.lastIndex}")
                         else -> result
                     }
                 }
                 else -> {
-                    if(index == sampleData.list.size) return failed(sampleData)
+                    if(index == sampleData.list.size)
+                        return Result.Failure("Expected an array of length ${pattern.size}, actual length ${sampleData.list.size}")
 
                     val sampleValue = sampleData.list[index]
                     when (val result = patternValue.matches(sampleValue, resolverWithNumberType)) {
-                        is Result.Failure -> return result.add("Expected value at index $index to match $patternValue. Actual value: $sampleValue in ${sampleData.list}")
+                        is Result.Failure -> return result.breadCrumb("""[$index]""")
                     }
                 }
             }

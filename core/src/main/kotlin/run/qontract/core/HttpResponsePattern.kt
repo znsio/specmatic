@@ -18,13 +18,19 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
         return HttpResponse(status!!, value.toString(), headers)
     }
 
-    fun matches(response: HttpResponse, resolver: Resolver) =
-            response to resolver to
-                    ::matchStatus then
-                    ::matchHeaders then
-                    ::matchBody otherwise
-                    ::handleError toResult
-                    ::returnResult
+    fun matches(response: HttpResponse, resolver: Resolver): Result {
+        val result = response to resolver to
+                ::matchStatus then
+                ::matchHeaders then
+                ::matchBody otherwise
+                ::handleError toResult
+                ::returnResult
+
+        return when(result) {
+            is Result.Failure -> result.breadCrumb("RESPONSE")
+            else -> result
+        }
+    }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpResponsePattern> =
         body.newBasedOn(row, resolver.makeCopy()).flatMap { newBody ->
@@ -39,7 +45,7 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, _) = parameters
         when (response.status != status) {
-            true -> return MatchFailure(Result.Failure("    Expected status: $status, actual: ${response.status}"))
+            true -> return MatchFailure(Result.Failure(message = "Expected status: $status, actual: ${response.status}", breadCrumb = "STATUS"))
         }
         return MatchSuccess(parameters)
     }
@@ -47,7 +53,7 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
     private fun matchHeaders(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
         when (val result = headersPattern.matches(response.headers, resolver)) {
-            is Result.Failure -> return MatchFailure(result.add("Response headers did not match"))
+            is Result.Failure -> return MatchFailure(result.breadCrumb("HEADERS"))
         }
         return MatchSuccess(parameters)
     }
@@ -55,9 +61,8 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
     private fun matchBody(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
         val resolverWithNumericString = resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern()))
-//        resolverWithNumericString.addCustomPattern("(number)", NumericStringPattern())
         when (val result = body.matches(parsedValue(response.body), resolverWithNumericString)) {
-            is Result.Failure -> return MatchFailure(result.add("Response body did not match"))
+            is Result.Failure -> return MatchFailure(result.breadCrumb("PAYLOAD"))
         }
         return MatchSuccess(parameters)
     }

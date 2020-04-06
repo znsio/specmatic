@@ -1,10 +1,7 @@
 package run.qontract.core.pattern
 
 import org.junit.jupiter.api.Test
-import run.qontract.core.Resolver
-import run.qontract.core.Result
-import run.qontract.core.shouldMatch
-import run.qontract.core.shouldNotMatch
+import run.qontract.core.*
 import run.qontract.core.value.*
 import java.util.*
 import kotlin.collections.HashMap
@@ -144,10 +141,7 @@ internal class JSONObjectPatternTest {
 
         assertNotNull(patterns.find { pattern ->
             val result = pattern.matches(JSONObjectValue(mapOf("id" to StringValue("abc"))), Resolver())
-            result is Result.Failure && result.stackTrace() == Stack<String>().also { stack ->
-                stack.push("abc should be a Number")
-                stack.push("Expected value at id to match (number), actual value abc in JSONObject {id=abc}")
-            }
+            result is Result.Failure && result.report() == FailureReport(listOf("id"), listOf("""Expected number, actual "abc""""))
         })
     }
 

@@ -24,7 +24,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     fun matches(httpRequest: HttpRequest, serverState: HashMap<String, Value>): Result {
         val resolver = Resolver(serverState, false, patterns)
         if (!serverStateMatches(serverState, resolver.copy())) {
-            return Result.Failure("Server State mismatch").also { it.updateScenario(this) }
+            return Result.Failure("Facts mismatch", breadCrumb = "FACTS").also { it.updateScenario(this) }
         }
         return httpRequestPattern.matches(httpRequest, resolver).also {
             it.updateScenario(this)
@@ -37,10 +37,6 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         val facts = combineFacts(expectedFacts, actualFacts, resolver)
 
         return httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts)))
-//        return Resolver(combinedState, false).let { resolver ->
-//            resolver.customPatterns = patterns
-//            httpResponsePattern.generateResponse(resolver)
-//        }
     }
 
     private fun combineFacts(
@@ -84,13 +80,12 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         return try {
             httpResponsePattern.matches(httpResponse, resolver).also { it.updateScenario(this) }.let {
                 when (it) {
-                    is Result.Failure -> it.add("Response did not match")
-                            .also { failure -> failure.updateScenario(this) }
+                    is Result.Failure -> it.also { failure -> failure.updateScenario(this) }
                     else -> it
                 }
             }
         } catch (exception: Throwable) {
-            return Result.Failure("Error: ${exception.message}")
+            return Result.Failure("Exception: ${exception.message}")
         }
     }
 

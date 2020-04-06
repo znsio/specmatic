@@ -1,25 +1,17 @@
 package run.qontract.core
 
-fun testBackwardCompatibility(older: ContractBehaviour, newer: ContractBehaviour): ExecutionInfo {
-    val contractTests: List<Scenario> = older.generateContractTests()
+fun testBackwardCompatibility(older: ContractBehaviour, newerContract: ContractBehaviour): Results =
+        older.generateContractTests().fold(Results()) { results, olderScenario ->
+            newerContract.setServerState(olderScenario.expectedFacts)
 
-     val executionInfo = ExecutionInfo()
+            val request = olderScenario.generateHttpRequest()
 
-    contractTests.forEach { testScenario ->
-        newer.setServerState(testScenario.expectedFacts)
+            try {
+                val response = newerContract.lookup(request)
 
-        try {
-            val request = testScenario.generateHttpRequest()
-            val response = newer.lookup(request)
-            when(val result = testScenario.matches(response)) {
-                is Result.Failure -> executionInfo.recordUnsuccessfulInteraction(result.scenario, result.stackTrace(), request, response)
-                else -> executionInfo.recordSuccessfulInteraction()
+                val result = olderScenario.matches(response)
+                results.copy(results = results.results.plus(Triple(result, request, response)).toMutableList())
+            } catch (e: Throwable) {
+                results.copy(results = results.results.plus(Triple(Result.Failure("Exception: ${e.localizedMessage}"), request, null)).toMutableList())
             }
-        } catch (e: Throwable) {
-            executionInfo.recordInteractionError(testScenario, e)
         }
-
-    }
-
-    return executionInfo
-}

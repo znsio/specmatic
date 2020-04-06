@@ -24,10 +24,10 @@ data class HttpHeadersPattern(val headers: Map<String, String> = emptyMap()) {
         this.headers.forEach { (key, value) ->
             val sampleValue = asValue(headers[key])
             if (sampleValue is NullValue)
-                return MatchFailure(Result.Failure("""Header "$key" was not available"""))
+                return MatchFailure(Result.Failure(message = """Header $key was missing"""))
             when (val result = asPattern(value, key).matches(asValue(headers[key]), resolver)) {
                 is Result.Failure -> {
-                    return MatchFailure(result.add("""Header "$key" did not match"""))
+                    return MatchFailure(result.breadCrumb(key))
                 }
             }
         }

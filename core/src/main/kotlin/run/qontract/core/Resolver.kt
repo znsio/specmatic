@@ -20,27 +20,19 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
 
         when (val result = pattern.matches(sampleValue, this)) {
             is Result.Failure -> {
-                return result.add("""Expected $pattern, actual $sampleValue""")
+                return result
             }
         }
 
         if (factKey != null && factStore.has(factKey)) {
             when(val result = factStore.match(sampleValue, factKey)) {
-                is Result.Failure -> result.add("Resolver was not able to match fact $factKey with value $sampleValue.")
+                is Result.Failure -> result.reason("Resolver was not able to match fact $factKey with value $sampleValue.")
             }
         }
 
         return Result.Success()
     }
 
-//    fun addCustomPattern(spec: String, pattern: Pattern) {
-//        this.customPatterns[spec] = pattern
-//    }
-//
-//    fun addCustomPatterns(patterns: java.util.HashMap<String, Pattern>) {
-//        customPatterns.putAll(patterns)
-//    }
-//
     fun getPattern(patternValue: String): Pattern {
         if (isPatternToken(patternValue = patternValue)) {
             return patterns[patternValue] ?: findPattern(patternValue)

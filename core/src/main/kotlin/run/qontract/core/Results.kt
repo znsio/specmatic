@@ -1,9 +1,15 @@
 package run.qontract.core
 
-import java.util.*
+data class Results(val results: MutableList<Triple<Result, HttpRequest, HttpResponse?>> = mutableListOf()) {
+    fun hasFailures(): Boolean = results.any { it.first is Result.Failure }
+    fun hasSuccess(): Boolean = results.any { it.first is Result.Success }
+    fun success(): Boolean = hasSuccess() && !hasFailures()
 
-class Results {
-    val results: LinkedList<Triple<Result, HttpRequest, HttpResponse?>> = LinkedList()
+    val failureCount
+        get(): Int = results.count { it.first is Result.Failure }
+
+    val successCount
+        get(): Int = results.count { it.first is Result.Success }
 
     fun add(result: Result, httpRequest: HttpRequest, httpResponse: HttpResponse?) {
         results.add(Triple(result, httpRequest, httpResponse))
@@ -13,23 +19,32 @@ class Results {
             HttpResponse(400, generateErrorResponseBody(), java.util.HashMap())
 
     private fun generateErrorResponseBody() =
-            "This request did not match any scenario.\n".plus(generateFeedback())
+            generateFeedback()
 
     private fun generateFeedback(): String {
-        val message = StringBuilder()
-        results.map { (result, request, response) ->
-            message.appendln("${result.scenario} Error:")
-            val stackTrace = (result as Result.Failure).stackTrace()
-            while (stackTrace.isNotEmpty()) {
-                message.appendln("\t${stackTrace.pop()}")
-            }
-            message.appendln("\tRequest: $request")
-            response?.let {
-                message.appendln("\tResponse: $it")
-            }
+        return results.joinToString("\n\n") { (result, request, response) ->
+            resultReport(result, request, response)
         }
-        return message.toString()
     }
 
-    fun generateErrorMessage() = generateErrorResponseBody()
+    fun report() = generateErrorResponseBody()
+}
+
+fun resultReport(result: Result, request: HttpRequest, response: HttpResponse?): String {
+    val firstLine = """In ${result.scenario}"""
+
+    val report = if (result is Result.Failure) {
+        result.report().let { (breadCrumbs, errorMessages) ->
+            val breadCrumbString = breadCrumbs.map { it.trim() }.filter { it.isNotEmpty() }.joinToString(".")
+            val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString(".")
+            ">> $breadCrumbString\n\n$errorMessagesString".trim()
+        }
+    } else ""
+
+    val firstPart = "$firstLine\n$report".trim()
+
+    val requestString = "Request: ${request.toLogString()}"
+    val responseString = response?.let { "Response: ${it.toLogString()}" } ?: ""
+
+    return "$firstPart\n\n$requestString\n$responseString".trim()
 }

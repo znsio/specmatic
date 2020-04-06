@@ -1,13 +1,12 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.convertStringToCorrectType
 import run.qontract.core.value.Value
 
 data class CheckFacts(private val state: Map<String, Value> = emptyMap()) : FactStore {
     override fun match(sampleValue: Value, key: String): Result =
             when (val stateValue = state.getValue(key)) {
                 sampleValue -> Result.Success()
-                else -> Result.Failure("Server state did not match. Expected $stateValue at $key, but got $sampleValue.")
+                else -> Result.Failure(message = "Server state did not match. Expected $stateValue at $key, but got $sampleValue.", breadCrumb = "FACTS")
             }
 
     override fun has(key: String): Boolean = state.containsKey(key)

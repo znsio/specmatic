@@ -1,5 +1,7 @@
 package run.qontract.core
 
+import run.qontract.core.pattern.Pattern
+import run.qontract.core.value.Value
 import java.util.*
 
 sealed class Result {
@@ -21,20 +23,22 @@ sealed class Result {
         override fun isTrue() = true
     }
 
-    class Failure : Result {
-        private var cause: Failure? = null
-        private val errorMessage: String
+    data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "") : Result() {
+        fun reason(errorMessage: String) = Failure(errorMessage, this)
+        fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
 
-        constructor(errorMessage: String) : super() {
-            this.errorMessage = errorMessage
-        }
-
-        private constructor(errorMessage: String, cause: Failure) : super() {
-            this.errorMessage = errorMessage
-            this.cause = cause
-        }
-
-        fun add(errorMessage: String) = Failure(errorMessage, this)
+        fun report(): FailureReport =
+            (cause?.report() ?: FailureReport()).let { reason ->
+                when {
+                    message.isNotEmpty() -> reason.copy(errorMessages = listOf(message).plus(reason.errorMessages))
+                    else -> reason
+                }
+            }.let { reason ->
+                when {
+                    breadCrumb.isNotEmpty() -> reason.copy(breadCrumbs = listOf(breadCrumb).plus(reason.breadCrumbs))
+                    else -> reason
+                }
+            }
 
         fun stackTrace(): Stack<String> {
             val stackTrace = Stack<String>()
@@ -43,10 +47,8 @@ sealed class Result {
         }
 
         private fun addTo(stackTrace: Stack<String>) {
-            cause.let {
-                it?.addTo(stackTrace)
-            }
-            stackTrace.push(this.errorMessage)
+            cause?.addTo(stackTrace)
+            stackTrace.push(this.message)
         }
 
         override fun record(executionInfo: ExecutionInfo, request: HttpRequest, response: HttpResponse?) {
@@ -56,3 +58,13 @@ sealed class Result {
         override fun isTrue() = false
     }
 }
+
+data class FailureReport(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList())
+
+fun mismatchResult(expected: String, actual: String): Result.Failure = Result.Failure("Expected $expected, actual $actual")
+fun mismatchResult(expected: String, actual: Value?): Result.Failure = mismatchResult(expected, actual?.toDisplayValue() ?: "null")
+fun mismatchResult(expected: Value, actual: Value?): Result = mismatchResult(expected.toDisplayValue(), actual?.toDisplayValue() ?: "")
+fun mismatchResult(expected: Pattern, actual: String): Result.Failure = mismatchResult(patternClassNameToString(expected), actual)
+
+fun patternClassNameToString(value: Pattern): String =
+        value.javaClass.name.split(".").last().removeSuffix("Pattern").toLowerCase()

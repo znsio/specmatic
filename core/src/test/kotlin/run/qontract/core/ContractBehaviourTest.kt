@@ -43,14 +43,12 @@ class ContractBehaviourTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance2").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
-Scenario: GET /balance?account-id=LookupPattern(pattern=(number), key=account-id) Error:
-	URL did not match
-	Path part did not match in /balance2. Expected: ExactMatchPattern(pattern=balance) Actual: balance2
-	Expected ExactMatchPattern(pattern=balance), actual balance2
-	Expected balance, actual balance2
-	Request: HttpRequest(method=GET, path=/balance2, headers={}, body=, queryParams={account-id=10}, formFields={})
-""")
+        assertThat(httpResponse.body).isEqualTo("""In Scenario: GET /balance?account-id=(number)
+>> REQUEST.URL.PATH (/balance2)
+
+Expected "balance", actual "balance2"
+
+Request: GET /balance2?account-id=10""")
     }
 
     @Test
@@ -68,14 +66,13 @@ Scenario: GET /balance?account-id=LookupPattern(pattern=(number), key=account-id
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateHeader("y-loginId", "abc123")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""
-            This request did not match any scenario.
-            Scenario: GET /balance Error:
-            	Request Headers did not match
-            	Header "x-loginId" was not available
-            	Request: HttpRequest(method=GET, path=/balance, headers={y-loginId=abc123}, body=, queryParams={}, formFields={})
+        assertThat(httpResponse.body).isEqualTo("""In Scenario: GET /balance
+>> REQUEST.HEADERS
 
-        """.trimIndent())
+Header x-loginId was missing
+
+Request: GET /balance
+y-loginId: abc123""".trimIndent())
     }
 
     @Test
@@ -145,24 +142,19 @@ Scenario: GET /balance?account-id=LookupPattern(pattern=(number), key=account-id
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10]}")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
-Scenario: POST /balance Error:
-	Request body did not match
-	Expected value at calls_made to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), ExactMatchPattern(pattern=2)]), actual value [
-    3,
-    10
-] in JSONObject {calls_made=[
-    3,
-    10
-]}
-	JSON Array did not match Expected: [ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), ExactMatchPattern(pattern=2)] Actual: [3, 10]
-	Request: HttpRequest(method=POST, path=/balance, headers={}, body={
+        assertThat(httpResponse.body).isEqualTo("""In Scenario: POST /balance
+>> REQUEST.PAYLOAD.calls_made
+
+Expected an array of length 3, actual length 2
+
+Request: POST /balance
+
+{
     "calls_made": [
         3,
         10
     ]
-}, queryParams={}, formFields={})
-""")
+}""")
     }
 
     @Test
@@ -179,28 +171,20 @@ Scenario: POST /balance Error:
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10, \"test\"]}")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
-Scenario: POST /balance Error:
-	Request body did not match
-	Expected value at calls_made to match JSONArrayPattern(pattern=[ExactMatchPattern(pattern=3), ExactMatchPattern(pattern=10), LookupPattern(pattern=(number), key=null)]), actual value [
-    3,
-    10,
-    "test"
-] in JSONObject {calls_made=[
-    3,
-    10,
-    "test"
-]}
-	Expected value at index 2 to match (number). Actual value: test in [3, 10, test]
-	test should be a Number
-	Request: HttpRequest(method=POST, path=/balance, headers={}, body={
+        assertThat(httpResponse.body).isEqualTo("""In Scenario: POST /balance
+>> REQUEST.PAYLOAD.calls_made.[2]
+
+Expected number, actual "test"
+
+Request: POST /balance
+
+{
     "calls_made": [
         3,
         10,
         "test"
     ]
-}, queryParams={}, formFields={})
-""")
+}""")
     }
 
     @Test
@@ -235,15 +219,12 @@ Scenario: POST /balance Error:
         val httpRequest = HttpRequest().updatePath("/balance").updateQueryParam("account-id", "abc").updateMethod("GET")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""This request did not match any scenario.
-Scenario: GET /balance?account-id=LookupPattern(pattern=(number), key=account-id) Error:
-	URL did not match
-	Query parameter did not match
-	Expected LookupPattern(pattern=(number), key=account-id), actual abc
-	Expected (number), actual abc
-	"abc" is not a Number
-	Request: HttpRequest(method=GET, path=/balance, headers={}, body=, queryParams={account-id=abc}, formFields={})
-""")
+        assertThat(httpResponse.body).isEqualTo("""In Scenario: GET /balance?account-id=(number)
+>> REQUEST.URL.account-id.QUERY PARAMS
+
+Expected number, actual "abc"
+
+Request: GET /balance?account-id=abc""")
     }
 
     @Test

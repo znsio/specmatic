@@ -27,7 +27,7 @@ data class XMLPattern(val node: Node) : Pattern {
             return Result.Failure("Got null, but expected xml of the form $pattern")
 
         return when (val result = matchesXMLData(sampleData, withNumericStringPattern(resolver))) {
-            is Result.Failure -> result.add("XML did not match")
+            is Result.Failure -> result.reason("XML did not match")
             else -> result
         }
     }
@@ -62,7 +62,7 @@ data class XMLPattern(val node: Node) : Pattern {
                 val sampleValue = XMLValue(sampleNode)
 
                 when (val result = resolver.matchesPattern(sampleNode.nodeName, pattern, sampleValue)) {
-                    is Result.Failure -> result.add("Node ${sampleNode.nodeName} did not match. Expected: ${patternNode.nodeValue} Actual: ${sampleNode.nodeValue}")
+                    is Result.Failure -> result.reason("Node ${sampleNode.nodeName} did not match. Expected: ${patternNode.nodeValue} Actual: ${sampleNode.nodeValue}")
                     else -> result
                 }
             } else {
@@ -106,7 +106,7 @@ data class XMLPattern(val node: Node) : Pattern {
                 val resolvedValue = resolvedPattern.parse(sampleValue, resolver)
 
                 when (val result = resolver.matchesPattern(key, resolvedPattern, resolvedValue)) {
-                    is Result.Failure -> result.add("Node $key did not match. Expected: $patternValue Actual: $sampleValue")
+                    is Result.Failure -> result.reason("Node $key did not match. Expected: $patternValue Actual: $sampleValue")
                     else -> result
                 }
             }
@@ -243,7 +243,7 @@ data class XMLPattern(val node: Node) : Pattern {
             if (row.containsField(parentNodeName)) {
                 if (isPatternToken(node.nodeValue)) {
                     when (val result = findPattern(node.nodeValue).matches(asValue(row.getField(parentNodeName)), resolver)) {
-                        is Result.Failure -> result.add("\"The value \" + row.getField(parentNodeName) + \" does not match the pattern \" + node.nodeValue")
+                        is Result.Failure -> result.reason("\"The value \" + row.getField(parentNodeName) + \" does not match the pattern \" + node.nodeValue")
                         else -> {
                         }
                     }

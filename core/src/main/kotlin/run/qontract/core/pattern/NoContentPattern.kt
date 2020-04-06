@@ -3,6 +3,7 @@ package run.qontract.core.pattern
 import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.mismatchResult
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
@@ -13,11 +14,11 @@ class NoContentPattern : Pattern {
         return when (sampleData) {
             is StringValue -> when (sampleData.string.isEmpty()) {
                 true -> Result.Success()
-                else -> Result.Failure("Expected content to be empty. However it was $sampleData.")
+                else -> mismatchResult("empty string", sampleData)
             }
             is EmptyString, is NullValue -> Result.Success()
             null -> Result.Success()
-            else -> Result.Failure("${sampleData.toDisplayValue()} is not empty.")
+            else -> mismatchResult("empty string", sampleData)
         }
     }
 

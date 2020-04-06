@@ -2,8 +2,6 @@ package run.qontract.core
 
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.w3c.dom.Document
-import org.w3c.dom.Node
 import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.PatternTable.Companion.fromPSV
 import run.qontract.core.pattern.StringPattern
@@ -187,7 +185,6 @@ Feature: Contract for /balance API
 
                 if(requestJSON is JSONObjectValue) {
                     val name = requestJSON.jsonObject.getValue("name") as StringValue
-                    val city = requestJSON.jsonObject.getValue("city") as StringValue
 
                     Assertions.assertEquals("POST", request.method)
 

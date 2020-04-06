@@ -14,7 +14,6 @@ import run.qontract.core.value.Value
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.test.TestExecutor
 import java.net.URI
-import java.util.*
 import kotlin.collections.HashMap
 
 class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
@@ -40,41 +39,10 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
         }
     }
 
-    fun executeTests(suggestions: List<Scenario>, testExecutorFn: TestExecutor): ExecutionInfo {
-        val scenariosWithSuggestions = generateTestScenarios(suggestions)
-        val executionInfo = ExecutionInfo()
-        for (scenario in scenariosWithSuggestions) {
-            executeTest(testExecutorFn, scenario.generateTestScenarios(), executionInfo)
-        }
-        return executionInfo
-    }
-
-    fun executeTests(testExecutorFn: TestExecutor): ExecutionInfo {
-        val executionInfo = ExecutionInfo()
-        for (scenario in scenarios) {
-            executeTest(testExecutorFn, scenario.generateTestScenarios(), executionInfo)
-        }
-        return executionInfo
-    }
-
-    private fun executeTest(testExecutor: TestExecutor, testScenarios: List<Scenario>, executionInfo: ExecutionInfo) {
-        for (testScenario in testScenarios) {
-            executeTest(testExecutor, testScenario, executionInfo)
-        }
-    }
-
-    private fun executeTest(testExecutor: TestExecutor, scenario: Scenario, executionInfo: ExecutionInfo) {
-        testExecutor.setServerState(scenario.serverState)
-        val request = scenario.generateHttpRequest()
-        try {
-            val response = testExecutor.execute(request)
-            scenario.matches(response).record(executionInfo, request, response)
-        } catch (exception: Throwable) {
-            Result.Failure("Error: ${exception.message}")
-                    .also { it.updateScenario(scenario) }
-                    .record(executionInfo, request, null)
-        }
-    }
+    fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results =
+            generateTestScenarios(suggestions).fold(Results()) { results, scenario ->
+                Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
+            }
 
     fun setServerState(serverState: Map<String, Value>) {
         this.serverState.putAll(serverState)
@@ -95,21 +63,21 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
                         when (val responseMatches = scenario.matchesMock(response)) {
                             is Result.Success -> return scenario.generateHttpResponseFrom(response)
                             is Result.Failure -> {
-                                responseMatches.add("Response didn't match the pattern")
+                                responseMatches.reason("Response didn't match the pattern")
                                         .also { failure -> failure.updateScenario(scenario) }
                                 results.add(responseMatches, request, response)
                             }
                         }
                     }
                     is Result.Failure -> {
-                        requestMatches.add("Request didn't match the pattern")
+                        requestMatches.reason("Request didn't match the pattern")
                                 .also { failure -> failure.updateScenario(scenario) }
                         results.add(requestMatches, request, response)
                     }
                 }
             }
 
-            throw NoMatchingScenario(results.generateErrorMessage())
+            throw NoMatchingScenario(results.report())
         } finally {
             serverState = HashMap()
         }
@@ -261,3 +229,18 @@ private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChil
 
 private fun scenarios(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
         featureChildren.filter { it.valueCase.name != "BACKGROUND" }
+
+private fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Triple<Result, HttpRequest, HttpResponse?> {
+    testExecutor.setServerState(scenario.serverState)
+
+    val request = scenario.generateHttpRequest()
+
+    return try {
+        val response = testExecutor.execute(request)
+        Triple(scenario.matches(response), request, response)
+    } catch (exception: Throwable) {
+        Triple(Result.Failure("Error: ${exception.message}")
+                .also { it.updateScenario(scenario) }, request, null)
+
+    }
+}

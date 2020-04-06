@@ -13,18 +13,14 @@ data class AnyPattern(override val pattern: List<Pattern>, override val key: Str
         pattern.asSequence().map {
             resolver.matchesPattern(key, it, sampleData ?: EmptyString)
         }.let { results ->
-            results.find { it is Result.Success } ?: failedToFindAny(pattern, results.toList(), sampleData)
+            results.find { it is Result.Success } ?: failedToFindAny(pattern, results.map { it as Result.Failure }.toList(), sampleData)
         }
 
-    private fun failedToFindAny(pattern: List<Pattern>, results: List<Result>, sampleData: Value?): Result.Failure {
-        val report = pattern.zip(results).map { (pattern, result) ->
-            "Pattern: $pattern, result: $result"
-        }.joinToString("\n")
+    private fun failedToFindAny(pattern: List<Pattern>, results: List<Result.Failure>, sampleData: Value?): Result.Failure {
+        val report = results.joinToString("\n") { it.message }
 
-        return Result.Failure("""Failed to match any of the available patterns.
-            |$report
-            |Value: $sampleData
-        """.trimMargin())
+        return Result.Failure("""${sampleData?.toDisplayValue()} failed to match any of the available patterns:
+$report""".trim())
     }
 
     override fun generate(resolver: Resolver): Value =

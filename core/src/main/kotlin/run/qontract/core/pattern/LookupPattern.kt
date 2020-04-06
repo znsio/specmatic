@@ -1,6 +1,7 @@
 package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
+import run.qontract.core.patternClassNameToString
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 
@@ -32,4 +33,6 @@ data class LookupPattern(override val pattern: String, override val key: String?
         is LookupPattern -> definedPattern.resolvePattern(resolver)
         else -> definedPattern
     }
+
+    override fun toString() = pattern
 }

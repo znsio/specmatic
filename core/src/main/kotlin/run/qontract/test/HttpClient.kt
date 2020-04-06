@@ -13,14 +13,12 @@ import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
-import run.qontract.core.ServerSetupStateException
 import run.qontract.core.startLinesWith
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import run.qontract.fake.toParams
 import java.io.IOException
-import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
 import java.util.*
@@ -75,7 +73,6 @@ class HttpClient(private val baseURL: String) : TestExecutor {
     }
 
     @KtorExperimentalAPI
-    @Throws(MalformedURLException::class, URISyntaxException::class, ServerSetupStateException::class)
     override fun setServerState(serverState: Map<String, Value>) {
         if (serverState.isEmpty()) return
 
@@ -101,7 +98,7 @@ class HttpClient(private val baseURL: String) : TestExecutor {
             ktorResponseToHttpResponse(ktorResponse)
 
             if(ktorResponse.status != HttpStatusCode.OK)
-                throw ServerSetupStateException("Server setup API responded with ${ktorResponse.status}")
+                throw Exception("API responded with ${ktorResponse.status}")
         }
     }
 

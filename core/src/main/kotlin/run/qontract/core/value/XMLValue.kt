@@ -13,9 +13,11 @@ data class XMLValue(val node: Node) : Value {
     override fun toStringValue() = xmlToString(node)
 
     override fun toString() = xmlToString(node)
-    override fun equals(other: Any?) = if(other is XMLValue) { equals(other) } else false
-
-    fun equals(other: XMLValue) = node.isEqualNode(other.node)
+    override fun equals(other: Any?) =
+        when (other) {
+            is XMLValue -> node.isEqualNode(other.node)
+            else -> false
+        }
 
     override fun hashCode(): Int = node.hashCode()
 }

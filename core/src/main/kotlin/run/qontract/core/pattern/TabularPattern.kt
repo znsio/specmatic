@@ -4,7 +4,7 @@ import io.cucumber.messages.Messages
 import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.value.*
-import run.qontract.test.ContractTestException
+import run.qontract.test.SyntaxException
 
 fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) =
         TabularPattern(rows.map { it.cellsList }.map { (key, value) ->
@@ -111,7 +111,7 @@ fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): Li
 
     val key = patternCollection.keys.first()
 
-    return (patternCollection[key] ?: throw ContractTestException("key $key should not be empty in $patternCollection"))
+    return (patternCollection[key] ?: throw SyntaxException("key $key should not be empty in $patternCollection"))
             .flatMap { pattern ->
                 val subLists = patternList<ValueType>(patternCollection - key)
                 subLists.map { generatedPatternMap ->

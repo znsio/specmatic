@@ -1,6 +1,6 @@
 package run.qontract.core
 
-import run.qontract.mock.HttpMockException
+import run.qontract.mock.MockException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import run.qontract.core.value.StringValue
@@ -9,7 +9,7 @@ import kotlin.test.assertEquals
 
 class RequestResponseSerialisationTest {
     @Test
-    @Throws(HttpMockException::class)
+    @Throws(MockException::class)
     fun testRequestSerialisationWithTextBody() {
         val request = HttpRequest()
         request.updateMethod("GET")
@@ -24,7 +24,7 @@ class RequestResponseSerialisationTest {
     }
 
     @Test
-    @Throws(HttpMockException::class)
+    @Throws(MockException::class)
     fun testRequestSerialisationWithJSONBody() {
         val request = HttpRequest()
         request.updateMethod("GET")
@@ -39,7 +39,7 @@ class RequestResponseSerialisationTest {
     }
 
     @Test
-    @Throws(HttpMockException::class)
+    @Throws(MockException::class)
     fun testRequestSerialisationWithXMLBody() {
         val request = HttpRequest()
         request.updateMethod("GET")

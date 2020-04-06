@@ -1,12 +1,12 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.PatternMismatchException
 import run.qontract.core.pattern.PatternTable
 import run.qontract.core.pattern.Row
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.test.SyntaxException
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -33,7 +33,7 @@ internal class ScenarioTest {
     @Test
     fun `should not match when there is an Exception`() {
         val httpResponsePattern = mockk<HttpResponsePattern>(relaxed = true)
-        every { httpResponsePattern.matches(any(), any()) }.throws(PatternMismatchException("message"))
+        every { httpResponsePattern.matches(any(), any()) }.throws(SyntaxException("message"))
         val scenario = Scenario("test", HttpRequestPattern(), httpResponsePattern, HashMap(), LinkedList(), HashMap(), HashMap())
         scenario.matches(HttpResponse()).let {
             assertThat(it is Result.Failure).isTrue()

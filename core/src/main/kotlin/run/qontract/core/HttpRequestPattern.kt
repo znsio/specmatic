@@ -1,7 +1,7 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.*
-import run.qontract.test.ContractTestException.Companion.missingParam
+import run.qontract.test.missingParam
 import java.io.UnsupportedEncodingException
 import java.net.URI
 

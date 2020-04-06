@@ -3,7 +3,6 @@
 package run.qontract.core.utilities
 
 import run.qontract.core.ComponentManifest
-import run.qontract.core.ServerSetupStateException
 import run.qontract.core.utilities.BrokerClient.getContractVersions
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.accept
@@ -18,8 +17,6 @@ import org.w3c.dom.Element
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import org.xml.sax.SAXException
-import run.qontract.core.Resolver
-import run.qontract.core.pattern.NumericStringPattern
 import java.io.*
 import java.net.URL
 import java.util.*
@@ -42,7 +39,7 @@ fun readFromAPI(url: String?): String {
         }
 
         if(ktorResponse.status != HttpStatusCode.OK)
-            throw ServerSetupStateException("Server setup API responded with ${ktorResponse.status}")
+            throw Exception("API responded with ${ktorResponse.status}")
 
         response = ktorResponse.readText()
     }
@@ -89,7 +86,7 @@ fun writeToAPI(method: io.ktor.http.HttpMethod, url: String?, contractMessage: M
         }
 
         if(ktorResponse.status != HttpStatusCode.OK)
-            throw ServerSetupStateException("Server setup API responded with ${ktorResponse.status}")
+            throw Exception("API responded with ${ktorResponse.status}")
 
         response = ktorResponse.readText()
     }

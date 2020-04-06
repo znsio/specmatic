@@ -39,32 +39,6 @@ fun isPatternToken(patternValue: Any?) =
         else -> false
     }
 
-fun convertStringToCorrectType(valueOfUnknownType: Any?): Any {
-    if(valueOfUnknownType == null)
-        throw PatternMismatchException("Cannot convert null values.")
-
-    if (valueOfUnknownType !is String) return valueOfUnknownType
-    valueOfUnknownType.trim().let {
-        try {
-            return it.toInt()
-        } catch (ignored: Exception) {
-        }
-        try {
-            return it.toBigInteger()
-        } catch (ignored: Exception) {
-        }
-        try {
-            return it.toFloat()
-        } catch (ignored: Exception) {
-        }
-        try {
-            return it.toDouble()
-        } catch (ignored: Exception) {
-        }
-        return it
-    }
-}
-
 fun generateValue(value: String, resolver: Resolver): String {
     return if (isPatternToken(value)) {
         findPattern(value).generate(resolver).toStringValue()

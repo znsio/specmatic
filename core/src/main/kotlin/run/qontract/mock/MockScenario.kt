@@ -7,7 +7,7 @@ import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
 
 data class MockScenario(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(), val facts: MutableMap<String, Value> = mutableMapOf()) {
-    @Throws(HttpMockException::class)
+    @Throws(MockException::class)
     fun toJSON(): MutableMap<String, Any> {
         val mockInteraction = mutableMapOf<String, Any>()
         mockInteraction[MOCK_HTTP_REQUEST] = request.toJSON()
@@ -26,8 +26,8 @@ private const val MOCK_HTTP_RESPONSE = "mock-http-response"
 private const val MOCK_FACTS = "mock-facts"
 
 fun validateMock(mockSpec: Map<String, Any?>) {
-    if (!mockSpec.containsKey(MOCK_HTTP_REQUEST)) throw HttpMockException("This spec does not information about the request to be mocked.")
-    if (!mockSpec.containsKey(MOCK_HTTP_RESPONSE)) throw HttpMockException("This spec does not information about the response to be mocked.")
+    if (!mockSpec.containsKey(MOCK_HTTP_REQUEST)) throw MockException("This spec does not information about the request to be mocked.")
+    if (!mockSpec.containsKey(MOCK_HTTP_RESPONSE)) throw MockException("This spec does not information about the response to be mocked.")
 }
 
 fun mockFromJSON(mockSpec: Map<String, Value>): MockScenario {

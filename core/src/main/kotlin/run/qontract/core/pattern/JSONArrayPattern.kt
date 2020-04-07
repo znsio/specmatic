@@ -9,8 +9,6 @@ import java.util.*
 data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) : Pattern {
     constructor(jsonString: String) : this(stringTooPatternArray(jsonString))
 
-    private fun failedMessage(value: JSONArrayValue) = "JSON Array did not match Expected: $pattern Actual: ${value.list}"
-
     @Throws(Exception::class)
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONArrayValue)

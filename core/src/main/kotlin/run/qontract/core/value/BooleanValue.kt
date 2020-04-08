@@ -9,4 +9,4 @@ data class BooleanValue(val booleanValue: Boolean) : Value {
     override fun toString() = booleanValue.toString()
 }
 
-val True = BooleanValue(true)
+public val True = BooleanValue(true)

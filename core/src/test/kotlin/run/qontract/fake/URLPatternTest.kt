@@ -39,11 +39,7 @@ internal class URLPatternTest {
         val urlPattern = toURLPattern(URI("/pets/123/owners/hari"))
         urlPattern.matches(URI("/pets/123/owners"), HashMap(), Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).stackTrace()).isEqualTo(
-                    Stack<String>().also { stack ->
-                        stack.push("Expected /pets/123/owners to have 4 parts, but it has 3 parts.")
-                    }
-            )
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("PATH"), listOf("""Expected /pets/123/owners to have 4 parts, but it has 3 parts.""")))
         }
     }
 

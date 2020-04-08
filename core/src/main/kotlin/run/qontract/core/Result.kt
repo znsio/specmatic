@@ -2,10 +2,8 @@ package run.qontract.core
 
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.Value
-import java.util.*
 
 sealed class Result {
-    abstract fun record(executionInfo: ExecutionInfo, request: HttpRequest, response: HttpResponse?)
 
     var scenario: Scenario? = null
 
@@ -16,9 +14,6 @@ sealed class Result {
     abstract fun isTrue(): Boolean
 
     class Success : Result() {
-        override fun record(executionInfo: ExecutionInfo, request: HttpRequest, response: HttpResponse?) {
-            executionInfo.recordSuccessfulInteraction()
-        }
 
         override fun isTrue() = true
     }
@@ -39,21 +34,6 @@ sealed class Result {
                     else -> reason
                 }
             }
-
-        fun stackTrace(): Stack<String> {
-            val stackTrace = Stack<String>()
-            this.addTo(stackTrace)
-            return stackTrace
-        }
-
-        private fun addTo(stackTrace: Stack<String>) {
-            cause?.addTo(stackTrace)
-            stackTrace.push(this.message)
-        }
-
-        override fun record(executionInfo: ExecutionInfo, request: HttpRequest, response: HttpResponse?) {
-//            executionInfo.recordUnsuccessfulInteraction(this.scenario, this.stackTrace(), request, response)
-        }
 
         override fun isTrue() = false
     }

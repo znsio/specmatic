@@ -67,9 +67,9 @@ Request: GET /balance2?account-id=10""")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
         assertThat(httpResponse.body).isEqualTo("""In scenario "Get balance info"
->> REQUEST.HEADERS
+>> REQUEST.HEADERS.x-loginId
 
-Header x-loginId was missing
+Header is missing
 
 Request: GET /balance
 y-loginId: abc123""".trimIndent())

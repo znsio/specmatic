@@ -3,7 +3,7 @@ package run.qontract.core
 import run.qontract.core.pattern.*
 
 data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var status: Int? = null, private var body: Pattern = NoContentPattern()) : Cloneable {
-    constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers), response.status, parsedPattern(response.body!!))
+    constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { asPattern(it.value, it.key)}), response.status, parsedPattern(response.body!!))
 
     fun bodyPattern(bodyContent: String?) = this.copy(body = parsedPattern(bodyContent!!))
 
@@ -56,8 +56,8 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
 
     private fun matchHeaders(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
-        when (val result = headersPattern.matches(response.headers, resolver)) {
-            is Result.Failure -> return MatchFailure(result.breadCrumb("HEADERS"))
+        when (val result = headersPattern.matches(HashMap(response.headers), resolver)) {
+            is Result.Failure -> return MatchFailure(result)
         }
         return MatchSuccess(parameters)
     }

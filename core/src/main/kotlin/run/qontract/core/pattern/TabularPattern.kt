@@ -46,7 +46,7 @@ fun convertToNumber(value: String): Number {
         } catch (ignored: Exception) {
         }
 
-        throw ContractException("Couldn't convert $value to number")
+        throw ContractException("""Couldn't convert "$value" to number""")
     }
 }
 

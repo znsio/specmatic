@@ -18,7 +18,7 @@ data class AnyPattern(override val pattern: List<Pattern>, override val key: Str
     private fun failedToFindAny(pattern: List<Pattern>, results: List<Result.Failure>, sampleData: Value?): Result.Failure {
         val report = results.joinToString("\n") { it.message }
 
-        return Result.Failure("""${sampleData?.toDisplayValue()} failed to match any of the available patterns:
+        return Result.Failure("""${sampleData?.displayableValue()} failed to match any of the available patterns:
 $report""".trim())
     }
 

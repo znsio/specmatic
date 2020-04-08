@@ -87,20 +87,7 @@ class ContractAsTest {
         assertThat(results.report()).isEqualTo("""In scenario "Get balance"
 >> RESPONSE.HEADERS.length
 
-Couldn't convert "abc" to number
-
-Request: GET /balance
-Content-Type: text/plain
-
-
-Response: 200 OK
-length: abc
-token: test
-
-{
-    "calls_left": 10,
-    "messages_left": 30
-}""")
+Couldn't convert "abc" to number""")
     }
 
     @Test

@@ -9,8 +9,9 @@ data class XMLValue(val node: Node) : Value {
 
     override val httpContentType = "application/xml"
 
-    override fun toDisplayValue(): String = toStringValue()
+    override fun displayableValue(): String = toStringValue()
     override fun toStringValue() = xmlToString(node)
+    override fun displayableType(): String = "xml"
 
     override fun toString() = xmlToString(node)
     override fun equals(other: Any?) =

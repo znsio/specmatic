@@ -54,7 +54,7 @@ internal class HttpHeadersPatternTest {
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
             assertThat((it as Result.Failure).report())
-                    .isEqualTo(FailureReport(listOf("HEADERS", "key"), listOf("Header is missing")))
+                    .isEqualTo(FailureReport(listOf("HEADERS", "key"), listOf("Header was missing")))
         }
     }
 
@@ -96,7 +96,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate new header objects given a row`() {
         val headers = HttpHeadersPattern(mapOf("Content-Type" to asPattern("(string)", "Content-Type")))
-        val newHeaders = headers.newBasedOn(Row())
+        val newHeaders = headers.newBasedOn(Row(), Resolver())
         assertEquals("(string)", newHeaders[0].headers.getValue("Content-Type").toString())
     }
 }

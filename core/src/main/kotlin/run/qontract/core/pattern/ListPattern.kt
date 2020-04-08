@@ -14,12 +14,21 @@ data class ListPattern(override val pattern: Pattern) : Pattern {
 
         return sampleData.list.asSequence().map {
             pattern.matches(it, withNumericStringPattern(resolver))
-        }.find { it is Result.Failure }.let { result ->
+        }.mapIndexed { index, result -> Pair(index, result) }.find { it.second is Result.Failure }?.let { (index, result) ->
             when(result) {
-                is Result.Failure -> result.reason("Expected multiple values of type $pattern, but one of the values didn't match in ${sampleData.list}")
+                is Result.Failure -> result.breadCrumb("[$index]")
                 else -> Result.Success()
             }
-        }
+        } ?: Result.Success()
+
+//        return sampleData.list.asSequence().map {
+//            pattern.matches(it, withNumericStringPattern(resolver))
+//        }.find { it is Result.Failure }.let { result ->
+//            when(result) {
+//                is Result.Failure -> result.reason("Expected multiple values of type $pattern, but one of the values didn't match in ${sampleData.list}")
+//                else -> Result.Success()
+//            }
+//        }
     }
 
     override fun generate(resolver: Resolver): JSONArrayValue =

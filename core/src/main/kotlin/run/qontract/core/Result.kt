@@ -61,10 +61,14 @@ sealed class Result {
 
 data class FailureReport(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList())
 
-fun mismatchResult(expected: String, actual: String): Result.Failure = Result.Failure("Expected $expected, actual $actual")
-fun mismatchResult(expected: String, actual: Value?): Result.Failure = mismatchResult(expected, actual?.toDisplayValue() ?: "null")
-fun mismatchResult(expected: Value, actual: Value?): Result = mismatchResult(expected.toDisplayValue(), actual?.toDisplayValue() ?: "")
+fun mismatchResult(expected: String, actual: String): Result.Failure = Result.Failure("Expected $expected, actual was $actual")
+fun mismatchResult(expected: String, actual: Value?): Result.Failure = mismatchResult(expected, valueError(actual) ?: "null")
+fun mismatchResult(expected: Value, actual: Value?): Result = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "")
 fun mismatchResult(expected: Pattern, actual: String): Result.Failure = mismatchResult(patternClassNameToString(expected), actual)
+
+fun valueError(value: Value?): String? {
+    return value?.let { "${it.displayableType()}: ${it.displayableValue()}" }
+}
 
 fun patternClassNameToString(value: Pattern): String =
         value.javaClass.name.split(".").last().removeSuffix("Pattern").toLowerCase()

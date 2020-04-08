@@ -30,7 +30,7 @@ internal class NumericStringPatternTest {
     fun `should not match String Value that is not a number`() {
         NumericStringPattern().matches(StringValue("text"), Resolver()).let {
             assertThat(it is Result.Success).isFalse()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(emptyList(), listOf("""Expected number, actual "text"""")))
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(emptyList(), listOf("""Expected number, actual was string: "text"""")))
         }
     }
 

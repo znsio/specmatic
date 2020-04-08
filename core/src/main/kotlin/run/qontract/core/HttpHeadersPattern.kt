@@ -29,7 +29,7 @@ data class HttpHeadersPattern(val headers: Map<String, Pattern> = emptyMap()) {
     private fun matchEach(parameters: Pair<Map<String, String>, Resolver>): MatchingResult<Pair<Map<String, String>, Resolver>> {
         val (headers, resolver) = parameters
         this.headers.forEach { (key, pattern) ->
-            val sampleValue = headers[key] ?: return MatchFailure(Result.Failure(message = """Header is missing""", breadCrumb = key))
+            val sampleValue = headers[key] ?: return MatchFailure(Result.Failure(message = """Header was missing""", breadCrumb = key))
 
             try {
                 when (val result = resolver.matchesPattern(key, pattern, attempt(breadCrumb = key) { pattern.parse(sampleValue, resolver) })) {
@@ -55,8 +55,8 @@ data class HttpHeadersPattern(val headers: Map<String, Pattern> = emptyMap()) {
         }
     }
 
-    fun newBasedOn(row: Row): List<HttpHeadersPattern> =
+    fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> =
         multipleValidKeys(headers, row) { pattern ->
-            newBasedOn(pattern, row, Resolver())
+            newBasedOn(pattern, row, resolver)
         }.map { HttpHeadersPattern(it) }
 }

@@ -55,7 +55,7 @@ internal class URLPatternTest {
 
         urlPattern.matches(URI("/pets"), queryParameters, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("petid", "QUERY PARAMS"), listOf("""Expected number, actual "text"""")))
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("petid", "QUERY PARAMS"), listOf("""Expected number, actual was string: "text"""")))
         }
     }
 
@@ -75,7 +75,7 @@ internal class URLPatternTest {
         val queryParameters = HashMap<String, String>()
         urlPattern.matches(URI("/owners/123123"), queryParameters, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("PATH (/owners/123123)"), listOf("""Expected "pets", actual "owners"""")))
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("PATH (/owners/123123)"), listOf("""Expected string: "pets", actual was string: "owners"""")))
         }
     }
 

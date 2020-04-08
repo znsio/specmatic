@@ -21,7 +21,7 @@ internal class HttpRequestPatternTest {
         }
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Result.Failure::class.java)
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "URL", "PATH (/unmatched_path)"), listOf("""Expected "matching_path", actual "unmatched_path"""")))
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "URL", "PATH (/unmatched_path)"), listOf("""Expected string: "matching_path", actual was string: "unmatched_path"""")))
         }
     }
 
@@ -38,7 +38,7 @@ internal class HttpRequestPatternTest {
         }
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "METHOD"), listOf("Expected POST, actual GET")))
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "METHOD"), listOf("Expected POST, actual was GET")))
         }
     }
 

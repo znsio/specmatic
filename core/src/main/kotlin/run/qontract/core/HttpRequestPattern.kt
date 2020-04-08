@@ -153,7 +153,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
         return attempt(breadCrumb = "REQUEST") {
             val newURLMatchers = urlPattern?.newBasedOn(row, resolver.makeCopy()) ?: listOf<URLPattern?>(null)
             val newBodies = attempt(breadCrumb = "BODY") { body.newBasedOn(row, resolver.makeCopy()) }
-            val newHeadersPattern = headersPattern.newBasedOn(row)
+            val newHeadersPattern = headersPattern.newBasedOn(row, resolver.makeCopy())
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
 
             newURLMatchers.flatMap { newURLMatcher ->

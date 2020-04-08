@@ -37,7 +37,7 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpResponsePattern> =
         attempt(breadCrumb = "RESPONSE") {
             body.newBasedOn(row, resolver.makeCopy()).flatMap { newBody ->
-                headersPattern.newBasedOn(row).map { newHeadersPattern ->
+                headersPattern.newBasedOn(row, resolver.makeCopy()).map { newHeadersPattern ->
                     HttpResponsePattern(newHeadersPattern, status, newBody)
                 }
             }

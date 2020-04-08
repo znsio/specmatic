@@ -31,12 +31,7 @@ data class Results(val results: MutableList<Triple<Result, HttpRequest, HttpResp
 }
 
 fun resultReport(result: Result, request: HttpRequest, response: HttpResponse?): String {
-    val firstPart = resultReport(result)
-
-    val requestString = "Request: ${request.toLogString()}"
-    val responseString = response?.let { "Response: ${it.toLogString()}" } ?: ""
-
-    return "$firstPart\n\n$requestString\n$responseString".trim()
+    return resultReport(result)
 }
 
 fun resultReport(result: Result): String {

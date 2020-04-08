@@ -46,9 +46,7 @@ class ContractBehaviourTest {
         assertThat(httpResponse.body).isEqualTo("""In scenario "Get account balance"
 >> REQUEST.URL.PATH (/balance2)
 
-Expected "balance", actual "balance2"
-
-Request: GET /balance2?account-id=10""")
+Expected string: "balance", actual was string: "balance2"""")
     }
 
     @Test
@@ -69,10 +67,7 @@ Request: GET /balance2?account-id=10""")
         assertThat(httpResponse.body).isEqualTo("""In scenario "Get balance info"
 >> REQUEST.HEADERS.x-loginId
 
-Header is missing
-
-Request: GET /balance
-y-loginId: abc123""".trimIndent())
+Header was missing""".trimIndent())
     }
 
     @Test
@@ -145,16 +140,7 @@ y-loginId: abc123""".trimIndent())
         assertThat(httpResponse.body).isEqualTo("""In scenario "Update balance"
 >> REQUEST.BODY.calls_made
 
-Expected an array of length 3, actual length 2
-
-Request: POST /balance
-
-{
-    "calls_made": [
-        3,
-        10
-    ]
-}""")
+Expected an array of length 3, actual length 2""")
     }
 
     @Test
@@ -174,17 +160,7 @@ Request: POST /balance
         assertThat(httpResponse.body).isEqualTo("""In scenario "Update balance"
 >> REQUEST.BODY.calls_made.[2]
 
-Expected number, actual "test"
-
-Request: POST /balance
-
-{
-    "calls_made": [
-        3,
-        10,
-        "test"
-    ]
-}""")
+Expected number, actual was string: "test"""")
     }
 
     @Test
@@ -222,9 +198,7 @@ Request: POST /balance
         assertThat(httpResponse.body).isEqualTo("""In scenario "Get account balance"
 >> REQUEST.URL.account-id.QUERY PARAMS
 
-Expected number, actual "abc"
-
-Request: GET /balance?account-id=abc""")
+Expected number, actual was string: "abc"""")
     }
 
     @Test

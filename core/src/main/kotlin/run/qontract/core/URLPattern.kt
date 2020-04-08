@@ -55,14 +55,13 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
     private fun matchesQuery(sampleQuery: Map<String, String>, resolver: Resolver): Result {
         for (key in queryPattern.keys) {
-            if (!sampleQuery.containsKey(key)) {
-                return Result.Failure("Query parameter $key not present", breadCrumb = "QUERY PARAMS")
-            }
-            val patternValue = queryPattern.getValue(key)
-            val sampleValue = sampleQuery.getValue(key)
+            if (sampleQuery.containsKey(key)) {
+                val patternValue = queryPattern.getValue(key)
+                val sampleValue = sampleQuery.getValue(key)
 
-            when (val result = resolver.matchesPattern(key, patternValue, StringValue(sampleValue))) {
-                is Result.Failure -> return result.breadCrumb("QUERY PARAMS").breadCrumb(key)
+                when (val result = resolver.matchesPattern(key, patternValue, StringValue(sampleValue))) {
+                    is Result.Failure -> return result.breadCrumb("QUERY PARAMS").breadCrumb(key)
+                }
             }
         }
         return Result.Success()
@@ -106,7 +105,14 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         val newURLPathPatternsList = newPathPartsList.map { list -> list.map { it as URLPathPattern } }
 
-        val newQueryParamsList = attempt(breadCrumb = "QUERY PARAMS") { newBasedOn(queryPattern, row, newResolver) }
+//        val newQueryParamsList = attempt(breadCrumb = "QUERY PARAMS") { newBasedOn(queryPattern, row, newResolver) }
+        val newQueryParamsList = attempt(breadCrumb = "QUERY PARAMS") {
+            val optionalQueryParams = queryPattern.mapKeys { "${it.key}?" }
+
+            multipleValidKeys(optionalQueryParams, row) {
+                newBasedOn(it.mapKeys { withoutOptionality(it.key) }, row, newResolver)
+            }
+        }
 
         return newURLPathPatternsList.flatMap { newURLPathPatterns ->
             newQueryParamsList.map { newQueryParams ->

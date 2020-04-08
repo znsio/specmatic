@@ -138,7 +138,7 @@ Then status 200
         val gherkin = """
 Feature: Contract API
 
-Scenario:
+Scenario: Test Contract
 Given fact id
 When GET /value?id=(number)
 Then status 200
@@ -151,7 +151,7 @@ Then status 200
         if(results.failureCount > 0)
             println(results.report())
 
-        kotlin.test.assertEquals(1, results.successCount)
+        kotlin.test.assertEquals(2, results.successCount)
         kotlin.test.assertEquals(0, results.failureCount)
     }
 

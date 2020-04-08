@@ -225,11 +225,18 @@ Couldn't convert "abc" to number""")
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val jsonResponseString = "{calls_left: 20, messages_left: 20}"
+
+        val flags = emptyList<String>().toMutableList()
+
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
-                assertTrue(NumericStringPattern()
-                        .matches(asValue(request.queryParams["account_id"]), Resolver()) is Result.Success)
+                if(request.queryParams.contains("account_id")) {
+                    flags.add("with")
+                    assertTrue(NumericStringPattern()
+                            .matches(asValue(request.queryParams["account_id"]), Resolver()) is Result.Success)
+                } else flags.add("without")
+
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -242,6 +249,7 @@ Couldn't convert "abc" to number""")
         })
 
         assertTrue(results.success(), results.report())
+        assertEquals(mutableListOf("without", "with"), flags)
     }
 
     @Test

@@ -1,6 +1,6 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.PatternTable
+import run.qontract.core.pattern.Examples
 import run.qontract.core.pattern.Row
 import io.mockk.every
 import io.mockk.mockk
@@ -21,7 +21,7 @@ internal class ScenarioTest {
 
     @Test
     fun `should generate two test scenarios when there are two rows in examples`() {
-        val patterns = PatternTable()
+        val patterns = Examples()
         patterns.rows.add(0, Row())
         patterns.rows.add(1, Row())
         val scenario = Scenario("test", HttpRequestPattern(), HttpResponsePattern(), HashMap(), listOf(patterns), HashMap(), HashMap())

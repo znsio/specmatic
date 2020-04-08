@@ -1,7 +1,7 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.Pattern
-import run.qontract.core.pattern.PatternTable
+import run.qontract.core.pattern.Examples
 import run.qontract.core.value.Value
 
 data class ScenarioInfo(
@@ -11,5 +11,5 @@ data class ScenarioInfo(
         val expectedServerState: Map<String, Value> = emptyMap(),
         val patterns: Map<String, Pattern> = emptyMap(),
         val fixtures: Map<String, Value> = emptyMap(),
-        val examples: List<PatternTable> = emptyList()
+        val examples: List<Examples> = emptyList()
 )

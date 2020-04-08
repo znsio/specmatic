@@ -7,7 +7,7 @@ import run.qontract.core.value.True
 import run.qontract.core.value.Value
 import java.lang.StringBuilder
 
-data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: HashMap<String, Value>, val examples: List<PatternTable>, val patterns: HashMap<String, Pattern>, val fixtures: HashMap<String, Value>) {
+data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: HashMap<String, Value>, val examples: List<Examples>, val patterns: HashMap<String, Pattern>, val fixtures: HashMap<String, Value>) {
     private fun serverStateMatches(actualState: HashMap<String, Value>, resolver: Resolver) =
             expectedFacts.keys == actualState.keys &&
                     mapZip(expectedFacts, actualState).all { (key, expectedStateValue, actualStateValue) ->

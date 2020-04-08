@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.NumericStringPattern
-import run.qontract.core.pattern.PatternTable.Companion.fromPSV
+import run.qontract.core.pattern.Examples.Companion.fromPSV
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.pattern.asValue
 import run.qontract.core.value.JSONObjectValue

@@ -169,7 +169,7 @@ data class XMLPattern(val node: Node) : Pattern {
             updateChildNodes(node, resolver)
         } else {
             val nodeValue = node.nodeValue
-            node.nodeValue = generateValue(nodeValue, resolver)
+            node.nodeValue = generateValue(node.nodeName, nodeValue, resolver)
         }
     }
 
@@ -209,7 +209,7 @@ data class XMLPattern(val node: Node) : Pattern {
             attempt(breadCrumb = "[$index]") {
                 val attribute = attributes.item(index)
                 val nodeValue = attribute.nodeValue
-                attribute.nodeValue = generateValue(nodeValue, resolver)
+                attribute.nodeValue = generateValue(attribute.nodeName, nodeValue, resolver)
             }
         }
     }
@@ -269,7 +269,7 @@ data class XMLPattern(val node: Node) : Pattern {
                     item.nodeValue = row.getField(item.nodeName)
                 } else {
                     val value = node.nodeValue
-                    node.nodeValue = generateValue(value, resolver)
+                    node.nodeValue = generateValue(node.nodeName, value, resolver)
                 }
             }
         }

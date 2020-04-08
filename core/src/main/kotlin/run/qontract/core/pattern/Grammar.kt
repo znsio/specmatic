@@ -38,7 +38,7 @@ fun isPatternToken(patternValue: Any?) =
         else -> false
     }
 
-fun generateValue(value: String, resolver: Resolver): String {
+fun generateValue(key: String, value: String, resolver: Resolver): String {
     return if (isPatternToken(value)) {
         findPattern(value).generate(resolver).toStringValue()
     } else value

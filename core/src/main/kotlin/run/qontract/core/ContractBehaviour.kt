@@ -6,7 +6,7 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.Messages.GherkinDocument
 import run.qontract.core.pattern.*
-import run.qontract.core.pattern.PatternTable.Companion.examplesFrom
+import run.qontract.core.pattern.Examples.Companion.examplesFrom
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.True

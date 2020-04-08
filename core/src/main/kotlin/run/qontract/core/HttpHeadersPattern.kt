@@ -17,15 +17,6 @@ data class HttpHeadersPattern(val headers: Map<String, Pattern> = emptyMap()) {
         }
     }
 
-    private fun matches(headers: Map<String, String>, resolver: Resolver): Result {
-        val hashMap: HashMap<String, String> = HashMap()
-        headers.forEach { (key, value) ->
-            hashMap[key] = value
-        }
-
-        return matches(hashMap, resolver)
-    }
-
     private fun matchEach(parameters: Pair<Map<String, String>, Resolver>): MatchingResult<Pair<Map<String, String>, Resolver>> {
         val (headers, resolver) = parameters
         this.headers.forEach { (key, pattern) ->

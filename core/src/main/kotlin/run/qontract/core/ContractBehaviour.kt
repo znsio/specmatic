@@ -89,7 +89,7 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
     fun generateTestScenarios(suggestions: List<Scenario>): List<Scenario> =
         scenarios.map { it.newBasedOn(suggestions) }.flatMap { it.generateTestScenarios() }
 
-    fun generateContractTests(): List<Scenario> =
+    fun generateTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->
             scenario.copy(examples = emptyList()).generateTestScenarios()
         }

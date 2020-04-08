@@ -3,7 +3,7 @@ package run.qontract.core
 import run.qontract.core.pattern.ContractException
 
 fun testBackwardCompatibility(older: ContractBehaviour, newerContract: ContractBehaviour): Results =
-        older.generateContractTests().fold(Results()) { results, olderScenario ->
+        older.generateTestScenarios().fold(Results()) { results, olderScenario ->
             newerContract.setServerState(olderScenario.expectedFacts)
 
             val request = olderScenario.generateHttpRequest()

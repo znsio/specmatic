@@ -243,7 +243,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     fun `contract mock should function without needing complex fixture setup`() {
         val contractGherkin = """Feature: Contract for /locations API
-  Scenario Outline: 
+  Scenario Outline: api call
     * fixture city_list {"cities": [{"city": "Mumbai"}, {"city": "Bangalore"}]}
     * pattern City {"city": "(string)"}
     * pattern Cities {"cities": ["(City...)"]}
@@ -279,7 +279,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     fun `contract mock should be able to match integer in request and response bodies`() {
         val contractGherkin = """Feature: Contract for /number API
-  Scenario Outline:
+  Scenario Outline: api call
     When POST /number
     And request-body (number)
     Then status 200
@@ -297,7 +297,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     fun `should be able to mock out a number in the request for AnyPattern with number or null`() {
         val contractGherkin = """Feature: Contract for /number API
-  Scenario Outline:
+  Scenario Outline: api call
     When POST /number
     And request-body (number?)
     Then status 200
@@ -314,7 +314,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     fun `should be able to mock out a null in the request for AnyPattern with number or null`() {
         val contractGherkin = """Feature: Contract for /number API
-  Scenario Outline:
+  Scenario Outline: api call
     When POST /number
     And request-body (number?)
     Then status 200
@@ -331,7 +331,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     fun `should be able to mock out a number in the response for AnyPattern with number or null`() {
         val contractGherkin = """Feature: Contract for /number API
-  Scenario Outline:
+  Scenario Outline: api call
     When GET /number
     Then status 200
     And response-body (number)
@@ -348,7 +348,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     fun `should be able to mock out an empty response for AnyPattern with number or null`() {
         val contractGherkin = """Feature: Contract for /number API
-  Scenario Outline:
+  Scenario Outline: api call
     When GET /number
     Then status 200
     And response-body (number?)

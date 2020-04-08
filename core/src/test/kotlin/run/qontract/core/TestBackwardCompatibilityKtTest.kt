@@ -8,7 +8,7 @@ internal class TestBackwardCompatibilityKtTest {
         val gherkin1 = """
 Feature: Older contract API
 
-Scenario:
+Scenario: api call
 Given json Value
 | value     | (number) |
 | optional? | (number) |
@@ -20,7 +20,7 @@ Then status 200
         val gherkin2 = """
 Feature: Older contract API
 
-Scenario:
+Scenario: api call
 Given json Value
 | value    | (number) |
 | optional | (number) |
@@ -43,7 +43,7 @@ Then status 200
         val gherkin1 = """
 Feature: Older contract API
 
-Scenario:
+Scenario: api call
 Given json Value
 | value     | (number) |
 | optional? | (number) |
@@ -56,7 +56,7 @@ Then status 200
         val gherkin2 = """
 Feature: Older contract API
 
-Scenario:
+Scenario: api call
 Given json Value
 | value    | (number) |
 | optional? | (number) |
@@ -80,7 +80,7 @@ Then status 200
         val gherkin1 = """
 Feature: Older contract API
 
-Scenario:
+Scenario: api call
 Given json Value
 | value     | (number) |
 | optional? | (number) |
@@ -92,7 +92,7 @@ Then status 200
         val gherkin2 = """
 Feature: Older contract API
 
-Scenario:
+Scenario: api call
 Given json Value
 | value    | (number) |
 | optional? | (number) |
@@ -116,7 +116,7 @@ Then status 200
         val gherkin = """
 Feature: Contract API
 
-Scenario:
+Scenario: api call
 Given fact id
 When POST /value/(id:number)
 Then status 200
@@ -160,7 +160,7 @@ Then status 200
         val gherkin = """
 Feature: Contract API
 
-Scenario:
+Scenario: api call
 When POST /number
 And request-body (number?)
 Then status 200
@@ -182,7 +182,7 @@ Then status 200
         val gherkin = """
 Feature: Contract API
 
-Scenario:
+Scenario: api call
 Given json Number
 | number | (number?) |
 When POST /number
@@ -206,7 +206,7 @@ Then status 200
         val gherkin = """
 Feature: Contract API
 
-Scenario:
+Scenario: api call
 When POST /number
 Then status 200
 And response-body (number?)
@@ -228,7 +228,7 @@ And response-body (number?)
         val gherkin = """
 Feature: Contract API
 
-Scenario:
+Scenario: api call
 Given json Number
 | number | (number?) |
 When POST /number

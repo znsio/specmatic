@@ -3,7 +3,7 @@ Feature: Contract for the balance API
 Background:
   * url "http://localhost:8080"
 
-Scenario:
+Scenario: api call
   Given path "/_mock_setup"
 #  And request {"GET": "/balance", "query": {"account_id": 10}, status: 200, "response-body": "{calls_left: 10, messages_left: 20}"}
   And request {"mock-http-request": {"method": "GET", "path": "/balance", "query": {"account_id": 10}}, "mock-http-response": {"status": 200, "body": "{calls_left: 10, messages_left: 20}"}}

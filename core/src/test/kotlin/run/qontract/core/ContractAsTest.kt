@@ -25,7 +25,7 @@ class ContractAsTest {
     @Throws(Throwable::class)
     fun runContractAsTest() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n" +
@@ -95,7 +95,7 @@ Couldn't convert "abc" to number""")
     fun `should generate request headers`() {
         val contractGherkin = """
             Feature: Contract for /balance API
-                  Scenario:
+                  Scenario: api call
                     When GET /balance
                     And request-header test (number)
                     Then status 200
@@ -118,7 +118,7 @@ Couldn't convert "abc" to number""")
     fun `should generate request headers with examples`() {
         val contractGherkin = """
             Feature: Contract for /balance API
-                  Scenario:
+                  Scenario: api call
                     When GET /balance
                     And request-header x-loginId (string)
                     Then status 200
@@ -144,7 +144,7 @@ Couldn't convert "abc" to number""")
     fun `should be able to generate request body with example id number as string`() {
         val contractGherkin = """
             Feature: Contract for /balance API
-                  Scenario:
+                  Scenario: api call
                     When POST /balance
                     And request-body {"id": "(string)"}
                     Then status 200
@@ -219,7 +219,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun testShouldGenerateQueryParams() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When GET /accounts?account_id=(number)\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
@@ -256,7 +256,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun integerInsideJsonStringShouldNotMatchAsInteger() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n" +
@@ -290,7 +290,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun floatRecognisedInJsonResponse() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n" +
@@ -321,7 +321,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun jsonArrayGeneratedInContractAsTest() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"(string)\", linked_ids: [1,2,3]}\n" +
                 "    Then status 200"
@@ -349,7 +349,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun jsonObjectInJsonArrayGeneratedInContractAsTest() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"(string)\", linked_ids: [1,2,3, {a: \"(number)\", b: \"(string)\"}]}\n" +
                 "    Then status 200"
@@ -380,7 +380,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun xmlMatchedInRequestAndReturnedInResponse() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When POST /accounts\n" +
                 "    And request-body <account><name>John Doe</name><address>(string)</address></account>\n" +
                 "    Then status 200\n" +
@@ -413,7 +413,7 @@ Couldn't convert "abc" to number""")
     fun dataInDatatablesPassedAsFactsDuringSetup() {
         val contractGherkin = """Feature: Contract for /balance API
 
-  Scenario Outline: 
+  Scenario Outline: api call
     Given fact userid
     When GET /accounts?userid=(number)
     Then status 200
@@ -441,7 +441,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun jsonArrayGenerationInRequestBody() {
         val contractGherkin = "Feature: Contract for /locations API\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given pattern Location {\"city\": \"(string)\"}\n" +
                 "    When POST /locations\n" +
                 "    And request-body {\"locations\": [\"(Location*)\"]}\n" +
@@ -453,7 +453,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun jsonArrayGenerationUsingPatternInRequestBody() {
         val contractGherkin = "Feature: Contract for /locations API\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given pattern Location {\"city\": \"(string)\"}\n" +
                 "    And pattern Locations {\"locations\": [\"(Location*)\"]}\n" +
                 "    When POST /locations\n" +
@@ -487,7 +487,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun jsonArrayGenerationInResponseBody() {
         val contractGherkin = "Feature: Contract for /locations API\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given pattern Location {\"city\": \"(string)\"}\n" +
                 "    When GET /locations\n" +
                 "    Then status 200\n" +
@@ -499,7 +499,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun jsonArrayGenerationUsingPatternInResponseBody() {
         val contractGherkin = "Feature: Contract for /locations API\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given pattern Location {\"city\": \"(string)\"}\n" +
                 "    And pattern Locations {\"locations\": [\"(Location*)\"]}\n" +
                 "    When GET /locations\n" +
@@ -527,7 +527,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun xmlArrayGenerationInRequestBody() {
         val contractGherkin = "Feature: Contract for /locations API\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given pattern Location <city>(string)</city>\n" +
                 "    When POST /locations\n" +
                 "    And request-body <locations>(Location...)</locations>\n" +
@@ -539,7 +539,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun xmlArrayGenerationUsingPatternInRequestBody() {
         val contractGherkin = "Feature: Contract for /locations API\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given pattern Location <city>(string)</city>\n" +
                 "    And pattern Locations <locations>(Location...)</locations>\n" +
                 "    When POST /locations\n" +
@@ -583,7 +583,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun xmlArrayGenerationInResponseBody() {
         val contractGherkin = "Feature: Contract for /locations API\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given pattern Location <city>(string)</city>\n" +
                 "    When GET /locations\n" +
                 "    Then status 200\n" +
@@ -595,7 +595,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun xmlArrayGenerationUsingPatternInResponseBody() {
         val contractGherkin = "Feature: Contract for /locations API\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given pattern Location <city>(string)</city>\n" +
                 "    And pattern Locations <locations>(Location*)</locations>\n" +
                 "    When GET /locations\n" +
@@ -623,7 +623,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun serverSetupDoneUsingFixtureDataWithoutTables() {
         val contractGherkin = "Feature: Contract for /locations API\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    * fixture cities {\"cities\": [{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}]}\n" +
                 "    * pattern City {\"city\": \"(string)\"}\n" +
                 "    * pattern Cities {\"cities\": [\"(City*)\"]}\n" +
@@ -655,7 +655,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     fun serverSetupDoneUsingFixtureDataWithTables() {
         val contractGherkin = """Feature: Contract for /locations API
-  Scenario Outline: 
+  Scenario Outline: api call
     * fixture city_list {"cities": [{"city": "Mumbai"}, {"city": "Bangalore"}]}
     * pattern City {"city": "(string)"}
     * pattern Cities {"cities": ["(City*)"]}
@@ -793,13 +793,13 @@ Scenario: GET and POST number
     @Test
     fun `when a contract is run as test against another contract fake, it should fail if the two contracts are incompatible`() {
         val oldContract = """Feature: Contract
-Scenario:
+Scenario: api call
 Given GET /
 Then status 200
 """
 
         val newContract = """Feature: Contract
-Scenario:
+Scenario: api call
 Given GET /d
 Then status 200"""
 

@@ -18,7 +18,7 @@ class ContractFakeShouldRunOverTCP {
         @JvmStatic
         fun startContractServerWithSingleFeature() {
             val data = "Feature: Contract for /balance API\n\n" +
-                    "  Scenario: \n\n" +
+                    "  Scenario: api call\n\n" +
                     "    When GET /balance?account_id=10\n" +
                     "    Then status 200\n" +
                     "    And response-body {calls_left: 10, messages_left: 20}\n\n" +
@@ -44,7 +44,7 @@ class ContractFakeShouldRunOverTCP {
                     "    When POST /locations_xml\n" +
                     "    And request-body <locations>(Location...)</locations>\n" +
                     "    Then status 200\n" +
-                    "  Scenario: \n\n" +
+                    "  Scenario: api call\n\n" +
                     "    Given fact account_id 10\n" +
                     "    When GET /balance?account_id=10\n" +
                     "    Then status 200\n" +

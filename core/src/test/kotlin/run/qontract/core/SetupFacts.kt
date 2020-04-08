@@ -19,7 +19,7 @@ class SetupFacts {
         val contractGherkin = "" +
                 "Feature: Contract for /balance API" +
                 "\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given fact {account_id: 54321}\n" +
                 "    When GET /balance?account_id=54321\n" +
                 "    Then status 200\n" +
@@ -34,7 +34,7 @@ class SetupFacts {
         val contractGherkin = "" +
                 "Feature: Contract for /balance API" +
                 "\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given fact account_id 54321\n" +
                 "    When GET /balance?account_id=54321\n" +
                 "    Then status 200\n" +
@@ -64,7 +64,7 @@ class SetupFacts {
     fun contractTestShouldSetupExpectedServerState() {
         val contractGherkin = "" +
                 "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given fact user jack\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"jack\", address: \"(string)\"}\n" +
@@ -93,7 +93,7 @@ class SetupFacts {
         val contractGherkin = """
 Feature: Contract for /balance API
 
-  Scenario: 
+  Scenario: api call
     Given fact id 10
     When POST /accounts
     And request-body {"name": "jack", "id": "(number)", "address": "(string)"}
@@ -124,7 +124,7 @@ Feature: Contract for /balance API
         val contractGherkin = """
 Feature: Contract for /balance API
 
-  Scenario: 
+  Scenario: api call
     Given fact id (number)
     When POST /accounts
     And request-body {"name": "jack", "id": "(number)", "address": "(string)"}
@@ -153,13 +153,13 @@ Feature: Contract for /balance API
     fun theRightScenarioShouldBePickedUpBasedOnServerState() {
         val contractGherkin = "" +
                 "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given fact user jack\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"jack\", address: \"(string)\"}\n" +
                 "    Then status 409\n" +
                 "\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given fact no_user\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"john\", address: \"(string)\"}\n" +
@@ -234,7 +234,7 @@ Feature: Contract for /balance API
     @Throws(Throwable::class)
     fun matchUserIdGivenInSetupAgainstUserIdPassed() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given fact userid\n" +
                 "    When GET /accounts?userid=(number)\n" +
                 "    Then status 200\n" +
@@ -258,7 +258,7 @@ Feature: Contract for /balance API
     @Throws(Throwable::class)
     fun factMatchesSpecifiedValueInJSONRequestBody() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given fact account_id\n" +
                 "    When POST /account\n" +
                 "    And request-body {\"account_id\": \"(number)\"}\n" +
@@ -284,7 +284,7 @@ Feature: Contract for /balance API
     @Throws(Throwable::class)
     fun factMatchesSpecifiedValueInXMLRequestBody() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given fact account_id\n" +
                 "    When POST /account\n" +
                 "    And request-body <account_id>(number)</account_id>\n" +
@@ -310,7 +310,7 @@ Feature: Contract for /balance API
     @Throws(Throwable::class)
     fun factMatchesSpecifiedValueInXMLRequestBodyInAttributes() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n" +
+                "  Scenario: api call\n" +
                 "    Given fact account_id\n" +
                 "    When POST /account\n" +
                 "    And request-body <account account_id=\"(number)\">(string)</account>\n" +

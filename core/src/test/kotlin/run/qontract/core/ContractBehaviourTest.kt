@@ -75,7 +75,7 @@ Header was missing""".trimIndent())
     fun `should generate response headers`() {
         val contractGherkin = """
                 Feature: Contract for /balance API
-                  Scenario:
+                  Scenario: api call
                     When GET /balance
                     Then status 200
                     And response-header token test
@@ -95,7 +95,7 @@ Header was missing""".trimIndent())
     fun `should match integer token in query params`() {
         val contractGherkin = """
                 Feature: Contract for /balance API
-                  Scenario:
+                  Scenario: api call
                     When GET /balance?account-id=(number)
                     Then status 200
                     And response-body {calls_left: 10, messages_left: 30}
@@ -113,7 +113,7 @@ Header was missing""".trimIndent())
     @Throws(Throwable::class)
     fun `should match JSON array in request`() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When POST /balance\n" +
                 "    And request-body {calls_made: [3, 10, \"(number)\"]}\n" +
                 "    Then status 200"
@@ -167,7 +167,7 @@ Expected number, actual was string: "test"""")
     @Throws(Throwable::class)
     fun floatRecognisedInQueryParams() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When GET /balance?account-id=(number)\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: 10, messages_left: 30}"
@@ -205,7 +205,7 @@ Expected number, actual was string: "abc"""")
     @Throws(Throwable::class)
     fun matchStringTokenInQueryParams() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When GET /balance?account-id=(string)\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: 10, messages_left: 30}"
@@ -225,7 +225,7 @@ Expected number, actual was string: "abc"""")
         val contractGherkin = """
 Feature: Contract for /balance API
 
-  Scenario: 
+  Scenario: api call
 
     When POST /accounts
     And request-body {name: "(string)", address: "(string)"}
@@ -245,11 +245,11 @@ Feature: Contract for /balance API
     @Throws(Throwable::class)
     fun matchMultipleScenarios() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When GET /balance?id=(number)\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n"
@@ -275,7 +275,7 @@ Feature: Contract for /balance API
     @Throws(Throwable::class)
     fun scenarioMatchesWhenFactIsSetupWithoutFixtureData() {
         val contractGherkin = """Feature: Contract for /locations API
-  Scenario Outline: 
+  Scenario Outline: api call
     * fixture city_list {"cities": [{"city": "Mumbai"}, {"city": "Bangalore"}]}
     * pattern City {"city": "(string)"}
     * pattern Cities {"cities": ["(City...)"]}
@@ -310,7 +310,7 @@ Feature: Contract for /balance API
     @Throws(Throwable::class)
     fun scenarioOutlineRunsLikeAnEmptyScenario() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario Outline: \n\n" +
+                "  Scenario Outline: api call\n\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n" +
@@ -335,13 +335,13 @@ Feature: Contract for /balance API
                 * pattern Person {name: "(string)", address: "(string)"}
                 * pattern Info {calls_left: "(number)", messages_left: "(number)"}
             
-              Scenario:
+              Scenario: api call
                 When POST /accounts1
                 And request-body (Person)
                 Then status 200
                 And response-body (Info)
             
-              Scenario:
+              Scenario: api call
                 When POST /accounts2
                 And request-body (Person)
                 Then status 200
@@ -370,7 +370,7 @@ Feature: Contract for /balance API
         val contractGherkin = """
             Feature: Contract for /balance API
             
-              Scenario Outline: 
+              Scenario Outline: api call
             
                 Given fact id 10
                 When GET /accounts/(id:number)
@@ -397,7 +397,7 @@ Feature: Contract for /balance API
         val contractGherkin = """
             Feature: Contract for /balance API
             
-              Scenario: 
+              Scenario: api call
                 Given fact id 10
                 When GET /accounts/(id:number)
                 Then status 200
@@ -423,7 +423,7 @@ Feature: Contract for /balance API
         val contractGherkin = """
             Feature: Contract for /account API
             
-              Scenario: 
+              Scenario: api call
                 When POST /account
                   And request-body (number)
                 Then status 200
@@ -782,12 +782,12 @@ Then status 200
         private fun singleFeatureContractSource(): Stream<Arguments> {
             val featureData = arrayOf(
                     "Feature: Contract for /balance API\n\n" +
-                            "  Scenario: \n\n" +
+                            "  Scenario: api call\n\n" +
                             "    When GET /balance?account-id=10\n" +
                             "    Then status 200\n" +
                             "    And response-body {calls_left: 10, messages_left: 20}",
                     "Feature: Contract for /balance API\n\n" +
-                            "  Scenario: \n\n" +
+                            "  Scenario: api call\n\n" +
                             "    When GET /balance?account-id=20\n" +
                             "    Then status 200\n" +
                             "    And response-body {calls_left: 10, messages_left: 30}"

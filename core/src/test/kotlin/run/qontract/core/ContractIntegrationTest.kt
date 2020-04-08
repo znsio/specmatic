@@ -13,7 +13,7 @@ class ContractIntegrationTest {
     fun shouldInvokeTargetUsingServerState() {
         val contractGherkin = "" +
                 "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given fact user jack\n" +
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"jack\", address: \"Mumbai\"}\n" +

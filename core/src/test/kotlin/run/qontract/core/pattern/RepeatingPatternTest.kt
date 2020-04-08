@@ -20,7 +20,7 @@ internal class RepeatingPatternTest {
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given pattern Id
 | id | (number) |
 """.trim()

@@ -79,7 +79,7 @@ class ContractTests {
         val gherkin = """
 Feature: Older contract API
 
-Scenario:
+Scenario: api call
 Given json Value
 | value     | (number) |
 | optional? | (number) |
@@ -117,7 +117,7 @@ Then status 200
         val gherkin = """
 Feature: Older contract API
 
-Scenario:
+Scenario: api call
 Given json Value
 | value     | (number) |
 | optional? | (number) |
@@ -155,7 +155,7 @@ Examples:
         val gherkin = """
 Feature: Contract API
 
-Scenario:
+Scenario: api call
 Given json Value
 | value     | (number?) |
 When POST /value
@@ -193,7 +193,7 @@ Then status 200
         val gherkin = """
 Feature: Math API
 
-Scenario:
+Scenario: api call
 When POST /square
     And form-field number (number)
 Then status 200
@@ -223,7 +223,7 @@ Then status 200
         val gherkin = """
 Feature: Math API
 
-Scenario:
+Scenario: api call
 When POST /square
     And form-field number (number)
 Then status 200
@@ -253,7 +253,7 @@ Then status 200
         val gherkin = """
 Feature: Math API
 
-Scenario:
+Scenario: api call
 When POST /square
     And form-field
     | number | (number) |
@@ -325,7 +325,7 @@ Then status 200
         val gherkin = """
 Feature: Math API
 
-Scenario:
+Scenario: api call
 Given json Input
 | value | (number?) |
 When POST /square
@@ -366,7 +366,7 @@ Then status 200
         val gherkin = """
 Feature: Math API
 
-Scenario:
+Scenario: api call
 When POST /square
     And request-body (number?)
 Then status 200
@@ -402,7 +402,7 @@ Then status 200
         val gherkin = """
 Feature: Math API
 
-Scenario:
+Scenario: api call
 When POST /square
     And request-body (number)
 Then status 200
@@ -428,7 +428,7 @@ Then status 200
         val gherkin = """
 Feature: Math API
 
-Scenario:
+Scenario: api call
 Given json Input
 | number | (number) |
 When POST /square
@@ -469,7 +469,7 @@ Examples:
         val gherkin = """
 Feature: Math API
 
-Scenario:
+Scenario: api call
 Given json Input
 | number | (number?) |
 When POST /square
@@ -509,7 +509,7 @@ Examples:
         val gherkin = """
 Feature: Dumb API
 
-Scenario:
+Scenario: api call
 When POST /acceptNumber
 And request-body (number*)
 Then status 200

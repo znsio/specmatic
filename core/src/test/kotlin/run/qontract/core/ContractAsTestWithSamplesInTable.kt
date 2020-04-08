@@ -32,7 +32,7 @@ class ContractAsTestWithSamplesInTable {
     fun GETAndResponseBodyGeneratedThroughDataTableWithPathParams() {
         val contractGherkin = """Feature: Contract for /balance API
 
-  Scenario Outline: 
+  Scenario Outline: api call
     When GET /balance/(account_id:number)
     Then status 200
     And response-body {calls_left: "(number)", messages_left: "(number)"}
@@ -81,7 +81,7 @@ class ContractAsTestWithSamplesInTable {
         val contractGherkin = """
 Feature: Contract for /balance API
 
-  Scenario Outline: 
+  Scenario Outline: api call
     When POST /account
     And request-body {"name": "(string)", "city": "(string)"}
     Then status 200
@@ -101,7 +101,7 @@ Feature: Contract for /balance API
         val contractGherkin = """
 Feature: Contract for /balance API
 
-  Scenario Outline: 
+  Scenario Outline: api call
     When POST /account
     And request-body {"name": "(string)", "city": "(string)"}
     Then status 200
@@ -124,7 +124,7 @@ Feature: Contract for /balance API
         val contractGherkin = """
 Feature: Contract for /balance API
 
-  Scenario Outline: 
+  Scenario Outline: api call
     Given pattern Person {"name": "(string)", "address": "(Address)"}
     And pattern Address {"city": "(string)"}
     When POST /account
@@ -222,7 +222,7 @@ Feature: Contract for /balance API
     fun POSTBodyAndResponseXMLGeneratedThroughDataTable() {
         val contractGherkin = """Feature: Contract for /balance API
 
-  Scenario Outline: 
+  Scenario Outline: api call
     When POST /account
     And request-body <account><name>(string)</name><city>(string)</city></account>
     Then status 200

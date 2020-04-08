@@ -16,7 +16,7 @@ class TabularPatternTest {
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given pattern Id
 | id   | (number) |
 """.trim()
@@ -32,7 +32,7 @@ Given pattern Id
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given pattern Id
 | id   | 10 |
 """.trim()
@@ -48,7 +48,7 @@ Given pattern Id
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given pattern Id
 | id   | "10" |
 """.trim()
@@ -64,7 +64,7 @@ Given pattern Id
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given pattern Status
 | status1 | true     |
 | status2 | (boolean) |
@@ -81,7 +81,7 @@ Given pattern Status
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given pattern Id
 | id   | "12345" |
 """.trim()
@@ -97,7 +97,7 @@ Given pattern Id
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given pattern Ids
 | ids | (Id*) |
 
@@ -122,7 +122,7 @@ Given pattern Id
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given pattern Ids
 | ids | (number*) |
 """.trim()
@@ -143,7 +143,7 @@ Given pattern Ids
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given pattern User
 | id   | (number) |
 | name | (string) |
@@ -213,7 +213,7 @@ And pattern Address
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given request-body
 | nothing | (null) |
 """.trim()
@@ -230,7 +230,7 @@ Given request-body
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given request-body
 | nothing | (null) |
 """.trim()
@@ -248,7 +248,7 @@ Given request-body
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given request-body
 | nothing | (string?) |
 """.trim()
@@ -273,7 +273,7 @@ Given request-body
         val gherkin = """
 Feature: test feature
 
-Scenario:
+Scenario: api call
 Given request-body
 | nothing | (string) |
 """.trim()

@@ -18,7 +18,7 @@ class PatternDefinitionTests {
     @Throws(Throwable::class)
     fun aliasANewPrimitivePattern() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given pattern NewNumber (number) \n" +
                 "    When GET /accounts?id=(NewNumber)\n" +
                 "    Then status 200\n" +
@@ -35,7 +35,7 @@ class PatternDefinitionTests {
     @Throws(Throwable::class)
     fun declareANewComplexJSONPattern() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given pattern Address {\"city\": \"(string)\"} \n" +
                 "    When POST /accounts\n" +
                 "    And request-body {\"name\": \"(string)\", \"address\": \"(Address)\"}\n" +
@@ -50,7 +50,7 @@ class PatternDefinitionTests {
     @Throws(Throwable::class)
     fun declareANewComplexXMLPattern() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given pattern Location <city>(string)</city> \n" +
                 "    When POST /locations\n" +
                 "    And request-body <location>(Location)</location> \n" +
@@ -65,7 +65,7 @@ class PatternDefinitionTests {
     @Throws(Throwable::class)
     fun matchVariableLengthArraysInJSONRequest() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given pattern Address {\"city\": \"(string)\"}\n" +
                 "    When POST /addresses\n" +
                 "    And request-body {\"addresses\": [\"(Address...)\"]}\n" +
@@ -81,7 +81,7 @@ class PatternDefinitionTests {
     @Throws(Throwable::class)
     fun matchVariableLengthArraysInXMLRequest() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given pattern Location <city>(string)</city> \n" +
                 "    When POST /locations\n" +
                 "    And request-body <locations>(Location*)</locations>\n" +
@@ -97,7 +97,7 @@ class PatternDefinitionTests {
     @Throws(Throwable::class)
     fun generateVariableLengthArraysInJSONResponse() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given pattern Address {\"city\": \"(string)\"}\n" +
                 "    When GET /addresses\n" +
                 "    Then status 200\n" +
@@ -119,7 +119,7 @@ class PatternDefinitionTests {
     @Throws(Throwable::class)
     fun generateVariableLengthArraysInXMLResponse() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given pattern Location <city>(string)</city> \n" +
                 "    When GET /locations\n" +
                 "    Then status 200\n" +
@@ -144,7 +144,7 @@ class PatternDefinitionTests {
     @Throws(Throwable::class)
     fun matchTopLevelPatternInRequest() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given pattern Person {\"id\": \"(number)\", \"name\": \"(string)\"} \n" +
                 "    When POST /accounts\n" +
                 "    And request-body (Person)\n" +
@@ -159,7 +159,7 @@ class PatternDefinitionTests {
     @Throws(Throwable::class)
     fun matchTopLevelPatternInResponse() {
         val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given pattern Person {\"id\": \"(number)\", \"name\": \"(string)\"} \n" +
                 "    When GET /accounts?id=(number)\n" +
                 "    Then status 200\n" +
@@ -176,7 +176,7 @@ class PatternDefinitionTests {
     @Throws(Throwable::class)
     fun generateTopLevelArrayInRequestAndResponse() {
         val contractGherkin = "Feature: Contract for updating accounts API\n\n" +
-                "  Scenario: \n\n" +
+                "  Scenario: api call\n\n" +
                 "    Given pattern Person {\"id\": \"(number)\", \"name\": \"(string)\"} \n" +
                 "    And pattern People [\"(Person...)\"] \n" +
                 "    And pattern Id {\"id\": \"(number)\"}\n" +

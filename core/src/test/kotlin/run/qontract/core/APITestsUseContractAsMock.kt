@@ -19,7 +19,7 @@ internal class APITestsUseContractAsMock {
         @JvmStatic
         fun setup() {
             val contractGherkin = "Feature: Contract for /balance API\n\n" +
-                    "  Scenario: \n\n" +
+                    "  Scenario: api call\n\n" +
                     "    When GET /balance?account_id=(number)\n" +
                     "    Then status 200\n" +
                     "    And response-body {calls_left: 10, messages_left: 20}"

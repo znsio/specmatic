@@ -36,15 +36,15 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpResponsePattern> =
         attempt(breadCrumb = "RESPONSE") {
-            body.newBasedOn(row, resolver.makeCopy()).flatMap { newBody ->
-                headersPattern.newBasedOn(row, resolver.makeCopy()).map { newHeadersPattern ->
+            body.newBasedOn(row, resolver).flatMap { newBody ->
+                headersPattern.newBasedOn(row, resolver).map { newHeadersPattern ->
                     HttpResponsePattern(newHeadersPattern, status, newBody)
                 }
             }
         }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) =
-            matches(response, resolver.makeCopy(true, mapOf("(number)" to NumericStringPattern())))
+            matches(response, resolver.copy(matchPatternInValue = true, patterns = resolver.patterns.plus(mapOf("(number)" to NumericStringPattern()))))
 
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, _) = parameters

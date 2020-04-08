@@ -9,9 +9,6 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
     constructor(facts: Map<String, Value> = emptyMap(), matchPattern: Boolean = false, patterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), matchPattern, patterns)
     constructor() : this(emptyMap(), false)
 
-    fun makeCopy(): Resolver = copy(patterns = patterns)
-    fun makeCopy(matchPattern: Boolean, newPatterns: Map<String, Pattern>): Resolver = copy(matchPatternInValue = matchPattern, patterns = patterns.plus(newPatterns))
-
     fun matchesPattern(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
         if (matchPatternInValue &&
                 sampleValue is StringValue && isPatternToken(sampleValue.string) &&

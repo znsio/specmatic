@@ -59,7 +59,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     private fun matchHeaders(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
         val headers = httpRequest.headers
-        when (val result = this.headersPattern.matches(headers, resolver.makeCopy())) {
+        when (val result = this.headersPattern.matches(headers, resolver)) {
             is Result.Failure -> return MatchFailure(result)
         }
         return MatchSuccess(parameters)
@@ -88,7 +88,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
         urlPattern.let {
             val result = urlPattern!!.matches(URI(httpRequest.path!!),
                     httpRequest.queryParams,
-                    resolver.makeCopy())
+                    resolver)
             return if (result is Result.Failure)
                 MatchFailure(result.breadCrumb("URL"))
             else
@@ -119,8 +119,8 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
             }
             newRequest.updateMethod(method!!)
             attempt(breadCrumb = "URL") {
-                newRequest.updatePath(urlPattern!!.generatePath(resolver.makeCopy()))
-                val queryParams = urlPattern!!.generateQuery(resolver.makeCopy())
+                newRequest.updatePath(urlPattern!!.generatePath(resolver))
+                val queryParams = urlPattern!!.generateQuery(resolver)
                 for (key in queryParams.keys) {
                     newRequest.updateQueryParam(key, queryParams[key] ?: "")
                 }
@@ -151,9 +151,9 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
         return attempt(breadCrumb = "REQUEST") {
-            val newURLMatchers = urlPattern?.newBasedOn(row, resolver.makeCopy()) ?: listOf<URLPattern?>(null)
-            val newBodies = attempt(breadCrumb = "BODY") { body.newBasedOn(row, resolver.makeCopy()) }
-            val newHeadersPattern = headersPattern.newBasedOn(row, resolver.makeCopy())
+            val newURLMatchers = urlPattern?.newBasedOn(row, resolver) ?: listOf<URLPattern?>(null)
+            val newBodies = attempt(breadCrumb = "BODY") { body.newBasedOn(row, resolver) }
+            val newHeadersPattern = headersPattern.newBasedOn(row, resolver)
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
 
             newURLMatchers.flatMap { newURLMatcher ->

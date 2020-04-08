@@ -3,7 +3,6 @@ package run.qontract.core.utilities
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.json.*
 import kotlinx.serialization.stringify
-import run.qontract.core.ContractParseException
 import run.qontract.core.pattern.*
 import run.qontract.core.value.*
 
@@ -58,7 +57,7 @@ fun toPattern(jsonElement: JsonElement): Pattern {
         is JsonObject -> JSONObjectPattern(jsonElement.toMap().mapValues { toPattern(it.value) })
         is JsonArray -> JSONArrayPattern(jsonElement.toList().map { toPattern(it) })
         is JsonLiteral -> toLiteralPattern(jsonElement)
-        else -> throw ContractParseException("Unknown value type: ${jsonElement.javaClass.name}")
+        else -> throw ContractException("Unknown value type: ${jsonElement.javaClass.name}")
     }
 }
 
@@ -69,7 +68,7 @@ fun toLiteralPattern(jsonElement: JsonLiteral): Pattern =
         jsonElement.intOrNull != null -> ExactMatchPattern(NumberValue(jsonElement.int))
         jsonElement.longOrNull != null -> ExactMatchPattern(NumberValue(jsonElement.long))
         jsonElement.floatOrNull != null -> ExactMatchPattern(NumberValue(jsonElement.float))
-        else -> throw ContractParseException("Can't recognise the type of $jsonElement")
+        else -> throw ContractException("Can't recognise the type of $jsonElement")
     }
 
 private fun toValue(jsonElement: JsonElement): Value =
@@ -78,7 +77,7 @@ private fun toValue(jsonElement: JsonElement): Value =
         is JsonObject -> JSONObjectValue(jsonElement.toMap().mapValues { toValue(it.value) })
         is JsonArray -> JSONArrayValue(jsonElement.toList().map { toValue(it) })
         is JsonLiteral -> toLiteralValue(jsonElement)
-        else -> throw ContractParseException("Unknown value type: ${jsonElement.javaClass.name}")
+        else -> throw ContractException("Unknown value type: ${jsonElement.javaClass.name}")
     }
 
 fun toLiteralValue(jsonElement: JsonLiteral): Value =

@@ -33,6 +33,6 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 }
 
 fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String, Value> =
-    jsonPattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, value) ->
-        asPattern(value, key).generate(resolver)
+    jsonPattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
+        attempt(breadCrumb = key) { resolver.generate(key, pattern) }
     }

@@ -7,7 +7,7 @@ import java.util.*
 sealed class Result {
     abstract fun record(executionInfo: ExecutionInfo, request: HttpRequest, response: HttpResponse?)
 
-    lateinit var scenario: Scenario
+    var scenario: Scenario? = null
 
     fun updateScenario(scenario: Scenario) {
         this.scenario = scenario
@@ -52,7 +52,7 @@ sealed class Result {
         }
 
         override fun record(executionInfo: ExecutionInfo, request: HttpRequest, response: HttpResponse?) {
-            executionInfo.recordUnsuccessfulInteraction(this.scenario, this.stackTrace(), request, response)
+//            executionInfo.recordUnsuccessfulInteraction(this.scenario, this.stackTrace(), request, response)
         }
 
         override fun isTrue() = false

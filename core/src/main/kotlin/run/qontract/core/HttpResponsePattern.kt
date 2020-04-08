@@ -12,10 +12,12 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
     }
 
     fun generateResponse(resolver: Resolver): HttpResponse {
-        val value = body.generate(resolver)
-        val headers = headersPattern.generate(resolver)
-        headers["Content-Type"] = value.httpContentType
-        return HttpResponse(status!!, value.toString(), headers)
+        return attempt(breadCrumb = "RESPONSE") {
+            val value = body.generate(resolver)
+            val headers = headersPattern.generate(resolver)
+            headers["Content-Type"] = value.httpContentType
+            HttpResponse(status!!, value.toString(), headers)
+        }
     }
 
     fun matches(response: HttpResponse, resolver: Resolver): Result {
@@ -33,9 +35,11 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpResponsePattern> =
-        body.newBasedOn(row, resolver.makeCopy()).flatMap { newBody ->
-            headersPattern.newBasedOn(row).map { newHeadersPattern ->
-                HttpResponsePattern(newHeadersPattern, status, newBody)
+        attempt(breadCrumb = "RESPONSE") {
+            body.newBasedOn(row, resolver.makeCopy()).flatMap { newBody ->
+                headersPattern.newBasedOn(row).map { newHeadersPattern ->
+                    HttpResponsePattern(newHeadersPattern, status, newBody)
+                }
             }
         }
 
@@ -62,7 +66,7 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
         val (response, resolver) = parameters
         val resolverWithNumericString = resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern()))
         when (val result = body.matches(parsedValue(response.body), resolverWithNumericString)) {
-            is Result.Failure -> return MatchFailure(result.breadCrumb("PAYLOAD"))
+            is Result.Failure -> return MatchFailure(result.breadCrumb("BODY"))
         }
         return MatchSuccess(parameters)
     }

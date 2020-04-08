@@ -2,6 +2,7 @@ package run.qontract.mock
 
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.requestFromJSON
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
@@ -26,8 +27,8 @@ private const val MOCK_HTTP_RESPONSE = "mock-http-response"
 private const val MOCK_FACTS = "mock-facts"
 
 fun validateMock(mockSpec: Map<String, Any?>) {
-    if (!mockSpec.containsKey(MOCK_HTTP_REQUEST)) throw MockException("This spec does not information about the request to be mocked.")
-    if (!mockSpec.containsKey(MOCK_HTTP_RESPONSE)) throw MockException("This spec does not information about the response to be mocked.")
+    if (!mockSpec.containsKey(MOCK_HTTP_REQUEST)) throw ContractException(errorMessage = "This spec does not information about the request to be mocked.")
+    if (!mockSpec.containsKey(MOCK_HTTP_RESPONSE)) throw ContractException(errorMessage = "This spec does not information about the response to be mocked.")
 }
 
 fun mockFromJSON(mockSpec: Map<String, Value>): MockScenario {

@@ -58,30 +58,39 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     fun generatePath(resolver: Resolver): String {
-        return "/" + pathPattern.map {
-            val key = if(it is Keyed) it.key else null
-            if(key != null) resolver.generate(key, it) else it.generate(resolver)
-        }.joinToString("/")
+        return attempt(breadCrumb = "PATH") {
+            "/" + pathPattern.mapIndexed { index, it ->
+                attempt(breadCrumb = "[$index]") {
+                    val key = if (it is Keyed) it.key else null
+                    if (key != null) resolver.generate(key, it) else it.generate(resolver)
+                }
+            }.joinToString("/")
+        }
     }
 
     fun generateQuery(resolver: Resolver): Map<String, String> {
-        return queryPattern.map { (parameterName, parameterPattern) ->
-            parameterName to resolver.generate(parameterName, parameterPattern).toString()
-        }.toMap()
+        return attempt(breadCrumb = "QUERY PARAMS") {
+            queryPattern.map { (name, pattern) ->
+                attempt(breadCrumb = name) { name to resolver.generate(name, pattern).toString() }
+            }.toMap()
+        }
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<URLPattern> {
         val newResolver = withNumericStringPattern(resolver)
 
-        val newPathPartsList = newBasedOn(pathPattern.map {
+        val newPathPartsList = newBasedOn(pathPattern.mapIndexedNotNull { index, it ->
             val key = if(it is Keyed) it.key else null
 
-            if(key !== null && row.containsField(key)) {
-                val rowValue = row.getField(key)
-                ExactMatchPattern(it.parse(rowValue, newResolver))
-            } else it
+            attempt(breadCrumb = "[$index]") {
+                if (key !== null && row.containsField(key)) {
+                    val rowValue = row.getField(key)
+                    attempt("Format error in example of \"$key\"") { ExactMatchPattern(it.parse(rowValue, newResolver)) }
+                } else it
+            }
         }, row, newResolver)
-        val newQueryParamsList = newBasedOn(queryPattern, row, newResolver)
+
+        val newQueryParamsList = attempt(breadCrumb = "QUERY PARAMS") { newBasedOn(queryPattern, row, newResolver) }
 
         return newPathPartsList.flatMap { newPathParts ->
             newQueryParamsList.map { newQueryParams ->
@@ -109,7 +118,7 @@ internal fun toURLPattern(urlPattern: URI): URLPattern {
             isPatternToken(part) -> {
                 val pieces = withoutPatternDelimiters(part).split(":").map { it.trim() }
                 if(pieces.size != 2) {
-                    throw ContractParseException("In path ${urlPattern.rawPath}, $part must be of the format (param_name:type), e.g. (id:number)")
+                    throw ContractException("In path ${urlPattern.rawPath}, $part must be of the format (param_name:type), e.g. (id:number)")
                 }
 
                 val (name, type) = pieces

@@ -35,18 +35,26 @@ data class HttpHeadersPattern(val headers: Map<String, String> = emptyMap()) {
     }
 
     fun generate(resolver: Resolver): HashMap<String, String> {
-        return HashMap(headers.mapValues { (key, value) ->
-            asPattern(value, key).generate(resolver).toStringValue()
-        }.toMutableMap())
+        return attempt(breadCrumb = "HEADERS") {
+            HashMap(headers.mapValues { (key, value) ->
+                attempt(breadCrumb = key) {
+                    asPattern(value, key).generate(resolver).toStringValue()
+                }
+            }.toMutableMap())
+        }
     }
 
     private fun newBasedOn(row: Row, headers: Map<String, String>): Map<String, String> =
-            HashMap(headers.mapValues {
-                when {
-                    row.containsField(it.key) -> row.getField(it.key)
-                    else -> it.value
-                }
-            })
+            attempt(breadCrumb = "HEADERS") {
+                HashMap(headers.mapValues {
+                    attempt(breadCrumb = it.key) {
+                        when {
+                            row.containsField(it.key) -> row.getField(it.key)
+                            else -> it.value
+                        }
+                    }
+                })
+            }
 
     fun newBasedOn(row: Row): List<HttpHeadersPattern> =
         multipleValidKeys(headers, row) { pattern ->

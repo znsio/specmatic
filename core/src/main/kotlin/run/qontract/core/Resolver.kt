@@ -38,7 +38,7 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
             return patterns[patternValue] ?: findPattern(patternValue)
         }
 
-        throw ContractParseException("Pattern $patternValue does not exist.")
+        throw ContractException("Pattern $patternValue does not exist.")
     }
 
     fun generate(factKey: String, pattern: Pattern): Value {
@@ -50,7 +50,7 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
                 try {
                     pattern.parse(fact.string, this)
                 } catch (e: Throwable) {
-                    throw ContractParseException("Fact $fact against key $factKey is not a $pattern")
+                    throw ContractException("""Value $fact in fact $factKey is not a $pattern""")
                 }
             True -> pattern.generate(this)
             else -> fact

@@ -1,6 +1,5 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.mismatchResult
@@ -22,7 +21,7 @@ object NullPattern : Pattern {
     override fun parse(value: String, resolver: Resolver): Value =
         when(value.trim()) {
             "(null)" -> NullValue
-            else -> throw ContractParseException("Failed to parse $value: it is not null.")
+            else -> throw ContractException("Failed to parse $value: it is not null.")
         }
 
     override val pattern: Any = "(null)"

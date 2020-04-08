@@ -22,7 +22,6 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
 
     constructor(gherkinData: String) : this(parseGherkinString(gherkinData))
 
-    @Throws(Exception::class)
     fun lookup(httpRequest: HttpRequest): HttpResponse {
         try {
             val results = Results()
@@ -58,22 +57,26 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
             val results = Results()
 
             for (scenario in scenarios) {
-                when (val requestMatches = scenario.matches(request, serverState)) {
-                    is Result.Success -> {
-                        when (val responseMatches = scenario.matchesMock(response)) {
-                            is Result.Success -> return scenario.generateHttpResponseFrom(response)
-                            is Result.Failure -> {
-                                responseMatches.reason("Response didn't match the pattern")
-                                        .also { failure -> failure.updateScenario(scenario) }
-                                results.add(responseMatches, request, response)
+                try {
+                    when (val requestMatches = attempt(breadCrumb = "REQUEST") { scenario.matches(request, serverState) }) {
+                        is Result.Success -> {
+                            when (val responseMatches = attempt(breadCrumb = "REQUEST") { scenario.matchesMock(response) }) {
+                                is Result.Success -> return attempt(breadCrumb = "RESPONSE") { scenario.generateHttpResponseFrom(response) }
+                                is Result.Failure -> {
+                                    responseMatches.reason("Response didn't match the pattern")
+                                            .also { failure -> failure.updateScenario(scenario) }
+                                    results.add(responseMatches, request, response)
+                                }
                             }
                         }
+                        is Result.Failure -> {
+                            requestMatches.reason("Request didn't match the pattern")
+                                    .also { failure -> failure.updateScenario(scenario) }
+                            results.add(requestMatches, request, response)
+                        }
                     }
-                    is Result.Failure -> {
-                        requestMatches.reason("Request didn't match the pattern")
-                                .also { failure -> failure.updateScenario(scenario) }
-                        results.add(requestMatches, request, response)
-                    }
+                } catch (contractException: ContractException) {
+                    results.add(contractException.result(), request, response)
                 }
             }
 
@@ -83,10 +86,8 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
         }
     }
 
-    fun generateTestScenarios(suggestions: List<Scenario>) =
-            scenarios.map { scenario ->
-                scenario.newBasedOn(suggestions)
-            }.flatMap { it.generateTestScenarios() }.toList()
+    fun generateTestScenarios(suggestions: List<Scenario>): List<Scenario> =
+        scenarios.map { it.newBasedOn(suggestions) }.flatMap { it.generateTestScenarios() }
 
     fun generateContractTests(): List<Scenario> =
         scenarios.flatMap { scenario ->
@@ -98,7 +99,7 @@ private fun toFixtureInfo(rest: String): Pair<String, Value> {
     val fixtureTokens = breakIntoParts(rest.trim(), 2)
 
     if(fixtureTokens.size != 2)
-        throw ContractParseException("Couldn't parse fixture data: $rest")
+        throw ContractException("Couldn't parse fixture data: $rest")
 
     return Pair(fixtureTokens[0], toFixtureData(fixtureTokens[1]))
 }
@@ -140,7 +141,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
                     scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
                                             urlPattern = toURLPattern(URI.create(step.rest)),
                                             method = step.keyword.toUpperCase()))
-                } ?: throw ContractParseException("Line ${step.line}: $step.text")
+                } ?: throw ContractException("Line ${step.line}: $step.text")
             }
             "REQUEST-HEADER" ->
                 scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(headersPattern = plusHeaderPattern(step.rest, scenarioInfo.httpRequestPattern.headersPattern)))
@@ -160,7 +161,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
                 scenarioInfo.copy(fixtures = scenarioInfo.fixtures.plus(toFixtureInfo(step.rest)))
             "FORM-FIELD" ->
                 scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(formFieldsPattern = plusFormFields(scenarioInfo.httpRequestPattern.formFieldsPattern, step.rest, step.rowsList)))
-            else -> throw ContractParseException("Couldn't recognise the meaning of this command: $step.text")
+            else -> throw ContractException("Couldn't recognise the meaning of this command: $step.text")
         }
     }
 
@@ -170,7 +171,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
 fun toPattern(step: StepInfo): Pattern {
     return when(val trimmedRest = step.rest.trim()) {
         "" -> {
-            if(step.rowsList.isEmpty()) throw ContractParseException("Not enough information to describe a type in $step")
+            if(step.rowsList.isEmpty()) throw ContractException("Not enough information to describe a type in $step")
             rowsToTabularPattern(step.rowsList)
         }
         else -> parsedPattern(trimmedRest)
@@ -238,9 +239,11 @@ private fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Triple<
     return try {
         val response = testExecutor.execute(request)
         Triple(scenario.matches(response), request, response)
-    } catch (exception: Throwable) {
-        Triple(Result.Failure("Error: ${exception.message}")
-                .also { it.updateScenario(scenario) }, request, null)
-
+    }
+    catch(contractException: ContractException) {
+        Triple(contractException.result().also { it.updateScenario(scenario) }, request, null)
+    }
+    catch(throwable: Throwable) {
+        Triple(Result.Failure("Error: ${throwable.message}").also { it.updateScenario(scenario) }, request, null)
     }
 }

@@ -1,5 +1,6 @@
 package run.qontract.core
 
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.BrokerClient.getContract
 import run.qontract.core.utilities.contractFilePath
 import run.qontract.core.utilities.readFile
@@ -8,13 +9,13 @@ import run.qontract.test.SyntaxException
 import run.qontract.test.HttpClient
 import java.io.IOException
 
-data class Contract constructor(val contractGherkin: String, val majorVersion: Int = 0, val minorVersion: Int = 0) {
+data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val minorVersion: Int = 0) {
     fun startFake(port: Int) = ContractFake(contractGherkin, "localhost", port)
 
     fun test(endPoint: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val results = contractBehaviour.executeTests(HttpClient(endPoint))
-        if(results.hasFailures())
+        if (results.hasFailures())
             throw SyntaxException(results.report())
     }
 

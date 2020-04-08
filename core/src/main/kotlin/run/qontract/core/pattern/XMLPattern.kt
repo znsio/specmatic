@@ -153,7 +153,6 @@ data class XMLPattern(val node: Node) : Pattern {
         return true
     }
 
-    @Throws(Exception::class)
     override fun generate(resolver: Resolver): Value {
         val newDocument = copyOfDocument()
         updateNodeTemplate(newDocument, resolver)
@@ -162,16 +161,9 @@ data class XMLPattern(val node: Node) : Pattern {
 
     private fun copyOfDocument(): Node = node.cloneNode(true)
 
-    @Throws(Exception::class)
-    private fun generate(newDocument: Document, resolver: Resolver): Element {
-        updateNodeTemplate(newDocument.documentElement, resolver)
-        return newDocument.documentElement
-    }
-
-    @Throws(Exception::class)
     private fun updateNodeTemplate(node: Node, resolver: Resolver) {
         if (node.hasAttributes()) {
-            updateAttributes(node.attributes, resolver)
+            attempt(breadCrumb = node.nodeName) { updateAttributes(node.attributes, resolver) }
         }
         if (node.hasChildNodes()) {
             updateChildNodes(node, resolver)
@@ -181,7 +173,6 @@ data class XMLPattern(val node: Node) : Pattern {
         }
     }
 
-    @Throws(Exception::class)
     private fun updateChildNodes(parentNode: Node, resolver: Resolver) {
         val childNodes = parentNode.childNodes
         if (childNodes.length > 0 && isRepeatingPattern(childNodes.item(0).nodeValue)) {
@@ -191,11 +182,13 @@ data class XMLPattern(val node: Node) : Pattern {
             val random = Random()
             val count = random.nextInt(9) + 1
             for (i in 0 until count) {
-                val result = resolver.getPattern(pattern).generate(resolver)
-                val newNode = getXMLNodeFrom(result)
-                parentNode.ownerDocument.adoptNode(newNode)
-                val first = parentNode.firstChild
-                parentNode.insertBefore(newNode, first)
+                attempt(breadCrumb = "${parentNode.nodeName}[$i]") {
+                    val result = resolver.getPattern(pattern).generate(resolver)
+                    val newNode = getXMLNodeFrom(result)
+                    parentNode.ownerDocument.adoptNode(newNode)
+                    val first = parentNode.firstChild
+                    parentNode.insertBefore(newNode, first)
+                }
             }
         }
         for (index in 0 until childNodes.length) {
@@ -213,9 +206,11 @@ data class XMLPattern(val node: Node) : Pattern {
 
     private fun updateAttributes(attributes: NamedNodeMap, resolver: Resolver) {
         for (index in 0 until attributes.length) {
-            val attribute = attributes.item(index)
-            val nodeValue = attribute.nodeValue
-            attribute.nodeValue = generateValue(nodeValue, resolver)
+            attempt(breadCrumb = "[$index]") {
+                val attribute = attributes.item(index)
+                val nodeValue = attribute.nodeValue
+                attribute.nodeValue = generateValue(nodeValue, resolver)
+            }
         }
     }
 
@@ -228,32 +223,31 @@ data class XMLPattern(val node: Node) : Pattern {
 
     override fun parse(value: String, resolver: Resolver): Value = XMLValue(value)
 
-    @Throws(Throwable::class)
     private fun updateBasedOnRow(node: Node, row: Row, resolver: Resolver) {
-        if (node.hasAttributes()) {
-            updateAttributesBasedOnRow(node, row, resolver)
-        }
-        if (node.hasChildNodes()) {
-            val childNodes = node.childNodes
-            for (index in 0 until childNodes.length) {
-                updateBasedOnRow(childNodes.item(index), row, resolver)
+        attempt(breadCrumb = "${node.nodeName}") {
+            if (node.hasAttributes()) {
+                updateAttributesBasedOnRow(node, row, resolver)
             }
-        } else {
-            val parentNodeName = node.parentNode.nodeName
-            if (row.containsField(parentNodeName)) {
-                if (isPatternToken(node.nodeValue)) {
-                    when (val result = findPattern(node.nodeValue).matches(asValue(row.getField(parentNodeName)), resolver)) {
-                        is Result.Failure -> result.reason("\"The value \" + row.getField(parentNodeName) + \" does not match the pattern \" + node.nodeValue")
-                        else -> {
+            if (node.hasChildNodes()) {
+                val childNodes = node.childNodes
+                for (index in 0 until childNodes.length) {
+                    updateBasedOnRow(childNodes.item(index), row, resolver)
+                }
+            } else {
+                val parentNodeName = node.parentNode.nodeName
+                if (row.containsField(parentNodeName)) {
+                    if (isPatternToken(node.nodeValue)) {
+                        when (val result = findPattern(node.nodeValue).matches(asValue(row.getField(parentNodeName)), resolver)) {
+                            is Result.Failure -> result.reason("\"The value \" + row.getField(parentNodeName) + \" in the examples of ${node.nodeName} does not match the pattern \" + node.nodeValue")
                         }
                     }
-                }
-                node.nodeValue = row.getField(parentNodeName)
-            } else {
-                val value = node.nodeValue
-                node.nodeValue = when {
-                    isPatternToken(value) -> resolver.getPattern(withoutRestTokenForXML(value)).generate(resolver).toString()
-                    else -> value
+                    node.nodeValue = row.getField(parentNodeName)
+                } else {
+                    val value = node.nodeValue
+                    node.nodeValue = when {
+                        isPatternToken(value) -> resolver.getPattern(withoutRestTokenForXML(value)).generate(resolver).toString()
+                        else -> value
+                    }
                 }
             }
         }
@@ -265,16 +259,18 @@ data class XMLPattern(val node: Node) : Pattern {
             else -> value
         }
 
-    @Throws(Exception::class)
     private fun updateAttributesBasedOnRow(node: Node, row: Row, resolver: Resolver) {
         val attributes = node.attributes
         for (i in 0 until attributes.length) {
             val item = attributes.item(i)
-            if (row.containsField(item.nodeName)) {
-                item.nodeValue = row.getField(item.nodeName)
-            } else {
-                val value = node.nodeValue
-                node.nodeValue = generateValue(value, resolver)
+
+            attempt(breadCrumb = "[$i]") {
+                if (row.containsField(item.nodeName)) {
+                    item.nodeValue = row.getField(item.nodeName)
+                } else {
+                    val value = node.nodeValue
+                    node.nodeValue = generateValue(value, resolver)
+                }
             }
         }
     }

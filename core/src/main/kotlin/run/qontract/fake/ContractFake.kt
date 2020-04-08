@@ -17,6 +17,7 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.toMap
 import run.qontract.core.value.EmptyString

@@ -44,7 +44,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
                         is Result.Failure -> result.breadCrumb("FORM FIELDS").breadCrumb(key)
                         else -> result
                     }
-                } catch(e: ContractParseException) {
+                } catch(e: ContractException) {
                     mismatchResult(pattern, value).breadCrumb("FORM FIELDS").breadCrumb(key)
                 }
             }
@@ -68,7 +68,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     private fun matchBody(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
         return when (val result = body?.matches(httpRequest.body, withNumericStringPattern(resolver))) {
-            is Result.Failure -> MatchFailure(result.breadCrumb("PAYLOAD"))
+            is Result.Failure -> MatchFailure(result.breadCrumb("BODY"))
             else -> MatchSuccess(parameters)
         }
     }
@@ -110,54 +110,63 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     fun generate(resolver: Resolver): HttpRequest {
         val newRequest = HttpRequest()
 
-        if (method == null) {
-            throw missingParam("HTTP method")
-        }
-        if (urlPattern == null) {
-            throw missingParam("URL path pattern")
-        }
-        newRequest.updateMethod(method!!)
-        newRequest.updatePath(urlPattern!!.generatePath(resolver.makeCopy()))
-        val queryParams = urlPattern!!.generateQuery(resolver.makeCopy())
-        for (key in queryParams.keys) {
-            newRequest.updateQueryParam(key, queryParams[key] ?: "")
-        }
-        val headers = headersPattern.generate(resolver)
+        return attempt(breadCrumb = "REQUEST") {
+            if (method == null) {
+                throw missingParam("HTTP method")
+            }
+            if (urlPattern == null) {
+                throw missingParam("URL path pattern")
+            }
+            newRequest.updateMethod(method!!)
+            attempt(breadCrumb = "URL") {
+                newRequest.updatePath(urlPattern!!.generatePath(resolver.makeCopy()))
+                val queryParams = urlPattern!!.generateQuery(resolver.makeCopy())
+                for (key in queryParams.keys) {
+                    newRequest.updateQueryParam(key, queryParams[key] ?: "")
+                }
+            }
+            val headers = headersPattern.generate(resolver)
 
-        val body = body
-        body.generate(resolver).let { value ->
-            newRequest.updateBody(value)
-            headers.put("Content-Type", value.httpContentType)
-        }
+            val body = body
+            attempt(breadCrumb = "BODY") {
+                body.generate(resolver).let { value ->
+                    newRequest.updateBody(value)
+                    headers.put("Content-Type", value.httpContentType)
+                }
+            }
 
-        headers.map { (key, value) -> newRequest.updateHeader(key, value) }
+            headers.map { (key, value) -> newRequest.updateHeader(key, value) }
 
-        val formFieldsValue = formFieldsPattern.mapValues { (key, pattern) -> asPattern(pattern, key).generate(resolver).toString() }
-        return when(formFieldsValue.size) {
-            0 -> newRequest
-            else -> {
-                newRequest.copy(
-                        formFields = formFieldsValue,
-                        headers = HashMap(newRequest.headers.plus("Content-Type" to "application/x-www-form-urlencoded")))            }
+            val formFieldsValue = attempt(breadCrumb = "FORM FIELDS") { formFieldsPattern.mapValues { (key, pattern) -> attempt(breadCrumb = key) { asPattern(pattern, key).generate(resolver).toString() } } }
+            when (formFieldsValue.size) {
+                0 -> newRequest
+                else -> {
+                    newRequest.copy(
+                            formFields = formFieldsValue,
+                            headers = HashMap(newRequest.headers.plus("Content-Type" to "application/x-www-form-urlencoded")))
+                }
+            }
         }
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
-        val newURLMatchers = urlPattern?.newBasedOn(row, resolver.makeCopy()) ?: listOf<URLPattern?>(null)
-        val newBodies = body.newBasedOn(row, resolver.makeCopy())
-        val newHeadersPattern = headersPattern.newBasedOn(row)
-        val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
+        return attempt(breadCrumb = "REQUEST") {
+            val newURLMatchers = urlPattern?.newBasedOn(row, resolver.makeCopy()) ?: listOf<URLPattern?>(null)
+            val newBodies = attempt(breadCrumb = "BODY") { body.newBasedOn(row, resolver.makeCopy()) }
+            val newHeadersPattern = headersPattern.newBasedOn(row)
+            val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
 
-        return newURLMatchers.flatMap { newURLMatcher ->
-            newBodies.flatMap { newBody ->
-                newHeadersPattern.flatMap { newHeadersPattern ->
-                    newFormFieldsPatterns.map { newFormFieldsPattern ->
-                        HttpRequestPattern(
-                                headersPattern = newHeadersPattern,
-                                urlPattern = newURLMatcher,
-                                method = method,
-                                body = newBody,
-                                formFieldsPattern = newFormFieldsPattern)
+            newURLMatchers.flatMap { newURLMatcher ->
+                newBodies.flatMap { newBody ->
+                    newHeadersPattern.flatMap { newHeadersPattern ->
+                        newFormFieldsPatterns.map { newFormFieldsPattern ->
+                            HttpRequestPattern(
+                                    headersPattern = newHeadersPattern,
+                                    urlPattern = newURLMatcher,
+                                    method = method,
+                                    body = newBody,
+                                    formFieldsPattern = newFormFieldsPattern)
+                        }
                     }
                 }
             }

@@ -1,6 +1,5 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.mismatchResult
@@ -27,7 +26,7 @@ class NoContentPattern : Pattern {
     override fun parse(value: String, resolver: Resolver): Value {
         return when {
             value.isEmpty() -> EmptyString
-            else -> throw ContractParseException("""Parsing to $javaClass, but "$value" is not empty""")
+            else -> throw ContractException("""Parsing to $javaClass, but "$value" is not empty""")
         }
     }
 

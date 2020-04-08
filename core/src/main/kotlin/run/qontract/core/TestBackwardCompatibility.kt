@@ -1,5 +1,7 @@
 package run.qontract.core
 
+import run.qontract.core.pattern.ContractException
+
 fun testBackwardCompatibility(older: ContractBehaviour, newerContract: ContractBehaviour): Results =
         older.generateContractTests().fold(Results()) { results, olderScenario ->
             newerContract.setServerState(olderScenario.expectedFacts)
@@ -11,7 +13,11 @@ fun testBackwardCompatibility(older: ContractBehaviour, newerContract: ContractB
 
                 val result = olderScenario.matches(response)
                 results.copy(results = results.results.plus(Triple(result, request, response)).toMutableList())
-            } catch (e: Throwable) {
-                results.copy(results = results.results.plus(Triple(Result.Failure("Exception: ${e.localizedMessage}"), request, null)).toMutableList())
+            }
+            catch(contractException: ContractException) {
+                results.copy(results = results.results.plus(Triple(contractException.result(), request, null)).toMutableList())
+            }
+            catch(throwable: Throwable) {
+                results.copy(results = results.results.plus(Triple(Result.Failure("Exception: ${throwable.localizedMessage}"), request, null)).toMutableList())
             }
         }

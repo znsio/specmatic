@@ -65,7 +65,7 @@ class ContractAsTest {
     fun `should verify response headers`() {
         val contractGherkin = """
             Feature: Contract for /balance API
-                  Scenario:
+                  Scenario: Get balance
                     When GET /balance
                     Then status 200
                     And response-header token test
@@ -84,7 +84,7 @@ class ContractAsTest {
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
-        assertThat(results.report()).isEqualTo("""In Scenario: GET /balance
+        assertThat(results.report()).isEqualTo("""In scenario "Get balance"
 >> RESPONSE.HEADERS.length
 
 Expected number, actual "abc"

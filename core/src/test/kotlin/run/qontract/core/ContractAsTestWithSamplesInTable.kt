@@ -2,6 +2,7 @@ package run.qontract.core
 
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.PatternTable.Companion.fromPSV
 import run.qontract.core.pattern.StringPattern
@@ -41,7 +42,7 @@ class ContractAsTestWithSamplesInTable {
   | 10 | 20 | 30 | 
   | hello | 30 | 40 | 
     """
-        Assertions.assertThrows(ContractParseException::class.java) { jsonResponsesTestsShouldBeVerifiedAgainstTable(contractGherkin) }
+        Assertions.assertThrows(ContractException::class.java) { jsonResponsesTestsShouldBeVerifiedAgainstTable(contractGherkin) }
     }
 
     @Throws(Throwable::class)

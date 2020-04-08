@@ -22,7 +22,10 @@ data class ListPattern(override val pattern: Pattern) : Pattern {
         }
     }
 
-    override fun generate(resolver: Resolver): JSONArrayValue = JSONArrayValue(generateMultipleValues(pattern, resolver))
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = pattern.newBasedOn(row, resolver).map { ListPattern(it) }
+    override fun generate(resolver: Resolver): JSONArrayValue =
+        JSONArrayValue(0.until(randomNumber(10)).mapIndexed{ index, _ ->
+            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolver) }
+        })
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolver).map { ListPattern(it) } }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
 }

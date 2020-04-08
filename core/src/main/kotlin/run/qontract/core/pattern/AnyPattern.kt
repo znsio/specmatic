@@ -1,6 +1,5 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.value.EmptyString
@@ -35,5 +34,5 @@ $report""".trim())
     override fun parse(value: String, resolver: Resolver): Value =
         pattern.asSequence().map {
             try { it.parse(value, resolver) } catch(e: Throwable) { null }
-        }.find { it != null } ?: throw ContractParseException("Failed to parse value $value. It should have matched one of $pattern")
+        }.find { it != null } ?: throw ContractException("Failed to parse value $value. It should have matched one of $pattern")
 }

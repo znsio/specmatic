@@ -34,7 +34,7 @@ class ContractBehaviourTest {
     fun `should return bad request on unmatched path in url`() {
         val contractGherkin = """
                 Feature: Contract for /balance API
-                  Scenario:
+                  Scenario: Get account balance
                     When GET /balance?account-id=(number)
                     Then status 200
                     And response-body {calls_left: 10, messages_left: 30}
@@ -43,7 +43,7 @@ class ContractBehaviourTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance2").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""In Scenario: GET /balance?account-id=(number)
+        assertThat(httpResponse.body).isEqualTo("""In scenario "Get account balance"
 >> REQUEST.URL.PATH (/balance2)
 
 Expected "balance", actual "balance2"
@@ -56,7 +56,7 @@ Request: GET /balance2?account-id=10""")
     fun `should return bad request when request headers do not match`() {
         val contractGherkin = """
                 Feature: Contract for /balance API
-                  Scenario:
+                  Scenario: Get balance info
                     When GET /balance
                     And request-header x-loginId (string)
                     Then status 200
@@ -66,7 +66,7 @@ Request: GET /balance2?account-id=10""")
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateHeader("y-loginId", "abc123")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""In Scenario: GET /balance
+        assertThat(httpResponse.body).isEqualTo("""In scenario "Get balance info"
 >> REQUEST.HEADERS
 
 Header x-loginId was missing
@@ -133,7 +133,7 @@ y-loginId: abc123""".trimIndent())
     fun `should return bad request on unmatched JSON array in request`() {
         val contractGherkin = """
                 Feature: Contract for /balance API
-                  Scenario:
+                  Scenario: Update balance
                     When POST /balance
                     And request-body {calls_made: [3, 10, 2]}
                     Then status 200
@@ -142,8 +142,8 @@ y-loginId: abc123""".trimIndent())
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10]}")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""In Scenario: POST /balance
->> REQUEST.PAYLOAD.calls_made
+        assertThat(httpResponse.body).isEqualTo("""In scenario "Update balance"
+>> REQUEST.BODY.calls_made
 
 Expected an array of length 3, actual length 2
 
@@ -162,7 +162,7 @@ Request: POST /balance
     fun `should return bad request on wrong type in JSON array in request`() {
         val contractGherkin = """
                 Feature: Contract for /balance API
-                  Scenario:
+                  Scenario: Update balance
                     When POST /balance
                     And request-body {"calls_made": [3, 10, "(number)"]}
                     Then status 200
@@ -171,8 +171,8 @@ Request: POST /balance
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10, \"test\"]}")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""In Scenario: POST /balance
->> REQUEST.PAYLOAD.calls_made.[2]
+        assertThat(httpResponse.body).isEqualTo("""In scenario "Update balance"
+>> REQUEST.BODY.calls_made.[2]
 
 Expected number, actual "test"
 
@@ -210,7 +210,7 @@ Request: POST /balance
     fun `should return bad request when Integer token does not match in query params`() {
         val contractGherkin = """
                 Feature: Contract for /balance API\
-                  Scenario: 
+                  Scenario: Get account balance
                     When GET /balance?account-id=(number)
                     Then status 200
                     And response-body {calls_left: 10, messages_left: 30}
@@ -219,7 +219,7 @@ Request: POST /balance
         val httpRequest = HttpRequest().updatePath("/balance").updateQueryParam("account-id", "abc").updateMethod("GET")
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body).isEqualTo("""In Scenario: GET /balance?account-id=(number)
+        assertThat(httpResponse.body).isEqualTo("""In scenario "Get account balance"
 >> REQUEST.URL.account-id.QUERY PARAMS
 
 Expected number, actual "abc"

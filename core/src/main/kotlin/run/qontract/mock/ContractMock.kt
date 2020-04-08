@@ -72,9 +72,10 @@ $expectationsString
     private fun registerExpectation(call: ApplicationCall, httpRequest: HttpRequest) {
         try {
             validateHttpMockRequest(httpRequest)
-            val mockSpec = jsonStringToValueMap(httpRequest.body.toString()).also {
-                validateMock(it)
-            }
+            val mockSpec =
+                jsonStringToValueMap(httpRequest.body.toString()).also {
+                    validateMock(it)
+                }
 
             createMockScenario(mockFromJSON(mockSpec))
 

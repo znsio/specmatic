@@ -31,13 +31,14 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
-    fun generateHttpResponse(actualFacts: HashMap<String, Value>): HttpResponse {
-        Resolver(HashMap(), false, patterns)
-        val resolver = Resolver(actualFacts, false, patterns)
-        val facts = combineFacts(expectedFacts, actualFacts, resolver)
+    fun generateHttpResponse(actualFacts: HashMap<String, Value>): HttpResponse =
+        scenarioBreadCrumb(this) {
+            Resolver(HashMap(), false, patterns)
+            val resolver = Resolver(actualFacts, false, patterns)
+            val facts = combineFacts(expectedFacts, actualFacts, resolver)
 
-        return httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts)))
-    }
+            httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts)))
+        }
 
     private fun combineFacts(
             expected: HashMap<String, Value>,
@@ -60,7 +61,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
                             if(resolver.matchesPattern(key, expectedPattern, expectedPattern.parse(actualValue.toString(), resolver)).isTrue())
                                 combinedServerState[key] = actualValue
                         } catch(e: Throwable) {
-                            throw ContractParseException("Couldn't match state values. Expected $expectedValue in key $key, actual value is $actualValue")
+                            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key, actual value is $actualValue")
                         }
                     }
                 }
@@ -72,7 +73,8 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         return combinedServerState
     }
 
-    fun generateHttpRequest(): HttpRequest = httpRequestPattern.generate(Resolver(expectedFacts, false, patterns))
+    fun generateHttpRequest(): HttpRequest =
+            scenarioBreadCrumb(this) { httpRequestPattern.generate(Resolver(expectedFacts, false, patterns)) }
 
     fun matches(httpResponse: HttpResponse): Result {
         val resolver = Resolver(expectedFacts, false, patterns)
@@ -99,27 +101,31 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     }
 
     fun generateTestScenarios(): List<Scenario> =
+        scenarioBreadCrumb(this) {
             when (examples.size) {
                 0 -> listOf(Row())
                 else -> examples.flatMap { it.rows }
             }.flatMap { row -> newBasedOn(row) }
+        }
 
     private fun newExpectedServerStateBasedOn(row: Row, expectedServerState: Map<String, Value>, resolver: Resolver): HashMap<String, Value> {
-        return HashMap(expectedServerState.mapValues { (key, value) ->
-            when {
-                row.containsField(key) -> {
-                    val fieldValue = row.getField(key)
+        return attempt(errorMessage = "Scenario fact generation failed") {
+            HashMap(expectedServerState.mapValues { (key, value) ->
+                when {
+                    row.containsField(key) -> {
+                        val fieldValue = row.getField(key)
 
-                    when {
-                        fixtures.containsKey(fieldValue) -> fixtures.getValue(fieldValue)
-                        isPatternToken(fieldValue) -> resolver.getPattern(fieldValue).generate(resolver)
-                        else -> StringValue(fieldValue)
+                        when {
+                            fixtures.containsKey(fieldValue) -> fixtures.getValue(fieldValue)
+                            isPatternToken(fieldValue) -> resolver.getPattern(fieldValue).generate(resolver)
+                            else -> StringValue(fieldValue)
+                        }
                     }
+                    value is StringValue && isPatternToken(value) -> resolver.getPattern(value.string).generate(resolver)
+                    else -> value
                 }
-                value is StringValue && isPatternToken(value) -> resolver.getPattern(value.string).generate(resolver)
-                else -> value
-            }
-        })
+            })
+        }
     }
 
     val serverState: Map<String, Value>
@@ -132,10 +138,11 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
-    fun generateHttpResponseFrom(response: HttpResponse?): HttpResponse {
-        val resolver = Resolver(expectedFacts, false, patterns)
-        return HttpResponsePattern(response!!).generateResponse(resolver)
-    }
+    fun generateHttpResponseFrom(response: HttpResponse?): HttpResponse =
+        scenarioBreadCrumb(this) {
+            val resolver = Resolver(expectedFacts, false, patterns)
+            HttpResponsePattern(response!!).generateResponse(resolver)
+        }
 
     override fun toString(): String {
         val scenarioDescription = StringBuilder()

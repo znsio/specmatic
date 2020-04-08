@@ -13,7 +13,7 @@ fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) 
 
 fun toJSONValue(value: String): Pattern {
     return value.trim().let {
-        val asNumber: Number? = try { convertToNumber(value) } catch (e: ContractParseException) { null }
+        val asNumber: Number? = try { convertToNumber(value) } catch (e: Throwable) { null }
 
         when {
             asNumber != null -> ExactMatchPattern(NumberValue(asNumber))
@@ -46,7 +46,7 @@ fun convertToNumber(value: String): Number {
         } catch (ignored: Exception) {
         }
 
-        throw ContractParseException("Couldn't convert $value to number")
+        throw ContractException("Couldn't convert $value to number")
     }
 }
 
@@ -70,11 +70,7 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
 
     override fun generate(resolver: Resolver) =
             JSONObjectValue(pattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
-                when {
-                    resolver.factStore.has(key) && resolver.factStore.get(key) != True ->
-                        pattern.parse(resolver.factStore.get(key).toString(), resolver)
-                    else -> asPattern(pattern, key).generate(resolver)
-                }
+                attempt(breadCrumb = key) { resolver.generate(key, pattern) }
             })
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
@@ -87,18 +83,20 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
 
 fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
     val patternCollection = patternMap.mapValues { (key, pattern) ->
-        val keyWithoutOptionality = withoutOptionality(key)
+        attempt(breadCrumb = key) {
+            val keyWithoutOptionality = withoutOptionality(key)
 
-        when {
-            row.containsField(keyWithoutOptionality) -> {
-                val rowField = row.getField(keyWithoutOptionality)
-                listOf(ExactMatchPattern(pattern.parse(rowField, resolver)))
+            when {
+                row.containsField(keyWithoutOptionality) -> {
+                    val rowField = row.getField(keyWithoutOptionality)
+                    attempt("Format error in example of \"$keyWithoutOptionality\"") { listOf(ExactMatchPattern(pattern.parse(rowField, resolver))) }
+                }
+                else ->
+                    when (pattern) {
+                        is LookupPattern -> pattern.copy(key = key)
+                        else -> pattern
+                    }.newBasedOn(row, resolver)
             }
-            else ->
-                when (pattern) {
-                    is LookupPattern -> pattern.copy(key=key)
-                    else -> pattern
-                }.newBasedOn(row, resolver)
         }
     }
 

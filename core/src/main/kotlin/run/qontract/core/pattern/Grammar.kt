@@ -1,6 +1,5 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.ContractParseException
 import run.qontract.core.Resolver
 import run.qontract.core.value.StringValue
 
@@ -46,7 +45,7 @@ fun generateValue(value: String, resolver: Resolver): String {
 }
 
 fun findPattern(matcherDescriptor: String): Pattern =
-        primitivePatterns.getOrElse(matcherDescriptor) { throw ContractParseException("Pattern $matcherDescriptor does not exist.") }
+        primitivePatterns.getOrElse(matcherDescriptor) { throw ContractException("Pattern $matcherDescriptor does not exist.") }
 
 
 fun withoutPatternDelimiters(patternValue: String) = patternValue.removeSurrounding("(", ")")

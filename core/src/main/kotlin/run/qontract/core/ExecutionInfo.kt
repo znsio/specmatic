@@ -86,10 +86,10 @@ class ExecutionInfo(results: List<Triple<Result, HttpRequest?, HttpResponse?>> =
 
     init {
         results.forEach { (result, request, response) ->
-            when(result) {
-                is Result.Failure -> this.recordUnsuccessfulInteraction(result.scenario, result.stackTrace(), request!!, response!!)
-                else -> this.recordSuccessfulInteraction()
-            }
+//            when(result) {
+//                is Result.Failure -> this.recordUnsuccessfulInteraction(result.scenario ?: Scenario("test"), result.stackTrace(), request!!, response!!)
+//                else -> this.recordSuccessfulInteraction()
+//            }
         }
     }
 }

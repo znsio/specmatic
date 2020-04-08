@@ -31,7 +31,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
                 is RestPattern -> {
                     val rest = if(index == sampleData.list.size) emptyList() else sampleData.list.slice(index..sampleData.list.lastIndex)
                     return when (val result = patternValue.matches(JSONArrayValue(rest), resolver)) {
-                        is Result.Failure -> result.breadCrumb("[$index...${sampleData.list.lastIndex}")
+                        is Result.Failure -> result.breadCrumb("[$index...${sampleData.list.lastIndex}]")
                         else -> result
                     }
                 }
@@ -59,7 +59,10 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
 }
 
 fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
-    val values = jsonPattern.map { pattern -> pattern.newBasedOn(row, resolver) }
+    val values = jsonPattern.mapIndexed { index, pattern ->
+        attempt(breadCrumb = "[$index]") { pattern.newBasedOn(row, resolver) }
+    }
+
     return multipleValidValues(values)
 }
 
@@ -74,13 +77,11 @@ fun multipleValidValues(values: List<List<Pattern>>): List<List<Pattern>> {
 }
 
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
-    jsonPattern.flatMap { pattern ->
-        when(pattern) {
-            is RestPattern -> pattern.generate(resolver).list
-            else -> listOf(pattern.generate(resolver))
-        }}
-
-internal fun generateMultipleValues(pattern: Pattern, resolver: Resolver): List<Value> =
-    0.until(randomNumber(10)).map { pattern.generate(resolver) }
+    jsonPattern.mapIndexed { index, pattern ->
+        when (pattern) {
+            is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") { pattern.generate(resolver).list }
+            else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(resolver)) }
+        }
+    }.flatten()
 
 internal fun randomNumber(max: Int) = Random().nextInt(max - 1) + 1

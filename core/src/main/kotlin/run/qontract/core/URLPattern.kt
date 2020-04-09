@@ -7,20 +7,6 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import java.net.URI
 
-data class URLPathPattern (override val pattern: Pattern, val key: String? = null) : Pattern {
-    override fun matches(sampleData: Value?, resolver: Resolver): Result =
-            resolver.matchesPattern(key, pattern, sampleData ?: NullValue)
-
-    override fun generate(resolver: Resolver): Value =
-            if(key != null) resolver.generate(key, pattern) else pattern.generate(resolver)
-
-    override fun newBasedOn(row: Row, resolver: Resolver): List<URLPathPattern> =
-            pattern.newBasedOn(row, resolver).map { URLPathPattern(it, key) }
-
-    override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
-
-}
-
 data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
     fun matches(uri: URI, sampleQuery: Map<String, String> = emptyMap(), resolver: Resolver = Resolver()): Result {
         val newResolver = withNumericStringPattern(resolver)
@@ -105,7 +91,6 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         val newURLPathPatternsList = newPathPartsList.map { list -> list.map { it as URLPathPattern } }
 
-//        val newQueryParamsList = attempt(breadCrumb = "QUERY PARAMS") { newBasedOn(queryPattern, row, newResolver) }
         val newQueryParamsList = attempt(breadCrumb = "QUERY PARAMS") {
             val optionalQueryParams = queryPattern.mapKeys { "${it.key}?" }
 
@@ -135,7 +120,7 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
 internal fun toURLPattern(urlPattern: URI): URLPattern {
     val path = urlPattern.path
 
-    val pathPattern = urlPattern.rawPath.trim('/').split("/").map { part ->
+    val pathPattern = urlPattern.rawPath.trim('/').split("/").filter { it.isNotEmpty() }.map { part ->
         when {
             isPatternToken(part) -> {
                 val pieces = withoutPatternDelimiters(part).split(":").map { it.trim() }
@@ -159,4 +144,18 @@ internal fun toURLPattern(urlPattern: URI): URLPattern {
     }
 
     return URLPattern(queryPattern = queryPattern, path = path, pathPattern = pathPattern)
+}
+
+data class URLPathPattern (override val pattern: Pattern, val key: String? = null) : Pattern {
+    override fun matches(sampleData: Value?, resolver: Resolver): Result =
+            resolver.matchesPattern(key, pattern, sampleData ?: NullValue)
+
+    override fun generate(resolver: Resolver): Value =
+            if(key != null) resolver.generate(key, pattern) else pattern.generate(resolver)
+
+    override fun newBasedOn(row: Row, resolver: Resolver): List<URLPathPattern> =
+            pattern.newBasedOn(row, resolver).map { URLPathPattern(it, key) }
+
+    override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
+
 }

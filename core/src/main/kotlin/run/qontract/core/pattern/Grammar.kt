@@ -18,16 +18,17 @@ internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
             else -> key in jsonObject
         }
 
-internal val primitivePatterns = mapOf(
+internal val builtInPatterns = mapOf(
     "(number)" to NumberTypePattern(),
     "(numericstring)" to NumericStringPattern(),
     "(string)" to StringPattern(),
     "(boolean)" to BooleanPattern(),
-    "(null)" to NullPattern)
+    "(null)" to NullPattern,
+    "(datetime)" to DateTimePattern)
 
-fun isPrimitivePattern(pattern: Any): Boolean =
+fun isBuiltInPattern(pattern: Any): Boolean =
     when(pattern) {
-        is String -> pattern in primitivePatterns
+        is String -> pattern in builtInPatterns
         else -> false
     }
 
@@ -40,12 +41,12 @@ fun isPatternToken(patternValue: Any?) =
 
 fun generateValue(key: String, value: String, resolver: Resolver): String {
     return if (isPatternToken(value)) {
-        findPattern(value).generate(resolver).toStringValue()
+        resolver.generate(key, findPattern(value)).toStringValue()
     } else value
 }
 
 fun findPattern(matcherDescriptor: String): Pattern =
-        primitivePatterns.getOrElse(matcherDescriptor) { throw ContractException("Pattern $matcherDescriptor does not exist.") }
+        builtInPatterns.getOrElse(matcherDescriptor) { throw ContractException("Pattern $matcherDescriptor does not exist.") }
 
 
 fun withoutPatternDelimiters(patternValue: String) = patternValue.removeSurrounding("(", ")")
@@ -54,7 +55,6 @@ fun withPatternDelimiters(name: String): String = "($name)"
 fun withoutRepeatingToken(patternValue: Any): String {
     val patternString = (patternValue as String).trim()
     return "(" + withoutPatternDelimiters(patternString).removeSuffix("*") + ")"
-//    return StringBuilder(patternString).deleteCharAt(patternString.length - 2).toString()
 }
 
 fun isRepeatingPattern(patternValue: Any?): Boolean =

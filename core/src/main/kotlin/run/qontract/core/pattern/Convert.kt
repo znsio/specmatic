@@ -25,7 +25,7 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
             isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutRepeatingToken(it)))
             it == "(number)" -> LookupPattern(it, null)
-            isPrimitivePattern(it) -> primitivePatterns.getValue(it)
+            isBuiltInPattern(it) -> builtInPatterns.getValue(it)
             isPatternToken(it) -> LookupPattern(it, key)
             else -> ExactMatchPattern(StringValue(it))
         }

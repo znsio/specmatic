@@ -139,7 +139,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
                     scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
-                                            urlPattern = toURLPattern(URI.create(step.rest)),
+                                            urlMatcher = toURLPattern(URI.create(step.rest)),
                                             method = step.keyword.toUpperCase()))
                 } ?: throw ContractException("Line ${step.line}: $step.text")
             }

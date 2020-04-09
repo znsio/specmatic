@@ -19,7 +19,7 @@ import java.net.URISyntaxException
 import java.util.*
 import kotlin.test.assertEquals
 
-internal class URLPatternTest {
+internal class URLMatcherTest {
     @Test
     @Throws(URISyntaxException::class, UnsupportedEncodingException::class)
     fun `should match url with only query parameters`() {

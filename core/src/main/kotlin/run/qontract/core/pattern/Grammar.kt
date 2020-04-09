@@ -24,7 +24,10 @@ internal val builtInPatterns = mapOf(
     "(string)" to StringPattern(),
     "(boolean)" to BooleanPattern(),
     "(null)" to NullPattern,
-    "(datetime)" to DateTimePattern)
+    "(datetime)" to DateTimePattern,
+    "(http-url)" to URLPattern(URLScheme.HTTP),
+    "(https-url)" to URLPattern(URLScheme.HTTPS),
+    "(url-path)" to URLPattern(URLScheme.PATH))
 
 fun isBuiltInPattern(pattern: Any): Boolean =
     when(pattern) {

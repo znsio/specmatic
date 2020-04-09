@@ -7,7 +7,7 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import java.net.URI
 
-data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
+data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
     fun matches(uri: URI, sampleQuery: Map<String, String> = emptyMap(), resolver: Resolver = Resolver()): Result {
         val newResolver = withNumericStringPattern(resolver)
 
@@ -72,7 +72,7 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
         }
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): List<URLPattern> {
+    fun newBasedOn(row: Row, resolver: Resolver): List<URLMatcher> {
         val newResolver = withNumericStringPattern(resolver)
 
         val newPathPartsList = newBasedOn(pathPattern.mapIndexed { index, it ->
@@ -101,7 +101,7 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         return newURLPathPatternsList.flatMap { newURLPathPatterns ->
             newQueryParamsList.map { newQueryParams ->
-                URLPattern(newQueryParams, newURLPathPatterns, path)
+                URLMatcher(newQueryParams, newURLPathPatterns, path)
             }
         }
     }
@@ -117,7 +117,7 @@ data class URLPattern(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 }
 
-internal fun toURLPattern(urlPattern: URI): URLPattern {
+internal fun toURLPattern(urlPattern: URI): URLMatcher {
     val path = urlPattern.path
 
     val pathPattern = urlPattern.rawPath.trim('/').split("/").filter { it.isNotEmpty() }.map { part ->
@@ -143,7 +143,7 @@ internal fun toURLPattern(urlPattern: URI): URLPattern {
             ExactMatchPattern(StringValue(it.value))
     }
 
-    return URLPattern(queryPattern = queryPattern, path = path, pathPattern = pathPattern)
+    return URLMatcher(queryPattern = queryPattern, path = path, pathPattern = pathPattern)
 }
 
 data class URLPathPattern (override val pattern: Pattern, val key: String? = null) : Pattern {

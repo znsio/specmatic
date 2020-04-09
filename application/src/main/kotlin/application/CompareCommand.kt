@@ -2,7 +2,10 @@ package application
 
 import run.qontract.core.utilities.readFile
 import picocli.CommandLine.*
-import run.qontract.core.ContractBehaviour
+import run.qontract.core.Contract
+import run.qontract.core.pattern.ContractException
+import run.qontract.core.resultReport
+import run.qontract.fake.ContractFake
 import java.util.concurrent.Callable
 
 @Command(name = "compare",
@@ -15,12 +18,16 @@ class CompareCommand : Callable<Void> {
     @Parameters(index = "1", description = ["Contract path"], paramLabel = "<contract path>")
     lateinit var path2: String
 
-    override fun call(): Void? {
-        val behaviour1 = ContractBehaviour(readFile(path1))
-        val behaviour2 = ContractBehaviour(readFile(path2))
+    @Option(names = ["--host"], description = ["Host"], defaultValue = "localhost")
+    var host: String = "127.0.0.1"
 
-        val successWith1To2 = backwardCompatible(behaviour1, behaviour2)
-        val successWith2To1 = backwardCompatible(behaviour2, behaviour1)
+    @Option(names = ["--port"], description = ["Port"], defaultValue = "9000")
+    var port: Int = 9000
+
+
+    override fun call(): Void? {
+        val successWith1To2 = backwardCompatibleUsingNetwork(path1, path2, host, port)
+        val successWith2To1 = backwardCompatibleUsingNetwork(path2, path1, host, port)
         val both = successWith1To2 && successWith2To1
 
         println()
@@ -32,5 +39,31 @@ class CompareCommand : Callable<Void> {
         })
 
         return null
+    }
+
+    private fun backwardCompatibleUsingNetwork(path1: String, path2: String, host: String, port: Int): Boolean {
+        println("### TESTING $path1 => $path2")
+        println()
+
+        return try {
+            ContractFake(readFile(path2), host, port).use { fake ->
+                Contract(readFile(path1)).test(fake)
+            }
+
+            true
+        }
+        catch(e: ContractException) {
+            println(resultReport(e.result()))
+            false
+        }
+        catch (contractTestException: Exception) {
+            println("""${contractTestException.message?.prependIndent(" ")}
+""")
+            false
+        }
+        catch (exception: Throwable) {
+            println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
+            false
+        }
     }
 }

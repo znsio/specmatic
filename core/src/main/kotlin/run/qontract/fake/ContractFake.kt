@@ -53,7 +53,7 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     try {
         val headersControlledByEngine = listOf("content-type", "content-length")
         for ((name, value) in httpResponse.headers.filterNot { it.key.toLowerCase() in headersControlledByEngine }) {
-            call.response.headers.append(name, value ?: "")
+            call.response.headers.append(name, value)
         }
 
         runBlocking { call.respond(textContent) }

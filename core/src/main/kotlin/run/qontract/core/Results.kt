@@ -16,7 +16,7 @@ data class Results(val results: MutableList<Triple<Result, HttpRequest, HttpResp
     }
 
     fun generateErrorHttpResponse() =
-            HttpResponse(400, generateErrorResponseBody(), java.util.HashMap())
+            HttpResponse(400, generateErrorResponseBody(), mutableMapOf("Content-Type" to "text/plain"))
 
     private fun generateErrorResponseBody() =
             generateFeedback()
@@ -35,9 +35,7 @@ fun resultReport(result: Result, request: HttpRequest, response: HttpResponse?):
 }
 
 fun resultReport(result: Result): String {
-    val scenario = result.scenario
-
-    val firstLine = when(scenario) {
+    val firstLine = when(val scenario = result.scenario) {
         null -> ""
         else -> {
             """In scenario "${scenario.name}""""

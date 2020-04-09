@@ -1,13 +1,12 @@
 package application
 
-import picocli.CommandLine
 import picocli.CommandLine.*
 import run.qontract.core.Contract
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.resultReport
 import run.qontract.core.utilities.readFile
 import run.qontract.fake.ContractFake
-import run.qontract.test.SyntaxException
+import run.qontract.test.ContractTestException
 import java.util.concurrent.Callable
 
 @Command(name = "samples", version = ["0.1.0"],
@@ -33,8 +32,8 @@ class SamplesCommand : Callable<Void> {
         catch(e: ContractException) {
             println(resultReport(e.result()))
         }
-        catch (syntaxException: SyntaxException) {
-            println("Errors were found in the spec.\n\n${syntaxException.message}")
+        catch (contractTestException: ContractTestException) {
+            println("Errors were found in the spec.\n\n${contractTestException.message}")
         }
         catch (exception: Throwable) {
             println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")

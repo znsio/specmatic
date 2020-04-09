@@ -28,18 +28,18 @@ class HttpClient(private val baseURL: String) : TestExecutor {
     @KtorExperimentalAPI
     @Throws(IOException::class, URISyntaxException::class)
     override fun execute(request: HttpRequest): HttpResponse {
-        val ktorClient = io.ktor.client.HttpClient(CIO)
+        val ktorClient = io.ktor.client.HttpClient(CIO) { expectSuccess = false }
         val url = URL(request.getURL(baseURL))
 
         val startTime = Date()
 
         return runBlocking {
             val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
-                this.method = io.ktor.http.HttpMethod.parse(request.method as String)
+                this.method = HttpMethod.parse(request.method as String)
 
                 val listOfExcludedHeaders = listOf("content-type", "content-length")
                 request.headers
-                        .map {Triple(it.key?.trim() ?: "", it.key?.trim()?.toLowerCase() ?: "", it.value?.trim() ?: "")}
+                        .map {Triple(it.key.trim(), it.key.trim().toLowerCase(), it.value.trim())}
                         .forEach { (key, loweredKey, value) ->
                             if(loweredKey !in listOfExcludedHeaders) {
                                 this.headers[key] = value
@@ -125,9 +125,10 @@ private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpReq
 private suspend fun ktorResponseToHttpResponse(ktorResponse: io.ktor.client.statement.HttpResponse): HttpResponse =
         HttpResponse(ktorResponse.status.value,
                 try {
-                    ktorResponse.readText()
+                    val data = ktorResponse.readText()
+                    data
                 } catch (e: ClientRequestException) {
-                    ""
+                    val data = e.response.readText()
+                    data
                 },
                 ktorResponse.headers.toMap().mapValues { it.value.first() }.toMutableMap())
-

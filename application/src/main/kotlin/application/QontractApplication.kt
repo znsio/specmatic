@@ -8,7 +8,7 @@ import java.util.*
 import java.util.concurrent.Callable
 import java.util.logging.LogManager
 
-@CommandLine.Command(name = "qontract", subcommands = [ContractCommand::class, ComponentCommand::class, MockCommand::class, HelpCommand::class, StubCommand::class, SamplesCommand::class, TestCommand::class])
+@CommandLine.Command(name = "qontract", subcommands = [ContractCommand::class, CompareCommand::class, CompatibleCommand::class, ComponentCommand::class, EqualCommand::class, MockCommand::class, HelpCommand::class, StubCommand::class, SamplesCommand::class, TestCommand::class])
 class QontractApplication : Callable<Int> {
     override fun call(): Int {
         return 0
@@ -28,8 +28,8 @@ class QontractApplication : Callable<Int> {
             val logManager = LogManager.getLogManager()
             val props = Properties()
             props.setProperty("java.util.logging.ConsoleHandler.level", "FINE")
-            val out = ByteArrayOutputStream(512);
-            props.store(out, "No comment");
+            val out = ByteArrayOutputStream(512)
+            props.store(out, "No comment")
             logManager.readConfiguration(ByteArrayInputStream(out.toByteArray()))
         }
     }

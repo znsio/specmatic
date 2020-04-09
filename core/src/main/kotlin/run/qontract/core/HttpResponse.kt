@@ -8,7 +8,7 @@ import run.qontract.core.utilities.valueMapToPrettyJsonString
 import run.qontract.core.value.*
 import java.util.*
 
-data class HttpResponse(var status: Int = 0, var body: String? = "", val headers: MutableMap<String, String> = mutableMapOf("Content-Type" to "text/plain")) {
+data class HttpResponse(var status: Int = 0, var body: String? = "", val headers: Map<String, String> = mapOf("Content-Type" to "text/plain")) {
     val statusText: String
         get() =
             when(status) {
@@ -17,9 +17,7 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
             }
 
     fun updateBodyWith(content: Value): HttpResponse {
-        body = content.toString()
-        headers.put("Content-Type", content.httpContentType)
-        return this
+        return copy(body = content.toString(), headers = headers.minus("Content-Type").plus("Content-Type" to content.httpContentType))
     }
 
     fun toJSON(): MutableMap<String, Value> =

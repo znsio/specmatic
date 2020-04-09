@@ -244,7 +244,13 @@ private fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Triple<
 
     return try {
         val response = testExecutor.execute(request)
-        Triple(scenario.matches(response), request, response)
+        when {
+            response.headers.get("X-Qontract-Result") == "failure" -> {
+                val errorMessage = "The request didn't match:\n${response.body?.prependIndent("  ")}"
+                Triple(Result.Failure(errorMessage), request, response)
+            }
+            else -> Triple(scenario.matches(response), request, response)
+        }
     }
     catch(contractException: ContractException) {
         Triple(contractException.result().also { it.updateScenario(scenario) }, request, null)

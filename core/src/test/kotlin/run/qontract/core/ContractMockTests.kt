@@ -10,10 +10,7 @@ import run.qontract.mock.MockScenario
 import run.qontract.mock.NoMatchingScenario
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.DynamicTest
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.*
 import org.springframework.http.HttpMethod
 import org.springframework.http.ResponseEntity
 import org.springframework.web.client.RestTemplate
@@ -119,11 +116,14 @@ Scenario: JSON API to get account details with fact check
         DynamicTest.dynamicTest("when url is ${httpRequest.getURL("")}") {
             val expectedResponse = HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>200</sms_messages_left></balance>")
             val response = validateAndRespond(contractGherkinString, httpRequest, expectedResponse, HashMap())
-            val xmlResponse = parseXML(response.body)
-            val root: Node = xmlResponse.documentElement
-            Assertions.assertEquals("balance", root.nodeName)
-            Assertions.assertEquals("calls_left", root.firstChild.nodeName)
-            Assertions.assertEquals("100", root.firstChild.firstChild.nodeValue)
+
+            response.body?.let {
+                val xmlResponse = parseXML(it)
+                val root: Node = xmlResponse.documentElement
+                Assertions.assertEquals("balance", root.nodeName)
+                Assertions.assertEquals("calls_left", root.firstChild.nodeName)
+                Assertions.assertEquals("100", root.firstChild.firstChild.nodeValue)
+            } ?: fail("Expected a response body")
         }
     }
 
@@ -154,9 +154,7 @@ Scenario: JSON API to get account details with fact check
     @Throws(Throwable::class)
     fun `contract mock should validate and serve response headers`() {
         val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
-        val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: \"(number)\", sms-messages-left: 200}").also {
-            it.headers["token"] = "test"
-        }
+        val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: \"(number)\", sms-messages-left: 200}").let { it.copy(headers = it.headers.plus("token" to "test"))}
         val response = validateAndRespond("""
                 Feature: Contract for the balance service
                   Scenario: JSON API to get the balance for an individual
@@ -179,11 +177,14 @@ Scenario: JSON API to get account details with fact check
         val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_xml").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>(number)</sms_messages_left></balance>")
         val response = validateAndRespond(queryParameterXmlContract, expectedRequest, expectedResponse, HashMap())
-        val xmlResponse = parseXML(response.body)
-        val root: Node = xmlResponse.documentElement
-        Assertions.assertEquals("balance", root.nodeName)
-        Assertions.assertEquals("sms_messages_left", root.lastChild.nodeName)
-        Assertions.assertTrue(NumericStringPattern().matches(asValue(root.firstChild.lastChild.nodeValue), Resolver()) is Result.Success)
+
+        response.body?.let {
+            val xmlResponse = parseXML(it)
+            val root: Node = xmlResponse.documentElement
+            Assertions.assertEquals("balance", root.nodeName)
+            Assertions.assertEquals("sms_messages_left", root.lastChild.nodeName)
+            Assertions.assertTrue(NumericStringPattern().matches(asValue(root.firstChild.lastChild.nodeValue), Resolver()) is Result.Success)
+        } ?: fail("Expected body in the response")
     }
 
     //TODO: Why does this pass after mismatching userid in serverstate and queryParam?
@@ -232,9 +233,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val requestBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody(requestBody)
-            val expectedResponse = HttpResponse.EMPTY_200.also {
-                it.headers["Content-Type"] = "application/json"
-            }
+            val expectedResponse = HttpResponse.EMPTY_200.let { it.copy(headers = it.headers.plus("Content-Type" to "application/json"))}
             val emptyServerState = HashMap<String, Value>()
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, emptyServerState))
         }

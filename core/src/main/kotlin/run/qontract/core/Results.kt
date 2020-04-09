@@ -16,7 +16,7 @@ data class Results(val results: MutableList<Triple<Result, HttpRequest, HttpResp
     }
 
     fun generateErrorHttpResponse() =
-            HttpResponse(400, generateErrorResponseBody(), mutableMapOf("Content-Type" to "text/plain"))
+            HttpResponse(400, generateErrorResponseBody(), mutableMapOf("Content-Type" to "text/plain", "X-Qontract-Result" to "failure"))
 
     private fun generateErrorResponseBody() =
             generateFeedback()
@@ -44,9 +44,18 @@ fun resultReport(result: Result): String {
 
     val report = if (result is Result.Failure) {
         result.report().let { (breadCrumbs, errorMessages) ->
-            val breadCrumbString = breadCrumbs.map { it.trim() }.filter { it.isNotEmpty() }.joinToString(".")
+            val breadCrumbString =
+                breadCrumbs
+                    .filter { it.isNotBlank() }
+                    .joinToString(".") { it.trim() }
+                    .let {
+                        when {
+                            it.isNotBlank() -> ">> $it"
+                            else -> ""
+                        }
+                    }
             val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
-            ">> $breadCrumbString\n\n$errorMessagesString".trim()
+            "$breadCrumbString\n\n$errorMessagesString".trim()
         }
     } else ""
 

@@ -1,15 +1,21 @@
 package run.qontract.core.pattern
 
-enum class URLScheme(val schemeName: String) {
-    HTTP("http") {
-        override val prefix = "$schemeName://"
+import run.qontract.core.value.StringValue
+
+enum class URLScheme(val schemes: List<String>) {
+    HTTP(listOf("http")) {
+        override val prefix = "${schemes.first()}://"
     },
-    HTTPS("https") {
-        override val prefix = "$schemeName://"
+    HTTPS(listOf("https")) {
+        override val prefix = "${schemes.first()}://"
     },
-    PATH("") {
+    PATH(listOf("/")) {
         override val prefix = "/"
+    },
+    EITHER(listOf("http", "https")) {
+        override val prefix = "${schemes.first()}://"
     };
 
     abstract val prefix: String
+    fun matches(url: StringValue): Boolean = schemes.any { url.string.startsWith(it) }
 }

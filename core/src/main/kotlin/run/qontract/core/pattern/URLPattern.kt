@@ -12,7 +12,7 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS): Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (sampleData) {
             is StringValue -> {
-                if(parse(sampleData.string, resolver).string.startsWith(scheme.prefix)) {
+                if(scheme.matches(parse(sampleData.string, resolver))) {
                     Result.Success()
                 } else Result.Failure("Expected URL prefix ${scheme.prefix} in url ${sampleData.string}")
             }

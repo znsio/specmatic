@@ -49,10 +49,12 @@ private fun mutualCompatibility(path1: String, path2: String): Pair<Boolean, Boo
 
     showPath(path1, path2)
     val successWith1To2 = backwardCompatible(behaviour1, behaviour2)
+    if(successWith1To2) println("| All good.")
 
     println()
     showPath(path2, path1)
     val successWith2To1 = backwardCompatible(behaviour2, behaviour1)
+    if(successWith1To2) println("| All good.")
 
     return Pair(successWith1To2, successWith2To1)
 }

@@ -11,7 +11,11 @@ fun testBackwardCompatibility(older: ContractBehaviour, newerContract: ContractB
             try {
                 val response = newerContract.lookup(request)
 
-                val result = olderScenario.matches(response)
+                val result = when {
+                    response.headers["X-Qontract-Result"] == "failure" -> Result.Failure(response.body ?: "")
+                    else -> olderScenario.matches(response)
+                }
+
                 results.copy(results = results.results.plus(Triple(result, request, response)).toMutableList())
             }
             catch(contractException: ContractException) {

@@ -36,7 +36,7 @@ class StubCommand : Callable<Void> {
             override fun run() {
                 try {
                     println("Shutting down stub server")
-                    contractFake?.close()
+                    contractFake.close()
                 } catch (e: InterruptedException) {
                     currentThread().interrupt()
                 }

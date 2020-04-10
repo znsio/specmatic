@@ -1,12 +1,13 @@
 package run.qontract.core.utilities
 
 import kotlinx.serialization.ImplicitReflectionSerializer
+import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.*
 import kotlinx.serialization.stringify
 import run.qontract.core.pattern.*
 import run.qontract.core.value.*
 
-@OptIn(ImplicitReflectionSerializer::class)
+@OptIn(ImplicitReflectionSerializer::class, UnstableDefault::class)
 fun valueArrayToJsonString(value: List<Value>): String {
     val data = valueListToElements(value)
     return Json.indented.stringify(data)
@@ -14,6 +15,7 @@ fun valueArrayToJsonString(value: List<Value>): String {
 
 fun toMap(value: Value?) = jsonStringToValueMap(value.toString())
 
+@OptIn(UnstableDefault::class)
 fun jsonStringToMap(stringContent: String): MutableMap<String, Any?>  {
     val data = Json.plain.parseJson(stringContent).jsonObject.toMap()
     return convertToMapAny(data)
@@ -31,14 +33,16 @@ private fun toAnyValue(value: JsonElement): Any? =
             is JsonArray -> convertToArrayAny(value.toList()).toMutableList()
         }
 
-@OptIn(ImplicitReflectionSerializer::class)
+@OptIn(ImplicitReflectionSerializer::class, UnstableDefault::class)
 internal fun prettifyJsonString(content: String): String = Json.indented.stringify(Json.plain.parseJson(content))
 
+@OptIn(UnstableDefault::class)
 fun stringToPatternMap(stringContent: String): Map<String, Pattern>  {
     val data = Json.nonstrict.parseJson(stringContent).jsonObject.toMap()
     return convertToMapPattern(data)
 }
 
+@OptIn(UnstableDefault::class)
 fun jsonStringToValueMap(stringContent: String): Map<String, Value>  {
     val data = Json.nonstrict.parseJson(stringContent).jsonObject.toMap()
     return convertToMapValue(data)
@@ -99,19 +103,19 @@ fun convertToArrayValue(data: List<JsonElement>): List<Value> =
 fun convertToArrayPattern(data: List<JsonElement>): List<Pattern> =
     data.map { toPattern(it) }
 
-@OptIn(ImplicitReflectionSerializer::class)
+@OptIn(ImplicitReflectionSerializer::class, UnstableDefault::class)
 fun nativeMapToJsonString(value: Map<String, Any?>): String {
     val data = nativeMapToStringElement(value)
     return Json.indented.stringify(data)
 }
 
-@OptIn(ImplicitReflectionSerializer::class)
+@OptIn(ImplicitReflectionSerializer::class, UnstableDefault::class)
 fun valueMapToPrettyJsonString(value: Map<String, Value>): String {
     val data = mapToStringElement(value)
     return Json.indented.stringify(data)
 }
 
-@OptIn(ImplicitReflectionSerializer::class)
+@OptIn(ImplicitReflectionSerializer::class, UnstableDefault::class)
 fun valueMapToPlainJsonString(value: Map<String, Value>): String {
     val data = mapToStringElement(value)
     return Json.plain.stringify(data)
@@ -155,11 +159,13 @@ fun valueListToElements(values: List<Value>): JsonArray {
     return JsonArray(values.map { valueToJsonElement(it) })
 }
 
+@OptIn(UnstableDefault::class)
 fun jsonStringToValueArray(value: String): List<Value> {
     val data = Json.nonstrict.parseJson(value).jsonArray.toList()
     return convertToArrayValue(data)
 }
 
+@OptIn(UnstableDefault::class)
 fun stringTooPatternArray(value: String): List<Pattern> {
     val data = Json.nonstrict.parseJson(value).jsonArray.toList()
     return convertToArrayPattern(data)

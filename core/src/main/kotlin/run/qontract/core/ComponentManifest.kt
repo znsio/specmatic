@@ -35,7 +35,7 @@ class ComponentManifest {
 
     fun getDependencyMinorVersion(dependencyName: String?): Int {
         val dependencies = componentManifest[DEPENDENCIES] as HashMap<String, Any>?
-        return (dependencies!![dependencyName] as HashMap<String?, Int>?)!!.computeIfAbsent("minor") { x: String? -> 0 }
+        return (dependencies!![dependencyName] as HashMap<String?, Int>?)!!.computeIfAbsent("minor") { 0 }
     }
 
     val componentContractMajorVersion: Int

@@ -11,6 +11,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.readText
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.util.KtorExperimentalAPI
 import kotlinx.coroutines.runBlocking
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -27,13 +28,16 @@ import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 
-fun readFromAPI(url: String?): String {
+@OptIn(KtorExperimentalAPI::class)
+fun readFromAPI(urlStr: String?): String {
     val ktorClient = io.ktor.client.HttpClient(CIO)
 
     var response = ""
 
+    val url = URL(urlStr)
+
     runBlocking {
-        val ktorResponse: HttpResponse = ktorClient.request(URL(url)) {
+        val ktorResponse: HttpResponse = ktorClient.request(url) {
             this.method = io.ktor.http.HttpMethod.Get
             this.accept(io.ktor.http.ContentType.Application.Json)
         }
@@ -73,13 +77,16 @@ fun loadDependencyInfo(): MutableMap<String, Any?>? {
     return null
 }
 
-fun writeToAPI(method: io.ktor.http.HttpMethod, url: String?, contractMessage: Map<String, Any?>): String {
+@OptIn(KtorExperimentalAPI::class)
+fun writeToAPI(method: io.ktor.http.HttpMethod, urlStr: String?, contractMessage: Map<String, Any?>): String {
     val ktorClient = io.ktor.client.HttpClient(CIO)
 
     var response = ""
 
+    val url = URL(urlStr)
+
     runBlocking {
-        val ktorResponse: HttpResponse = ktorClient.request(URL(url)) {
+        val ktorResponse: HttpResponse = ktorClient.request(url) {
             this.method = method
             this.contentType(io.ktor.http.ContentType.Application.Json)
             this.body = nativeMapToJsonString(contractMessage)

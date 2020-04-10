@@ -25,7 +25,7 @@ import java.util.*
 
 class HttpClient(private val baseURL: String) : TestExecutor {
     private val serverStateURL = "/_server_state"
-    @KtorExperimentalAPI
+    @OptIn(KtorExperimentalAPI::class)
     @Throws(IOException::class, URISyntaxException::class)
     override fun execute(request: HttpRequest): HttpResponse {
         val ktorClient = io.ktor.client.HttpClient(CIO) { expectSuccess = false }
@@ -72,7 +72,7 @@ class HttpClient(private val baseURL: String) : TestExecutor {
         }
     }
 
-    @KtorExperimentalAPI
+    @OptIn(KtorExperimentalAPI::class)
     override fun setServerState(serverState: Map<String, Value>) {
         if (serverState.isEmpty()) return
 

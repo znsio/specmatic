@@ -126,3 +126,9 @@ javadoc {
         options.addBooleanOption('html5', true)
     }
 }
+
+compileKotlin {
+    kotlinOptions {
+        freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+    }
+}

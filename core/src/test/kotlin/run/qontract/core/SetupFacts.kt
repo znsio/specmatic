@@ -1,11 +1,9 @@
 package run.qontract.core
 
+import org.assertj.core.api.Assertions.assertThat
 import run.qontract.core.pattern.NumberTypePattern
-import run.qontract.core.pattern.StringPattern
-import run.qontract.core.pattern.asValue
 import run.qontract.test.TestExecutor
 import org.json.JSONObject
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -247,11 +245,11 @@ Feature: Contract for /balance API
             }
         })
         val httpResponse = contractBehaviour.lookup(httpRequest)
-        Assertions.assertNotNull(httpResponse)
+        assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
         val actual = JSONObject(httpResponse.body)
-        assertTrue(NumberTypePattern().matches(asValue(actual["calls_left"]), Resolver()) is Result.Success)
-        assertTrue(NumberTypePattern().matches(asValue(actual["messages_left"]), Resolver()) is Result.Success)
+        assertThat(actual["calls_left"]).isInstanceOf(Number::class.java)
+        assertThat(actual["messages_left"]).isInstanceOf(Number::class.java)
     }
 
     @Test
@@ -274,10 +272,10 @@ Feature: Contract for /balance API
         contractBehaviour.setServerState(serverState)
         val request = HttpRequest().updateMethod("POST").updatePath("/account").updateBody("{\"account_id\": 10}")
         val response = contractBehaviour.lookup(request)
-        Assertions.assertNotNull(response)
+        assertNotNull(response)
         assertEquals(200, response.status)
         val jsonObject = JSONObject(response.body)
-        assertTrue(StringPattern().matches(asValue(jsonObject["name"]), Resolver()) is Result.Success)
+        assertThat(jsonObject["name"]).isInstanceOf(String::class.java)
     }
 
     @Test
@@ -300,10 +298,10 @@ Feature: Contract for /balance API
         contractBehaviour.setServerState(serverState)
         val request = HttpRequest().updateMethod("POST").updatePath("/account").updateBody("<account_id>10</account_id>")
         val response = contractBehaviour.lookup(request)
-        Assertions.assertNotNull(response)
+        assertNotNull(response)
         assertEquals(200, response.status)
         val jsonObject = JSONObject(response.body)
-        assertTrue(StringPattern().matches(asValue(jsonObject["name"]), Resolver()) is Result.Success)
+        assertThat(jsonObject["name"]).isInstanceOf(String::class.java)
     }
 
     @Test
@@ -326,9 +324,9 @@ Feature: Contract for /balance API
         contractBehaviour.setServerState(serverState)
         val request = HttpRequest().updateMethod("POST").updatePath("/account").updateBody("<account account_id=\"10\">(string)</account>")
         val response = contractBehaviour.lookup(request)
-        Assertions.assertNotNull(response)
+        assertNotNull(response)
         assertEquals(200, response.status)
         val jsonObject = JSONObject(response.body)
-        assertTrue(StringPattern().matches(asValue(jsonObject["name"]), Resolver()) is Result.Success)
+        assertThat(jsonObject["name"]).isInstanceOf(String::class.java)
     }
 }

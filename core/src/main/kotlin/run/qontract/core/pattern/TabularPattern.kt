@@ -27,6 +27,15 @@ fun toJSONValue(value: String): Pattern {
     }
 }
 
+fun isNumber(value: StringValue): Boolean {
+    return try {
+        convertToNumber(value.string)
+        true
+    } catch(e: ContractException) {
+        false
+    }
+}
+
 fun convertToNumber(value: String): Number {
     value.trim().let {
         try {
@@ -60,7 +69,8 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
             return Result.Failure("Missing key $missingKey")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
-            when (val result = asPattern(patternValue, key).matches(sampleValue, withNumberTypePattern(resolver))) {
+            when (val result = withNumberTypePattern(resolver).matchesPattern(key, patternValue, sampleValue)) {
+//            when (val result = asPattern(patternValue, key).matches(sampleValue, withNumberTypePattern(resolver))) {
                 is Result.Failure -> return result.breadCrumb(key)
             }
         }

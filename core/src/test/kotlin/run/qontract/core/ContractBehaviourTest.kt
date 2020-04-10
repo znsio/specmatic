@@ -436,7 +436,7 @@ Feature: Contract for /balance API
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        assertTrue(NumericStringPattern().matches(asValue(httpResponse.body), Resolver()) is Result.Success)
+        assertTrue(NumericStringPattern().matches(httpResponse.body?.let { StringValue(it) } ?: EmptyString, Resolver()) is Result.Success)
     }
 
     @Test

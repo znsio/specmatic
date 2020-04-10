@@ -5,14 +5,11 @@ package run.qontract.core.pattern
 import run.qontract.core.utilities.*
 import run.qontract.core.value.*
 
-fun asPattern(patternValue: Any?, key: String?): Pattern =
-    when {
-        patternValue is Keyed -> patternValue.withKey(key)
-        patternValue is Pattern -> patternValue
-        patternValue is String && isPatternToken(patternValue) -> DeferredPattern(patternValue, key)
-        patternValue == null -> NoContentPattern()
-        else -> ExactMatchPattern(asValue(patternValue))
-    }
+fun stringToPattern(patternValue: String, key: String?): Pattern =
+        when {
+            isPatternToken(patternValue) -> DeferredPattern(patternValue, key)
+            else -> ExactMatchPattern(StringValue(patternValue))
+        }
 
 fun parsedPattern(rawContent: String, key: String? = null): Pattern {
     return rawContent.trim().let {
@@ -30,14 +27,6 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             else -> ExactMatchPattern(StringValue(it))
         }
     }
-}
-
-fun asValue(value: Any?): Value = when(value) {
-    is Value -> value
-    is Number -> NumberValue(value)
-    is Boolean -> BooleanValue(value)
-    null -> NullValue
-    else -> StringValue(value.toString())
 }
 
 fun parsedJSON(content: String): Value {

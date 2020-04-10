@@ -17,7 +17,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
             return Result.Failure("Missing key $missingKey")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
-            when (val result = asPattern(patternValue, key).matches(asValue(sampleValue), withNumberTypePattern(resolver))) {
+            when (val result = withNumberTypePattern(resolver).matchesPattern(key, patternValue, sampleValue)) {
                 is Result.Failure -> return result.breadCrumb(key)
             }
         }

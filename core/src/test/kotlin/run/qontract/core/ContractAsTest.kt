@@ -8,10 +8,8 @@ import org.junit.jupiter.api.fail
 import org.xml.sax.SAXException
 import run.qontract.core.HttpResponse.Companion.jsonResponse
 import run.qontract.core.HttpResponse.Companion.xmlResponse
-import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.StringPattern
-import run.qontract.core.pattern.asValue
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.*
 import run.qontract.fake.ContractFake
@@ -43,8 +41,8 @@ class ContractAsTest {
                 val requestBody = jsonObject(request.body)
                 val name = requestBody["name"]
                 val address = requestBody["address"]
-                assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
-                assertTrue(StringPattern().matches(asValue(address), Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(address, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -234,7 +232,7 @@ Couldn't convert "abc" to number""")
                 if(request.queryParams.contains("account_id")) {
                     flags.add("with")
                     assertTrue(NumericStringPattern()
-                            .matches(asValue(request.queryParams["account_id"]), Resolver()) is Result.Success)
+                            .matches(StringValue(request.queryParams.getValue("account_id")), Resolver()) is Result.Success)
                 } else flags.add("without")
 
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
@@ -269,8 +267,8 @@ Couldn't convert "abc" to number""")
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 val address = jsonBody["address"]
-                assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
-                assertTrue(StringPattern().matches(asValue(address), Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(address, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -303,8 +301,8 @@ Couldn't convert "abc" to number""")
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 val address = jsonBody["address"]
-                assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
-                assertTrue(StringPattern().matches(asValue(address), Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(address, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -331,7 +329,7 @@ Couldn't convert "abc" to number""")
                 assertEquals("/accounts", request.path)
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
-                assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
                 val expectedLinkedIds = arrayOf(1, 2, 3)
                 val actualLinkedIds = jsonBody["linked_ids"] as List<Any?>
                 for (i in expectedLinkedIds.indices) {
@@ -359,15 +357,15 @@ Couldn't convert "abc" to number""")
                 assertEquals("/accounts", request.path)
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
-                assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
                 val expectedLinkedIds = arrayOf(1, 2, 3)
                 val actualLinkedIds = jsonBody["linked_ids"] as List<Any?>
                 for (i in expectedLinkedIds.indices) {
                     assertEquals(expectedLinkedIds[i], actualLinkedIds[i])
                 }
                 val innerObject = actualLinkedIds[3] as Map<String, Any?>
-                assertTrue(NumberTypePattern().matches(asValue(innerObject["a"]), Resolver()) is Result.Success)
-                assertTrue(StringPattern().matches(asValue(innerObject["b"]), Resolver()) is Result.Success)
+                assertThat(innerObject["a"]).isInstanceOf(Number::class.java)
+                assertThat(innerObject["b"]).isInstanceOf(String::class.java)
                 val headers = HashMap<String, String>()
                 return HttpResponse(200, "", headers)
             }
@@ -395,7 +393,7 @@ Couldn't convert "abc" to number""")
                 assertEquals("name", nameItem.nodeName)
                 assertEquals("address", addressItem.nodeName)
                 assertEquals("John Doe", nameItem.firstChild.nodeValue)
-                assertTrue(StringPattern().matches(asValue(addressItem.firstChild.nodeValue), Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(StringValue(addressItem.firstChild.nodeValue), Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/xml")

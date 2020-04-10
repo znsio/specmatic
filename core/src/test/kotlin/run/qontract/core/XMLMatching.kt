@@ -2,10 +2,10 @@ package run.qontract.core
 
 import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.StringPattern
-import run.qontract.core.pattern.asValue
 import run.qontract.core.utilities.parseXML
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import run.qontract.core.value.StringValue
 
 class XMLMatching {
     @Test
@@ -27,10 +27,10 @@ class XMLMatching {
         val name = root.childNodes.item(0).childNodes.item(0).nodeValue
         val address = root.childNodes.item(1).childNodes.item(0).nodeValue
         val age = root.childNodes.item(2).childNodes.item(0).nodeValue
-        Assertions.assertTrue(StringPattern().matches(asValue(type), Resolver()) is Result.Success)
-        Assertions.assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
-        Assertions.assertTrue(StringPattern().matches(asValue(address), Resolver()) is Result.Success)
-        Assertions.assertTrue(NumericStringPattern().matches(asValue(age), Resolver()) is Result.Success)
+        Assertions.assertTrue(StringPattern().matches(StringValue(type), Resolver()) is Result.Success)
+        Assertions.assertTrue(StringPattern().matches(StringValue(name), Resolver()) is Result.Success)
+        Assertions.assertTrue(StringPattern().matches(StringValue(address), Resolver()) is Result.Success)
+        Assertions.assertTrue(NumericStringPattern().matches(StringValue(age), Resolver()) is Result.Success)
     }
 
     @Test

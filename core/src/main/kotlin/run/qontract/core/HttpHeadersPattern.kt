@@ -40,7 +40,8 @@ data class HttpHeadersPattern(val headers: Map<String, Pattern> = emptyMap()) {
         return attempt(breadCrumb = "HEADERS") {
             HashMap(headers.mapValues { (key, pattern) ->
                 attempt(breadCrumb = key) {
-                    asPattern(pattern, key).generate(resolver).toStringValue()
+                    resolver.generate(key, pattern).toStringValue()
+//                    asPattern(pattern, key).generate(resolver).toStringValue()
                 }
             }.toMutableMap())
         }

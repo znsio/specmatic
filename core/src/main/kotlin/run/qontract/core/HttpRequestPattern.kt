@@ -40,7 +40,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
             .map { (key, pattern) -> Triple(withoutOptionality(key), pattern, httpRequest.formFields.getValue(key)) }
             .map { (key, pattern, value) ->
                 try {
-                    when (val result = asPattern(pattern, key).matches(pattern.parse(value, resolver), resolver)) {
+                    when (val result = resolver.matchesPattern(key, pattern, pattern.parse(value, resolver))) {
                         is Result.Failure -> result.breadCrumb("FORM FIELDS").breadCrumb(key)
                         else -> result
                     }
@@ -137,7 +137,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
 
             headers.map { (key, value) -> newRequest.updateHeader(key, value) }
 
-            val formFieldsValue = attempt(breadCrumb = "FORM FIELDS") { formFieldsPattern.mapValues { (key, pattern) -> attempt(breadCrumb = key) { asPattern(pattern, key).generate(resolver).toString() } } }
+            val formFieldsValue = attempt(breadCrumb = "FORM FIELDS") { formFieldsPattern.mapValues { (key, pattern) -> attempt(breadCrumb = key) { resolver.generate(key, pattern).toString() } } }
             when (formFieldsValue.size) {
                 0 -> newRequest
                 else -> {

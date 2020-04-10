@@ -6,7 +6,6 @@ import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.Examples.Companion.fromPSV
 import run.qontract.core.pattern.StringPattern
-import run.qontract.core.pattern.asValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
@@ -50,22 +49,21 @@ class ContractAsTestWithSamplesInTable {
         val contractBehaviour = ContractBehaviour(contractGherkin)
         contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                var account_id = request.queryParams["account_id"]
-                if (account_id == null) {
+                val accountId = request.queryParams.getOrElse("account_id") {
                     val pathParts = request.path!!.split("/".toRegex()).toTypedArray()
-                    account_id = pathParts[pathParts.size - 1]
+                    pathParts[pathParts.size - 1]
                 }
                 Assertions.assertEquals("GET", request.method)
-                Assertions.assertTrue(NumericStringPattern().matches(asValue(account_id), Resolver()) is Result.Success)
+                Assertions.assertTrue(NumericStringPattern().matches(StringValue(accountId), Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
                     }
                 }
                 var jsonResponseString: String? = null
-                if (account_id == "10") {
+                if (accountId == "10") {
                     jsonResponseString = "{calls_left: 20, messages_left: 30}"
-                } else if (account_id == "20") {
+                } else if (accountId == "20") {
                     jsonResponseString = "{calls_left: 30, messages_left: \"hello\"}"
                 }
                 return HttpResponse(200, jsonResponseString, headers)
@@ -146,7 +144,7 @@ Feature: Contract for /balance API
                 val name = requestJSON["name"] as StringValue
                 val city = (requestJSON["address"] as JSONObjectValue).jsonObject["city"] as StringValue
                 Assertions.assertEquals("POST", request.method)
-                Assertions.assertTrue(StringPattern().matches(asValue(city), Resolver()) is Result.Success)
+                Assertions.assertTrue(StringPattern().matches(city, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -197,10 +195,10 @@ Feature: Contract for /balance API
 
                     var jsonResponseString: String? = null
                     if (name.string == "John Doe") {
-                        flags["john"] = true;
+                        flags["john"] = true
                         jsonResponseString = "{account_id: 10}"
                     } else if (name.string == "Jane Doe") {
-                        flags["jane"] = true;
+                        flags["jane"] = true
                         jsonResponseString = "{account_id: 20}"
                     }
                     return HttpResponse(200, jsonResponseString, headers)
@@ -246,8 +244,8 @@ Feature: Contract for /balance API
                 Assertions.assertEquals("name", nameItem.nodeName)
                 Assertions.assertEquals("city", cityItem.nodeName)
                 val name = nameItem.firstChild.nodeValue
-                Assertions.assertTrue(StringPattern().matches(asValue(name), Resolver()) is Result.Success)
-                Assertions.assertTrue(StringPattern().matches(asValue(cityItem.firstChild.nodeValue), Resolver()) is Result.Success)
+                Assertions.assertTrue(StringPattern().matches(StringValue(name), Resolver()) is Result.Success)
+                Assertions.assertTrue(StringPattern().matches(StringValue(cityItem.firstChild.nodeValue), Resolver()) is Result.Success)
                 Assertions.assertEquals("POST", request.method)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {

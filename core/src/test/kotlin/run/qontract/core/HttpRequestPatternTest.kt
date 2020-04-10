@@ -3,7 +3,7 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.Row
-import run.qontract.core.pattern.asPattern
+import run.qontract.core.pattern.stringToPattern
 import java.net.URI
 import kotlin.test.assertEquals
 
@@ -80,7 +80,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `a clone request pattern request should include the headers specified`() {
         val pattern = HttpRequestPattern(
-                headersPattern = HttpHeadersPattern(mapOf("Test-Header" to asPattern("(string)", "Test-Header"))),
+                headersPattern = HttpHeadersPattern(mapOf("Test-Header" to stringToPattern("(string)", "Test-Header"))),
                 urlMatcher = toURLPattern(URI("/")),
                 method = "GET"
         )

@@ -239,15 +239,30 @@ data class XMLPattern(val node: Node) : Pattern {
                 val parentNodeName = node.parentNode.nodeName
                 if (row.containsField(parentNodeName)) {
                     if (isPatternToken(node.nodeValue)) {
-                        when (val result = findPattern(node.nodeValue).matches(asValue(row.getField(parentNodeName)), resolver)) {
-                            is Result.Failure -> result.reason("\"The value \" + row.getField(parentNodeName) + \" in the examples of ${node.nodeName} does not match the pattern \" + node.nodeValue")
+                        val nodePattern = resolver.getPattern(node.nodeValue)
+
+                        val rowValue = row.getField(parentNodeName)
+
+                        when {
+                            isPatternToken(rowValue) -> {
+                                val rowPattern = resolver.getPattern(rowValue)
+                                if(!nodePattern.matchesPattern(rowPattern, resolver))
+                                    throw ContractException("Type $rowValue in example did not match ${node.nodeValue} in the xml document")
+                                else
+                                    node.nodeValue = resolver.generate(parentNodeName, rowPattern).toString()
+                            }
+                            else -> {
+                                val parsedRowValue = nodePattern.parse(rowValue, resolver)
+                                node.nodeValue = parsedRowValue.toStringValue()
+                            }
                         }
                     }
-                    node.nodeValue = row.getField(parentNodeName)
+                    else
+                        node.nodeValue = row.getField(parentNodeName)
                 } else {
                     val value = node.nodeValue
                     node.nodeValue = when {
-                        isPatternToken(value) -> resolver.getPattern(withoutRestTokenForXML(value)).generate(resolver).toString()
+                        isPatternToken(value) -> resolver.generate(parentNodeName, resolver.getPattern(withoutRestTokenForXML(value))).toString()
                         else -> value
                     }
                 }

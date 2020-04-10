@@ -1,9 +1,6 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.pattern.NumericStringPattern
-import run.qontract.core.pattern.StringPattern
-import run.qontract.core.pattern.asValue
 import run.qontract.core.utilities.parseXML
 import run.qontract.mock.ContractMock
 import run.qontract.mock.MockScenario
@@ -15,10 +12,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.http.ResponseEntity
 import org.springframework.web.client.RestTemplate
 import org.w3c.dom.Node
-import run.qontract.core.value.NullValue
-import run.qontract.core.value.NumberValue
-import run.qontract.core.value.True
-import run.qontract.core.value.Value
+import run.qontract.core.value.*
 import java.net.URI
 import java.util.*
 import kotlin.collections.HashMap
@@ -146,7 +140,7 @@ Scenario: JSON API to get account details with fact check
         val response = validateAndRespond(queryParamJsonContract, expectedRequest, expectedResponse, HashMap())
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
         Assertions.assertEquals(200, response.statusCodeValue)
-        Assertions.assertTrue(NumberTypePattern().matches(asValue(jsonResponse["call-mins-left"]), Resolver()) is Result.Success)
+        assertThat(jsonResponse.get("call-mins-left")).isInstanceOf(Number::class.java)
         Assertions.assertEquals(200, jsonResponse["sms-messages-left"])
     }
 
@@ -166,7 +160,7 @@ Scenario: JSON API to get account details with fact check
         """, expectedRequest, expectedResponse, HashMap())
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
         assertThat(response.statusCodeValue).isEqualTo(200)
-        assertThat(NumberTypePattern().matches(asValue(jsonResponse["call-mins-left"]), Resolver()) is Result.Success).isTrue()
+        assertThat(jsonResponse.get("call-mins-left")).isInstanceOf(Number::class.java)
         assertThat(jsonResponse["sms-messages-left"]).isEqualTo(200)
         assertThat(response.headers["token"]).contains("test")
     }
@@ -183,7 +177,7 @@ Scenario: JSON API to get account details with fact check
             val root: Node = xmlResponse.documentElement
             Assertions.assertEquals("balance", root.nodeName)
             Assertions.assertEquals("sms_messages_left", root.lastChild.nodeName)
-            Assertions.assertTrue(NumericStringPattern().matches(asValue(root.firstChild.lastChild.nodeValue), Resolver()) is Result.Success)
+            Assertions.assertTrue(NumericStringPattern().matches(StringValue(root.firstChild.lastChild.nodeValue), Resolver()) is Result.Success)
         } ?: fail("Expected body in the response")
     }
 
@@ -197,7 +191,7 @@ Scenario: JSON API to get account details with fact check
         val response = validateAndRespond(contractGherkin, expectedRequest, expectedResponse, serverState)
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
         Assertions.assertEquals(200, response.statusCodeValue)
-        Assertions.assertTrue(StringPattern().matches(asValue(jsonResponse["name"]), Resolver()) is Result.Success)
+        assertThat(jsonResponse["name"]).isInstanceOf(String::class.java)
     }
 
     @Test

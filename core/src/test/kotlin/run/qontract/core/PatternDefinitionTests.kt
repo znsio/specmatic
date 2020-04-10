@@ -1,5 +1,6 @@
 package run.qontract.core
 
+import org.assertj.core.api.Assertions.assertThat
 import run.qontract.core.pattern.*
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.BooleanValue
@@ -10,6 +11,7 @@ import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Node
+import run.qontract.core.value.StringValue
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -28,7 +30,7 @@ class PatternDefinitionTests {
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body)
-        Assertions.assertTrue(StringPattern().matches(asValue(responseJSON.getString("name")), Resolver()) is Result.Success)
+        Assertions.assertTrue(StringPattern().matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
     }
 
     @Test
@@ -169,7 +171,7 @@ class PatternDefinitionTests {
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body)
-        Assertions.assertTrue(StringPattern().matches(asValue(responseJSON.getString("name")), Resolver()) is Result.Success)
+        Assertions.assertTrue(StringPattern().matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
     }
 
     @Test
@@ -192,7 +194,7 @@ class PatternDefinitionTests {
         val responseArray = JSONArray(response.body)
         for (i in 0 until responseArray.length()) {
             val id = responseArray.getJSONObject(i)
-            Assertions.assertTrue(NumberTypePattern().matches(asValue(id["id"]), Resolver()) is Result.Success)
+            assertThat(id["id"]).isInstanceOf(Number::class.java)
         }
     }
 

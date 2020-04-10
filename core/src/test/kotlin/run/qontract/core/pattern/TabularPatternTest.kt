@@ -5,6 +5,7 @@ import run.qontract.core.shouldMatch
 import run.qontract.core.shouldNotMatch
 import run.qontract.core.parseGherkinString
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import run.qontract.core.value.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -282,17 +283,7 @@ Given request-body
 
         val patternWithNullValue = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
         val example = Row(listOf("nothing"), listOf("(null)"))
-        val newPatterns = patternWithNullValue.newBasedOn(example, Resolver())
-
-        assertEquals(1, newPatterns.size)
-
-        val value = newPatterns[0].generate(Resolver())
-        if(value !is JSONObjectValue) fail("Expected JSON object")
-
-        val nothingValue = value.jsonObject.getValue("nothing")
-        if(nothingValue !is StringValue) fail("Expected string")
-
-        assertEquals("(null)", nothingValue.string)
+        assertThrows<ContractException> { patternWithNullValue.newBasedOn(example, Resolver()) }
     }
 
     @Test

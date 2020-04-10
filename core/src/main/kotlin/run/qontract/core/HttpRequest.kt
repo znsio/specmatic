@@ -71,20 +71,15 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
     val bodyString: String
         get() = body.toString()
 
-    fun getURL(baseURL: String?): String {
-        val url = StringBuilder().append(baseURL).append(path)
-        if (!queryParams.isEmpty()) {
-            val keys: Set<String?> = queryParams.keys
-            val parts: MutableList<String> = ArrayList()
-            for (key in keys) {
-                val value = queryParams[key]
-                parts.add(key + "=" + URLEncoder.encode(value, StandardCharsets.UTF_8.toString()))
-            }
-            val joinedQueryParams = java.lang.String.join("&", parts)
-            url.append("?").append(joinedQueryParams)
-        }
-        return url.toString()
-    }
+    fun getURL(baseURL: String?): String =
+        "$baseURL$path" + if (queryParams.isNotEmpty()) {
+            val joinedQueryParams =
+                    queryParams.toList()
+                            .joinToString("&") {
+                                "${it.first}=${URLEncoder.encode(it.second, StandardCharsets.UTF_8.toString())}"
+                            }
+            "?$joinedQueryParams"
+        } else ""
 
     fun toJSON(): Map<String, Value> {
         val requestMap = mutableMapOf<String, Value>()

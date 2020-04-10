@@ -30,7 +30,13 @@ class NoContentPattern : Pattern {
         }
     }
 
+    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean {
+        return pattern is NoContentPattern
+    }
+
+    override val description: String = "nothing"
+
     override val pattern: Any = ""
 
-    override fun toString(): String = "(Nothing)"
+    override fun toString(): String = "(nothing)"
 }

@@ -12,15 +12,8 @@ data class AnyPattern(override val pattern: List<Pattern>, override val key: Str
         pattern.asSequence().map {
             resolver.matchesPattern(key, it, sampleData ?: EmptyString)
         }.let { results ->
-            results.find { it is Result.Success } ?: failedToFindAny(pattern, results.map { it as Result.Failure }.toList(), sampleData)
+            results.find { it is Result.Success } ?: failedToFindAny(description, results.map { it as Result.Failure }.toList(), sampleData)
         }
-
-    private fun failedToFindAny(pattern: List<Pattern>, results: List<Result.Failure>, sampleData: Value?): Result.Failure {
-        val report = results.joinToString("\n") { it.message }
-
-        return Result.Failure("""${sampleData?.displayableValue()} failed to match any of the available patterns:
-$report""".trim())
-    }
 
     override fun generate(resolver: Resolver): Value =
             when(key) {
@@ -35,4 +28,16 @@ $report""".trim())
         pattern.asSequence().map {
             try { it.parse(value, resolver) } catch(e: Throwable) { null }
         }.find { it != null } ?: throw ContractException("Failed to parse value $value. It should have matched one of $pattern")
+
+    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
+            this.pattern.any { it.matchesPattern(pattern, resolver) }
+
+    override val description: String = pattern.joinToString(" or ") { inner -> inner.description }
+}
+
+private fun failedToFindAny(description: String, results: List<Result.Failure>, sampleData: Value?): Result.Failure {
+    val report = results.joinToString("\n") { it.message }
+
+    return Result.Failure("""${sampleData?.displayableValue()} failed to match $description
+$report""".trim())
 }

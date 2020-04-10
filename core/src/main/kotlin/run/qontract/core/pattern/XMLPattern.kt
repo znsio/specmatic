@@ -222,9 +222,11 @@ data class XMLPattern(val node: Node) : Pattern {
     }
 
     override fun parse(value: String, resolver: Resolver): Value = XMLValue(value)
+    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern is XMLPattern
+    override val description: String = "xml"
 
     private fun updateBasedOnRow(node: Node, row: Row, resolver: Resolver) {
-        attempt(breadCrumb = "${node.nodeName}") {
+        attempt(breadCrumb = node.nodeName) {
             if (node.hasAttributes()) {
                 updateAttributesBasedOnRow(node, row, resolver)
             }

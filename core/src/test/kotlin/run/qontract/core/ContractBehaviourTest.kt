@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import run.qontract.core.pattern.*
 import run.qontract.core.value.*
+import java.net.URI
 import java.util.*
 import java.util.stream.Stream
 

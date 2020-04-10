@@ -2,9 +2,7 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 import run.qontract.core.utilities.URIUtils
-import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
-import run.qontract.core.value.Value
 import java.net.URI
 
 data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
@@ -130,7 +128,7 @@ internal fun toURLPattern(urlPattern: URI): URLMatcher {
 
                 val (name, type) = pieces
 
-                URLPathPattern(LookupPattern(withPatternDelimiters(type)), name)
+                URLPathPattern(DeferredPattern(withPatternDelimiters(type)), name)
             }
             else -> URLPathPattern(ExactMatchPattern(StringValue(part)))
         }
@@ -138,7 +136,7 @@ internal fun toURLPattern(urlPattern: URI): URLMatcher {
 
     val queryPattern = URIUtils.parseQuery(urlPattern.query).mapValues {
         if(isPatternToken(it.value))
-            LookupPattern(it.value, it.key)
+            DeferredPattern(it.value, it.key)
         else
             ExactMatchPattern(StringValue(it.value))
     }
@@ -146,16 +144,3 @@ internal fun toURLPattern(urlPattern: URI): URLMatcher {
     return URLMatcher(queryPattern = queryPattern, path = path, pathPattern = pathPattern)
 }
 
-data class URLPathPattern (override val pattern: Pattern, val key: String? = null) : Pattern {
-    override fun matches(sampleData: Value?, resolver: Resolver): Result =
-            resolver.matchesPattern(key, pattern, sampleData ?: NullValue)
-
-    override fun generate(resolver: Resolver): Value =
-            if(key != null) resolver.generate(key, pattern) else pattern.generate(resolver)
-
-    override fun newBasedOn(row: Row, resolver: Resolver): List<URLPathPattern> =
-            pattern.newBasedOn(row, resolver).map { URLPathPattern(it, key) }
-
-    override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
-
-}

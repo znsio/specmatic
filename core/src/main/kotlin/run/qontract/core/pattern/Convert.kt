@@ -9,7 +9,7 @@ fun asPattern(patternValue: Any?, key: String?): Pattern =
     when {
         patternValue is Keyed -> patternValue.withKey(key)
         patternValue is Pattern -> patternValue
-        patternValue is String && isPatternToken(patternValue) -> LookupPattern(patternValue, key)
+        patternValue is String && isPatternToken(patternValue) -> DeferredPattern(patternValue, key)
         patternValue == null -> NoContentPattern()
         else -> ExactMatchPattern(asValue(patternValue))
     }
@@ -24,9 +24,9 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             isNullablePattern(it) -> AnyPattern(listOf(NullPattern, parsedPattern(withoutNullToken(it))))
             isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
             isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutRepeatingToken(it)))
-            it == "(number)" -> LookupPattern(it, null)
+            it == "(number)" -> DeferredPattern(it, null)
             isBuiltInPattern(it) -> builtInPatterns.getValue(it)
-            isPatternToken(it) -> LookupPattern(it, key)
+            isPatternToken(it) -> DeferredPattern(it, key)
             else -> ExactMatchPattern(StringValue(it))
         }
     }

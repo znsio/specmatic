@@ -94,7 +94,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     private fun newBasedOn(row: Row): List<Scenario> {
         val resolver = Resolver(expectedFacts, false, patterns)
 
-        val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, resolver)
+        val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
         return httpRequestPattern.newBasedOn(row, resolver).map { newHttpRequestPattern ->
             Scenario(name, newHttpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures)
         }
@@ -107,26 +107,6 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
                 else -> examples.flatMap { it.rows }
             }.flatMap { row -> newBasedOn(row) }
         }
-
-    private fun newExpectedServerStateBasedOn(row: Row, expectedServerState: Map<String, Value>, resolver: Resolver): HashMap<String, Value> {
-        return attempt(errorMessage = "Scenario fact generation failed") {
-            HashMap(expectedServerState.mapValues { (key, value) ->
-                when {
-                    row.containsField(key) -> {
-                        val fieldValue = row.getField(key)
-
-                        when {
-                            fixtures.containsKey(fieldValue) -> fixtures.getValue(fieldValue)
-                            isPatternToken(fieldValue) -> resolver.getPattern(fieldValue).generate(resolver)
-                            else -> StringValue(fieldValue)
-                        }
-                    }
-                    value is StringValue && isPatternToken(value) -> resolver.getPattern(value.string).generate(resolver)
-                    else -> value
-                }
-            })
-        }
-    }
 
     val serverState: Map<String, Value>
         get() = expectedFacts
@@ -159,4 +139,24 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
 
+}
+
+fun newExpectedServerStateBasedOn(row: Row, expectedServerState: Map<String, Value>, fixtures: HashMap<String, Value>, resolver: Resolver): HashMap<String, Value> {
+    return attempt(errorMessage = "Scenario fact generation failed") {
+        HashMap(expectedServerState.mapValues { (key, value) ->
+            when {
+                row.containsField(key) -> {
+                    val fieldValue = row.getField(key)
+
+                    when {
+                        fixtures.containsKey(fieldValue) -> fixtures.getValue(fieldValue)
+                        isPatternToken(fieldValue) -> resolver.getPattern(fieldValue).generate(resolver)
+                        else -> StringValue(fieldValue)
+                    }
+                }
+                value is StringValue && isPatternToken(value) -> resolver.getPattern(value.string).generate(resolver)
+                else -> value
+            }
+        })
+    }
 }

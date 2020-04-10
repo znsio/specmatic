@@ -115,7 +115,7 @@ private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpReq
     val requestHeaders = HashMap(request.headers.toMap().mapValues { it.value[0] })
 
     return HttpRequest(method = request.method.value,
-            path = request.url.fullPath,
+            path = request.url.encodedPath,
             headers = requestHeaders,
             body = body,
             queryParams = toParams(request.url.parameters),

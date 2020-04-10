@@ -17,4 +17,10 @@ data class ExactMatchPattern(override val pattern: Value) : Pattern {
     override fun generate(resolver: Resolver) = pattern
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = pattern
+    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
+            pattern is ExactMatchPattern && this.pattern == pattern.pattern
+
+    override val description: String = pattern.displayableValue()
+
+    override fun toString(): String = pattern.toStringValue()
 }

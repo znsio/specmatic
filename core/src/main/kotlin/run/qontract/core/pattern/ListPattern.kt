@@ -20,15 +20,6 @@ data class ListPattern(override val pattern: Pattern) : Pattern {
                 else -> Result.Success()
             }
         } ?: Result.Success()
-
-//        return sampleData.list.asSequence().map {
-//            pattern.matches(it, withNumericStringPattern(resolver))
-//        }.find { it is Result.Failure }.let { result ->
-//            when(result) {
-//                is Result.Failure -> result.reason("Expected multiple values of type $pattern, but one of the values didn't match in ${sampleData.list}")
-//                else -> Result.Success()
-//            }
-//        }
     }
 
     override fun generate(resolver: Resolver): JSONArrayValue =
@@ -37,4 +28,8 @@ data class ListPattern(override val pattern: Pattern) : Pattern {
         })
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolver).map { ListPattern(it) } }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
+    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
+            pattern is ListPattern && pattern.pattern.matchesPattern(this.pattern, resolver)
+
+    override val description: String = "list of ${pattern.description}"
 }

@@ -1,23 +1,20 @@
-package run.qontract.fake
+package run.qontract.core
 
-import run.qontract.core.Resolver
-import run.qontract.core.Result
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.FailureReport
-import run.qontract.core.toURLPattern
-import run.qontract.core.pattern.LookupPattern
+import run.qontract.core.pattern.DeferredPattern
 import run.qontract.core.pattern.Row
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 internal class URLMatcherTest {
     @Test
@@ -97,8 +94,8 @@ internal class URLMatcherTest {
     fun `should generate path when url has only path parameters`() {
         val urlPattern = toURLPattern(URI("/pets/(petid:number)/owner/(owner:string)"))
         val resolver = mockk<Resolver>().also {
-            every { it.generate("petid", LookupPattern("(number)", "petid")) } returns NumberValue(123)
-            every { it.generate("owner", LookupPattern("(string)", "owner")) } returns StringValue("hari")
+            every { it.generate("petid", DeferredPattern("(number)", "petid")) } returns NumberValue(123)
+            every { it.generate("owner", DeferredPattern("(string)", "owner")) } returns StringValue("hari")
         }
         urlPattern.generatePath(resolver).let{
             assertThat(it).isEqualTo("/pets/123/owner/hari")
@@ -109,8 +106,8 @@ internal class URLMatcherTest {
     fun `should generate query`() {
         val urlPattern = toURLPattern(URI("/pets?petid=(number)&owner=(string)"))
         val resolver = mockk<Resolver>().also {
-            every { it.generate("petid", LookupPattern("(number)", "petid")) } returns NumberValue(123)
-            every { it.generate("owner", LookupPattern("(string)", "owner")) } returns StringValue("hari")
+            every { it.generate("petid", DeferredPattern("(number)", "petid")) } returns NumberValue(123)
+            every { it.generate("owner", DeferredPattern("(string)", "owner")) } returns StringValue("hari")
         }
         urlPattern.generateQuery(resolver).let {
             assertThat(it).isEqualTo(hashMapOf("petid" to "123", "owner" to "hari"))
@@ -125,5 +122,35 @@ internal class URLMatcherTest {
         val newURLPatterns = urlPattern.newBasedOn(Row(), resolver)
         val path = newURLPatterns.first().generatePath(resolver)
         assertEquals("/pets/10", path)
+    }
+
+    @Test
+    fun `should create 2^n matchers on an empty Row`() {
+        val matcher = toURLPattern(URI("/pets?status=(string)&type=(string)"))
+        val matchers = matcher.newBasedOn(Row(), Resolver())
+
+        assertEquals(4, matchers.size)
+        println(matchers)
+    }
+
+    @Test
+    fun `should generate a valid query string when there is a single row with matching columns`() {
+        val row = Row(listOf("status", "type"), listOf("available", "dog"))
+        val resolver = Resolver()
+
+        val matchers = toURLPattern(URI("/pets?status=(string)&type=(string)")).newBasedOn(row, resolver)
+        assertEquals(1, matchers.size)
+        val query = matchers.first().generateQuery(Resolver())
+        assertEquals("available", query.getValue("status"))
+        assertEquals("dog", query.getValue("type"))
+    }
+
+    @Test
+    fun `given a pattern in a query param, it should generate a random value matching that pattern`() {
+        val matcher = toURLPattern(URI("/pets?id=(string)"))
+        val query = matcher.generateQuery(Resolver())
+
+        assertNotEquals("(string)", query.getValue("id"))
+        assertTrue(query.getValue("id").isNotEmpty())
     }
 }

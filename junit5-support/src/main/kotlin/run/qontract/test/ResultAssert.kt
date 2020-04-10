@@ -16,10 +16,7 @@ class ResultAssert(actual: Result) : AbstractAssert<ResultAssert, Result>(actual
     fun isSuccess(request: HttpRequest, response: HttpResponse?) {
         isNotNull
 
-        when(actual) {
-            is Result.Failure -> failWithMessage(resultReport(actual, request, response))
-            else -> this
-        }
+        if(actual is Result.Failure)
+            failWithMessage(resultReport(actual, request, response))
     }
-
 }

@@ -1,5 +1,7 @@
 Qontract
 ========
+[![Maven Central](https://img.shields.io/maven-central/v/run.qontract/qontract-core.svg)](https://mvnrepository.com/artifact/run.qontract/qontract-core) [![GitHub release](https://img.shields.io/github/release/qontract/qontract.svg)](https://github.com/qontract/qontract/releases) [![Twitter Follow](https://img.shields.io/twitter/follow/qontract.svg?style=social&label=Follow)](https://twitter.com/qontract)
+
 ### Elevator Pitch
 
 In a complex, interdependent eco-system, where each system’s components are evolving rapidly,

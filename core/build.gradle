@@ -78,7 +78,7 @@ publishing {
             pom {
                 name = 'Qontract'
                 description = 'A Contract Testing Tool that leverages Gherkin to describe APIs in a human readable and machine enforceable manner'
-                url = 'http://qontract.run'
+                url = 'https://qontract.run'
                 licenses {
                     license {
                         name = 'MIT'

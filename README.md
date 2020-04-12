@@ -1,6 +1,6 @@
 Qontract
 ========
-[![Maven Central](https://img.shields.io/maven-central/v/run.qontract/qontract-core.svg)](https://mvnrepository.com/artifact/run.qontract/qontract-core) [![GitHub release](https://img.shields.io/github/release/qontract/qontract.svg)](https://github.com/qontract/qontract/releases) [![Twitter Follow](https://img.shields.io/twitter/follow/qontract.svg?style=social&label=Follow)](https://twitter.com/qontract)
+[![Maven Central](https://img.shields.io/maven-central/v/run.qontract/qontract-core.svg)](https://mvnrepository.com/artifact/run.qontract/qontract-core) [![GitHub release](https://img.shields.io/github/release/qontract/qontract.svg)](https://github.com/qontract/qontract/releases) ![CI Build](https://github.com/qontract/qontract/workflows/CI%20Build/badge.svg) [![Twitter Follow](https://img.shields.io/twitter/follow/qontract.svg?style=social&label=Follow)](https://twitter.com/qontract)
 
 ### Elevator Pitch
 
@@ -17,5 +17,5 @@ Systems interact with each other through several means. Qontract hopes to addres
 * Libraries, SDK 
 * OS Level Pipes
 
-[Get started now](http://qontract.run/documentation/getting_started.html)
+[Get started now](https://qontract.run/documentation/getting_started.html)
 ---

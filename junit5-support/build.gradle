@@ -60,7 +60,7 @@ publishing {
             pom {
                 name = 'QontractJUnit5Support'
                 description = 'Qontract JUnit 5 Support'
-                url = 'http://qontract.run'
+                url = 'https://qontract.run'
                 licenses {
                     license {
                         name = 'MIT'

@@ -15,11 +15,6 @@ class NumericStringPattern : Pattern {
         else -> if(isNumber(sampleData)) Result.Success() else mismatchResult("number", sampleData)
     }
 
-//    private fun isNumber(value: StringValue) = isInt(value.string) || isFloat(value.string) || isDouble(value.string)
-//    private fun isInt(value: String) = try { value.toInt().run { true } } catch(e: Exception) { false }
-//    private fun isFloat(value: String) = try { value.toFloat().run { true } } catch(e: Exception) { false }
-//    private fun isDouble(value: String) = try { value.toDouble().run { true } } catch(e: Exception) { false }
-
     override fun generate(resolver: Resolver): Value = NumberValue(Random().nextInt(1000))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)

@@ -94,7 +94,7 @@ Scenario: JSON API to get account details with fact check
     ).map { (contractGherkinString, httpRequest) ->
         DynamicTest.dynamicTest("when url is ${httpRequest.getURL("")}") {
             val httpResponse = HttpResponse.jsonResponse("{call-mins-left: 100, sms-messages-left: 200}")
-            val response = validateAndRespond(contractGherkinString, httpRequest, httpResponse, HashMap())
+            val response = validateAndRespond(contractGherkinString, httpRequest, httpResponse)
             val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
             Assertions.assertEquals(200, response.statusCodeValue)
             Assertions.assertEquals(100, jsonResponse["call-mins-left"])
@@ -109,7 +109,7 @@ Scenario: JSON API to get account details with fact check
     ).map { (contractGherkinString, httpRequest) ->
         DynamicTest.dynamicTest("when url is ${httpRequest.getURL("")}") {
             val expectedResponse = HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>200</sms_messages_left></balance>")
-            val response = validateAndRespond(contractGherkinString, httpRequest, expectedResponse, HashMap())
+            val response = validateAndRespond(contractGherkinString, httpRequest, expectedResponse)
 
             response.body?.let {
                 val xmlResponse = parseXML(it)
@@ -128,7 +128,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
             val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: 100, smses-left: 200}")
-            Assertions.assertThrows(NoMatchingScenario::class.java) { mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap())) }
+            Assertions.assertThrows(NoMatchingScenario::class.java) { mock.createMockScenario(MockScenario(expectedRequest, expectedResponse)) }
         }
     }
 
@@ -137,7 +137,7 @@ Scenario: JSON API to get account details with fact check
     fun `contract mock should validate expectations and serve generated json`() {
         val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: \"(number)\", sms-messages-left: 200}")
-        val response = validateAndRespond(queryParamJsonContract, expectedRequest, expectedResponse, HashMap())
+        val response = validateAndRespond(queryParamJsonContract, expectedRequest, expectedResponse)
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
         Assertions.assertEquals(200, response.statusCodeValue)
         assertThat(jsonResponse.get("call-mins-left")).isInstanceOf(Number::class.java)
@@ -157,7 +157,7 @@ Scenario: JSON API to get account details with fact check
                     And response-body {"call-mins-left": "(number)", "sms-messages-left": "(number)"}
                     And response-header token test
                     And response-header Content-Type application/json
-        """, expectedRequest, expectedResponse, HashMap())
+        """, expectedRequest, expectedResponse)
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
         assertThat(response.statusCodeValue).isEqualTo(200)
         assertThat(jsonResponse.get("call-mins-left")).isInstanceOf(Number::class.java)
@@ -170,7 +170,7 @@ Scenario: JSON API to get account details with fact check
     fun `contract mock should validate expectations and serve generated xml`() {
         val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_xml").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>(number)</sms_messages_left></balance>")
-        val response = validateAndRespond(queryParameterXmlContract, expectedRequest, expectedResponse, HashMap())
+        val response = validateAndRespond(queryParameterXmlContract, expectedRequest, expectedResponse)
 
         response.body?.let {
             val xmlResponse = parseXML(it)
@@ -181,14 +181,12 @@ Scenario: JSON API to get account details with fact check
         } ?: fail("Expected body in the response")
     }
 
-    //TODO: Why does this pass after mismatching userid in serverstate and queryParam?
     @Test
     @Throws(Throwable::class)
     fun `contract should mock server state`() {
         val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/account_json").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.jsonResponse("{\"name\": \"John Doe\"}")
-        val serverState: HashMap<String, Value> = hashMapOf("userid" to NumberValue(10))
-        val response = validateAndRespond(contractGherkin, expectedRequest, expectedResponse, serverState)
+        val response = validateAndRespond(contractGherkin, expectedRequest, expectedResponse)
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
         Assertions.assertEquals(200, response.statusCodeValue)
         assertThat(jsonResponse["name"]).isInstanceOf(String::class.java)
@@ -202,8 +200,7 @@ Scenario: JSON API to get account details with fact check
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
-            val emptyServerState = emptyMap<String, Value>().toMutableMap()
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, emptyServerState))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -215,8 +212,7 @@ Scenario: JSON API to get account details with fact check
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/special_locations")
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
-            val emptyServerState = emptyMap<String, Value>().toMutableMap()
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, emptyServerState))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -228,8 +224,7 @@ Scenario: JSON API to get account details with fact check
             val requestBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody(requestBody)
             val expectedResponse = HttpResponse.EMPTY_200.let { it.copy(headers = it.headers.plus("Content-Type" to "application/json"))}
-            val emptyServerState = HashMap<String, Value>()
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, emptyServerState))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -254,16 +249,15 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val expectedResponse = HttpResponse(200, "{\"cities\":[{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}] }")
-            val serverState: HashMap<String, Value> = hashMapOf("cities_exist" to True)
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, serverState))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
 
     @Throws(Throwable::class)
-    private fun validateAndRespond(contractGherkinString: String, httpRequest: HttpRequest, httpResponse: HttpResponse, serverState: java.util.HashMap<String, Value>): ResponseEntity<String> {
+    private fun validateAndRespond(contractGherkinString: String, httpRequest: HttpRequest, httpResponse: HttpResponse): ResponseEntity<String> {
         ContractMock.fromGherkin(contractGherkinString).use { mock ->
             mock.start()
-            mock.createMockScenario(MockScenario(httpRequest, httpResponse, serverState))
+            mock.createMockScenario(MockScenario(httpRequest, httpResponse))
             val restTemplate = RestTemplate()
             return restTemplate.exchange(URI.create(httpRequest.getURL("http://localhost:8080")), HttpMethod.GET, null, String::class.java)
         }
@@ -283,7 +277,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody("10")
             val expectedResponse = HttpResponse(200, "10")
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -300,7 +294,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NumberValue(10))
             val expectedResponse = HttpResponse(200)
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -317,7 +311,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NullValue)
             val expectedResponse = HttpResponse(200)
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -334,7 +328,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
             val expectedResponse = HttpResponse(200, "10")
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -351,7 +345,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
             val expectedResponse = HttpResponse(200, "")
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse, HashMap()))
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
 }

@@ -111,6 +111,25 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     val serverState: Map<String, Value>
         get() = expectedFacts
 
+    fun matchesMock(request: HttpRequest, response: HttpResponse): Result {
+        return scenarioBreadCrumb(this) {
+            val resolver = Resolver(IgnoreFacts(), true, patterns)
+            val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }
+
+            if(requestMatchResult is Result.Failure) {
+                requestMatchResult.updateScenario(this)
+            } else {
+                val responseMatchResult = attempt(breadCrumb = "RESPONSE") { httpResponsePattern.matchesMock(response, resolver) }
+
+                if (responseMatchResult is Result.Failure) {
+                    responseMatchResult.updateScenario(this)
+                }
+                else
+                    responseMatchResult
+            }
+        }
+    }
+
     fun matchesMock(response: HttpResponse): Result {
         val resolver = Resolver(IgnoreFacts(), true, patterns)
         return httpResponsePattern.matchesMock(response, resolver).also {
@@ -120,8 +139,10 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
     fun generateHttpResponseFrom(response: HttpResponse?): HttpResponse =
         scenarioBreadCrumb(this) {
-            val resolver = Resolver(expectedFacts, false, patterns)
-            HttpResponsePattern(response!!).generateResponse(resolver)
+            attempt(breadCrumb = "RESPONSE") {
+                val resolver = Resolver(expectedFacts, false, patterns)
+                HttpResponsePattern(response!!).generateResponse(resolver)
+            }
         }
 
     override fun toString(): String {

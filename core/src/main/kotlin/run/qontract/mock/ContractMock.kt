@@ -135,7 +135,7 @@ $expectationsString
         }
 
     fun createMockScenario(mocked: MockScenario) {
-        contractBehaviour.setServerState(mocked.facts)
+//        contractBehaviour.setServerState(mocked.facts)
 
         val mockedResponse = contractBehaviour.getResponseForMock(mocked.request, mocked.response)
         expectations.add(Pair(mocked.request, mockedResponse))

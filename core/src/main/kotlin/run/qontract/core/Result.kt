@@ -7,8 +7,9 @@ sealed class Result {
 
     var scenario: Scenario? = null
 
-    fun updateScenario(scenario: Scenario) {
+    fun updateScenario(scenario: Scenario): Result {
         this.scenario = scenario
+        return this
     }
 
     abstract fun isTrue(): Boolean

@@ -1,7 +1,6 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.*
-import run.qontract.test.missingParam
 import java.io.UnsupportedEncodingException
 import java.net.URI
 
@@ -176,4 +175,8 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     override fun toString(): String {
         return "$method ${urlMatcher.toString()}"
     }
+}
+
+fun missingParam(missingValue: String): ContractException {
+    return ContractException("$missingValue is missing. Can't generate the contract test.")
 }

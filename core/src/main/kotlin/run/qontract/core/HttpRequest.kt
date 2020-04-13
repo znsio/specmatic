@@ -4,10 +4,10 @@ import run.qontract.core.utilities.URIUtils.parseQuery
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import io.netty.buffer.ByteBuf
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
-import run.qontract.test.ContractTestException
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
@@ -85,7 +85,7 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         val requestMap = mutableMapOf<String, Value>()
 
         requestMap["path"] = path?.let { StringValue(it) } ?: StringValue("/")
-        method?.let { requestMap["method"] = StringValue(it) } ?: throw ContractTestException("Can't serialise the request without a method.")
+        method?.let { requestMap["method"] = StringValue(it) } ?: throw ContractException("Can't serialise the request without a method.")
         body?.let { requestMap["body"] = it }
 
         if (queryParams.size > 0) requestMap["query"] = JSONObjectValue(queryParams.mapValues { StringValue(it.value) })

@@ -1,7 +1,4 @@
 package run.qontract.test
 
-class ContractTestException(message: String?) : Exception(message)
+import run.qontract.core.pattern.ContractException
 
-fun missingParam(missingValue: String): ContractTestException {
-    return ContractTestException("$missingValue is missing. Can't generate the contract test.")
-}

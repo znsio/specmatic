@@ -5,6 +5,7 @@ import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -776,6 +777,52 @@ Then status 200
         val httpResponse = behaviour.lookup(httpRequest)
 
         assertEquals(200, httpResponse.status)
+    }
+
+    @Test
+    fun `Contract fake should match a json object matching a dictionary pattern`() {
+        val contractGherkin = """
+Feature: Order API
+
+Scenario: Order products
+Given json Quantities (string: number)
+When POST /order
+    And request-body (Quantities)
+Then status 200
+""".trim()
+
+        val behaviour = ContractBehaviour(contractGherkin)
+        val httpRequest = HttpRequest(method="POST", path="/order", body = JSONObjectValue(mapOf("soap" to NumberValue(2), "toothpaste" to NumberValue(3))))
+        val httpResponse = behaviour.lookup(httpRequest)
+
+        assertEquals(200, httpResponse.status)
+    }
+
+    @Test
+    fun `Contract fake should generate a json object matching a dictionary pattern`() {
+        val contractGherkin = """
+Feature: Order API
+
+Scenario: Order products
+Given json Quantities (string: number)
+When GET /order
+Then status 200
+    And response-body (Quantities)
+""".trim()
+
+        val behaviour = ContractBehaviour(contractGherkin)
+        val httpRequest = HttpRequest(method="GET", path="/order")
+        val httpResponse = behaviour.lookup(httpRequest)
+
+        assertEquals(200, httpResponse.status)
+        val json = parsedValue(httpResponse.body)
+
+        if(json !is JSONObjectValue) fail("Expected JSONObjectValue")
+
+        for((key, value) in json.jsonObject) {
+            assertThat(key.length).isPositive()
+            assertThat(value).isInstanceOf(NumberValue::class.java)
+        }
     }
 
     companion object {

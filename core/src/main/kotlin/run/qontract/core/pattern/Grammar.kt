@@ -1,6 +1,5 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.Resolver
 import run.qontract.core.value.StringValue
 
 internal fun withoutOptionality(key: String) = key.removeSuffix("?")
@@ -18,7 +17,7 @@ internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
             else -> key in jsonObject
         }
 
-internal val builtInPatterns = mapOf(
+private val builtInPatterns = mapOf(
     "(number)" to NumberTypePattern(),
     "(numericstring)" to NumericStringPattern(),
     "(string)" to StringPattern(),
@@ -43,15 +42,19 @@ fun isPatternToken(patternValue: Any?) =
         else -> false
     }
 
-fun generateValue(key: String, value: String, resolver: Resolver): String {
-    return if (isPatternToken(value)) {
-        resolver.generate(key, findPattern(value)).toStringValue()
-    } else value
-}
+fun findBuiltInPattern(patternString: String): Pattern =
+        when {
+            isPatternToken(patternString) -> builtInPatterns.getOrElse(patternString) {
+                if(patternString.contains(":")) {
+                    val patternParts = withoutPatternDelimiters(patternString).split(":").map { DeferredPattern(withPatternDelimiters(it.trim())) }
 
-fun findPattern(matcherDescriptor: String): Pattern =
-        builtInPatterns.getOrElse(matcherDescriptor) { throw ContractException("Pattern $matcherDescriptor does not exist.") }
-
+                    if(patternParts.size == 2) {
+                        DictionaryPattern(patternParts[0], patternParts[1])
+                    } else throw ContractException("Type $patternString does not exist.")
+                } else throw ContractException("Type $patternString does not exist.")
+            }
+            else -> throw ContractException("Type $patternString is not a type specifier.")
+        }
 
 fun withoutPatternDelimiters(patternValue: String) = patternValue.removeSurrounding("(", ")")
 fun withPatternDelimiters(name: String): String = "($name)"

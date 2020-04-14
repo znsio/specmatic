@@ -1,21 +1,27 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.NumericStringPattern
-import run.qontract.core.utilities.parseXML
-import run.qontract.mock.ContractMock
-import run.qontract.mock.MockScenario
-import run.qontract.mock.NoMatchingScenario
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.*
 import org.springframework.http.HttpMethod
 import org.springframework.http.ResponseEntity
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
+import org.springframework.web.client.getForEntity
+import org.springframework.web.client.postForEntity
 import org.w3c.dom.Node
-import run.qontract.core.value.*
+import run.qontract.core.pattern.NumericStringPattern
+import run.qontract.core.pattern.parsedJSON
+import run.qontract.core.utilities.parseXML
+import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.NullValue
+import run.qontract.core.value.NumberValue
+import run.qontract.core.value.StringValue
+import run.qontract.mock.ContractMock
+import run.qontract.mock.MockScenario
+import run.qontract.mock.NoMatchingScenario
 import java.net.URI
 import java.util.*
-import kotlin.collections.HashMap
 
 class ContractMockTests {
     private val contractGherkin = """
@@ -346,6 +352,60 @@ Scenario: JSON API to get account details with fact check
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
             val expectedResponse = HttpResponse(200, "")
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+        }
+    }
+
+    @Test
+    fun `should be able to mock out an object matching the dictionary type in the request`() {
+        val contractGherkin = """Feature: Contract for /store API
+  Scenario Outline: api call
+    When POST /variables
+    And request-body (string: number)
+    Then status 200
+""".trimIndent()
+
+        ContractMock.fromGherkin(contractGherkin).use { mock ->
+            mock.start()
+            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").updateBody(JSONObjectValue(mapOf("one" to NumberValue(1), "two" to NumberValue(2))))
+            val expectedResponse = HttpResponse.EMPTY_200
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            val restTemplate = RestTemplate()
+            try {
+                val response = restTemplate.postForEntity<String>(URI.create("${mock.baseURL}/variables"), """{"one": 1, "two": 2}""")
+                assertThat(response.statusCode.value()).isEqualTo(200)
+            } catch (e: HttpClientErrorException) {
+                fail("Throw exception: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    @Test
+    fun `should be able to mock out an object matching the dictionary type in the response`() {
+        val contractGherkin = """Feature: Contract for /store API
+  Scenario Outline: api call
+    When GET /variables
+    Then status 200
+    And response-body (string: number)
+""".trimIndent()
+
+        ContractMock.fromGherkin(contractGherkin).use { mock ->
+            mock.start()
+            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/variables")
+            val expectedResponse = HttpResponse(200, """{"one": 1, "two": 2}""")
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            val restTemplate = RestTemplate()
+            try {
+                val response = restTemplate.getForEntity<String>(URI.create("${mock.baseURL}/variables"))
+                assertThat(response.statusCode.value()).isEqualTo(200)
+                val responseBody = parsedJSON(response.body ?: "")
+                if(responseBody !is JSONObjectValue) fail("Expected JSONObjectValue")
+
+                assertThat(responseBody.jsonObject.getValue("one")).isEqualTo(NumberValue(1))
+                assertThat(responseBody.jsonObject.getValue("two")).isEqualTo(NumberValue(2))
+
+            } catch (e: HttpClientErrorException) {
+                fail("Throw exception: ${e.localizedMessage}")
+            }
         }
     }
 }

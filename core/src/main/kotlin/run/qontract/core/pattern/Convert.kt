@@ -22,7 +22,7 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
             isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutRepeatingToken(it)))
             it == "(number)" -> DeferredPattern(it, null)
-            isBuiltInPattern(it) -> builtInPatterns.getValue(it)
+            isBuiltInPattern(it) -> findBuiltInPattern(it)
             isPatternToken(it) -> DeferredPattern(it, key)
             else -> ExactMatchPattern(StringValue(it))
         }

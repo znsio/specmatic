@@ -1,0 +1,24 @@
+Feature: The mock API
+
+Scenario:
+Given json MockRequest
+| mock-http-request  | (MockRequest)  |
+| mock-http-response | (MockResponse) |
+
+And type Params (string: string)
+
+And json MockRequest
+| method       | (string)     |
+| path?        | (string)     |
+| query?       | (Params) |
+| headers?     | (Params) |
+| form_fields? | (Params) |
+
+And json MockResponse
+| status   | (number)     |
+| body?    | (string)     |
+| headers? | (Params) |
+
+When POST /_mock_setup
+And request-body (MockRequest)
+Then status 200

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.fail
 import org.xml.sax.SAXException
 import run.qontract.core.HttpResponse.Companion.jsonResponse
 import run.qontract.core.HttpResponse.Companion.xmlResponse
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.utilities.parseXML
@@ -805,6 +806,84 @@ Then status 200"""
             Contract.fromGherkin(newContract, 0, 0).test(ContractFake(oldContract, "localhost", 9000))
         }
     }
+
+    @Test
+    fun `should generate a dictionary in test mode`() {
+        val gherkin = """Feature: Contract
+Scenario: api call
+Given POST /
+And request-body (string: number)
+Then status 200
+"""
+
+        ContractBehaviour(gherkin).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body
+                if(body !is JSONObjectValue) fail("Expected JSONObjectValue")
+
+                assertThat(body.jsonObject.keys.size).isGreaterThan(0)
+
+                for((key, value) in body.jsonObject) {
+                    assertThat(key).hasSizeGreaterThan(0)
+                    assertThat(value).isInstanceOf(NumberValue::class.java)
+                }
+
+                return HttpResponse.EMPTY_200
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+
+        })
+    }
+
+    @Test
+    fun `should match a dictionary in test mode`() {
+        val gherkin = """Feature: Contract
+Scenario: api call
+Given GET /
+Then status 200
+And response-body (string: number)
+"""
+
+        val results = ContractBehaviour(gherkin).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val response = """{"one": 1, "two": 2}"""
+                return HttpResponse(200, response)
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+
+        })
+
+        assertThat(results.failureCount).isEqualTo(0)
+        assertThat(results.successCount).isGreaterThan(0)
+    }
+
+    @Test
+    @Throws(ContractException::class)
+    fun `should not match a dictionary with the wrong format in test mode`() {
+        val gherkin = """Feature: Contract
+Scenario: api call
+Given GET /
+Then status 200
+And response-body (string: string)
+"""
+
+        ContractBehaviour(gherkin).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val response = """{"one": 1, "two": 2}"""
+                return HttpResponse(200, response)
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+    }
 }
 
 internal fun jsonObject(value: Value?): Map<String, Value> {
@@ -813,4 +892,3 @@ internal fun jsonObject(value: Value?): Map<String, Value> {
 
     return value.jsonObject
 }
-

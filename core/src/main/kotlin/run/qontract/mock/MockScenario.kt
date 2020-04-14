@@ -26,10 +26,14 @@ fun validateMock(mockSpec: Map<String, Any?>) {
 }
 
 fun mockFromJSON(mockSpec: Map<String, Value>): MockScenario {
-    val mockRequestSpec = mockSpec.getValue(MOCK_HTTP_REQUEST) as JSONObjectValue
-    val mockRequest = requestFromJSON(mockRequestSpec.jsonObject)
-    val mockResponseSpec = mockSpec.getValue(MOCK_HTTP_RESPONSE) as JSONObjectValue
-    val mockResponse = HttpResponse.fromJSON(mockResponseSpec.jsonObject)
+    val mockRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST, mockSpec))
+    val mockResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE, mockSpec))
 
     return MockScenario(mockRequest, mockResponse)
+}
+
+private fun getJSONObjectValue(key: String, mapData: Map<String, Value>): Map<String, Value> {
+    val data = mapData.getValue(key)
+    if(data !is JSONObjectValue) throw ContractException("$key should be a json object")
+    return data.jsonObject
 }

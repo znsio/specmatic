@@ -62,35 +62,13 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
                         is Result.Success -> return scenario.generateHttpResponseFrom(response)
                         is Result.Failure -> {
                             results.add(mockMatches
-                                    .reason("Response didn't match the pattern")
+                                    .reason("Response didn't match the expected type.")
                                     .updateScenario(scenario), request, response)
                         }
                     }
                 } catch (contractException: ContractException) {
                     results.add(contractException.result(), request, response)
                 }
-
-//                try {
-//                    when (val requestMatches = attempt(breadCrumb = "REQUEST") { scenario.matches(request, serverState) }) {
-//                        is Result.Success -> {
-//                            when (val responseMatches = attempt(breadCrumb = "RESPONSE") { scenario.matchesMock(response) }) {
-//                                is Result.Success -> return attempt(breadCrumb = "RESPONSE") { scenario.generateHttpResponseFrom(response) }
-//                                is Result.Failure -> {
-//                                    responseMatches.reason("Response didn't match the pattern")
-//                                            .also { failure -> failure.updateScenario(scenario) }
-//                                    results.add(responseMatches, request, response)
-//                                }
-//                            }
-//                        }
-//                        is Result.Failure -> {
-//                            requestMatches.reason("Request didn't match the pattern")
-//                                    .also { failure -> failure.updateScenario(scenario) }
-//                            results.add(requestMatches, request, response)
-//                        }
-//                    }
-//                } catch (contractException: ContractException) {
-//                    results.add(contractException.result(), request, response)
-//                }
             }
 
             throw NoMatchingScenario(results.report())

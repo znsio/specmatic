@@ -66,7 +66,7 @@ data class XMLPattern(val node: Node) : Pattern {
                     else -> result
                 }
             } else {
-                Result.Failure("${patternNode.nodeValue} is not a pattern token")
+                Result.Failure("${patternNode.nodeValue} is not a type specifier")
             }
         }
         if (patternNode.hasAttributes()) {
@@ -298,4 +298,10 @@ internal fun parseXML(xmlData: String): Document {
     val builder = builderFactory.newDocumentBuilder()
 
     return builder.parse(InputSource(StringReader(xmlData)))
+}
+
+internal fun generateValue(key: String, value: String, resolver: Resolver): String {
+    return if (isPatternToken(value)) {
+        resolver.generate(key, findBuiltInPattern(value)).toStringValue()
+    } else value
 }

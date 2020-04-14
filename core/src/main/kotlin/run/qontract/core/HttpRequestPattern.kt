@@ -114,7 +114,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
                 throw missingParam("HTTP method")
             }
             if (urlMatcher == null) {
-                throw missingParam("URL path pattern")
+                throw missingParam("URL path")
             }
             newRequest.updateMethod(method!!)
             attempt(breadCrumb = "URL") {

@@ -19,6 +19,7 @@ import kotlinx.coroutines.runBlocking
 import run.qontract.core.value.*
 import org.w3c.dom.Document
 import org.xml.sax.SAXException
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.EmptyString
 import java.io.Closeable
@@ -72,6 +73,7 @@ $expectationsString
     private fun registerExpectation(call: ApplicationCall, httpRequest: HttpRequest) {
         try {
             validateHttpMockRequest(httpRequest)
+
             val mockSpec =
                 jsonStringToValueMap(httpRequest.body.toString()).also {
                     validateMock(it)
@@ -80,10 +82,21 @@ $expectationsString
             createMockScenario(mockFromJSON(mockSpec))
 
             call.response.status(HttpStatusCode.OK)
-        } catch (e: Exception) {
-            call.response.status(HttpStatusCode.BadRequest)
-            runBlocking { call.respondText(e.message ?: "") }
         }
+        catch(e: NoMatchingScenario) {
+            writeBadRequest(call, e.message)
+        }
+        catch(e: ContractException) {
+            writeBadRequest(call, e.message)
+        }
+        catch (e: Exception) {
+            writeBadRequest(call, e.message)
+        }
+    }
+
+    private fun writeBadRequest(call: ApplicationCall, errorMessage: String?) {
+        call.response.status(HttpStatusCode.UnprocessableEntity)
+        runBlocking { call.respondText(errorMessage ?: "") }
     }
 
     private fun matches(actual: HttpRequest, expected: HttpRequest) =
@@ -135,8 +148,6 @@ $expectationsString
         }
 
     fun createMockScenario(mocked: MockScenario) {
-//        contractBehaviour.setServerState(mocked.facts)
-
         val mockedResponse = contractBehaviour.getResponseForMock(mocked.request, mocked.response)
         expectations.add(Pair(mocked.request, mockedResponse))
     }

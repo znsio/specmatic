@@ -42,7 +42,7 @@ fun convertToNumber(value: String): Number {
         } catch (ignored: Exception) {
         }
         try {
-            return it.toBigInteger()
+            return it.toLong()
         } catch (ignored: Exception) {
         }
         try {
@@ -69,7 +69,6 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = withNumberTypePattern(resolver).matchesPattern(key, patternValue, sampleValue)) {
-//            when (val result = asPattern(patternValue, key).matches(sampleValue, withNumberTypePattern(resolver))) {
                 is Result.Failure -> return result.breadCrumb(key)
             }
         }

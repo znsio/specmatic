@@ -26,7 +26,10 @@ class MockCommand : Callable<Void?> {
     @Throws(Throwable::class)
     fun file(@CommandLine.Parameters(description = ["Path to file containing contract gherkin"], paramLabel = "<path>") path: String) {
         val spec = readFile(path)
-        ContractMock.fromGherkin(spec, 9000).use { mock -> mock.waitUntilClosed() }
+        ContractMock.fromGherkin(spec, 9000).use { mock ->
+            mock.start()
+            mock.waitUntilClosed()
+        }
     }
 
     override fun call(): Void? {

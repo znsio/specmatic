@@ -165,7 +165,15 @@ $expectationsString
 
     @Throws(InterruptedException::class)
     fun waitUntilClosed() {
-        while(server.application.isActive) Thread.sleep(1000)
+        while(true) {
+            Thread.sleep(1000)
+
+            try {
+                if (!server.application.isActive) break
+            } catch(e: Exception) {
+                println(e.localizedMessage)
+            }
+        }
     }
 
     companion object {

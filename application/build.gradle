@@ -9,7 +9,7 @@ application {
 }
 
 shadowJar {
-    archiveFileName = "qontract-${archiveVersion.get()}-all.${archiveExtension.get()}"
+    archiveFileName = "qontract.${archiveExtension.get()}"
 }
 
 repositories {

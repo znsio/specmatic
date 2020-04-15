@@ -27,5 +27,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: Executable jar
+        name: Qontract Standalone Executable
         path: application/build/libs/qontract.jar

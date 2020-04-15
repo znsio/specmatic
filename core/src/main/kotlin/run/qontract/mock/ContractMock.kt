@@ -37,49 +37,16 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
             if(isMockRequest(httpRequest))
                  registerExpectation(call, httpRequest)
             else
-                responseIfExpected(call, httpRequest)
+                respondAndDelete(call, expectations, httpRequest)
         }
     }
 
     val baseURL = "http://localhost" + if(port == 80) "" else ":$port"
     val mockSetupURL = "$baseURL/_mock_setup"
 
-    private fun responseIfExpected(call: ApplicationCall, httpRequest: HttpRequest) {
-        expectations.find { it ->
-            matches(httpRequest, it.first)
-        }?.let {
-            respondToKtorHttpResponse(call, it.second)
-            expectations.remove(it)
-        } ?: {
-            respondToKtorHttpResponse(call, debugInfoIn400Response(httpRequest, expectations))
-        }()
-    }
-
-    private fun debugInfoIn400Response(httpRequest: HttpRequest, expectations: MutableList<Pair<HttpRequest, HttpResponse>>): HttpResponse {
-        val expectationsString = expectations.mapIndexed { index, expectation -> """
-Expectation $index
-  Request: ${expectation.first.toJSON()}
-  Response: ${expectation.second.toJSON()}
-""".trimIndent()}.joinToString(System.lineSeparator())
-
-        val message = """
-Message received: ${httpRequest.toJSON()}
-
-$expectationsString
-"""
-        return HttpResponse(400, message)
-    }
-
     private fun registerExpectation(call: ApplicationCall, httpRequest: HttpRequest) {
         try {
-            validateHttpMockRequest(httpRequest)
-
-            val mockSpec =
-                jsonStringToValueMap(httpRequest.body.toString()).also {
-                    validateMock(it)
-                }
-
-            createMockScenario(mockFromJSON(mockSpec))
+            createMockScenario(stringToMockScenario(httpRequest.body ?: throw ContractException("Expectation payload was empty")))
 
             call.response.status(HttpStatusCode.OK)
         }
@@ -99,56 +66,8 @@ $expectationsString
         runBlocking { call.respondText(errorMessage ?: "") }
     }
 
-    private fun matches(actual: HttpRequest, expected: HttpRequest) =
-        expected.method == actual.method &&
-        actual.path == expected.path &&
-        actual.queryParams == expected.queryParams &&
-        matchesBody(actual, expected)
-
-    private fun matchesBody(actual: HttpRequest, expected: HttpRequest): Boolean {
-        when(parsedValue(actual.body.toString())) {
-            is JSONObjectValue, is JSONArrayValue -> {
-                if(expected.body != actual.body) return false
-            }
-            is XMLValue -> {
-                try {
-                    val mockedXML = expected.body as Document
-                    val requestXML = parseXML(actual.body?.toString() ?: "")
-
-                    return mockedXML == requestXML
-                } catch (e: ParserConfigurationException) {
-                    e.printStackTrace()
-                } catch (e: SAXException) {
-                    e.printStackTrace()
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                }
-
-                return false
-            }
-            else -> {
-                if(expected.body is EmptyString && actual.body is StringValue) {
-                    return actual.bodyString.isEmpty()
-                } else if(expected.body is StringValue && actual.body is EmptyString) {
-                    return expected.bodyString.isEmpty()
-                }
-                else if(expected.body != actual.body) {
-                    return false
-                }
-            }
-        }
-
-        return true
-    }
-
-    private fun validateHttpMockRequest(request: HttpRequest) =
-        when (request.body) {
-            null -> throw Exception("Mock request body can't be empty")
-            else -> true
-        }
-
     fun createMockScenario(mocked: MockScenario) {
-        val mockedResponse = contractBehaviour.getResponseForMock(mocked.request, mocked.response)
+        val mockedResponse = contractBehaviour.matchingMockResponse(mocked.request, mocked.response)
         expectations.add(Pair(mocked.request, mockedResponse))
     }
 
@@ -188,4 +107,91 @@ $expectationsString
             return ContractMock(contractGherkin, 8080)
         }
     }
+}
+
+fun stringToMockScenario(text: Value): MockScenario {
+    val mockSpec =
+            jsonStringToValueMap(text.toStringValue()).also {
+                validateMock(it)
+            }
+
+    return mockFromJSON(mockSpec)
+}
+
+fun matchesRequest(actual: HttpRequest, expected: HttpRequest) =
+        expected.method == actual.method &&
+                actual.path == expected.path &&
+                actual.queryParams == expected.queryParams &&
+                matchesBody(actual, expected)
+
+fun respond(call: ApplicationCall, expectations: List<Pair<HttpRequest, HttpResponse>>, httpRequest: HttpRequest) {
+    expectations.find {
+        matchesRequest(httpRequest, it.first)
+    }?.let {
+        respondToKtorHttpResponse(call, it.second)
+    } ?: {
+        respondToKtorHttpResponse(call, debugInfoIn400Response(httpRequest, expectations))
+    }()
+}
+
+fun respondAndDelete(call: ApplicationCall, expectations: MutableList<Pair<HttpRequest, HttpResponse>>, httpRequest: HttpRequest) {
+    expectations.find {
+        matchesRequest(httpRequest, it.first)
+    }?.let {
+        respondToKtorHttpResponse(call, it.second)
+        expectations.remove(it)
+    } ?: {
+        respondToKtorHttpResponse(call, debugInfoIn400Response(httpRequest, expectations))
+    }()
+}
+
+fun debugInfoIn400Response(httpRequest: HttpRequest, expectations: List<Pair<HttpRequest, HttpResponse>>): HttpResponse {
+    val expectationsString = expectations.mapIndexed { index, expectation -> """
+Expectation $index
+  Request: ${expectation.first.toJSON()}
+  Response: ${expectation.second.toJSON()}
+""".trimIndent()}.joinToString(System.lineSeparator())
+
+    val message = """
+Message received: ${httpRequest.toJSON()}
+
+$expectationsString
+"""
+    return HttpResponse(400, message)
+}
+
+fun matchesBody(actual: HttpRequest, expected: HttpRequest): Boolean {
+    when(parsedValue(actual.body.toString())) {
+        is JSONObjectValue, is JSONArrayValue -> {
+            if(expected.body != actual.body) return false
+        }
+        is XMLValue -> {
+            try {
+                val mockedXML = expected.body as Document
+                val requestXML = parseXML(actual.body?.toString() ?: "")
+
+                return mockedXML == requestXML
+            } catch (e: ParserConfigurationException) {
+                e.printStackTrace()
+            } catch (e: SAXException) {
+                e.printStackTrace()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+
+            return false
+        }
+        else -> {
+            if(expected.body is EmptyString && actual.body is StringValue) {
+                return actual.bodyString.isEmpty()
+            } else if(expected.body is StringValue && actual.body is EmptyString) {
+                return expected.bodyString.isEmpty()
+            }
+            else if(expected.body?.toStringValue() != actual.body?.toStringValue()) {
+                return false
+            }
+        }
+    }
+
+    return true
 }

@@ -71,7 +71,7 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
         fun fromJSON(jsonObject: Map<String, Value>) =
             HttpResponse(
                 Integer.parseInt(jsonObject["status"].toString()),
-                jsonObject.getOrDefault("body", StringValue()).toString(),
+                jsonObject.getOrDefault("body", StringValue()).toStringValue(),
                 getHeaders(jsonObject))
     }
 }

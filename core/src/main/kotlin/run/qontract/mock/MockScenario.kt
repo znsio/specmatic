@@ -1,5 +1,6 @@
 package run.qontract.mock
 
+import run.qontract.core.ContractBehaviour
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.pattern.ContractException

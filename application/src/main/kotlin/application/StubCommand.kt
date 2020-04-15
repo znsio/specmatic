@@ -2,8 +2,13 @@ package application
 
 import run.qontract.core.utilities.readFile
 import run.qontract.fake.ContractFake
-import picocli.CommandLine
 import picocli.CommandLine.*
+import run.qontract.core.ContractBehaviour
+import run.qontract.core.value.StringValue
+import run.qontract.mock.MockScenario
+import run.qontract.mock.NoMatchingScenario
+import run.qontract.mock.stringToMockScenario
+import java.io.File
 import java.util.concurrent.Callable
 
 @Command(name = "stub", version = ["0.1.0"],
@@ -22,13 +27,41 @@ class StubCommand : Callable<Void> {
     var port: Int = 9000
 
     override fun call(): Void? {
-        val contractGherkin = readFile(path)
-        addShutdownHook()
-        contractFake = ContractFake(contractGherkin, host, port.toInt())
-        println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
-        while (true) {
-            Thread.sleep(1000)
+        try {
+            val contractGherkin = readFile(path)
+            val contractBehaviour = ContractBehaviour(contractGherkin)
+            val stubInfo = loadStubInformation(path, contractBehaviour)
+
+            addShutdownHook()
+            contractFake = ContractFake(contractGherkin, stubInfo, host, port)
+
+            println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
+            while (true) {
+                Thread.sleep(1000)
+            }
+        } catch(e: NoMatchingScenario) {
+            println(e.localizedMessage)
         }
+
+        return null
+    }
+
+    private fun loadStubInformation(path: String, contractBehaviour: ContractBehaviour): List<MockScenario> =
+            stubDataFiles(path).map { file ->
+                println("Loading data from ${file.name}")
+
+                stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))
+                    .also {
+                        contractBehaviour.matchingMockResponse(it)
+                    }
+            }
+
+    private fun stubDataFiles(path: String): List<File> {
+        val contractFile = File(path)
+        val stubDataDir = File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}.data")
+        println("Loading data files from ${stubDataDir.absolutePath} ")
+
+        return stubDataDir.listFiles()?.filter { it.name.endsWith(".expectation") } ?: emptyList()
     }
 
     private fun addShutdownHook() {

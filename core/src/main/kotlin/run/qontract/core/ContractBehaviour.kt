@@ -11,6 +11,7 @@ import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
+import run.qontract.mock.MockScenario
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.test.TestExecutor
 import java.net.URI
@@ -52,7 +53,7 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
                 .none { it.matches(response) is Result.Success }
     }
 
-    fun getResponseForMock(request: HttpRequest, response: HttpResponse): HttpResponse {
+    fun matchingMockResponse(request: HttpRequest, response: HttpResponse): HttpResponse {
         try {
             val results = Results()
 
@@ -84,6 +85,9 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
         scenarios.flatMap { scenario ->
             scenario.copy(examples = emptyList()).generateTestScenarios()
         }
+
+    fun matchingMockResponse(mockScenario: MockScenario): HttpResponse =
+            matchingMockResponse(mockScenario.request, mockScenario.response)
 }
 
 private fun toFixtureInfo(rest: String): Pair<String, Value> {

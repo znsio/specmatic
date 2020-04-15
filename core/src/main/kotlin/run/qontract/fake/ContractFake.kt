@@ -1,11 +1,8 @@
 package run.qontract.fake
 
-import io.ktor.application.*
-import run.qontract.core.ContractBehaviour
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
-import run.qontract.core.utilities.contractGherkinForCurrentComponent
-import run.qontract.core.utilities.getContractGherkin
+import io.ktor.application.ApplicationCall
+import io.ktor.application.ApplicationCallPipeline
+import io.ktor.application.call
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
@@ -17,13 +14,78 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
-import run.qontract.core.pattern.ContractException
+import run.qontract.core.ContractBehaviour
+import run.qontract.core.HttpRequest
+import run.qontract.core.HttpResponse
 import run.qontract.core.pattern.parsedValue
+import run.qontract.core.utilities.contractGherkinForCurrentComponent
+import run.qontract.core.utilities.getContractGherkin
 import run.qontract.core.utilities.toMap
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
+import run.qontract.mock.MockScenario
+import run.qontract.mock.matchesRequest
 import java.io.Closeable
 import java.util.*
+
+class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000) : Closeable {
+    val endPoint = "http://$host:$port"
+
+    private val contractBehaviour = ContractBehaviour(gherkinData)
+    private val expectations = stubInfo.map { expectation ->
+        Pair(expectation.request, contractBehaviour.matchingMockResponse(expectation))
+    }
+
+    private val server: ApplicationEngine = embeddedServer(Netty, port) {
+        intercept(ApplicationCallPipeline.Call) {
+            val httpRequest = ktorHttpRequestToHttpRequest(call)
+
+            if (isSetupRequest(httpRequest)) {
+                setupServerState(httpRequest)
+                call.response.status(HttpStatusCode.OK)
+            } else {
+                when(val mock = expectations.find {
+                    matchesRequest(httpRequest, it.first)
+                }) {
+                    null -> respondToKtorHttpResponse(call, contractBehaviour.lookup(httpRequest))
+                    else -> respondToKtorHttpResponse(call, mock.second)
+                }
+            }
+        }
+    }
+
+    override fun close() {
+        server.stop(0, 5000)
+    }
+
+    companion object {
+        @Throws(Throwable::class)
+        fun forSupportedContract(): ContractFake {
+            val gherkin = contractGherkinForCurrentComponent
+            return ContractFake(gherkin, emptyList(), "localhost", 8080)
+        }
+
+        @JvmOverloads
+        @Throws(Throwable::class)
+        fun forService(serviceName: String?, host: String = "127.00.1", port: Int = 8080): ContractFake {
+            val contractGherkin = getContractGherkin(serviceName!!)
+            return ContractFake(contractGherkin, emptyList(), host, port)
+        }
+    }
+
+    private fun setupServerState(httpRequest: HttpRequest) {
+        val body = httpRequest.body
+        contractBehaviour.setServerState(body?.let { toMap(it) } ?: mutableMapOf())
+    }
+
+    private fun isSetupRequest(httpRequest: HttpRequest): Boolean {
+        return httpRequest.path == "/_server_state" && httpRequest.method == "POST"
+    }
+
+    init {
+        server.start()
+    }
+}
 
 internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
     val(body, formFields) = bodyFromCall(call)
@@ -61,55 +123,5 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     catch(e:Exception)
     {
         print(e.toString())
-    }
-}
-
-class ContractFake(gherkinData: String, host: String, port: Int) : Closeable {
-    val endPoint = "http://$host:$port"
-    val contractBehaviour = ContractBehaviour(gherkinData)
-
-    private val server: ApplicationEngine = embeddedServer(Netty, port) {
-        intercept(ApplicationCallPipeline.Call) {
-            val httpRequest = ktorHttpRequestToHttpRequest(call)
-
-            if (isSetupRequest(httpRequest)) {
-                setupServerState(httpRequest)
-                call.response.status(HttpStatusCode.OK)
-            } else {
-                respondToKtorHttpResponse(call, contractBehaviour.lookup(httpRequest))
-            }
-        }
-    }
-
-    override fun close() {
-        server.stop(0, 0)
-    }
-
-    companion object {
-        @Throws(Throwable::class)
-        fun forSupportedContract(): ContractFake {
-            val gherkin = contractGherkinForCurrentComponent
-            return ContractFake(gherkin, "localhost", 8080)
-        }
-
-        @JvmOverloads
-        @Throws(Throwable::class)
-        fun forService(serviceName: String?, host: String = "127.00.1", port: Int = 8080): ContractFake {
-            val contractGherkin = getContractGherkin(serviceName!!)
-            return ContractFake(contractGherkin, host, port)
-        }
-    }
-
-    private fun setupServerState(httpRequest: HttpRequest) {
-        val body = httpRequest.body
-        contractBehaviour.setServerState(body?.let { toMap(it) } ?: mutableMapOf())
-    }
-
-    private fun isSetupRequest(httpRequest: HttpRequest): Boolean {
-        return httpRequest.path == "/_server_state" && httpRequest.method == "POST"
-    }
-
-    init {
-        server.start()
     }
 }

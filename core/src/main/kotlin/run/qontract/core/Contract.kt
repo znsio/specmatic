@@ -8,7 +8,7 @@ import run.qontract.test.HttpClient
 import java.io.IOException
 
 data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val minorVersion: Int = 0) {
-    fun startFake(port: Int) = ContractFake(contractGherkin, "localhost", port)
+    fun startFake(port: Int) = ContractFake(contractGherkin, emptyList(), "localhost", port)
 
     fun test(endPoint: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)

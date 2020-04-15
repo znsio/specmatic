@@ -49,7 +49,7 @@ class ContractFakeShouldRunOverTCP {
                     "    When GET /balance?account_id=10\n" +
                     "    Then status 200\n" +
                     "    And response-body {calls_left: 10, messages_left: 20}"
-            contractFake = ContractFake(data, "127.0.0.1", 8080)
+            contractFake = ContractFake(data, emptyList(), "127.0.0.1", 8080)
         }
 
         @AfterAll

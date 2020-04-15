@@ -24,7 +24,7 @@ class SamplesCommand : Callable<Void> {
     override fun call(): Void? {
         try {
             val gherkin = readFile(path)
-            ContractFake(gherkin, host, port).use { fake ->
+            ContractFake(gherkin, emptyList(), host, port).use { fake ->
                 Contract(gherkin).test(fake)
             }
         }

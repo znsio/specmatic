@@ -803,7 +803,9 @@ Given GET /d
 Then status 200"""
 
         assertThrows(Throwable::class.java) {
-            Contract.fromGherkin(newContract, 0, 0).test(ContractFake(oldContract, "localhost", 9000))
+            ContractFake(oldContract, emptyList()).use { fake ->
+                Contract.fromGherkin(newContract, 0, 0).test(fake)
+            }
         }
     }
 

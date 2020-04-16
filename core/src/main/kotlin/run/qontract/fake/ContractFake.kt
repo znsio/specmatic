@@ -3,9 +3,9 @@ package run.qontract.fake
 import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline
 import io.ktor.application.call
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.Parameters
+import io.ktor.application.install
+import io.ktor.features.CORS
+import io.ktor.http.*
 import io.ktor.http.content.TextContent
 import io.ktor.request.*
 import io.ktor.response.respond
@@ -37,6 +37,18 @@ class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList
     }
 
     private val server: ApplicationEngine = embeddedServer(Netty, port) {
+        install(CORS) {
+            method(HttpMethod.Options)
+            method(HttpMethod.Get)
+            method(HttpMethod.Post)
+            method(HttpMethod.Put)
+            method(HttpMethod.Delete)
+            method(HttpMethod.Patch)
+            header(HttpHeaders.Authorization)
+            allowCredentials = true
+            anyHost()
+        }
+
         intercept(ApplicationCallPipeline.Call) {
             val httpRequest = ktorHttpRequestToHttpRequest(call)
 

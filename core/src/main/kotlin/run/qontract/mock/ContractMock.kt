@@ -124,16 +124,6 @@ fun matchesRequest(actual: HttpRequest, expected: HttpRequest) =
                 actual.queryParams == expected.queryParams &&
                 matchesBody(actual, expected)
 
-fun respond(call: ApplicationCall, expectations: List<Pair<HttpRequest, HttpResponse>>, httpRequest: HttpRequest) {
-    expectations.find {
-        matchesRequest(httpRequest, it.first)
-    }?.let {
-        respondToKtorHttpResponse(call, it.second)
-    } ?: {
-        respondToKtorHttpResponse(call, debugInfoIn400Response(httpRequest, expectations))
-    }()
-}
-
 fun respondAndDelete(call: ApplicationCall, expectations: MutableList<Pair<HttpRequest, HttpResponse>>, httpRequest: HttpRequest) {
     expectations.find {
         matchesRequest(httpRequest, it.first)

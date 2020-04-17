@@ -58,7 +58,7 @@ class StubCommand : Callable<Void> {
 
     private fun stubDataFiles(path: String): List<File> {
         val contractFile = File(path)
-        val stubDataDir = File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}.data")
+        val stubDataDir = File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}_data")
         println("Loading data files from ${stubDataDir.absolutePath} ")
 
         return stubDataDir.listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()

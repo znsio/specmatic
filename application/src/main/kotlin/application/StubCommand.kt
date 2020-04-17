@@ -61,7 +61,7 @@ class StubCommand : Callable<Void> {
         val stubDataDir = File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}.data")
         println("Loading data files from ${stubDataDir.absolutePath} ")
 
-        return stubDataDir.listFiles()?.filter { it.name.endsWith(".expectation") } ?: emptyList()
+        return stubDataDir.listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()
     }
 
     private fun addShutdownHook() {

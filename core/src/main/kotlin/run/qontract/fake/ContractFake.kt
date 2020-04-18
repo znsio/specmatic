@@ -38,7 +38,7 @@ class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList
         Pair(expectation.request, contractBehaviour.matchingMockResponse(expectation))
     }
 
-    private val server: ApplicationEngine = embeddedServer(Netty, port) {
+    private val server: ApplicationEngine = embeddedServer(Netty, host = host, port = port) {
         install(CORS) {
             method(HttpMethod.Options)
             method(HttpMethod.Get)

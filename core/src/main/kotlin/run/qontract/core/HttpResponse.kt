@@ -8,7 +8,7 @@ import run.qontract.core.utilities.valueMapToPrettyJsonString
 import run.qontract.core.value.*
 import java.util.*
 
-data class HttpResponse(var status: Int = 0, var body: String? = "", val headers: Map<String, String> = mapOf("Content-Type" to "text/plain")) {
+data class HttpResponse(val status: Int = 0, val body: String? = "", val headers: Map<String, String> = mapOf("Content-Type" to "text/plain")) {
     val statusText: String
         get() =
             when(status) {

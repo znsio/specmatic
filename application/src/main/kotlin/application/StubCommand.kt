@@ -9,6 +9,7 @@ import run.qontract.mock.MockScenario
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.stringToMockScenario
 import java.io.File
+import java.nio.file.*
 import java.util.concurrent.Callable
 
 @Command(name = "stub", version = ["0.1.0"],
@@ -16,6 +17,7 @@ import java.util.concurrent.Callable
         description = ["Start a stub server with contract"])
 class StubCommand : Callable<Void> {
     lateinit var contractFake: ContractFake
+    lateinit var watchService: WatchService
 
     @Parameters(index = "0", description = ["Contract file path"])
     lateinit var path: String
@@ -28,22 +30,48 @@ class StubCommand : Callable<Void> {
 
     override fun call(): Void? {
         try {
-            val contractGherkin = readFile(path)
-            val contractBehaviour = ContractBehaviour(contractGherkin)
-            val stubInfo = loadStubInformation(path, contractBehaviour)
-
-            addShutdownHook()
-            contractFake = ContractFake(contractGherkin, stubInfo, host, port)
-
+            startServer()
             println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
-            while (true) {
-                Thread.sleep(1000)
+            addShutdownHook()
+
+            watchService = FileSystems.getDefault().newWatchService();
+            val contractPath = Paths.get(path)
+            contractPath.parent.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+
+            var key: WatchKey
+            while (watchService.take().also { key = it } != null) {
+                key.pollEvents().forEach { event ->
+                    when (contractPath.fileName) {
+                        event.context() -> {
+                            println("""Restarting stub server. Change in $contractPath""")
+                            restartServer()
+                        }
+                    }
+                }
+                key.reset()
             }
-        } catch(e: NoMatchingScenario) {
+        } catch (e: NoMatchingScenario) {
             println(e.localizedMessage)
         }
 
         return null
+    }
+
+    private fun startServer() {
+        val contractGherkin = readFile(path)
+        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val stubInfo = loadStubInformation(path, contractBehaviour)
+
+        contractFake = ContractFake(contractGherkin, stubInfo, host, port)
+    }
+
+    private fun restartServer() {
+        stopServer()
+        startServer()
+    }
+
+    private fun stopServer() {
+        contractFake.close()
     }
 
     private fun loadStubInformation(filePath: String, contractBehaviour: ContractBehaviour): List<MockScenario> =
@@ -51,9 +79,9 @@ class StubCommand : Callable<Void> {
                 println("Loading data from ${file.name}")
 
                 stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))
-                    .also {
-                        contractBehaviour.matchingMockResponse(it)
-                    }
+                        .also {
+                            contractBehaviour.matchingMockResponse(it)
+                        }
             }
 
     private fun stubDataFiles(path: String): List<File> {

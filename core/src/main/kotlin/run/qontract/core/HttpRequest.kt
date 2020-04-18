@@ -17,8 +17,9 @@ import java.nio.charset.StandardCharsets
 import java.util.*
 
 data class HttpRequest(var method: String? = null, var path: String? = null, val headers: HashMap<String, String> = HashMap(), var body: Value? = EmptyString, var queryParams: HashMap<String, String> = HashMap(), val formFields: Map<String, String> = emptyMap()) {
-    fun updateQueryParams(queryParams: Map<String, String>) {
+    fun updateQueryParams(queryParams: Map<String, String>): HttpRequest {
         this.queryParams.putAll(queryParams)
+        return this
     }
 
     fun updatePath(path: String): HttpRequest {
@@ -91,11 +92,14 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         if (queryParams.size > 0) requestMap["query"] = JSONObjectValue(queryParams.mapValues { StringValue(it.value) })
         if (headers.size > 0) requestMap["headers"] = JSONObjectValue(headers.mapValues { StringValue(it.value) })
 
+        if(formFields.isNotEmpty()) requestMap["form-fields"] = JSONObjectValue(formFields.mapValues { StringValue(it.value) })
+
         return requestMap
     }
 
-    fun setHeaders(addedHeaders: Map<String, String>) {
+    fun setHeaders(addedHeaders: Map<String, String>): HttpRequest {
         headers.putAll(addedHeaders)
+        return this
     }
 
     fun toLogString(prefix: String = ""): String {
@@ -121,16 +125,23 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
 fun s(json: Map<String, Value>, key: String): String = (json.getValue(key) as StringValue).string
 
 fun requestFromJSON(json: Map<String, Value>): HttpRequest {
-    val httpRequest = HttpRequest()
-    httpRequest.updateMethod(s(json, "method"))
-    httpRequest.updatePath(if ("path" in json) s(json, "path") else "/")
-    httpRequest.updateQueryParams(if ("query" in json)
+    var httpRequest = HttpRequest()
+    httpRequest = httpRequest.updateMethod(s(json, "method"))
+    httpRequest = httpRequest.updatePath(if ("path" in json) s(json, "path") else "/")
+    httpRequest = httpRequest.updateQueryParams(if ("query" in json)
         (json["query"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() }
     else emptyMap())
-    httpRequest.setHeaders(if ("headers" in json) (json["headers"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() } else emptyMap())
+    httpRequest = httpRequest.setHeaders(if ("headers" in json) (json["headers"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() } else emptyMap())
 
-    if ("body" in json)
-        httpRequest.updateBody(json.getValue("body"))
+    if("form-fields" in json) {
+        val formFields = json.getValue("form-fields")
+        if(formFields !is JSONObjectValue)
+            throw ContractException("form-fields must be a json object.")
+
+        httpRequest = httpRequest.copy(formFields = formFields.jsonObject.mapValues { it.value.toStringValue() })
+    }
+    else if("body" in json)
+        httpRequest = httpRequest.updateBody(json.getValue("body"))
 
     return httpRequest
 }

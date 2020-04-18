@@ -42,8 +42,8 @@ data class HttpResponse(var status: Int = 0, var body: String? = "", val headers
     }
 
     companion object {
-        var HTTP_400 = HttpResponse(400, "This request did not match any scenario.", HashMap())
-        var EMPTY_200 = HttpResponse(200, "", HashMap())
+        var ERROR_400 = HttpResponse(400, "This request did not match any scenario.", HashMap())
+        var OK_200_EMPTY = HttpResponse(200, "", HashMap())
 
         fun jsonResponse(jsonData: String?): HttpResponse {
             return HttpResponse(200, jsonData, object : HashMap<String, String>() {

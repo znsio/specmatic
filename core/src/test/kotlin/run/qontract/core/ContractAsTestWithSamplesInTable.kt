@@ -203,7 +203,7 @@ Feature: Contract for /balance API
                     }
                     return HttpResponse(200, jsonResponseString, headers)
                 } else {
-                    return HttpResponse.HTTP_400
+                    return HttpResponse.ERROR_400
                 }
             }
 

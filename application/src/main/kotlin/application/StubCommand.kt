@@ -46,8 +46,8 @@ class StubCommand : Callable<Void> {
         return null
     }
 
-    private fun loadStubInformation(path: String, contractBehaviour: ContractBehaviour): List<MockScenario> =
-            stubDataFiles(path).map { file ->
+    private fun loadStubInformation(filePath: String, contractBehaviour: ContractBehaviour): List<MockScenario> =
+            stubDataFiles(filePath).map { file ->
                 println("Loading data from ${file.name}")
 
                 stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))

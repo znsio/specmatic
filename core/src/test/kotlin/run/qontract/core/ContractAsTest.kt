@@ -475,7 +475,7 @@ Couldn't convert "abc" to number""")
                     assertNotNull(location["city"])
                     assertTrue((location["city"] as String).length > 0)
                 }
-                return HttpResponse.EMPTY_200
+                return HttpResponse.OK_200_EMPTY
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
@@ -565,13 +565,13 @@ Couldn't convert "abc" to number""")
                         assertTrue(city.firstChild.nodeValue.length > 0)
                     }
                 } catch (e: ParserConfigurationException) {
-                    return HttpResponse.HTTP_400
+                    return HttpResponse.ERROR_400
                 } catch (e: SAXException) {
-                    return HttpResponse.HTTP_400
+                    return HttpResponse.ERROR_400
                 } catch (e: IOException) {
-                    return HttpResponse.HTTP_400
+                    return HttpResponse.ERROR_400
                 }
-                return HttpResponse.EMPTY_200
+                return HttpResponse.OK_200_EMPTY
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
@@ -706,7 +706,7 @@ Couldn't convert "abc" to number""")
                 assertEquals("POST", request.method)
                 val requestBody = JSONObject(request.bodyString)
                 assertEquals(idFound[0], requestBody.getInt("id"))
-                return HttpResponse.EMPTY_200
+                return HttpResponse.OK_200_EMPTY
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -746,7 +746,7 @@ Scenario: Update pet details
                 assertEquals("POST", request.method)
                 val requestBody = JSONObject(request.bodyString)
                 assertEquals(idFound[0], requestBody.getInt("id"))
-                return HttpResponse.EMPTY_200
+                return HttpResponse.OK_200_EMPTY
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -830,7 +830,7 @@ Then status 200
                     assertThat(value).isInstanceOf(NumberValue::class.java)
                 }
 
-                return HttpResponse.EMPTY_200
+                return HttpResponse.OK_200_EMPTY
             }
 
             override fun setServerState(serverState: Map<String, Value>) {

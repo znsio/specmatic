@@ -3,8 +3,9 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.*
-import org.springframework.http.HttpMethod
-import org.springframework.http.ResponseEntity
+import org.springframework.http.*
+import org.springframework.util.LinkedMultiValueMap
+import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
@@ -22,6 +23,7 @@ import run.qontract.mock.MockScenario
 import run.qontract.mock.NoMatchingScenario
 import java.net.URI
 import java.util.*
+
 
 class ContractMockTests {
     private val contractGherkin = """
@@ -229,7 +231,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val requestBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody(requestBody)
-            val expectedResponse = HttpResponse.EMPTY_200.let { it.copy(headers = it.headers.plus("Content-Type" to "application/json"))}
+            val expectedResponse = HttpResponse.OK_200_EMPTY.let { it.copy(headers = it.headers.plus("Content-Type" to "application/json"))}
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
@@ -367,7 +369,7 @@ Scenario: JSON API to get account details with fact check
         ContractMock.fromGherkin(contractGherkin).use { mock ->
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").updateBody(JSONObjectValue(mapOf("one" to NumberValue(1), "two" to NumberValue(2))))
-            val expectedResponse = HttpResponse.EMPTY_200
+            val expectedResponse = HttpResponse.OK_200_EMPTY
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
             val restTemplate = RestTemplate()
             try {
@@ -436,6 +438,39 @@ Scenario: JSON API to get account details with fact check
                 assertThat(responseBody.jsonObject.getValue("number")).isEqualTo(StringValue("20"))
             } catch (e: HttpClientErrorException) {
                 fail("Throw exception: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    @Test
+    fun `should be able to stub out form fields in the request`() {
+        val contractGherkin = """Feature: Contract for /store API
+  Scenario Outline: api call
+    When POST /variables
+    And form-field Data (number)
+    Then status 200
+""".trimIndent()
+
+        ContractMock.fromGherkin(contractGherkin).use { mock ->
+            mock.start()
+            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").copy(formFields = mapOf("Data" to "10"))
+
+            val expectedResponse = HttpResponse.OK_200_EMPTY
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+
+            try {
+                val headers = HttpHeaders()
+                headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED)
+
+                val map: MultiValueMap<String, String> = LinkedMultiValueMap()
+                map.add("Data", "10")
+
+                val request: HttpEntity<MultiValueMap<String, String>> = HttpEntity<MultiValueMap<String, String>>(map, headers)
+
+                val response = RestTemplate().postForEntity<String>(URI.create("${mock.baseURL}/variables"), request)
+                assertThat(response.statusCode.value()).isEqualTo(200)
+            } catch (e: HttpClientErrorException) {
+                fail("Threw exception: ${e.localizedMessage}")
             }
         }
     }

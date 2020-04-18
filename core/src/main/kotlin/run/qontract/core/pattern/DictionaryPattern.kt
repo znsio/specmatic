@@ -28,8 +28,8 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
     }
 
     override fun generate(resolver: Resolver): Value {
-        return JSONObjectValue((1..randomNumber(10)).fold(emptyMap<String, Value>()) { obj, _ ->
-            val key = randomString()
+        return JSONObjectValue((1..randomNumber(10)).fold(emptyMap()) { obj, _ ->
+            val key = keyPattern.generate(resolver).toStringValue()
             val value = valuePattern.generate(resolver)
 
             obj.plus(key to value)

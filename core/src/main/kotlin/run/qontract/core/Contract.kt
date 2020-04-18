@@ -1,5 +1,6 @@
 package run.qontract.core
 
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.BrokerClient.getContract
 import run.qontract.core.utilities.contractFilePath
 import run.qontract.core.utilities.readFile
@@ -14,7 +15,7 @@ data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val 
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val results = contractBehaviour.executeTests(HttpClient(endPoint))
         if (results.hasFailures())
-            throw Exception(results.report())
+            throw ContractException(results.report())
     }
 
     fun test(fake: ContractFake) {

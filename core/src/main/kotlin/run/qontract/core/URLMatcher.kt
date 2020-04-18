@@ -23,7 +23,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         val pathParts = uri.path.split("/".toRegex()).filter { it.isNotEmpty() }.toTypedArray()
 
         if (pathPattern.size != pathParts.size)
-            return Result.Failure("Expected $uri to have ${pathPattern.size} parts, but it has ${pathParts.size} parts.", breadCrumb = "PATH")
+            return Result.Failure("Expected $uri (having ${pathParts.size} path segments) to match $path (which has ${pathPattern.size} path segments).", breadCrumb = "PATH")
 
         pathPattern.zip(pathParts).forEach { (urlPathPattern, token) ->
             when (val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, StringValue(token))) {

@@ -114,18 +114,16 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     fun matchesMock(request: HttpRequest, response: HttpResponse): Result {
         return scenarioBreadCrumb(this) {
             val resolver = Resolver(IgnoreFacts(), true, patterns)
-            val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }
 
-            if(requestMatchResult is Result.Failure) {
-                requestMatchResult.updateScenario(this)
-            } else {
-                val responseMatchResult = attempt(breadCrumb = "RESPONSE") { httpResponsePattern.matchesMock(response, resolver) }
-
-                if (responseMatchResult is Result.Failure) {
-                    responseMatchResult.updateScenario(this)
-                }
-                else
-                    responseMatchResult
+            when (val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }) {
+                is Result.Failure -> requestMatchResult.updateScenario(this)
+                else ->
+                    when (val responseMatchResult = attempt(breadCrumb = "RESPONSE") { httpResponsePattern.matchesMock(response, resolver) }) {
+                        is Result.Failure -> {
+                            responseMatchResult.updateScenario(this)
+                        }
+                        else -> responseMatchResult
+                    }
             }
         }
     }

@@ -408,4 +408,35 @@ Scenario: JSON API to get account details with fact check
             }
         }
     }
+
+    @Test
+    fun `should be able to mock out number in string in request and response`() {
+        val contractGherkin = """Feature: Contract for /store API
+  Scenario Outline: api call
+    When POST /variables
+    And request-body
+      | number | (number in string) |
+    Then status 200
+    And response-body
+      | number | (number in string) |
+""".trimIndent()
+
+        ContractMock.fromGherkin(contractGherkin).use { mock ->
+            mock.start()
+            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").updateBody("""{"number": "10"}""")
+            val expectedResponse = HttpResponse(200, """{"number": "20"}""")
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            val restTemplate = RestTemplate()
+            try {
+                val response = restTemplate.postForEntity<String>(URI.create("${mock.baseURL}/variables"), """{"number": "10"}""")
+                assertThat(response.statusCode.value()).isEqualTo(200)
+                val responseBody = parsedJSON(response.body ?: "")
+                if(responseBody !is JSONObjectValue) fail("Expected json object")
+
+                assertThat(responseBody.jsonObject.getValue("number")).isEqualTo(StringValue("20"))
+            } catch (e: HttpClientErrorException) {
+                fail("Throw exception: ${e.localizedMessage}")
+            }
+        }
+    }
 }

@@ -1,8 +1,6 @@
 package run.qontract.fake
 
-import org.junit.jupiter.api.Assertions.*
-import org.assertj.core.api.Assertions.*
-
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.postForEntity

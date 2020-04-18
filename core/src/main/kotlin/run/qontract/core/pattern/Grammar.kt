@@ -31,7 +31,10 @@ private val builtInPatterns = mapOf(
 
 fun isBuiltInPattern(pattern: Any): Boolean =
     when(pattern) {
-        is String -> pattern in builtInPatterns
+        is String -> {
+            val patternString = pattern.toString()
+            patternString in builtInPatterns || ":" in patternString || " in " in patternString
+        }
         else -> false
     }
 
@@ -45,13 +48,27 @@ fun isPatternToken(patternValue: Any?) =
 fun findBuiltInPattern(patternString: String): Pattern =
         when {
             isPatternToken(patternString) -> builtInPatterns.getOrElse(patternString) {
-                if(patternString.contains(":")) {
-                    val patternParts = withoutPatternDelimiters(patternString).split(":").map { DeferredPattern(withPatternDelimiters(it.trim())) }
+                when {
+                    patternString.contains(":") -> {
+                        val patternParts = withoutPatternDelimiters(patternString).split(":").map { DeferredPattern(withPatternDelimiters(it.trim())) }
 
-                    if(patternParts.size == 2) {
-                        DictionaryPattern(patternParts[0], patternParts[1])
-                    } else throw ContractException("Type $patternString does not exist.")
-                } else throw ContractException("Type $patternString does not exist.")
+                        if(patternParts.size == 2) {
+                            DictionaryPattern(patternParts[0], patternParts[1])
+                        } else throw ContractException("Type $patternString does not exist.")
+                    }
+                    patternString.contains(" in ") -> {
+                        val patternParts = withoutPatternDelimiters(patternString).split(" in ").map { it.trim().toLowerCase() }
+
+                        if(patternParts.size != 2)
+                            throw ContractException("$patternString seems incomplete")
+
+                        if(patternParts.get(1) != "string")
+                            throw ContractException("Only string is supported for declaring a pattern in a pattern")
+
+                        PatternInStringPattern(findBuiltInPattern(withPatternDelimiters(patternParts.get(0))))
+                    }
+                    else -> throw ContractException("Type $patternString does not exist.")
+                }
             }
             else -> throw ContractException("Type $patternString is not a type specifier.")
         }

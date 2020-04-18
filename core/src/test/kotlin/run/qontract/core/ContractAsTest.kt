@@ -886,6 +886,46 @@ And response-body (string: string)
             }
         })
     }
+
+    @Test
+    @Throws(ContractException::class)
+    fun `should match pattern in string in request and response`() {
+        val gherkin = """Feature: Contract
+Scenario: api call
+Given POST /
+And request-body
+| id | (number in string) |
+Then status 200
+And response-body
+| id | (number in string) |
+"""
+
+        val results = ContractBehaviour(gherkin).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body
+                if(body !is JSONObjectValue)
+                    fail("Expected json object")
+
+                val id = body.jsonObject.getValue("id")
+                assertThat(id).isInstanceOf(StringValue::class.java)
+                assertDoesNotThrow {
+                    id.toStringValue().toInt()
+                }
+
+                val response = """{"id": "10"}"""
+                return HttpResponse(200, response)
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        println(results.report())
+
+        assertThat(results.failureCount).isZero()
+        assertThat(results.successCount).isNotZero()
+    }
 }
 
 internal fun jsonObject(value: Value?): Map<String, Value> {

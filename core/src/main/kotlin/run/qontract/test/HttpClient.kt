@@ -13,6 +13,7 @@ import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.startLinesWith
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.EmptyString
@@ -109,7 +110,7 @@ private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpReq
         when(request.content) {
             is FormDataContent -> Pair(EmptyString, qontractRequest.formFields)
             is TextContent -> Pair(qontractRequest.body ?: EmptyString, emptyMap<String, String>())
-            else -> throw ContractHTTPException("Unknown type of body content sent in the request")
+            else -> throw ContractException("Unknown type of body content sent in the request")
         }
 
     val requestHeaders = HashMap(request.headers.toMap().mapValues { it.value[0] })

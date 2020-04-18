@@ -2,12 +2,15 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Result
 import run.qontract.core.Scenario
+import run.qontract.core.resultReport
 
 data class ContractException(val errorMessage: String = "", val breadCrumb: String = "", val exceptionCause: ContractException? = null, val scenario: Scenario? = null) : Exception(errorMessage) {
     fun result(): Result.Failure =
         Result.Failure(errorMessage, exceptionCause?.result(), breadCrumb).also { result ->
             if(scenario != null) result.updateScenario(scenario)
         }
+
+    override val message = resultReport(result())
 }
 
 fun <ReturnType> attempt(errorMessage: String = "", breadCrumb: String = "", f: ()->ReturnType): ReturnType {

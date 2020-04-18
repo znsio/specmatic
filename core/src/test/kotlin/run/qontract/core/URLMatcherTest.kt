@@ -36,7 +36,7 @@ internal class URLMatcherTest {
         val urlPattern = toURLPattern(URI("/pets/123/owners/hari"))
         urlPattern.matches(URI("/pets/123/owners"), HashMap(), Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("PATH"), listOf("""Expected /pets/123/owners to have 4 parts, but it has 3 parts.""")))
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("PATH"), listOf("""Expected /pets/123/owners (having 3 path segments) to match /pets/123/owners/hari (which has 4 path segments).""")))
         }
     }
 

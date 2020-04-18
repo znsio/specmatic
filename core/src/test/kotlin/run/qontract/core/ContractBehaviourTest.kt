@@ -825,6 +825,33 @@ Then status 200
         }
     }
 
+    @Test
+    fun `should generate number in string`() {
+        val contractGherkin = """
+Feature: Number API
+
+Scenario: Random number
+When GET /number
+Then status 200
+And response-body
+| number | (number in string) |
+""".trim()
+
+        val behaviour = ContractBehaviour(contractGherkin)
+        val httpRequest = HttpRequest(method="GET", path="/number")
+        val httpResponse = behaviour.lookup(httpRequest)
+
+        assertEquals(200, httpResponse.status)
+        val json = parsedValue(httpResponse.body)
+
+        if(json !is JSONObjectValue) fail("Expected json object")
+
+        assertThat(json.jsonObject.getValue("number")).isInstanceOf(StringValue::class.java)
+        assertDoesNotThrow {
+            json.jsonObject.getValue("number").toStringValue().toInt()
+        }
+    }
+
     companion object {
         @JvmStatic
         private fun singleFeatureContractSource(): Stream<Arguments> {

@@ -10,6 +10,7 @@ import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
+import io.ktor.response.header
 import io.ktor.response.respondText
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
@@ -59,11 +60,6 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
         catch (e: Exception) {
             writeBadRequest(call, e.message)
         }
-    }
-
-    private fun writeBadRequest(call: ApplicationCall, errorMessage: String?) {
-        call.response.status(HttpStatusCode.UnprocessableEntity)
-        runBlocking { call.respondText(errorMessage ?: "") }
     }
 
     fun createMockScenario(mocked: MockScenario) {
@@ -184,4 +180,10 @@ fun matchesBody(actual: HttpRequest, expected: HttpRequest): Boolean {
     }
 
     return true
+}
+
+fun writeBadRequest(call: ApplicationCall, errorMessage: String?) {
+    call.response.status(HttpStatusCode.UnprocessableEntity)
+    call.response.header("X-Qontract-Result", "failure")
+    runBlocking { call.respondText(errorMessage ?: "") }
 }

@@ -63,7 +63,6 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
                         is Result.Success -> return scenario.generateHttpResponseFrom(response)
                         is Result.Failure -> {
                             results.add(mockMatches
-                                    .reason("Response didn't match the expected type.")
                                     .updateScenario(scenario), request, response)
                         }
                     }
@@ -241,8 +240,7 @@ private fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Triple<
         val response = testExecutor.execute(request)
         when {
             response.headers.get("X-Qontract-Result") == "failure" -> {
-                val errorMessage = "The request didn't match:\n${response.body?.prependIndent("  ")}"
-                Triple(Result.Failure(errorMessage), request, response)
+                Triple(Result.Failure(response.body ?: ""), request, response)
             }
             else -> Triple(scenario.matches(response), request, response)
         }

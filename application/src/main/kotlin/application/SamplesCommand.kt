@@ -24,15 +24,18 @@ class SamplesCommand : Callable<Void> {
     override fun call(): Void? {
         try {
             val gherkin = readFile(path)
+
             ContractFake(gherkin, emptyList(), host, port).use { fake ->
                 Contract(gherkin).test(fake)
             }
         }
         catch(e: ContractException) {
-            println(resultReport(e.result()))
+            println(e.message)
         }
         catch (exception: Throwable) {
-            println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
+            val indent = "  "
+            val message = listOf("Exception", "Class=${exception.javaClass.name}".prependIndent(indent), exception.message?.prependIndent(indent)).joinToString("\n")
+            println(message)
         }
 
         return null

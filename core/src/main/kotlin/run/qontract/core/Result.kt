@@ -46,10 +46,37 @@ fun mismatchResult(expected: String, actual: String): Result.Failure = Result.Fa
 fun mismatchResult(expected: String, actual: Value?): Result.Failure = mismatchResult(expected, valueError(actual) ?: "null")
 fun mismatchResult(expected: Value, actual: Value?): Result = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "")
 fun mismatchResult(expected: Pattern, actual: String): Result.Failure = mismatchResult(expected.description, actual)
+fun mismatchResult(pattern: Pattern, sampleData: Value?): Result.Failure = mismatchResult(pattern, sampleData?.toStringValue() ?: "null")
+
 
 fun valueError(value: Value?): String? {
     return value?.let { "${it.displayableType()}: ${it.displayableValue()}" }
 }
 
-//fun patternClassNameToString(value: Pattern): String =
-//        value.javaClass.name.split(".").last().removeSuffix("Pattern").toLowerCase()
+fun resultReport(result: Result): String {
+    val firstLine = when(val scenario = result.scenario) {
+        null -> ""
+        else -> {
+            """In scenario "${scenario.name}""""
+        }
+    }
+
+    val report = if (result is Result.Failure) {
+        result.report().let { (breadCrumbs, errorMessages) ->
+            val breadCrumbString =
+                    breadCrumbs
+                            .filter { it.isNotBlank() }
+                            .joinToString(".") { it.trim() }
+                            .let {
+                                when {
+                                    it.isNotBlank() -> ">> $it"
+                                    else -> ""
+                                }
+                            }
+            val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+            "$breadCrumbString\n\n$errorMessagesString".trim()
+        }
+    } else ""
+
+    return "$firstLine\n$report".trim()
+}

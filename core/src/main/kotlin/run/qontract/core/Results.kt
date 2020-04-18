@@ -33,31 +33,3 @@ data class Results(val results: MutableList<Triple<Result, HttpRequest, HttpResp
 fun resultReport(result: Result, request: HttpRequest, response: HttpResponse?): String {
     return resultReport(result)
 }
-
-fun resultReport(result: Result): String {
-    val firstLine = when(val scenario = result.scenario) {
-        null -> ""
-        else -> {
-            """In scenario "${scenario.name}""""
-        }
-    }
-
-    val report = if (result is Result.Failure) {
-        result.report().let { (breadCrumbs, errorMessages) ->
-            val breadCrumbString =
-                breadCrumbs
-                    .filter { it.isNotBlank() }
-                    .joinToString(".") { it.trim() }
-                    .let {
-                        when {
-                            it.isNotBlank() -> ">> $it"
-                            else -> ""
-                        }
-                    }
-            val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
-            "$breadCrumbString\n\n$errorMessagesString".trim()
-        }
-    } else ""
-
-    return "$firstLine\n$report".trim()
-}

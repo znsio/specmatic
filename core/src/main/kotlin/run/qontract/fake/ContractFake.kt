@@ -17,6 +17,7 @@ import kotlinx.coroutines.runBlocking
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.contractGherkinForCurrentComponent
 import run.qontract.core.utilities.getContractGherkin
@@ -25,6 +26,7 @@ import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import run.qontract.mock.MockScenario
 import run.qontract.mock.matchesRequest
+import run.qontract.mock.writeBadRequest
 import java.io.Closeable
 import java.util.*
 
@@ -50,18 +52,22 @@ class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList
         }
 
         intercept(ApplicationCallPipeline.Call) {
-            val httpRequest = ktorHttpRequestToHttpRequest(call)
+            try {
+                val httpRequest = ktorHttpRequestToHttpRequest(call)
 
-            if (isSetupRequest(httpRequest)) {
-                setupServerState(httpRequest)
-                call.response.status(HttpStatusCode.OK)
-            } else {
-                when(val mock = expectations.find {
-                    matchesRequest(httpRequest, it.first)
-                }) {
-                    null -> respondToKtorHttpResponse(call, contractBehaviour.lookup(httpRequest))
-                    else -> respondToKtorHttpResponse(call, mock.second)
+                if (isSetupRequest(httpRequest)) {
+                    setupServerState(httpRequest)
+                    call.response.status(HttpStatusCode.OK)
+                } else {
+                    when (val mock = expectations.find {
+                        matchesRequest(httpRequest, it.first)
+                    }) {
+                        null -> respondToKtorHttpResponse(call, contractBehaviour.lookup(httpRequest))
+                        else -> respondToKtorHttpResponse(call, mock.second)
+                    }
                 }
+            } catch(e: Exception) {
+                writeBadRequest(call, e.message)
             }
         }
     }
@@ -132,8 +138,8 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
 
         runBlocking { call.respond(textContent) }
     }
-    catch(e:Exception)
+    catch(e: Exception)
     {
-        print(e.toString())
+        println(e.toString())
     }
 }

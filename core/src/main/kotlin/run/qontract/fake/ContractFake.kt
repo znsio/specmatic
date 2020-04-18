@@ -125,7 +125,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Pair<Value, Map<String,
         Pair(parsedValue(call.receiveText()), emptyMap())
 }
 
-internal fun toParams(queryParameters: Parameters) = HashMap(queryParameters.toMap().mapValues { it.value.first() })
+internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
 
 internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse) {
     val textContent = TextContent(httpResponse.body as String, ContentType.Application.Json, HttpStatusCode.fromValue(httpResponse.status))

@@ -55,7 +55,7 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
 
     private fun matchHeaders(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
-        when (val result = headersPattern.matches(HashMap(response.headers), resolver)) {
+        when (val result = headersPattern.matches(response.headers, resolver)) {
             is Result.Failure -> return MatchFailure(result)
         }
         return MatchSuccess(parameters)

@@ -19,7 +19,7 @@ import kotlin.collections.HashMap
 
 class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
     private val scenarios: List<Scenario> = lex(contractGherkinDocument)
-    private var serverState = HashMap<String, Value>()
+    private var serverState = emptyMap<String, Value>()
 
     constructor(gherkinData: String) : this(parseGherkinString(gherkinData))
 
@@ -35,7 +35,7 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
             }
             return results.generateErrorHttpResponse()
         } finally {
-            serverState = HashMap()
+            serverState = emptyMap()
         }
     }
 
@@ -45,7 +45,7 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
             }
 
     fun setServerState(serverState: Map<String, Value>) {
-        this.serverState.putAll(serverState)
+        this.serverState = this.serverState.plus(serverState)
     }
 
     fun matches(request: HttpRequest, response: HttpResponse): Boolean {
@@ -73,7 +73,7 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
 
             throw NoMatchingScenario(results.report())
         } finally {
-            serverState = HashMap()
+            serverState = emptyMap()
         }
     }
 
@@ -217,7 +217,7 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, ba
         if(scenarioInfo.scenarioName.isBlank())
             throw ContractException("A scenario name must not be empty. The contract has a scenario without a name.")
 
-        Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, HashMap(scenarioInfo.expectedServerState), scenarioInfo.examples, HashMap(scenarioInfo.patterns), HashMap(scenarioInfo.fixtures))
+        Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, scenarioInfo.expectedServerState, scenarioInfo.examples, scenarioInfo.patterns, scenarioInfo.fixtures)
     }
 
 private fun lexBackground(featureChildren: List<GherkinDocument.Feature.FeatureChild>): ScenarioInfo =

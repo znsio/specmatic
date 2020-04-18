@@ -7,8 +7,8 @@ import run.qontract.core.value.True
 import run.qontract.core.value.Value
 import java.lang.StringBuilder
 
-data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: HashMap<String, Value>, val examples: List<Examples>, val patterns: HashMap<String, Pattern>, val fixtures: HashMap<String, Value>) {
-    private fun serverStateMatches(actualState: HashMap<String, Value>, resolver: Resolver) =
+data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: Map<String, Value>, val examples: List<Examples>, val patterns: Map<String, Pattern>, val fixtures: Map<String, Value>) {
+    private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
             expectedFacts.keys == actualState.keys &&
                     mapZip(expectedFacts, actualState).all { (key, expectedStateValue, actualStateValue) ->
                         when {
@@ -21,7 +21,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
                         }
                     }
 
-    fun matches(httpRequest: HttpRequest, serverState: HashMap<String, Value>): Result {
+    fun matches(httpRequest: HttpRequest, serverState: Map<String, Value>): Result {
         val resolver = Resolver(serverState, false, patterns)
         if (!serverStateMatches(serverState, resolver.copy())) {
             return Result.Failure("Facts mismatch", breadCrumb = "FACTS").also { it.updateScenario(this) }
@@ -31,9 +31,9 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
-    fun generateHttpResponse(actualFacts: HashMap<String, Value>): HttpResponse =
+    fun generateHttpResponse(actualFacts: Map<String, Value>): HttpResponse =
         scenarioBreadCrumb(this) {
-            Resolver(HashMap(), false, patterns)
+            Resolver(emptyMap(), false, patterns)
             val resolver = Resolver(actualFacts, false, patterns)
             val facts = combineFacts(expectedFacts, actualFacts, resolver)
 
@@ -41,10 +41,10 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
 
     private fun combineFacts(
-            expected: HashMap<String, Value>,
-            actual: HashMap<String, Value>,
+            expected: Map<String, Value>,
+            actual: Map<String, Value>,
             resolver: Resolver
-    ): HashMap<String, Value> {
+    ): Map<String, Value> {
         val combinedServerState = HashMap<String, Value>()
 
         for (key in expected.keys + actual.keys) {
@@ -160,22 +160,21 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
 }
 
-fun newExpectedServerStateBasedOn(row: Row, expectedServerState: Map<String, Value>, fixtures: HashMap<String, Value>, resolver: Resolver): HashMap<String, Value> {
-    return attempt(errorMessage = "Scenario fact generation failed") {
-        HashMap(expectedServerState.mapValues { (key, value) ->
-            when {
-                row.containsField(key) -> {
-                    val fieldValue = row.getField(key)
+fun newExpectedServerStateBasedOn(row: Row, expectedServerState: Map<String, Value>, fixtures: Map<String, Value>, resolver: Resolver): Map<String, Value> =
+        attempt(errorMessage = "Scenario fact generation failed") {
+            expectedServerState.mapValues { (key, value) ->
+                when {
+                    row.containsField(key) -> {
+                        val fieldValue = row.getField(key)
 
-                    when {
-                        fixtures.containsKey(fieldValue) -> fixtures.getValue(fieldValue)
-                        isPatternToken(fieldValue) -> resolver.getPattern(fieldValue).generate(resolver)
-                        else -> StringValue(fieldValue)
+                        when {
+                            fixtures.containsKey(fieldValue) -> fixtures.getValue(fieldValue)
+                            isPatternToken(fieldValue) -> resolver.getPattern(fieldValue).generate(resolver)
+                            else -> StringValue(fieldValue)
+                        }
                     }
+                    value is StringValue && isPatternToken(value) -> resolver.getPattern(value.string).generate(resolver)
+                    else -> value
                 }
-                value is StringValue && isPatternToken(value) -> resolver.getPattern(value.string).generate(resolver)
-                else -> value
             }
-        })
-    }
-}
+        }

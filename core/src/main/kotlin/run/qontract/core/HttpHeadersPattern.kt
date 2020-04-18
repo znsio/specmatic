@@ -36,14 +36,13 @@ data class HttpHeadersPattern(val headers: Map<String, Pattern> = emptyMap()) {
         return MatchSuccess(parameters)
     }
 
-    fun generate(resolver: Resolver): HashMap<String, String> {
+    fun generate(resolver: Resolver): Map<String, String> {
         return attempt(breadCrumb = "HEADERS") {
-            HashMap(headers.mapValues { (key, pattern) ->
+            headers.mapValues { (key, pattern) ->
                 attempt(breadCrumb = key) {
                     resolver.generate(key, pattern).toStringValue()
-//                    asPattern(pattern, key).generate(resolver).toStringValue()
                 }
-            }.toMutableMap())
+            }
         }
     }
 

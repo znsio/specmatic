@@ -8,10 +8,9 @@ import java.nio.charset.StandardCharsets
 import java.util.stream.Collectors
 
 object URIUtils {
-    @Throws(UnsupportedEncodingException::class)
-    fun parseQuery(query: String?): HashMap<String, String> {
+    fun parseQuery(query: String?): Map<String, String> {
         if (query == null) {
-            return HashMap()
+            return emptyMap()
         }
         val pairs = query.split("&".toRegex()).toTypedArray()
         val query_pairs = HashMap<String, String>()
@@ -22,7 +21,7 @@ object URIUtils {
         return query_pairs
     }
 
-    fun parsePathParams(rawPath: String): HashMap<String, String> {
+    fun parsePathParams(rawPath: String): Map<String, String> {
         val pathParts = rawPath.split("/".toRegex()).toTypedArray()
         val pathParams = HashMap<String, String>()
         for (pathPart in java.util.Arrays.stream(pathParts).filter { isPatternToken(it) }.collect(Collectors.toList())) {

@@ -1,7 +1,6 @@
 package run.qontract.core.pattern
 
 import org.w3c.dom.Document
-import org.w3c.dom.Element
 import org.w3c.dom.NamedNodeMap
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
@@ -302,6 +301,6 @@ internal fun parseXML(xmlData: String): Document {
 
 internal fun generateValue(key: String, value: String, resolver: Resolver): String {
     return if (isPatternToken(value)) {
-        resolver.generate(key, findBuiltInPattern(value)).toStringValue()
+        resolver.generate(key, getBuiltInPattern(value)).toStringValue()
     } else value
 }

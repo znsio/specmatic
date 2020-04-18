@@ -45,12 +45,12 @@ fun isPatternToken(patternValue: Any?) =
         else -> false
     }
 
-fun findBuiltInPattern(patternString: String): Pattern =
+fun getBuiltInPattern(patternString: String): Pattern =
         when {
             isPatternToken(patternString) -> builtInPatterns.getOrElse(patternString) {
                 when {
                     patternString.contains(":") -> {
-                        val patternParts = withoutPatternDelimiters(patternString).split(":").map { DeferredPattern(withPatternDelimiters(it.trim())) }
+                        val patternParts = withoutPatternDelimiters(patternString).split(":").map { parsedPattern(withPatternDelimiters(it.trim())) }
 
                         if(patternParts.size == 2) {
                             DictionaryPattern(patternParts[0], patternParts[1])
@@ -65,7 +65,7 @@ fun findBuiltInPattern(patternString: String): Pattern =
                         if(patternParts.get(1) != "string")
                             throw ContractException("Only string is supported for declaring a pattern in a pattern")
 
-                        PatternInStringPattern(findBuiltInPattern(withPatternDelimiters(patternParts.get(0))))
+                        PatternInStringPattern(parsedPattern(withPatternDelimiters(patternParts.get(0))))
                     }
                     else -> throw ContractException("Type $patternString does not exist.")
                 }

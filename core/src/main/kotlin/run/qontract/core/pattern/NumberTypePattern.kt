@@ -27,4 +27,11 @@ class NumberTypePattern : Pattern {
 
     override val pattern: Any = "(number)"
     override fun toString(): String = pattern.toString()
+
+    override fun equals(other: Any?): Boolean = other is NumberTypePattern
+    override fun hashCode(): Int {
+        var result = description.hashCode()
+        result = 31 * result + pattern.hashCode()
+        return result
+    }
 }

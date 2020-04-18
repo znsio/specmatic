@@ -9,7 +9,7 @@ import run.qontract.core.value.NullValue
 internal class ListPatternTest {
     @Test
     fun `should generate a list of patterns each of which is a list pattern`() {
-        val patterns = ListPattern(NumberTypePattern()).newBasedOn(Row(), Resolver())
+        val patterns = ListPattern(NumberTypePattern).newBasedOn(Row(), Resolver())
 
         for(pattern in patterns) {
             assertTrue(pattern is ListPattern)
@@ -18,6 +18,6 @@ internal class ListPatternTest {
 
     @Test
     fun `should fail to match nulls gracefully`() {
-        NullValue shouldNotMatch ListPattern(StringPattern())
+        NullValue shouldNotMatch ListPattern(StringPattern)
     }
 }

@@ -6,7 +6,7 @@ import java.util.*
 
 data class HttpHeadersPattern(val headers: Map<String, Pattern> = emptyMap()) {
     fun matches(headers: Map<String, String>, resolver: Resolver): Result {
-        val result = headers to resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern())) to
+        val result = headers to resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern)) to
                 ::matchEach otherwise
                 ::handleError toResult
                 ::returnResult

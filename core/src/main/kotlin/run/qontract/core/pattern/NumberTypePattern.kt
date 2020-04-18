@@ -8,7 +8,7 @@ import run.qontract.core.value.NumberValue
 import run.qontract.core.value.Value
 import java.util.*
 
-class NumberTypePattern : Pattern {
+object NumberTypePattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when(sampleData is NumberValue) {
             true -> Result.Success()
@@ -27,11 +27,4 @@ class NumberTypePattern : Pattern {
 
     override val pattern: Any = "(number)"
     override fun toString(): String = pattern.toString()
-
-    override fun equals(other: Any?): Boolean = other is NumberTypePattern
-    override fun hashCode(): Int {
-        var result = description.hashCode()
-        result = 31 * result + pattern.hashCode()
-        return result
-    }
 }

@@ -7,6 +7,6 @@ import run.qontract.core.value.NullValue
 internal class BooleanPatternTest {
     @Test
     fun `should fail to match nulls graceully`() {
-        NullValue shouldNotMatch BooleanPattern()
+        NullValue shouldNotMatch BooleanPattern
     }
 }

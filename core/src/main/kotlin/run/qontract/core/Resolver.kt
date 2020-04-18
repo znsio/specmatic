@@ -61,8 +61,8 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
 }
 
 fun withNumericStringPattern(resolver: Resolver): Resolver =
-        resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern()))
+        resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern))
 
 fun withNumberTypePattern(resolver: Resolver): Resolver =
-        resolver.copy(patterns = resolver.patterns.plus("(number)" to NumberTypePattern()))
+        resolver.copy(patterns = resolver.patterns.plus("(number)" to NumberTypePattern))
 

@@ -47,14 +47,14 @@ class ContractAsTestWithSamplesInTable {
     @Throws(Throwable::class)
     private fun jsonResponsesTestsShouldBeVerifiedAgainstTable(contractGherkin: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val accountId = request.queryParams.getOrElse("account_id") {
                     val pathParts = request.path!!.split("/".toRegex()).toTypedArray()
                     pathParts[pathParts.size - 1]
                 }
                 Assertions.assertEquals("GET", request.method)
-                Assertions.assertTrue(NumericStringPattern().matches(StringValue(accountId), Resolver()) is Result.Success)
+                Assertions.assertTrue(NumericStringPattern.matches(StringValue(accountId), Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -71,6 +71,8 @@ class ContractAsTestWithSamplesInTable {
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -138,20 +140,20 @@ Feature: Contract for /balance API
 
         val contractBehaviour = ContractBehaviour(contractGherkin)
 
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val requestJSON = jsonObject(request.body)
                 val name = requestJSON["name"] as StringValue
                 val city = (requestJSON["address"] as JSONObjectValue).jsonObject["city"] as StringValue
                 Assertions.assertEquals("POST", request.method)
-                Assertions.assertTrue(StringPattern().matches(city, Resolver()) is Result.Success)
+                Assertions.assertTrue(StringPattern.matches(city, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
                     }
                 }
 
-                if(name.string !in listOf("John Doe", "Jane Doe"))
+                if (name.string !in listOf("John Doe", "Jane Doe"))
                     throw Exception("Unexpected name $name")
 
                 when (name.string) {
@@ -170,6 +172,8 @@ Feature: Contract for /balance API
             override fun setServerState(serverState: Map<String, Value>) {
             }
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Throws(Throwable::class)
@@ -177,12 +181,12 @@ Feature: Contract for /balance API
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val flags = mutableMapOf("john" to false, "jane" to false)
 
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val requestJSON = request.body!!
                 assert(requestJSON is JSONObjectValue)
 
-                if(requestJSON is JSONObjectValue) {
+                if (requestJSON is JSONObjectValue) {
                     val name = requestJSON.jsonObject.getValue("name") as StringValue
 
                     Assertions.assertEquals("POST", request.method)
@@ -213,6 +217,7 @@ Feature: Contract for /balance API
 
         assertTrue(flags["john"] ?: false)
         assertTrue(flags["jane"] ?: false)
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -236,7 +241,7 @@ Feature: Contract for /balance API
     @Throws(Throwable::class)
     private fun xmlRequestAndResponseTest(contractGherkin: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val root = (request.body as XMLValue).node
                 val nameItem = root.childNodes.item(0)
@@ -244,8 +249,8 @@ Feature: Contract for /balance API
                 Assertions.assertEquals("name", nameItem.nodeName)
                 Assertions.assertEquals("city", cityItem.nodeName)
                 val name = nameItem.firstChild.nodeValue
-                Assertions.assertTrue(StringPattern().matches(StringValue(name), Resolver()) is Result.Success)
-                Assertions.assertTrue(StringPattern().matches(StringValue(cityItem.firstChild.nodeValue), Resolver()) is Result.Success)
+                Assertions.assertTrue(StringPattern.matches(StringValue(name), Resolver()) is Result.Success)
+                Assertions.assertTrue(StringPattern.matches(StringValue(cityItem.firstChild.nodeValue), Resolver()) is Result.Success)
                 Assertions.assertEquals("POST", request.method)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
@@ -263,5 +268,7 @@ Feature: Contract for /balance API
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 }

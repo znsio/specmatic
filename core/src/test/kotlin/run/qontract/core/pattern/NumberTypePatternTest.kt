@@ -7,6 +7,6 @@ import run.qontract.core.value.NullValue
 internal class NumberTypePatternTest {
     @Test
     fun `should fail to match nulls gracefully`() {
-        NullValue shouldNotMatch NumberTypePattern()
+        NullValue shouldNotMatch NumberTypePattern
     }
 }

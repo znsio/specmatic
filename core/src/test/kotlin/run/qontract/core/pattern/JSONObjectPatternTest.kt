@@ -155,6 +155,6 @@ internal class JSONObjectPatternTest {
 
     @Test
     fun `should fail to match nulls gracefully`() {
-        NullValue shouldNotMatch JSONObjectPattern(mapOf("name" to StringPattern()))
+        NullValue shouldNotMatch JSONObjectPattern(mapOf("name" to StringPattern))
     }
 }

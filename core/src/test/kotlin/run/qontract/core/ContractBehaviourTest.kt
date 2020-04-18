@@ -437,7 +437,7 @@ Feature: Contract for /balance API
         val httpResponse = contractBehaviour.lookup(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        assertTrue(NumericStringPattern().matches(httpResponse.body?.let { StringValue(it) } ?: EmptyString, Resolver()) is Result.Success)
+        assertTrue(NumericStringPattern.matches(httpResponse.body?.let { StringValue(it) } ?: EmptyString, Resolver()) is Result.Success)
     }
 
     @Test
@@ -644,14 +644,14 @@ Feature: Contract for /balance API
 
     @Test
     fun `successfully matches valid form fields`() {
-        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, NoContentPattern(), mapOf("Data" to NumberTypePattern()))
+        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, NoContentPattern, mapOf("Data" to NumberTypePattern))
         val request = HttpRequest().copy(formFields = mapOf("Data" to "10"))
         assertTrue(requestPattern.matchFormFields(request to Resolver()) is MatchSuccess)
     }
 
     @Test
     fun `returns error for form fields`() {
-        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, NoContentPattern(), mapOf("Data" to NumberTypePattern()))
+        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, NoContentPattern, mapOf("Data" to NumberTypePattern))
         val request = HttpRequest().copy(formFields = mapOf("Data" to "hello"))
         assertTrue(requestPattern.matchFormFields(request to Resolver()) is MatchFailure)
     }
@@ -673,7 +673,7 @@ Then status 200
         val httpResponse = behaviour.lookup(httpRequest)
 
         assertEquals(200, httpResponse.status)
-        assertTrue(NumericStringPattern().parse(httpResponse.body ?: "", Resolver()) is NumberValue)
+        assertTrue(NumericStringPattern.parse(httpResponse.body ?: "", Resolver()) is NumberValue)
     }
 
     @Test

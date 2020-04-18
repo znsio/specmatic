@@ -2,7 +2,7 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 
-data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var status: Int? = null, private var body: Pattern = NoContentPattern()) : Cloneable {
+data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var status: Int? = null, private var body: Pattern = NoContentPattern) : Cloneable {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, parsedPattern(response.body!!))
 
     fun bodyPattern(bodyContent: String?) = this.copy(body = parsedPattern(bodyContent!!))
@@ -43,7 +43,7 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
         }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) =
-            matches(response, resolver.copy(matchPatternInValue = true, patterns = resolver.patterns.plus(mapOf("(number)" to NumericStringPattern()))))
+            matches(response, resolver.copy(matchPatternInValue = true, patterns = resolver.patterns.plus(mapOf("(number)" to NumericStringPattern))))
 
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, _) = parameters
@@ -63,7 +63,7 @@ data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHead
 
     private fun matchBody(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
-        val resolverWithNumericString = resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern()))
+        val resolverWithNumericString = resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern))
         when (val result = body.matches(parsedValue(response.body), resolverWithNumericString)) {
             is Result.Failure -> return MatchFailure(result.breadCrumb("BODY"))
         }

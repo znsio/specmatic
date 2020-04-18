@@ -185,7 +185,7 @@ Scenario: JSON API to get account details with fact check
             val root: Node = xmlResponse.documentElement
             Assertions.assertEquals("balance", root.nodeName)
             Assertions.assertEquals("sms_messages_left", root.lastChild.nodeName)
-            Assertions.assertTrue(NumericStringPattern().matches(StringValue(root.firstChild.lastChild.nodeValue), Resolver()) is Result.Success)
+            Assertions.assertTrue(NumericStringPattern.matches(StringValue(root.firstChild.lastChild.nodeValue), Resolver()) is Result.Success)
         } ?: fail("Expected body in the response")
     }
 

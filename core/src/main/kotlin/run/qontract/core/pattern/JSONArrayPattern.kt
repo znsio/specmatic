@@ -17,7 +17,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
         if(sampleData.list.isEmpty())
             return Result.Success()
 
-        val resolverWithNumberType = resolver.copy(patterns = resolver.patterns.plus("(number)" to NumberTypePattern()))
+        val resolverWithNumberType = resolver.copy(patterns = resolver.patterns.plus("(number)" to NumberTypePattern))
 
         val resolvedPattern = pattern.map {
             when(it) {
@@ -62,7 +62,9 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
 
 fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
     val values = jsonPattern.mapIndexed { index, pattern ->
-        attempt(breadCrumb = "[$index]") { pattern.newBasedOn(row, resolver) }
+        attempt(breadCrumb = "[$index]") {
+            pattern.newBasedOn(row, resolver)
+        }
     }
 
     return multipleValidValues(values)

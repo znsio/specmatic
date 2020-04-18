@@ -6,7 +6,7 @@ import run.qontract.core.mismatchResult
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
-data class PatternInStringPattern(override val pattern: Pattern = StringPattern()): Pattern {
+data class PatternInStringPattern(override val pattern: Pattern = StringPattern): Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is StringValue)
             return mismatchResult(pattern, sampleData)

@@ -7,6 +7,6 @@ import run.qontract.core.value.NullValue
 internal class NoContentPatternTest {
     @Test
     fun `should match nulls gracefully`() {
-        NullValue shouldMatch NoContentPattern()
+        NullValue shouldMatch NoContentPattern
     }
 }

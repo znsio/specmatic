@@ -14,7 +14,7 @@ fun stringToPattern(patternValue: String, key: String?): Pattern =
 fun parsedPattern(rawContent: String, key: String? = null): Pattern {
     return rawContent.trim().let {
         when {
-            it.isEmpty() -> NoContentPattern()
+            it.isEmpty() -> NoContentPattern
             it.startsWith("{") -> JSONObjectPattern(it)
             it.startsWith("[") -> JSONArrayPattern(it)
             it.startsWith("<") -> XMLPattern(it)

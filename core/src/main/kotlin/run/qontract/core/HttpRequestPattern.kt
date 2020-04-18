@@ -4,7 +4,7 @@ import run.qontract.core.pattern.*
 import java.io.UnsupportedEncodingException
 import java.net.URI
 
-data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlMatcher: URLMatcher? = null, private var method: String? = null, private var body: Pattern = NoContentPattern(), val formFieldsPattern: Map<String, Pattern> = emptyMap()) {
+data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlMatcher: URLMatcher? = null, private var method: String? = null, private var body: Pattern = NoContentPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap()) {
     @Throws(UnsupportedEncodingException::class)
     fun updateWith(urlMatcher: URLMatcher) {
         this.urlMatcher = urlMatcher

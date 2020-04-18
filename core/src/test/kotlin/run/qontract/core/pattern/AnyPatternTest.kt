@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 internal class AnyPatternTest {
     @Test
     fun `should match multiple patterns`() {
-        val pattern = AnyPattern(listOf(NumberTypePattern(), StringPattern()))
+        val pattern = AnyPattern(listOf(NumberTypePattern, StringPattern))
         val string = StringValue("hello")
         val number = NumberValue(10)
 

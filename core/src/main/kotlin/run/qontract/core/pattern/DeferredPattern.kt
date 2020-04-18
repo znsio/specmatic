@@ -9,6 +9,7 @@ data class DeferredPattern(override val pattern: String, override val key: Strin
         is DeferredPattern -> other.pattern == pattern
         else -> false
     }
+    override fun hashCode(): Int = pattern.hashCode()
 
     override fun withKey(key: String?): Pattern = this.copy(key = key)
 
@@ -39,6 +40,4 @@ data class DeferredPattern(override val pattern: String, override val key: Strin
     }
 
     override fun toString() = pattern
-
-    override fun hashCode(): Int = pattern.hashCode()
 }

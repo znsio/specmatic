@@ -9,7 +9,7 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import java.util.*
 
-class BooleanPattern : Pattern {
+object BooleanPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
         when(sampleData) {
             is BooleanValue -> Result.Success()

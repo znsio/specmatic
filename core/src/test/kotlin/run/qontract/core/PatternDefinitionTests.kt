@@ -30,7 +30,7 @@ class PatternDefinitionTests {
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body)
-        Assertions.assertTrue(StringPattern().matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
+        Assertions.assertTrue(StringPattern.matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
     }
 
     @Test
@@ -171,7 +171,7 @@ class PatternDefinitionTests {
         val response = contractBehaviour.lookup(request)
         Assertions.assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body)
-        Assertions.assertTrue(StringPattern().matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
+        Assertions.assertTrue(StringPattern.matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
     }
 
     @Test
@@ -211,7 +211,7 @@ class PatternDefinitionTests {
     @Test
     fun `(boolean) should match a boolean value`() {
         val boolValue = true
-        val boolPattern = BooleanPattern()
+        val boolPattern = BooleanPattern
 
         BooleanValue(boolValue) shouldMatch  boolPattern
     }
@@ -227,7 +227,7 @@ class PatternDefinitionTests {
     @Test
     fun `(number) should match a decimal value`() {
         val value = 10.5
-        val pattern = NumberTypePattern()
+        val pattern = NumberTypePattern
 
         NumberValue(value) shouldMatch pattern
     }

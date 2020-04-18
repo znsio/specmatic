@@ -56,7 +56,7 @@ class LexTest {
         val request = HttpRequest().updateMethod("POST").updatePath("/pets").updateBody("""{"name": "Benny", "description": "Fluffy and white"}""")
         val response = contractBehaviour.lookup(request)
 
-        try { NumberTypePattern().parse(response.body ?: "", Resolver()) } catch(e: Throwable) { fail("Expected Number value") }
+        try { NumberTypePattern.parse(response.body ?: "", Resolver()) } catch(e: Throwable) { fail("Expected Number value") }
     }
 
     @Test

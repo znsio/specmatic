@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import run.qontract.core.value.*
 import java.util.*
+import kotlin.test.assertTrue
 
 class SetupFacts {
     @Test
@@ -69,10 +70,11 @@ class SetupFacts {
                 "    Then status 409\n" +
                 ""
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val serverStateForValidation = HashMap<String, Any?>()
-        contractBehaviour.executeTests(object : TestExecutor {
+        var serverStateForValidation = emptyMap<String, Value>()
+
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertEquals("jack", serverStateForValidation["user"])
+                assertEquals("jack", serverStateForValidation.getValue("user").toStringValue())
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 assertEquals("jack", name?.toStringValue())
@@ -80,9 +82,11 @@ class SetupFacts {
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
-                serverStateForValidation.putAll(serverState)
+                serverStateForValidation = serverState
             }
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -99,11 +103,11 @@ Feature: Contract for /balance API
 """
 
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val serverStateForValidation = HashMap<String, Any?>()
+        val serverStateForValidation = HashMap<String, Value>()
 
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertEquals(10, serverStateForValidation["id"])
+                assertEquals("10", (serverStateForValidation.getValue("id") as StringValue).string)
                 val jsonBody = jsonObject(request.body)
                 val id = jsonBody["id"] as NumberValue
                 assertEquals(10, id.number)
@@ -114,6 +118,8 @@ Feature: Contract for /balance API
                 serverStateForValidation.putAll(serverState)
             }
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -132,11 +138,11 @@ Feature: Contract for /balance API
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val serverStateForValidation = HashMap<String, Value>()
 
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertTrue(NumberTypePattern().matches(serverStateForValidation["id"], Resolver()) is Result.Success)
+                assertTrue(NumberTypePattern.matches(serverStateForValidation["id"], Resolver()) is Result.Success)
                 val jsonBody = jsonObject(request.body)
-                assertTrue(NumberTypePattern().matches(jsonBody["id"], Resolver()) is Result.Success)
+                assertTrue(NumberTypePattern.matches(jsonBody["id"], Resolver()) is Result.Success)
                 return HttpResponse(200, null, HashMap())
             }
 
@@ -144,6 +150,8 @@ Feature: Contract for /balance API
                 serverStateForValidation.putAll(serverState)
             }
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -167,12 +175,12 @@ Feature: Contract for /balance API
         val serverStateForValidation = emptyMap<String, Value>().toMutableMap()
         val logs: MutableList<String> = mutableListOf()
 
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 return when {
                     serverStateForValidation.containsKey("user") -> {
                         serverStateForValidation["user"].let { user ->
-                            if(user !is StringValue)
+                            if (user !is StringValue)
                                 fail("Expected user to be a string, got $user")
 
                             assertEquals("jack", user.string)
@@ -180,9 +188,9 @@ Feature: Contract for /balance API
 
 
                         request.body?.let {
-                            if(it is JSONObjectValue) {
+                            if (it is JSONObjectValue) {
                                 it.jsonObject.getValue("name").let { name ->
-                                    if(name !is StringValue)
+                                    if (name !is StringValue)
                                         fail("Expected name to be a string, got $name")
 
                                     assertEquals("jack", name.string)
@@ -198,9 +206,9 @@ Feature: Contract for /balance API
                         assertEquals(True, serverStateForValidation["no_user"])
 
                         request.body?.let {
-                            if(it is JSONObjectValue) {
+                            if (it is JSONObjectValue) {
                                 it.jsonObject.getValue("name").let { name ->
-                                    if(name !is StringValue)
+                                    if (name !is StringValue)
                                         fail("Expected string, but got $name")
 
                                     assertEquals("john", name.string)
@@ -226,6 +234,7 @@ Feature: Contract for /balance API
 
         val expectedLogs = listOf("user", "no_user")
         assertEquals(expectedLogs, logs.toList())
+        assertTrue(results.success(), results.report())
     }
 
     @Test

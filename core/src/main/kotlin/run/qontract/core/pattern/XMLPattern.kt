@@ -229,43 +229,55 @@ data class XMLPattern(val node: Node) : Pattern {
             if (node.hasAttributes()) {
                 updateAttributesBasedOnRow(node, row, resolver)
             }
-            if (node.hasChildNodes()) {
+            if (node.hasChildNodes() && (node.childNodes.length > 1 || node.firstChild.nodeName != "#text")) {
                 val childNodes = node.childNodes
                 for (index in 0 until childNodes.length) {
                     updateBasedOnRow(childNodes.item(index), row, resolver)
                 }
-            } else {
-                val parentNodeName = node.parentNode.nodeName
-                if (row.containsField(parentNodeName)) {
-                    if (isPatternToken(node.nodeValue)) {
-                        val nodePattern = resolver.getPattern(node.nodeValue)
+            } else if(node.hasChildNodes() && node.firstChild.nodeName == "#text") {
+                val nodeName = node.nodeName
+                val nodeValue = node.firstChild.nodeValue
 
-                        val rowValue = row.getField(parentNodeName)
+                if (row.containsField(nodeName)) {
+                    if (isPatternToken(nodeValue)) {
+                        val nodePattern = resolver.getPattern(nodeValue)
+
+                        val rowValue = row.getField(nodeName)
 
                         when {
                             isPatternToken(rowValue) -> {
                                 val rowPattern = resolver.getPattern(rowValue)
                                 if(!nodePattern.matchesPattern(rowPattern, resolver))
                                     throw ContractException("Type $rowValue in example did not match ${node.nodeValue} in the xml document")
-                                else
-                                    node.nodeValue = resolver.generate(parentNodeName, rowPattern).toString()
+                                else {
+                                    putValueIntoNode(resolver.generate(nodeName, rowPattern), node)
+                                }
                             }
                             else -> {
-                                val parsedRowValue = nodePattern.parse(rowValue, resolver)
-                                node.nodeValue = parsedRowValue.toStringValue()
+                                putValueIntoNode(nodePattern.parse(rowValue, resolver), node)
                             }
                         }
                     }
                     else
-                        node.nodeValue = row.getField(parentNodeName)
+                        node.firstChild.nodeValue = row.getField(nodeName)
                 } else {
-                    val value = node.nodeValue
-                    node.nodeValue = when {
-                        isPatternToken(value) -> resolver.generate(parentNodeName, resolver.getPattern(withoutRestTokenForXML(value))).toString()
-                        else -> value
+                    if (isPatternToken(node.firstChild.nodeValue)) {
+                        putValueIntoNode(
+                                resolver.generate(nodeName, resolver.getPattern(withoutRestTokenForXML(node.firstChild.nodeValue))),
+                                node)
                     }
                 }
             }
+        }
+    }
+
+    private fun putValueIntoNode(newNodeValue: Value, node: Node) {
+        if(newNodeValue is XMLValue) {
+            node.removeChild(node.firstChild)
+            val nodeCopy = node.ownerDocument.importNode(newNodeValue.node, true)
+            node.appendChild(nodeCopy)
+        } else {
+            node.firstChild.nodeValue = newNodeValue.toStringValue()
         }
     }
 

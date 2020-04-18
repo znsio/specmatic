@@ -8,7 +8,7 @@ import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
-class NoContentPattern : Pattern {
+object NoContentPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (sampleData) {
             is StringValue -> when (sampleData.string.isEmpty()) {

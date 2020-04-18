@@ -18,10 +18,10 @@ internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
         }
 
 private val builtInPatterns = mapOf(
-    "(number)" to NumberTypePattern(),
-    "(numericstring)" to NumericStringPattern(),
-    "(string)" to StringPattern(),
-    "(boolean)" to BooleanPattern(),
+    "(number)" to NumberTypePattern,
+    "(numericstring)" to NumericStringPattern,
+    "(string)" to StringPattern,
+    "(boolean)" to BooleanPattern,
     "(null)" to NullPattern,
     "(datetime)" to DateTimePattern,
     "(url)" to URLPattern(URLScheme.EITHER),

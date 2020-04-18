@@ -12,7 +12,7 @@ data class RestPattern(override val pattern: Pattern) : Pattern {
             listPattern.matches(sampleData, resolver)
 
     override fun generate(resolver: Resolver): JSONArrayValue = listPattern.generate(resolver)
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listPattern.newBasedOn(row, resolver)
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = pattern.newBasedOn(row, resolver).map { RestPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = listPattern.parse(value, resolver)
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
             pattern is RestPattern && pattern.pattern.matchesPattern(this.pattern, resolver)

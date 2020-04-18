@@ -91,11 +91,11 @@ Then status 200
         val contract = ContractBehaviour(gherkin)
         val flags = mutableMapOf<String, Int>()
 
-        contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val requestBody = request.body
-                if(requestBody is JSONObjectValue) {
-                    when("optional") {
+                if (requestBody is JSONObjectValue) {
+                    when ("optional") {
                         in requestBody.jsonObject.keys -> "with"
                         else -> "without"
                     }.let { flags[it] = flags.getOrDefault(it, 0) + 1 }
@@ -110,6 +110,7 @@ Then status 200
 
         assertEquals(1, flags["with"])
         assertEquals(1, flags["without"])
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -133,10 +134,10 @@ Examples:
         val contract = ContractBehaviour(gherkin)
         val flags = mutableMapOf<String, Int>()
 
-        contract.executeTests(object : TestExecutor {
+        val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val requestBody = request.body
-                if(requestBody is JSONObjectValue) {
+                if (requestBody is JSONObjectValue) {
                     flags["optional"] = requestBody.jsonObject.getOrDefault("optional", 0).toString().toInt()
                 }
 
@@ -148,6 +149,7 @@ Examples:
         })
 
         assertEquals(10, flags["optional"])
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -235,7 +237,7 @@ Then status 200
 
         val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertTrue(NumberTypePattern().parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
+                assertTrue(NumberTypePattern.parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
                 flags["parsed number"] = true
                 return HttpResponse(200, "100")
             }
@@ -266,7 +268,7 @@ Then status 200
 
         val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertTrue(NumberTypePattern().parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
+                assertTrue(NumberTypePattern.parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
                 flags["parsed number"] = true
                 return HttpResponse(200, "100")
             }

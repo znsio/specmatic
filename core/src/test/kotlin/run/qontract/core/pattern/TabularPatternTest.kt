@@ -288,7 +288,7 @@ Given request-body
 
     @Test
     fun `should fail to match nulls gracefully`() {
-        NullValue shouldNotMatch TabularPattern(mapOf("name" to StringPattern()))
+        NullValue shouldNotMatch TabularPattern(mapOf("name" to StringPattern))
     }
 }
 

@@ -24,6 +24,7 @@ import java.util.*
 import java.util.stream.Collectors
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.parsers.ParserConfigurationException
+import javax.xml.transform.OutputKeys
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
@@ -169,8 +170,6 @@ fun parseXML(xmlData: String): Document {
     return builder.parse(InputSource(StringReader(xmlData)))
 }
 
-fun xmlToString(doc: Document): String = xmlToString(DOMSource(doc))
-fun xmlToString(element: Element): String = xmlToString(DOMSource(element))
 fun xmlToString(node: Node): String = xmlToString(DOMSource(node))
 
 private fun xmlToString(domSource: DOMSource): String {
@@ -178,6 +177,7 @@ private fun xmlToString(domSource: DOMSource): String {
     val result = StreamResult(writer)
     val tf = TransformerFactory.newInstance()
     val transformer = tf.newTransformer()
+    transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
     transformer.transform(domSource, result)
     return writer.toString()
 }
@@ -189,7 +189,6 @@ val contractGherkinForCurrentComponent: String
         val componentName = componentManifest.componentName
         val majorVersion = componentManifest.componentContractMajorVersion
         val minorVersion = componentManifest.componentContractMinorVersion
-        //        URL url = new URL(BROKER_URL + "/contracts?provider=" + componentName + "&majorVersion=" + majorVersion + "&minorVersion=" + minorVersion);
         val url = URL("$brokerURL/contracts?provider=$componentName&majorVersion=$majorVersion&minorVersion=$minorVersion")
         val bufferedReader = BufferedReader(InputStreamReader(url.openStream()))
         val contractInfoBuffer = StringBuilder()

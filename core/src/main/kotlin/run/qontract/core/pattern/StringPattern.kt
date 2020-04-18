@@ -9,7 +9,7 @@ import run.qontract.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-class StringPattern : Pattern {
+object StringPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when(sampleData) {
             is StringValue, is EmptyString -> Result.Success()

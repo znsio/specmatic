@@ -10,17 +10,17 @@ import run.qontract.core.value.StringValue
 internal class PatternInStringPatternTest {
     @Test
     fun `should match a number in string`() {
-        StringValue("10") shouldMatch PatternInStringPattern(NumberTypePattern())
+        StringValue("10") shouldMatch PatternInStringPattern(NumberTypePattern)
     }
 
     @Test
     fun `should match a boolean in string`() {
-        StringValue("true") shouldMatch PatternInStringPattern(BooleanPattern())
+        StringValue("true") shouldMatch PatternInStringPattern(BooleanPattern)
     }
 
     @Test
     fun `should generate a number in a string`() {
-        val value = PatternInStringPattern(NumberTypePattern()).generate(Resolver())
+        val value = PatternInStringPattern(NumberTypePattern).generate(Resolver())
 
         assertThat(value).isInstanceOf(StringValue::class.java)
         if(value !is StringValue)
@@ -35,7 +35,7 @@ internal class PatternInStringPatternTest {
 
     @Test
     fun `should generate a list of patterns based on a Row`() {
-        val patterns = PatternInStringPattern(NumberTypePattern()).newBasedOn(Row(), Resolver())
+        val patterns = PatternInStringPattern(NumberTypePattern).newBasedOn(Row(), Resolver())
 
         assertThat(patterns).hasSize(1)
 
@@ -50,7 +50,7 @@ internal class PatternInStringPatternTest {
 
     @Test
     fun `should parse a string`() {
-        val pattern = PatternInStringPattern(NumberTypePattern())
+        val pattern = PatternInStringPattern(NumberTypePattern)
         val value = pattern.parse("10", Resolver())
 
         assertThat(value).isEqualTo(StringValue("10"))
@@ -58,12 +58,12 @@ internal class PatternInStringPatternTest {
 
     @Test
     fun `should match another pattern-in-string of the same inner pattern type`() {
-        val pattern1 = PatternInStringPattern(NumberTypePattern())
-        val pattern2 = PatternInStringPattern(NumberTypePattern())
+        val pattern1 = PatternInStringPattern(NumberTypePattern)
+        val pattern2 = PatternInStringPattern(NumberTypePattern)
 
         assertThat(pattern1.matchesPattern(pattern2, Resolver())).isTrue()
 
-        val pattern3 = PatternInStringPattern(BooleanPattern())
+        val pattern3 = PatternInStringPattern(BooleanPattern)
         assertThat(pattern1.matchesPattern(pattern3, Resolver())).isFalse()
     }
 }

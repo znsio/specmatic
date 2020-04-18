@@ -35,15 +35,15 @@ class ContractAsTest {
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val jsonResponseString = "{calls_left: 20, messages_left: 20}"
 
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 flags["executed"] = true
                 assertEquals("/accounts", request.path)
                 val requestBody = jsonObject(request.body)
                 val name = requestBody["name"]
                 val address = requestBody["address"]
-                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
-                assertTrue(StringPattern().matches(address, Resolver()) is Result.Success)
+                assertTrue(StringPattern.matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern.matches(address, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -57,6 +57,7 @@ class ContractAsTest {
         })
 
         assertThat(flags["executed"]).isTrue()
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -100,16 +101,18 @@ Couldn't convert "abc" to number""")
                     Then status 200
         """
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers.keys).contains("test")
                 assertThat(request.headers["test"]).matches("[0-9]+")
-                val headers: HashMap<String, String> = HashMap()
-                return HttpResponse(200, "{calls_left: 10, messages_left: 30}", headers)
+                return HttpResponse.OK_200_EMPTY
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        println(results.report())
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -124,13 +127,16 @@ Couldn't convert "abc" to number""")
                 Then status 202
         """
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.method).isEqualTo("PATCH")
                 return HttpResponse(202, "", HashMap())
             }
+
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -147,16 +153,18 @@ Couldn't convert "abc" to number""")
                     | a@b.com   |
         """
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers.keys).contains("x-loginId")
                 assertThat(request.headers["x-loginId"]).isEqualTo("a@b.com")
-                val headers: HashMap<String, String> = HashMap()
-                return HttpResponse(200, "{calls_left: 10, messages_left: 30}", headers)
+                return HttpResponse.OK_200_EMPTY
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        println(results.report())
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -177,14 +185,16 @@ Couldn't convert "abc" to number""")
 
         val contractBehaviour = ContractBehaviour(contractGherkin)
 
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 flags["executed"] = true
 
                 val body = request.body
                 if (body !is JSONObjectValue)
                     throw Exception("Unexpected value type: ${request.body}")
-                assertThat("10").isEqualTo(body.jsonObject["id"])
+
+                assertThat(body.jsonObject["id"]).isInstanceOf(StringValue::class.java)
+                assertThat("10").isEqualTo((body.jsonObject["id"] as StringValue).string)
                 val headers: HashMap<String, String> = HashMap()
                 return HttpResponse(200, "", headers)
             }
@@ -193,6 +203,9 @@ Couldn't convert "abc" to number""")
         })
 
         assertThat(flags["executed"]).isTrue()
+
+        println(results.report())
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -232,7 +245,9 @@ Couldn't convert "abc" to number""")
         }, suggestions)
 
         assertThat(flags["executed"]).isTrue()
-        assertFalse(results.hasFailures(), results.report())
+
+        println(results.report())
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -253,7 +268,7 @@ Couldn't convert "abc" to number""")
                 assertEquals("/accounts", request.path)
                 if (request.queryParams.contains("account_id")) {
                     flags.add("with")
-                    assertTrue(NumericStringPattern()
+                    assertTrue(NumericStringPattern
                             .matches(StringValue(request.queryParams.getValue("account_id")), Resolver()) is Result.Success)
                 } else flags.add("without")
 
@@ -268,8 +283,8 @@ Couldn't convert "abc" to number""")
             override fun setServerState(serverState: Map<String, Value>) {}
         })
 
-        assertTrue(results.success(), results.report())
         assertEquals(mutableListOf("without", "with"), flags)
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -289,8 +304,8 @@ Couldn't convert "abc" to number""")
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 val address = jsonBody["address"]
-                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
-                assertTrue(StringPattern().matches(address, Resolver()) is Result.Success)
+                assertTrue(StringPattern.matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern.matches(address, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -317,14 +332,14 @@ Couldn't convert "abc" to number""")
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val jsonResponseString = "{calls_left: 20, messages_left: 20.1}"
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 val address = jsonBody["address"]
-                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
-                assertTrue(StringPattern().matches(address, Resolver()) is Result.Success)
+                assertTrue(StringPattern.matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern.matches(address, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -335,6 +350,8 @@ Couldn't convert "abc" to number""")
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -346,16 +363,16 @@ Couldn't convert "abc" to number""")
                 "    And request-body {name: \"(string)\", linked_ids: [1,2,3]}\n" +
                 "    Then status 200"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
-                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern.matches(name, Resolver()) is Result.Success)
                 val expectedLinkedIds = arrayOf(1, 2, 3)
-                val actualLinkedIds = jsonBody["linked_ids"] as List<Any?>
+                val actualLinkedIds = jsonBody["linked_ids"] as JSONArrayValue
                 for (i in expectedLinkedIds.indices) {
-                    assertEquals(expectedLinkedIds[i], actualLinkedIds[i])
+                    assertEquals(expectedLinkedIds[i], (actualLinkedIds.list.get(i) as NumberValue).number)
                 }
                 val headers = HashMap<String, String>()
                 return HttpResponse(200, "", headers)
@@ -363,6 +380,8 @@ Couldn't convert "abc" to number""")
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -374,26 +393,27 @@ Couldn't convert "abc" to number""")
                 "    And request-body {name: \"(string)\", linked_ids: [1,2,3, {a: \"(number)\", b: \"(string)\"}]}\n" +
                 "    Then status 200"
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
-                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
+                assertThat(StringPattern.matches(name, Resolver())).isInstanceOf(Result.Success::class.java)
                 val expectedLinkedIds = arrayOf(1, 2, 3)
-                val actualLinkedIds = jsonBody["linked_ids"] as List<Any?>
+                val actualLinkedIds = jsonBody["linked_ids"] as JSONArrayValue
                 for (i in expectedLinkedIds.indices) {
-                    assertEquals(expectedLinkedIds[i], actualLinkedIds[i])
+                    assertEquals(expectedLinkedIds[i], (actualLinkedIds.list.get(i) as NumberValue).number)
                 }
-                val innerObject = actualLinkedIds[3] as Map<String, Any?>
-                assertThat(innerObject["a"]).isInstanceOf(Number::class.java)
-                assertThat(innerObject["b"]).isInstanceOf(String::class.java)
-                val headers = HashMap<String, String>()
-                return HttpResponse(200, "", headers)
+                val innerObject = actualLinkedIds.list.get(3) as JSONObjectValue
+                assertThat(innerObject.jsonObject.getValue("a")).isInstanceOf(NumberValue::class.java)
+                assertThat(innerObject.jsonObject.getValue("b")).isInstanceOf(StringValue::class.java)
+                return HttpResponse.OK_200_EMPTY
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -407,7 +427,7 @@ Couldn't convert "abc" to number""")
                 "    And response-body <balance><calls_left>(number)</calls_left><messages_left>(number)</messages_left></balance>"
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val xmlResponseString = "<balance><calls_left>20</calls_left><messages_left>20</messages_left></balance>"
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val root = (request.body as XMLValue).node
                 val nameItem = root.childNodes.item(0)
@@ -415,7 +435,7 @@ Couldn't convert "abc" to number""")
                 assertEquals("name", nameItem.nodeName)
                 assertEquals("address", addressItem.nodeName)
                 assertEquals("John Doe", nameItem.firstChild.nodeValue)
-                assertTrue(StringPattern().matches(StringValue(addressItem.firstChild.nodeValue), Resolver()) is Result.Success)
+                assertTrue(StringPattern.matches(StringValue(addressItem.firstChild.nodeValue), Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/xml")
@@ -426,6 +446,8 @@ Couldn't convert "abc" to number""")
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -444,7 +466,7 @@ Couldn't convert "abc" to number""")
   | 10       | jack    |
 """
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
                 assertEquals("10", request.queryParams["userid"])
@@ -455,6 +477,8 @@ Couldn't convert "abc" to number""")
                 assertEquals("10", serverState["userid"].toString())
             }
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -464,7 +488,7 @@ Couldn't convert "abc" to number""")
                 "  Scenario: api call\n" +
                 "    Given pattern Location {\"city\": \"(string)\"}\n" +
                 "    When POST /locations\n" +
-                "    And request-body {\"locations\": [\"(Location*)\"]}\n" +
+                "    And request-body {\"locations\": [\"(Location...)\"]}\n" +
                 "    Then status 200\n"
         verifyJsonArrayGenerationInRequestBody(contractGherkin)
     }
@@ -475,7 +499,7 @@ Couldn't convert "abc" to number""")
         val contractGherkin = "Feature: Contract for /locations API\n" +
                 "  Scenario: api call\n" +
                 "    Given pattern Location {\"city\": \"(string)\"}\n" +
-                "    And pattern Locations {\"locations\": [\"(Location*)\"]}\n" +
+                "    And pattern Locations {\"locations\": [\"(Location...)\"]}\n" +
                 "    When POST /locations\n" +
                 "    And request-body (Locations)\n" +
                 "    Then status 200\n"
@@ -485,22 +509,24 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     private fun verifyJsonArrayGenerationInRequestBody(contractGherkin: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
                 assertEquals("POST", request.method)
                 val requestBody = jsonObject(request.body)
-                val locations = requestBody["locations"] as List<Any?>
-                for (i in locations.indices) {
-                    val location = locations[i] as Map<String, Any?>
-                    assertNotNull(location["city"])
-                    assertTrue((location["city"] as String).length > 0)
+                val locations = requestBody["locations"] as JSONArrayValue
+                for (i in locations.list.indices) {
+                    val location = locations.list.get(i) as JSONObjectValue
+                    val cityValue = location.jsonObject.getValue("city") as StringValue
+                    assertThat(cityValue.string.length).isNotZero()
                 }
                 return HttpResponse.OK_200_EMPTY
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -511,7 +537,7 @@ Couldn't convert "abc" to number""")
                 "    Given pattern Location {\"city\": \"(string)\"}\n" +
                 "    When GET /locations\n" +
                 "    Then status 200\n" +
-                "    And response-body {\"locations\": [\"(Location*)\"]}"
+                "    And response-body {\"locations\": [\"(Location...)\"]}"
         verifyJsonArrayGenerationInResponseBody(contractGherkin)
     }
 
@@ -521,7 +547,7 @@ Couldn't convert "abc" to number""")
         val contractGherkin = "Feature: Contract for /locations API\n" +
                 "  Scenario: api call\n" +
                 "    Given pattern Location {\"city\": \"(string)\"}\n" +
-                "    And pattern Locations {\"locations\": [\"(Location*)\"]}\n" +
+                "    And pattern Locations {\"locations\": [\"(Location...)\"]}\n" +
                 "    When GET /locations\n" +
                 "    Then status 200\n" +
                 "    And response-body (Locations)"
@@ -531,7 +557,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     private fun verifyJsonArrayGenerationInResponseBody(contractGherkin: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
                 assertEquals("GET", request.method)
@@ -541,18 +567,8 @@ Couldn't convert "abc" to number""")
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
-    }
 
-    @Test
-    @Throws(Throwable::class)
-    fun xmlArrayGenerationInRequestBody() {
-        val contractGherkin = "Feature: Contract for /locations API\n" +
-                "  Scenario: api call\n" +
-                "    Given pattern Location <city>(string)</city>\n" +
-                "    When POST /locations\n" +
-                "    And request-body <locations>(Location...)</locations>\n" +
-                "    Then status 200\n"
-        verifyXMLArrayGenerationInRequestBody(contractGherkin)
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -568,10 +584,21 @@ Couldn't convert "abc" to number""")
         verifyXMLArrayGenerationInRequestBody(contractGherkin)
     }
 
+    @Test
     @Throws(Throwable::class)
+    fun xmlArrayGenerationInRequestBody() {
+        val contractGherkin = "Feature: Contract for /locations API\n" +
+                "  Scenario: api call\n" +
+                "    Given pattern Location <city>(string)</city>\n" +
+                "    When POST /locations\n" +
+                "    And request-body <locations>(Location...)</locations>\n" +
+                "    Then status 200\n"
+        verifyXMLArrayGenerationInRequestBody(contractGherkin)
+    }
+
     private fun verifyXMLArrayGenerationInRequestBody(contractGherkin: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
                 assertEquals("POST", request.method)
@@ -597,6 +624,8 @@ Couldn't convert "abc" to number""")
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -627,7 +656,7 @@ Couldn't convert "abc" to number""")
     @Throws(Throwable::class)
     private fun verifyXMLArrayGenerationInResponseBody(contractGherkin: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
                 assertEquals("GET", request.method)
@@ -637,6 +666,8 @@ Couldn't convert "abc" to number""")
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -646,7 +677,7 @@ Couldn't convert "abc" to number""")
                 "  Scenario: api call\n" +
                 "    * fixture cities {\"cities\": [{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}]}\n" +
                 "    * pattern City {\"city\": \"(string)\"}\n" +
-                "    * pattern Cities {\"cities\": [\"(City*)\"]}\n" +
+                "    * pattern Cities {\"cities\": [\"(City...)\"]}\n" +
                 "    Given fact cities\n" +
                 "    When GET /locations\n" +
                 "    Then status 200\n" +
@@ -654,7 +685,8 @@ Couldn't convert "abc" to number""")
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val setupStatus = arrayOf("Setup didn\"t happen")
         val setupSuccess = "Setup happened"
-        contractBehaviour.executeTests(object : TestExecutor {
+
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
                 assertEquals("GET", request.method)
@@ -668,7 +700,9 @@ Couldn't convert "abc" to number""")
                 assertTrue(serverState["cities"] != True)
             }
         })
+
         assertEquals("Setup happened", setupStatus[0])
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -678,7 +712,7 @@ Couldn't convert "abc" to number""")
   Scenario Outline: api call
     * fixture city_list {"cities": [{"city": "Mumbai"}, {"city": "Bangalore"}]}
     * pattern City {"city": "(string)"}
-    * pattern Cities {"cities": ["(City*)"]}
+    * pattern Cities {"cities": ["(City...)"]}
     Given fact cities_exist 
     When GET /locations
     Then status 200
@@ -690,7 +724,8 @@ Couldn't convert "abc" to number""")
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val setupStatus = arrayOf("Setup didn\"t happen")
         val setupSuccess = "Setup happened"
-        contractBehaviour.executeTests(object : TestExecutor {
+
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
                 assertEquals("GET", request.method)
@@ -704,7 +739,9 @@ Couldn't convert "abc" to number""")
                 assertTrue(serverState["cities_exist"] != True)
             }
         })
+
         assertEquals("Setup happened", setupStatus[0])
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -721,7 +758,8 @@ Couldn't convert "abc" to number""")
         val setupStatus = arrayOf("Setup didn\"t happen")
         val setupSuccess = "Setup happened"
         val idFound = intArrayOf(0)
-        contractBehaviour.executeTests(object : TestExecutor {
+
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/pets", request.path)
                 assertEquals("POST", request.method)
@@ -736,7 +774,9 @@ Couldn't convert "abc" to number""")
                 idFound[0] = serverState["id"].toString().toInt()
             }
         })
+
         assertEquals("Setup happened", setupStatus[0])
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -761,7 +801,7 @@ Scenario: Update pet details
         val setupSuccess = "Setup happened"
         val idFound = intArrayOf(0)
 
-        contractBehaviour.executeTests(object : TestExecutor {
+        val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/pets", request.path)
                 assertEquals("POST", request.method)
@@ -776,7 +816,9 @@ Scenario: Update pet details
                 idFound[0] = serverState["id"].toString().toInt()
             }
         })
+
         assertEquals("Setup happened", setupStatus[0])
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -839,7 +881,7 @@ And request-body (string: number)
 Then status 200
 """
 
-        ContractBehaviour(gherkin).executeTests(object : TestExecutor {
+        val results = ContractBehaviour(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val body = request.body
                 if (body !is JSONObjectValue) fail("Expected JSONObjectValue")
@@ -859,6 +901,8 @@ Then status 200
             }
 
         })
+
+        assertTrue(results.success(), results.report())
     }
 
     @Test
@@ -887,7 +931,6 @@ And response-body (string: number)
     }
 
     @Test
-    @Throws(ContractException::class)
     fun `should not match a dictionary with the wrong format in test mode`() {
         val gherkin = """Feature: Contract
 Scenario: api call
@@ -896,7 +939,7 @@ Then status 200
 And response-body (string: string)
 """
 
-        ContractBehaviour(gherkin).executeTests(object : TestExecutor {
+        val results = ContractBehaviour(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val response = """{"one": 1, "two": 2}"""
                 return HttpResponse(200, response)
@@ -906,10 +949,11 @@ And response-body (string: string)
 
             }
         })
+
+        assertFalse(results.success(), results.report())
     }
 
     @Test
-    @Throws(ContractException::class)
     fun `should match pattern in string in request and response`() {
         val gherkin = """Feature: Contract
 Scenario: api call

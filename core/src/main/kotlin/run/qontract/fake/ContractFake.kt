@@ -108,7 +108,7 @@ class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList
 internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
     val(body, formFields) = bodyFromCall(call)
 
-    val requestHeaders = HashMap(call.request.headers.toMap().mapValues { it.value[0] })
+    val requestHeaders = call.request.headers.toMap().mapValues { it.value[0] }
 
     return HttpRequest(method = call.request.httpMethod.value,
             path = call.request.path(),

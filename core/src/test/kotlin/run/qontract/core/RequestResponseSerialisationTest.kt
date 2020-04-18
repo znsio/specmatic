@@ -11,13 +11,14 @@ class RequestResponseSerialisationTest {
     @Test
     @Throws(MockException::class)
     fun testRequestSerialisationWithTextBody() {
-        val request = HttpRequest()
-        request.updateMethod("GET")
-        request.updateQueryParam("one", 1.toString())
-        request.updateQueryParam("two", 2.toString())
-        request.updatePath("/test")
-        request.updateHeader("Content-Type", "text/plain")
-        request.updateBody("hello world")
+        val request =
+                HttpRequest()
+                    .updateMethod("GET")
+                    .updateQueryParam("one", 1.toString())
+                    .updateQueryParam("two", 2.toString())
+                    .updatePath("/test")
+                    .updateHeader("Content-Type", "text/plain")
+                    .updateBody("hello world")
         val jsonRequest = request.toJSON()
         val requestDeserialised = requestFromJSON(jsonRequest)
         Assertions.assertEquals(request, requestDeserialised)
@@ -26,13 +27,14 @@ class RequestResponseSerialisationTest {
     @Test
     @Throws(MockException::class)
     fun testRequestSerialisationWithJSONBody() {
-        val request = HttpRequest()
-        request.updateMethod("GET")
-        request.updateQueryParam("one", 1.toString())
-        request.updateQueryParam("two", 2.toString())
-        request.updatePath("/test")
-        request.updateHeader("Content-Type", "application/json")
-        request.updateBody("{\"one\": 1}")
+        val request =
+                HttpRequest()
+                    .updateMethod("GET")
+                    .updateQueryParam("one", 1.toString())
+                    .updateQueryParam("two", 2.toString())
+                    .updatePath("/test")
+                    .updateHeader("Content-Type", "application/json")
+                    .updateBody("{\"one\": 1}")
         val jsonRequest = request.toJSON()
         val requestDeserialised = requestFromJSON(jsonRequest)
         Assertions.assertEquals(request, requestDeserialised)
@@ -41,13 +43,14 @@ class RequestResponseSerialisationTest {
     @Test
     @Throws(MockException::class)
     fun testRequestSerialisationWithXMLBody() {
-        val request = HttpRequest()
-        request.updateMethod("GET")
-        request.updateQueryParam("one", 1.toString())
-        request.updateQueryParam("two", 2.toString())
-        request.updatePath("/test")
-        request.updateHeader("Content-Type", "application/xml")
-        request.updateBody("<one>1</one>")
+        val request =
+                HttpRequest()
+                    .updateMethod("GET")
+                    .updateQueryParam("one", 1.toString())
+                    .updateQueryParam("two", 2.toString())
+                    .updatePath("/test")
+                    .updateHeader("Content-Type", "application/xml")
+                    .updateBody("<one>1</one>")
         val json: Map<String, Value> = request.toJSON()
 
         assertEquals("GET", s(json, "method"))

@@ -107,7 +107,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
     }
 
     fun generate(resolver: Resolver): HttpRequest {
-        val newRequest = HttpRequest()
+        var newRequest = HttpRequest()
 
         return attempt(breadCrumb = "REQUEST") {
             if (method == null) {
@@ -116,12 +116,12 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
             if (urlMatcher == null) {
                 throw missingParam("URL path")
             }
-            newRequest.updateMethod(method!!)
+            newRequest = newRequest.updateMethod(method!!)
             attempt(breadCrumb = "URL") {
-                newRequest.updatePath(urlMatcher!!.generatePath(resolver))
+                newRequest = newRequest.updatePath(urlMatcher!!.generatePath(resolver))
                 val queryParams = urlMatcher!!.generateQuery(resolver)
                 for (key in queryParams.keys) {
-                    newRequest.updateQueryParam(key, queryParams[key] ?: "")
+                    newRequest = newRequest.updateQueryParam(key, queryParams[key] ?: "")
                 }
             }
             val headers = headersPattern.generate(resolver)
@@ -129,12 +129,12 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
             val body = body
             attempt(breadCrumb = "BODY") {
                 body.generate(resolver).let { value ->
-                    newRequest.updateBody(value)
-                    headers.put("Content-Type", value.httpContentType)
+                    newRequest = newRequest.updateBody(value)
+                    newRequest = newRequest.updateHeader("Content-Type", value.httpContentType)
                 }
             }
 
-            headers.map { (key, value) -> newRequest.updateHeader(key, value) }
+            newRequest = newRequest.copy(headers = headers)
 
             val formFieldsValue = attempt(breadCrumb = "FORM FIELDS") { formFieldsPattern.mapValues { (key, pattern) -> attempt(breadCrumb = key) { resolver.generate(key, pattern).toString() } } }
             when (formFieldsValue.size) {
@@ -142,7 +142,7 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
                 else -> {
                     newRequest.copy(
                             formFields = formFieldsValue,
-                            headers = HashMap(newRequest.headers.plus("Content-Type" to "application/x-www-form-urlencoded")))
+                            headers = newRequest.headers.plus("Content-Type" to "application/x-www-form-urlencoded"))
                 }
             }
         }

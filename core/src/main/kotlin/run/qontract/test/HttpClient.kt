@@ -113,7 +113,7 @@ private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpReq
             else -> throw ContractException("Unknown type of body content sent in the request")
         }
 
-    val requestHeaders = HashMap(request.headers.toMap().mapValues { it.value[0] })
+    val requestHeaders = request.headers.toMap().mapValues { it.value[0] }
 
     return HttpRequest(method = request.method.value,
             path = request.url.encodedPath,

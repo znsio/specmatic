@@ -16,58 +16,40 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-data class HttpRequest(var method: String? = null, var path: String? = null, val headers: HashMap<String, String> = HashMap(), var body: Value? = EmptyString, var queryParams: HashMap<String, String> = HashMap(), val formFields: Map<String, String> = emptyMap()) {
-    fun updateQueryParams(queryParams: Map<String, String>): HttpRequest {
-        this.queryParams.putAll(queryParams)
-        return this
-    }
+data class HttpRequest(val method: String? = null, val path: String? = null, val headers: Map<String, String> = emptyMap(), val body: Value? = EmptyString, val queryParams: Map<String, String> = emptyMap(), val formFields: Map<String, String> = emptyMap()) {
+    fun updateQueryParams(queryParams: Map<String, String>): HttpRequest = copy(queryParams = queryParams.plus(queryParams))
 
     fun updatePath(path: String): HttpRequest {
-        try {
+        return try {
             val urlParam = URI(path)
             updateWith(urlParam)
         } catch (e: URISyntaxException) {
-            this.path = path
+            copy(path = path)
         } catch (e: UnsupportedEncodingException) {
-            this.path = path
+            copy(path = path)
         }
-        return this
     }
 
-    fun updateQueryParam(key: String, value: String): HttpRequest {
-        queryParams[key] = value
-        return this
+    fun updateQueryParam(key: String, value: String): HttpRequest = copy(queryParams = queryParams.plus(key to value))
+
+    fun updateBody(body: Value): HttpRequest = copy(body = body)
+
+    fun updateBody(body: String?): HttpRequest = copy(body = parsedValue(body))
+
+    fun updateWith(url: URI): HttpRequest {
+        val path = url.path
+        val queryParams = parseQuery(url.query)
+        return copy(path = path, queryParams = queryParams)
     }
 
-    fun updateBody(body: Value): HttpRequest {
-        this.body = body
-        return this
-    }
-
-    fun updateBody(body: String?): HttpRequest {
-        this.body = parsedValue(body)
-        return this
-    }
-
-    fun updateWith(url: URI) {
-        path = url.path
-        queryParams = parseQuery(url.query)
-    }
-
-    fun updateMethod(name: String): HttpRequest {
-        method = name.toUpperCase()
-        return this
-    }
+    fun updateMethod(name: String): HttpRequest = copy(method = name.toUpperCase())
 
     private fun updateBody(contentBuffer: ByteBuf) {
         val bodyString = contentBuffer.toString(Charset.defaultCharset())
         updateBody(bodyString)
     }
 
-    fun updateHeader(key: String, value: String): HttpRequest {
-        headers[key] = value
-        return this
-    }
+    fun updateHeader(key: String, value: String): HttpRequest = copy(headers = headers.plus(key to value))
 
     val bodyString: String
         get() = body.toString()
@@ -97,10 +79,7 @@ data class HttpRequest(var method: String? = null, var path: String? = null, val
         return requestMap
     }
 
-    fun setHeaders(addedHeaders: Map<String, String>): HttpRequest {
-        headers.putAll(addedHeaders)
-        return this
-    }
+    fun setHeaders(addedHeaders: Map<String, String>): HttpRequest = copy(headers = headers.plus(addedHeaders))
 
     fun toLogString(prefix: String = ""): String {
         val methodString = method ?: "NO_METHOD"

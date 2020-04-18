@@ -195,7 +195,7 @@ fun toPatternPair(key: String, value: String): Pair<String, Pattern> = key to pa
 
 private fun breakIntoParts(whole: String, partCount: Int) = whole.split("\\s+".toRegex(), partCount)
 
-private val HTTP_METHODS = listOf("GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS")
+private val HTTP_METHODS = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
 
 internal fun parseGherkinString(gherkinData: String): GherkinDocument {
     val idGenerator: IdGenerator = Incrementing()

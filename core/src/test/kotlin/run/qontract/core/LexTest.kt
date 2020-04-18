@@ -1,14 +1,11 @@
 package run.qontract.core
 
-import org.json.JSONObject
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.NumberTypePattern
-import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
-import kotlin.contracts.contract
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -86,5 +83,25 @@ class LexTest {
             assertTrue(body.jsonObject.getValue("id") is NumberValue)
             assertTrue(body.jsonObject.getValue("name") is StringValue)
         }
+    }
+
+    @Test
+    fun `should lex http PATCH`() {
+        val contractGherkin = """
+            Feature: Pet Store
+            
+            Scenario: Update all pets
+              When PATCH /pets
+              And request-body {"health": "good"}
+              Then status 202
+        """.trimIndent()
+
+        val contractBehaviour = ContractBehaviour(contractGherkin)
+
+        val request = HttpRequest().updateMethod("PATCH").updatePath("/pets").updateBody("""{"health": "good"}""")
+
+        val response = contractBehaviour.lookup(request)
+
+        assertEquals(202, response.status)
     }
 }

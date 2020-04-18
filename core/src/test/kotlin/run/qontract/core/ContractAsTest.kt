@@ -114,6 +114,27 @@ Couldn't convert "abc" to number""")
 
     @Test
     @Throws(Throwable::class)
+    fun `should generate PATCH`() {
+        val contractGherkin = """
+            Feature: Pet Store
+            
+            Scenario: Update all pets
+                When PATCH /pets
+                And request-body {"health": "good"}
+                Then status 202
+        """
+        val contractBehaviour = ContractBehaviour(contractGherkin)
+        contractBehaviour.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.method).isEqualTo("PATCH")
+                return HttpResponse(202, "", HashMap())
+            }
+            override fun setServerState(serverState: Map<String, Value>) {}
+        })
+    }
+
+    @Test
+    @Throws(Throwable::class)
     fun `should generate request headers with examples`() {
         val contractGherkin = """
             Feature: Contract for /balance API
@@ -168,7 +189,7 @@ Couldn't convert "abc" to number""")
                 return HttpResponse(200, "", headers)
             }
 
-            override fun setServerState(serverState: Map<String, Value>) { }
+            override fun setServerState(serverState: Map<String, Value>) {}
         })
 
         assertThat(flags["executed"]).isTrue()
@@ -230,7 +251,7 @@ Couldn't convert "abc" to number""")
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
-                if(request.queryParams.contains("account_id")) {
+                if (request.queryParams.contains("account_id")) {
                     flags.add("with")
                     assertTrue(NumericStringPattern()
                             .matches(StringValue(request.queryParams.getValue("account_id")), Resolver()) is Result.Success)
@@ -821,11 +842,11 @@ Then status 200
         ContractBehaviour(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val body = request.body
-                if(body !is JSONObjectValue) fail("Expected JSONObjectValue")
+                if (body !is JSONObjectValue) fail("Expected JSONObjectValue")
 
                 assertThat(body.jsonObject.keys.size).isGreaterThan(0)
 
-                for((key, value) in body.jsonObject) {
+                for ((key, value) in body.jsonObject) {
                     assertThat(key).hasSizeGreaterThan(0)
                     assertThat(value).isInstanceOf(NumberValue::class.java)
                 }
@@ -929,7 +950,7 @@ And response-body
 }
 
 internal fun jsonObject(value: Value?): Map<String, Value> {
-    if(value !is JSONObjectValue)
+    if (value !is JSONObjectValue)
         fail("Expected JSONObjectValue, got ${value?.javaClass?.name ?: "null"}")
 
     return value.jsonObject

@@ -7,10 +7,10 @@ import run.qontract.core.value.*
 
 fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) =
         TabularPattern(rows.map { it.cellsList }.map { (key, value) ->
-            key.value to toJSONValue(value.value)
+            key.value to toJSONPattern(value.value)
         }.toMap())
 
-fun toJSONValue(value: String): Pattern {
+fun toJSONPattern(value: String): Pattern {
     return value.trim().let {
         val asNumber: Number? = try { convertToNumber(value) } catch (e: Throwable) { null }
 

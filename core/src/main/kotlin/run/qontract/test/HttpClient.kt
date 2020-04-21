@@ -54,7 +54,8 @@ class HttpClient(private val baseURL: String) : TestExecutor {
                 else if (request.body != null) {
                     this.body = when {
                         request.headers.containsKey("Content-Type") -> TextContent(request.bodyString, ContentType.parse(request.headers["Content-Type"] as String))
-                        else -> request.bodyString
+                        else -> TextContent(request.bodyString, ContentType.parse(request.body.httpContentType))
+//                        else -> request.bodyString
                     }
                 }
             }

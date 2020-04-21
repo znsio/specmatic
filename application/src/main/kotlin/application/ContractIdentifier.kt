@@ -7,7 +7,7 @@ import java.io.File
 fun findLatestVersion(contractName: String): Int? {
     return File(cachePathToName(contractName)).listFiles()
             ?.filter { it.isFile }
-            ?.map { it.name.removeSuffix(".pointer").toInt() }
+            ?.map { it.name.removeSuffix(".$POINTER_EXTENSION").toInt() }
             ?.max()
 }
 
@@ -19,7 +19,7 @@ data class ContractIdentifier(val contractName: String, val version: Int) {
 
     private val nameAsRelativePath = contractName.split(".").joinToString(File.separator)
     private val cachePathToName = "$qontractDirPath/cache/$nameAsRelativePath"
-    val cacheDescriptorFile = File("$cachePathToName/$version.pointer")
+    val cacheDescriptorFile = File("$cachePathToName/$version.$POINTER_EXTENSION")
 
     fun isNameFound(): Boolean = File(cachePathToName).exists()
     fun isVersionFound(): Boolean = cacheDescriptorFile.exists()

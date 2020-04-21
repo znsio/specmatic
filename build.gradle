@@ -19,7 +19,7 @@ allprojects {
 }
 
 subprojects {
-    version '0.4.0'
+    version '0.4.1'
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {

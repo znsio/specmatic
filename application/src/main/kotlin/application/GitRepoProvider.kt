@@ -41,7 +41,7 @@ data class GitRepoProvider(val repoName: String) : RepoProvider {
         val commit = git.commit()
         commit.message = "Updated ${identifier.displayableString}"
         commit.call()
-        git.push().call()
+        git.push().setTransportConfigCallback(getTransportCallingCallback()).call()
     }
 
     private val gitPath get() = pathToFile(qontractRepoDirPath, repoName, "repo")

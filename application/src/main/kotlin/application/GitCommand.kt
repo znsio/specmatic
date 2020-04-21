@@ -1,6 +1,12 @@
 package application
 
+import com.jcraft.jsch.Session
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.TransportConfigCallback
+import org.eclipse.jgit.transport.JschConfigSessionFactory
+import org.eclipse.jgit.transport.OpenSshConfig
+import org.eclipse.jgit.transport.SshTransport
+import org.eclipse.jgit.transport.Transport
 import picocli.CommandLine
 import picocli.CommandLine.*
 import java.io.File
@@ -36,7 +42,22 @@ fun createRepoDescriptor(gitRepo: GitRepo) {
 
 fun checkoutGitRepo(repo: GitRepo) {
     println("Cloning from ${repo.uri} to ${repo.repoDir.file.absolutePath}")
-    Git.cloneRepository().setURI(repo.uri).setDirectory(repo.repoDir.file).call()
+    Git.cloneRepository().setURI(repo.uri).setTransportConfigCallback(getTransportCallingCallback()).setDirectory(repo.repoDir.file).call()
+}
+
+fun getTransportCallingCallback(): TransportConfigCallback {
+    return object : TransportConfigCallback {
+        override fun configure(transport: Transport?) {
+            if (transport is SshTransport) {
+                transport.sshSessionFactory = object : JschConfigSessionFactory() {
+                    override fun configure(hc: OpenSshConfig.Host?, session: Session?) {
+                        println("HERE")
+                    }
+
+                }
+            }
+        }
+    }
 }
 
 fun linkContracts(gitRepo: GitRepo) {
@@ -47,7 +68,7 @@ fun linkContracts(gitRepo: GitRepo) {
                 .removePrefix(gitRepo.repoDir.file.absolutePath)
                 .removePrefix("/")
                 .removeSuffix(".contract")
-                .plus(".pointer")
+                .plus(".$POINTER_EXTENSION")
     }.map { ExistingFile("$qontractCacheDirPath/$it") }
 
     contractFiles.map { it.absolutePath }.zip(destFiles).forEach { (contractPath, pointer) ->
@@ -63,7 +84,7 @@ fun listOfFiles(file: File, extension: String = ""): List<File> {
                 else -> emptyList()
             }
             extension.isNotBlank() && it.name.endsWith(".$extension") -> listOf(it)
-            else -> listOf(it)
+            else -> emptyList()
         }
     } ?: emptyList()
 }

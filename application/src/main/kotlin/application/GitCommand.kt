@@ -1,14 +1,13 @@
 package application
 
-import com.jcraft.jsch.Session
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.TransportConfigCallback
-import org.eclipse.jgit.transport.JschConfigSessionFactory
-import org.eclipse.jgit.transport.OpenSshConfig
 import org.eclipse.jgit.transport.SshTransport
 import org.eclipse.jgit.transport.Transport
+import org.eclipse.jgit.transport.sshd.SshdSessionFactory
 import picocli.CommandLine
-import picocli.CommandLine.*
+import picocli.CommandLine.Command
+import picocli.CommandLine.Parameters
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -49,12 +48,7 @@ fun getTransportCallingCallback(): TransportConfigCallback {
     return object : TransportConfigCallback {
         override fun configure(transport: Transport?) {
             if (transport is SshTransport) {
-                transport.sshSessionFactory = object : JschConfigSessionFactory() {
-                    override fun configure(hc: OpenSshConfig.Host?, session: Session?) {
-                        println("HERE")
-                    }
-
-                }
+                transport.sshSessionFactory = SshdSessionFactory()
             }
         }
     }

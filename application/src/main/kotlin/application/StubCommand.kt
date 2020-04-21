@@ -34,9 +34,9 @@ class StubCommand : Callable<Void> {
             println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
             addShutdownHook()
 
-            watchService = FileSystems.getDefault().newWatchService();
-            val contractPath = Paths.get(path)
-            contractPath.parent.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+            watchService = FileSystems.getDefault().newWatchService()
+            val contractPath = Paths.get(path).toAbsolutePath()
+            contractPath.parent.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
 
             var key: WatchKey
             while (watchService.take().also { key = it } != null) {

@@ -1,3 +1,5 @@
+@file:JvmName(name = "RepoUtils")
+
 package run.qontract.core.versioning
 
 import org.eclipse.jgit.api.TransportConfigCallback
@@ -8,6 +10,12 @@ import run.qontract.core.versioning.git.GitRepoProvider
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.qontractRepoDirPath
 import run.qontract.core.utilities.jsonStringToValueMap
+import java.io.File
+
+fun getContractFilePath(name: String, version: Int): String {
+    val identifier = ContractIdentifier(name, version)
+    return getRepoProvider(identifier).getContractFilePath(identifier)
+}
 
 fun getRepoProvider(identifier: ContractIdentifier): RepoProvider {
     val pointerInfo = jsonStringToValueMap(identifier.getCacheDescriptorFile().readText())

@@ -11,5 +11,5 @@ interface RepoProvider {
     fun testBackwardCompatibility(identifier: ContractIdentifier, contractFile: File): Results
     fun addContract(identifier: ContractIdentifier, contractFileWithUpdate: File): PointerInfo
     fun getContractData(identifier: ContractIdentifier): String
-    fun getFilePath(identifier: ContractIdentifier): File
+    fun getContractFilePath(identifier: ContractIdentifier): String
 }

@@ -7,12 +7,12 @@ import picocli.CommandLine.Parameters
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 
-@Command(name = "checkout", mixinStandardHelpOptions = true, description = ["Checkout a contract into a file in the current directory"])
+@Command(name = "checkout", mixinStandardHelpOptions = true, description = ["Create a file in the current directory with the specified contract"])
 class CheckoutCommand: Callable<Unit> {
-    @Parameters(index = "0", descriptionKey = "contractName", description = ["Name of the contract to checkout"])
+    @Parameters(index = "0", description = ["Name of the contract"])
     var contractName: String = ""
 
-    @Parameters(index = "1", descriptionKey = "version", description = ["Version of the contract to checkout"])
+    @Parameters(index = "1", description = ["Version of the contract"])
     var version: Int = 0
 
     override fun call() {

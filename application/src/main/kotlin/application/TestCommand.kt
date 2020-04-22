@@ -18,13 +18,13 @@ class TestCommand : Callable<Void> {
     @CommandLine.Parameters(index = "0", description = ["Contract file path"])
     lateinit var path: String
 
-    @Option(names = ["--host"], description = ["Host"], defaultValue = "localhost")
+    @Option(names = ["--host"], description = ["The host to bind to, e.g. localhost or some locally bound IP"], defaultValue = "localhost")
     lateinit var host: String
 
-    @Option(names = ["--port"], description = ["Port"], defaultValue = "9000")
+    @Option(names = ["--port"], description = ["The port to bind to"], defaultValue = "9000")
     var port: Int = 0
 
-    @Option(names = ["--suggestions"], description = ["run.qontract.core.Suggestions location"], defaultValue = "")
+    @Option(names = ["--suggestions"], description = ["Location of the suggestions file"], defaultValue = "")
     lateinit var suggestionsPath: String
 
     override fun call(): Void? {

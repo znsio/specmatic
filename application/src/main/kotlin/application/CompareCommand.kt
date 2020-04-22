@@ -11,10 +11,10 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Checks if two contracts are equivalent"])
 class CompareCommand : Callable<Void> {
-    @Parameters(index = "0", description = ["Contract path"], paramLabel = "<contract path>")
+    @Parameters(index = "0", description = ["Contract path"])
     lateinit var path1: String
 
-    @Parameters(index = "1", description = ["Contract path"], paramLabel = "<contract path>")
+    @Parameters(index = "1", description = ["Contract path"])
     lateinit var path2: String
 
     override fun call(): Void? {

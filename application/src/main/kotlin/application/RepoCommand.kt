@@ -15,10 +15,10 @@ import run.qontract.core.versioning.getTransportCallingCallback
 import java.io.File
 import java.util.concurrent.Callable
 
-@Command(name = "repo", mixinStandardHelpOptions = true)
+@Command(name = "repo", description = ["Create a qontract repository that tracks an external repository containing contracts. Currently only external git repositories are supported."], mixinStandardHelpOptions = true)
 class RepoCommand: Callable<Unit> {
     @CommandLine.Command
-    fun git(@Parameters(index = "0", descriptionKey = "repoName") repoName: String = "", @Parameters(index = "1", descriptionKey = "repoURL") repoURI: String = "") {
+    fun git(@Parameters(index = "0", paramLabel = "<repoName>", description = ["The name of the git repository"]) repoName: String = "", @Parameters(index = "1", paramLabel = "<repoURI>", description = ["The URL of the git repository"]) repoURI: String = "") {
         val gitRepo = GitRepo(repoName, repoURI)
         checkoutGitRepo(gitRepo)
         createRepoDescriptor(gitRepo)

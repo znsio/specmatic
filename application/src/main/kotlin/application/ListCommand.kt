@@ -7,7 +7,7 @@ import run.qontract.core.versioning.POINTER_EXTENSION
 import java.io.File
 import java.util.concurrent.Callable
 
-@CommandLine.Command(name = "list", mixinStandardHelpOptions = true)
+@CommandLine.Command(name = "list", description = ["List all the contracts in the qontract repository"], mixinStandardHelpOptions = true)
 class ListCommand: Callable<Unit> {
     override fun call() {
         listOfFiles(File(qontractCacheDirPath), POINTER_EXTENSION)

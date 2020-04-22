@@ -6,7 +6,7 @@ import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
 
-@CommandLine.Command(name = "update", mixinStandardHelpOptions = true)
+@CommandLine.Command(name = "update", description = ["Check the new contract for backward compatibility with the specified version, then overwrite the old one with it."], mixinStandardHelpOptions = true)
 class UpdateCommand: Callable<Unit> {
     @CommandLine.Parameters(index = "0", descriptionKey = "contractPath")
     var contractPath: String = ""
@@ -27,8 +27,6 @@ class UpdateCommand: Callable<Unit> {
         val results = repoProvider.testBackwardCompatibility(identifier, contractFile)
         if(!results.success()) {
             println("The new contract is not backward compatible with the older one.")
-            println()
-            println(results.report())
             return
         }
 

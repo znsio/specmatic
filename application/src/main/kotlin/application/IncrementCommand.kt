@@ -8,9 +8,9 @@ import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
 
-@CommandLine.Command(name = "increment", mixinStandardHelpOptions = true)
+@CommandLine.Command(name = "increment", description = ["Store the contract as a new version, which is one greater than the highest available version."], mixinStandardHelpOptions = true)
 class IncrementCommand: Callable<Unit> {
-    @CommandLine.Parameters(index = "0", descriptionKey = "contractPath")
+    @CommandLine.Parameters(index = "0", description = ["path to the contract"])
     var contractPath: String = ""
 
     override fun call() {

@@ -14,9 +14,9 @@ import java.util.concurrent.Callable
 class MockCommand : Callable<Void?> {
     @CommandLine.Command
     @Throws(Throwable::class)
-    fun version(@CommandLine.Parameters(description = ["Name of the contract to mock out"], paramLabel = "<name>") contractName: String, @CommandLine.Parameters(description = ["Dot separated version (e.g. 2, 2.0, 1.1) of the contract"], paramLabel = "<version>") versionSpec: String?) {
-        val version = toVersion(versionSpec)
-        val response = readFromAPI(brokerURL + "/contracts?provider=" + contractName + version.toQueryParams())
+    fun version(@CommandLine.Parameters(description = ["Name of the contract to mock out"]) name: String, @CommandLine.Parameters(description = ["Dot separated version (e.g. 2, 2.0, 1.1) of the contract"]) version: String?) {
+        val versionNumber = toVersion(version)
+        val response = readFromAPI(brokerURL + "/contracts?provider=" + name + versionNumber.toQueryParams())
         val jsonObject = jsonStringToMap(response)
         val spec = jsonObject["spec"] as String
         ContractMock.fromGherkin(spec, 9000).use { mock -> mock.waitUntilClosed() }
@@ -24,7 +24,7 @@ class MockCommand : Callable<Void?> {
 
     @CommandLine.Command
     @Throws(Throwable::class)
-    fun file(@CommandLine.Parameters(description = ["Path to file containing contract gherkin"], paramLabel = "<path>") path: String) {
+    fun file(@CommandLine.Parameters(description = ["Path to file containing contract gherkin"]) path: String) {
         val spec = readFile(path)
         ContractMock.fromGherkin(spec, 9000).use { mock ->
             mock.start()

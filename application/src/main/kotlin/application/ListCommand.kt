@@ -1,10 +1,11 @@
 package application
 
+import application.versioning.ContractIdentifier
 import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
 
-val POINTER_EXTENSION = "pointer"
+const val POINTER_EXTENSION = "pointer"
 
 @CommandLine.Command(name = "list", mixinStandardHelpOptions = true)
 class ListCommand: Callable<Unit> {
@@ -12,7 +13,7 @@ class ListCommand: Callable<Unit> {
         listOfFiles(File(qontractCacheDirPath), POINTER_EXTENSION)
             .map { toRelativePath(it.absolutePath, qontractCacheDirPath) }
             .map { toContractIdentifier(it, POINTER_EXTENSION) }
-            .sortedWith(compareBy<ContractIdentifier> { it.contractName }.thenBy { it.version })
+            .sortedWith(compareBy<ContractIdentifier> { it.name }.thenBy { it.version })
             .forEach {
                 println(it.displayableString)
             }

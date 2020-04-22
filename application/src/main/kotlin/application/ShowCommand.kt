@@ -1,5 +1,7 @@
 package application
 
+import application.versioning.ContractIdentifier
+import application.versioning.getRepoProvider
 import picocli.CommandLine
 import java.util.concurrent.Callable
 

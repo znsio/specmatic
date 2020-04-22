@@ -1,5 +1,9 @@
 package application
 
+import application.versioning.ContractIdentifier
+import application.versioning.PointerInfo
+import application.versioning.findLatestVersion
+import application.versioning.getRepoProvider
 import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
@@ -25,10 +29,10 @@ class IncrementCommand: Callable<Unit> {
 
         val repoProvider = getRepoProvider(latestInCache)
         val pointerInfo: PointerInfo = repoProvider.addContract(next, contractFile)
-        addPointerInfo(next, pointerInfo)
+        createPointerFile(next, pointerInfo)
     }
 }
 
-fun addPointerInfo(identifier: ContractIdentifier, pointerInfo: PointerInfo) {
-    ExistingFile(identifier.cacheDescriptorFile).writeText(pointerInfo.toJSONString())
+fun createPointerFile(identifier: ContractIdentifier, pointerInfo: PointerInfo) {
+    ExistingFile(identifier.getCacheDescriptorFile()).writeText(pointerInfo.toJSONString())
 }

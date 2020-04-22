@@ -11,10 +11,10 @@ import picocli.CommandLine.Parameters
 import java.io.File
 import java.util.concurrent.Callable
 
-@Command(name = "git", mixinStandardHelpOptions = true)
-class GitCommand: Callable<Unit> {
+@Command(name = "repo", mixinStandardHelpOptions = true)
+class RepoCommand: Callable<Unit> {
     @CommandLine.Command
-    fun add(@Parameters(index = "0", descriptionKey = "repoName") repoName: String = "", @Parameters(index = "1", descriptionKey = "repoURL") repoURI: String = "") {
+    fun git(@Parameters(index = "0", descriptionKey = "repoName") repoName: String = "", @Parameters(index = "1", descriptionKey = "repoURL") repoURI: String = "") {
         val gitRepo = GitRepo(repoName, repoURI)
         checkoutGitRepo(gitRepo)
         createRepoDescriptor(gitRepo)
@@ -22,7 +22,7 @@ class GitCommand: Callable<Unit> {
     }
 
     override fun call() {
-        CommandLine(GitCommand()).usage(System.out)
+        CommandLine(RepoCommand()).usage(System.out)
     }
 }
 
@@ -90,7 +90,3 @@ data class ExistingDirectory(val directory: String) {
         file.mkdirs()
     }
 }
-
-val qontractDirPath: String = "${System.getProperty("user.home")}/.qontract"
-val qontractCacheDirPath = "$qontractDirPath/cache"
-val qontractRepoDirPath = "$qontractDirPath/repos"

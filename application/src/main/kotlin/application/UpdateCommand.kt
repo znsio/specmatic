@@ -1,5 +1,7 @@
 package application
 
+import application.versioning.ContractIdentifier
+import application.versioning.getRepoProvider
 import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
@@ -16,7 +18,7 @@ class UpdateCommand: Callable<Unit> {
         val identifier = ContractIdentifier(File(contractPath).name.removeSuffix(".contract"), version)
         val contractFile = File(contractPath)
 
-        if(!identifier.cacheDescriptorFile.exists()) {
+        if(!identifier.getCacheDescriptorFile().exists()) {
             println("Can't find ${identifier.displayableString}")
             return
         }

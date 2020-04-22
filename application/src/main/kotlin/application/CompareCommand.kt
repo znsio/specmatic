@@ -1,13 +1,10 @@
 package application
 
-import run.qontract.core.utilities.readFile
-import picocli.CommandLine.*
-import run.qontract.core.Contract
+import picocli.CommandLine.Command
+import picocli.CommandLine.Parameters
 import run.qontract.core.ContractBehaviour
-import run.qontract.core.pattern.ContractException
-import run.qontract.core.resultReport
 import run.qontract.core.testBackwardCompatibility
-import run.qontract.fake.ContractFake
+import run.qontract.core.utilities.readFile
 import java.util.concurrent.Callable
 
 @Command(name = "compare",
@@ -19,8 +16,6 @@ class CompareCommand : Callable<Void> {
 
     @Parameters(index = "1", description = ["Contract path"], paramLabel = "<contract path>")
     lateinit var path2: String
-
-
 
     override fun call(): Void? {
         val (successWith1To2, successWith2To1) = mutualCompatibility(path1, path2)

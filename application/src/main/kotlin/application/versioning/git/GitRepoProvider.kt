@@ -1,5 +1,9 @@
-package application
+package application.versioning.git
 
+import application.*
+import application.versioning.ContractIdentifier
+import application.versioning.PointerInfo
+import application.versioning.pathToFile
 import org.eclipse.jgit.api.Git
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.Results
@@ -13,15 +17,12 @@ data class GitRepoProvider(val repoName: String) : RepoProvider {
         return contractFile.readText()
     }
 
-    private fun pointerInfo(identifier: ContractIdentifier): GitPointerInfo =
-            GitPointerInfo(jsonStringToValueMap(identifier.cacheDescriptorFile.readText().trim()))
-
     private fun contractFileInRepo(identifier: ContractIdentifier): File {
         val pointerInfo =
             when {
-                identifier.cacheDescriptorFile.exists() ->
-                    GitPointerInfo(jsonStringToValueMap(identifier.cacheDescriptorFile.readText().trim()))
-                else -> GitPointerInfo(repoName, toContractPathInRepo(repoName, identifier))
+                identifier.getCacheDescriptorFile().exists() ->
+                    PointerInfo(jsonStringToValueMap(identifier.getCacheDescriptorFile().readText().trim()))
+                else -> PointerInfo(repoName, identifierToContractGitFile(repoName, identifier))
             }
 
         return File(pointerInfo.contractPath)
@@ -44,18 +45,19 @@ data class GitRepoProvider(val repoName: String) : RepoProvider {
         git.push().setTransportConfigCallback(getTransportCallingCallback()).call()
     }
 
-    private val gitPath get() = pathToFile(qontractRepoDirPath, repoName, "repo")
+    private val gitPath = pathToFile(qontractRepoDirPath, repoName, "repo")
 
     override fun addContract(identifier: ContractIdentifier, contractFileWithUpdate: File): PointerInfo {
         updateContract(identifier, contractFileWithUpdate)
         val contractFileInRepo = contractFileInRepo(identifier)
 
-        return GitPointerInfo(
+        return PointerInfo(
                 repoName = repoName,
                 contractPath = contractFileInRepo.absolutePath)
     }
 
     override fun getContractData(identifier: ContractIdentifier): String = contractFileInRepo(identifier).readText()
+    override fun getFilePath(identifier: ContractIdentifier) = contractFileInRepo(identifier)
 
     override fun testBackwardCompatibility(identifier: ContractIdentifier, contractFile: File): Results {
         val older = ContractBehaviour(contractFileInRepo(identifier).readText())
@@ -65,9 +67,9 @@ data class GitRepoProvider(val repoName: String) : RepoProvider {
     }
 }
 
-fun toContractPathInRepo(repoName: String, identifier: ContractIdentifier): String {
+fun identifierToContractGitFile(repoName: String, identifier: ContractIdentifier): String {
     val fragment = listOf(qontractRepoDirPath, repoName, "repo")
-            .plus(identifier.contractName.split("."))
+            .plus(identifier.name.split("."))
             .plus(identifier.version.toString())
             .joinToString(File.separator)
 

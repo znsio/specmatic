@@ -1,13 +1,13 @@
-package application
+package application.versioning
 
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
-data class GitPointerInfo(val repoName: String, val contractPath: String) : PointerInfo {
+data class PointerInfo(val repoName: String, val contractPath: String) {
     constructor(json: Map<String, Value>) : this(json.getValue("repoName").toStringValue(), json.getValue("contractPath").toStringValue())
 
-    override fun toJSONString(): String {
+    fun toJSONString(): String {
         return valueMapToPlainJsonString(toMap())
     }
 

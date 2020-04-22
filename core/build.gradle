@@ -28,6 +28,8 @@ dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-maven-serialization'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0'
     implementation 'org.slf4j:slf4j-nop:1.7.30'
+    implementation 'org.eclipse.jgit:org.eclipse.jgit:5.7.0.202003110725-r'
+    implementation 'org.eclipse.jgit:org.eclipse.jgit.ssh.apache:5.7.0.202003110725-r'
 
     testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine:5.4.2')
 

@@ -1,14 +1,12 @@
-package application.versioning.git
+package run.qontract.core.versioning.git
 
-import application.*
-import application.versioning.ContractIdentifier
-import application.versioning.PointerInfo
-import application.versioning.pathToFile
 import org.eclipse.jgit.api.Git
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.Results
+import run.qontract.core.qontractRepoDirPath
 import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.utilities.jsonStringToValueMap
+import run.qontract.core.versioning.*
 import java.io.File
 
 data class GitRepoProvider(val repoName: String) : RepoProvider {

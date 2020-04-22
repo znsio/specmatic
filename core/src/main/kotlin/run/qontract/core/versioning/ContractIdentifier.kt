@@ -1,7 +1,6 @@
-package application.versioning
+package run.qontract.core.versioning
 
-import application.POINTER_EXTENSION
-import application.qontractDirPath
+import run.qontract.core.qontractDirPath
 import java.io.File
 
 data class ContractIdentifier(val name: String, val version: Int) {

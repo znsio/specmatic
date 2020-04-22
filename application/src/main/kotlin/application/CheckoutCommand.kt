@@ -1,7 +1,7 @@
 package application
 
-import application.versioning.ContractIdentifier
-import application.versioning.getRepoProvider
+import run.qontract.core.versioning.ContractIdentifier
+import run.qontract.core.versioning.getRepoProvider
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import java.nio.file.Paths

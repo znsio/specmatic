@@ -1,11 +1,11 @@
 package application
 
-import application.versioning.ContractIdentifier
+import run.qontract.core.versioning.ContractIdentifier
 import picocli.CommandLine
+import run.qontract.core.qontractCacheDirPath
+import run.qontract.core.versioning.POINTER_EXTENSION
 import java.io.File
 import java.util.concurrent.Callable
-
-const val POINTER_EXTENSION = "pointer"
 
 @CommandLine.Command(name = "list", mixinStandardHelpOptions = true)
 class ListCommand: Callable<Unit> {

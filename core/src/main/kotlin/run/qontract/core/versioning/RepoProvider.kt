@@ -1,7 +1,7 @@
-package application
+package run.qontract.core.versioning
 
-import application.versioning.ContractIdentifier
-import application.versioning.PointerInfo
+import run.qontract.core.versioning.ContractIdentifier
+import run.qontract.core.versioning.PointerInfo
 import run.qontract.core.Results
 import java.io.File
 

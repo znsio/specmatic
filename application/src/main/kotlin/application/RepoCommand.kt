@@ -8,6 +8,10 @@ import org.eclipse.jgit.transport.sshd.SshdSessionFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
+import run.qontract.core.qontractCacheDirPath
+import run.qontract.core.qontractRepoDirPath
+import run.qontract.core.versioning.POINTER_EXTENSION
+import run.qontract.core.versioning.getTransportCallingCallback
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -42,16 +46,6 @@ fun createRepoDescriptor(gitRepo: GitRepo) {
 fun checkoutGitRepo(repo: GitRepo) {
     println("Cloning from ${repo.uri} to ${repo.repoDir.file.absolutePath}")
     Git.cloneRepository().setURI(repo.uri).setTransportConfigCallback(getTransportCallingCallback()).setDirectory(repo.repoDir.file).call()
-}
-
-fun getTransportCallingCallback(): TransportConfigCallback {
-    return object : TransportConfigCallback {
-        override fun configure(transport: Transport?) {
-            if (transport is SshTransport) {
-                transport.sshSessionFactory = SshdSessionFactory()
-            }
-        }
-    }
 }
 
 fun linkContracts(gitRepo: GitRepo) {

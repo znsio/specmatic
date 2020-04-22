@@ -1,51 +1,16 @@
 package run.qontract.core
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock
-import org.json.JSONObject
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import run.qontract.core.Contract.Companion.forService
 import run.qontract.core.Contract.Companion.fromGherkin
 import run.qontract.core.pattern.NumberTypePattern
-import run.qontract.core.utilities.brokerURL
 import run.qontract.core.value.*
 import run.qontract.test.TestExecutor
-import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class ContractTests {
-    @Test
-    @Throws(IOException::class)
-    fun shouldBeAbleToGetContract() {
-        val wireMockServer = WireMockServer(8089)
-        wireMockServer.start()
-        val majorVersion = 1
-        val minorVersion = 0
-        val mockResponseJSONObject: JSONObject = object : JSONObject() {
-            init {
-                put("majorVersion", majorVersion)
-                put("minorVersion", minorVersion)
-                put("spec", contractGherkin)
-            }
-        }
-        val mapper = ObjectMapper()
-        val jsonFactory = mapper.factory
-        val jsonParser = jsonFactory.createParser(mockResponseJSONObject.toString())
-        val mockResponse = mapper.readTree<JsonNode>(jsonParser)
-        wireMockServer.stubFor(WireMock.get("/contracts?provider=balance&majorVersion=$majorVersion&minorVersion=$minorVersion").willReturn(WireMock.aResponse().withStatus(200).withJsonBody(mockResponse)))
-        brokerURL = wireMockServer.baseUrl()
-        val actual = forService("balance", majorVersion, minorVersion)
-        val expected = fromGherkin(contractGherkin, majorVersion, minorVersion)
-        Assertions.assertEquals(expected, actual)
-        wireMockServer.stop()
-    }
-
     @Test
     @Throws(Throwable::class)
     fun shouldBeAbleToGetFakeFromContract() {

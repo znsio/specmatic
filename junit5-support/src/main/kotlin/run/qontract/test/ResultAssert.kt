@@ -17,6 +17,6 @@ class ResultAssert(actual: Result) : AbstractAssert<ResultAssert, Result>(actual
         isNotNull
 
         if(actual is Result.Failure)
-            failWithMessage(resultReport(actual, request, response))
+            failWithMessage(resultReport(actual))
     }
 }

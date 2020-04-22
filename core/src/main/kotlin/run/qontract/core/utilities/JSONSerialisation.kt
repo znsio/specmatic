@@ -7,44 +7,33 @@ import kotlinx.serialization.stringify
 import run.qontract.core.pattern.*
 import run.qontract.core.value.*
 
+@OptIn(UnstableDefault::class)
+val indentedJson = Json(JsonConfiguration(prettyPrint = true))
+
+@OptIn(UnstableDefault::class)
+val lenientJson = Json(JsonConfiguration(isLenient = true))
+
 @OptIn(ImplicitReflectionSerializer::class, UnstableDefault::class)
 fun valueArrayToJsonString(value: List<Value>): String {
     val data = valueListToElements(value)
-    return Json.indented.stringify(data)
+
+    return indentedJson.stringify(data)
 }
 
 fun toMap(value: Value?) = jsonStringToValueMap(value.toString())
 
-@OptIn(UnstableDefault::class)
-fun jsonStringToMap(stringContent: String): MutableMap<String, Any?>  {
-    val data = Json.plain.parseJson(stringContent).jsonObject.toMap()
-    return convertToMapAny(data)
-}
-
-fun convertToMapAny(data: Map<String, JsonElement>): MutableMap<String, Any?> {
-    return data.mapValues { toAnyValue(it.value) }.toMutableMap()
-}
-
-private fun toAnyValue(value: JsonElement): Any? =
-        when (value) {
-            is JsonNull -> null
-            is JsonLiteral -> if(value.isString) value.content else value.booleanOrNull ?: value.intOrNull ?: value.longOrNull ?: value.floatOrNull ?: value.doubleOrNull
-            is JsonObject -> convertToMapAny(value.toMap()).toMutableMap()
-            is JsonArray -> convertToArrayAny(value.toList()).toMutableList()
-        }
-
 @OptIn(ImplicitReflectionSerializer::class, UnstableDefault::class)
-internal fun prettifyJsonString(content: String): String = Json.indented.stringify(Json.plain.parseJson(content))
+internal fun prettifyJsonString(content: String): String = indentedJson.stringify(lenientJson.parseJson(content))
 
 @OptIn(UnstableDefault::class)
 fun stringToPatternMap(stringContent: String): Map<String, Pattern>  {
-    val data = Json.nonstrict.parseJson(stringContent).jsonObject.toMap()
+    val data = lenientJson.parseJson(stringContent).jsonObject.toMap()
     return convertToMapPattern(data)
 }
 
 @OptIn(UnstableDefault::class)
 fun jsonStringToValueMap(stringContent: String): Map<String, Value>  {
-    val data = Json.nonstrict.parseJson(stringContent).jsonObject.toMap()
+    val data = lenientJson.parseJson(stringContent).jsonObject.toMap()
     return convertToMapValue(data)
 }
 
@@ -94,9 +83,6 @@ fun toLiteralValue(jsonElement: JsonLiteral): Value =
         else -> NumberValue(jsonElement.double)
     }
 
-fun convertToArrayAny(data: List<JsonElement>): List<Any?> =
-    data.map { toAnyValue(it) }
-
 fun convertToArrayValue(data: List<JsonElement>): List<Value> =
     data.map { toValue(it) }
 
@@ -104,40 +90,19 @@ fun convertToArrayPattern(data: List<JsonElement>): List<Pattern> =
     data.map { toPattern(it) }
 
 @OptIn(ImplicitReflectionSerializer::class, UnstableDefault::class)
-fun nativeMapToJsonString(value: Map<String, Any?>): String {
-    val data = nativeMapToStringElement(value)
-    return Json.indented.stringify(data)
-}
-
-@OptIn(ImplicitReflectionSerializer::class, UnstableDefault::class)
 fun valueMapToPrettyJsonString(value: Map<String, Value>): String {
     val data = mapToStringElement(value)
-    return Json.indented.stringify(data)
+    return indentedJson.stringify(data)
 }
 
 @OptIn(ImplicitReflectionSerializer::class, UnstableDefault::class)
 fun valueMapToPlainJsonString(value: Map<String, Value>): String {
     val data = mapToStringElement(value)
-    return Json.plain.stringify(data)
-}
-
-fun nativeMapToStringElement(data: Map<String, Any?>): Map<String, JsonElement> {
-    return data.mapValues { anyToJsonElement(it.value) }
+    return lenientJson.stringify(data)
 }
 
 fun mapToStringElement(data: Map<String, Value>): Map<String, JsonElement> {
     return data.mapValues { valueToJsonElement(it.value) }
-}
-
-private fun anyToJsonElement(value: Any?): JsonElement {
-    return when (value) {
-        is List<*> -> listAnyToElements(value as List<Any?>)
-        is Map<*, *> -> JsonObject(nativeMapToStringElement(value as Map<String, Any?>))
-        is Number -> JsonLiteral(value)
-        is Boolean -> JsonLiteral(value)
-        is String -> JsonLiteral(value)
-        else -> JsonNull
-    }
 }
 
 private fun valueToJsonElement(value: Value): JsonElement {
@@ -151,22 +116,18 @@ private fun valueToJsonElement(value: Value): JsonElement {
     }
 }
 
-fun listAnyToElements(values: List<Any?>): JsonArray {
-    return JsonArray(values.map { anyToJsonElement(it) })
-}
-
 fun valueListToElements(values: List<Value>): JsonArray {
     return JsonArray(values.map { valueToJsonElement(it) })
 }
 
 @OptIn(UnstableDefault::class)
 fun jsonStringToValueArray(value: String): List<Value> {
-    val data = Json.nonstrict.parseJson(value).jsonArray.toList()
+    val data = lenientJson.parseJson(value).jsonArray.toList()
     return convertToArrayValue(data)
 }
 
 @OptIn(UnstableDefault::class)
 fun stringTooPatternArray(value: String): List<Pattern> {
-    val data = Json.nonstrict.parseJson(value).jsonArray.toList()
+    val data = lenientJson.parseJson(value).jsonArray.toList()
     return convertToArrayPattern(data)
 }

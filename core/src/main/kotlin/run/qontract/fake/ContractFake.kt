@@ -17,10 +17,7 @@ import kotlinx.coroutines.runBlocking
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
-import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
-import run.qontract.core.utilities.contractGherkinForCurrentComponent
-import run.qontract.core.utilities.getContractGherkin
 import run.qontract.core.utilities.toMap
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
@@ -28,7 +25,6 @@ import run.qontract.mock.MockScenario
 import run.qontract.mock.matchesRequest
 import run.qontract.mock.writeBadRequest
 import java.io.Closeable
-import java.util.*
 
 class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000) : Closeable {
     val endPoint = "http://$host:$port"
@@ -74,21 +70,6 @@ class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList
 
     override fun close() {
         server.stop(0, 5000)
-    }
-
-    companion object {
-        @Throws(Throwable::class)
-        fun forSupportedContract(): ContractFake {
-            val gherkin = contractGherkinForCurrentComponent
-            return ContractFake(gherkin, emptyList(), "localhost", 8080)
-        }
-
-        @JvmOverloads
-        @Throws(Throwable::class)
-        fun forService(serviceName: String?, host: String = "127.00.1", port: Int = 8080): ContractFake {
-            val contractGherkin = getContractGherkin(serviceName!!)
-            return ContractFake(contractGherkin, emptyList(), host, port)
-        }
     }
 
     private fun setupServerState(httpRequest: HttpRequest) {

@@ -2,11 +2,8 @@ package run.qontract.core
 
 import io.ktor.http.HttpStatusCode
 import run.qontract.core.pattern.parsedValue
-import run.qontract.core.utilities.nativeMapToJsonString
 import run.qontract.core.utilities.prettifyJsonString
-import run.qontract.core.utilities.valueMapToPrettyJsonString
 import run.qontract.core.value.*
-import java.util.*
 
 data class HttpResponse(val status: Int = 0, val body: String? = "", val headers: Map<String, String> = mapOf("Content-Type" to "text/plain")) {
     val statusText: String

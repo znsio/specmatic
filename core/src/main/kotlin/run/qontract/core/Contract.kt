@@ -1,12 +1,10 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.utilities.BrokerClient.getContract
 import run.qontract.core.utilities.contractFilePath
 import run.qontract.core.utilities.readFile
 import run.qontract.fake.ContractFake
 import run.qontract.test.HttpClient
-import java.io.IOException
 
 data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val minorVersion: Int = 0) {
     fun startFake(port: Int) = ContractFake(contractGherkin, emptyList(), "localhost", port)
@@ -23,14 +21,6 @@ data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val 
     }
 
     companion object {
-        @JvmStatic
-        @Throws(IOException::class)
-        fun forService(name: String?, majorVersion: Int, minorVersion: Int): Contract {
-            val contractInfo = getContract(name!!, majorVersion, minorVersion)
-            val spec = contractInfo["spec"].toString()
-            return Contract(spec, majorVersion, minorVersion)
-        }
-
         @JvmStatic
         fun fromGherkin(contractGherkin: String, majorVersion: Int, minorVersion: Int): Contract {
             return Contract(contractGherkin, majorVersion, minorVersion)

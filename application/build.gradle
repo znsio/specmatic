@@ -10,7 +10,6 @@ application {
 
 shadowJar {
     archiveFileName = "qontract.${archiveExtension.get()}"
-    minimize()
 }
 
 repositories {

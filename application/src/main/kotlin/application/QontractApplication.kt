@@ -8,7 +8,7 @@ import java.util.*
 import java.util.concurrent.Callable
 import java.util.logging.LogManager
 
-@CommandLine.Command(name = "qontract", version = ["0.4.2"], subcommands = [CheckoutCommand::class, CompareCommand::class, HelpCommand::class, IncrementCommand::class, ListCommand::class, MockCommand::class, RepoCommand::class, SamplesCommand::class, ShowCommand::class, StubCommand::class, TestCommand::class, UpdateCommand::class])
+@CommandLine.Command(name = "qontract", mixinStandardHelpOptions = true, version = ["0.4.2"], subcommands = [CheckoutCommand::class, CompareCommand::class, HelpCommand::class, IncrementCommand::class, ListCommand::class, MockCommand::class, RepoCommand::class, SamplesCommand::class, ShowCommand::class, StubCommand::class, TestCommand::class, UpdateCommand::class])
 class QontractApplication : Callable<Int> {
     override fun call(): Int {
         return 0

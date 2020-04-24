@@ -21,6 +21,7 @@ object NullPattern : Pattern {
     override fun parse(value: String, resolver: Resolver): Value =
         when(value.trim()) {
             "(null)" -> NullValue
+            "" -> NullValue
             else -> throw ContractException("Failed to parse $value: it is not null.")
         }
 
@@ -28,6 +29,7 @@ object NullPattern : Pattern {
     override val description: String = "null"
 
     override val pattern: Any = "(null)"
+    override fun toString(): String = "(null)"
 }
 
 internal fun isNullablePattern(patternSpec: String): Boolean = withoutPatternDelimiters(patternSpec.trim()).endsWith("?")

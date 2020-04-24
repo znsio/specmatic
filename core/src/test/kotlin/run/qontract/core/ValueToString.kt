@@ -7,7 +7,7 @@ import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.xml.sax.SAXException
-import run.qontract.core.pattern.parsedJSON
+import run.qontract.core.pattern.parsedJSONStructure
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
 
@@ -22,7 +22,7 @@ class ValueToString {
     fun jsonStringTest() {
         val jsonString = """{"a": 1, "b": 2}"""
         val jsonObject = JSONObject(jsonString)
-        val body: Value = parsedJSON(jsonString)
+        val body: Value = parsedJSONStructure(jsonString)
         val jsonObject2 = JSONObject(body.toString())
         Assertions.assertEquals(jsonObject.getInt("a"), jsonObject2.getInt("a"))
         Assertions.assertEquals(jsonObject.getInt("b"), jsonObject2.getInt("b"))

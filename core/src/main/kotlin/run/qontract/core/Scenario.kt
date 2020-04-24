@@ -135,11 +135,11 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
-    fun generateHttpResponseFrom(response: HttpResponse?): HttpResponse =
+    fun resolverAndResponseFrom(response: HttpResponse?): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
                 val resolver = Resolver(expectedFacts, false, patterns)
-                HttpResponsePattern(response!!).generateResponse(resolver)
+                Pair(resolver, HttpResponsePattern(response!!).generateResponse(resolver))
             }
         }
 

@@ -86,7 +86,7 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
             newBasedOn(pattern, row, resolver)
         }.map { TabularPattern(it) }
 
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern is TabularPattern
     override val description: String = "json object"
 }

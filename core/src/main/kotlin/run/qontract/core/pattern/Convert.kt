@@ -2,6 +2,7 @@
 
 package run.qontract.core.pattern
 
+import run.qontract.core.mismatchResult
 import run.qontract.core.utilities.*
 import run.qontract.core.value.*
 
@@ -29,12 +30,12 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
     }
 }
 
-fun parsedJSON(content: String): Value {
+fun parsedJSONStructure(content: String): Value {
     return content.trim().let {
         when {
             it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
             it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
-            else -> NullValue
+            else -> throw ContractException("Expected json, actual $content.")
         }
     }
 }

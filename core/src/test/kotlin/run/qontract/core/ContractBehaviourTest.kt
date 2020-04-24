@@ -11,7 +11,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import run.qontract.core.pattern.*
 import run.qontract.core.value.*
-import java.net.URI
 import java.util.*
 import java.util.stream.Stream
 
@@ -554,7 +553,7 @@ Feature: Contract for /balance API
         val httpResponse = behaviour.lookup(httpRequest)
 
         assertEquals(200, httpResponse.status)
-        val array = parsedJSON(httpResponse.body ?: "{}")
+        val array = parsedJSONStructure(httpResponse.body ?: "{}")
 
         assertTrue(array is JSONArrayValue)
 
@@ -590,7 +589,7 @@ Feature: Contract for /balance API
         val httpResponse = behaviour.lookup(httpRequest)
 
         assertEquals(200, httpResponse.status)
-        val jsonObject = parsedJSON(httpResponse.body ?: "{}")
+        val jsonObject = parsedJSONStructure(httpResponse.body ?: "{}")
 
         assertTrue(jsonObject is JSONObjectValue)
         if(jsonObject is JSONObjectValue) {
@@ -625,7 +624,7 @@ Feature: Contract for /balance API
         val httpResponse = behaviour.lookup(httpRequest)
 
         assertEquals(200, httpResponse.status)
-        val jsonObject = parsedJSON(httpResponse.body ?: "{}")
+        val jsonObject = parsedJSONStructure(httpResponse.body ?: "{}")
 
         assertTrue(jsonObject is JSONObjectValue)
         assertTrue(if(jsonObject is JSONObjectValue) {

@@ -15,7 +15,6 @@ import run.qontract.mock.MockScenario
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.test.TestExecutor
 import java.net.URI
-import kotlin.collections.HashMap
 
 class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
     private val scenarios: List<Scenario> = lex(contractGherkinDocument)
@@ -53,14 +52,14 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
                 .none { it.matches(response) is Result.Success }
     }
 
-    fun matchingMockResponse(request: HttpRequest, response: HttpResponse): HttpResponse {
+    fun matchingMockResponse(request: HttpRequest, response: HttpResponse): Pair<Resolver, HttpResponse> {
         try {
             val results = Results()
 
             for (scenario in scenarios) {
                 try {
                     when(val mockMatches = scenario.matchesMock(request, response)) {
-                        is Result.Success -> return scenario.generateHttpResponseFrom(response)
+                        is Result.Success -> return scenario.resolverAndResponseFrom(response)
                         is Result.Failure -> {
                             results.add(mockMatches
                                     .updateScenario(scenario), request, response)
@@ -85,7 +84,7 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
             scenario.copy(examples = emptyList()).generateTestScenarios()
         }
 
-    fun matchingMockResponse(mockScenario: MockScenario): HttpResponse =
+    fun matchingMockResponse(mockScenario: MockScenario): Pair<Resolver, HttpResponse> =
             matchingMockResponse(mockScenario.request, mockScenario.response)
 }
 
@@ -98,7 +97,7 @@ private fun toFixtureInfo(rest: String): Pair<String, Value> {
     return Pair(fixtureTokens[0], toFixtureData(fixtureTokens[1]))
 }
 
-private fun toFixtureData(rawData: String): Value = parsedJSON(rawData)
+private fun toFixtureData(rawData: String): Value = parsedJSONStructure(rawData)
 
 private fun toPatternInfo(rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): Pair<String, Pattern> {
     val tokens = breakIntoParts(rest, 2)

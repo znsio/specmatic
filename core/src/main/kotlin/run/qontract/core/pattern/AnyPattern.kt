@@ -27,7 +27,7 @@ data class AnyPattern(override val pattern: List<Pattern>, override val key: Str
     override fun parse(value: String, resolver: Resolver): Value =
         pattern.asSequence().map {
             try { it.parse(value, resolver) } catch(e: Throwable) { null }
-        }.find { it != null } ?: throw ContractException("Failed to parse value $value. It should have matched one of $pattern")
+        }.find { it != null } ?: throw ContractException("Failed to parse value \"$value\". It should have matched one of ${pattern.joinToString(", ") { it.description }}.")
 
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
             this.pattern.any { it.matchesPattern(pattern, resolver) }

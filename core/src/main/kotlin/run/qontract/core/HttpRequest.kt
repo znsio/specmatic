@@ -4,8 +4,7 @@ import run.qontract.core.utilities.URIUtils.parseQuery
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import io.netty.buffer.ByteBuf
-import run.qontract.core.pattern.ContractException
-import run.qontract.core.pattern.parsedValue
+import run.qontract.core.pattern.*
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import java.io.UnsupportedEncodingException
@@ -14,7 +13,6 @@ import java.net.URISyntaxException
 import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
-import java.util.*
 
 data class HttpRequest(val method: String? = null, val path: String? = null, val headers: Map<String, String> = emptyMap(), val body: Value? = EmptyString, val queryParams: Map<String, String> = emptyMap(), val formFields: Map<String, String> = emptyMap()) {
     fun updateQueryParams(queryParams: Map<String, String>): HttpRequest = copy(queryParams = queryParams.plus(queryParams))
@@ -98,6 +96,27 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         val firstPart = listOf(firstLine, headerString).joinToString("\n").trim()
         val requestString = listOf(firstPart, "", bodyString).joinToString("\n")
         return startLinesWith(requestString, prefix)
+    }
+
+    fun toPattern(): HttpRequestPattern {
+        val pathForPattern = path ?: "/"
+
+        return HttpRequestPattern(
+                headersPattern = HttpHeadersPattern(mapToPattern(headers)),
+                urlMatcher = URLMatcher(mapToPattern(queryParams), pathToPattern(pathForPattern), pathForPattern),
+                method = this.method,
+                body = this.body?.toPattern() ?: NoContentPattern,
+                formFieldsPattern = mapToPattern(formFields)
+        )
+    }
+
+    private fun mapToPattern(map: Map<String, String>): Map<String, Pattern> {
+        return map.mapValues { (_, value) ->
+            if (isPatternToken(value))
+                parsedPattern(value)
+            else
+                ExactMatchPattern(StringValue(value))
+        }
     }
 }
 

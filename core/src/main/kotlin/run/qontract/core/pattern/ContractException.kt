@@ -10,7 +10,7 @@ data class ContractException(val errorMessage: String = "", val breadCrumb: Stri
             if(scenario != null) result.updateScenario(scenario)
         }
 
-    override val message = resultReport(result())
+    fun report(): String = resultReport(result())
 }
 
 fun <ReturnType> attempt(errorMessage: String = "", breadCrumb: String = "", f: ()->ReturnType): ReturnType {

@@ -1,8 +1,5 @@
 package run.qontract.mock
 
-import run.qontract.core.ContractBehaviour
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
 import run.qontract.core.utilities.*
 import run.qontract.fake.ktorHttpRequestToHttpRequest
 import run.qontract.fake.respondToKtorHttpResponse
@@ -18,18 +15,15 @@ import io.ktor.server.netty.Netty
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
 import run.qontract.core.value.*
-import org.w3c.dom.Document
-import org.xml.sax.SAXException
+import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.pattern.parsedValue
-import run.qontract.core.value.EmptyString
 import java.io.Closeable
-import java.io.IOException
-import javax.xml.parsers.ParserConfigurationException
+
+typealias Expectation = Triple<HttpRequestPattern, Resolver, HttpResponse>
 
 class ContractMock(contractGherkin: String, port: Int) : Closeable {
     private val contractBehaviour: ContractBehaviour = ContractBehaviour(contractGherkin)
-    private val expectations: MutableList<Pair<HttpRequest, HttpResponse>> = mutableListOf()
+    private val expectations: MutableList<Expectation> = mutableListOf()
 
     private val server: ApplicationEngine = embeddedServer(Netty, port) {
         intercept(ApplicationCallPipeline.Call) {
@@ -38,7 +32,7 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
             if(isMockRequest(httpRequest))
                  registerExpectation(call, httpRequest)
             else
-                respondAndDelete(call, expectations, httpRequest)
+                respond(call, expectations, httpRequest)
         }
     }
 
@@ -55,7 +49,7 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
             writeBadRequest(call, e.message)
         }
         catch(e: ContractException) {
-            writeBadRequest(call, e.message)
+            writeBadRequest(call, e.report())
         }
         catch (e: Exception) {
             writeBadRequest(call, e.message)
@@ -63,8 +57,8 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
     }
 
     fun createMockScenario(mocked: MockScenario) {
-        val mockedResponse = contractBehaviour.matchingMockResponse(mocked.request, mocked.response)
-        expectations.add(Pair(mocked.request, mockedResponse))
+        val (resolver, mockedResponse) = contractBehaviour.matchingMockResponse(mocked.request, mocked.response)
+        expectations.add(Expectation(mocked.request.toPattern(), resolver, mockedResponse))
     }
 
     private fun isMockRequest(httpRequest: HttpRequest) =
@@ -114,72 +108,21 @@ fun stringToMockScenario(text: Value): MockScenario {
     return mockFromJSON(mockSpec)
 }
 
-fun matchesRequest(actual: HttpRequest, expected: HttpRequest) =
-        expected.method == actual.method &&
-                actual.path == expected.path &&
-                actual.queryParams == expected.queryParams &&
-                matchesBody(actual, expected)
-
-fun respondAndDelete(call: ApplicationCall, expectations: MutableList<Pair<HttpRequest, HttpResponse>>, httpRequest: HttpRequest) {
-    expectations.find {
-        matchesRequest(httpRequest, it.first)
-    }?.let {
-        respondToKtorHttpResponse(call, it.second)
-        expectations.remove(it)
-    } ?: {
-        respondToKtorHttpResponse(call, debugInfoIn400Response(httpRequest, expectations))
-    }()
+fun respond(call: ApplicationCall, expectations: List<Expectation>, httpRequest: HttpRequest) {
+    expectations.find { (requestPattern, resolver, _) ->
+        requestPattern.matches(httpRequest, resolver) is Result.Success
+    }?.let { it ->
+        respondToKtorHttpResponse(call, it.third)
+    } ?: respondToKtorHttpResponse(call, debugInfoIn400Response(httpRequest))
 }
 
-fun debugInfoIn400Response(httpRequest: HttpRequest, expectations: List<Pair<HttpRequest, HttpResponse>>): HttpResponse {
-    val expectationsString = expectations.mapIndexed { index, expectation -> """
-Expectation $index
-  Request: ${expectation.first.toJSON()}
-  Response: ${expectation.second.toJSON()}
-""".trimIndent()}.joinToString(System.lineSeparator())
-
+fun debugInfoIn400Response(httpRequest: HttpRequest): HttpResponse {
     val message = """
-Message received: ${httpRequest.toJSON()}
+The http request did not match any of the stubs.
 
-$expectationsString
+HttpRequest: ${httpRequest.toJSON()}
 """
     return HttpResponse(400, message)
-}
-
-fun matchesBody(actual: HttpRequest, expected: HttpRequest): Boolean {
-    when(parsedValue(actual.body.toString())) {
-        is JSONObjectValue, is JSONArrayValue -> {
-            if(expected.body != actual.body) return false
-        }
-        is XMLValue -> {
-            try {
-                val mockedXML = expected.body as Document
-                val requestXML = parseXML(actual.body?.toString() ?: "")
-
-                return mockedXML == requestXML
-            } catch (e: ParserConfigurationException) {
-                e.printStackTrace()
-            } catch (e: SAXException) {
-                e.printStackTrace()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-
-            return false
-        }
-        else -> {
-            if(expected.body is EmptyString && actual.body is StringValue) {
-                return actual.bodyString.isEmpty()
-            } else if(expected.body is StringValue && actual.body is EmptyString) {
-                return expected.bodyString.isEmpty()
-            }
-            else if(expected.body?.toStringValue() != actual.body?.toStringValue()) {
-                return false
-            }
-        }
-    }
-
-    return true
 }
 
 fun writeBadRequest(call: ApplicationCall, errorMessage: String?) {

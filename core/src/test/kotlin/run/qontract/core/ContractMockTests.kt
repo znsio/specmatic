@@ -12,7 +12,7 @@ import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
 import org.w3c.dom.Node
 import run.qontract.core.pattern.NumericStringPattern
-import run.qontract.core.pattern.parsedJSON
+import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NullValue
@@ -399,7 +399,7 @@ Scenario: JSON API to get account details with fact check
             try {
                 val response = restTemplate.getForEntity<String>(URI.create("${mock.baseURL}/variables"))
                 assertThat(response.statusCode.value()).isEqualTo(200)
-                val responseBody = parsedJSON(response.body ?: "")
+                val responseBody = parsedJSONStructure(response.body ?: "")
                 if(responseBody !is JSONObjectValue) fail("Expected JSONObjectValue")
 
                 assertThat(responseBody.jsonObject.getValue("one")).isEqualTo(NumberValue(1))
@@ -432,7 +432,7 @@ Scenario: JSON API to get account details with fact check
             try {
                 val response = restTemplate.postForEntity<String>(URI.create("${mock.baseURL}/variables"), """{"number": "10"}""")
                 assertThat(response.statusCode.value()).isEqualTo(200)
-                val responseBody = parsedJSON(response.body ?: "")
+                val responseBody = parsedJSONStructure(response.body ?: "")
                 if(responseBody !is JSONObjectValue) fail("Expected json object")
 
                 assertThat(responseBody.jsonObject.getValue("number")).isEqualTo(StringValue("20"))
@@ -460,7 +460,7 @@ Scenario: JSON API to get account details with fact check
 
             try {
                 val headers = HttpHeaders()
-                headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED)
+                headers.contentType = MediaType.APPLICATION_FORM_URLENCODED
 
                 val map: MultiValueMap<String, String> = LinkedMultiValueMap()
                 map.add("Data", "10")

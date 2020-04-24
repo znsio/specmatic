@@ -1,6 +1,8 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.*
+import run.qontract.core.value.EmptyString
+import run.qontract.core.value.StringValue
 import java.io.UnsupportedEncodingException
 import java.net.URI
 
@@ -66,7 +68,16 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
 
     private fun matchBody(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
-        return when (val result = body/**/.matches(httpRequest.body, withNumericStringPattern(resolver))) {
+
+        val resolverWithNumericString = withNumericStringPattern(resolver)
+
+        val bodyValue = try {
+            if (isPatternToken(httpRequest.bodyString)) StringValue(httpRequest.bodyString) else body.parse(httpRequest.bodyString, resolverWithNumericString)
+        } catch(e: ContractException) {
+            return MatchFailure(e.result().breadCrumb("BODY"))
+        }
+
+        return when (val result = resolverWithNumericString.matchesPattern(null, body, bodyValue)) {
             is Result.Failure -> MatchFailure(result.breadCrumb("BODY"))
             else -> MatchSuccess(parameters)
         }

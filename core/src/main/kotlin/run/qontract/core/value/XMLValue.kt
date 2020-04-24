@@ -2,6 +2,8 @@ package run.qontract.core.value
 
 import run.qontract.core.utilities.xmlToString
 import org.w3c.dom.Node
+import run.qontract.core.pattern.Pattern
+import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.utilities.parseXML
 
 data class XMLValue(val node: Node) : Value {
@@ -12,6 +14,7 @@ data class XMLValue(val node: Node) : Value {
     override fun displayableValue(): String = toStringValue()
     override fun toStringValue() = xmlToString(node)
     override fun displayableType(): String = "xml"
+    override fun toPattern(): Pattern = XMLPattern(node)
 
     override fun toString() = xmlToString(node)
     override fun equals(other: Any?) =

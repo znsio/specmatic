@@ -118,21 +118,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 internal fun toURLPattern(urlPattern: URI): URLMatcher {
     val path = urlPattern.path
 
-    val pathPattern = urlPattern.rawPath.trim('/').split("/").filter { it.isNotEmpty() }.map { part ->
-        when {
-            isPatternToken(part) -> {
-                val pieces = withoutPatternDelimiters(part).split(":").map { it.trim() }
-                if(pieces.size != 2) {
-                    throw ContractException("In path ${urlPattern.rawPath}, $part must be of the format (param_name:type), e.g. (id:number)")
-                }
-
-                val (name, type) = pieces
-
-                URLPathPattern(DeferredPattern(withPatternDelimiters(type)), name)
-            }
-            else -> URLPathPattern(ExactMatchPattern(StringValue(part)))
-        }
-    }
+    val pathPattern = pathToPattern(urlPattern.rawPath)
 
     val queryPattern = URIUtils.parseQuery(urlPattern.query).mapValues {
         if(isPatternToken(it.value))
@@ -143,4 +129,21 @@ internal fun toURLPattern(urlPattern: URI): URLMatcher {
 
     return URLMatcher(queryPattern = queryPattern, path = path, pathPattern = pathPattern)
 }
+
+internal fun pathToPattern(rawPath: String): List<URLPathPattern> =
+        rawPath.trim('/').split("/").filter { it.isNotEmpty() }.map { part ->
+            when {
+                isPatternToken(part) -> {
+                    val pieces = withoutPatternDelimiters(part).split(":").map { it.trim() }
+                    if (pieces.size != 2) {
+                        throw ContractException("In path ${rawPath}, $part must be of the format (param_name:type), e.g. (id:number)")
+                    }
+
+                    val (name, type) = pieces
+
+                    URLPathPattern(DeferredPattern(withPatternDelimiters(type)), name)
+                }
+                else -> URLPathPattern(ExactMatchPattern(StringValue(part)))
+            }
+        }
 

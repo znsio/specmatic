@@ -27,7 +27,7 @@ data class ListPattern(override val pattern: Pattern) : Pattern {
             attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolver) }
         })
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolver).map { ListPattern(it) } }
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
             pattern is ListPattern && pattern.pattern.matchesPattern(this.pattern, resolver)
 

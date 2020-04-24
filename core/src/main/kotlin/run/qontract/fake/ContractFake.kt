@@ -17,12 +17,13 @@ import kotlinx.coroutines.runBlocking
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
+import run.qontract.core.Result
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.toMap
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import run.qontract.mock.MockScenario
-import run.qontract.mock.matchesRequest
 import run.qontract.mock.writeBadRequest
 import java.io.Closeable
 
@@ -31,7 +32,8 @@ class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList
 
     private val contractBehaviour = ContractBehaviour(gherkinData)
     private val expectations = stubInfo.map { expectation ->
-        Pair(expectation.request, contractBehaviour.matchingMockResponse(expectation))
+        val (resolver, httpResponse) = contractBehaviour.matchingMockResponse(expectation)
+        Triple(expectation.request.toPattern(), resolver, httpResponse)
     }
 
     private val server: ApplicationEngine = embeddedServer(Netty, host = host, port = port) {
@@ -55,14 +57,21 @@ class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList
                     setupServerState(httpRequest)
                     call.response.status(HttpStatusCode.OK)
                 } else {
-                    when (val mock = expectations.find {
-                        matchesRequest(httpRequest, it.first)
+                    when (val mock = expectations.find { (requestPattern, resolver, _) ->
+                        requestPattern.matches(httpRequest, resolver) is Result.Success
                     }) {
                         null -> respondToKtorHttpResponse(call, contractBehaviour.lookup(httpRequest))
-                        else -> respondToKtorHttpResponse(call, mock.second)
+                        else -> {
+                            val (_, _, response) = mock
+                            respondToKtorHttpResponse(call, response)
+                        }
                     }
                 }
-            } catch(e: Exception) {
+            }
+            catch(e: ContractException) {
+                writeBadRequest(call, e.report())
+            }
+            catch(e: Exception) {
                 writeBadRequest(call, e.message)
             }
         }

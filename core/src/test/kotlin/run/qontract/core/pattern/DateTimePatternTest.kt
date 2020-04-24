@@ -8,6 +8,9 @@ import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.StringValue
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import org.assertj.core.api.*
+import org.assertj.core.api.Assertions.*
+import run.qontract.core.Result
 
 internal class DateTimePatternTest {
     @Test
@@ -43,5 +46,14 @@ internal class DateTimePatternTest {
         val datePatterns = DateTimePattern.newBasedOn(Row(), Resolver())
         assertEquals(1, datePatterns.size)
         assertEquals(DateTimePattern, datePatterns.first())
+    }
+
+    @Test
+    fun `should match this date time format`() {
+        val date1 = StringValue("2020-04-12T00:00:00")
+        val date2 = StringValue("2020-04-22T23:59:59")
+
+        assertThat(DateTimePattern.matches(date1, Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(DateTimePattern.matches(date2, Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

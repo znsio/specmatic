@@ -15,7 +15,7 @@ object NoContentPattern : Pattern {
                 true -> Result.Success()
                 else -> mismatchResult("empty string", sampleData)
             }
-            is EmptyString, is NullValue -> Result.Success()
+            EmptyString, is NullValue -> Result.Success()
             null -> Result.Success()
             else -> mismatchResult("empty string", sampleData)
         }

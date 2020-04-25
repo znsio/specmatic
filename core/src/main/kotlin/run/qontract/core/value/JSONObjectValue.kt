@@ -10,7 +10,8 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     override fun displayableValue() = toStringValue()
     override fun toStringValue() = valueMapToPrettyJsonString(jsonObject)
     override fun displayableType(): String = "json object"
-    override fun toPattern(): Pattern = JSONObjectPattern(jsonObject.mapValues { it.value.toPattern() })
+    override fun toMatchingPattern(): Pattern = JSONObjectPattern(jsonObject.mapValues { it.value.toMatchingPattern() })
+    override fun type(): Pattern = JSONObjectPattern()
 
     override fun toString() = valueMapToPrettyJsonString(jsonObject)
 }

@@ -1,4 +1,4 @@
-package application
+package application.versioning.commands
 
 import run.qontract.core.versioning.ContractIdentifier
 import run.qontract.core.versioning.getRepoProvider

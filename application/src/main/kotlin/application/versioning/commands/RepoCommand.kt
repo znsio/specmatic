@@ -1,10 +1,6 @@
-package application
+package application.versioning.commands
 
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.api.TransportConfigCallback
-import org.eclipse.jgit.transport.SshTransport
-import org.eclipse.jgit.transport.Transport
-import org.eclipse.jgit.transport.sshd.SshdSessionFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters

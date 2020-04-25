@@ -74,7 +74,6 @@ And response-body (string)
 
         ContractFake(gherkin, listOf(mock)).use { fake ->
             val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/date", """{"date": "2020-04-12T00:00:00"}""")
-//            val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/date", """2020-04-12T00:00:00""")
             assertThat(postResponse.statusCode.value()).isEqualTo(200)
             assertThat(postResponse.body).isEqualTo("done")
         }

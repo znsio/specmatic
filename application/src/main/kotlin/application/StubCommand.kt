@@ -1,5 +1,6 @@
 package application
 
+import picocli.CommandLine
 import run.qontract.core.utilities.readFile
 import run.qontract.fake.ContractFake
 import picocli.CommandLine.*
@@ -15,12 +16,11 @@ import java.util.concurrent.Callable
 @Command(name = "stub", version = ["0.1.0"],
         mixinStandardHelpOptions = true,
         description = ["Start a stub server with contract"])
-class StubCommand : Callable<Void> {
+class StubCommand : Callable<Unit> {
     lateinit var contractFake: ContractFake
-    lateinit var watchService: WatchService
 
-    @Parameters(index = "0", description = ["Contract file path"])
-    lateinit var path: String
+    @Parameters(arity = "1..*", description = ["Contract file paths"])
+    lateinit var paths: List<String>
 
     @Option(names = ["--host"], description = ["Host"], defaultValue = "localhost")
     lateinit var host: String
@@ -28,22 +28,25 @@ class StubCommand : Callable<Void> {
     @Option(names = ["--port"], description = ["Port"], defaultValue = "9000")
     var port: Int = 9000
 
-    override fun call(): Void? {
+    override fun call() {
         try {
             startServer()
             println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
             addShutdownHook()
 
-            watchService = FileSystems.getDefault().newWatchService()
-            val contractPath = Paths.get(path).toAbsolutePath()
-            contractPath.parent.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
+            val watchService = FileSystems.getDefault().newWatchService()
+            val contractPaths = paths.map { Paths.get(it).toAbsolutePath() }
+
+            contractPaths.forEach { contractPath ->
+                contractPath.parent.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
+            }
 
             var key: WatchKey
             while (watchService.take().also { key = it } != null) {
                 key.pollEvents().forEach { event ->
-                    when (contractPath.fileName) {
-                        event.context() -> {
-                            println("""Restarting stub server. Change in $contractPath""")
+                    when {
+                        event.context() in contractPaths.map { it.fileName } -> {
+                            println("""Restarting stub server. Change in ${event.context()}""")
                             restartServer()
                         }
                     }
@@ -53,16 +56,17 @@ class StubCommand : Callable<Void> {
         } catch (e: NoMatchingScenario) {
             println(e.localizedMessage)
         }
-
-        return null
     }
 
     private fun startServer() {
-        val contractGherkin = readFile(path)
-        val contractBehaviour = ContractBehaviour(contractGherkin)
-        val stubInfo = loadStubInformation(path, contractBehaviour)
+        val contractInfo = paths.map { path ->
+            val contractGherkin = readFile(path)
+            val contractBehaviour = ContractBehaviour(contractGherkin)
+            val stubInfo = loadStubInformation(path, contractBehaviour)
+            Pair(contractBehaviour, stubInfo)
+        }
 
-        contractFake = ContractFake(contractGherkin, stubInfo, host, port)
+        contractFake = ContractFake(contractInfo, host, port)
     }
 
     private fun restartServer() {

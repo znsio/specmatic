@@ -1,5 +1,6 @@
 package application
 
+import application.versioning.commands.*
 import picocli.CommandLine
 import picocli.CommandLine.HelpCommand
 import java.io.ByteArrayInputStream

@@ -23,17 +23,22 @@ import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.toMap
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
+import run.qontract.mock.Expectation
 import run.qontract.mock.MockScenario
 import run.qontract.mock.writeBadRequest
 import java.io.Closeable
 
-class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000) : Closeable {
+class ContractFake(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "localhost", port: Int = 9000) : Closeable {
+    constructor(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000) : this(listOf(Pair(ContractBehaviour(gherkinData), stubInfo)), host, port)
+
     val endPoint = "http://$host:$port"
 
-    private val contractBehaviour = ContractBehaviour(gherkinData)
-    private val expectations = stubInfo.map { expectation ->
-        val (resolver, httpResponse) = contractBehaviour.matchingMockResponse(expectation)
-        Triple(expectation.request.toPattern(), resolver, httpResponse)
+    private val contractBehaviours = contractInfo.map { it.first }
+    private val expectations = contractBehaviours.zip(contractInfo.map { it.second }).flatMap { (behaviour, mocks) ->
+        mocks.map { mock ->
+            val (resolver, httpResponse) = behaviour.matchingMockResponse(mock)
+            Triple(mock.request.toPattern(), resolver, httpResponse)
+        }
     }
 
     private val server: ApplicationEngine = embeddedServer(Netty, host = host, port = port) {
@@ -56,15 +61,29 @@ class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList
                 if (isSetupRequest(httpRequest)) {
                     setupServerState(httpRequest)
                     call.response.status(HttpStatusCode.OK)
-                } else {
+                } else try {
                     when (val mock = expectations.find { (requestPattern, resolver, _) ->
                         requestPattern.matches(httpRequest, resolver) is Result.Success
                     }) {
-                        null -> respondToKtorHttpResponse(call, contractBehaviour.lookup(httpRequest))
+                        null -> {
+                            val responses = contractBehaviours.asSequence().map {
+                                it.lookup(httpRequest)
+                            }
+
+                            val response = responses.firstOrNull {
+                                it.headers.getOrDefault("X-Qontract-Result", "none") != "failure"
+                            } ?: HttpResponse.ERROR_400
+
+                            respondToKtorHttpResponse(call, response)
+                        }
                         else -> {
                             val (_, _, response) = mock
                             respondToKtorHttpResponse(call, response)
                         }
+                    }
+                } finally {
+                    contractBehaviours.forEach {
+                        it.clearServerState()
                     }
                 }
             }
@@ -83,7 +102,9 @@ class ContractFake(gherkinData: String, stubInfo: List<MockScenario> = emptyList
 
     private fun setupServerState(httpRequest: HttpRequest) {
         val body = httpRequest.body
-        contractBehaviour.setServerState(body?.let { toMap(it) } ?: mutableMapOf())
+        contractBehaviours.forEach { behaviour ->
+            behaviour.setServerState(body?.let { toMap(it) } ?: mutableMapOf())
+        }
     }
 
     private fun isSetupRequest(httpRequest: HttpRequest): Boolean {

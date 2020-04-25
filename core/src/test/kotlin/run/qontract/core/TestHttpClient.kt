@@ -50,12 +50,9 @@ class TestHttpClient {
         val port = 8080
         val url = "http://localhost:$port"
         val client = HttpClient(url)
+
         ContractFake(contractGherkin, emptyList(), host, port).use {
-            client.setServerState(object : HashMap<String, Value>() {
-                init {
-                    put("server", StringValue("state"))
-                }
-            })
+            client.setServerState(mapOf("server" to StringValue("state")))
             val response = client.execute(request)
             Assertions.assertNotNull(response)
             Assertions.assertEquals(200, response.status)

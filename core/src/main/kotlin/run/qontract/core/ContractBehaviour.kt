@@ -86,6 +86,10 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
 
     fun matchingMockResponse(mockScenario: MockScenario): Pair<Resolver, HttpResponse> =
             matchingMockResponse(mockScenario.request, mockScenario.response)
+
+    fun clearServerState() {
+        serverState = emptyMap()
+    }
 }
 
 private fun toFixtureInfo(rest: String): Pair<String, Value> {

@@ -1,10 +1,7 @@
 package run.qontract.core.versioning.git
 
 import org.eclipse.jgit.api.Git
-import run.qontract.core.ContractBehaviour
-import run.qontract.core.Results
-import run.qontract.core.qontractRepoDirPath
-import run.qontract.core.testBackwardCompatibility
+import run.qontract.core.*
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.versioning.*
 import java.io.File
@@ -71,5 +68,5 @@ fun identifierToContractGitFile(repoName: String, identifier: ContractIdentifier
             .plus(identifier.version.toString())
             .joinToString(File.separator)
 
-    return "$fragment.contract"
+    return "$fragment.$CONTRACT_EXTENSION"
 }

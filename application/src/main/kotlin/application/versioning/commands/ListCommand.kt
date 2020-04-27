@@ -2,8 +2,8 @@ package application.versioning.commands
 
 import run.qontract.core.versioning.ContractIdentifier
 import picocli.CommandLine
+import run.qontract.core.POINTER_EXTENSION
 import run.qontract.core.qontractCacheDirPath
-import run.qontract.core.versioning.POINTER_EXTENSION
 import java.io.File
 import java.util.concurrent.Callable
 

@@ -4,9 +4,10 @@ import org.eclipse.jgit.api.Git
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
+import run.qontract.core.CONTRACT_EXTENSION
+import run.qontract.core.POINTER_EXTENSION
 import run.qontract.core.qontractCacheDirPath
 import run.qontract.core.qontractRepoDirPath
-import run.qontract.core.versioning.POINTER_EXTENSION
 import run.qontract.core.versioning.getTransportCallingCallback
 import java.io.File
 import java.util.concurrent.Callable
@@ -51,7 +52,7 @@ fun linkContracts(gitRepo: GitRepo) {
         it.absolutePath
                 .removePrefix(gitRepo.repoDir.file.absolutePath)
                 .removePrefix("/")
-                .removeSuffix(".contract")
+                .removeSuffix(".$CONTRACT_EXTENSION")
                 .plus(".$POINTER_EXTENSION")
     }.map { ExistingFile("$qontractCacheDirPath/$it") }
 

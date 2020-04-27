@@ -1,5 +1,6 @@
 package run.qontract.core.versioning
 
+import run.qontract.core.POINTER_EXTENSION
 import run.qontract.core.qontractDirPath
 import java.io.File
 

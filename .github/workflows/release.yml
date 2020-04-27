@@ -8,8 +8,6 @@ on:
   push:
     tags:
       - '*.*.*'
-  push:
-    tags:
       - 'SNAPSHOT'
 
 jobs:

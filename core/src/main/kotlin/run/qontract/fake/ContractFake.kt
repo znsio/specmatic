@@ -72,7 +72,7 @@ class ContractFake(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>
 
                             val response = responses.firstOrNull {
                                 it.headers.getOrDefault("X-Qontract-Result", "none") != "failure"
-                            } ?: HttpResponse.ERROR_400
+                            } ?: HttpResponse(400, responses.map { it.body ?: "" }.filter { it.isNotBlank() }.joinToString("\n\n"))
 
                             respondToKtorHttpResponse(call, response)
                         }

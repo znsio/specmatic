@@ -28,7 +28,14 @@ internal fun prettifyJsonString(content: String): String = indentedJson.stringif
 @OptIn(UnstableDefault::class)
 fun stringToPatternMap(stringContent: String): Map<String, Pattern>  {
     val data = lenientJson.parseJson(stringContent).jsonObject.toMap()
-    return convertToMapPattern(data)
+    try {
+        return convertToMapPattern(data)
+    }
+    catch (e: Throwable) {
+        println(e.message)
+        println(e.toString())
+        throw e
+    }
 }
 
 @OptIn(UnstableDefault::class)

@@ -31,9 +31,13 @@ private val builtInPatterns = mapOf(
 
 fun isBuiltInPattern(pattern: Any): Boolean =
     when(pattern) {
-        is String -> {
-            val patternString = pattern.toString()
-            patternString in builtInPatterns || ":" in patternString || " in " in patternString
+        is String -> when {
+            pattern in builtInPatterns -> true
+            isPatternToken(pattern) -> when {
+                ":" in pattern || " in " in pattern -> true
+                else -> false
+            }
+            else -> false
         }
         else -> false
     }

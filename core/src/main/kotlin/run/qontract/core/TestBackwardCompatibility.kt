@@ -27,28 +27,31 @@ fun testBackwardCompatibility(older: ContractBehaviour, newerContract: ContractB
             }
         }
 
-sealed class TestResult
 data class Comparison(val older: String, val newer: String, val results: Results)
-data class ResultList(val list: Sequence<Comparison>) : TestResult()
-data class JustOne(val file: String) : TestResult()
-object Nothing : TestResult()
 
-fun testBackwardCompatibilityInDirectory(directory: File, version: Int): TestResult {
+sealed class CompatibilityResult
+data class TestResults(val list: Sequence<Comparison>) : CompatibilityResult()
+data class JustOne(val file: String) : CompatibilityResult()
+object NoContractsFound : CompatibilityResult()
+
+fun testBackwardCompatibilityInDirectory(directory: File, majorVersion: Int, minorVersion: Int?): CompatibilityResult {
     val files = (directory.listFiles()?.toList() ?: emptyList()).asSequence().filterNotNull().filter {
-        it.name.startsWith("$version.") && it.name.endsWith(".$CONTRACT_EXTENSION")
+        it.name.startsWith("$majorVersion.") && it.name.endsWith(".$CONTRACT_EXTENSION")
     }.map {
         val pieces = it.name.removeSuffix(".$CONTRACT_EXTENSION").split(".").filter { it.isNotBlank() }.map { it.toInt() }
         Triple(it, pieces.first(), pieces.getOrElse(1) { 0 })
-    }.sortedWith(compareBy({it.second}, {it.third}) ).map { it.first }.toList()
+    }.sortedWith(compareBy({it.second}, {it.third}) ).filter { (_, _, fileMinorVersion) ->
+        minorVersion == null || fileMinorVersion <= minorVersion
+    }.map { it.first }
 
     if(files.elementAtOrNull(0) == null) {
-        return Nothing
+        return NoContractsFound
     }
 
     if(files.elementAtOrNull(1) == null)
         return JustOne(files.first().path)
 
-    return ResultList(files.zipWithNext().asSequence().map { (older, newer) ->
+    return TestResults(files.zipWithNext().asSequence().map { (older, newer) ->
         val results = testBackwardCompatibility(ContractBehaviour(older.readText()), ContractBehaviour(newer.readText()))
         Comparison(older.absolutePath, newer.absolutePath, results)
     })

@@ -27,12 +27,16 @@ class TestCommand : Callable<Void> {
     @Option(names = ["--suggestions"], description = ["Location of the suggestions file"], defaultValue = "")
     lateinit var suggestionsPath: String
 
+    @Option(names = ["--checkBackwardCompatibility", "--check", "-c"], description = ["Identify versions of the contract prior to the one specified, and verify backward compatibility from the earliest to the latest"])
+    var checkBackwardCompatibility: Boolean = false
+
     override fun call(): Void? {
         try {
             System.setProperty("path", path)
             System.setProperty("host", host)
             System.setProperty("port", port.toString())
             System.setProperty("suggestions", suggestionsPath)
+            System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
             val launcher = LauncherFactory.create()
             val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
                     .selectors(selectClass(QontractJUnitSupport::class.java))

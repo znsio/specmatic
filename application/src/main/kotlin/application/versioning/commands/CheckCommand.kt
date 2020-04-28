@@ -13,15 +13,23 @@ class CheckCommand: Callable<Unit> {
     var directory: String = ""
 
     @Parameters(index = "1", description = ["Version"])
-    var version: Int = 0
+    var version: String = ""
 
     override fun call() {
-        val result = testBackwardCompatibilityInDirectory(File(directory), version)
+        val versionTokens = version.split(".").map { it.toInt() }
+        if(versionTokens.isEmpty() || versionTokens.size > 2) {
+            println("Versions must be of the format <majorVersion>.<minorVersion>")
+            exitProcess(1)
+        }
+
+        val majorVersion = versionTokens[0]
+        val minorVersion = versionTokens.getOrNull(1)
+
+        val result = testBackwardCompatibilityInDirectory(File(directory), majorVersion, minorVersion)
         val (exitValue, message) = when(result) {
             is JustOne -> Pair(0, "There was just one contract: ${result.file}")
-            is ResultList -> {
-                val failure = result.list.firstOrNull { !it.results.success() }
-                when(failure) {
+            is TestResults -> {
+                when(val failure = result.list.firstOrNull { !it.results.success() }) {
                     null -> Pair(0, "Contracts are all backward compatible.")
                     else -> Pair(1, """Backward compatibility breakdown detected.
 ${failure.older} => ${failure.newer}
@@ -29,7 +37,7 @@ ${failure.results.report()}
                     """.trimIndent())
                 }
             }
-            Nothing -> Pair(0, "There were no files with this version number")
+            NoContractsFound -> Pair(0, "There were no files with this version number")
         }
 
         println(message)

@@ -3,11 +3,11 @@ package run.qontract.core
 
 import java.io.File
 
-fun getLatestCompatibleContractFileName(directory: String, version: Int): String? {
-    return when(val result = testBackwardCompatibilityInDirectory(File(directory), version)) {
+fun getContractFileName(directory: String, majorVersion: Int, minorVersion: Int? = null): String? {
+    return when(val result = testBackwardCompatibilityInDirectory(File(directory), majorVersion, minorVersion)) {
         is JustOne -> File(result.file).absolutePath
-        is Nothing -> return null
-        is ResultList -> {
+        is NoContractsFound -> return null
+        is TestResults -> {
             File(if(!result.list.first().results.success())
                 result.list.first().older
             else

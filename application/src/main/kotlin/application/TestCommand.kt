@@ -11,7 +11,7 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import java.util.concurrent.Callable
 
-@Command(name = "test", version = ["0.1.0"],
+@Command(name = "test",
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
 class TestCommand : Callable<Void> {

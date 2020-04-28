@@ -14,7 +14,7 @@ import java.io.File
 import java.nio.file.*
 import java.util.concurrent.Callable
 
-@Command(name = "stub", version = ["0.1.0"],
+@Command(name = "stub",
         mixinStandardHelpOptions = true,
         description = ["Start a stub server with contract"])
 class StubCommand : Callable<Unit> {

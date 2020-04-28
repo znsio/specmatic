@@ -28,7 +28,7 @@ import run.qontract.mock.MockScenario
 import run.qontract.mock.writeBadRequest
 import java.io.Closeable
 
-class ContractFake(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "localhost", port: Int = 9000) : Closeable {
+class ContractFake(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "localhost", port: Int = 9000) : ContractStub {
     constructor(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000) : this(listOf(Pair(ContractBehaviour(gherkinData), stubInfo)), host, port)
 
     val endPoint = "http://$host:$port"

@@ -3,6 +3,7 @@ package application
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import run.qontract.core.ContractBehaviour
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.utilities.readFile
 import java.util.concurrent.Callable
@@ -55,12 +56,17 @@ private fun mutualCompatibility(path1: String, path2: String): Pair<Boolean, Boo
 }
 
 fun backwardCompatible(behaviour1: ContractBehaviour, behaviour2: ContractBehaviour): Boolean =
-        testBackwardCompatibility(behaviour1, behaviour2).let { results ->
-            when {
-                results.failureCount > 0 -> {
-                    println(results.report().prependIndent("| "))
-                    false
+        try {
+            testBackwardCompatibility(behaviour1, behaviour2).let { results ->
+                when {
+                    results.failureCount > 0 -> {
+                        println(results.report().prependIndent("| "))
+                        false
+                    }
+                    else -> true
                 }
-                else -> true
             }
+        } catch(e: ContractException) {
+            println(e.report().prependIndent("| "))
+            false
         }

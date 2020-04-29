@@ -22,9 +22,9 @@ data class Results(val results: MutableList<Triple<Result, HttpRequest, HttpResp
             generateFeedback()
 
     private fun generateFeedback(): String {
-        return results.map { it.first }.joinToString("\n\n") { result ->
+        return results.map { it.first }.map { result ->
             resultReport(result)
-        }
+        }.filter { it.isNotBlank() }.joinToString("\n\n")
     }
 
     fun report() = generateErrorResponseBody()

@@ -54,29 +54,32 @@ fun valueError(value: Value?): String? {
 }
 
 fun resultReport(result: Result): String {
-    val firstLine = when(val scenario = result.scenario) {
-        null -> ""
-        else -> {
-            """In scenario "${scenario.name}""""
-        }
-    }
+    return when (result) {
+        is Result.Failure -> {
+            val firstLine = when(val scenario = result.scenario) {
+                null -> ""
+                else -> {
+                    """In scenario "${scenario.name}""""
+                }
+            }
 
-    val report = if (result is Result.Failure) {
-        result.report().let { (breadCrumbs, errorMessages) ->
-            val breadCrumbString =
-                    breadCrumbs
-                            .filter { it.isNotBlank() }
-                            .joinToString(".") { it.trim() }
-                            .let {
-                                when {
-                                    it.isNotBlank() -> ">> $it"
-                                    else -> ""
+            val report = result.report().let { (breadCrumbs, errorMessages) ->
+                val breadCrumbString =
+                        breadCrumbs
+                                .filter { it.isNotBlank() }
+                                .joinToString(".") { it.trim() }
+                                .let {
+                                    when {
+                                        it.isNotBlank() -> ">> $it"
+                                        else -> ""
+                                    }
                                 }
-                            }
-            val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
-            "$breadCrumbString\n\n$errorMessagesString".trim()
-        }
-    } else ""
+                val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+                "$breadCrumbString\n\n$errorMessagesString".trim()
+            }
 
-    return "$firstLine\n$report".trim()
+            "$firstLine\n$report"
+        }
+        else -> ""
+    }.trim()
 }

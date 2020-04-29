@@ -31,9 +31,10 @@ class CheckCommand: Callable<Unit> {
             is TestResults -> {
                 when(val failure = result.list.firstOrNull { !it.results.success() }) {
                     null -> Pair(0, "Contracts are all backward compatible.")
-                    else -> Pair(1, """Backward compatibility breakdown detected.
-${failure.older} => ${failure.newer}
+                    else -> Pair(1, """${failure.older} => ${failure.newer}
 ${failure.results.report()}
+
+Backward compatibility breakdown detected between ${failure.older} and ${failure.newer}
                     """.trimIndent())
                 }
             }

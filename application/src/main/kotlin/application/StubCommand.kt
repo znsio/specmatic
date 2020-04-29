@@ -1,16 +1,9 @@
 package application
 
-import run.qontract.core.utilities.readFile
-import run.qontract.fake.ContractFake
 import picocli.CommandLine.*
-import run.qontract.core.ContractBehaviour
-import run.qontract.core.value.StringValue
 import run.qontract.fake.ContractStub
-import run.qontract.fake.createStubFromPaths
-import run.qontract.mock.MockScenario
+import run.qontract.fake.createStubFromContracts
 import run.qontract.mock.NoMatchingScenario
-import run.qontract.mock.stringToMockScenario
-import java.io.File
 import java.nio.file.*
 import java.util.concurrent.Callable
 
@@ -60,7 +53,7 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun startServer() {
-        contractFake = createStubFromPaths(paths, host, port)
+        contractFake = createStubFromContracts(paths, host, port)
     }
 
     private fun restartServer() {

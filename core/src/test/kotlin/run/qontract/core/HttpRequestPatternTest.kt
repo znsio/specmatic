@@ -3,6 +3,7 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.Row
+import run.qontract.core.pattern.parsedPattern
 import run.qontract.core.pattern.stringToPattern
 import java.net.URI
 import kotlin.test.assertEquals
@@ -10,10 +11,8 @@ import kotlin.test.assertEquals
 internal class HttpRequestPatternTest {
     @Test
     fun `should not match when url does not match`() {
-        val httpRequestPattern = HttpRequestPattern().also {
-            val urlMatcher = toURLPattern(URI("/matching_path"))
-            it.updateWith(urlMatcher)
-        }
+        val httpRequestPattern = HttpRequestPattern(
+                urlMatcher = toURLPattern(URI("/matching_path")))
         val httpRequest = HttpRequest().updateWith(URI("/unmatched_path"))
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Result.Failure::class.java)
@@ -23,11 +22,9 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `should not match when method does not match`() {
-        val httpRequestPattern = HttpRequestPattern().also {
-            val urlMatcher = toURLPattern(URI("/matching_path"))
-            it.updateMethod("POST")
-            it.updateWith(urlMatcher)
-        }
+        val httpRequestPattern = HttpRequestPattern(
+                urlMatcher = toURLPattern(URI("/matching_path")),
+                method = "POST")
         val httpRequest = HttpRequest()
             .updateWith(URI("/matching_path"))
             .updateMethod("GET")
@@ -39,12 +36,11 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `should not match when body does not match`() {
-        val httpRequestPattern = HttpRequestPattern().also {
-            val urlMatcher = toURLPattern(URI("/matching_path"))
-            it.updateMethod("POST")
-            it.setBodyPattern("""{"name": "Hari"}""")
-            it.updateWith(urlMatcher)
-        }
+        val httpRequestPattern =
+                HttpRequestPattern(
+                        urlMatcher = toURLPattern(URI("/matching_path")),
+                        method = "POST",
+                        body = parsedPattern("""{"name": "Hari"}"""))
         val httpRequest = HttpRequest()
             .updateWith(URI("/matching_path"))
             .updateMethod("POST")
@@ -57,12 +53,10 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `should match when request matches url, method and body`() {
-        val httpRequestPattern = HttpRequestPattern().also {
-            val urlMatcher = toURLPattern(URI("/matching_path"))
-            it.updateMethod("POST")
-            it.setBodyPattern("""{"name": "Hari"}""")
-            it.updateWith(urlMatcher)
-        }
+        val httpRequestPattern = HttpRequestPattern(
+                urlMatcher =  toURLPattern(URI("/matching_path")),
+                method = "POST",
+                body = parsedPattern("""{"name": "Hari"}"""))
         val httpRequest = HttpRequest()
             .updateWith(URI("/matching_path"))
             .updateMethod("POST")

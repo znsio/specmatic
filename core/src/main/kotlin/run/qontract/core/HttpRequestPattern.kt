@@ -6,11 +6,9 @@ import run.qontract.core.value.StringValue
 import java.io.UnsupportedEncodingException
 import java.net.URI
 
-data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var urlMatcher: URLMatcher? = null, private var method: String? = null, private var body: Pattern = NoContentPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap()) {
+data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val urlMatcher: URLMatcher? = null, val method: String? = null, val body: Pattern = NoContentPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap()) {
     @Throws(UnsupportedEncodingException::class)
-    fun updateWith(urlMatcher: URLMatcher) {
-        this.urlMatcher = urlMatcher
-    }
+    fun updateWith(urlMatcher: URLMatcher) = this.copy(urlMatcher = urlMatcher)
 
     @Throws(Exception::class)
     fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver): Result {
@@ -106,16 +104,12 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
         }
     }
 
-    fun updateMethod(method: String) {
-        this.method = method.toUpperCase()
-    }
+    fun updateMethod(method: String) = this.copy(method = method.toUpperCase())
 
     fun bodyPattern(bodyContent: String?) = this.copy(body = parsedPattern(bodyContent!!))
     fun bodyPattern(newBody: Pattern) = this.copy(body = newBody)
 
-    fun setBodyPattern(bodyContent: String?) {
-        body = parsedPattern(bodyContent!!)
-    }
+    fun setBodyPattern(bodyContent: String?) = parsedPattern(bodyContent!!)
 
     fun generate(resolver: Resolver): HttpRequest {
         var newRequest = HttpRequest()
@@ -127,10 +121,10 @@ data class HttpRequestPattern(var headersPattern: HttpHeadersPattern = HttpHeade
             if (urlMatcher == null) {
                 throw missingParam("URL path")
             }
-            newRequest = newRequest.updateMethod(method!!)
+            newRequest = newRequest.updateMethod(method)
             attempt(breadCrumb = "URL") {
-                newRequest = newRequest.updatePath(urlMatcher!!.generatePath(resolver))
-                val queryParams = urlMatcher!!.generateQuery(resolver)
+                newRequest = newRequest.updatePath(urlMatcher.generatePath(resolver))
+                val queryParams = urlMatcher.generateQuery(resolver)
                 for (key in queryParams.keys) {
                     newRequest = newRequest.updateQueryParam(key, queryParams[key] ?: "")
                 }

@@ -33,4 +33,9 @@ internal class HttpRequestTest {
         assertThat(logString).contains("Data=10")
     }
 
+    @Test
+    fun `request with a nullable string should result in an Any null or string pattern`() {
+        val request = HttpRequest("POST", "/", emptyMap(), parsedValue("""{"data": "(string?)"}"""))
+        val requestPattern = request.toPattern()
+    }
 }

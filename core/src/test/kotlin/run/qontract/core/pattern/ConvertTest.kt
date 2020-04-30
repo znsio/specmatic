@@ -1,5 +1,6 @@
 package run.qontract.core.pattern
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.shouldMatch
 import run.qontract.core.value.NullValue
@@ -34,5 +35,21 @@ internal class ConvertTest {
 
         numberList shouldMatch pattern
         numberListWithNulls shouldMatch pattern
+    }
+
+    @Test
+    fun `given a number in string question it should generate a nullable number in string`() {
+        val pattern = parsedPattern("(number in string?)")
+        val expectedPattern = AnyPattern(listOf(NullPattern, PatternInStringPattern(DeferredPattern("(number)"))))
+
+        assertThat(pattern).isEqualTo(expectedPattern)
+    }
+
+    @Test
+    fun `given a number in string star it should generate a nullable number in string`() {
+        val pattern = parsedPattern("(number in string*)")
+        val expectedPattern = ListPattern(PatternInStringPattern(DeferredPattern("(number)")))
+
+        assertThat(pattern).isEqualTo(expectedPattern)
     }
 }

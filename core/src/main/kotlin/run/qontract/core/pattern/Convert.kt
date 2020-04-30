@@ -2,8 +2,8 @@
 
 package run.qontract.core.pattern
 
-import run.qontract.core.mismatchResult
-import run.qontract.core.utilities.*
+import run.qontract.core.utilities.jsonStringToValueArray
+import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.*
 
 fun stringToPattern(patternValue: String, key: String?): Pattern =

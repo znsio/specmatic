@@ -3,6 +3,7 @@ package run.qontract.core.pattern
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.shouldMatch
+import run.qontract.core.value.EmptyString
 import run.qontract.core.value.NullValue
 import kotlin.test.assertEquals
 
@@ -20,7 +21,13 @@ internal class NullPatternTest {
         assertEquals(NullValue,  NullPattern.generate(Resolver()))
     }
 
-    @Test fun `should create a new array of patterns containing itself`() {
+    @Test
+    fun `should create a new array of patterns containing itself`() {
         assertEquals(listOf(NullPattern), NullPattern.newBasedOn(Row(), Resolver()))
+    }
+
+    @Test
+    fun `should match an empty string`() {
+        EmptyString shouldMatch NullPattern
     }
 }

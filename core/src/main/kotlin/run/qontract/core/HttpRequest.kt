@@ -122,29 +122,28 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
 
 fun s(json: Map<String, Value>, key: String): String = (json.getValue(key) as StringValue).string
 
-fun requestFromJSON(json: Map<String, Value>): HttpRequest {
-    var httpRequest = HttpRequest()
-    httpRequest = httpRequest.updateMethod(s(json, "method"))
-    httpRequest = httpRequest.updatePath(if ("path" in json) s(json, "path") else "/")
-    httpRequest = httpRequest.updateQueryParams(if ("query" in json)
-        (json["query"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() }
-    else emptyMap())
-    httpRequest = httpRequest.setHeaders(if ("headers" in json) (json["headers"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() } else emptyMap())
+fun requestFromJSON(json: Map<String, Value>): HttpRequest =
+    HttpRequest()
+        .updateMethod(s(json, "method"))
+        .updatePath(if ("path" in json) s(json, "path") else "/")
+        .updateQueryParams(if ("query" in json)
+            (json["query"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() }
+            else emptyMap())
+        .setHeaders(if ("headers" in json) (json["headers"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() } else emptyMap())
+        .let { httpRequest ->
+            when {
+                "form-fields" in json -> {
+                    val formFields = json.getValue("form-fields")
+                    if(formFields !is JSONObjectValue)
+                        throw ContractException("form-fields must be a json object.")
 
-    if("form-fields" in json) {
-        val formFields = json.getValue("form-fields")
-        if(formFields !is JSONObjectValue)
-            throw ContractException("form-fields must be a json object.")
-
-        httpRequest = httpRequest.copy(formFields = formFields.jsonObject.mapValues { it.value.toStringValue() })
-    }
-    else if("body" in json)
-        httpRequest = httpRequest.updateBody(json.getValue("body"))
-
-    return httpRequest
-}
+                    httpRequest.copy(formFields = formFields.jsonObject.mapValues { it.value.toStringValue() })
+                }
+                "body" in json -> httpRequest.updateBody(json.getValue("body"))
+                else -> httpRequest
+            }
+        }
 
 internal fun startLinesWith(str: String, startValue: String): String {
     return str.split("\n").map { "$startValue$it" }.joinToString("\n")
 }
-

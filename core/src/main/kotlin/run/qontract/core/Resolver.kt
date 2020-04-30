@@ -30,13 +30,16 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
         return Result.Success()
     }
 
-    fun getPattern(patternValue: String): Pattern {
-        if (isPatternToken(patternValue = patternValue)) {
-            return patterns[patternValue] ?: getBuiltInPattern(patternValue) ?: parsedPattern(patternValue, null)
+    fun getPattern(patternValue: String): Pattern =
+        when {
+            isPatternToken(patternValue) -> {
+                patterns[patternValue] ?: when {
+                    isBuiltInPattern(patternValue) -> getBuiltInPattern(patternValue)
+                    else -> parsedPattern(patternValue, null)
+                }
+            }
+            else -> throw ContractException("Type $patternValue does not exist.")
         }
-
-        throw ContractException("Type $patternValue does not exist.")
-    }
 
     fun generate(factKey: String, pattern: Pattern): Value {
         if (!factStore.has(factKey))

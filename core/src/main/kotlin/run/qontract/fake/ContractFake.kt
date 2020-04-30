@@ -34,7 +34,7 @@ class ContractFake(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>
     val endPoint = "http://$host:$port"
 
     private val contractBehaviours = contractInfo.map { it.first }
-    private val expectations = contractBehaviours.zip(contractInfo.map { it.second }).flatMap { (behaviour, mocks) ->
+    private val expectations = contractInfo.flatMap { (behaviour, mocks) ->
         mocks.map { mock ->
             val (resolver, httpResponse) = behaviour.matchingMockResponse(mock)
             Triple(mock.request.toPattern(), resolver, httpResponse)

@@ -2,6 +2,7 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
@@ -31,4 +32,5 @@ internal class HttpRequestTest {
 
         assertThat(logString).contains("Data=10")
     }
+
 }

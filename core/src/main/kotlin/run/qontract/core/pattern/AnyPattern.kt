@@ -30,7 +30,8 @@ data class AnyPattern(override val pattern: List<Pattern>, override val key: Str
         }.find { it != null } ?: throw ContractException("Failed to parse value \"$value\". It should have matched one of ${pattern.joinToString(", ") { it.description }}.")
 
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
-            this.pattern.any { it.matchesPattern(pattern, resolver) }
+            this.pattern.any { pattern.matchesPattern(it, resolver) }
+//            this.pattern.any { it.matchesPattern(pattern, resolver) }
 
     override val description: String = pattern.joinToString(" or ") { inner -> inner.description }
 }

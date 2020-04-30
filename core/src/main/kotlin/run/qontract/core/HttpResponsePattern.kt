@@ -2,14 +2,8 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 
-data class HttpResponsePattern(var headersPattern: HttpHeadersPattern = HttpHeadersPattern(), var status: Int? = null, private var body: Pattern = NoContentPattern) : Cloneable {
+data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int? = null, val body: Pattern = NoContentPattern) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, parsedPattern(response.body!!))
-
-    fun bodyPattern(bodyContent: String?) = this.copy(body = parsedPattern(bodyContent!!))
-
-    fun setBodyPattern(bodyContent: String?) {
-        body = parsedPattern(bodyContent!!)
-    }
 
     fun generateResponse(resolver: Resolver): HttpResponse {
         return attempt(breadCrumb = "RESPONSE") {

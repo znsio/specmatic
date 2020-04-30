@@ -147,7 +147,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             "STATUS" ->
                 scenarioInfo.copy(httpResponsePattern = scenarioInfo.httpResponsePattern.copy(status = Integer.valueOf(step.rest)))
             "REQUEST-BODY" ->
-                scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.bodyPattern(toPattern(step)))
+                scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(body = toPattern(step)))
             "RESPONSE-BODY" ->
                 scenarioInfo.copy(httpResponsePattern = scenarioInfo.httpResponsePattern.bodyPattern(toPattern(step)))
             "FACT" ->

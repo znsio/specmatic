@@ -7,9 +7,6 @@ import java.io.UnsupportedEncodingException
 import java.net.URI
 
 data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val urlMatcher: URLMatcher? = null, val method: String? = null, val body: Pattern = NoContentPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap()) {
-    @Throws(UnsupportedEncodingException::class)
-    fun updateWith(urlMatcher: URLMatcher) = this.copy(urlMatcher = urlMatcher)
-
     @Throws(Exception::class)
     fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver): Result {
         val result = incomingHttpRequest to resolver to
@@ -103,13 +100,6 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
                 MatchSuccess(parameters)
         }
     }
-
-    fun updateMethod(method: String) = this.copy(method = method.toUpperCase())
-
-    fun bodyPattern(bodyContent: String?) = this.copy(body = parsedPattern(bodyContent!!))
-    fun bodyPattern(newBody: Pattern) = this.copy(body = newBody)
-
-    fun setBodyPattern(bodyContent: String?) = parsedPattern(bodyContent!!)
 
     fun generate(resolver: Resolver): HttpRequest {
         var newRequest = HttpRequest()

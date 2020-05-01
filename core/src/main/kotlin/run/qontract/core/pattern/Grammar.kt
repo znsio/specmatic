@@ -1,6 +1,8 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.value.StringValue
+import run.qontract.core.utilities.jsonStringToValueArray
+import run.qontract.core.utilities.jsonStringToValueMap
+import run.qontract.core.value.*
 
 internal fun withoutOptionality(key: String) = key.removeSuffix("?")
 internal fun isOptional(key: String): Boolean = key.endsWith("?")
@@ -19,7 +21,6 @@ internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
 
 internal val builtInPatterns = mapOf(
     "(number)" to NumberTypePattern,
-    "(numericstring)" to NumericStringPattern,
     "(string)" to StringPattern,
     "(boolean)" to BooleanPattern,
     "(null)" to NullPattern,
@@ -49,7 +50,7 @@ fun isPatternToken(patternValue: Any?) =
         else -> false
     }
 
-fun getBuiltInPattern(patternString: String): Pattern =
+internal fun getBuiltInPattern(patternString: String): Pattern =
         when {
             isPatternToken(patternString) -> builtInPatterns.getOrElse(patternString) {
                 when {
@@ -87,3 +88,50 @@ fun withoutRepeatingToken(patternValue: Any): String {
 
 fun isRepeatingPattern(patternValue: Any?): Boolean =
         patternValue != null && isPatternToken(patternValue) && (patternValue as String).endsWith("*)")
+
+fun stringToPattern(patternValue: String, key: String?): Pattern =
+        when {
+            isPatternToken(patternValue) -> DeferredPattern(patternValue, key)
+            else -> ExactMatchPattern(StringValue(patternValue))
+        }
+
+fun parsedPattern(rawContent: String, key: String? = null): Pattern {
+    return rawContent.trim().let {
+        when {
+            it.isEmpty() -> NoContentPattern
+            it.startsWith("{") -> JSONObjectPattern(it)
+            it.startsWith("[") -> JSONArrayPattern(it)
+            it.startsWith("<") -> XMLPattern(it)
+            isNullablePattern(it) -> AnyPattern(listOf(NullPattern, parsedPattern(withoutNullToken(it))))
+            isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
+            isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutRepeatingToken(it)))
+            it == "(number)" -> DeferredPattern(it, null)
+            isBuiltInPattern(it) -> getBuiltInPattern(it)
+            isPatternToken(it) -> DeferredPattern(it, key)
+            else -> ExactMatchPattern(StringValue(it))
+        }
+    }
+}
+
+fun parsedJSONStructure(content: String): Value {
+    return content.trim().let {
+        when {
+            it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
+            it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
+            else -> throw ContractException("Expected json, actual $content.")
+        }
+    }
+}
+
+fun parsedValue(content: String?): Value {
+    return content?.trim()?.let {
+        when {
+            it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
+            it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
+            it.startsWith("<") -> XMLValue(it)
+            it == "true" -> BooleanValue(true)
+            it == "false" -> BooleanValue(false)
+            else -> StringValue(it)
+        }
+    } ?: EmptyString
+}

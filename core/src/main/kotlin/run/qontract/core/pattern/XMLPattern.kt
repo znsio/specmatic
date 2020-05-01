@@ -313,6 +313,6 @@ internal fun parseXML(xmlData: String): Document {
 
 internal fun generateValue(key: String, value: String, resolver: Resolver): String {
     return if (isPatternToken(value)) {
-        resolver.generate(key, getBuiltInPattern(value)).toStringValue()
+        resolver.generate(key, parsedPattern(value)).toStringValue()
     } else value
 }

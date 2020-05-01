@@ -26,7 +26,7 @@ object NullPattern : Pattern {
         }
 
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern == NullPattern
-    override val description: String = "null"
+    override val displayName: String = "null"
 
     override val pattern: Any = "(null)"
     override fun toString(): String = "(null)"

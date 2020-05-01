@@ -27,21 +27,18 @@ fun createStubFromContracts(contractPaths: List<String>, host: String = "localho
     val contractInfo = contractPaths.map { path ->
         val contractGherkin = readFile(path)
         val contractBehaviour = ContractBehaviour(contractGherkin)
-        val stubInfo = loadStubInformation(path, contractBehaviour)
+        val stubInfo = loadStubInformation(path)
         Pair(contractBehaviour, stubInfo)
     }
 
     return ContractFake(contractInfo, host, port)
 }
 
-private fun loadStubInformation(filePath: String, contractBehaviour: ContractBehaviour): List<MockScenario> =
+private fun loadStubInformation(filePath: String): List<MockScenario> =
         stubDataFiles(filePath).map { file ->
             println("Loading data from ${file.name}")
 
             stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))
-                    .also {
-                        contractBehaviour.matchingMockResponse(it)
-                    }
         }
 
 private fun stubDataFiles(path: String): List<File> {

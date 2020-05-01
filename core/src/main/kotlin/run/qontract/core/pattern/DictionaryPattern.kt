@@ -53,7 +53,7 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
             (pattern.valuePattern.matchesPattern(this.keyPattern, resolver) || this.valuePattern.matchesPattern(pattern.valuePattern, resolver)))
     }
 
-    override val description: String = "object with key type ${keyPattern.description} and value type ${valuePattern.description}"
+    override val displayName: String = "object with key type ${keyPattern.displayName} and value type ${valuePattern.displayName}"
 
     override val pattern: Any = "(${withoutPatternDelimiters(keyPattern.pattern.toString())}:${withoutPatternDelimiters(valuePattern.pattern.toString())})"
 }

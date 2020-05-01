@@ -31,5 +31,5 @@ data class ListPattern(override val pattern: Pattern) : Pattern {
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
             pattern is ListPattern && pattern.pattern.matchesPattern(this.pattern, resolver)
 
-    override val description: String = "list of ${pattern.description}"
+    override val displayName: String = "list of ${pattern.displayName}"
 }

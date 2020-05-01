@@ -19,5 +19,5 @@ data class URLPathPattern(override val pattern: Pattern, val key: String? = null
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
             pattern is URLPathPattern && pattern.pattern.matchesPattern(this.pattern, resolver)
 
-    override val description: String = "url path"
+    override val displayName: String = "url path"
 }

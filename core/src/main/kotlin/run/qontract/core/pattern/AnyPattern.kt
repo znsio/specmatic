@@ -12,7 +12,7 @@ data class AnyPattern(override val pattern: List<Pattern>, override val key: Str
         pattern.asSequence().map {
             resolver.matchesPattern(key, it, sampleData ?: EmptyString)
         }.let { results ->
-            results.find { it is Result.Success } ?: failedToFindAny(description, results.map { it as Result.Failure }.toList(), sampleData)
+            results.find { it is Result.Success } ?: failedToFindAny(displayName, results.map { it as Result.Failure }.toList(), sampleData)
         }
 
     override fun generate(resolver: Resolver): Value =
@@ -27,13 +27,13 @@ data class AnyPattern(override val pattern: List<Pattern>, override val key: Str
     override fun parse(value: String, resolver: Resolver): Value =
         pattern.asSequence().map {
             try { it.parse(value, resolver) } catch(e: Throwable) { null }
-        }.find { it != null } ?: throw ContractException("Failed to parse value \"$value\". It should have matched one of ${pattern.joinToString(", ") { it.description }}.")
+        }.find { it != null } ?: throw ContractException("Failed to parse value \"$value\". It should have matched one of ${pattern.joinToString(", ") { it.displayName }}.")
 
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
             this.pattern.any { pattern.matchesPattern(it, resolver) }
 //            this.pattern.any { it.matchesPattern(pattern, resolver) }
 
-    override val description: String = pattern.joinToString(" or ") { inner -> inner.description }
+    override val displayName: String = pattern.joinToString(" or ") { inner -> inner.displayName }
 }
 
 private fun failedToFindAny(description: String, results: List<Result.Failure>, sampleData: Value?): Result.Failure {

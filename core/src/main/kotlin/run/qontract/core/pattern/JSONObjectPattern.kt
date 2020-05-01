@@ -31,7 +31,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
             newBasedOn(pattern, row, resolver).map { JSONObjectPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern is JSONObjectPattern
-    override val description: String = "json object"
+    override val displayName: String = "json object"
 }
 
 fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String, Value> =

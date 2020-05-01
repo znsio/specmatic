@@ -12,7 +12,7 @@ interface Pattern {
     fun parse(value: String, resolver: Resolver): Value
     fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean
 
-    val description: String
+    val displayName: String
 
     val pattern: Any
 }

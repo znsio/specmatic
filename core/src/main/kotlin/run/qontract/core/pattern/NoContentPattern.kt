@@ -34,7 +34,7 @@ object NoContentPattern : Pattern {
         return pattern is NoContentPattern
     }
 
-    override val description: String = "nothing"
+    override val displayName: String = "nothing"
 
     override val pattern: Any = ""
 

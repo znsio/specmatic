@@ -23,7 +23,7 @@ object NumberTypePattern : Pattern {
     }
 
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern is NumberTypePattern
-    override val description: String = "number"
+    override val displayName: String = "number"
 
     override val pattern: Any = "(number)"
     override fun toString(): String = pattern.toString()

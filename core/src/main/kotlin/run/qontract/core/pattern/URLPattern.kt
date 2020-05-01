@@ -30,5 +30,5 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS): Pattern {
         return this == pattern
     }
 
-    override val description: String = "url"
+    override val displayName: String = "url"
 }

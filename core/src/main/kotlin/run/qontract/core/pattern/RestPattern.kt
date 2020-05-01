@@ -17,7 +17,7 @@ data class RestPattern(override val pattern: Pattern) : Pattern {
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
             pattern is RestPattern && pattern.pattern.matchesPattern(this.pattern, resolver)
 
-    override val description: String = "the rest are ${pattern.description}"
+    override val displayName: String = "the rest are ${pattern.displayName}"
 }
 
 private const val REST_SUFFIX = "..."

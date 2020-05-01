@@ -32,7 +32,7 @@ data class DeferredPattern(override val pattern: String, override val key: Strin
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
             resolver.getPattern(this.pattern).matchesPattern(pattern, resolver)
 
-    override val description: String = withoutPatternDelimiters(pattern)
+    override val displayName: String = withoutPatternDelimiters(pattern)
 
     fun resolvePattern(resolver: Resolver): Pattern = when(val definedPattern = resolver.getPattern(pattern)) {
         is DeferredPattern -> definedPattern.resolvePattern(resolver)

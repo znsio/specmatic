@@ -20,7 +20,7 @@ data class ExactMatchPattern(override val pattern: Value) : Pattern {
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
             pattern is ExactMatchPattern && this.pattern == pattern.pattern
 
-    override val description: String = pattern.displayableValue()
+    override val displayName: String = pattern.displayableValue()
 
     override fun toString(): String = pattern.toStringValue()
 }

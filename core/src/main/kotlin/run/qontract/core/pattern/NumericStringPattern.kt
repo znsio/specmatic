@@ -20,7 +20,7 @@ object NumericStringPattern : Pattern {
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = NumberValue(convertToNumber(value))
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern is NumericStringPattern
-    override val description: String = "number"
+    override val displayName: String = "number"
 
     override fun toString() = pattern.toString()
 

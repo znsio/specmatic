@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.Resolver
+import run.qontract.core.Result
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.shouldMatch
@@ -66,6 +67,6 @@ internal class MockScenarioKtTest {
         parsedValue("""{"number": 10, "description": "10"}""") shouldMatch pattern.body
         parsedValue("""{"number": 10, "description": null}""") shouldMatch pattern.body
 
-        assertThatThrownBy { pattern.body.matches(parsedValue("""{"number": 10, "description": "test"}"""), Resolver()) }.isInstanceOf(ContractException::class.java)
+        assertThat(pattern.body.matches(parsedValue("""{"number": 10, "description": "test"}"""), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

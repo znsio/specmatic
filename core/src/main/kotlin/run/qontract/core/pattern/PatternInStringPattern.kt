@@ -11,7 +11,13 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern)
         if(sampleData !is StringValue)
             return mismatchResult(pattern, sampleData)
 
-        return pattern.matches(pattern.parse(sampleData.string, resolver), resolver)
+        val value = try {
+            pattern.parse(sampleData.string, resolver)
+        } catch(e: Throwable) {
+            return Result.Failure("Could not parse ${sampleData.displayableValue()} to ${pattern.displayName}")
+        }
+
+        return pattern.matches(value, resolver)
     }
 
     override fun generate(resolver: Resolver): Value = StringValue(pattern.generate(resolver).toStringValue())
@@ -23,5 +29,5 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern)
 
     override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern == this
 
-    override val description: String = "${pattern.description} in string"
+    override val displayName: String = "${pattern.displayName} in string"
 }

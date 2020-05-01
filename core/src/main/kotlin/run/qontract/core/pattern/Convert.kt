@@ -1,5 +1,3 @@
-@file:JvmName("Convert")
-
 package run.qontract.core.pattern
 
 import run.qontract.core.utilities.jsonStringToValueArray

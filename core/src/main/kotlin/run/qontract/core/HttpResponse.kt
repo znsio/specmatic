@@ -40,7 +40,8 @@ data class HttpResponse(val status: Int = 0, val body: String? = "", val headers
 
     companion object {
         var ERROR_400 = HttpResponse(400, "This request did not match any scenario.", emptyMap())
-        var OK_200_EMPTY = HttpResponse(200, "", emptyMap())
+        var OK = HttpResponse(200)
+        fun OK(body: String) = HttpResponse(200, body)
 
         fun jsonResponse(jsonData: String?): HttpResponse {
             return HttpResponse(200, jsonData, mapOf("Content-Type" to "application/json"))

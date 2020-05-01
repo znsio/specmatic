@@ -37,7 +37,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) =
-            matches(response, resolver.copy(matchPatternInValue = true, patterns = resolver.patterns.plus(mapOf("(number)" to NumericStringPattern))))
+            matches(response, resolver.copy(matchPatternInValue = true, newPatterns = resolver.newPatterns.plus(mapOf("(number)" to NumericStringPattern))))
 
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, _) = parameters
@@ -57,7 +57,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
 
     private fun matchBody(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
-        val resolverWithNumericString = resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern))
+        val resolverWithNumericString = resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumericStringPattern))
         when (val result = body.matches(parsedValue(response.body), resolverWithNumericString)) {
             is Result.Failure -> return MatchFailure(result.breadCrumb("BODY"))
         }

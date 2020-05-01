@@ -27,7 +27,7 @@ Given pattern Id
 
         val value = parsedValue("""[{"id": 12345}, {"id": 98765}]""")
         val idPattern = rowsToTabularPattern(getRows(gherkin))
-        val resolver = Resolver(patterns = mapOf("(Id)" to idPattern))
+        val resolver = Resolver(newPatterns = mapOf("(Id)" to idPattern))
 
         val idArrayPattern = parsedPattern("(Id*)")
         assertTrue(idArrayPattern.matches(value, resolver).isTrue())

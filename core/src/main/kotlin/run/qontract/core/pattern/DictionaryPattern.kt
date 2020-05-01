@@ -12,7 +12,7 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
 
-        val resolverWithNumericString = resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern))
+        val resolverWithNumericString = resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumericStringPattern))
 
         sampleData.jsonObject.forEach { (key, value) ->
             when(val result = resolverWithNumericString.matchesPattern(null, keyPattern, StringValue(key))) {

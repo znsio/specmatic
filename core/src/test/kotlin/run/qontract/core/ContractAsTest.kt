@@ -8,7 +8,6 @@ import org.junit.jupiter.api.fail
 import org.xml.sax.SAXException
 import run.qontract.core.HttpResponse.Companion.jsonResponse
 import run.qontract.core.HttpResponse.Companion.xmlResponse
-import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.utilities.parseXML
@@ -105,7 +104,7 @@ Couldn't convert "abc" to number""")
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers.keys).contains("test")
                 assertThat(request.headers["test"]).matches("[0-9]+")
-                return HttpResponse.OK_200_EMPTY
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
@@ -157,7 +156,7 @@ Couldn't convert "abc" to number""")
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers.keys).contains("x-loginId")
                 assertThat(request.headers["x-loginId"]).isEqualTo("a@b.com")
-                return HttpResponse.OK_200_EMPTY
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
@@ -407,7 +406,7 @@ Couldn't convert "abc" to number""")
                 val innerObject = actualLinkedIds.list.get(3) as JSONObjectValue
                 assertThat(innerObject.jsonObject.getValue("a")).isInstanceOf(NumberValue::class.java)
                 assertThat(innerObject.jsonObject.getValue("b")).isInstanceOf(StringValue::class.java)
-                return HttpResponse.OK_200_EMPTY
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
@@ -520,7 +519,7 @@ Couldn't convert "abc" to number""")
                     val cityValue = location.jsonObject.getValue("city") as StringValue
                     assertThat(cityValue.string.length).isNotZero()
                 }
-                return HttpResponse.OK_200_EMPTY
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
@@ -619,7 +618,7 @@ Couldn't convert "abc" to number""")
                 } catch (e: IOException) {
                     return HttpResponse.ERROR_400
                 }
-                return HttpResponse.OK_200_EMPTY
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
@@ -765,7 +764,7 @@ Couldn't convert "abc" to number""")
                 assertEquals("POST", request.method)
                 val requestBody = JSONObject(request.bodyString)
                 assertEquals(idFound[0], requestBody.getInt("id"))
-                return HttpResponse.OK_200_EMPTY
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -807,7 +806,7 @@ Scenario: Update pet details
                 assertEquals("POST", request.method)
                 val requestBody = JSONObject(request.bodyString)
                 assertEquals(idFound[0], requestBody.getInt("id"))
-                return HttpResponse.OK_200_EMPTY
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -893,7 +892,7 @@ Then status 200
                     assertThat(value).isInstanceOf(NumberValue::class.java)
                 }
 
-                return HttpResponse.OK_200_EMPTY
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {

@@ -5,9 +5,11 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
 
-data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean = false, val patterns: Map<String, Pattern> = emptyMap()) {
-    constructor(facts: Map<String, Value> = emptyMap(), matchPattern: Boolean = false, patterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), matchPattern, patterns)
+data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Pattern>, actual: Map<String, Value>) -> String? = checkOnlyPatternKeys ) {
+    constructor(facts: Map<String, Value> = emptyMap(), matchPattern: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), matchPattern, newPatterns)
     constructor() : this(emptyMap(), false)
+
+    val patterns = builtInPatterns.plus(newPatterns)
 
     fun matchesPattern(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
         if (matchPatternInValue &&
@@ -33,10 +35,11 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
     fun getPattern(patternValue: String): Pattern =
         when {
             isPatternToken(patternValue) -> {
-                patterns[patternValue] ?: when {
-                    isBuiltInPattern(patternValue) -> getBuiltInPattern(patternValue)
-                    else -> parsedPattern(patternValue, null)
-                }
+                patterns[patternValue] ?: parsedPattern(patternValue, null)
+//                patterns[patternValue] ?: when {
+//                    isBuiltInPattern(patternValue) -> getBuiltInPattern(patternValue)
+//                    else -> parsedPattern(patternValue, null)
+//                }
             }
             else -> throw ContractException("Type $patternValue does not exist.")
         }
@@ -64,8 +67,17 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
 }
 
 fun withNumericStringPattern(resolver: Resolver): Resolver =
-        resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern))
+        resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumericStringPattern))
 
 fun withNumberTypePattern(resolver: Resolver): Resolver =
-        resolver.copy(patterns = resolver.patterns.plus("(number)" to NumberTypePattern))
+        resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberTypePattern))
 
+val checkOnlyPatternKeys = { pattern: Map<String, Pattern>, actual: Map<String, Value> ->
+    pattern.keys.find { key -> isMissingKey(actual, key) }
+}
+
+val checkAllKeys = { pattern: Map<String, Pattern>, actual: Map<String, Value> ->
+    pattern.keys.find { key -> isMissingKey(actual, key) } ?: actual.keys.find { key ->
+        key !in pattern
+    }
+}

@@ -1,12 +1,10 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.*
-import run.qontract.core.value.NullValue
-import java.util.*
 
 data class HttpHeadersPattern(val headers: Map<String, Pattern> = emptyMap()) {
     fun matches(headers: Map<String, String>, resolver: Resolver): Result {
-        val result = headers to resolver.copy(patterns = resolver.patterns.plus("(number)" to NumericStringPattern)) to
+        val result = headers to resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumericStringPattern)) to
                 ::matchEach otherwise
                 ::handleError toResult
                 ::returnResult

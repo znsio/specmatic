@@ -231,7 +231,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val requestBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody(requestBody)
-            val expectedResponse = HttpResponse.OK_200_EMPTY.let { it.copy(headers = it.headers.plus("Content-Type" to "application/json"))}
+            val expectedResponse = HttpResponse.OK.let { it.copy(headers = it.headers.plus("Content-Type" to "application/json"))}
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
@@ -369,7 +369,7 @@ Scenario: JSON API to get account details with fact check
         ContractMock.fromGherkin(contractGherkin).use { mock ->
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").updateBody(JSONObjectValue(mapOf("one" to NumberValue(1), "two" to NumberValue(2))))
-            val expectedResponse = HttpResponse.OK_200_EMPTY
+            val expectedResponse = HttpResponse.OK
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
             val restTemplate = RestTemplate()
             try {
@@ -455,7 +455,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").copy(formFields = mapOf("Data" to "10"))
 
-            val expectedResponse = HttpResponse.OK_200_EMPTY
+            val expectedResponse = HttpResponse.OK
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
 
             try {

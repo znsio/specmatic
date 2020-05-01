@@ -196,7 +196,7 @@ And pattern Address
 
         val row = Row(listOf("id", "flat"), listOf("10", "100"))
 
-        val resolver = Resolver(patterns = mapOf("(User)" to userPattern, "(Address)" to addressPattern))
+        val resolver = Resolver(newPatterns = mapOf("(User)" to userPattern, "(Address)" to addressPattern))
 
         val value = userPattern.newBasedOn(row, resolver).first().generate(resolver)
 

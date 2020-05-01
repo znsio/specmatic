@@ -14,32 +14,21 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
-import run.qontract.core.ContractBehaviour
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
-import run.qontract.core.Result
+import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.toMap
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
-import run.qontract.mock.Expectation
 import run.qontract.mock.MockScenario
 import run.qontract.mock.writeBadRequest
-import java.io.Closeable
 
-class ContractFake(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "localhost", port: Int = 9000) : ContractStub {
+class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "localhost", port: Int = 9000) : ContractStub {
     constructor(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000) : this(listOf(Pair(ContractBehaviour(gherkinData), stubInfo)), host, port)
 
     val endPoint = "http://$host:$port"
 
-    private val contractBehaviours = contractInfo.map { it.first }
-    private val expectations = contractInfo.flatMap { (behaviour, mocks) ->
-        mocks.map { mock ->
-            val (resolver, httpResponse) = behaviour.matchingMockResponse(mock)
-            Triple(mock.request.toPattern(), resolver, httpResponse)
-        }
-    }
+    private val expectations = contractInfoToExpectations(contractInfo)
 
     private val server: ApplicationEngine = embeddedServer(Netty, host = host, port = port) {
         install(CORS) {
@@ -58,39 +47,21 @@ class ContractFake(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>
             try {
                 val httpRequest = ktorHttpRequestToHttpRequest(call)
 
-                if (isSetupRequest(httpRequest)) {
-                    setupServerState(httpRequest)
-                    call.response.status(HttpStatusCode.OK)
-                } else try {
-                    when (val mock = expectations.find { (requestPattern, resolver, _) ->
-                        requestPattern.matches(httpRequest, resolver) is Result.Success
-                    }) {
-                        null -> {
-                            val responses = contractBehaviours.asSequence().map {
-                                it.lookup(httpRequest)
-                            }
-
-                            val response = responses.firstOrNull {
-                                it.headers.getOrDefault("X-Qontract-Result", "none") != "failure"
-                            } ?: HttpResponse(400, responses.map { it.body ?: "" }.filter { it.isNotBlank() }.joinToString("\n\n"))
-
-                            respondToKtorHttpResponse(call, response)
-                        }
-                        else -> {
-                            val (_, _, response) = mock
-                            respondToKtorHttpResponse(call, response)
-                        }
+                when {
+                    isSetupRequest(httpRequest) -> {
+                        setupServerState(httpRequest)
+                        call.response.status(HttpStatusCode.OK)
                     }
-                } finally {
-                    contractBehaviours.forEach {
-                        it.clearServerState()
+                    else -> {
+                        val response = stubResponse(httpRequest, contractInfo, expectations)
+                        respondToKtorHttpResponse(call, response)
                     }
                 }
             }
             catch(e: ContractException) {
                 writeBadRequest(call, e.report())
             }
-            catch(e: Exception) {
+            catch(e: Throwable) {
                 writeBadRequest(call, e.message)
             }
         }
@@ -102,7 +73,7 @@ class ContractFake(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>
 
     private fun setupServerState(httpRequest: HttpRequest) {
         val body = httpRequest.body
-        contractBehaviours.forEach { behaviour ->
+        contractInfo.forEach { (behaviour, _) ->
             behaviour.setServerState(body?.let { toMap(it) } ?: mutableMapOf())
         }
     }
@@ -152,5 +123,39 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     catch(e: Exception)
     {
         println(e.toString())
+    }
+}
+
+fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>>, expectations: List<Triple<HttpRequestPattern, Resolver, HttpResponse>>): HttpResponse {
+    return try {
+        when (val mock = expectations.find { (requestPattern, resolver, _) ->
+            requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)) is Result.Success
+        }) {
+            null -> {
+                val responses = contractInfo.asSequence().map { (behaviour, _) ->
+                    behaviour.lookup(httpRequest)
+                }
+
+                responses.firstOrNull {
+                    it.headers.getOrDefault("X-Qontract-Result", "none") != "failure"
+                } ?: HttpResponse(400, responses.map {
+                    it.body ?: ""
+                }.filter { it.isNotBlank() }.joinToString("\n\n"))
+            }
+            else -> mock.third
+        }
+    } finally {
+        contractInfo.forEach { (behaviour, _) ->
+            behaviour.clearServerState()
+        }
+    }
+}
+
+fun contractInfoToExpectations(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>>): List<Triple<HttpRequestPattern, Resolver, HttpResponse>> {
+    return contractInfo.flatMap { (behaviour, mocks) ->
+        mocks.map { mock ->
+            val (resolver, httpResponse) = behaviour.matchingMockResponse(mock)
+            Triple(mock.request.toPattern(), resolver, httpResponse)
+        }
     }
 }

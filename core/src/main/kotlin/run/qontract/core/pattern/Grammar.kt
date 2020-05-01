@@ -17,7 +17,7 @@ internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
             else -> key in jsonObject
         }
 
-private val builtInPatterns = mapOf(
+internal val builtInPatterns = mapOf(
     "(number)" to NumberTypePattern,
     "(numericstring)" to NumericStringPattern,
     "(string)" to StringPattern,

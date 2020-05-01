@@ -28,4 +28,11 @@ internal class DictionaryPatternTest {
 
         value shouldNotMatch pattern
     }
+
+    @Test
+    fun `should match a json object with a key type of number`() {
+        val pattern = DictionaryPattern(DeferredPattern("(number)"), DeferredPattern("(string)"))
+        parsedValue("""{"1": "1", "2": "two"}""") shouldMatch pattern
+        parsedValue("""{"one": "1", "2": "two"}""") shouldNotMatch pattern
+    }
 }

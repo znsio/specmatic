@@ -12,7 +12,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
 
-        val missingKey = pattern.keys.find { key -> isMissingKey(sampleData.jsonObject, key) }
+        val missingKey = resolver.findMissingKey(pattern, sampleData.jsonObject)
         if(missingKey != null)
             return Result.Failure("Missing key $missingKey")
 

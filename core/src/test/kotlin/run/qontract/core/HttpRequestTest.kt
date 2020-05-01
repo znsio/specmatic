@@ -39,9 +39,9 @@ internal class HttpRequestTest {
         val request = HttpRequest("POST", "/", emptyMap(), parsedValue("""{"data": "(string?)"}"""))
         val requestPattern = request.toPattern()
         val body = requestPattern.body
-        if(body !is JSONObjectPattern) fail("Expected json object pattern")
+        if (body !is JSONObjectPattern) fail("Expected json object pattern")
 
-        val dataPattern  = body.pattern.getValue("data") as DeferredPattern
+        val dataPattern = body.pattern.getValue("data") as DeferredPattern
         val nullableStringPattern = AnyPattern(listOf(NullPattern, StringPattern))
 
         assertThat(dataPattern.resolvePattern(Resolver())).isEqualTo(nullableStringPattern)
@@ -52,9 +52,9 @@ internal class HttpRequestTest {
         val request = HttpRequest("POST", "/", emptyMap(), parsedValue("""{"data": "(string*)"}"""))
         val requestPattern = request.toPattern()
         val body = requestPattern.body
-        if(body !is JSONObjectPattern) fail("Expected json object pattern")
+        if (body !is JSONObjectPattern) fail("Expected json object pattern")
 
-        val dataPattern  = body.pattern.getValue("data") as DeferredPattern
+        val dataPattern = body.pattern.getValue("data") as DeferredPattern
         val listOfStringsPattern = ListPattern(StringPattern)
 
         assertThat(dataPattern.resolvePattern(Resolver())).isEqualTo(listOfStringsPattern)
@@ -66,9 +66,9 @@ internal class HttpRequestTest {
         val requestPattern = request.toPattern()
         val body = requestPattern.body
 
-        if(body !is JSONObjectPattern) fail("Expected json object pattern")
+        if (body !is JSONObjectPattern) fail("Expected json object pattern")
 
-        val dataPattern  = body.pattern.getValue("data") as JSONArrayPattern
+        val dataPattern = body.pattern.getValue("data") as JSONArrayPattern
         val deferredPattern = dataPattern.pattern.first() as DeferredPattern
         assertThat(deferredPattern.resolvePattern(Resolver())).isEqualTo(RestPattern(StringPattern))
     }
@@ -91,8 +91,5 @@ internal class HttpRequestTest {
 
         assertThat(requestPattern.body.matches(parsedValue("""{"maybe": "present"}"""), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(requestPattern.body.matches(parsedValue("""{}"""), Resolver())).isInstanceOf(Result.Success::class.java)
-
-//        val expected = AnyPattern(listOf(parsedPattern("""{"maybe": "present"}"""), parsedPattern("""{}""")))
-//        assertThat(requestPattern.body).isEqualTo(expected)
     }
 }

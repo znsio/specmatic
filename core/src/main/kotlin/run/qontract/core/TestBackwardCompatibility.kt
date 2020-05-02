@@ -3,18 +3,24 @@ package run.qontract.core
 import run.qontract.core.pattern.ContractException
 import java.io.File
 
-fun testBackwardCompatibility(older: ContractBehaviour, newerContract: ContractBehaviour): Results =
+fun testBackwardCompatibility(older: ContractBehaviour, newer: ContractBehaviour): Results =
         older.generateTestScenarios().fold(Results()) { results, olderScenario ->
-            newerContract.setServerState(olderScenario.expectedFacts)
+            newer.setServerState(olderScenario.expectedFacts)
 
             val request = olderScenario.generateHttpRequest()
 
             try {
-                val response = newerContract.lookup(request)
+                val responses = newer.lookupAllResponses(request)
 
-                val result = when {
-                    response.headers["X-Qontract-Result"] == "failure" -> Result.Failure(response.body ?: "")
-                    else -> olderScenario.matches(response)
+                val (response, result) = when {
+                    responses.singleOrNull()?.headers?.get("X-Qontract-Result") == "failure" -> Pair(responses.first(), Result.Failure(responses.first().body ?: ""))
+                    else -> {
+                        val matchResults = responses.asSequence().map { response ->
+                            Pair(response, olderScenario.matches(response))
+                        }
+
+                        matchResults.find { it.second is Result.Failure } ?: Pair(responses.first(), Result.Success())
+                    }
                 }
 
                 results.copy(results = results.results.plus(Triple(result, request, response)).toMutableList())

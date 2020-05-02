@@ -28,7 +28,7 @@ class LexTest {
 
         val request = HttpRequest().updateMethod("POST").updatePath("/add").updateBody("[1, 2]")
 
-        val response = contractBehaviour.lookup(request)
+        val response = contractBehaviour.lookupResponse(request)
 
         assertEquals(200, response.status)
 
@@ -54,7 +54,7 @@ class LexTest {
         val contractBehaviour = ContractBehaviour(contractGherkin)
 
         val request = HttpRequest().updateMethod("POST").updatePath("/pets").updateBody("""{"name": "Benny", "description": "Fluffy and white"}""")
-        val response = contractBehaviour.lookup(request)
+        val response = contractBehaviour.lookupResponse(request)
 
         try { NumberTypePattern.parse(response.body ?: "", Resolver()) } catch(e: Throwable) { fail("Expected Number value") }
     }
@@ -75,7 +75,7 @@ class LexTest {
         val contractBehaviour = ContractBehaviour(contractGherkin)
 
         val request = HttpRequest().updateMethod("GET").updatePath("/pets/10")
-        val response = contractBehaviour.lookup(request)
+        val response = contractBehaviour.lookupResponse(request)
 
         parsedValue(response.body ?: "").let { body ->
             if(body !is JSONObjectValue) fail("Expected JSON object")
@@ -100,7 +100,7 @@ class LexTest {
 
         val request = HttpRequest().updateMethod("PATCH").updatePath("/pets").updateBody("""{"health": "good"}""")
 
-        val response = contractBehaviour.lookup(request)
+        val response = contractBehaviour.lookupResponse(request)
 
         assertEquals(202, response.status)
     }

@@ -51,7 +51,7 @@ class SetupFacts {
                 put("account_id", NumberValue(54321))
             }
         })
-        val response = contractBehaviour.lookup(request)
+        val response = contractBehaviour.lookupResponse(request)
         assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body)
         assertEquals(responseJSON.getInt("calls_left"), 10)
@@ -253,7 +253,7 @@ Feature: Contract for /balance API
                 put("userid", NumberValue(10))
             }
         })
-        val httpResponse = contractBehaviour.lookup(httpRequest)
+        val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
         val actual = JSONObject(httpResponse.body)
@@ -280,7 +280,7 @@ Feature: Contract for /balance API
         }
         contractBehaviour.setServerState(serverState)
         val request = HttpRequest().updateMethod("POST").updatePath("/account").updateBody("{\"account_id\": 10}")
-        val response = contractBehaviour.lookup(request)
+        val response = contractBehaviour.lookupResponse(request)
         assertNotNull(response)
         assertEquals(200, response.status)
         val jsonObject = JSONObject(response.body)
@@ -306,7 +306,7 @@ Feature: Contract for /balance API
         }
         contractBehaviour.setServerState(serverState)
         val request = HttpRequest().updateMethod("POST").updatePath("/account").updateBody("<account_id>10</account_id>")
-        val response = contractBehaviour.lookup(request)
+        val response = contractBehaviour.lookupResponse(request)
         assertNotNull(response)
         assertEquals(200, response.status)
         val jsonObject = JSONObject(response.body)
@@ -332,7 +332,7 @@ Feature: Contract for /balance API
         }
         contractBehaviour.setServerState(serverState)
         val request = HttpRequest().updateMethod("POST").updatePath("/account").updateBody("<account account_id=\"10\">(string)</account>")
-        val response = contractBehaviour.lookup(request)
+        val response = contractBehaviour.lookupResponse(request)
         assertNotNull(response)
         assertEquals(200, response.status)
         val jsonObject = JSONObject(response.body)

@@ -128,13 +128,6 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
-    fun matchesMock(response: HttpResponse): Result {
-        val resolver = Resolver(IgnoreFacts(), true, patterns)
-        return httpResponsePattern.matchesMock(response, resolver).also {
-            it.updateScenario(this)
-        }
-    }
-
     fun resolverAndResponseFrom(response: HttpResponse?): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
@@ -157,6 +150,16 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
+
+    fun generateHttpResponses(actualFacts: Map<String, Value>): List<HttpResponse> {
+        return scenarioBreadCrumb(this) {
+            Resolver(emptyMap(), false, patterns)
+            val resolver = Resolver(actualFacts, false, patterns)
+            val facts = combineFacts(expectedFacts, actualFacts, resolver)
+
+            httpResponsePattern.generateResponses(resolver.copy(factStore = CheckFacts(facts)))
+        }
+    }
 
 }
 

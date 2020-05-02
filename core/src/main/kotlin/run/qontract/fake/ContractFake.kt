@@ -22,8 +22,6 @@ import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import run.qontract.mock.MockScenario
 import run.qontract.mock.writeBadRequest
-import java.text.DateFormat
-import java.util.*
 
 class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "127.0.0.1", port: Int = 9000) : ContractStub {
     constructor(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000) : this(listOf(Pair(ContractBehaviour(gherkinData), stubInfo)), host, port)
@@ -135,7 +133,7 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehav
         }) {
             null -> {
                 val responses = contractInfo.asSequence().map { (behaviour, _) ->
-                    behaviour.lookup(httpRequest)
+                    behaviour.lookupResponse(httpRequest)
                 }
 
                 responses.firstOrNull {

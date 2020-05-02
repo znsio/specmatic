@@ -20,7 +20,7 @@ class XMLMatching {
                 ""
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val request = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account_id", "10")
-        val response = contractBehaviour.lookup(request)
+        val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
         val root = parseXML(response.body ?: "").documentElement
         val type = root.attributes.getNamedItem("type").nodeValue
@@ -45,7 +45,7 @@ class XMLMatching {
                 ""
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("<account type=\"user\"><name>John</name><address>Mumbai</address><age>25</age></account>")
-        val response = contractBehaviour.lookup(request)
+        val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
     }
 }

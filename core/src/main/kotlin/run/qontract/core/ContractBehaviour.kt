@@ -22,20 +22,37 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
 
     constructor(gherkinData: String) : this(parseGherkinString(gherkinData))
 
-    fun lookup(httpRequest: HttpRequest): HttpResponse {
+    fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
-            val results = Results()
-            scenarios.find {
-                it.matches(httpRequest, serverState).also { result ->
-                    results.add(result, httpRequest, null)
-                } is Result.Success
-            }?.let {
-                return it.generateHttpResponse(serverState)
-            }
-            return results.generateErrorHttpResponse()
+            val resultList = lookupScenario(httpRequest, scenarios)
+            return matchingScenario(resultList)?.generateHttpResponse(serverState) ?: errorResponse(resultList, httpRequest)
         } finally {
             serverState = emptyMap()
         }
+    }
+
+    fun lookupAllResponses(httpRequest: HttpRequest): List<HttpResponse> =
+        try {
+            matchingScenario(lookupScenario(httpRequest, scenarios))?.generateHttpResponses(serverState) ?: listOf(errorResponse(lookupScenario(httpRequest, scenarios), httpRequest))
+        } finally {
+            serverState = emptyMap()
+        }
+
+    private fun errorResponse(resultList: Sequence<Pair<Scenario, Result>>, httpRequest: HttpRequest) =
+            Results(resultList.map { Triple(it.second, httpRequest, null) }.toMutableList()).generateErrorHttpResponse()
+
+    private fun matchingScenario(resultList: Sequence<Pair<Scenario, Result>>): Scenario? {
+        return resultList.find {
+            it.second is Result.Success
+        }?.first
+    }
+
+    private fun lookupScenario(httpRequest: HttpRequest, scenarios: List<Scenario>): Sequence<Pair<Scenario, Result>> {
+        val scenarioSequence = scenarios.asSequence()
+
+        return scenarioSequence.zip(scenarioSequence.map {
+            it.matches(httpRequest, serverState)
+        })
     }
 
     fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results =

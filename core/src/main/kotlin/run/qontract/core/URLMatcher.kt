@@ -38,6 +38,10 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     private fun matchesQuery(sampleQuery: Map<String, String>, resolver: Resolver): Result {
+        val missingKey = resolver.findMissingKey(queryPattern.mapKeys { "${it.key}?" }, sampleQuery.mapValues { StringValue(it.value) })
+        if(missingKey != null)
+            return Result.Failure("Key $missingKey was missing in query", null, missingKey)
+
         for (key in queryPattern.keys) {
             if (sampleQuery.containsKey(key)) {
                 val patternValue = queryPattern.getValue(key)

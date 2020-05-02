@@ -68,7 +68,7 @@ Expected string: "balance", actual was string: "balance2"""")
         assertThat(httpResponse.body).isEqualTo("""In scenario "Get balance info"
 >> REQUEST.HEADERS.x-loginId
 
-Header was missing""".trimIndent())
+Header x-loginId was missing""".trimIndent())
     }
 
     @Test

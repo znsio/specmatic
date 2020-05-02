@@ -36,10 +36,6 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
         when {
             isPatternToken(patternValue) -> {
                 patterns[patternValue] ?: parsedPattern(patternValue, null)
-//                patterns[patternValue] ?: when {
-//                    isBuiltInPattern(patternValue) -> getBuiltInPattern(patternValue)
-//                    else -> parsedPattern(patternValue, null)
-//                }
             }
             else -> throw ContractException("Type $patternValue does not exist.")
         }

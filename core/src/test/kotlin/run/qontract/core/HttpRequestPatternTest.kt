@@ -75,6 +75,6 @@ internal class HttpRequestPatternTest {
         )
 
         val newPatterns = pattern.newBasedOn(Row(), Resolver())
-        assertEquals("(string)", newPatterns[0].headersPattern.headers.get("Test-Header").toString())
+        assertEquals("(string)", newPatterns[0].headersPattern.pattern.get("Test-Header").toString())
     }
 }

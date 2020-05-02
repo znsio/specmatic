@@ -205,7 +205,7 @@ fun plusHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHea
     val parts = breakIntoParts(rest, 2)
 
     return when (parts.size) {
-        2 -> headersPattern.copy(headers = headersPattern.headers.plus(toPatternPair(parts[0], parts[1])))
+        2 -> headersPattern.copy(pattern = headersPattern.pattern.plus(toPatternPair(parts[0], parts[1])))
         1 -> throw ContractException("Header $parts[0] should have a value")
         else -> throw ContractException("Unrecognised header params $rest")
     }

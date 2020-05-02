@@ -1,9 +1,7 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.*
-import run.qontract.core.value.EmptyString
 import run.qontract.core.value.StringValue
-import java.io.UnsupportedEncodingException
 import java.net.URI
 
 data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val urlMatcher: URLMatcher? = null, val method: String? = null, val body: Pattern = NoContentPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap()) {

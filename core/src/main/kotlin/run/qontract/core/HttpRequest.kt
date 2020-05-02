@@ -69,8 +69,8 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         method?.let { requestMap["method"] = StringValue(it) } ?: throw ContractException("Can't serialise the request without a method.")
         body?.let { requestMap["body"] = it }
 
-        if (queryParams.size > 0) requestMap["query"] = JSONObjectValue(queryParams.mapValues { StringValue(it.value) })
-        if (headers.size > 0) requestMap["headers"] = JSONObjectValue(headers.mapValues { StringValue(it.value) })
+        if (queryParams.isNotEmpty()) requestMap["query"] = JSONObjectValue(queryParams.mapValues { StringValue(it.value) })
+        if (headers.isNotEmpty()) requestMap["headers"] = JSONObjectValue(headers.mapValues { StringValue(it.value) })
 
         if(formFields.isNotEmpty()) requestMap["form-fields"] = JSONObjectValue(formFields.mapValues { StringValue(it.value) })
 

@@ -10,7 +10,7 @@ internal fun isOptional(key: String): Boolean = key.endsWith("?")
 internal fun isMissingKey(jsonObject: Map<String, Any?>, key: String) =
         when {
             key.endsWith("?") -> false
-            else -> key !in jsonObject
+            else -> key !in jsonObject && "$key?" !in jsonObject
         }
 
 internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =

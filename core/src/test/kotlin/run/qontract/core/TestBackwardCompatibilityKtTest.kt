@@ -1,6 +1,7 @@
 package run.qontract.core
 
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 
 internal class TestBackwardCompatibilityKtTest {
     @Test
@@ -34,8 +35,8 @@ Then status 200
 
         val result: Results = testBackwardCompatibility(olderContract, newerContract)
 
-        kotlin.test.assertEquals(1, result.failureCount)
-        kotlin.test.assertEquals(1, result.successCount)
+        assertEquals(1, result.failureCount)
+        assertEquals(1, result.successCount)
     }
 
     @Test
@@ -71,8 +72,8 @@ Then status 200
 
         val result: Results = testBackwardCompatibility(olderContract, newerContract)
 
-        kotlin.test.assertEquals(2, result.successCount)
-        kotlin.test.assertEquals(0, result.failureCount)
+        assertEquals(2, result.successCount)
+        assertEquals(0, result.failureCount)
     }
 
     @Test
@@ -107,8 +108,8 @@ Then status 200
 
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
 
-        kotlin.test.assertEquals(0, results.successCount)
-        kotlin.test.assertEquals(2, results.failureCount)
+        assertEquals(0, results.successCount)
+        assertEquals(2, results.failureCount)
     }
 
     @Test
@@ -129,8 +130,8 @@ Then status 200
         if(results.failureCount > 0)
             println(results.report())
 
-        kotlin.test.assertEquals(1, results.successCount)
-        kotlin.test.assertEquals(0, results.failureCount)
+        assertEquals(1, results.successCount)
+        assertEquals(0, results.failureCount)
     }
 
     @Test
@@ -151,8 +152,8 @@ Then status 200
         if(results.failureCount > 0)
             println(results.report())
 
-        kotlin.test.assertEquals(2, results.successCount)
-        kotlin.test.assertEquals(0, results.failureCount)
+        assertEquals(2, results.successCount)
+        assertEquals(0, results.failureCount)
     }
 
     @Test
@@ -173,8 +174,8 @@ Then status 200
         if(results.failureCount > 0)
             println(results.report())
 
-        kotlin.test.assertEquals(2, results.successCount)
-        kotlin.test.assertEquals(0, results.failureCount)
+        assertEquals(2, results.successCount)
+        assertEquals(0, results.failureCount)
     }
 
     @Test
@@ -197,8 +198,8 @@ Then status 200
         if(results.failureCount > 0)
             println(results.report())
 
-        kotlin.test.assertEquals(2, results.successCount)
-        kotlin.test.assertEquals(0, results.failureCount)
+        assertEquals(2, results.successCount)
+        assertEquals(0, results.failureCount)
     }
 
     @Test
@@ -219,8 +220,8 @@ And response-body (number?)
         if(results.failureCount > 0)
             println(results.report())
 
-        kotlin.test.assertEquals(1, results.successCount)
-        kotlin.test.assertEquals(0, results.failureCount)
+        assertEquals(1, results.successCount)
+        assertEquals(0, results.failureCount)
     }
 
     @Test
@@ -243,7 +244,61 @@ And response-body (Number)
         if(results.failureCount > 0)
             println(results.report())
 
-        kotlin.test.assertEquals(1, results.successCount)
-        kotlin.test.assertEquals(0, results.failureCount)
+        assertEquals(1, results.successCount)
+        assertEquals(0, results.failureCount)
+    }
+
+    @Test
+    fun `contract with a required key should not match a contract with the same key made optional`() {
+        val behaviour1 = ContractBehaviour("""
+Feature: Contract API
+
+Scenario: api call
+When POST /number
+And request-body (number)
+Then status 200
+And response-body
+| number      | (number) |
+| description | (string) |
+""".trim())
+
+        val behaviour2 = ContractBehaviour("""
+Feature: Contract API
+
+Scenario: api call
+When POST /number
+And request-body (number)
+Then status 200
+And response-body
+| number       | (number) |
+| description? | (string) |
+""".trim())
+
+        val results: Results = testBackwardCompatibility(behaviour1, behaviour2)
+
+        println(results.report())
+        assertEquals(0, results.successCount)
+        assertEquals(1, results.failureCount)
+    }
+
+    @Test
+    fun `contract with an optional key in the response should pass against itself`() {
+        val behaviour = ContractBehaviour("""
+Feature: Contract API
+
+Scenario: api call
+When POST /number
+And request-body (number)
+Then status 200
+And response-body
+| number       | (number) |
+| description? | (string) |
+""".trim())
+
+        val results: Results = testBackwardCompatibility(behaviour, behaviour)
+
+        println(results.report())
+        assertEquals(1, results.successCount)
+        assertEquals(0, results.failureCount)
     }
 }

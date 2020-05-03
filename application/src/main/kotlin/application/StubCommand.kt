@@ -1,6 +1,7 @@
 package application
 
 import picocli.CommandLine.*
+import run.qontract.core.pattern.ContractException
 import run.qontract.fake.ContractStub
 import run.qontract.fake.createStubFromContracts
 import run.qontract.mock.NoMatchingScenario
@@ -15,6 +16,9 @@ class StubCommand : Callable<Unit> {
 
     @Parameters(arity = "1..*", description = ["Contract file paths"])
     lateinit var paths: List<String>
+
+    @Option(names = ["--data"], description = ["Directory in which contract data may be found"])
+    var dataDir: String? = null
 
     @Option(names = ["--host"], description = ["Host"], defaultValue = "localhost")
     lateinit var host: String
@@ -49,11 +53,15 @@ class StubCommand : Callable<Unit> {
             }
         } catch (e: NoMatchingScenario) {
             println(e.localizedMessage)
+        } catch (e:ContractException) {
+            println(e.report())
+        } catch (e: Throwable) {
+            println("An error occurred: ${e.localizedMessage}")
         }
     }
 
     private fun startServer() {
-        contractFake = createStubFromContracts(paths, host, port)
+        contractFake = dataDir?.let { createStubFromContracts(paths, it, host, port) } ?: createStubFromContracts(paths, host, port)
     }
 
     private fun restartServer() {

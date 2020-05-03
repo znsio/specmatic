@@ -6,3 +6,4 @@ val qontractRepoDirPath = "$qontractDirPath/repos"
 
 const val POINTER_EXTENSION = "pointer"
 const val CONTRACT_EXTENSION = "qontract"
+const val DATA_DIR_SUFFIX = "_data"

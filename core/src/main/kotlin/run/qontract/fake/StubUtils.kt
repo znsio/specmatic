@@ -2,9 +2,11 @@
 package run.qontract.fake
 
 import run.qontract.core.ContractBehaviour
+import run.qontract.core.DATA_DIR_SUFFIX
 import run.qontract.core.utilities.readFile
 import run.qontract.core.value.StringValue
 import run.qontract.mock.MockScenario
+import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.stringToMockScenario
 import java.io.File
 
@@ -21,6 +23,43 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
     }
 
     return ContractFake(listOf(Pair(contractBehaviour, mocks)), host, port)
+}
+
+fun createStubFromContracts(contractPaths: List<String>, dataDirPath: String, host: String = "localhost", port: Int = 9000): ContractStub {
+    val dataDir = File(dataDirPath)
+    if(!dataDir.exists() || !dataDir.isDirectory) throw Exception("Data directory $dataDirPath does not exist.")
+
+    val behaviours = contractPaths.map { path ->
+        Pair(File(path), ContractBehaviour(readFile(path)))
+    }
+
+    val dataFiles = dataDir.listFiles()?.filter { it.extension == "json" }
+    val mocks = dataFiles?.map { Pair(it, stringToMockScenario(StringValue(it.readText()))) } ?: emptyList()
+
+    val contractInfo = mocks.map { (mockFile, mock) ->
+        val matchResults = behaviours.asSequence().map { (contractFile, behaviour) ->
+            try {
+                behaviour.matchingMockResponse(mock)
+                Pair(behaviour, null)
+            } catch (e: NoMatchingScenario) {
+                Pair(null, Pair(e, contractFile))
+            }
+        }
+
+        val behaviour = matchResults.mapNotNull { it.first }.firstOrNull()
+                ?: throw NoMatchingScenario(matchResults.mapNotNull { it.second }.map {
+                    val (exception, contractFile) = it
+                    "${mockFile.absolutePath} didn't match ${contractFile.absolutePath}${System.lineSeparator()}${exception.message}"
+                }.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
+
+        Pair(behaviour, mock)
+    }.groupBy { it.first }.mapValues { it.value.map { it.second } }.entries.map { Pair(it.key, it.value)}
+
+    dataFiles?.let {
+        println("Loaded data from:${System.lineSeparator()}${it.joinToString(System.lineSeparator())}")
+    }
+
+    return ContractFake(contractInfo, host, port)
 }
 
 fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
@@ -43,7 +82,7 @@ private fun loadStubInformation(filePath: String): List<MockScenario> =
 
 private fun stubDataFiles(path: String): List<File> {
     val contractFile = File(path)
-    val stubDataDir = File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}_data")
+    val stubDataDir = File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
     println("Loading data files from ${stubDataDir.absolutePath} ")
 
     return stubDataDir.listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()

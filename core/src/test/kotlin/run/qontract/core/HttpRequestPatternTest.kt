@@ -3,6 +3,7 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.Row
+import run.qontract.core.pattern.StringPattern
 import run.qontract.core.pattern.parsedPattern
 import run.qontract.core.pattern.stringToPattern
 import java.net.URI
@@ -76,5 +77,23 @@ internal class HttpRequestPatternTest {
 
         val newPatterns = pattern.newBasedOn(Row(), Resolver())
         assertEquals("(string)", newPatterns[0].headersPattern.pattern.get("Test-Header").toString())
+    }
+
+    @Test
+    fun `a request with an optional header should result in 2 options for newBasedOn`() {
+        val requests = HttpRequestPattern(method = "GET",
+                urlMatcher = toURLPattern(URI("/")),
+                headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern))).newBasedOn(Row(), Resolver())
+
+        assertThat(requests).hasSize(2)
+
+        val flags = requests.map {
+            when {
+                it.headersPattern.pattern.containsKey("X-Optional") -> "with"
+                else -> "without"
+            }
+        }
+
+        flagsContain(flags, listOf("with", "without"))
     }
 }

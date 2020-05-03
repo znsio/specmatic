@@ -69,14 +69,16 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
                 .none { it.matches(response) is Result.Success }
     }
 
-    fun matchingMockResponse(request: HttpRequest, response: HttpResponse): Pair<Resolver, HttpResponse> {
+    fun matchingMockResponse(request: HttpRequest, response: HttpResponse): Triple<Resolver, Scenario, HttpResponse> {
         try {
             val results = Results()
 
             for (scenario in scenarios) {
                 try {
                     when(val mockMatches = scenario.matchesMock(request, response)) {
-                        is Result.Success -> return scenario.resolverAndResponseFrom(response)
+                        is Result.Success -> return scenario.resolverAndResponseFrom(response).let {
+                            Triple(it.first, scenario, it.second)
+                        }
                         is Result.Failure -> {
                             results.add(mockMatches
                                     .updateScenario(scenario), request, response)
@@ -101,7 +103,7 @@ class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
             scenario.copy(examples = emptyList()).generateTestScenarios()
         }
 
-    fun matchingMockResponse(mockScenario: MockScenario): Pair<Resolver, HttpResponse> =
+    fun matchingMockResponse(mockScenario: MockScenario): Triple<Resolver, Scenario, HttpResponse> =
             matchingMockResponse(mockScenario.request, mockScenario.response)
 
     fun clearServerState() {

@@ -74,6 +74,7 @@ val checkOnlyPatternKeys = { pattern: Map<String, Pattern>, actual: Map<String, 
 
 val checkAllKeys = { pattern: Map<String, Pattern>, actual: Map<String, Value> ->
     pattern.keys.find { key -> isMissingKey(actual, key) } ?: actual.keys.find { key ->
-        key !in pattern
+        val keyWithoutOptionality = withoutOptionality(key)
+        key !in pattern && "$keyWithoutOptionality?" !in pattern
     }
 }

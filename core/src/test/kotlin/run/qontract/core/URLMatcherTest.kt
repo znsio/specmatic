@@ -153,4 +153,22 @@ internal class URLMatcherTest {
         assertNotEquals("(string)", query.getValue("id"))
         assertTrue(query.getValue("id").isNotEmpty())
     }
+
+    @Test
+    fun `request url with no query params should match a url pattern with query params`() {
+        val matcher = toURLPattern(URI("/pets?id=(string)"))
+        assertThat(matcher.matches(URI("/pets"), emptyMap())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `request url with 1 query param should match a url pattern with superset of 2 params`() {
+        val matcher = toURLPattern(URI("/pets?id=(string)&name=(string)"))
+        assertThat(matcher.matches(URI("/pets"), mapOf("name" to "Jack Daniel"))).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `request url query params should match a url with unknown query params`() {
+        val matcher = toURLPattern(URI("/pets?id=(string)"))
+        assertThat(matcher.matches(URI("/pets"), mapOf("name" to "Jack Daniel"))).isInstanceOf(Result.Success::class.java)
+    }
 }

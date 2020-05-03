@@ -154,8 +154,12 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehav
 fun contractInfoToExpectations(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>>): List<Triple<HttpRequestPattern, Resolver, HttpResponse>> {
     return contractInfo.flatMap { (behaviour, mocks) ->
         mocks.map { mock ->
-            val (resolver, httpResponse) = behaviour.matchingMockResponse(mock)
-            Triple(mock.request.toPattern(), resolver, httpResponse)
+            val (resolver, scenario, httpResponse) = behaviour.matchingMockResponse(mock)
+
+            val requestPattern = mock.request.toPattern()
+            val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
+
+            Triple(requestPatternWithHeaderAncestor, resolver, httpResponse)
         }
     }
 }

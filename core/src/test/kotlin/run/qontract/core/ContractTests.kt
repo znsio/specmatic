@@ -1,14 +1,12 @@
 package run.qontract.core
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.Contract.Companion.fromGherkin
 import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.value.*
 import run.qontract.test.TestExecutor
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
-import kotlin.test.fail
+import kotlin.test.*
 
 class ContractTests {
     @Test
@@ -507,4 +505,106 @@ Then status 200
         assertEquals(1, invocationCount)
         assertFalse(results.hasFailures(), results.report())
     }
+
+    @Test
+    fun `optional header should result in 2 tests` () {
+        val gherkin = """
+Feature: Dumb API
+
+Scenario: api call
+When GET /acceptNumber
+And request-header X-Optional? (string)
+Then status 200
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableListOf<String>()
+
+        val results = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.headers)
+                when {
+                    "X-Optional" in request.headers -> flags.add("with")
+                    else -> flags.add("without")
+                }
+
+                return HttpResponse(200, "")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        flagsContain(flags, listOf("with", "without"))
+        assertFalse(results.hasFailures(), results.report())
+    }
+
+    @Test
+    fun `a single query param should result in 2 tests` () {
+        val gherkin = """
+Feature: Dumb API
+
+Scenario: api call
+When GET /queryNumber?type=(string)
+Then status 200
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableListOf<String>()
+
+        val results = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                when {
+                    "type" in request.queryParams -> flags.add("with")
+                    else -> flags.add("without")
+                }
+
+                return HttpResponse(200, "")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        flagsContain(flags, listOf("with", "without"))
+        assertFalse(results.hasFailures(), results.report())
+    }
+
+    @Test
+    fun `an optional header should pick up its value from row` () {
+        val gherkin = """
+Feature: Dumb API
+
+Scenario: api call
+When GET /queryNumber
+And request-header type? (string)
+Then status 200
+
+Examples:
+| type      |
+| some kind |
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableListOf<String>()
+
+        val results = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add(request.headers["type"] ?: "")
+                return HttpResponse(200, "")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(flags).isEqualTo(mutableListOf("some kind"))
+        assertFalse(results.hasFailures(), results.report())
+    }
+}
+
+fun flagsContain(haystack: List<String>, needles: List<String>) {
+    println("Haystack: $haystack")
+    println("Needles: $needles")
+    assertNull(needles.find { it !in haystack })
 }

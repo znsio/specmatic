@@ -3,6 +3,7 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.Row
+import run.qontract.core.pattern.StringPattern
 import run.qontract.core.pattern.stringToPattern
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
@@ -97,5 +98,46 @@ internal class HttpHeadersPatternTest {
         val headers = HttpHeadersPattern(mapOf("Content-Type" to stringToPattern("(string)", "Content-Type")))
         val newHeaders = headers.newBasedOn(Row(), Resolver())
         assertEquals("(string)", newHeaders[0].pattern.getValue("Content-Type").toString())
+    }
+
+    @Test
+    fun `given ancestor headers from the creators header set the pattern should skip past all headers in the value map not in the ancestors list`() {
+        val pattern = HttpHeadersPattern(mapOf("X-Required-Header" to StringPattern), mapOf("X-Required-Header" to StringPattern))
+        val headers = mapOf("X-Required-Header" to "some value", "X-Extraneous-Header" to "some other value")
+
+        assertThat(pattern.matches(headers, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should match if optional headers are present`() {
+        val pattern = HttpHeadersPattern(mapOf("X-Optional-Header?" to StringPattern))
+        val headers = mapOf("X-Optional-Header?" to "some value")
+
+        assertThat(pattern.matches(headers, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should match if optional headers are absent`() {
+        val pattern = HttpHeadersPattern(mapOf("X-Optional-Header?" to StringPattern))
+        val headers = emptyMap<String, String>()
+
+        assertThat(pattern.matches(headers, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `an optional header should result in 2 new header patterns for newBasedOn`() {
+        val pattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern))
+        val list = pattern.newBasedOn(Row(), Resolver())
+
+        assertThat(list).hasSize(2)
+
+        val flags = list.map {
+            when {
+                it.pattern.contains("X-Optional") -> "with"
+                else -> "without"
+            }
+        }
+
+        flagsContain(flags, listOf("with", "without"))
     }
 }

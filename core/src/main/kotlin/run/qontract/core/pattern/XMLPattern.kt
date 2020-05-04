@@ -221,8 +221,8 @@ data class XMLPattern(val node: Node) : Pattern {
     }
 
     override fun parse(value: String, resolver: Resolver): Value = XMLValue(value)
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern is XMLPattern
-    override val displayName: String = "xml"
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is XMLPattern
+    override val description: String = "xml"
 
     private fun updateBasedOnRow(node: Node, row: Row, resolver: Resolver) {
         attempt(breadCrumb = node.nodeName) {
@@ -247,7 +247,7 @@ data class XMLPattern(val node: Node) : Pattern {
                         when {
                             isPatternToken(rowValue) -> {
                                 val rowPattern = resolver.getPattern(rowValue)
-                                if(!nodePattern.matchesPattern(rowPattern, resolver))
+                                if(!nodePattern.encompasses(rowPattern, resolver))
                                     throw ContractException("Type $rowValue in example did not match ${node.nodeValue} in the xml document")
                                 else {
                                     putValueIntoNode(resolver.generate(nodeName, rowPattern), node)

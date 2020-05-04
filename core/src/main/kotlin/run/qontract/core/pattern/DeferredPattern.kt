@@ -29,15 +29,17 @@ data class DeferredPattern(override val pattern: String, override val key: Strin
     override fun parse(value: String, resolver: Resolver): Value =
         resolver.getPattern(pattern).parse(value, resolver)
 
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
-            resolver.getPattern(this.pattern).matchesPattern(pattern, resolver)
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
+            resolver.getPattern(this.pattern).encompasses(otherPattern, resolver)
 
-    override val displayName: String = withoutPatternDelimiters(pattern)
+    override val description: String = withoutPatternDelimiters(pattern)
 
     fun resolvePattern(resolver: Resolver): Pattern = when(val definedPattern = resolver.getPattern(pattern)) {
         is DeferredPattern -> definedPattern.resolvePattern(resolver)
         else -> definedPattern
     }
+
+    override fun patternSet(resolver: Resolver): List<Pattern> = resolvePattern(resolver).patternSet(resolver)
 
     override fun toString() = pattern
 }

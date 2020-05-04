@@ -25,8 +25,8 @@ object NullPattern : Pattern {
             else -> throw ContractException("Failed to parse $value: it is not null.")
         }
 
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern == NullPattern
-    override val displayName: String = "null"
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern == NullPattern
+    override val description: String = "null"
 
     override val pattern: Any = "(null)"
     override fun toString(): String = "(null)"

@@ -28,8 +28,10 @@ data class ListPattern(override val pattern: Pattern) : Pattern {
         })
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolver).map { ListPattern(it) } }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
-            pattern is ListPattern && pattern.pattern.matchesPattern(this.pattern, resolver)
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
+            otherPattern is ListPattern && otherPattern.pattern.fitsWithin(pattern.patternSet(resolver), resolver)
 
-    override val displayName: String = "list of ${pattern.displayName}"
+    override fun patternSet(resolver: Resolver): List<Pattern> = pattern.patternSet(resolver).map { ListPattern(it) }
+
+    override val description: String = "list of ${pattern.description}"
 }

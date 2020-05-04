@@ -14,10 +14,13 @@ data class RestPattern(override val pattern: Pattern) : Pattern {
     override fun generate(resolver: Resolver): JSONArrayValue = listPattern.generate(resolver)
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = pattern.newBasedOn(row, resolver).map { RestPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = listPattern.parse(value, resolver)
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
-            pattern is RestPattern && pattern.pattern.matchesPattern(this.pattern, resolver)
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
+            otherPattern is RestPattern && otherPattern.pattern.fitsWithin(pattern.patternSet(resolver), resolver)
 
-    override val displayName: String = "the rest are ${pattern.displayName}"
+    override fun patternSet(resolver: Resolver): List<Pattern> =
+            pattern.patternSet(resolver).map { RestPattern(it) }
+
+    override val description: String = "the rest are ${pattern.description}"
 }
 
 private const val REST_SUFFIX = "..."

@@ -47,13 +47,13 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
 
     override fun parse(value: String, resolver: Resolver): Value = parsedValue(value)
 
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean {
-        return (pattern is DictionaryPattern &&
-        (pattern.keyPattern.matchesPattern(this.keyPattern, resolver) || this.keyPattern.matchesPattern(pattern.keyPattern, resolver)) &&
-            (pattern.valuePattern.matchesPattern(this.keyPattern, resolver) || this.valuePattern.matchesPattern(pattern.valuePattern, resolver)))
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean {
+        return (otherPattern is DictionaryPattern &&
+        (otherPattern.keyPattern.encompasses(this.keyPattern, resolver) || this.keyPattern.encompasses(otherPattern.keyPattern, resolver)) &&
+            (otherPattern.valuePattern.encompasses(this.keyPattern, resolver) || this.valuePattern.encompasses(otherPattern.valuePattern, resolver)))
     }
 
-    override val displayName: String = "object with key type ${keyPattern.displayName} and value type ${valuePattern.displayName}"
+    override val description: String = "object with key type ${keyPattern.description} and value type ${valuePattern.description}"
 
     override val pattern: Any = "(${withoutPatternDelimiters(keyPattern.pattern.toString())}:${withoutPatternDelimiters(valuePattern.pattern.toString())})"
 }

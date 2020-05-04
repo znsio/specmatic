@@ -43,12 +43,12 @@ internal class URLSchemeTest {
 
     @Test
     fun `should match another pattern with the same scheme`() {
-        assertTrue(URLPattern(URLScheme.HTTP).matchesPattern(URLPattern(URLScheme.HTTP), Resolver()))
+        assertTrue(URLPattern(URLScheme.HTTP).encompasses(URLPattern(URLScheme.HTTP), Resolver()))
     }
 
     @Test
     fun `should not match another pattern with a different scheme`() {
-        assertFalse(URLPattern(URLScheme.HTTP).matchesPattern(URLPattern(URLScheme.HTTPS), Resolver()))
+        assertFalse(URLPattern(URLScheme.HTTP).encompasses(URLPattern(URLScheme.HTTPS), Resolver()))
     }
 
     @Test

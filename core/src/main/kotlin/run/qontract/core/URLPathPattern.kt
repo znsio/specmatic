@@ -16,8 +16,8 @@ data class URLPathPattern(override val pattern: Pattern, val key: String? = null
             pattern.newBasedOn(row, resolver).map { URLPathPattern(it, key) }
 
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean =
-            pattern is URLPathPattern && pattern.pattern.matchesPattern(this.pattern, resolver)
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
+            otherPattern is URLPathPattern && otherPattern.pattern.encompasses(this.pattern, resolver)
 
-    override val displayName: String = "url path"
+    override val description: String = "url path"
 }

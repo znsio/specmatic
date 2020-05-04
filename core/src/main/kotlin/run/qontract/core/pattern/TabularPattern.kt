@@ -87,8 +87,8 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
         }.map { TabularPattern(it) }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern is TabularPattern
-    override val displayName: String = "json object"
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is TabularPattern
+    override val description: String = "json object"
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
@@ -102,8 +102,8 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
                     if(isPatternToken(rowValue)) {
                         val rowPattern = resolver.getPattern(rowValue)
                         attempt(breadCrumb = key) {
-                            if (!pattern.matchesPattern(rowPattern, resolver))
-                                throw ContractException("In the scenario, $key contained a ${pattern.displayName}, but the corresponding example contained ${rowPattern.displayName}")
+                            if (!pattern.encompasses(rowPattern, resolver))
+                                throw ContractException("In the scenario, $key contained a ${pattern.description}, but the corresponding example contained ${rowPattern.description}")
                         }
 
                         rowPattern.newBasedOn(row, resolver)

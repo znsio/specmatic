@@ -19,7 +19,7 @@ internal class StringValueTest {
         println(pattern)
         println(constructedPattern)
 
-        assertThat(pattern.matchesPattern(constructedPattern, Resolver())).isTrue()
+        assertThat(pattern.encompasses(constructedPattern, Resolver())).isTrue()
 
         StringValue("data") shouldMatch  pattern
         NullValue shouldMatch  pattern

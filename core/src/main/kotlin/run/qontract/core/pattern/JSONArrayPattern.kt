@@ -56,8 +56,8 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONArrayPattern> = newBasedOn(pattern, row, resolver).map { JSONArrayPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern is JSONArrayPattern
-    override val displayName: String = "json array"
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is JSONArrayPattern
+    override val description: String = "json array"
 }
 
 fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {

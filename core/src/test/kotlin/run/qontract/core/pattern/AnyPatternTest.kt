@@ -1,5 +1,6 @@
 package run.qontract.core.pattern
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
@@ -39,5 +40,10 @@ internal class AnyPatternTest {
     @Test
     fun `should generate a value based on the pattern given`() {
         NumberValue(10) shouldMatch AnyPattern(listOf(parsedPattern("(number)")))
+    }
+
+    @Test
+    fun `AnyPattern of null and string patterns should encompass null pattern`() {
+        assertThat(AnyPattern(listOf(NullPattern, StringPattern)).encompasses(NullPattern, Resolver())).isTrue()
     }
 }

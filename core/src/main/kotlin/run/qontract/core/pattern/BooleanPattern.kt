@@ -4,7 +4,6 @@ import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.mismatchResult
 import run.qontract.core.value.BooleanValue
-import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import java.util.*
@@ -25,8 +24,8 @@ object BooleanPattern : Pattern {
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = BooleanValue(value.toBoolean())
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern is BooleanPattern
-    override val displayName: String = "boolean"
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is BooleanPattern
+    override val description: String = "boolean"
     override val pattern: Any = "(boolean)"
     override fun toString(): String = pattern.toString()
 }

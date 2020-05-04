@@ -14,7 +14,7 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern)
         val value = try {
             pattern.parse(sampleData.string, resolver)
         } catch(e: Throwable) {
-            return Result.Failure("Could not parse ${sampleData.displayableValue()} to ${pattern.displayName}")
+            return Result.Failure("Could not parse ${sampleData.displayableValue()} to ${pattern.description}")
         }
 
         return pattern.matches(value, resolver)
@@ -27,7 +27,12 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern)
 
     override fun parse(value: String, resolver: Resolver): Value = StringValue(pattern.parse(value, resolver).toStringValue())
 
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern == this
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
+            otherPattern is PatternInStringPattern
+                    && otherPattern.pattern.fitsWithin(pattern.patternSet(resolver), resolver)
 
-    override val displayName: String = "${pattern.displayName} in string"
+    override fun patternSet(resolver: Resolver): List<Pattern> =
+            pattern.patternSet(resolver).map { PatternInStringPattern(it) }
+
+    override val description: String = "${pattern.description} in string"
 }

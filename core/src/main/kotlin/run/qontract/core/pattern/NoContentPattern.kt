@@ -30,11 +30,11 @@ object NoContentPattern : Pattern {
         }
     }
 
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean {
-        return pattern is NoContentPattern
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean {
+        return otherPattern is NoContentPattern
     }
 
-    override val displayName: String = "nothing"
+    override val description: String = "nothing"
 
     override val pattern: Any = ""
 

@@ -27,8 +27,8 @@ object DateTimePattern : Pattern {
                 StringValue(value)
             }
 
-    override fun matchesPattern(pattern: Pattern, resolver: Resolver): Boolean = pattern is DateTimePattern
-    override val displayName: String = "datetime"
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is DateTimePattern
+    override val description: String = "datetime"
 
     override val pattern = "(datetime)"
 }

@@ -61,9 +61,9 @@ internal class PatternInStringPatternTest {
         val pattern1 = PatternInStringPattern(NumberTypePattern)
         val pattern2 = PatternInStringPattern(NumberTypePattern)
 
-        assertThat(pattern1.matchesPattern(pattern2, Resolver())).isTrue()
+        assertThat(pattern1.encompasses(pattern2, Resolver())).isTrue()
 
         val pattern3 = PatternInStringPattern(BooleanPattern)
-        assertThat(pattern1.matchesPattern(pattern3, Resolver())).isFalse()
+        assertThat(pattern1.encompasses(pattern3, Resolver())).isFalse()
     }
 }

@@ -12,9 +12,10 @@ data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean =
     val patterns = builtInPatterns.plus(newPatterns)
 
     fun matchesPattern(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
-        if (matchPatternInValue &&
-                sampleValue is StringValue && isPatternToken(sampleValue.string) &&
-                pattern == getPattern(sampleValue.string))
+        if (matchPatternInValue
+                && sampleValue is StringValue
+                && isPatternToken(sampleValue.string)
+                && pattern.encompasses(getPattern(sampleValue.string), this))
             return Result.Success()
 
         when (val result = pattern.matches(sampleValue, this)) {

@@ -7,11 +7,10 @@ import run.qontract.core.ContractBehaviour
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.pattern.parsedValue
-import run.qontract.core.value.EmptyString
-import run.qontract.core.value.NumberValue
+import run.qontract.core.value.*
 import run.qontract.mock.MockScenario
 
-internal class ContractFakeKtTest {
+internal class StubUtilsTest {
     @Test
     fun `given an expectation json with a key and one without, the request with the key should always match`() {
         val behaviour = ContractBehaviour("""
@@ -177,6 +176,76 @@ Feature: Math API
 
         assertThat(response.status).isEqualTo(200)
         assertThat(response.body).isEqualTo("2")
+    }
+
+    @Test
+    fun `stubbing out a contract pattern in json by specifing a sub pattern in stub data`() {
+        val behaviour = ContractBehaviour("""
+Feature: Math API
+
+    Scenario: Square of a number
+        When POST /square
+        And request-body
+          | number      | (number?)  |
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val mockRequest1 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to StringValue("(number)"))))
+        val mockRequest2 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to StringValue("(null)"))))
+
+        val mock1 = MockScenario(mockRequest1, HttpResponse.OK("1"))
+        val mock2 = MockScenario(mockRequest2, HttpResponse.OK("2"))
+        val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
+
+        val actualRequest1 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to NumberValue(10))))
+        stubResponse(actualRequest1, contractInfo).let { response ->
+            println(response)
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body).isEqualTo("1")
+        }
+
+        val actualRequest2 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to NullValue)))
+        stubResponse(actualRequest2, contractInfo).let { response ->
+            println(response)
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body).isEqualTo("2")
+        }
+    }
+
+
+    @Test
+    fun `stubbing out a contract pattern in request body by specifing a sub pattern in stub data`() {
+        val behaviour = ContractBehaviour("""
+Feature: Math API
+
+    Scenario: Square of a number
+        When POST /square
+        And request-body (number?)
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val mockRequest1 = HttpRequest("POST", "/square", body = StringValue("(number)"))
+        val mockRequest2 = HttpRequest("POST", "/square", body = StringValue("(null)"))
+
+        val mock1 = MockScenario(mockRequest1, HttpResponse.OK("1"))
+        val mock2 = MockScenario(mockRequest2, HttpResponse.OK("2"))
+        val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
+
+        val actualRequest1 = HttpRequest("POST", "/square", body = NumberValue(10))
+        stubResponse(actualRequest1, contractInfo).let { response ->
+            println(response)
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body).isEqualTo("1")
+        }
+
+        val actualRequest2 = HttpRequest("POST", "/square", body = EmptyString)
+        stubResponse(actualRequest2, contractInfo).let { response ->
+            println(response)
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body).isEqualTo("2")
+        }
     }
 
     private fun fakeResponse(request: HttpRequest, behaviour: ContractBehaviour): HttpResponse {

@@ -6,7 +6,7 @@ import java.io.File
 
 fun getContractFileName(directory: String, majorVersion: Int, minorVersion: Int? = null): String? {
     return when(val result = testBackwardCompatibilityInDirectory(File(directory), majorVersion, minorVersion)) {
-        is JustOne -> File(result.file).absolutePath
+        is JustOne -> File(result.filePath).absolutePath
         is NoContractsFound -> return null
         is TestResults -> {
             if(minorVersion != null && result.list.any { !it.results.success() } ) {

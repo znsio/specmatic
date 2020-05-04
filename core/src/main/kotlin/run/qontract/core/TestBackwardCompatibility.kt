@@ -37,7 +37,7 @@ data class Comparison(val older: String, val newer: String, val results: Results
 
 sealed class CompatibilityResult
 data class TestResults(val list: Sequence<Comparison>) : CompatibilityResult()
-data class JustOne(val file: String) : CompatibilityResult()
+data class JustOne(val filePath: String) : CompatibilityResult()
 object NoContractsFound : CompatibilityResult()
 
 fun testBackwardCompatibilityInDirectory(directory: File, majorVersion: Int, minorVersion: Int?): CompatibilityResult {

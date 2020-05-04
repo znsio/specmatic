@@ -1,7 +1,9 @@
 package application
 
 import application.versioning.commands.*
+import application.versioning.commands.repo.VersionCommand
 import picocli.CommandLine
+import picocli.CommandLine.Command
 import picocli.CommandLine.HelpCommand
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -9,7 +11,7 @@ import java.util.*
 import java.util.concurrent.Callable
 import java.util.logging.LogManager
 
-@CommandLine.Command(name = "qontract", mixinStandardHelpOptions = true, version = ["0.6.1"], subcommands = [CheckCommand::class, CheckoutCommand::class, CompareCommand::class, HelpCommand::class, IncrementCommand::class, ListCommand::class, MockCommand::class, RepoCommand::class, SamplesCommand::class, ShowCommand::class, StubCommand::class, TestCommand::class, UpdateCommand::class])
+@Command(name = "qontract", mixinStandardHelpOptions = true, version = ["0.6.0"], subcommands = [CheckCommand::class, CheckoutCommand::class, CompareCommand::class, HelpCommand::class, IncrementCommand::class, ListCommand::class, MockCommand::class, RepoCommand::class, SamplesCommand::class, ShowCommand::class, StubCommand::class, TestCommand::class, UpdateCommand::class, VersionCommand::class])
 class QontractApplication : Callable<Int> {
     override fun call(): Int {
         return 0

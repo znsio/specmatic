@@ -27,7 +27,7 @@ class CheckCommand: Callable<Unit> {
 
         val result = testBackwardCompatibilityInDirectory(File(directory), majorVersion, minorVersion)
         val (exitValue, message) = when(result) {
-            is JustOne -> Pair(0, "There was just one contract: ${result.file}")
+            is JustOne -> Pair(0, "There was just one contract: ${result.filePath}")
             is TestResults -> {
                 when(val failure = result.list.firstOrNull { !it.results.success() }) {
                     null -> Pair(0, "Contracts are all backward compatible.")

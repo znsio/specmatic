@@ -19,7 +19,14 @@ allprojects {
 }
 
 subprojects {
-    version '0.6.0'
+    def versionPropsFile = file('../version.properties')
+    Properties versionProps = new Properties()
+
+    versionProps.load(new FileInputStream(versionPropsFile))
+
+    def versionInfo = versionProps['version']
+
+    version versionInfo
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {

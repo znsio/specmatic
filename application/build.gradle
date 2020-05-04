@@ -8,8 +8,13 @@ application {
     mainClassName = "application.QontractApplication"
 }
 
+jar {
+    from '../version.properties'
+}
+
 shadowJar {
     archiveFileName = "qontract.${archiveExtension.get()}"
+    from '../version.properties'
 }
 
 repositories {

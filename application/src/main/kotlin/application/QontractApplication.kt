@@ -11,7 +11,7 @@ import java.util.*
 import java.util.concurrent.Callable
 import java.util.logging.LogManager
 
-@Command(name = "qontract", mixinStandardHelpOptions = true, version = ["0.6.0"], subcommands = [CheckCommand::class, CheckoutCommand::class, CompareCommand::class, HelpCommand::class, IncrementCommand::class, ListCommand::class, MockCommand::class, RepoCommand::class, SamplesCommand::class, ShowCommand::class, StubCommand::class, TestCommand::class, UpdateCommand::class, VersionCommand::class])
+@Command(name = "qontract", mixinStandardHelpOptions = true, versionProvider = VersionProvider::class, subcommands = [CheckCommand::class, CheckoutCommand::class, CompareCommand::class, HelpCommand::class, IncrementCommand::class, ListCommand::class, MockCommand::class, RepoCommand::class, SamplesCommand::class, ShowCommand::class, StubCommand::class, TestCommand::class, UpdateCommand::class, VersionCommand::class])
 class QontractApplication : Callable<Int> {
     override fun call(): Int {
         return 0

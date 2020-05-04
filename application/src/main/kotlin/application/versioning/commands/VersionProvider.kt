@@ -1,0 +1,16 @@
+package application.versioning.commands
+
+import application.QontractApplication
+import picocli.CommandLine
+import java.util.*
+
+class VersionProvider : CommandLine.IVersionProvider {
+    override fun getVersion(): Array<String> {
+        val props = Properties()
+        QontractApplication::class.java.classLoader.getResourceAsStream("version.properties").use {
+            props.load(it)
+        }
+
+        return arrayOf(props.getProperty("version"))
+    }
+}

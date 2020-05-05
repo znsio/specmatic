@@ -24,7 +24,7 @@ import run.qontract.mock.MockScenario
 import run.qontract.nullLog
 import java.util.*
 
-class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = ::nullLog) : ContractStub {
+class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
     constructor(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000) : this(listOf(Pair(ContractBehaviour(gherkinData), stubInfo)), host, port)
 
     val endPoint = "http://$host:$port"

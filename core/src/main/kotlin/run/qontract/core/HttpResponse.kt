@@ -6,7 +6,7 @@ import run.qontract.core.utilities.prettifyJsonString
 import run.qontract.core.value.*
 
 data class HttpResponse(val status: Int = 0, val body: String? = "", val headers: Map<String, String> = mapOf("Content-Type" to "text/plain")) {
-    val statusText: String
+    private val statusText: String
         get() =
             when(status) {
                 0 -> ""

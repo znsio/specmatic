@@ -1,6 +1,7 @@
 @file:JvmName("StubUtils")
 package run.qontract.fake
 
+import run.qontract.consoleLog
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.DATA_DIR_SUFFIX
 import run.qontract.core.utilities.readFile
@@ -22,7 +23,7 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
                 }
     }
 
-    return ContractFake(listOf(Pair(contractBehaviour, mocks)), host, port)
+    return ContractFake(listOf(Pair(contractBehaviour, mocks)), host, port, ::consoleLog)
 }
 
 fun createStubFromContracts(contractPaths: List<String>, dataDirPath: String, host: String = "localhost", port: Int = 9000): ContractStub {
@@ -59,7 +60,7 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPath: String, ho
         println("Loaded data from:${System.lineSeparator()}${it.joinToString(System.lineSeparator())}")
     }
 
-    return ContractFake(contractInfo, host, port)
+    return ContractFake(contractInfo, host, port, ::consoleLog)
 }
 
 fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
@@ -70,7 +71,7 @@ fun createStubFromContracts(contractPaths: List<String>, host: String = "localho
         Pair(contractBehaviour, stubInfo)
     }
 
-    return ContractFake(contractInfo, host, port)
+    return ContractFake(contractInfo, host, port, ::consoleLog)
 }
 
 private fun loadStubInformation(filePath: String): List<MockScenario> =

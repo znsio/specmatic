@@ -11,6 +11,7 @@ import io.ktor.http.content.TextContent
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
+import run.qontract.consoleLog
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.pattern.ContractException
@@ -24,7 +25,7 @@ import java.net.URISyntaxException
 import java.net.URL
 import java.util.*
 
-class HttpClient(private val baseURL: String) : TestExecutor {
+class HttpClient(private val baseURL: String, private val log: (event: String) -> Unit = ::consoleLog) : TestExecutor {
     private val serverStateURL = "/_server_state"
     @OptIn(KtorExperimentalAPI::class)
     @Throws(IOException::class, URISyntaxException::class)
@@ -55,7 +56,6 @@ class HttpClient(private val baseURL: String) : TestExecutor {
                     this.body = when {
                         request.headers.containsKey("Content-Type") -> TextContent(request.bodyString, ContentType.parse(request.headers["Content-Type"] as String))
                         else -> TextContent(request.bodyString, ContentType.parse(request.body.httpContentType))
-//                        else -> request.bodyString
                     }
                 }
             }
@@ -63,13 +63,13 @@ class HttpClient(private val baseURL: String) : TestExecutor {
             val endTime = Date()
 
             val outboundRequest: HttpRequest = ktorHttpRequestToHttpRequest(ktorResponse.request, request)
-            println(">> Request Start At $startTime")
-            println(outboundRequest.toLogString("-> "))
+            log(">> Request Start At $startTime")
+            log(outboundRequest.toLogString("-> "))
 
             ktorResponseToHttpResponse(ktorResponse).also {
-                println(it.toLogString("<- "))
-                println("<< Response At $endTime == ")
-                println()
+                log(it.toLogString("<- "))
+                log("<< Response At $endTime == ")
+                log(System.lineSeparator())
             }
         }
     }
@@ -84,8 +84,8 @@ class HttpClient(private val baseURL: String) : TestExecutor {
         val startTime = Date()
 
         runBlocking {
-            println("# >> Request Sent At $startTime")
-            println(startLinesWith(valueMapToPlainJsonString(serverState), "# "))
+            log("# >> Request Sent At $startTime")
+            log(startLinesWith(valueMapToPlainJsonString(serverState), "# "))
 
             val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
                 this.method = HttpMethod.Post
@@ -95,7 +95,7 @@ class HttpClient(private val baseURL: String) : TestExecutor {
 
             val endTime = Date()
 
-            println("# << Complete At $endTime")
+            log("# << Complete At $endTime")
 
             ktorResponseToHttpResponse(ktorResponse)
 

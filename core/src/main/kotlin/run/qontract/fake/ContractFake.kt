@@ -21,9 +21,10 @@ import run.qontract.core.utilities.toMap
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import run.qontract.mock.MockScenario
-import run.qontract.mock.writeBadRequest
+import run.qontract.nullLog
+import java.util.*
 
-class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "127.0.0.1", port: Int = 9000) : ContractStub {
+class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = ::nullLog) : ContractStub {
     constructor(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000) : this(listOf(Pair(ContractBehaviour(gherkinData), stubInfo)), host, port)
 
     val endPoint = "http://$host:$port"
@@ -53,16 +54,27 @@ class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<M
                         call.response.status(HttpStatusCode.OK)
                     }
                     else -> {
+                        log(">> Request Start At ${Date()}")
+                        log(httpRequest.toLogString("-> "))
                         val response = stubResponse(httpRequest, contractInfo, expectations)
+                        log(response.toLogString("<- "))
+                        log("<< Response At ${Date()} == ")
+                        log(System.lineSeparator())
                         respondToKtorHttpResponse(call, response)
                     }
                 }
             }
             catch(e: ContractException) {
-                writeBadRequest(call, e.report())
+                val response = badRequest(e.report())
+                log(response.toLogString("<- "))
+                log("<< Response At ${Date()} == ")
+                respondToKtorHttpResponse(call, response)
             }
             catch(e: Throwable) {
-                writeBadRequest(call, e.message)
+                val response = badRequest(e.message)
+                log(response.toLogString("<- "))
+                log("<< Response At ${Date()} == ")
+                respondToKtorHttpResponse(call, response)
             }
         }
     }
@@ -162,4 +174,8 @@ fun contractInfoToExpectations(contractInfo: List<Pair<ContractBehaviour, List<M
             Triple(requestPatternWithHeaderAncestor, resolver, httpResponse)
         }
     }
+}
+
+fun badRequest(errorMessage: String?): HttpResponse {
+    return HttpResponse(HttpStatusCode.UnprocessableEntity.value, errorMessage, mapOf("X-Qontract-Result" to "failure"))
 }

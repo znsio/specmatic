@@ -3,9 +3,7 @@ package run.qontract.fake
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import run.qontract.core.ContractBehaviour
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
+import run.qontract.core.*
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.*
 import run.qontract.mock.MockScenario
@@ -213,7 +211,6 @@ Feature: Math API
         }
     }
 
-
     @Test
     fun `stubbing out a contract pattern in request body by specifing a sub pattern in stub data`() {
         val behaviour = ContractBehaviour("""
@@ -246,6 +243,96 @@ Feature: Math API
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body).isEqualTo("2")
         }
+    }
+
+    @Test
+    fun `should load a stub with a form content part and match such a request`() {
+        val behaviour = ContractBehaviour("""
+Feature: Math API
+
+    Scenario: Square of a number
+        When POST /square
+        And request-part number (number)
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartContentValue("number", NumberValue(10))))
+        val mock = MockScenario(request, HttpResponse.OK("10"))
+
+        val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
+
+        println(response.toLogString())
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).hasSizeGreaterThan(0)
+        assertDoesNotThrow { response.body?.toInt() }
+    }
+
+    @Test
+    fun `should match multipart content part`() {
+        val behaviour = ContractBehaviour("""
+Feature: Math API
+
+    Scenario: Square of a number
+        When POST /square
+        And request-part number (number)
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartContentValue("number", NumberValue(10))))
+
+        val response = stubResponse(request, listOf(Pair(behaviour, emptyList())))
+
+        println(response.toLogString())
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).hasSizeGreaterThan(0)
+        assertDoesNotThrow { response.body?.toInt() }
+    }
+
+    @Test
+    fun `should load a stub with a file part and match such a request`() {
+        val behaviour = ContractBehaviour("""
+Feature: Math API
+
+    Scenario: Square of a number
+        When POST /square
+        And request-part number @number.txt text/plain
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "@number.txt", "text/plain", null)))
+        val mock = MockScenario(request, HttpResponse.OK("10"))
+
+        val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
+
+        println(response.toLogString())
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).hasSizeGreaterThan(0)
+        assertDoesNotThrow { response.body?.toInt() }
+    }
+
+    @Test
+    fun `should match multipart file part`() {
+        val behaviour = ContractBehaviour("""
+Feature: Math API
+
+    Scenario: Square of a number
+        When POST /square
+        And request-part number @number.txt text/plain
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "@number.txt", "text/plain", null)))
+
+        val response = stubResponse(request, listOf(Pair(behaviour, emptyList())))
+
+        println(response.toLogString())
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).hasSizeGreaterThan(0)
+        assertDoesNotThrow { response.body?.toInt() }
     }
 
     private fun fakeResponse(request: HttpRequest, behaviour: ContractBehaviour): HttpResponse {

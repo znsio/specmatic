@@ -2,24 +2,29 @@ package run.qontract.test
 
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.ClientRequestException
-import io.ktor.client.request.forms.FormDataContent
+import io.ktor.client.request.forms.*
+import io.ktor.client.request.headers
 import io.ktor.client.request.request
 import io.ktor.client.statement.readText
 import io.ktor.client.statement.request
 import io.ktor.http.*
+import io.ktor.http.content.PartData
 import io.ktor.http.content.TextContent
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.toMap
+import io.ktor.utils.io.streams.asInput
 import kotlinx.coroutines.runBlocking
 import run.qontract.consoleLog
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
+import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
+import run.qontract.core.pattern.StringPattern
 import run.qontract.core.startLinesWith
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import run.qontract.fake.toParams
+import java.io.BufferedInputStream
+import java.io.File
 import java.io.IOException
 import java.net.URISyntaxException
 import java.net.URL
@@ -48,14 +53,42 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
                             }
                 }
 
-                if(request.formFields.isNotEmpty()) {
-                    val parameters = request.formFields.mapValues { listOf(it.value) }.toList()
-                    this.body = FormDataContent(parametersOf(*parameters.toTypedArray()))
-                }
-                else if (request.body != null) {
-                    this.body = when {
-                        request.headers.containsKey("Content-Type") -> TextContent(request.bodyString, ContentType.parse(request.headers["Content-Type"] as String))
-                        else -> TextContent(request.bodyString, ContentType.parse(request.body.httpContentType))
+                when {
+                    request.formFields.isNotEmpty() -> {
+                        val parameters = request.formFields.mapValues { listOf(it.value) }.toList()
+                        this.body = FormDataContent(parametersOf(*parameters.toTypedArray()))
+                    }
+                    request.multiPartFormData.isNotEmpty() -> {
+                        this.body = MultiPartFormDataContent(formData {
+                            request.multiPartFormData.forEach { value ->
+                                when(value) {
+                                    is MultiPartContentValue -> {
+                                        append(value.name, value.content.toStringValue(), headers {
+                                            this.append("Content-Disposition", "form-data; name=${value.name}")
+                                        }.build())
+                                    }
+                                    is MultiPartFileValue -> {
+                                        appendInput(value.name, headers {
+                                            this.append("Content-Disposition", "form-data; name=${value.name}; filename=${value.filename.removePrefix("@")}")
+                                        }.build()) {
+                                            val partFile = File(value.filename.removePrefix("@"))
+                                            if(partFile.exists()) {
+                                                partFile.inputStream().asInput()
+                                            } else {
+                                                val random = StringPattern.generate(Resolver()).toStringValue()
+                                                random.byteInputStream().asInput()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                    }
+                    request.body != null -> {
+                        this.body = when {
+                            request.headers.containsKey("Content-Type") -> TextContent(request.bodyString, ContentType.parse(request.headers["Content-Type"] as String))
+                            else -> TextContent(request.bodyString, ContentType.parse(request.body.httpContentType))
+                        }
                     }
                 }
             }
@@ -107,10 +140,11 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
 }
 
 private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpRequest, qontractRequest: HttpRequest): HttpRequest {
-    val(body, formFields) =
+    val(body, formFields, multiPartFormData) =
         when(request.content) {
-            is FormDataContent -> Pair(EmptyString, qontractRequest.formFields)
-            is TextContent -> Pair(qontractRequest.body ?: EmptyString, emptyMap<String, String>())
+            is FormDataContent -> Triple(EmptyString, qontractRequest.formFields, emptyList())
+            is TextContent -> Triple(qontractRequest.body ?: EmptyString, emptyMap<String, String>(), emptyList<MultiPartFormDataValue>())
+            is MultiPartFormDataContent -> Triple(EmptyString, emptyMap<String, String>(), qontractRequest.multiPartFormData)
             else -> throw ContractException("Unknown type of body content sent in the request")
         }
 
@@ -121,7 +155,8 @@ private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpReq
             headers = requestHeaders,
             body = body,
             queryParams = toParams(request.url.parameters),
-            formFields = formFields)
+            formFields = formFields,
+            multiPartFormData = multiPartFormData)
 }
 
 private suspend fun ktorResponseToHttpResponse(ktorResponse: io.ktor.client.statement.HttpResponse): HttpResponse =

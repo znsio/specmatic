@@ -8,6 +8,6 @@ interface Value {
     fun displayableValue(): String
     fun toStringValue(): String
     fun displayableType(): String
-    fun toMatchingPattern(): Pattern
+    fun toPattern(): Pattern
     fun type(): Pattern
 }

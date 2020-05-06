@@ -15,12 +15,12 @@ fun toJSONPattern(value: String): Pattern {
         val asNumber: Number? = try { convertToNumber(value) } catch (e: Throwable) { null }
 
         when {
-            asNumber != null -> ExactMatchPattern(NumberValue(asNumber))
+            asNumber != null -> ExactValuePattern(NumberValue(asNumber))
             it.startsWith("\"") && it.endsWith("\"") ->
-                ExactMatchPattern(StringValue(it.removeSurrounding("\"")))
-            it == "null" -> ExactMatchPattern(NullValue)
-            it == "true" -> ExactMatchPattern(BooleanValue(true))
-            it == "false" -> ExactMatchPattern(BooleanValue(false))
+                ExactValuePattern(StringValue(it.removeSurrounding("\"")))
+            it == "null" -> ExactValuePattern(NullValue)
+            it == "true" -> ExactValuePattern(BooleanValue(true))
+            it == "false" -> ExactValuePattern(BooleanValue(false))
             else -> parsedPattern(value)
         }
     }
@@ -108,7 +108,7 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
 
                         rowPattern.newBasedOn(row, resolver)
                     } else {
-                        attempt("Format error in example of \"$keyWithoutOptionality\"") { listOf(ExactMatchPattern(pattern.parse(rowValue, resolver))) }
+                        attempt("Format error in example of \"$keyWithoutOptionality\"") { listOf(ExactValuePattern(pattern.parse(rowValue, resolver))) }
                     }
                 }
                 else ->

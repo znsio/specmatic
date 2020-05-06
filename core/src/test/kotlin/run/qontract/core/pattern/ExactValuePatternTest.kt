@@ -5,9 +5,9 @@ import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.NumberValue
 
-internal class ExactMatchPatternTest {
+internal class ExactValuePatternTest {
     @Test
     fun `should match nulls gracefully`() {
-        NullValue shouldNotMatch ExactMatchPattern(NumberValue(10))
+        NullValue shouldNotMatch ExactValuePattern(NumberValue(10))
     }
 }

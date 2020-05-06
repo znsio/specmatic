@@ -84,7 +84,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                 when {
                     key !== null && row.containsField(key) -> {
                         val rowValue = row.getField(key)
-                        attempt("Format error in example of \"$key\"") { URLPathPattern(ExactMatchPattern(it.parse(rowValue, newResolver))) }
+                        attempt("Format error in example of \"$key\"") { URLPathPattern(ExactValuePattern(it.parse(rowValue, newResolver))) }
                     }
                     else -> it
                 }
@@ -128,7 +128,7 @@ internal fun toURLPattern(urlPattern: URI): URLMatcher {
         if(isPatternToken(it.value))
             DeferredPattern(it.value, it.key)
         else
-            ExactMatchPattern(StringValue(it.value))
+            ExactValuePattern(StringValue(it.value))
     }
 
     return URLMatcher(queryPattern = queryPattern, path = path, pathPattern = pathPattern)
@@ -147,7 +147,7 @@ internal fun pathToPattern(rawPath: String): List<URLPathPattern> =
 
                     URLPathPattern(DeferredPattern(withPatternDelimiters(type)), name)
                 }
-                else -> URLPathPattern(ExactMatchPattern(StringValue(part)))
+                else -> URLPathPattern(ExactValuePattern(StringValue(part)))
             }
         }
 

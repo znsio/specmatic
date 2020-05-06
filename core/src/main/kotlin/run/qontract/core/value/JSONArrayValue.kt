@@ -10,7 +10,7 @@ data class JSONArrayValue(val list: List<Value>) : Value {
     override fun displayableValue(): String = toStringValue()
     override fun toStringValue() = valueArrayToJsonString(list)
     override fun displayableType(): String = "json array"
-    override fun toMatchingPattern(): Pattern = JSONArrayPattern(list.map { it.toMatchingPattern() })
+    override fun toPattern(): Pattern = JSONArrayPattern(list.map { it.toPattern() })
     override fun type(): Pattern = JSONArrayPattern()
 
     override fun toString() = valueArrayToJsonString(list)

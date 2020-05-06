@@ -92,7 +92,7 @@ fun isRepeatingPattern(patternValue: Any?): Boolean =
 fun stringToPattern(patternValue: String, key: String?): Pattern =
         when {
             isPatternToken(patternValue) -> DeferredPattern(patternValue, key)
-            else -> ExactMatchPattern(StringValue(patternValue))
+            else -> ExactValuePattern(StringValue(patternValue))
         }
 
 fun parsedPattern(rawContent: String, key: String? = null): Pattern {
@@ -108,7 +108,7 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             it == "(number)" -> DeferredPattern(it, null)
             isBuiltInPattern(it) -> getBuiltInPattern(it)
             isPatternToken(it) -> DeferredPattern(it, key)
-            else -> ExactMatchPattern(StringValue(it))
+            else -> ExactValuePattern(StringValue(it))
         }
     }
 }

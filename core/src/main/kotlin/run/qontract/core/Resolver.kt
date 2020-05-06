@@ -5,7 +5,7 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
 
-data class Resolver(val factStore: FactStore, val matchPatternInValue: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Pattern>, actual: Map<String, Value>) -> String? = checkOnlyPatternKeys ) {
+data class Resolver(val factStore: FactStore = CheckFacts(), val matchPatternInValue: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Pattern>, actual: Map<String, Value>) -> String? = checkOnlyPatternKeys ) {
     constructor(facts: Map<String, Value> = emptyMap(), matchPattern: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), matchPattern, newPatterns)
     constructor() : this(emptyMap(), false)
 

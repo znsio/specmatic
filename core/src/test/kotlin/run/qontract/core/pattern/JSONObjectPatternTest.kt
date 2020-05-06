@@ -3,7 +3,6 @@ package run.qontract.core.pattern
 import org.junit.jupiter.api.Test
 import run.qontract.core.*
 import run.qontract.core.value.*
-import java.util.*
 import kotlin.collections.HashMap
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -111,7 +110,7 @@ internal class JSONObjectPatternTest {
             throw AssertionError("Expected JSONObjectPattern, got ${addressPattern?.javaClass?.name}")
 
         val cityPattern = addressPattern.pattern["city"]
-        if(cityPattern !is ExactMatchPattern)
+        if(cityPattern !is ExactValuePattern)
             throw AssertionError("Expected ExactMatchPattern, got ${cityPattern?.javaClass?.name}")
 
         val cityValue = cityPattern.pattern

@@ -14,7 +14,7 @@ data class XMLValue(val node: Node) : Value {
     override fun displayableValue(): String = toStringValue()
     override fun toStringValue() = xmlToString(node)
     override fun displayableType(): String = "xml"
-    override fun toMatchingPattern(): Pattern = XMLPattern(node)
+    override fun toPattern(): Pattern = XMLPattern(node)
     override fun type(): Pattern = XMLPattern("<empty/>")
 
     override fun toString() = xmlToString(node)

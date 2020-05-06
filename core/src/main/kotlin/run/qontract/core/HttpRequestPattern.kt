@@ -1,10 +1,12 @@
 package run.qontract.core
 
+import run.qontract.core.Result.Failure
+import run.qontract.core.Result.Success
 import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
 import java.net.URI
 
-data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val urlMatcher: URLMatcher? = null, val method: String? = null, val body: Pattern = NoContentPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap()) {
+data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val urlMatcher: URLMatcher? = null, val method: String? = null, val body: Pattern = NoContentPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap(), val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList()) {
     @Throws(Exception::class)
     fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver): Result {
         val result = incomingHttpRequest to resolver to
@@ -12,14 +14,51 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
                 ::matchMethod then
                 ::matchHeaders then
                 ::matchFormFields then
+                ::matchMultiPartFormData then
                 ::matchBody otherwise
                 ::handleError toResult
                 ::returnResult
 
         return when(result) {
-            is Result.Failure -> result.breadCrumb("REQUEST")
+            is Failure -> result.breadCrumb("REQUEST")
             else -> result
         }
+    }
+
+    private fun matchMultiPartFormData(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
+        val (httpRequest, resolver) = parameters
+
+        if(multiPartFormDataPattern.isEmpty() && httpRequest.multiPartFormData.isEmpty())
+            return MatchSuccess(parameters)
+
+        if (multiPartFormDataPattern.isEmpty() && httpRequest.multiPartFormData.isNotEmpty()) {
+            throw ContractException("The contract expected no multipart data, but the request contained ${httpRequest.multiPartFormData.size} parts.", breadCrumb = "MULTIPART-FORMDATA")
+        }
+
+        if (multiPartFormDataPattern.size != httpRequest.multiPartFormData.size) {
+            throw ContractException("The contract expected ${multiPartFormDataPattern.size} parts, but the request contained ${httpRequest.multiPartFormData.size} parts.", breadCrumb = "MULTIPART-FORMDATA")
+        }
+
+        val results = multiPartFormDataPattern.mapIndexed { index, type ->
+            val results = httpRequest.multiPartFormData.map { value ->
+                when (val result = type.matches(value, resolver)) {
+                    is Success -> Pair(value, result)
+                    is Failure -> Pair(value, result.breadCrumb("[$index]"))
+                }
+            }
+
+            results.find { (_, result) -> result is Success }?.let { listOf(it) } ?: results
+        }
+
+        if (results.any { it.first().second !is Success }) {
+            val reason = results.flatten().joinToString("\n\n") { (value, result) ->
+                "${value.toDisplayableValue()}\n${resultReport(result)}"
+            }
+
+            return MatchFailure(Failure("The multipart data in the request did not match the contract:\n$reason", null, "MULTIPART-FORMDATA"))
+        }
+
+        return MatchSuccess(parameters)
     }
 
     fun matchFormFields(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
@@ -27,7 +66,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
 
         val keys: List<String> = formFieldsPattern.keys.filter { key -> isOptional(key) && withoutOptionality(key) !in httpRequest.formFields }
         if(keys.isNotEmpty())
-            return MatchFailure(Result.Failure(message = "Fields $keys not found", breadCrumb = "FORM FIELDS"))
+            return MatchFailure(Failure(message = "Fields $keys not found", breadCrumb = "FORM FIELDS"))
 
         val result: Result? = formFieldsPattern
             .filterKeys { key -> withoutOptionality(key) in httpRequest.formFields }
@@ -35,17 +74,17 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             .map { (key, pattern, value) ->
                 try {
                     when (val result = resolver.matchesPattern(key, pattern, pattern.parse(value, resolver))) {
-                        is Result.Failure -> result.breadCrumb("FORM FIELDS").breadCrumb(key)
+                        is Failure -> result.breadCrumb("FORM FIELDS").breadCrumb(key)
                         else -> result
                     }
                 } catch(e: ContractException) {
                     mismatchResult(pattern, value).breadCrumb("FORM FIELDS").breadCrumb(key)
                 }
             }
-            .firstOrNull { it is Result.Failure }
+            .firstOrNull { it is Failure }
 
         return when(result) {
-            is Result.Failure -> MatchFailure(result)
+            is Failure -> MatchFailure(result)
             else -> MatchSuccess(parameters)
         }
     }
@@ -54,7 +93,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
         val (httpRequest, resolver) = parameters
         val headers = httpRequest.headers
         when (val result = this.headersPattern.matches(headers, resolver)) {
-            is Result.Failure -> return MatchFailure(result)
+            is Failure -> return MatchFailure(result)
         }
         return MatchSuccess(parameters)
     }
@@ -71,7 +110,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
         }
 
         return when (val result = resolverWithNumericString.matchesPattern(null, body, bodyValue)) {
-            is Result.Failure -> MatchFailure(result.breadCrumb("BODY"))
+            is Failure -> MatchFailure(result.breadCrumb("BODY"))
             else -> MatchSuccess(parameters)
         }
     }
@@ -92,7 +131,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             val result = urlMatcher!!.matches(URI(httpRequest.path!!),
                     httpRequest.queryParams,
                     resolver)
-            return if (result is Result.Failure)
+            return if (result is Failure)
                 MatchFailure(result.breadCrumb("URL"))
             else
                 MatchSuccess(parameters)
@@ -130,13 +169,20 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             newRequest = newRequest.copy(headers = headers)
 
             val formFieldsValue = attempt(breadCrumb = "FORM FIELDS") { formFieldsPattern.mapValues { (key, pattern) -> attempt(breadCrumb = key) { resolver.generate(key, pattern).toString() } } }
-            when (formFieldsValue.size) {
+            newRequest = when (formFieldsValue.size) {
                 0 -> newRequest
-                else -> {
-                    newRequest.copy(
-                            formFields = formFieldsValue,
-                            headers = newRequest.headers.plus("Content-Type" to "application/x-www-form-urlencoded"))
-                }
+                else -> newRequest.copy(
+                        formFields = formFieldsValue,
+                        headers = newRequest.headers.plus("Content-Type" to "application/x-www-form-urlencoded"))
+            }
+
+            val multipartData = attempt(breadCrumb = "MULTIPART DATA") { multiPartFormDataPattern.mapIndexed { index, multiPartFormDataPattern -> attempt(breadCrumb = "[$index]") { multiPartFormDataPattern.generate(resolver) } } }
+            when(multipartData.size) {
+                0 -> newRequest
+                else -> newRequest.copy(
+                        multiPartFormData = multipartData,
+                        headers = newRequest.headers.plus("Content-Type" to "multipart/form-data")
+                )
             }
         }
     }
@@ -147,17 +193,26 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             val newBodies = attempt(breadCrumb = "BODY") { body.newBasedOn(row, resolver) }
             val newHeadersPattern = headersPattern.newBasedOn(row, resolver)
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
+            val newFormDataPartLists = multiPartFormDataPattern.map { it.newBasedOn(row, resolver) }.let {
+                if(it.isEmpty()) {
+                    listOf(multiPartFormDataPattern)
+                }
+                else it
+            }
 
             newURLMatchers.flatMap { newURLMatcher ->
                 newBodies.flatMap { newBody ->
                     newHeadersPattern.flatMap { newHeadersPattern ->
-                        newFormFieldsPatterns.map { newFormFieldsPattern ->
-                            HttpRequestPattern(
-                                    headersPattern = newHeadersPattern,
-                                    urlMatcher = newURLMatcher,
-                                    method = method,
-                                    body = newBody,
-                                    formFieldsPattern = newFormFieldsPattern)
+                        newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
+                            newFormDataPartLists.map { newFormDataPartList ->
+                                HttpRequestPattern(
+                                        headersPattern = newHeadersPattern,
+                                        urlMatcher = newURLMatcher,
+                                        method = method,
+                                        body = newBody,
+                                        formFieldsPattern = newFormFieldsPattern,
+                                        multiPartFormDataPattern = newFormDataPartList)
+                            }
                         }
                     }
                 }

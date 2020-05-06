@@ -11,10 +11,10 @@ data class StringValue(val string: String = "") : Value {
     override fun displayableValue(): String = toStringValue().quote()
     override fun toStringValue() = string
     override fun displayableType(): String = "string"
-    override fun toMatchingPattern(): Pattern {
+    override fun toPattern(): Pattern {
         return when {
             isPatternToken() -> DeferredPattern(string)
-            else -> ExactMatchPattern(this)
+            else -> ExactValuePattern(this)
         }
     }
 

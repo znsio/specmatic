@@ -6,22 +6,31 @@ import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.CORS
 import io.ktor.http.*
+import io.ktor.http.content.PartData
 import io.ktor.http.content.TextContent
+import io.ktor.http.content.readAllParts
+import io.ktor.http.content.streamProvider
 import io.ktor.request.*
 import io.ktor.response.respond
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.util.KtorExperimentalAPI
+import io.ktor.util.asStream
 import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.toMap
+import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.EmptyString
+import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import run.qontract.mock.MockScenario
 import run.qontract.nullLog
+import java.io.ByteArrayOutputStream
+import java.io.StringWriter
 import java.util.*
 
 class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
@@ -85,9 +94,16 @@ class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<M
 
     private fun setupServerState(httpRequest: HttpRequest) {
         val body = httpRequest.body
+        val serverState = body?.let { toMap(it) } ?: mutableMapOf()
+
+        log("# >> Request Sent At ${Date()}")
+        log(startLinesWith(valueMapToPlainJsonString(serverState), "# "))
+
         contractInfo.forEach { (behaviour, _) ->
-            behaviour.setServerState(body?.let { toMap(it) } ?: mutableMapOf())
+            behaviour.setServerState(serverState)
         }
+
+        log("# << Complete At ${Date()}")
     }
 
     private fun isSetupRequest(httpRequest: HttpRequest): Boolean {
@@ -100,7 +116,7 @@ class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<M
 }
 
 internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
-    val(body, formFields) = bodyFromCall(call)
+    val(body, formFields, multiPartFormData) = bodyFromCall(call)
 
     val requestHeaders = call.request.headers.toMap().mapValues { it.value[0] }
 
@@ -109,14 +125,40 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
             headers = requestHeaders,
             body = body,
             queryParams = toParams(call.request.queryParameters),
-            formFields = formFields)
+            formFields = formFields,
+            multiPartFormData = multiPartFormData)
 }
 
-private suspend fun bodyFromCall(call: ApplicationCall): Pair<Value, Map<String, String>> {
-    return if (call.request.contentType().match(ContentType.Application.FormUrlEncoded))
-        Pair(EmptyString, call.receiveParameters().toMap().mapValues { (_, values) -> values.first() })
-    else
-        Pair(parsedValue(call.receiveText()), emptyMap())
+@OptIn(KtorExperimentalAPI::class)
+private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<String, String>, List<MultiPartFormDataValue>> {
+    return when {
+        call.request.contentType().match(ContentType.Application.FormUrlEncoded) -> Triple(EmptyString, call.receiveParameters().toMap().mapValues { (_, values) -> values.first() }, emptyList())
+        call.request.isMultipart() -> {
+            val multiPartData = call.receiveMultipart()
+            val parts = multiPartData.readAllParts().map {
+                when (it) {
+                    is PartData.FileItem -> {
+                        MultiPartFileValue(it.name ?: "", it.originalFileName ?: "", "${it.contentType?.contentType}/${it.contentType?.contentSubtype}", null)
+                    }
+                    is PartData.FormItem -> {
+                        MultiPartContentValue(it.name ?: "", StringValue(it.value))
+                    }
+                    is PartData.BinaryItem -> {
+                        val content = it.provider().asStream().use { input ->
+                            val output = ByteArrayOutputStream()
+                            input.copyTo(output)
+                            output.toString()
+                        }
+
+                        MultiPartContentValue(it.name ?: "", StringValue(content))
+                    }
+                }
+            }
+
+            Triple(EmptyString, emptyMap(), parts)
+        }
+        else -> Triple(parsedValue(call.receiveText()), emptyMap(), emptyList())
+    }
 }
 
 internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }

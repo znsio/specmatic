@@ -64,10 +64,10 @@ fun toPattern(jsonElement: JsonElement): Pattern {
 fun toLiteralPattern(jsonElement: JsonLiteral): Pattern =
     when {
         jsonElement.isString -> parsedPattern(jsonElement.content)
-        jsonElement.booleanOrNull != null -> ExactMatchPattern(BooleanValue(jsonElement.boolean))
-        jsonElement.intOrNull != null -> ExactMatchPattern(NumberValue(jsonElement.int))
-        jsonElement.longOrNull != null -> ExactMatchPattern(NumberValue(jsonElement.long))
-        jsonElement.floatOrNull != null -> ExactMatchPattern(NumberValue(jsonElement.float))
+        jsonElement.booleanOrNull != null -> ExactValuePattern(BooleanValue(jsonElement.boolean))
+        jsonElement.intOrNull != null -> ExactValuePattern(NumberValue(jsonElement.int))
+        jsonElement.longOrNull != null -> ExactValuePattern(NumberValue(jsonElement.long))
+        jsonElement.floatOrNull != null -> ExactValuePattern(NumberValue(jsonElement.float))
         else -> throw ContractException("Can't recognise the type of $jsonElement")
     }
 

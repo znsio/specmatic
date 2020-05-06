@@ -16,10 +16,8 @@ import run.qontract.mock.NoMatchingScenario
 import run.qontract.test.TestExecutor
 import java.net.URI
 
-class ContractBehaviour(contractGherkinDocument: GherkinDocument) {
-    private val scenarios: List<Scenario> = lex(contractGherkinDocument)
-    private var serverState = emptyMap<String, Value>()
-
+data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap<String, Value>()) {
+    constructor(contractGherkinDocument: GherkinDocument) : this(lex(contractGherkinDocument))
     constructor(gherkinData: String) : this(parseGherkinString(gherkinData))
 
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
@@ -177,11 +175,44 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
                 scenarioInfo.copy(fixtures = scenarioInfo.fixtures.plus(toFixtureInfo(step.rest)))
             "FORM-FIELD" ->
                 scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(formFieldsPattern = plusFormFields(scenarioInfo.httpRequestPattern.formFieldsPattern, step.rest, step.rowsList)))
+            "REQUEST-PART" -> {
+                scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(multiPartFormDataPattern = scenarioInfo.httpRequestPattern.multiPartFormDataPattern.plus(toFormDataPart(step))))
+            }
             else -> throw ContractException("Couldn't recognise the meaning of this command: $step.text")
         }
     }
 
     return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)))
+}
+
+fun toFormDataPart(step: StepInfo): MultiPartFormDataPattern {
+    val parts = breakIntoParts(step.rest, 4)
+
+    if(parts.size < 2)
+        throw ContractException("There must be at least 2 words after request-part in $step.line")
+
+    val (name, content) = parts.slice(0..1)
+
+    return when {
+        content.startsWith("@") -> {
+            if(parts.size < 3)
+                throw ContractException("A file must be accompanied by at least the content type, and optionally the content encoding.")
+
+            if(parts.size > 4)
+                throw ContractException("Too many tokens in this statement. A file content part should at most contain a name, a file name, a Content-Type header value and a Content-Encoding header value.")
+
+            val (name, content, type) = parts
+            val encoding = parts.getOrNull(3)
+
+            MultiPartFilePattern(name, content, type, encoding)
+        }
+        isPatternToken(content) -> {
+            MultiPartContentPattern(name, parsedPattern(content))
+        }
+        else -> {
+            MultiPartContentPattern(name, ExactValuePattern(parsedValue(content)))
+        }
+    }
 }
 
 fun toPattern(step: StepInfo): Pattern {

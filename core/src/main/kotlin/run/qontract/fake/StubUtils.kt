@@ -37,7 +37,7 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPath: String, ho
     val dataFiles = dataDir.listFiles()?.filter { it.extension == "json" }
     val mocks = dataFiles?.map { Pair(it, stringToMockScenario(StringValue(it.readText()))) } ?: emptyList()
 
-    val contractInfo = mocks.map { (mockFile, mock) ->
+    val contractInfo = mocks.mapNotNull { (mockFile, mock) ->
         val matchResults = behaviours.asSequence().map { (contractFile, behaviour) ->
             try {
                 behaviour.matchingMockResponse(mock)
@@ -47,13 +47,15 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPath: String, ho
             }
         }
 
-        val behaviour = matchResults.mapNotNull { it.first }.firstOrNull()
-                ?: throw NoMatchingScenario(matchResults.mapNotNull { it.second }.map {
-                    val (exception, contractFile) = it
+        when(val behaviour = matchResults.mapNotNull { it.first }.firstOrNull()) {
+            null -> {
+                println(matchResults.mapNotNull { it.second }.map { (exception, contractFile) ->
                     "${mockFile.absolutePath} didn't match ${contractFile.absolutePath}${System.lineSeparator()}${exception.message}"
                 }.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
-
-        Pair(behaviour, mock)
+                null
+            }
+            else -> Pair(behaviour, mock)
+        }
     }.groupBy { it.first }.mapValues { it.value.map { it.second } }.entries.map { Pair(it.key, it.value)}
 
     dataFiles?.let {

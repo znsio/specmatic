@@ -1,12 +1,9 @@
 package run.qontract.core
 
 import run.qontract.core.utilities.URIUtils.parseQuery
-import run.qontract.core.value.EmptyString
-import run.qontract.core.value.Value
 import io.netty.buffer.ByteBuf
 import run.qontract.core.pattern.*
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.StringValue
+import run.qontract.core.value.*
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
@@ -14,7 +11,7 @@ import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-data class HttpRequest(val method: String? = null, val path: String? = null, val headers: Map<String, String> = emptyMap(), val body: Value? = EmptyString, val queryParams: Map<String, String> = emptyMap(), val formFields: Map<String, String> = emptyMap()) {
+data class HttpRequest(val method: String? = null, val path: String? = null, val headers: Map<String, String> = emptyMap(), val body: Value? = EmptyString, val queryParams: Map<String, String> = emptyMap(), val formFields: Map<String, String> = emptyMap(), val multiPartFormData: List<MultiPartFormDataValue> = emptyList()) {
     fun updateQueryParams(queryParams: Map<String, String>): HttpRequest = copy(queryParams = queryParams.plus(queryParams))
 
     fun updatePath(path: String): HttpRequest {
@@ -90,6 +87,10 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         val headerString = headers.map { "${it.key}: ${it.value}" }.joinToString("\n")
         val bodyString = when {
             formFields.isNotEmpty() -> formFields.map { "${it.key}=${it.value}"}.joinToString("&")
+            multiPartFormData.isNotEmpty() -> {
+                val partInfo = multiPartFormData.mapIndexed { index, part -> "$index: ${part.toDisplayableValue()}"}.joinToString("\n")
+                "Parts\n$partInfo"
+            }
             else -> body.toString()
         }
 
@@ -102,11 +103,12 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         val pathForPattern = path ?: "/"
 
         return HttpRequestPattern(
-                headersPattern = HttpHeadersPattern(mapToPattern(headers)),
-                urlMatcher = URLMatcher(mapToPattern(queryParams), pathToPattern(pathForPattern), pathForPattern),
-                method = this.method,
-                body = this.body?.toMatchingPattern() ?: NoContentPattern,
-                formFieldsPattern = mapToPattern(formFields)
+            headersPattern = HttpHeadersPattern(mapToPattern(headers)),
+            urlMatcher = URLMatcher(mapToPattern(queryParams), pathToPattern(pathForPattern), pathForPattern),
+            method = this.method,
+            body = this.body?.toPattern() ?: NoContentPattern,
+            formFieldsPattern = mapToPattern(formFields),
+            multiPartFormDataPattern = multiPartFormData.map { it.toPattern() }
         )
     }
 
@@ -115,7 +117,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
             if (isPatternToken(value))
                 parsedPattern(value)
             else
-                ExactMatchPattern(StringValue(value))
+                ExactValuePattern(StringValue(value))
         }
     }
 }
@@ -138,6 +140,26 @@ fun requestFromJSON(json: Map<String, Value>): HttpRequest =
                         throw ContractException("form-fields must be a json object.")
 
                     httpRequest.copy(formFields = formFields.jsonObject.mapValues { it.value.toStringValue() })
+                }
+                "multipart-formdata" in json -> {
+                    val parts = json.getValue("multipart-formdata")
+                    if(parts !is JSONArrayValue)
+                        throw ContractException("multipart-formdata must be a json array.")
+
+                    val multiPartData: List<MultiPartFormDataValue> = parts.list.map {
+                        if(it !is JSONObjectValue)
+                            throw ContractException("All multipart parts must be json object values.")
+
+                        val multiPartSpec = it.jsonObject
+                        val name = multiPartSpec.getValue("name").toStringValue()
+
+                        when {
+                            multiPartSpec.containsKey("content") -> MultiPartContentValue(name, multiPartSpec.getValue("content"))
+                            else -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringValue(), multiPartSpec.getValue("contentType").toStringValue(), multiPartSpec["contentEncoding"]?.toStringValue())
+                        }
+                    }
+
+                    httpRequest.copy(multiPartFormData = httpRequest.multiPartFormData.plus(multiPartData))
                 }
                 "body" in json -> httpRequest.updateBody(json.getValue("body"))
                 else -> httpRequest

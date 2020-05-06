@@ -5,7 +5,7 @@ import run.qontract.core.Result
 import run.qontract.core.mismatchResult
 import run.qontract.core.value.Value
 
-data class ExactMatchPattern(override val pattern: Value) : Pattern {
+data class ExactValuePattern(override val pattern: Value) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (pattern == sampleData) {
             true -> Result.Success()
@@ -17,7 +17,7 @@ data class ExactMatchPattern(override val pattern: Value) : Pattern {
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = pattern.type().parse(value, resolver)
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
-            otherPattern is ExactMatchPattern && this.pattern == otherPattern.pattern
+            otherPattern is ExactValuePattern && this.pattern == otherPattern.pattern
 
     override val description: String = pattern.displayableValue()
 

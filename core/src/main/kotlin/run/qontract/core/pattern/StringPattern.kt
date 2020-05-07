@@ -28,8 +28,8 @@ object StringPattern : Pattern {
     override fun toString(): String = pattern.toString()
 }
 
-fun randomString(): String {
-    val array = ByteArray(5)
+fun randomString(length: Int = 5): String {
+    val array = ByteArray(length)
     val random = Random()
     for (index in array.indices) {
         array[index] = (random.nextInt(25) + 65).toByte()

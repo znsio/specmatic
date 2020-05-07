@@ -601,6 +601,40 @@ Examples:
         assertThat(flags).isEqualTo(mutableListOf("some kind"))
         assertFalse(results.hasFailures(), results.report())
     }
+
+    @Test
+    fun `a row lookup pattern should pick up it's value from a row and execute 1 test` () {
+        val gherkin = """
+Feature: Dumb API
+
+Scenario: api call
+When POST /number
+And request-body (number from number)
+Then status 200
+
+Examples:
+| number |
+| 10     |
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableSetOf<String>()
+
+        val results = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add("executed")
+                assertThat(request.bodyString).isEqualTo("10")
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(flags.toSet()).isEqualTo(setOf("executed"))
+        assertTrue(results.success(), results.report())
+    }
 }
 
 fun flagsContain(haystack: List<String>, needles: List<String>) {

@@ -154,9 +154,36 @@ class LexTest {
         assertThat(contentPattern1).isEqualTo(NumberTypePattern)
     }
 
+    @Test
+    fun `should parse a row lookup pattern`() {
+        val behaviour = ContractBehaviour("""
+            Feature: Customer Data API
+
+            Scenario: Upload multipart info
+              Given json Data
+                | id1 | (number from customerId) |
+                | id2 | (number from orderId)    |
+              When POST /data
+              And request-body (Data)
+              Then status 200
+
+              Examples:
+              | customerId | orderId |
+              | 10         | 20      |
+        """.trimIndent())
+
+        val pattern = behaviour.scenarios.single().patterns.getValue("(Data)") as TabularPattern
+
+        assertThat(pattern.pattern.getValue("id1")).isEqualTo(LookupRowPattern(DeferredPattern("(number)"), "customerId"))
+        assertThat(pattern.pattern.getValue("id2")).isEqualTo(LookupRowPattern(DeferredPattern("(number)"), "orderId"))
+    }
+
     private fun deferredToJsonPatternData(pattern: Pattern, resolver: Resolver): Map<String, Pattern> =
             ((pattern as DeferredPattern).resolvePattern(resolver) as TabularPattern).pattern
 
     private fun deferredToNumberPattern(pattern: Pattern, resolver: Resolver): NumberTypePattern =
             (pattern as DeferredPattern).resolvePattern(resolver) as NumberTypePattern
+
+    private fun resolveDeferred(pattern: Pattern, resolver: Resolver): Pattern =
+            (pattern as DeferredPattern).resolvePattern(resolver)
 }

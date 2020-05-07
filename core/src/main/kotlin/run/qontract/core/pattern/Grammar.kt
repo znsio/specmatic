@@ -102,6 +102,10 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             it.startsWith("{") -> JSONObjectPattern(it)
             it.startsWith("[") -> JSONArrayPattern(it)
             it.startsWith("<") -> XMLPattern(it)
+            isLookupRowPattern(it) -> {
+                val (pattern, lookupKey) = parseLookupRowPattern(it)
+                LookupRowPattern(parsedPattern(pattern), lookupKey)
+            }
             isNullablePattern(it) -> AnyPattern(listOf(NullPattern, parsedPattern(withoutNullToken(it))))
             isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
             isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutRepeatingToken(it)))
@@ -112,6 +116,26 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
         }
     }
 }
+
+fun parseLookupRowPattern(token: String): Pair<String, String> {
+    val parts = withoutPatternDelimiters(token).split("\\s+".toRegex())
+
+    val key = parts.last()
+    val subPatternParts = parts.dropLast(2)
+
+    return Pair(withPatternDelimiters(subPatternParts.joinToString(" ")), key)
+}
+
+fun isLookupRowPattern(token: String): Boolean {
+    val parts = withoutPatternDelimiters(token).split("\\s+".toRegex())
+
+    return when {
+        parts.size >= 3 && penultimate(parts).toLowerCase() == "from" -> true
+        else -> false
+    }
+}
+
+private fun penultimate(parts: List<String>) = parts[parts.size - 2]
 
 fun parsedJSONStructure(content: String): Value {
     return content.trim().let {

@@ -1,5 +1,6 @@
 package run.qontract.core
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
@@ -300,5 +301,79 @@ And response-body
         println(results.report())
         assertEquals(1, results.successCount)
         assertEquals(0, results.failureCount)
+    }
+
+    @Test
+    fun `should work with multipart content part`() {
+        val behaviour = ContractBehaviour("""
+Feature: Contract API
+
+Scenario: api call
+When POST /number
+And request-part number (number)
+Then status 200
+And response-body
+| number       | (number) |
+| description? | (string) |
+""".trim())
+
+        val results: Results = testBackwardCompatibility(behaviour, behaviour)
+
+        println(results.report())
+        assertEquals(1, results.successCount)
+        assertEquals(0, results.failureCount)
+    }
+
+    @Test
+    fun `should work with multipart file part`() {
+        val behaviour = ContractBehaviour("""
+Feature: Contract API
+
+Scenario: api call
+When POST /number
+And request-part number @number.txt text/plain
+Then status 200
+And response-body
+| number       | (number) |
+| description? | (string) |
+""".trim())
+
+        val results: Results = testBackwardCompatibility(behaviour, behaviour)
+
+        println(results.report())
+        assertEquals(1, results.successCount)
+        assertEquals(0, results.failureCount)
+    }
+
+    @Test
+    fun `should fail given a file part in one and a content part in the other`() {
+        val older = ContractBehaviour("""
+Feature: Contract API
+
+Scenario: api call
+When POST /number
+And request-part number @number.txt text/plain
+Then status 200
+And response-body
+| number       | (number) |
+| description? | (string) |
+""".trim())
+
+        val newer = ContractBehaviour("""
+Feature: Contract API
+
+Scenario: api call
+When POST /number
+And request-part number (number))
+Then status 200
+And response-body
+| number       | (number) |
+| description? | (string) |
+""".trim())
+
+        val results: Results = testBackwardCompatibility(older, newer)
+
+        println(results.report())
+        assertThat(results.success()).isFalse()
     }
 }

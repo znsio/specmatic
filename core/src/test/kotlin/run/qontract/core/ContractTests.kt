@@ -1,7 +1,9 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
+import org.checkerframework.common.value.qual.StringVal
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import run.qontract.core.Contract.Companion.fromGherkin
 import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.value.*
@@ -599,6 +601,73 @@ Examples:
         })
 
         assertThat(flags).isEqualTo(mutableListOf("some kind"))
+        assertFalse(results.hasFailures(), results.report())
+    }
+
+    @Test
+    fun `should generate a test with a multipart content part` () {
+        val gherkin = """
+Feature: Dumb API
+
+Scenario: api call
+When POST /number
+And request-part number (number)
+Then status 200
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableListOf<String>()
+
+        val results = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add("executed")
+
+                val part = request.multiPartFormData.single() as MultiPartContentValue
+                assertThat(part.name).isEqualTo("number")
+                assertDoesNotThrow { part.content.toStringValue().toInt() }
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(flags).isEqualTo(mutableListOf("executed"))
+        assertFalse(results.hasFailures(), results.report())
+    }
+
+    @Test
+    fun `should generate a test with a multipart file part` () {
+        val gherkin = """
+Feature: Dumb API
+
+Scenario: api call
+When POST /number
+And request-part number @number.txt text/plain
+Then status 200
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableListOf<String>()
+
+        val results = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add("executed")
+
+                val part = request.multiPartFormData.single() as MultiPartFileValue
+                assertThat(part.name).isEqualTo("number")
+                assertThat(part.filename).isEqualTo("@number.txt")
+                assertThat(part.contentType).isEqualTo("text/plain")
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(flags).isEqualTo(mutableListOf("executed"))
         assertFalse(results.hasFailures(), results.report())
     }
 

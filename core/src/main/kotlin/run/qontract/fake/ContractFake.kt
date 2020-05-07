@@ -135,13 +135,18 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
         call.request.contentType().match(ContentType.Application.FormUrlEncoded) -> Triple(EmptyString, call.receiveParameters().toMap().mapValues { (_, values) -> values.first() }, emptyList())
         call.request.isMultipart() -> {
             val multiPartData = call.receiveMultipart()
+            val boundary = call.request.contentType().parameter("boundary") ?: "boundary"
+
             val parts = multiPartData.readAllParts().map {
                 when (it) {
                     is PartData.FileItem -> {
-                        MultiPartFileValue(it.name ?: "", it.originalFileName ?: "", "${it.contentType?.contentType}/${it.contentType?.contentSubtype}", null)
+                        val content: String = it.provider().asStream().use { inputStream ->
+                             inputStream.bufferedReader().readText()
+                        }
+                        MultiPartFileValue(it.name ?: "", it.originalFileName ?: "", "${it.contentType?.contentType}/${it.contentType?.contentSubtype}", null, content, boundary)
                     }
                     is PartData.FormItem -> {
-                        MultiPartContentValue(it.name ?: "", StringValue(it.value))
+                        MultiPartContentValue(it.name ?: "", StringValue(it.value), boundary)
                     }
                     is PartData.BinaryItem -> {
                         val content = it.provider().asStream().use { input ->
@@ -150,7 +155,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             output.toString()
                         }
 
-                        MultiPartContentValue(it.name ?: "", StringValue(content))
+                        MultiPartContentValue(it.name ?: "", StringValue(content), boundary)
                     }
                 }
             }

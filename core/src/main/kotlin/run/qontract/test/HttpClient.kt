@@ -37,13 +37,15 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
 
         val startTime = Date()
 
+        val requestWithFileContent = loadFileContentIntoParts(request)
+
         return runBlocking {
             val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
-                this.method = HttpMethod.parse(request.method as String)
+                this.method = HttpMethod.parse(requestWithFileContent.method as String)
 
                 val listOfExcludedHeaders = HttpHeaders.UnsafeHeadersList.map { it.toLowerCase() }
 
-                request.headers
+                requestWithFileContent.headers
                         .map {Triple(it.key.trim(), it.key.trim().toLowerCase(), it.value.trim())}
                         .forEach { (key, loweredKey, value) ->
                             if(loweredKey !in listOfExcludedHeaders) {
@@ -52,13 +54,13 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
                 }
 
                 when {
-                    request.formFields.isNotEmpty() -> {
-                        val parameters = request.formFields.mapValues { listOf(it.value) }.toList()
+                    requestWithFileContent.formFields.isNotEmpty() -> {
+                        val parameters = requestWithFileContent.formFields.mapValues { listOf(it.value) }.toList()
                         this.body = FormDataContent(parametersOf(*parameters.toTypedArray()))
                     }
-                    request.multiPartFormData.isNotEmpty() -> {
+                    requestWithFileContent.multiPartFormData.isNotEmpty() -> {
                         this.body = MultiPartFormDataContent(formData {
-                            request.multiPartFormData.forEach { value ->
+                            requestWithFileContent.multiPartFormData.forEach { value ->
                                 when(value) {
                                     is MultiPartContentValue -> {
                                         append(value.name, value.content.toStringValue(), Headers.build {
@@ -74,23 +76,17 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
                                             }
                                             append("Content-Disposition", "form-data; name=${value.name}; filename=${value.filename.removePrefix("@")}")
                                         }) {
-                                            val partFile = File(value.filename.removePrefix("@"))
-                                            if(partFile.exists()) {
-                                                partFile.inputStream().asInput()
-                                            } else {
-                                                val random = StringPattern.generate(Resolver()).toStringValue()
-                                                random.byteInputStream().asInput()
-                                            }
+                                            (value.content ?: "").byteInputStream().asInput()
                                         }
                                     }
                                 }
                             }
                         })
                     }
-                    request.body != null -> {
+                    requestWithFileContent.body != null -> {
                         this.body = when {
-                            request.headers.containsKey("Content-Type") -> TextContent(request.bodyString, ContentType.parse(request.headers["Content-Type"] as String))
-                            else -> TextContent(request.bodyString, ContentType.parse(request.body.httpContentType))
+                            requestWithFileContent.headers.containsKey("Content-Type") -> TextContent(requestWithFileContent.bodyString, ContentType.parse(requestWithFileContent.headers["Content-Type"] as String))
+                            else -> TextContent(requestWithFileContent.bodyString, ContentType.parse(requestWithFileContent.body.httpContentType))
                         }
                     }
                 }
@@ -98,7 +94,7 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
 
             val endTime = Date()
 
-            val outboundRequest: HttpRequest = ktorHttpRequestToHttpRequest(ktorResponse.request, request)
+            val outboundRequest: HttpRequest = ktorHttpRequestToHttpRequest(ktorResponse.request, requestWithFileContent)
             log(">> Request Start At $startTime")
             log(outboundRequest.toLogString("-> "))
 
@@ -108,6 +104,27 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
                 log(System.lineSeparator())
             }
         }
+    }
+
+    private fun loadFileContentIntoParts(request: HttpRequest): HttpRequest {
+        val parts = request.multiPartFormData
+
+        val newParts = parts.map { part ->
+            when(part) {
+                is MultiPartContentValue -> part
+                is MultiPartFileValue -> {
+                    val partFile = File(part.filename.removePrefix("@"))
+                    val content = if(partFile.exists()) {
+                        partFile.readText()
+                    } else {
+                        StringPattern.generate(Resolver()).toStringValue()
+                    }
+                    part.copy(content = content)
+                }
+            }
+        }
+
+        return request.copy(multiPartFormData = newParts)
     }
 
     @OptIn(KtorExperimentalAPI::class)
@@ -147,7 +164,7 @@ private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpReq
         when(request.content) {
             is FormDataContent -> Triple(EmptyString, qontractRequest.formFields, emptyList())
             is TextContent -> Triple(qontractRequest.body ?: EmptyString, emptyMap<String, String>(), emptyList<MultiPartFormDataValue>())
-            is MultiPartFormDataContent -> Triple(EmptyString, emptyMap<String, String>(), qontractRequest.multiPartFormData)
+            is MultiPartFormDataContent -> Triple(EmptyString, emptyMap(), qontractRequest.multiPartFormData)
             else -> throw ContractException("Unknown type of body content sent in the request")
         }
 

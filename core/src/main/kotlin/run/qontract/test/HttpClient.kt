@@ -11,6 +11,7 @@ import io.ktor.http.*
 import io.ktor.http.content.PartData
 import io.ktor.http.content.TextContent
 import io.ktor.util.KtorExperimentalAPI
+import io.ktor.util.appendFiltered
 import io.ktor.util.toMap
 import io.ktor.utils.io.streams.asInput
 import kotlinx.coroutines.runBlocking
@@ -44,7 +45,8 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
             val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
                 this.method = HttpMethod.parse(request.method as String)
 
-                val listOfExcludedHeaders = listOf("content-type", "content-length")
+                val listOfExcludedHeaders = HttpHeaders.UnsafeHeadersList.map { it.toLowerCase() }
+
                 request.headers
                         .map {Triple(it.key.trim(), it.key.trim().toLowerCase(), it.value.trim())}
                         .forEach { (key, loweredKey, value) ->
@@ -63,14 +65,19 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
                             request.multiPartFormData.forEach { value ->
                                 when(value) {
                                     is MultiPartContentValue -> {
-                                        append(value.name, value.content.toStringValue(), headers {
+                                        append(value.name, value.content.toStringValue(), Headers.build {
+                                            this.append(HttpHeaders.ContentType, ContentType.parse(value.content.httpContentType))
                                             this.append("Content-Disposition", "form-data; name=${value.name}")
-                                        }.build())
+                                        })
                                     }
                                     is MultiPartFileValue -> {
-                                        appendInput(value.name, headers {
+                                        appendInput(value.name, Headers.build {
+                                            this.append(HttpHeaders.ContentType, ContentType.parse(value.contentType))
+                                            value.contentEncoding?.let {
+                                                this.append(HttpHeaders.ContentEncoding, value.contentEncoding)
+                                            }
                                             this.append("Content-Disposition", "form-data; name=${value.name}; filename=${value.filename.removePrefix("@")}")
-                                        }.build()) {
+                                        }) {
                                             val partFile = File(value.filename.removePrefix("@"))
                                             if(partFile.exists()) {
                                                 partFile.inputStream().asInput()

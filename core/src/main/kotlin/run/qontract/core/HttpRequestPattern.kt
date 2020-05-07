@@ -43,7 +43,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             val results = httpRequest.multiPartFormData.map { value ->
                 when (val result = type.matches(value, resolver)) {
                     is Success -> Pair(value, result)
-                    is Failure -> Pair(value, result.breadCrumb("[$index]"))
+                    is Failure -> Pair(value, result)
                 }
             }
 
@@ -52,7 +52,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
 
         if (results.any { it.first().second !is Success }) {
             val reason = results.flatten().joinToString("\n\n") { (value, result) ->
-                "${value.toDisplayableValue()}\n${resultReport(result)}"
+                "${value.toDisplayableValue()}\n${resultReport(result)}".prependIndent("  ")
             }
 
             return MatchFailure(Failure("The multipart data in the request did not match the contract:\n$reason", null, "MULTIPART-FORMDATA"))

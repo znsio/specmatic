@@ -2,6 +2,7 @@
 package run.qontract.fake
 
 import run.qontract.consoleLog
+import run.qontract.core.CONTRACT_EXTENSION
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.DATA_DIR_SUFFIX
 import run.qontract.core.utilities.readFile
@@ -25,6 +26,9 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
 
     return ContractFake(listOf(Pair(contractBehaviour, mocks)), host, port, ::consoleLog)
 }
+
+fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
+    File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStubFromContracts(contractPaths: List<String>, dataDirPath: String, host: String = "localhost", port: Int = 9000): ContractStub {
     val dataDir = File(dataDirPath)

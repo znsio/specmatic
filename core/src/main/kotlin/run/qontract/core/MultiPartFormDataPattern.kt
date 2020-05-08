@@ -32,7 +32,7 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
     }
 }
 
-data class MultiPartFilePattern(override val name: String, val filename: String, val contentType: String, val contentEncoding: String?) : MultiPartFormDataPattern(name) {
+data class MultiPartFilePattern(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null) : MultiPartFormDataPattern(name) {
     override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern> = listOf(this)
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
             MultiPartFileValue(name, filename, contentType, contentEncoding)
@@ -41,13 +41,13 @@ data class MultiPartFilePattern(override val name: String, val filename: String,
         value !is MultiPartFileValue -> Failure("The contract expected a file, but got content instead.")
         name != value.name -> Failure("The contract expected part name to be $name, but got ${value.name}.", breadCrumb = "name")
         value.filename.removePrefix("@") != filename.removePrefix("@") -> Failure("The contract expected filename $filename, but got ${value.filename}.", breadCrumb = "filename")
-//        value.contentType != contentType -> Failure("The contract expected content type $contentType, but got ${value.contentType}.", breadCrumb = "contentType")
-//        value.contentEncoding != contentEncoding -> {
-//            val contentEncodingMessage = contentEncoding ?: "no content encoding"
-//            val receivedContentEncodingMessage = value.contentEncoding ?: "no content encoding"
-//
-//            Failure("The contract expected content encoding ${contentEncodingMessage}, but got ${receivedContentEncodingMessage}.", breadCrumb = "contentEncoding")
-//        }
+        value.contentType != contentType -> Failure("The contract expected ${contentType?.let { "content type $contentType" } ?: "no content type" }, but got ${value.contentType?.let { "content type $contentType" } ?: "no content type" }.", breadCrumb = "contentType")
+        value.contentEncoding != contentEncoding -> {
+            val contentEncodingMessage = contentEncoding?.let { "content encoding $contentEncoding"} ?: "no content encoding"
+            val receivedContentEncodingMessage = value.contentEncoding?.let { "content encoding ${value.contentEncoding}"} ?: "no content encoding"
+
+            Failure("The contract expected ${contentEncodingMessage}, but got ${receivedContentEncodingMessage}.", breadCrumb = "contentEncoding")
+        }
         else -> Success()
     }
 }

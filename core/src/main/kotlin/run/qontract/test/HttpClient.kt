@@ -70,7 +70,8 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
                                     }
                                     is MultiPartFileValue -> {
                                         appendInput(value.name, Headers.build {
-                                            append(HttpHeaders.ContentType, ContentType.parse(value.contentType))
+                                            if(value.contentType != null)
+                                                append(HttpHeaders.ContentType, ContentType.parse(value.contentType))
                                             value.contentEncoding?.let {
                                                 append(HttpHeaders.ContentEncoding, value.contentEncoding)
                                             }

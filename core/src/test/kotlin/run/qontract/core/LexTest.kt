@@ -124,6 +124,42 @@ class LexTest {
     }
 
     @Test
+    fun `should parse multipart file spec without content encoding`() {
+        val behaviour = ContractBehaviour("""
+            Feature: Customer Data API
+            
+            Scenario: Upload customer information
+              When POST /data
+              And request-part customer_info @customer_info.csv text/csv
+              Then status 200
+        """.trimIndent())
+
+        val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
+        assertThat(pattern.name).isEqualTo("customer_info")
+        assertThat(pattern.filename).isEqualTo("@customer_info.csv")
+        assertThat(pattern.contentType).isEqualTo("text/csv")
+        assertThat(pattern.contentEncoding).isEqualTo(null)
+    }
+
+    @Test
+    fun `should parse multipart file spec without content type and content encoding`() {
+        val behaviour = ContractBehaviour("""
+            Feature: Customer Data API
+            
+            Scenario: Upload customer information
+              When POST /data
+              And request-part customer_info @customer_info.csv
+              Then status 200
+        """.trimIndent())
+
+        val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
+        assertThat(pattern.name).isEqualTo("customer_info")
+        assertThat(pattern.filename).isEqualTo("@customer_info.csv")
+        assertThat(pattern.contentType).isEqualTo(null)
+        assertThat(pattern.contentEncoding).isEqualTo(null)
+    }
+
+    @Test
     fun `should parse multipart content spec`() {
         val behaviour = ContractBehaviour("""
             Feature: Customer Data API

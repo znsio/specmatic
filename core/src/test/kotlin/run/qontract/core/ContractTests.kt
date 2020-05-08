@@ -672,6 +672,39 @@ Then status 200
     }
 
     @Test
+    fun `should generate a test with a multipart file part with no content ypte` () {
+        val gherkin = """
+Feature: Dumb API
+
+Scenario: api call
+When POST /number
+And request-part number @number.txt
+Then status 200
+""".trim()
+
+        val contract = ContractBehaviour(gherkin)
+        val flags = mutableListOf<String>()
+
+        val results = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add("executed")
+
+                val part = request.multiPartFormData.single() as MultiPartFileValue
+                assertThat(part.name).isEqualTo("number")
+                assertThat(part.filename).isEqualTo("@number.txt")
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(flags).isEqualTo(mutableListOf("executed"))
+        assertFalse(results.hasFailures(), results.report())
+    }
+
+    @Test
     fun `a row lookup pattern should pick up it's value from a row and execute 1 test` () {
         val gherkin = """
 Feature: Dumb API

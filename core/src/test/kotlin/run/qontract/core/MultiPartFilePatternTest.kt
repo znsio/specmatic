@@ -3,6 +3,7 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import run.qontract.core.Result.Failure
 import run.qontract.core.Result.Success
 import run.qontract.core.pattern.Row
 import run.qontract.core.pattern.StringPattern
@@ -14,6 +15,27 @@ internal class MultiPartFilePatternTest {
         val pattern = MultiPartFilePattern("employeecsv", "@employee.csv", "text/csv", "gzip")
         val value = MultiPartFileValue("employeecsv", "@employee.csv", "text/csv", "gzip")
         assertThat(pattern.matches(value, Resolver())).isInstanceOf(Success::class.java)
+    }
+
+    @Test
+    fun `should match file parts without content type or encoding`() {
+        val pattern = MultiPartFilePattern("employeecsv", "@employee.csv")
+        val value = MultiPartFileValue("employeecsv", "@employee.csv")
+        assertThat(pattern.matches(value, Resolver())).isInstanceOf(Success::class.java)
+    }
+
+    @Test
+    fun `should not match file parts with mismatched content type`() {
+        val pattern = MultiPartFilePattern("employeecsv", "@employee.csv", "text/plain")
+        val value = MultiPartFileValue("employeecsv", "@employee.csv")
+        assertThat(pattern.matches(value, Resolver())).isInstanceOf(Failure::class.java)
+    }
+
+    @Test
+    fun `should not match file parts with mismatched content encoding`() {
+        val pattern = MultiPartFilePattern("employeecsv", "@employee.csv", "text/plain")
+        val value = MultiPartFileValue("employeecsv", "@employee.csv", "text/plain", "gzip")
+        assertThat(pattern.matches(value, Resolver())).isInstanceOf(Failure::class.java)
     }
 
     @Test

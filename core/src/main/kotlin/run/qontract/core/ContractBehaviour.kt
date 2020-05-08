@@ -195,16 +195,10 @@ fun toFormDataPart(step: StepInfo): MultiPartFormDataPattern {
 
     return when {
         content.startsWith("@") -> {
-            if(parts.size < 3)
-                throw ContractException("A file must be accompanied by at least the content type, and optionally the content encoding.")
+            val contentType = parts.getOrNull(2)
+            val contentEncoding = parts.getOrNull(3)
 
-            if(parts.size > 4)
-                throw ContractException("Too many tokens in this statement. A file content part should at most contain a name, a file name, a Content-Type header value and a Content-Encoding header value.")
-
-            val (name, content, type) = parts
-            val encoding = parts.getOrNull(3)
-
-            MultiPartFilePattern(name, content, type, encoding)
+            MultiPartFilePattern(name, content, contentType, contentEncoding)
         }
         isPatternToken(content) -> {
             MultiPartContentPattern(name, parsedPattern(content))

@@ -21,19 +21,21 @@ $content
 """.trim()
 }
 
-data class MultiPartFileValue(override val name: String, val filename: String, val contentType: String, val contentEncoding: String? = null, val content: String? = null, val boundary: String = "#####") : MultiPartFormDataValue(name) {
+data class MultiPartFileValue(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null, val content: String? = null, val boundary: String = "#####") : MultiPartFormDataValue(name) {
     override fun toPattern(): MultiPartFormDataPattern {
         return MultiPartFilePattern(name, filename, contentType, contentEncoding)
     }
 
     override fun toDisplayableValue(): String {
-        val headers =
-                listOf("""Content-Disposition: form-data; name="$name"; filename="$filename"""", """Content-Type: $contentType""")
-        val headersWithEncoding = contentEncoding?.let {
-            headers.plus("Content-Encoding: $contentEncoding")
-        } ?: headers
+        val headers = mapOf (
+                "Content-Disposition" to """form-data; name="$name"; filename="$filename"""",
+                "Content-Type" to (contentType ?: ""),
+                "Content-Encoding" to (contentEncoding ?: "")
+        ).filter { it.value.isNotBlank() }
 
-        val headerString = headersWithEncoding.joinToString(System.lineSeparator())
+        val headerString = headers.entries.joinToString {
+            "${it.key}: ${it.value}"
+        }
 
         return """
 --$boundary

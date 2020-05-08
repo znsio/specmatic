@@ -73,7 +73,8 @@ open class QontractJUnitSupport {
             DynamicTest.dynamicTest("$it") {
                 val host = System.getProperty("host")
                 val port = System.getProperty("port")
-                val httpClient = HttpClient("http://$host:$port")
+                val protocol = System.getProperty("protocol")
+                val httpClient = HttpClient("$protocol://$host:$port")
                 httpClient.setServerState(it.serverState)
                 val request = it.generateHttpRequest()
                 var response: HttpResponse? = null

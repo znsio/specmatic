@@ -27,6 +27,9 @@ class TestCommand : Callable<Void> {
     @Option(names = ["--suggestions"], description = ["Location of the suggestions file"], defaultValue = "")
     lateinit var suggestionsPath: String
 
+    @Option(names = ["--https"], description = ["Use https instead of the default http"], required = false)
+    var useHttps: Boolean = false
+
     @Option(names = ["--checkBackwardCompatibility", "--check", "-c"], description = ["Identify versions of the contract prior to the one specified, and verify backward compatibility from the earliest to the latest"])
     var checkBackwardCompatibility: Boolean = false
 
@@ -37,6 +40,7 @@ class TestCommand : Callable<Void> {
             System.setProperty("port", port.toString())
             System.setProperty("suggestions", suggestionsPath)
             System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
+            System.setProperty("protocol", if(useHttps) "https" else "http")
             val launcher = LauncherFactory.create()
             val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
                     .selectors(selectClass(QontractJUnitSupport::class.java))

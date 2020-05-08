@@ -21,7 +21,7 @@ class TestCommand : Callable<Void> {
     @Option(names = ["--host"], description = ["The host to bind to, e.g. localhost or some locally bound IP"], defaultValue = "localhost")
     lateinit var host: String
 
-    @Option(names = ["--port"], description = ["The port to bind to"], defaultValue = "9000")
+    @Option(names = ["--port"], description = ["The port to bind to"])
     var port: Int = 0
 
     @Option(names = ["--suggestions"], description = ["Location of the suggestions file"], defaultValue = "")
@@ -35,12 +35,22 @@ class TestCommand : Callable<Void> {
 
     override fun call(): Void? {
         try {
+            if(port == 0) {
+                port = when {
+                    useHttps -> 443
+                    else -> 9000
+                }
+            }
+
+            val protocol = if(useHttps) "https" else "http"
+
             System.setProperty("path", path)
             System.setProperty("host", host)
             System.setProperty("port", port.toString())
             System.setProperty("suggestions", suggestionsPath)
             System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
-            System.setProperty("protocol", if(useHttps) "https" else "http")
+            System.setProperty("protocol", protocol)
+
             val launcher = LauncherFactory.create()
             val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
                     .selectors(selectClass(QontractJUnitSupport::class.java))
@@ -55,5 +65,4 @@ class TestCommand : Callable<Void> {
         }
         return null
     }
-
 }

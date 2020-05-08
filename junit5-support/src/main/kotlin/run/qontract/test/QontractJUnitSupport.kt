@@ -74,12 +74,15 @@ open class QontractJUnitSupport {
                 val host = System.getProperty("host")
                 val port = System.getProperty("port")
                 val protocol = System.getProperty("protocol")
+
                 val httpClient = HttpClient("$protocol://$host:$port")
-                httpClient.setServerState(it.serverState)
+
                 val request = it.generateHttpRequest()
                 var response: HttpResponse? = null
+
                 val result: Result = try {
-                    response = httpClient.execute(request)
+                    httpClient.setServerState(it.serverState)
+                    val response = httpClient.execute(request)
                     when(response.status) {
                         400 -> Result.Failure(response.body ?: "").also { failureResult -> failureResult.updateScenario(it) }
                         else -> it.matches(response)
@@ -88,6 +91,7 @@ open class QontractJUnitSupport {
                     Result.Failure("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
                             .also { failure -> failure.updateScenario(it) }
                 }
+
                 ResultAssert.assertThat(result).isSuccess(request, response)
             }
         }.toList()

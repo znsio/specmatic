@@ -1,6 +1,5 @@
-package application.versioning.commands
+package application
 
-import application.QontractApplication
 import picocli.CommandLine
 import java.util.*
 

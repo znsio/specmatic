@@ -21,8 +21,8 @@ private const val MOCK_HTTP_REQUEST = "mock-http-request"
 private const val MOCK_HTTP_RESPONSE = "mock-http-response"
 
 fun validateMock(mockSpec: Map<String, Any?>) {
-    if (!mockSpec.containsKey(MOCK_HTTP_REQUEST)) throw ContractException(errorMessage = "This spec does not information about the request to be mocked.")
-    if (!mockSpec.containsKey(MOCK_HTTP_RESPONSE)) throw ContractException(errorMessage = "This spec does not information about the response to be mocked.")
+    if (!mockSpec.containsKey(MOCK_HTTP_REQUEST)) throw ContractException(errorMessage = "This spec does contain not information about the request to be mocked.")
+    if (!mockSpec.containsKey(MOCK_HTTP_RESPONSE)) throw ContractException(errorMessage = "This spec does not contain information about the response to be mocked.")
 }
 
 fun mockFromJSON(mockSpec: Map<String, Value>): MockScenario {

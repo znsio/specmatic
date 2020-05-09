@@ -1,15 +1,14 @@
-package application.versioning.commands.repo
+package application.versioning.commands
 
 import picocli.CommandLine
-import picocli.CommandLine.Command
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import java.io.File
 import java.lang.NumberFormatException
 import java.util.concurrent.Callable
 
-@Command(name = "version", mixinStandardHelpOptions = true, description = ["Suggest the version of a contract"])
-class VersionCommand: Callable<Unit> {
+@CommandLine.Command(name = "suggest", mixinStandardHelpOptions = true, description = ["Suggest the version of a contract"])
+class SuggestCommand : Callable<Unit> {
     @CommandLine.Parameters(index = "0", description = ["Path of the contract file"])
     var contractFilePath: String = ""
 

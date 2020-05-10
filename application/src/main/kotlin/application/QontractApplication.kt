@@ -1,15 +1,14 @@
 package application
 
-import application.versioning.commands.*
 import application.versioning.commands.VersionCommand
 import picocli.CommandLine
 import picocli.CommandLine.Command
-import picocli.CommandLine.HelpCommand
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.concurrent.Callable
 import java.util.logging.LogManager
+import kotlin.system.exitProcess
 
 @Command(name = "qontract", mixinStandardHelpOptions = true, versionProvider = VersionProvider::class, subcommands = [CompareCommand::class, SamplesCommand::class, StubCommand::class, TestCommand::class, VersionCommand::class])
 class QontractApplication : Callable<Int> {
@@ -23,7 +22,7 @@ class QontractApplication : Callable<Int> {
             setupLogging()
             when {
                 args.isEmpty() -> CommandLine(QontractApplication()).usage(System.out)
-                else -> System.exit(CommandLine(QontractApplication()).execute(*args))
+                else -> exitProcess(CommandLine(QontractApplication()).execute(*args))
             }
         }
 

@@ -10,6 +10,7 @@ import picocli.CommandLine.Parameters
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.testBackwardCompatibility
 import java.io.File
+import java.io.FileNotFoundException
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
@@ -19,36 +20,48 @@ class CheckGitFileCommand: Callable<Unit> {
     var filePath: String = ""
 
     override fun call() {
-        val gitFile = File(filePath)
-        val older = getOlder(gitFile)
-        val newer = ContractBehaviour(gitFile.readText())
+        try {
+            val gitFile = File(filePath)
+            val (commitId, older) = getOlder(gitFile)
+            val newer = ContractBehaviour(gitFile.readText())
 
-        val results = testBackwardCompatibility(older, newer)
+            val results = testBackwardCompatibility(older, newer)
 
-        if(results.success()) {
-            println("The new version is backward compatible with the old.")
+            if (results.success()) {
+                println("This contract is backward compatible with the previous one in commit $commitId.")
+            } else {
+                println("This contract is not backward compatible with the previous one in commit $commitId.")
+                println()
+                println(results.report())
+                exitProcess(1)
+            }
         }
-        else {
-            println("The new version is not backward compatible with the old.")
-            println()
-            println(results.report())
-            exitProcess(1)
+        catch (e: Throwable) {
+            println(e.localizedMessage)
         }
     }
 }
 
-private fun getOlder(newer: File): ContractBehaviour {
+private fun getOlder(newer: File): Pair<String, ContractBehaviour> {
+    if(!newer.exists()) {
+        throw FileNotFoundException("${newer.absoluteFile} does not exist.")
+    }
+
     return Git.open(findParentGitDir(newer)).use { git ->
         val relativeFile = newer.absoluteFile.relativeTo(findParentGitDir(newer).absoluteFile)
         val commit = git.log().call().first()
 
-        ContractBehaviour(getContent(git, commit, relativeFile.path) ?: throw Exception("Couldn't find the file in git history."))
+        Pair(commit.name, ContractBehaviour(getContent(git, commit, relativeFile.path) ?: throw Exception("Couldn't find the file in git history.")))
     }
 }
 
 private fun getContent(git: Git, commit: RevCommit, path: String): String? {
     return git.repository.newObjectReader().use { repo ->
         TreeWalk.forPath(git.repository, path, commit.tree).use { treeWalk ->
+            if(treeWalk == null) {
+                throw FileNotFoundException("Couldn't find the path in the last commit (${commit.name})")
+            }
+
             val blobId: ObjectId = treeWalk.getObjectId(0)
 
             repo.use { objectReader ->
@@ -67,7 +80,7 @@ private fun findParentGitDir(filePath: File): File {
         return filePath
     } else {
         if(filePath.absoluteFile.parentFile == null)
-            throw Exception("Couln't find git parent")
+            throw FileNotFoundException("Couldn't find a parent git directory.")
 
         return findParentGitDir(filePath.absoluteFile.parentFile)
     }

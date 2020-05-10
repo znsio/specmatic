@@ -7,8 +7,8 @@ import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
-@Command(name = "check", mixinStandardHelpOptions = true, description = ["Check backward compatibility of all versions in a directory"])
-class CheckCommand: Callable<Unit> {
+@Command(name = "checkAncestors", mixinStandardHelpOptions = true, description = ["Check backward compatibility of all versions in a directory"])
+class CheckAncestorsCommand: Callable<Unit> {
     @Parameters(index = "0", description = ["Name of the directory"])
     var directory: String = ""
 

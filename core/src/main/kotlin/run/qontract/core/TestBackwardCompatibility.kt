@@ -7,9 +7,10 @@ fun testBackwardCompatibility(older: ContractBehaviour, newer: ContractBehaviour
         older.generateTestScenarios().fold(Results()) { results, olderScenario ->
             newer.setServerState(olderScenario.expectedFacts)
 
-            val request = olderScenario.generateHttpRequest()
+            var request: HttpRequest? = null
 
             try {
+                request = olderScenario.generateHttpRequest()
                 val responses = newer.lookupAllResponses(request)
 
                 val (response, result) = when {

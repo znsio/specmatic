@@ -1,6 +1,6 @@
 package run.qontract.core
 
-data class Results(val results: MutableList<Triple<Result, HttpRequest, HttpResponse?>> = mutableListOf()) {
+data class Results(val results: MutableList<Triple<Result, HttpRequest?, HttpResponse?>> = mutableListOf()) {
     fun hasFailures(): Boolean = results.any { it.first is Result.Failure }
     fun hasSuccess(): Boolean = results.any { it.first is Result.Success }
     fun success(): Boolean = hasSuccess() && !hasFailures()

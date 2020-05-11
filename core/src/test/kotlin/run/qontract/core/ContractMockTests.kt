@@ -177,7 +177,7 @@ Scenario: JSON API to get account details with fact check
     @Throws(Throwable::class)
     fun `contract mock should validate expectations and serve generated xml`() {
         val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_xml").updateQueryParam("userid", "10")
-        val expectedResponse = HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>(number)</sms_messages_left></balance>")
+        val expectedResponse = HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>10</sms_messages_left></balance>")
         val response = validateAndRespond(queryParameterXmlContract, expectedRequest, expectedResponse)
 
         response.body?.let {

@@ -87,11 +87,8 @@ data class XMLPattern(val node: Node) : Pattern {
             if (patternChildNodes.length != sampleChildNodes.length)
                 return Result.Failure("Node ${sampleNode.nodeName} does not have matching number of children. Expected: ${patternChildNodes.length} Actual: ${sampleChildNodes.length}")
             for (index in 0 until patternChildNodes.length) {
-                when (val result = matchesNode(patternChildNodes.item(index), sampleChildNodes.item(index), resolver)) {
-                    is Result.Success -> return result
-                    else -> {
-                    }
-                }
+                val result = matchesNode(patternChildNodes.item(index), sampleChildNodes.item(index), resolver)
+                if (result is Result.Failure) return result
             }
             return Result.Success()
         }
@@ -100,7 +97,7 @@ data class XMLPattern(val node: Node) : Pattern {
         val key = patternNode.parentNode.nodeName
 
         return when {
-            isPatternToken(patternValue) -> {
+            isPatternToken(patternValue) -> try {
                 val resolvedPattern = resolver.getPattern(patternValue)
                 val resolvedValue = resolvedPattern.parse(sampleValue, resolver)
 
@@ -108,6 +105,8 @@ data class XMLPattern(val node: Node) : Pattern {
                     is Result.Failure -> result.reason("Node $key did not match. Expected: $patternValue Actual: $sampleValue")
                     else -> result
                 }
+            } catch(e: ContractException) {
+                e.result()
             }
             else -> when (patternValue) {
                 sampleValue -> Result.Success()

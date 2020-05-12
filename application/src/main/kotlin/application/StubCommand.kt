@@ -18,8 +18,11 @@ class StubCommand : Callable<Unit> {
     lateinit var paths: List<String>
 
     @Option(names = ["--data"], description = ["Directory in which contract data may be found"])
-    var dataDir: String? = null
+    lateinit var dataDirs: List<String>
 
+//    @Option(names = ["--data"], description = ["Directory in which contract data may be found"])
+//    var dataDir: String? = null
+//
     @Option(names = ["--host"], description = ["Host"], defaultValue = "localhost")
     lateinit var host: String
 
@@ -61,7 +64,7 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun startServer() {
-        contractFake = dataDir?.let { createStubFromContracts(paths, it, host, port) } ?: createStubFromContracts(paths, host, port)
+        contractFake = createStubFromContracts(paths, dataDirs, host, port)
     }
 
     private fun restartServer() {

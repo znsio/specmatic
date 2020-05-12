@@ -30,18 +30,18 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
-fun createStubFromContracts(contractPaths: List<String>, dataDirPath: String, host: String = "localhost", port: Int = 9000): ContractStub {
-    val dataDir = File(dataDirPath)
-    if(!dataDir.exists() || !dataDir.isDirectory) throw Exception("Data directory $dataDirPath does not exist.")
+fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
+    val dataDirs = dataDirPaths.map { File(it) }
+    if(dataDirs.any { !it.exists() || !it.isDirectory }) throw Exception("Data directory $dataDirPaths does not exist.")
 
     val behaviours = contractPaths.map { path ->
         Pair(File(path), ContractBehaviour(readFile(path)))
     }
 
-    val dataFiles = dataDir.listFiles()?.filter { it.extension == "json" }
-    val mocks = dataFiles?.map { Pair(it, stringToMockScenario(StringValue(it.readText()))) } ?: emptyList()
+    val dataFiles = dataDirs.flatMap { it.listFiles()?.toList() ?: emptyList<File>() }.filter { it.extension == "json" }
+    val mockData = dataFiles.map { Pair(it, stringToMockScenario(StringValue(it.readText()))) }
 
-    val contractInfo = mocks.mapNotNull { (mockFile, mock) ->
+    val contractInfo = mockData.mapNotNull { (mockFile, mock) ->
         val matchResults = behaviours.asSequence().map { (contractFile, behaviour) ->
             try {
                 behaviour.matchingMockResponse(mock)

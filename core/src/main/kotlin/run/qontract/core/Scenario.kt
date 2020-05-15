@@ -80,14 +80,9 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         val resolver = Resolver(expectedFacts, false, patterns)
 
         return try {
-            httpResponsePattern.matches(httpResponse, resolver).also { it.updateScenario(this) }.let {
-                when (it) {
-                    is Result.Failure -> it.also { failure -> failure.updateScenario(this) }
-                    else -> it
-                }
-            }
+            httpResponsePattern.matches(httpResponse, resolver).updateScenario(this)
         } catch (exception: Throwable) {
-            return Result.Failure("Exception: ${exception.message}")
+            Result.Failure("Exception: ${exception.message}")
         }
     }
 

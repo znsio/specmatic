@@ -31,7 +31,8 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
 
     fun lookupAllResponses(httpRequest: HttpRequest): List<HttpResponse> =
         try {
-            matchingScenario(lookupScenario(httpRequest, scenarios))?.generateHttpResponses(serverState) ?: listOf(errorResponse(lookupScenario(httpRequest, scenarios), httpRequest))
+            val scenarios = lookupScenario(httpRequest, scenarios)
+            matchingScenario(scenarios)?.generateHttpResponses(serverState) ?: listOf(errorResponse(scenarios, httpRequest))
         } finally {
             serverState = emptyMap()
         }

@@ -66,7 +66,7 @@ Then status 200
                     }.let { flags[it] = flags.getOrDefault(it, 0) + 1 }
                 }
 
-                return HttpResponse(200)
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -106,7 +106,7 @@ Examples:
                     flags["optional"] = requestBody.jsonObject.getOrDefault("optional", 0).toString().toInt()
                 }
 
-                return HttpResponse(200)
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -144,7 +144,7 @@ Then status 200
                     })
                 } else fail("Expected JSON object")
 
-                return HttpResponse(200)
+                return HttpResponse.OK
             }
 
             override fun setServerState(serverState: Map<String, Value>) {

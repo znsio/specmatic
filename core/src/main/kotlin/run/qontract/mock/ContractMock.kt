@@ -17,6 +17,7 @@ import kotlinx.coroutines.runBlocking
 import run.qontract.core.value.*
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
+import run.qontract.core.pattern.parsedValue
 import java.io.Closeable
 
 typealias Expectation = Triple<HttpRequestPattern, Resolver, HttpResponse>

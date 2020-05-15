@@ -29,7 +29,7 @@ class PatternDefinitionTests {
         val request = HttpRequest().updateMethod("GET").updatePath("/accounts").updateQueryParam("id", "10")
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
-        val responseJSON = JSONObject(response.body)
+        val responseJSON = JSONObject(response.body?.displayableValue())
         Assertions.assertTrue(StringPattern.matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
     }
 
@@ -108,7 +108,7 @@ class PatternDefinitionTests {
         val request = HttpRequest().updateMethod("GET").updatePath("/addresses")
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
-        val responseObject = JSONObject(response.body)
+        val responseObject = JSONObject(response.body?.displayableValue())
         val addresses = responseObject.getJSONArray("addresses")
         Assertions.assertTrue(responseObject.length() > 0)
         for (i in 0 until responseObject.length()) {
@@ -130,7 +130,7 @@ class PatternDefinitionTests {
         val request = HttpRequest().updateMethod("GET").updatePath("/locations")
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
-        val document = parseXML(response.body ?: "")
+        val document = parseXML(response.body?.displayableValue() ?: "")
         val root: Node = document.documentElement
         Assertions.assertEquals("locations", root.nodeName)
         val childNodes = root.childNodes
@@ -170,7 +170,7 @@ class PatternDefinitionTests {
         val request = HttpRequest().updateMethod("GET").updatePath("/accounts").updateQueryParam("id", "10")
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
-        val responseJSON = JSONObject(response.body)
+        val responseJSON = JSONObject(response.body?.displayableValue())
         Assertions.assertTrue(StringPattern.matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
     }
 
@@ -191,7 +191,7 @@ class PatternDefinitionTests {
         val request = HttpRequest().updateMethod("POST").updatePath("/accounts").updateBody("[{\"id\": 10, \"name\": \"John Doe\"}, {\"id\": 20, \"name\": \"Jane Doe\"}]")
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
-        val responseArray = JSONArray(response.body)
+        val responseArray = JSONArray(response.body?.displayableValue())
         for (i in 0 until responseArray.length()) {
             val id = responseArray.getJSONObject(i)
             assertThat(id["id"]).isInstanceOf(Number::class.java)

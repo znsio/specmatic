@@ -14,7 +14,7 @@ fun testBackwardCompatibility(older: ContractBehaviour, newer: ContractBehaviour
                 val responses = newer.lookupAllResponses(request)
 
                 val (response, result) = when {
-                    responses.singleOrNull()?.headers?.get("X-Qontract-Result") == "failure" -> Pair(responses.first(), Result.Failure(responses.first().body ?: ""))
+                    responses.singleOrNull()?.headers?.get("X-Qontract-Result") == "failure" -> Pair(responses.first(), Result.Failure(responses.first().body?.displayableValue() ?: ""))
                     else -> {
                         val matchResults = responses.asSequence().map { response ->
                             Pair(response, olderScenario.matches(response))

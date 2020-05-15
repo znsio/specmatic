@@ -170,7 +170,7 @@ internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().map
 
 internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse) {
     val headerString = httpResponse.headers.get("Content-Type") ?: "text/plain"
-    val textContent = TextContent(httpResponse.body as String, ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
+    val textContent = TextContent(httpResponse.body?.toStringValue() ?: "", ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
 
     try {
         val headersControlledByEngine = HttpHeaders.UnsafeHeadersList.map { it.toLowerCase() }
@@ -199,8 +199,8 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehav
                 responses.firstOrNull {
                     it.headers.getOrDefault("X-Qontract-Result", "none") != "failure"
                 } ?: HttpResponse(400, responses.map {
-                    it.body ?: ""
-                }.filter { it.isNotBlank() }.joinToString("\n\n"))
+                    it.body ?: EmptyString
+                }.filter { it != EmptyString }.joinToString("\n\n"))
             }
             else -> mock.third
         }

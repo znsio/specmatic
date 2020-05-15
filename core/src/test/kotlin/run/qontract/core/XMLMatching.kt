@@ -22,7 +22,7 @@ class XMLMatching {
         val request = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account_id", "10")
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
-        val root = parseXML(response.body ?: "").documentElement
+        val root = parseXML(response.body?.displayableValue() ?: "").documentElement
         val type = root.attributes.getNamedItem("type").nodeValue
         val name = root.childNodes.item(0).childNodes.item(0).nodeValue
         val address = root.childNodes.item(1).childNodes.item(0).nodeValue

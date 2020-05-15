@@ -17,16 +17,6 @@ import javax.xml.transform.stream.StreamResult
 @Throws(IOException::class)
 fun readFile(filePath: String): String {
     return File(filePath).readText().trim()
-//    val fileInputStream = FileInputStream(filePath)
-//    val contractBuffer = StringBuilder()
-//    val bufferedReader = BufferedReader(InputStreamReader(fileInputStream))
-//    var line: String?
-//    val lineSeparator = System.getProperty("line.separator")
-//    while (bufferedReader.readLine().also { line = it } != null) {
-//        contractBuffer.append(line)
-//        contractBuffer.append(lineSeparator)
-//    }
-//    return contractBuffer.toString().trim { it <= ' ' }
 }
 
 @Throws(ParserConfigurationException::class, SAXException::class, IOException::class)

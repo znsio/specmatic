@@ -82,7 +82,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         return try {
             httpResponsePattern.matches(httpResponse, resolver).updateScenario(this)
         } catch (exception: Throwable) {
-            Result.Failure("Exception: ${exception.message}")
+            return Result.Failure("Exception: ${exception.message}")
         }
     }
 

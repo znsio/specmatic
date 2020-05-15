@@ -37,7 +37,7 @@ internal class ScenarioTest {
         val httpResponsePattern = mockk<HttpResponsePattern>(relaxed = true)
         every { httpResponsePattern.matches(any(), any()) }.throws(ContractException("message"))
         val scenario = Scenario("test", HttpRequestPattern(), httpResponsePattern, HashMap(), LinkedList(), HashMap(), HashMap())
-        scenario.matches(HttpResponse()).let {
+        scenario.matches(HttpResponse.EMPTY).let {
             assertThat(it is Result.Failure).isTrue()
             assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf(), listOf("Exception: message")))
         }

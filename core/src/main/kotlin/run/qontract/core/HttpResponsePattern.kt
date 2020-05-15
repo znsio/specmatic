@@ -2,14 +2,14 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 
-data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int? = null, val body: Pattern = NoContentPattern) {
-    constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, parsedPattern(response.body!!))
+data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = NoContentPattern) {
+    constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body?.toPattern() ?: NoContentPattern)
 
     fun generateResponse(resolver: Resolver): HttpResponse {
         return attempt(breadCrumb = "RESPONSE") {
             val value = body.generate(resolver)
             val headers = headersPattern.generate(resolver).plus("Content-Type" to value.httpContentType).plus("X-Qontract-Result" to "success")
-            HttpResponse(status!!, value.toString(), headers)
+            HttpResponse(status, headers, value)
         }
     }
 
@@ -58,7 +58,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
     private fun matchBody(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
         val resolverWithNumericString = resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumericStringPattern))
-        when (val result = body.matches(parsedValue(response.body), resolverWithNumericString)) {
+        when (val result = body.matches(response.body, resolverWithNumericString)) {
             is Result.Failure -> return MatchFailure(result.breadCrumb("BODY"))
         }
         return MatchSuccess(parameters)
@@ -74,7 +74,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
                 allPossibleHeaders.map { oneHeadersPattern ->
                     val body = oneBody.generate(resolver)
                     val headers = oneHeadersPattern.generate(resolver).plus("Content-Type" to body.httpContentType).plus("X-Qontract-Result" to "success")
-                    HttpResponse(status!!, body.toStringValue(), headers)
+                    HttpResponse(status, headers, body)
                 }
             }
         }

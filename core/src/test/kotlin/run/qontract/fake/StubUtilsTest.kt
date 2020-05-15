@@ -26,13 +26,13 @@ Feature: Math API
         val request1 = HttpRequest("POST", "/square", emptyMap(), parsedValue("""{"number": 10}"""))
         val request2 = HttpRequest("POST", "/square", emptyMap(), parsedValue("""{"number": 10, "description": "10"}"""))
 
-        val mock1 = MockScenario(request1, HttpResponse.OK("1"))
-        val mock2 = MockScenario(request2, HttpResponse.OK("2"))
+        val mock1 = MockScenario(request1, HttpResponse.OK(1))
+        val mock2 = MockScenario(request2, HttpResponse.OK(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
         val response = stubResponse(request2, contractInfo)
 
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).isEqualTo("2")
+        assertThat(response.body).isEqualTo(NumberValue(2))
     }
 
     @Test
@@ -53,8 +53,7 @@ Feature: Math API
 
         println(response.toLogString())
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).hasSizeGreaterThan(0)
-        assertDoesNotThrow { response.body?.toInt() }
+        assertThat(response.body).isInstanceOf(NumberValue::class.java)
     }
 
     @Test
@@ -75,8 +74,7 @@ Feature: Math API
 
         println(response.toLogString())
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).hasSizeGreaterThan(0)
-        assertDoesNotThrow { response.body?.toInt() }
+        assertThat(response.body).isInstanceOf(NumberValue::class.java)
     }
 
     @Test
@@ -93,14 +91,13 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", mapOf("X-Optional-Header" to "some value"), NumberValue(10))
-        val mock = MockScenario(request, HttpResponse.OK("10"))
+        val mock = MockScenario(request, HttpResponse.OK(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
         println(response.toLogString())
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).hasSizeGreaterThan(0)
-        assertDoesNotThrow { response.body?.toInt() }
+        assertThat(response.body).isInstanceOf(NumberValue::class.java)
     }
 
     @Test
@@ -117,14 +114,13 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", emptyMap(), NumberValue(10))
-        val mock = MockScenario(request, HttpResponse.OK("10"))
+        val mock = MockScenario(request, HttpResponse.OK(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
         println(response.toLogString())
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).hasSizeGreaterThan(0)
-        assertDoesNotThrow { response.body?.toInt() }
+        assertThat(response.body).isInstanceOf(NumberValue::class.java)
     }
 
     @Test
@@ -144,13 +140,13 @@ Feature: Math API
         val request1 = HttpRequest("POST", "/square", mapOf("X-Required" to "some value"), parsedValue("""10"""))
         val request2 = HttpRequest("POST", "/square", mapOf("X-Required" to "some value", "X-Optional" to "some other value"), parsedValue("""10"""))
 
-        val mock1 = MockScenario(request1, HttpResponse.OK("1"))
-        val mock2 = MockScenario(request2, HttpResponse.OK("2"))
+        val mock1 = MockScenario(request1, HttpResponse.OK(1))
+        val mock2 = MockScenario(request2, HttpResponse.OK(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
         val response = stubResponse(request2, contractInfo)
 
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).isEqualTo("2")
+        assertThat(response.body).isEqualTo(NumberValue(2))
     }
 
     @Test
@@ -167,13 +163,13 @@ Feature: Math API
         val request1 = HttpRequest("GET", "/number", queryParams = mapOf("param1" to "some value"))
         val request2 = HttpRequest("GET", "/number", queryParams = mapOf("param1" to "some value", "param2" to "some other value"))
 
-        val mock1 = MockScenario(request1, HttpResponse.OK("1"))
-        val mock2 = MockScenario(request2, HttpResponse.OK("2"))
+        val mock1 = MockScenario(request1, HttpResponse.OK(1))
+        val mock2 = MockScenario(request2, HttpResponse.OK(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
         val response = stubResponse(request2, contractInfo)
 
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).isEqualTo("2")
+        assertThat(response.body).isEqualTo(NumberValue(2))
     }
 
     @Test
@@ -192,22 +188,22 @@ Feature: Math API
         val mockRequest1 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to StringValue("(number)"))))
         val mockRequest2 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to StringValue("(null)"))))
 
-        val mock1 = MockScenario(mockRequest1, HttpResponse.OK("1"))
-        val mock2 = MockScenario(mockRequest2, HttpResponse.OK("2"))
+        val mock1 = MockScenario(mockRequest1, HttpResponse.OK(NumberValue(1)))
+        val mock2 = MockScenario(mockRequest2, HttpResponse.OK(NumberValue(2)))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
 
         val actualRequest1 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to NumberValue(10))))
         stubResponse(actualRequest1, contractInfo).let { response ->
             println(response)
             assertThat(response.status).isEqualTo(200)
-            assertThat(response.body).isEqualTo("1")
+            assertThat(response.body).isEqualTo(NumberValue(1))
         }
 
         val actualRequest2 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to NullValue)))
         stubResponse(actualRequest2, contractInfo).let { response ->
             println(response)
             assertThat(response.status).isEqualTo(200)
-            assertThat(response.body).isEqualTo("2")
+            assertThat(response.body).isEqualTo(NumberValue(2))
         }
     }
 
@@ -226,22 +222,22 @@ Feature: Math API
         val mockRequest1 = HttpRequest("POST", "/square", body = StringValue("(number)"))
         val mockRequest2 = HttpRequest("POST", "/square", body = StringValue("(null)"))
 
-        val mock1 = MockScenario(mockRequest1, HttpResponse.OK("1"))
-        val mock2 = MockScenario(mockRequest2, HttpResponse.OK("2"))
+        val mock1 = MockScenario(mockRequest1, HttpResponse.OK(1))
+        val mock2 = MockScenario(mockRequest2, HttpResponse.OK(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
 
         val actualRequest1 = HttpRequest("POST", "/square", body = NumberValue(10))
         stubResponse(actualRequest1, contractInfo).let { response ->
             println(response)
             assertThat(response.status).isEqualTo(200)
-            assertThat(response.body).isEqualTo("1")
+            assertThat(response.body).isEqualTo(NumberValue(1))
         }
 
         val actualRequest2 = HttpRequest("POST", "/square", body = EmptyString)
         stubResponse(actualRequest2, contractInfo).let { response ->
             println(response)
             assertThat(response.status).isEqualTo(200)
-            assertThat(response.body).isEqualTo("2")
+            assertThat(response.body).isEqualTo(NumberValue(2))
         }
     }
 
@@ -258,14 +254,13 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartContentValue("number", NumberValue(10))))
-        val mock = MockScenario(request, HttpResponse.OK("10"))
+        val mock = MockScenario(request, HttpResponse.OK(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
         println(response.toLogString())
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).hasSizeGreaterThan(0)
-        assertDoesNotThrow { response.body?.toInt() }
+        assertThat(response.body).isInstanceOf(NumberValue::class.java)
     }
 
     @Test
@@ -286,8 +281,7 @@ Feature: Math API
 
         println(response.toLogString())
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).hasSizeGreaterThan(0)
-        assertDoesNotThrow { response.body?.toInt() }
+        assertThat(response.body).isInstanceOf(NumberValue::class.java)
     }
 
     @Test
@@ -303,14 +297,13 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "@number.txt", "text/plain", null)))
-        val mock = MockScenario(request, HttpResponse.OK("10"))
+        val mock = MockScenario(request, HttpResponse.OK(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
         println(response.toLogString())
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).hasSizeGreaterThan(0)
-        assertDoesNotThrow { response.body?.toInt() }
+        assertThat(response.body).isInstanceOf(NumberValue::class.java)
     }
 
     @Test
@@ -331,8 +324,7 @@ Feature: Math API
 
         println(response.toLogString())
         assertThat(response.status).isEqualTo(200)
-        assertThat(response.body).hasSizeGreaterThan(0)
-        assertDoesNotThrow { response.body?.toInt() }
+        assertThat(response.body).isInstanceOf(NumberValue::class.java)
     }
 
     private fun fakeResponse(request: HttpRequest, behaviour: ContractBehaviour): HttpResponse {

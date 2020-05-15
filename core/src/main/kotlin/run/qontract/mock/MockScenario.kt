@@ -7,7 +7,7 @@ import run.qontract.core.requestFromJSON
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
 
-data class MockScenario(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse()) {
+data class MockScenario(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap())) {
     @Throws(MockException::class)
     fun toJSON(): MutableMap<String, Any> {
         val mockInteraction = mutableMapOf<String, Any>()

@@ -301,7 +301,7 @@ Scenario: JSON API to get account details with fact check
         ContractMock.fromGherkin(contractGherkin).use { mock ->
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NumberValue(10))
-            val expectedResponse = HttpResponse(200)
+            val expectedResponse = HttpResponse.OK
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }
@@ -318,7 +318,7 @@ Scenario: JSON API to get account details with fact check
         ContractMock.fromGherkin(contractGherkin).use { mock ->
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NullValue)
-            val expectedResponse = HttpResponse(200)
+            val expectedResponse = HttpResponse.OK
             mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
         }
     }

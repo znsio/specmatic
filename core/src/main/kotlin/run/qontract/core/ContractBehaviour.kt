@@ -8,6 +8,7 @@ import io.cucumber.messages.Messages.GherkinDocument
 import run.qontract.core.pattern.*
 import run.qontract.core.pattern.Examples.Companion.examplesFrom
 import run.qontract.core.utilities.jsonStringToValueMap
+import run.qontract.core.value.EmptyString
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
@@ -288,7 +289,7 @@ private fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Triple<
         val response = testExecutor.execute(request)
         when {
             response.headers.get("X-Qontract-Result") == "failure" -> {
-                Triple(Result.Failure(response.body ?: ""), request, response)
+                Triple(Result.Failure(response.body?.displayableValue() ?: ""), request, response)
             }
             else -> Triple(scenario.matches(response), request, response)
         }

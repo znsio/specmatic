@@ -3,6 +3,7 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.*
+import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
@@ -33,7 +34,7 @@ class LexTest {
         assertEquals(200, response.status)
 
         try {
-            (response.body ?: "hello").toInt()
+            (response.body ?: StringValue("NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa Batman")).displayableValue().toInt()
         } catch (e: Exception) { fail("${response.body} is not a number")}
     }
 
@@ -56,7 +57,7 @@ class LexTest {
         val request = HttpRequest().updateMethod("POST").updatePath("/pets").updateBody("""{"name": "Benny", "description": "Fluffy and white"}""")
         val response = contractBehaviour.lookupResponse(request)
 
-        try { NumberTypePattern.parse(response.body ?: "", Resolver()) } catch(e: Throwable) { fail("Expected Number value") }
+        assertThat(response.body).isInstanceOf(NumberValue::class.java)
     }
 
     @Test
@@ -77,12 +78,12 @@ class LexTest {
         val request = HttpRequest().updateMethod("GET").updatePath("/pets/10")
         val response = contractBehaviour.lookupResponse(request)
 
-        parsedValue(response.body ?: "").let { body ->
+        response.body?.let { body ->
             if(body !is JSONObjectValue) fail("Expected JSON object")
 
             assertTrue(body.jsonObject.getValue("id") is NumberValue)
             assertTrue(body.jsonObject.getValue("name") is StringValue)
-        }
+        } ?: fail("Response body was null")
     }
 
     @Test

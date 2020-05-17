@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import run.qontract.core.Resolver
+import run.qontract.core.Result
 import run.qontract.core.shouldMatch
 import run.qontract.core.value.StringValue
 
@@ -65,5 +66,18 @@ internal class PatternInStringPatternTest {
 
         val pattern3 = PatternInStringPattern(BooleanPattern)
         assertThat(pattern1.encompasses(pattern3, Resolver())).isFalse()
+    }
+
+    @Test
+    fun `should encompass itself`() {
+        val type = parsedPattern("""(number in string)""")
+        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should not encompass another contained type`() {
+        val numberInString = parsedPattern("""(number in string)""")
+        val booleanInString = parsedPattern("""(boolean in string)""")
+        assertThat(numberInString.encompasses2(booleanInString, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

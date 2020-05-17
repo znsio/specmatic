@@ -25,7 +25,14 @@ object BooleanPattern : Pattern {
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = BooleanValue(value.toBoolean())
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is BooleanPattern
-    override val description: String = "boolean"
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        return when(otherPattern) {
+            is BooleanPattern -> Result.Success()
+            else -> Result.Failure("Expected boolean type, got $otherPattern")
+        }
+    }
+
+    override val typeName: String = "boolean"
     override val pattern: Any = "(boolean)"
     override fun toString(): String = pattern.toString()
 }

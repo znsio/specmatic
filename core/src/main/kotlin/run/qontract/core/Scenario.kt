@@ -103,6 +103,8 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
             }.flatMap { row -> newBasedOn(row) }
         }
 
+    val resolver: Resolver = Resolver(newPatterns = patterns)
+
     val serverState: Map<String, Value>
         get() = expectedFacts
 

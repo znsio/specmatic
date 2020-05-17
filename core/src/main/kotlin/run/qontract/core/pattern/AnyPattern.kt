@@ -16,7 +16,7 @@ data class AnyPattern(override val pattern: List<Pattern>, override val key: Str
         pattern.asSequence().map {
             resolver.matchesPattern(key, it, sampleData ?: EmptyString)
         }.let { results ->
-            results.find { it is Result.Success } ?: failedToFindAny(description, results.map { it as Result.Failure }.toList(), sampleData)
+            results.find { it is Result.Success } ?: failedToFindAny(typeName, results.map { it as Result.Failure }.toList(), sampleData)
         }
 
     override fun generate(resolver: Resolver): Value =
@@ -31,16 +31,20 @@ data class AnyPattern(override val pattern: List<Pattern>, override val key: Str
     override fun parse(value: String, resolver: Resolver): Value =
         pattern.asSequence().map {
             try { it.parse(value, resolver) } catch(e: Throwable) { null }
-        }.find { it != null } ?: throw ContractException("Failed to parse value \"$value\". It should have matched one of ${pattern.joinToString(", ") { it.description }}.")
+        }.find { it != null } ?: throw ContractException("Failed to parse value \"$value\". It should have matched one of ${pattern.joinToString(", ") { it.typeName }}.")
 
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean {
         return otherPattern.fitsWithin(patternSet(resolver), resolver)
     }
 
     override fun patternSet(resolver: Resolver): List<Pattern> =
-            this.pattern.flatMap { it.patternSet(resolver) }.plus(this)
+            this.pattern.flatMap { it.patternSet(resolver) }
 
-    override val description: String = pattern.joinToString(" or ") { inner -> inner.description }
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        return otherPattern.fitsWithin2(patternSet(thisResolver), otherResolver, thisResolver)
+    }
+
+    override val typeName: String = pattern.joinToString(" or ") { inner -> inner.typeName }
 }
 
 private fun failedToFindAny(description: String, results: List<Result.Failure>, sampleData: Value?): Result.Failure {

@@ -17,12 +17,17 @@ object StringPattern : Pattern {
         }
     }
 
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern is StringPattern) return Result.Success()
+        return Result.Failure("Expected string, got ${otherPattern.typeName}")
+    }
+
     override fun generate(resolver: Resolver): Value = StringValue(randomString())
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = StringValue(value)
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is StringPattern
-    override val description: String = "string"
+    override val typeName: String = "string"
 
     override val pattern: Any = "(string)"
     override fun toString(): String = pattern.toString()

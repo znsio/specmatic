@@ -9,6 +9,7 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.testBackwardCompatibility
+import run.qontract.core.testBackwardCompatibility2
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.concurrent.Callable
@@ -25,7 +26,7 @@ class CheckGitFileCommand: Callable<Unit> {
             val (commitId, older) = getOlder(gitFile)
             val newer = ContractBehaviour(gitFile.readText())
 
-            val results = testBackwardCompatibility(older, newer)
+            val results = testBackwardCompatibility2(older, newer)
 
             if (results.success()) {
                 println("This contract is backward compatible with the previous one in commit $commitId.")

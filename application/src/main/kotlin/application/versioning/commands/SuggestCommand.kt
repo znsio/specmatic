@@ -52,7 +52,7 @@ class SuggestCommand : Callable<Unit> {
                 else -> {
                     val older = ContractBehaviour(File(olderFilePath).readText())
                     try {
-                        val results = testBackwardCompatibility(older, newer)
+                        val results = testBackwardCompatibility2(older, newer)
 
                         when {
                             results.success() -> toVersion(File(olderFilePath).nameWithoutExtension).incrementedMinorVersion()

@@ -1,9 +1,9 @@
 package run.qontract.core.pattern
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.*
 import run.qontract.core.value.*
-import kotlin.collections.HashMap
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -155,5 +155,47 @@ internal class JSONObjectPatternTest {
     @Test
     fun `should fail to match nulls gracefully`() {
         NullValue shouldNotMatch JSONObjectPattern(mapOf("name" to StringPattern))
+    }
+
+    @Test
+    fun `it should encompass itself`() {
+        val type = parsedPattern("""{"name": "(string)"}""")
+        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `it should encompass itself with a nullable value`() {
+        val type = parsedPattern("""{"number": "(number?)"}""")
+        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `having a nullable value it should encompass another with a non null value of the same type`() {
+        val bigger = parsedPattern("""{"number": "(number?)"}""")
+        val smallerWithNumber = parsedPattern("""{"number": "(number)"}""")
+        val smallerWithNull = parsedPattern("""{"number": "(null)"}""")
+
+        assertThat(bigger.encompasses2(smallerWithNumber, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses2(smallerWithNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `it should encompass with an optional key`() {
+        val type = parsedPattern("""{"number?": "(number)"}""")
+        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `it should encompass another with the optional key missing`() {
+        val bigger = parsedPattern("""{"required": "(number)", "optional?": "(number)"}""")
+        val smaller = parsedPattern("""{"required": "(number)"}""")
+        assertThat(bigger.encompasses2(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `it should encompass another with an unheard of key`() {
+        val bigger = parsedPattern("""{"required": "(number)"}""")
+        val smaller = parsedPattern("""{"required": "(number)", "extra": "(number)"}""")
+        assertThat(bigger.encompasses2(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

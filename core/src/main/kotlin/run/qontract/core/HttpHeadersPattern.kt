@@ -2,7 +2,6 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
-import run.qontract.core.value.Value
 
 data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), val ancestorHeaders: Map<String, Pattern>? = null) {
     fun matches(headers: Map<String, String>, resolver: Resolver): Result {
@@ -68,4 +67,29 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
         multipleValidKeys(pattern, row) { pattern ->
             newBasedOn(pattern, row, resolver)
         }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+
+    fun encompasses(other: HttpHeadersPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        return _encompasses(other, thisResolver, otherResolver).breadCrumb("HEADER")
+    }
+
+    private fun _encompasses(other: HttpHeadersPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
+        val otherRequiredKeys = other.pattern.keys.filter { !isOptional(it) }
+
+        val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
+        if(missingFixedKey != null)
+            return Result.Failure("Header $missingFixedKey was missing", breadCrumb = missingFixedKey)
+
+        val otherWithoutOptionality = other.pattern.mapKeys { withoutOptionality(it.key) }
+        val thisWithoutOptionality = pattern.filterKeys { withoutOptionality(it) in otherWithoutOptionality }.mapKeys { withoutOptionality(it.key) }
+
+        val valueResults =
+            thisWithoutOptionality.keys.asSequence().map {
+                Pair(it, thisWithoutOptionality.getValue(it).encompasses2(resolvedHop(otherWithoutOptionality.getValue(it), otherResolver), otherResolver, thisResolver))
+            }
+
+        val result = valueResults.firstOrNull { it.second is Result.Failure }
+
+        return result?.second?.breadCrumb(result.first) ?: Result.Success()
+    }
 }

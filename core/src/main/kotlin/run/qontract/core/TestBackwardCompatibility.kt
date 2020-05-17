@@ -3,6 +3,29 @@ package run.qontract.core
 import run.qontract.core.pattern.ContractException
 import java.io.File
 
+fun testBackwardCompatibility2(older: ContractBehaviour, newerBehaviour: ContractBehaviour): Results {
+    return older.generateTestScenarios().fold(Results()) { results, olderScenario ->
+        newerBehaviour.setServerState(olderScenario.expectedFacts)
+        var request: HttpRequest? = null
+
+        try {
+            request = olderScenario.generateHttpRequest()
+            val newerScenario = newerBehaviour.lookupScenario(request)
+            val newerResponsePattern = newerScenario.httpResponsePattern
+
+            val result: Result = olderScenario.httpResponsePattern.encompasses(newerResponsePattern, olderScenario.resolver, newerScenario.resolver)
+
+            results.copy(results = results.results.plus(Triple(result, request, null)).toMutableList())
+        }
+        catch(contractException: ContractException) {
+            results.copy(results = results.results.plus(Triple(contractException.result(), request, null)).toMutableList())
+        }
+        catch(throwable: Throwable) {
+            results.copy(results = results.results.plus(Triple(Result.Failure("Exception: ${throwable.localizedMessage}"), request, null)).toMutableList())
+        }
+    }
+}
+
 fun testBackwardCompatibility(older: ContractBehaviour, newer: ContractBehaviour): Results =
         older.generateTestScenarios().fold(Results()) { results, olderScenario ->
             newer.setServerState(olderScenario.expectedFacts)
@@ -59,7 +82,7 @@ fun testBackwardCompatibilityInDirectory(directory: File, majorVersion: Int, min
         return JustOne(files.first().path)
 
     return TestResults(files.zipWithNext().asSequence().map { (older, newer) ->
-        val results = testBackwardCompatibility(ContractBehaviour(older.readText()), ContractBehaviour(newer.readText()))
+        val results = testBackwardCompatibility2(ContractBehaviour(older.readText()), ContractBehaviour(newer.readText()))
         Comparison(older.absolutePath, newer.absolutePath, results)
     })
 }

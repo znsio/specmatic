@@ -5,7 +5,7 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
 
-data class Resolver(val factStore: FactStore = CheckFacts(), val matchPatternInValue: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Pattern>, actual: Map<String, Value>) -> String? = checkOnlyPatternKeys ) {
+data class Resolver(val factStore: FactStore = CheckFacts(), val matchPatternInValue: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Any>, actual: Map<String, Any>) -> String? = checkOnlyPatternKeys ) {
     constructor(facts: Map<String, Value> = emptyMap(), matchPattern: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), matchPattern, newPatterns)
     constructor() : this(emptyMap(), false)
 
@@ -69,11 +69,11 @@ fun withNumericStringPattern(resolver: Resolver): Resolver =
 fun withNumberTypePattern(resolver: Resolver): Resolver =
         resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberTypePattern))
 
-val checkOnlyPatternKeys = { pattern: Map<String, Pattern>, actual: Map<String, Value> ->
+val checkOnlyPatternKeys = { pattern: Map<String, Any>, actual: Map<String, Any> ->
     pattern.keys.find { key -> isMissingKey(actual, key) }
 }
 
-val checkAllKeys = { pattern: Map<String, Pattern>, actual: Map<String, Value> ->
+val checkAllKeys = { pattern: Map<String, Any>, actual: Map<String, Any> ->
     pattern.keys.find { key -> isMissingKey(actual, key) } ?: actual.keys.find { key ->
         val keyWithoutOptionality = withoutOptionality(key)
         key !in pattern && "$keyWithoutOptionality?" !in pattern

@@ -5,59 +5,6 @@ import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.value.*
 
-fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) =
-        TabularPattern(rows.map { it.cellsList }.map { (key, value) ->
-            key.value to toJSONPattern(value.value)
-        }.toMap())
-
-fun toJSONPattern(value: String): Pattern {
-    return value.trim().let {
-        val asNumber: Number? = try { convertToNumber(value) } catch (e: Throwable) { null }
-
-        when {
-            asNumber != null -> ExactValuePattern(NumberValue(asNumber))
-            it.startsWith("\"") && it.endsWith("\"") ->
-                ExactValuePattern(StringValue(it.removeSurrounding("\"")))
-            it == "null" -> ExactValuePattern(NullValue)
-            it == "true" -> ExactValuePattern(BooleanValue(true))
-            it == "false" -> ExactValuePattern(BooleanValue(false))
-            else -> parsedPattern(value)
-        }
-    }
-}
-
-fun isNumber(value: StringValue): Boolean {
-    return try {
-        convertToNumber(value.string)
-        true
-    } catch(e: ContractException) {
-        false
-    }
-}
-
-fun convertToNumber(value: String): Number {
-    value.trim().let {
-        try {
-            return it.toInt()
-        } catch (ignored: Exception) {
-        }
-        try {
-            return it.toLong()
-        } catch (ignored: Exception) {
-        }
-        try {
-            return it.toFloat()
-        } catch (ignored: Exception) {
-        }
-        try {
-            return it.toDouble()
-        } catch (ignored: Exception) {
-        }
-
-        throw ContractException("""Couldn't convert "$value" to number""")
-    }
-}
-
 class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
@@ -88,7 +35,34 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is TabularPattern
-    override val description: String = "json object"
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern !is TabularPattern)
+            return Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
+
+        val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
+        val otherRequiredKeys = otherPattern.pattern.keys.filter { !isOptional(it) }
+
+        val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
+        if(missingFixedKey != null)
+            return Result.Failure("Key $missingFixedKey was missing", breadCrumb = missingFixedKey)
+
+        val thisResolverWithNumberType = withNumberTypePattern(thisResolver)
+        val otherResolverWithNumberType = withNumberTypePattern(otherResolver)
+
+        val result = pattern.keys.asSequence().map { key ->
+            val bigger = pattern.getValue(key)
+            val smaller = otherPattern.pattern[key] ?: otherPattern.pattern[withoutOptionality(key)]
+
+            Pair(key,
+                    if(smaller != null)
+                        bigger.encompasses2(resolvedHop(smaller, otherResolverWithNumberType), thisResolverWithNumberType, otherResolverWithNumberType)
+                    else Result.Success())
+        }.find { it.second is Result.Failure }
+
+        return result?.second?.breadCrumb(breadCrumb = result?.first) ?: Result.Success()
+    }
+
+    override val typeName: String = "json object"
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
@@ -103,7 +77,7 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
                         val rowPattern = resolver.getPattern(rowValue)
                         attempt(breadCrumb = key) {
                             if (!pattern.encompasses(rowPattern, resolver))
-                                throw ContractException("In the scenario, $key contained a ${pattern.description}, but the corresponding example contained ${rowPattern.description}")
+                                throw ContractException("In the scenario, $key contained a ${pattern.typeName}, but the corresponding example contained ${rowPattern.typeName}")
                         }
 
                         rowPattern.newBasedOn(row, resolver)
@@ -160,3 +134,57 @@ internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {
         }
     }
 }
+
+fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) =
+        TabularPattern(rows.map { it.cellsList }.map { (key, value) ->
+            key.value to toJSONPattern(value.value)
+        }.toMap())
+
+fun toJSONPattern(value: String): Pattern {
+    return value.trim().let {
+        val asNumber: Number? = try { convertToNumber(value) } catch (e: Throwable) { null }
+
+        when {
+            asNumber != null -> ExactValuePattern(NumberValue(asNumber))
+            it.startsWith("\"") && it.endsWith("\"") ->
+                ExactValuePattern(StringValue(it.removeSurrounding("\"")))
+            it == "null" -> ExactValuePattern(NullValue)
+            it == "true" -> ExactValuePattern(BooleanValue(true))
+            it == "false" -> ExactValuePattern(BooleanValue(false))
+            else -> parsedPattern(value)
+        }
+    }
+}
+
+fun isNumber(value: StringValue): Boolean {
+    return try {
+        convertToNumber(value.string)
+        true
+    } catch(e: ContractException) {
+        false
+    }
+}
+
+fun convertToNumber(value: String): Number {
+    value.trim().let {
+        try {
+            return it.toInt()
+        } catch (ignored: Exception) {
+        }
+        try {
+            return it.toLong()
+        } catch (ignored: Exception) {
+        }
+        try {
+            return it.toFloat()
+        } catch (ignored: Exception) {
+        }
+        try {
+            return it.toDouble()
+        } catch (ignored: Exception) {
+        }
+
+        throw ContractException("""Couldn't convert "$value" to number""")
+    }
+}
+

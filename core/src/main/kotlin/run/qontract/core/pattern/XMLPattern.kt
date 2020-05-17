@@ -221,7 +221,14 @@ data class XMLPattern(val node: Node) : Pattern {
 
     override fun parse(value: String, resolver: Resolver): Value = XMLValue(value)
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is XMLPattern
-    override val description: String = "xml"
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern is XMLPattern)
+            return Result.Success()
+
+        return Result.Failure("Expected XMLPattern")
+    }
+
+    override val typeName: String = "xml"
 
     private fun updateBasedOnRow(node: Node, row: Row, resolver: Resolver) {
         attempt(breadCrumb = node.nodeName) {

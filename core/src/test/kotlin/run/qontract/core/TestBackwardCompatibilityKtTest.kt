@@ -34,7 +34,9 @@ Then status 200
         val olderContract = ContractBehaviour(gherkin1)
         val newerContract = ContractBehaviour(gherkin2)
 
-        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+        val result: Results = testBackwardCompatibility2(olderContract, newerContract)
+
+        println(result.report())
 
         assertEquals(1, result.failureCount)
         assertEquals(1, result.successCount)
@@ -43,7 +45,7 @@ Then status 200
     @Test
     fun `contract backward compatibility should not break when both have an optional keys` () {
         val gherkin1 = """
-Feature: Older contract API
+Feature: API contract
 
 Scenario: api call
 Given json Value
@@ -56,7 +58,7 @@ Then status 200
     """.trim()
 
         val gherkin2 = """
-Feature: Older contract API
+Feature: API contract
 
 Scenario: api call
 Given json Value
@@ -71,7 +73,9 @@ Then status 200
         val olderContract = ContractBehaviour(gherkin1)
         val newerContract = ContractBehaviour(gherkin2)
 
-        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+        val result: Results = testBackwardCompatibility2(olderContract, newerContract)
+
+        println(result.report())
 
         assertEquals(2, result.successCount)
         assertEquals(0, result.failureCount)
@@ -107,7 +111,7 @@ Then status 200
         val olderContract = ContractBehaviour(gherkin1)
         val newerContract = ContractBehaviour(gherkin2)
 
-        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        val results: Results = testBackwardCompatibility2(olderContract, newerContract)
 
         assertEquals(0, results.successCount)
         assertEquals(2, results.failureCount)
@@ -126,7 +130,7 @@ Then status 200
 
         val contract = ContractBehaviour(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility2(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -148,7 +152,7 @@ Then status 200
 
         val contract = ContractBehaviour(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility2(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -170,7 +174,7 @@ Then status 200
 
         val contract = ContractBehaviour(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility2(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -194,7 +198,7 @@ Then status 200
 
         val contract = ContractBehaviour(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility2(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -216,7 +220,7 @@ And response-body (number?)
 
         val contract = ContractBehaviour(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility2(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -240,7 +244,7 @@ And response-body (Number)
 
         val contract = ContractBehaviour(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibility2(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -251,7 +255,7 @@ And response-body (Number)
 
     @Test
     fun `contract with a required key should not match a contract with the same key made optional`() {
-        val behaviour1 = ContractBehaviour("""
+        val olderBehaviour = ContractBehaviour("""
 Feature: Contract API
 
 Scenario: api call
@@ -263,7 +267,7 @@ And response-body
 | description | (string) |
 """.trim())
 
-        val behaviour2 = ContractBehaviour("""
+        val newerBehaviour = ContractBehaviour("""
 Feature: Contract API
 
 Scenario: api call
@@ -275,9 +279,10 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val results: Results = testBackwardCompatibility(behaviour1, behaviour2)
+        val results: Results = testBackwardCompatibility2(olderBehaviour, newerBehaviour)
 
         println(results.report())
+
         assertEquals(0, results.successCount)
         assertEquals(1, results.failureCount)
     }
@@ -296,7 +301,7 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val results: Results = testBackwardCompatibility(behaviour, behaviour)
+        val results: Results = testBackwardCompatibility2(behaviour, behaviour)
 
         println(results.report())
         assertEquals(1, results.successCount)
@@ -317,7 +322,7 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val results: Results = testBackwardCompatibility(behaviour, behaviour)
+        val results: Results = testBackwardCompatibility2(behaviour, behaviour)
 
         println(results.report())
         assertEquals(1, results.successCount)
@@ -338,7 +343,7 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val results: Results = testBackwardCompatibility(behaviour, behaviour)
+        val results: Results = testBackwardCompatibility2(behaviour, behaviour)
 
         println(results.report())
         assertEquals(1, results.successCount)
@@ -371,9 +376,91 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val results: Results = testBackwardCompatibility(older, newer)
+        val results: Results = testBackwardCompatibility2(older, newer)
 
         println(results.report())
         assertThat(results.success()).isFalse()
+    }
+
+    @Test
+    fun `a contract should be backward compatible with itself`() {
+        val gherkin = """
+Feature: Contract API
+
+Scenario: api call
+When POST /number
+Then status 200
+And response-body (number)
+    """.trim()
+
+        val contract = ContractBehaviour(gherkin)
+
+        val results: Results = testBackwardCompatibility2(contract, contract)
+
+        if(results.failureCount > 0)
+            println(results.report())
+
+        assertEquals(1, results.successCount)
+        assertEquals(0, results.failureCount)
+    }
+
+    @Test
+    fun `a contract with named patterns should be backward compatible with itself`() {
+        val gherkin = """
+Feature: Contract API
+
+Scenario: api call
+Given json Payload
+  | number | (number) |
+When POST /number
+  And request-body (Payload)
+Then status 200
+And response-body (number)
+    """.trim()
+
+        val contract = ContractBehaviour(gherkin)
+
+        val results: Results = testBackwardCompatibility2(contract, contract)
+
+        if(results.failureCount > 0)
+            println(results.report())
+
+        assertEquals(1, results.successCount)
+        assertEquals(0, results.failureCount)
+    }
+
+    @Test
+    fun `a contract with named patterns should not be backward compatible with another contract with a different pattern against the same name`() {
+        val gherkin1 = """
+Feature: Contract API
+
+Scenario: api call
+Given json Payload
+  | number | (number) |
+When POST /number
+  And request-body (Payload)
+Then status 200
+And response-body (number)
+    """.trim()
+
+        val gherkin2 = """
+Feature: Contract API
+
+Scenario: api call
+Given json Payload
+  | number | (string) |
+When POST /number
+  And request-body (Payload)
+Then status 200
+And response-body (number)
+    """.trim()
+
+        val results: Results = testBackwardCompatibility2(ContractBehaviour(gherkin1), ContractBehaviour(gherkin2))
+
+        if(results.failureCount > 0)
+            println(results.report())
+
+        assertEquals(0, results.successCount)
+        assertEquals(1, results.failureCount)
     }
 }

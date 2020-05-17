@@ -20,7 +20,12 @@ object NumericStringPattern : Pattern {
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = NumberValue(convertToNumber(value))
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is NumericStringPattern
-    override val description: String = "number"
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern is NumericStringPattern) return Result.Success()
+        return Result.Failure("Expected number, got ${otherPattern.typeName}")
+    }
+
+    override val typeName: String = "number"
 
     override fun toString() = pattern.toString()
 

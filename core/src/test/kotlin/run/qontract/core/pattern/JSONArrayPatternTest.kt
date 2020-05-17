@@ -1,8 +1,10 @@
 package run.qontract.core.pattern
 
+import org.assertj.core.api.Assertions.assertThat
 import run.qontract.core.Resolver
 import run.qontract.core.shouldMatch
 import org.junit.jupiter.api.Test
+import run.qontract.core.Result
 import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.NullValue
@@ -38,5 +40,21 @@ internal class JSONArrayPatternTest {
     @Test
     fun `should fail to match nulls gracefully`() {
         NullValue shouldNotMatch JSONArrayPattern(listOf(StringPattern, StringPattern))
+    }
+
+    @Test
+    fun `should encompass itself`() {
+        val type = parsedPattern("""["(number)", "(number)"]""")
+        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should not encompass a pattern with a different number of items`() {
+        val bigger = parsedPattern("""["(number)", "(number)"]""")
+        val smallerLess = parsedPattern("""["(number)"]""")
+        val smallerMore = parsedPattern("""["(number)"]""")
+
+        assertThat(bigger.encompasses2(smallerLess, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(bigger.encompasses2(smallerMore, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

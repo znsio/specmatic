@@ -30,11 +30,14 @@ object NoContentPattern : Pattern {
         }
     }
 
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean {
-        return otherPattern is NoContentPattern
+    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is NoContentPattern
+
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern is NoContentPattern) return Result.Success()
+        return Result.Failure("Expected no content, got ${otherPattern.typeName}")
     }
 
-    override val description: String = "nothing"
+    override val typeName: String = "nothing"
 
     override val pattern: Any = ""
 

@@ -79,4 +79,19 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
             }
         }
     }
+
+    fun encompasses(other: HttpResponsePattern, olderResolver: Resolver, newerResolver: Resolver): Result {
+        val result = listOf(
+                {
+                    when {
+                        status != other.status -> Result.Failure("The status didn't match", breadCrumb = "STATUS")
+                        else -> Result.Success()
+                    }
+                },
+                { headersPattern.encompasses(other.headersPattern, Resolver(), Resolver()) },
+                { resolvedHop(body, olderResolver).encompasses2(resolvedHop(other.body, newerResolver), olderResolver, newerResolver) }
+        ).asSequence().map { it.invoke() }.firstOrNull { it is Result.Failure } ?: Result.Success()
+
+        return result.breadCrumb("RESPONSE")
+    }
 }

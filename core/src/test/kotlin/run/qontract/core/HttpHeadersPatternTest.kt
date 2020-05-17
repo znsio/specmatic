@@ -2,6 +2,7 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.NumberTypePattern
 import run.qontract.core.pattern.Row
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.pattern.stringToPattern
@@ -139,5 +140,34 @@ internal class HttpHeadersPatternTest {
         }
 
         flagsContain(flags, listOf("with", "without"))
+    }
+
+    @Test
+    fun `it should encompass itself`() {
+        val headersType = HttpHeadersPattern(mapOf("X-Required" to StringPattern))
+        assertThat(headersType.encompasses(headersType, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `a header pattern with required headers should encompass one with extra headers`() {
+        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern))
+        val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Extra" to StringPattern))
+        assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `a header pattern with an optional header should match one without that header`() {
+        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional?" to NumberTypePattern))
+        val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern))
+        val result = bigger.encompasses(smaller, Resolver(), Resolver())
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `a header pattern with an optional header should match one with that header if present`() {
+        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional?" to NumberTypePattern))
+        val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional" to StringPattern))
+        val result = bigger.encompasses(smaller, Resolver(), Resolver())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
     }
 }

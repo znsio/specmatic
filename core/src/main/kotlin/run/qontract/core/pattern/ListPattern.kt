@@ -31,7 +31,13 @@ data class ListPattern(override val pattern: Pattern) : Pattern {
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
             otherPattern is ListPattern && otherPattern.pattern.fitsWithin(pattern.patternSet(resolver), resolver)
 
-    override fun patternSet(resolver: Resolver): List<Pattern> = pattern.patternSet(resolver).map { ListPattern(it) }
+    override fun patternSet(resolver: Resolver): List<Pattern> = pattern.patternSet(resolver)
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern !is ListPattern)
+            return Result.Failure("Expected list type, got ${otherPattern.typeName}")
 
-    override val description: String = "list of ${pattern.description}"
+        return otherPattern.fitsWithin2(patternSet(thisResolver), otherResolver, thisResolver)
+    }
+
+    override val typeName: String = "list of ${pattern.typeName}"
 }

@@ -15,6 +15,22 @@ interface Pattern {
     fun fitsWithin(patterns: List<Pattern>, resolver: Resolver): Boolean =
             patternSet(resolver).all { it in patterns }
 
-    val description: String
+    fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result
+    fun fitsWithin2(otherPatterns: List<Pattern>, myResolver: Resolver, otherResolver: Resolver): Result {
+        val myPatternSet = patternSet(myResolver)
+
+        val result = myPatternSet.map { my ->
+            val encompassResult = otherPatterns.asSequence().map { other ->
+                other.encompasses2(my, myResolver, otherResolver)
+            }
+
+            encompassResult.find { it is Result.Success } ?: encompassResult.first()
+        }
+
+        return result.find { it is Result.Failure } ?: Result.Success()
+    }
+
+
+    val typeName: String
     val pattern: Any
 }

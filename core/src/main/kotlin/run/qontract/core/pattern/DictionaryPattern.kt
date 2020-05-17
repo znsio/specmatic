@@ -53,7 +53,17 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
             (otherPattern.valuePattern.encompasses(this.keyPattern, resolver) || this.valuePattern.encompasses(otherPattern.valuePattern, resolver)))
     }
 
-    override val description: String = "object with key type ${keyPattern.description} and value type ${valuePattern.description}"
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern !is DictionaryPattern)
+            return Result.Failure("Expected dictionary type, got ${otherPattern.typeName}")
+
+        return listOf(
+                { this.keyPattern.encompasses2(otherPattern, thisResolver, otherResolver) },
+                { this.valuePattern.encompasses2(otherPattern, thisResolver, otherResolver) }
+        ).asSequence().map { it.invoke() }.firstOrNull { it is Result.Failure } ?: Result.Success()
+    }
+
+    override val typeName: String = "object with key type ${keyPattern.typeName} and value type ${valuePattern.typeName}"
 
     override val pattern: Any = "(${withoutPatternDelimiters(keyPattern.pattern.toString())}:${withoutPatternDelimiters(valuePattern.pattern.toString())})"
 }

@@ -24,7 +24,7 @@ data class LookupRowPattern(override val pattern: Pattern, val key: String) : Pa
                         val rowPattern = parsedPattern(rowValue)
                         if(pattern.encompasses(rowPattern, resolver)) {
                             listOf(rowPattern)
-                        } else throw ContractException("Expected ${pattern.description} but got $rowValue in row in column $key")
+                        } else throw ContractException("Expected ${pattern.typeName} but got $rowValue in row in column $key")
                     }
                     else -> listOf(ExactValuePattern(pattern.parse(rowValue, resolver)))
                 }
@@ -40,5 +40,9 @@ data class LookupRowPattern(override val pattern: Pattern, val key: String) : Pa
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
             pattern.encompasses(otherPattern, resolver)
 
-    override val description: String = pattern.description
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        return pattern.encompasses2(resolvedHop(otherPattern, otherResolver), otherResolver, thisResolver)
+    }
+
+    override val typeName: String = pattern.typeName
 }

@@ -38,6 +38,15 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
             serverState = emptyMap()
         }
 
+    fun lookupScenario(httpRequest: HttpRequest): Scenario =
+        try {
+            val scenarios = lookupScenario(httpRequest, scenarios)
+            val matchingScenario = matchingScenario(scenarios)
+            matchingScenario ?: throw ContractException("Couldn't find response for this scenario.", scenario = matchingScenario)
+        } finally {
+            serverState = emptyMap()
+        }
+
     private fun errorResponse(resultList: Sequence<Pair<Scenario, Result>>, httpRequest: HttpRequest) =
             Results(resultList.map { Triple(it.second, httpRequest, null) }.toMutableList()).generateErrorHttpResponse()
 

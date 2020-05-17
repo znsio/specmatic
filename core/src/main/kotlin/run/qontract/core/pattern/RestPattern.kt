@@ -20,7 +20,14 @@ data class RestPattern(override val pattern: Pattern) : Pattern {
     override fun patternSet(resolver: Resolver): List<Pattern> =
             pattern.patternSet(resolver).map { RestPattern(it) }
 
-    override val description: String = "the rest are ${pattern.description}"
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern !is RestPattern)
+            return Result.Failure("Expected rest in string type, got ${otherPattern.typeName}")
+
+        return otherPattern.pattern.fitsWithin2(patternSet(thisResolver), otherResolver, thisResolver)
+    }
+
+    override val typeName: String = "the rest are ${pattern.typeName}"
 }
 
 private const val REST_SUFFIX = "..."

@@ -57,7 +57,44 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONArrayPattern> = newBasedOn(pattern, row, resolver).map { JSONArrayPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is JSONArrayPattern
-    override val description: String = "json array"
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern !is JSONArrayPattern)
+            return Result.Failure("Expected array, got ${otherPattern.typeName}")
+
+        val resolverWithNumberType = thisResolver.copy(newPatterns = thisResolver.newPatterns.plus("(number)" to NumberTypePattern))
+
+        val resolvedPattern = pattern.map {
+            when(it) {
+                is DeferredPattern -> it.resolvePattern(thisResolver)
+                else -> it
+            }
+        }
+
+        for (index in resolvedPattern.indices) {
+            when(val patternValue = resolvedPattern[index]) {
+                is RestPattern -> {
+                    val rest = if(index == otherPattern.pattern.size) emptyList() else otherPattern.pattern.slice(index..otherPattern.pattern.lastIndex)
+                    return when (val result = patternValue.encompasses2(JSONArrayPattern(rest), thisResolver, otherResolver)) {
+                        is Result.Failure -> result.breadCrumb("[$index...${otherPattern.pattern.lastIndex}]")
+                        else -> result
+                    }
+                }
+                else -> {
+                    if(index == otherPattern.pattern.size)
+                        return Result.Failure("Expected an array type of length ${pattern.size}, actual length ${otherPattern.pattern.size}")
+
+                    val otherPatternItem = otherPattern.pattern[index]
+                    when (val result = patternValue.encompasses2(otherPatternItem, resolverWithNumberType, otherResolver)) {
+                        is Result.Failure -> return result.breadCrumb("""[$index]""")
+                    }
+                }
+            }
+        }
+
+        return Result.Success()
+    }
+
+    override val typeName: String = "json array"
 }
 
 fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {

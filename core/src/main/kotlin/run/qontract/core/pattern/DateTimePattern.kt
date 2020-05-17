@@ -28,7 +28,12 @@ object DateTimePattern : Pattern {
             }
 
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is DateTimePattern
-    override val description: String = "datetime"
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern is DateTimePattern) return Result.Success()
+        return Result.Failure("Expected datetime, got ${otherPattern.typeName}")
+    }
+
+    override val typeName: String = "datetime"
 
     override val pattern = "(datetime)"
 }

@@ -1,9 +1,10 @@
 package run.qontract.core.pattern
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
+import run.qontract.core.Result
+import run.qontract.core.resultReport
 import run.qontract.core.value.NumberValue
 
 internal class LookupRowPatternTest {
@@ -23,5 +24,14 @@ internal class LookupRowPatternTest {
 
         val newPattern = pattern.newBasedOn(row, Resolver())
         assertThat(newPattern.single()).isEqualTo(NumberTypePattern)
+    }
+
+    @Test
+    fun `should encompass itself`() {
+        val lookupRowPattern = LookupRowPattern(StringPattern, "name")
+        val result = lookupRowPattern.encompasses2(lookupRowPattern, Resolver(), Resolver())
+
+        println(resultReport(result))
+        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 }

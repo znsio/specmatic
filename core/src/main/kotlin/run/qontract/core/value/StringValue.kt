@@ -7,7 +7,7 @@ import run.qontract.core.pattern.*
 data class StringValue(val string: String = "") : Value {
     override val httpContentType = "text/plain"
 
-    @InternalAPI
+    @OptIn(InternalAPI::class)
     override fun displayableValue(): String = toStringValue().quote()
     override fun toStringValue() = string
     override fun displayableType(): String = "string"

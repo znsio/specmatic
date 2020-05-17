@@ -19,4 +19,11 @@ class ResultAssert(actual: Result) : AbstractAssert<ResultAssert, Result>(actual
         if(actual is Result.Failure)
             failWithMessage(resultReport(actual))
     }
+
+    fun isSuccess() {
+        isNotNull
+
+        if(actual is Result.Failure)
+            failWithMessage(resultReport(actual))
+    }
 }

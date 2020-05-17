@@ -6,6 +6,7 @@ import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.KafkaMessagePattern
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
@@ -15,7 +16,7 @@ import kotlin.collections.HashMap
 internal class ScenarioTest {
     @Test
     fun `should generate one test scenario when there are no examples`() {
-        val scenario = Scenario("test", HttpRequestPattern(), HttpResponsePattern(), HashMap(), LinkedList(), HashMap(), HashMap())
+        val scenario = Scenario("test", HttpRequestPattern(), HttpResponsePattern(), HashMap(), LinkedList(), HashMap(), HashMap(), KafkaMessagePattern())
         scenario.generateTestScenarios().let {
             assertThat(it.size).isEqualTo(1)
         }
@@ -26,7 +27,7 @@ internal class ScenarioTest {
         val patterns = Examples()
         patterns.rows.add(0, Row())
         patterns.rows.add(1, Row())
-        val scenario = Scenario("test", HttpRequestPattern(), HttpResponsePattern(), HashMap(), listOf(patterns), HashMap(), HashMap())
+        val scenario = Scenario("test", HttpRequestPattern(), HttpResponsePattern(), HashMap(), listOf(patterns), HashMap(), HashMap(), KafkaMessagePattern())
         scenario.generateTestScenarios().let {
             assertThat(it.size).isEqualTo(2)
         }
@@ -36,7 +37,7 @@ internal class ScenarioTest {
     fun `should not match when there is an Exception`() {
         val httpResponsePattern = mockk<HttpResponsePattern>(relaxed = true)
         every { httpResponsePattern.matches(any(), any()) }.throws(ContractException("message"))
-        val scenario = Scenario("test", HttpRequestPattern(), httpResponsePattern, HashMap(), LinkedList(), HashMap(), HashMap())
+        val scenario = Scenario("test", HttpRequestPattern(), httpResponsePattern, HashMap(), LinkedList(), HashMap(), HashMap(), KafkaMessagePattern())
         scenario.matches(HttpResponse.EMPTY).let {
             assertThat(it is Result.Failure).isTrue()
             assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf(), listOf("Exception: message")))
@@ -60,7 +61,7 @@ internal class ScenarioTest {
         example.addRows(listOf(row))
 
         val state = HashMap(mapOf<String, Value>("id" to True))
-        val scenario = Scenario("Test", HttpRequestPattern(urlMatcher = URLMatcher(emptyMap(), emptyList(), path="/")), HttpResponsePattern(status=200), state, listOf(example), HashMap(), HashMap())
+        val scenario = Scenario("Test", HttpRequestPattern(urlMatcher = URLMatcher(emptyMap(), emptyList(), path="/")), HttpResponsePattern(status=200), state, listOf(example), HashMap(), HashMap(), KafkaMessagePattern())
 
         val testScenarios = scenario.generateTestScenarios()
         val newState = testScenarios.first().expectedFacts

@@ -33,6 +33,9 @@ class TestCommand : Callable<Void> {
     @Option(names = ["--checkBackwardCompatibility", "--check", "-c"], description = ["Identify versions of the contract prior to the one specified, and verify backward compatibility from the earliest to the latest"])
     var checkBackwardCompatibility: Boolean = false
 
+    @Option(names = ["--kafkaPort"], description = ["The port on which to connect to Kafka"])
+    var kafkaPort: Int = 0
+
     override fun call(): Void? {
         try {
             if(port == 0) {
@@ -50,6 +53,9 @@ class TestCommand : Callable<Void> {
             System.setProperty("suggestions", suggestionsPath)
             System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
             System.setProperty("protocol", protocol)
+
+            if(kafkaPort != 0)
+                System.setProperty("kafkaPort", kafkaPort.toString())
 
             val launcher = LauncherFactory.create()
             val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()

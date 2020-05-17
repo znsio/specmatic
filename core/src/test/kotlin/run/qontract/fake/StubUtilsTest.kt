@@ -2,7 +2,6 @@ package run.qontract.fake
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
 import run.qontract.core.*
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.*

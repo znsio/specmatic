@@ -18,11 +18,8 @@ class StubCommand : Callable<Unit> {
     lateinit var paths: List<String>
 
     @Option(names = ["--data"], description = ["Directory in which contract data may be found"])
-    lateinit var dataDirs: List<String>
+    var dataDirs: List<String> = mutableListOf()
 
-//    @Option(names = ["--data"], description = ["Directory in which contract data may be found"])
-//    var dataDir: String? = null
-//
     @Option(names = ["--host"], description = ["Host"], defaultValue = "localhost")
     lateinit var host: String
 
@@ -64,7 +61,13 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun startServer() {
-        contractFake = createStubFromContracts(paths, dataDirs, host, port)
+        contractFake = when{
+            dataDirs.isNotEmpty() -> createStubFromContracts(paths, dataDirs, host, port)
+            else -> createStubFromContracts(paths, host, port)
+        }
+        if(contractFake.getKafkaInstance() != null) {
+            println("Started Kafka: ${contractFake.getKafkaInstance()?.bootstrapServers}")
+        }
     }
 
     private fun restartServer() {
@@ -89,4 +92,3 @@ class StubCommand : Callable<Unit> {
         })
     }
 }
-

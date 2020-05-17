@@ -25,6 +25,10 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0'
     implementation 'org.assertj:assertj-core:3.14.0'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.4.2'
+
+    implementation 'org.apache.kafka:kafka_2.13:2.5.0'
+    implementation 'org.apache.zookeeper:zookeeper:3.6.1'
+    implementation 'io.dropwizard.metrics:metrics-core:4.1.7'
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {

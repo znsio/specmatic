@@ -44,7 +44,12 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
     val contractInfo = mockData.mapNotNull { (mockFile, mock) ->
         val matchResults = behaviours.asSequence().map { (contractFile, behaviour) ->
             try {
-                behaviour.matchingMockResponse(mock)
+                val kafkaMessage = mock.kafkaMessage
+                if(kafkaMessage != null) {
+                    behaviour.assertMatchesMockKafkaMessage(kafkaMessage)
+                } else {
+                    behaviour.matchingMockResponse(mock.request, mock.response)
+                }
                 Pair(behaviour, null)
             } catch (e: NoMatchingScenario) {
                 Pair(null, Pair(e, contractFile))

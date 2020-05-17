@@ -2,12 +2,13 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 import run.qontract.core.utilities.mapZip
+import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
 import java.lang.StringBuilder
 
-data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: Map<String, Value>, val examples: List<Examples>, val patterns: Map<String, Pattern>, val fixtures: Map<String, Value>) {
+data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: Map<String, Value>, val examples: List<Examples>, val patterns: Map<String, Pattern>, val fixtures: Map<String, Value>, val kafkaMessagePattern: KafkaMessagePattern? = null) {
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
             expectedFacts.keys == actualState.keys &&
                     mapZip(expectedFacts, actualState).all { (key, expectedStateValue, actualStateValue) ->
@@ -91,7 +92,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
         return httpRequestPattern.newBasedOn(row, resolver).map { newHttpRequestPattern ->
-            Scenario(name, newHttpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures)
+            Scenario(name, newHttpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures, kafkaMessagePattern)
         }
     }
 
@@ -125,6 +126,10 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
     }
 
+    fun matchesMock(kafkaMessage: KafkaMessage): Result {
+        return kafkaMessagePattern?.matches(kafkaMessage, resolver) ?: Result.Failure("This scenario does not have a Kafka mock")
+    }
+
     fun resolverAndResponseFrom(response: HttpResponse?): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
@@ -139,11 +144,15 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         when {
             name.isNotEmpty() -> scenarioDescription.append("$name ")
         }
-        return scenarioDescription.append("$httpRequestPattern").toString()
+
+        return if(kafkaMessagePattern != null)
+            scenarioDescription.append(kafkaMessagePattern.target).toString()
+        else
+            scenarioDescription.append("$httpRequestPattern").toString()
     }
 
     fun newBasedOn(scenario: Scenario): Scenario =
-        Scenario(this.name, this.httpRequestPattern, this.httpResponsePattern, this.expectedFacts, scenario.examples, this.patterns, this.fixtures)
+        Scenario(this.name, this.httpRequestPattern, this.httpResponsePattern, this.expectedFacts, scenario.examples, this.patterns, this.fixtures, this.kafkaMessagePattern)
 
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)

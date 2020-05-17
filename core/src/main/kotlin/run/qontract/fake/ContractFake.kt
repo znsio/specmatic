@@ -9,7 +9,6 @@ import io.ktor.http.*
 import io.ktor.http.content.PartData
 import io.ktor.http.content.TextContent
 import io.ktor.http.content.readAllParts
-import io.ktor.http.content.streamProvider
 import io.ktor.request.*
 import io.ktor.response.respond
 import io.ktor.server.engine.ApplicationEngine
@@ -25,12 +24,12 @@ import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.toMap
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.EmptyString
+import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import run.qontract.mock.MockScenario
 import run.qontract.nullLog
 import java.io.ByteArrayOutputStream
-import java.io.StringWriter
 import java.util.*
 
 class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
@@ -38,7 +37,11 @@ class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<M
 
     val endPoint = "http://$host:$port"
 
-    private val expectations = contractInfoToExpectations(contractInfo)
+    private val stubs: Stubs = contractInfoToExpectations(contractInfo)
+
+    private var qontractKafka: QontractKafka? = null
+
+    override fun getKafkaInstance() = qontractKafka
 
     private val server: ApplicationEngine = embeddedServer(Netty, host = host, port = port) {
         install(CORS) {
@@ -65,7 +68,7 @@ class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<M
                     else -> {
                         log(">> Request Start At ${Date()}")
                         log(httpRequest.toLogString("-> "))
-                        val response = stubResponse(httpRequest, contractInfo, expectations)
+                        val response = stubResponse(httpRequest, contractInfo, stubs)
                         log(response.toLogString("<- "))
                         log("<< Response At ${Date()} == ")
                         log(System.lineSeparator())
@@ -90,6 +93,7 @@ class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<M
 
     override fun close() {
         server.stop(0, 5000)
+        qontractKafka?.close()
     }
 
     private fun setupServerState(httpRequest: HttpRequest) {
@@ -112,6 +116,20 @@ class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<M
 
     init {
         server.start()
+
+        if(stubs.kafka.isNotEmpty()) {
+            val qontractKafka = QontractKafka()
+            this.qontractKafka = qontractKafka
+
+            for(stub in stubs.kafka) {
+                val (target, key, content) = stub.kafkaMessage
+
+                if(key != null)
+                    qontractKafka.send(target, key.string, content.toStringValue())
+                else
+                    qontractKafka.send(target, content.toStringValue())
+            }
+        }
     }
 }
 
@@ -186,9 +204,9 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     }
 }
 
-fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>>, expectations: List<Triple<HttpRequestPattern, Resolver, HttpResponse>>): HttpResponse {
+fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>>, stubs: Stubs): HttpResponse {
     return try {
-        when (val mock = expectations.find { (requestPattern, resolver, _) ->
+        when (val mock = stubs.http.find { (requestPattern, _, resolver) ->
             requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)) is Result.Success
         }) {
             null -> {
@@ -211,19 +229,36 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehav
     }
 }
 
-fun contractInfoToExpectations(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>>): List<Triple<HttpRequestPattern, Resolver, HttpResponse>> {
-    return contractInfo.flatMap { (behaviour, mocks) ->
-        mocks.map { mock ->
-            val (resolver, scenario, httpResponse) = behaviour.matchingMockResponse(mock)
+fun contractInfoToExpectations(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>>): Stubs {
+    return contractInfo.fold(Stubs()) { stubsAcc, (behaviour, mocks) ->
+        val newStubs = mocks.fold(Stubs()) { stubs, mock ->
+            if(mock.kafkaMessage != null) {
+                Stubs(stubs.http, stubs.kafka.plus(KafkaStub(mock.kafkaMessage)))
+            } else {
+                val (resolver, scenario, httpResponse) = behaviour.matchingMockResponse(mock)
 
-            val requestPattern = mock.request.toPattern()
-            val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
+                val requestPattern = mock.request.toPattern()
+                val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
 
-            Triple(requestPatternWithHeaderAncestor, resolver, httpResponse)
+                Stubs(stubs.http.plus(HttpStub(requestPatternWithHeaderAncestor, httpResponse, resolver)), stubs.kafka)
+            }
         }
+
+        Stubs(stubsAcc.http.plus(newStubs.http), stubsAcc.kafka.plus(newStubs.kafka))
     }
 }
 
 fun badRequest(errorMessage: String?): HttpResponse {
     return HttpResponse(HttpStatusCode.UnprocessableEntity.value, errorMessage, mapOf("X-Qontract-Result" to "failure"))
 }
+
+interface Stub
+data class HttpStub(val requestPattern: HttpRequestPattern, val response: HttpResponse, val resolver: Resolver) : Stub {
+    val first = requestPattern
+    val second = resolver
+    val third = response
+}
+
+data class KafkaStub(val kafkaMessage: KafkaMessage) : Stub
+
+data class Stubs(val http: List<HttpStub> = emptyList(), val kafka: List<KafkaStub> = emptyList())

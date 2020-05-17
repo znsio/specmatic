@@ -8,7 +8,7 @@ import io.cucumber.messages.Messages.GherkinDocument
 import run.qontract.core.pattern.*
 import run.qontract.core.pattern.Examples.Companion.examplesFrom
 import run.qontract.core.utilities.jsonStringToValueMap
-import run.qontract.core.value.EmptyString
+import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
@@ -112,6 +112,12 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
             scenario.copy(examples = emptyList()).generateTestScenarios()
         }
 
+    fun assertMatchesMockKafkaMessage(kafkaMessage: KafkaMessage) {
+        scenarios.asSequence().map {
+            it.matchesMock(kafkaMessage)
+        }.find { it is Result.Success } ?: throw NoMatchingScenario()
+    }
+
     fun matchingMockResponse(mockScenario: MockScenario): Triple<Resolver, Scenario, HttpResponse> =
             matchingMockResponse(mockScenario.request, mockScenario.response)
 
@@ -189,11 +195,30 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             "REQUEST-PART" -> {
                 scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(multiPartFormDataPattern = scenarioInfo.httpRequestPattern.multiPartFormDataPattern.plus(toFormDataPart(step))))
             }
+            "KAFKA-MESSAGE" -> {
+                scenarioInfo.copy(kafkaMessage = toAsyncMessage(step))
+            }
             else -> throw ContractException("Couldn't recognise the meaning of this command: $step.text")
         }
     }
 
     return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)))
+}
+
+fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
+    val parts = breakIntoParts(step.rest, 3)
+
+    return when (parts.size) {
+        2 -> {
+            val (name, type) = parts
+            KafkaMessagePattern(name, content = parsedPattern(type))
+        }
+        3 -> {
+            val (name, key, contentType) = parts
+            KafkaMessagePattern(name, parsedPattern(key), parsedPattern(contentType))
+        }
+        else -> throw ContractException("The message keyword must have either 2 params (topic, value) or 3 (topic, key, value)")
+    }
 }
 
 fun toFormDataPart(step: StepInfo): MultiPartFormDataPattern {
@@ -275,7 +300,7 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, ba
         if(scenarioInfo.scenarioName.isBlank())
             throw ContractException("A scenario name must not be empty. The contract has a scenario without a name.")
 
-        Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, scenarioInfo.expectedServerState, scenarioInfo.examples, scenarioInfo.patterns, scenarioInfo.fixtures)
+        Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, scenarioInfo.expectedServerState, scenarioInfo.examples, scenarioInfo.patterns, scenarioInfo.fixtures, scenarioInfo.kafkaMessage)
     }
 
 private fun lexBackground(featureChildren: List<GherkinDocument.Feature.FeatureChild>): ScenarioInfo =

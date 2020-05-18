@@ -4,11 +4,11 @@ import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.Consumer
+import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.KafkaFuture
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
@@ -20,7 +20,7 @@ import java.io.Closeable
 import java.time.Duration
 import java.util.*
 
-class QontractKafka : Closeable {
+class QontractKafka(kafkaPort: Int = 9093) : Closeable {
     private val kafkaContainer = KafkaContainer()
 
     val bootstrapServers
@@ -55,7 +55,7 @@ class QontractKafka : Closeable {
     }
 
     fun fetch(topic: String): List<KafkaMessage> {
-        return createConsumer(kafkaContainer.bootstrapServers).use { consumer ->
+        return createConsumer(kafkaContainer.bootstrapServers, false).use { consumer ->
             consumer.subscribe(listOf(topic))
             consumer.poll(Duration.ofSeconds(1))
             consumer.seekToBeginning(listOf(TopicPartition(topic, 0)))
@@ -67,6 +67,7 @@ class QontractKafka : Closeable {
     }
 
     init {
+        kafkaContainer.portBindings = listOf("$kafkaPort:9093")
         kafkaContainer.start()
     }
 
@@ -75,26 +76,17 @@ class QontractKafka : Closeable {
     }
 }
 
-private fun printFuture(future: KafkaFuture<Void>?) {
-    println("RESULT==============")
-    println(when {
-        future != null -> when {
-            future.isCancelled -> "CANCELLED"
-            future.isCompletedExceptionally -> "EXCEPTIONALLY"
-            future.isDone -> "DONE"
-            else -> "SOMETHING ELSE"
-        }
-        else -> "NULL TOPIC"
-    })
-    println("====================")
-}
-
-fun createConsumer(brokers: String): Consumer<String, String> {
+fun createConsumer(brokers: String, commit: Boolean): Consumer<String, String> {
     val props = Properties()
     props["bootstrap.servers"] = brokers
     props["group.id"] = "qontract"
     props["key.deserializer"] = StringDeserializer::class.java
     props["value.deserializer"] = StringDeserializer::class.java
+    props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+
+    if(!commit)
+        props[ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG] = "false"
+
     return KafkaConsumer<String, String>(props)
 }
 

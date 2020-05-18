@@ -5,23 +5,29 @@ import java.io.File
 
 fun testBackwardCompatibility2(older: ContractBehaviour, newerBehaviour: ContractBehaviour): Results {
     return older.generateTestScenarios().fold(Results()) { results, olderScenario ->
-        newerBehaviour.setServerState(olderScenario.expectedFacts)
-        var request: HttpRequest? = null
+        if(olderScenario.kafkaMessagePattern != null) {
+            val scenarioMatchResults = newerBehaviour.lookupKafkaScenario(olderScenario.kafkaMessagePattern, olderScenario.resolver)
 
-        try {
-            request = olderScenario.generateHttpRequest()
-            val newerScenario = newerBehaviour.lookupScenario(request)
-            val newerResponsePattern = newerScenario.httpResponsePattern
+            val result = resultListToResults(scenarioMatchResults.map { it.second }.toList()).toResultIfAny()
 
-            val result: Result = olderScenario.httpResponsePattern.encompasses(newerResponsePattern, olderScenario.resolver, newerScenario.resolver)
+            results.copy(results = results.results.plus(Triple(result, null, null)).toMutableList())
+        } else {
+            newerBehaviour.setServerState(olderScenario.expectedFacts)
+            var request: HttpRequest? = null
 
-            results.copy(results = results.results.plus(Triple(result, request, null)).toMutableList())
-        }
-        catch(contractException: ContractException) {
-            results.copy(results = results.results.plus(Triple(contractException.result(), request, null)).toMutableList())
-        }
-        catch(throwable: Throwable) {
-            results.copy(results = results.results.plus(Triple(Result.Failure("Exception: ${throwable.localizedMessage}"), request, null)).toMutableList())
+            try {
+                request = olderScenario.generateHttpRequest()
+                val newerScenario = newerBehaviour.lookupScenario(request)
+                val newerResponsePattern = newerScenario.httpResponsePattern
+
+                val result: Result = olderScenario.httpResponsePattern.encompasses(newerResponsePattern, olderScenario.resolver, newerScenario.resolver)
+
+                results.copy(results = results.results.plus(Triple(result, request, null)).toMutableList())
+            } catch (contractException: ContractException) {
+                results.copy(results = results.results.plus(Triple(contractException.result(), request, null)).toMutableList())
+            } catch (throwable: Throwable) {
+                results.copy(results = results.results.plus(Triple(Result.Failure("Exception: ${throwable.localizedMessage}"), request, null)).toMutableList())
+            }
         }
     }
 }

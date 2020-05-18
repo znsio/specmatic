@@ -32,8 +32,8 @@ import run.qontract.nullLog
 import java.io.ByteArrayOutputStream
 import java.util.*
 
-class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
-    constructor(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000) : this(listOf(Pair(ContractBehaviour(gherkinData), stubInfo)), host, port)
+class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, kafkaPort: Int = 9093, private val log: (event: String) -> Unit = nullLog) : ContractStub {
+    constructor(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093) : this(listOf(Pair(ContractBehaviour(gherkinData), stubInfo)), host, port, kafkaPort)
 
     val endPoint = "http://$host:$port"
 
@@ -115,10 +115,12 @@ class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<M
     }
 
     init {
+        println("Starting http server...")
         server.start()
 
         if(stubs.kafka.isNotEmpty()) {
-            val qontractKafka = QontractKafka()
+            println("Starting Kafka...")
+            val qontractKafka = QontractKafka(kafkaPort)
             this.qontractKafka = qontractKafka
 
             for(stub in stubs.kafka) {

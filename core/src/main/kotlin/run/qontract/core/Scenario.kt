@@ -91,8 +91,16 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         val resolver = Resolver(expectedFacts, false, patterns)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
-        return httpRequestPattern.newBasedOn(row, resolver).map { newHttpRequestPattern ->
-            Scenario(name, newHttpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures, kafkaMessagePattern)
+
+        return when (kafkaMessagePattern) {
+            null -> httpRequestPattern.newBasedOn(row, resolver).map { newHttpRequestPattern ->
+                Scenario(name, newHttpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures, kafkaMessagePattern)
+            }
+            else -> {
+                kafkaMessagePattern.newBasedOn(row, resolver).map { newKafkaMessagePattern ->
+                    Scenario(name, httpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures, newKafkaMessagePattern)
+                }
+            }
         }
     }
 

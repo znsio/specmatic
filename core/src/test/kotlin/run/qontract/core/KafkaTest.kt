@@ -7,8 +7,7 @@ import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
 
 class KafkaTest {
-    @Ignore
-    @Test
+//    @Test
     fun temp() {
         val flags = mutableSetOf<String>()
 

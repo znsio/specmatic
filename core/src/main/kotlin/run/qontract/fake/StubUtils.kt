@@ -7,30 +7,14 @@ import run.qontract.core.ContractBehaviour
 import run.qontract.core.DATA_DIR_SUFFIX
 import run.qontract.core.utilities.readFile
 import run.qontract.core.value.StringValue
-import run.qontract.mock.MockScenario
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.stringToMockScenario
 import java.io.File
 
-fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): ContractStub {
-    val contractBehaviour = ContractBehaviour(contractGherkin)
-
-    val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->
-        println("Loading data from ${file.name}")
-
-        stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))
-                .also {
-                    contractBehaviour.matchingMockResponse(it)
-                }
-    }
-
-    return ContractFake(listOf(Pair(contractBehaviour, mocks)), host, port, ::consoleLog)
-}
-
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
-fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
+fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
     val dataDirs = dataDirPaths.map { File(it) }
     if(dataDirs.any { !it.exists() || !it.isDirectory }) throw Exception("Data directory $dataDirPaths does not exist.")
 
@@ -39,6 +23,9 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
     }
 
     val dataFiles = dataDirs.flatMap { it.listFiles()?.toList() ?: emptyList<File>() }.filter { it.extension == "json" }
+    if(dataFiles.size > 0)
+        println("Reading the stub files below:${System.lineSeparator()}${dataFiles.joinToString(System.lineSeparator())}")
+
     val mockData = dataFiles.map { Pair(it, stringToMockScenario(StringValue(it.readText()))) }
 
     val contractInfo = mockData.mapNotNull { (mockFile, mock) ->
@@ -67,35 +54,15 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
         }
     }.groupBy { it.first }.mapValues { it.value.map { it.second } }.entries.map { Pair(it.key, it.value)}
 
-    dataFiles?.let {
-        println("Loaded data from:${System.lineSeparator()}${it.joinToString(System.lineSeparator())}")
-    }
-
-    return ContractFake(contractInfo, host, port, ::consoleLog)
+    return ContractFake(contractInfo, host, port, kafkaPort, ::consoleLog)
 }
 
-fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
-    val contractInfo = contractPaths.map { path ->
-        val contractGherkin = readFile(path)
-        val contractBehaviour = ContractBehaviour(contractGherkin)
-        val stubInfo = loadStubInformation(path)
-        Pair(contractBehaviour, stubInfo)
-    }
-
-    return ContractFake(contractInfo, host, port, ::consoleLog)
+fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
+    val dataDirPaths = contractPaths.map { contractFilePathToStubDataDir(it).absolutePath }
+    return createStubFromContracts(contractPaths, dataDirPaths, host, port, kafkaPort)
 }
 
-private fun loadStubInformation(filePath: String): List<MockScenario> =
-        stubDataFiles(filePath).map { file ->
-            println("Loading data from ${file.name}")
-
-            stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))
-        }
-
-private fun stubDataFiles(path: String): List<File> {
+private fun contractFilePathToStubDataDir(path: String): File {
     val contractFile = File(path)
-    val stubDataDir = File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
-    println("Loading data files from ${stubDataDir.absolutePath} ")
-
-    return stubDataDir.listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()
+    return File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
 }

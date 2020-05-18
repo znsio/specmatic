@@ -20,11 +20,14 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--data"], description = ["Directory in which contract data may be found"])
     var dataDirs: List<String> = mutableListOf()
 
-    @Option(names = ["--host"], description = ["Host"], defaultValue = "localhost")
+    @Option(names = ["--host"], description = ["Host for the http stub"], defaultValue = "localhost")
     lateinit var host: String
 
-    @Option(names = ["--port"], description = ["Port"], defaultValue = "9000")
+    @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = "9000")
     var port: Int = 9000
+
+    @Option(names = ["--kafkaPort"], description = ["Port for the Kafka stub"], defaultValue = "9093")
+    var kafkaPort: Int = 9093
 
     override fun call() {
         try {
@@ -61,18 +64,21 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun startServer() {
-        contractFake = when{
-            dataDirs.isNotEmpty() -> createStubFromContracts(paths, dataDirs, host, port)
-            else -> createStubFromContracts(paths, host, port)
+        contractFake = when {
+            dataDirs.isNotEmpty() -> createStubFromContracts(paths, dataDirs, host, port, kafkaPort)
+            else -> createStubFromContracts(paths, host, port, kafkaPort)
         }
+
         if(contractFake.getKafkaInstance() != null) {
             println("Started Kafka: ${contractFake.getKafkaInstance()?.bootstrapServers}")
         }
     }
 
     private fun restartServer() {
+        println("Stopping servers...")
         stopServer()
         startServer()
+        println("Stopped.")
     }
 
     private fun stopServer() {

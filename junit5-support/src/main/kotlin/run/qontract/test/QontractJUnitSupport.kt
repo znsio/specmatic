@@ -1,6 +1,5 @@
 package run.qontract.test
 
-import org.apache.kafka.common.TopicPartition
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import run.qontract.core.*
@@ -63,13 +62,11 @@ open class QontractJUnitSupport {
                             exitProcess(1)
                         }
 
-                        val kafkaPort = System.getProperty("kafkaPort").toInt()
+                        val commit = "true" == System.getProperty("commit")
 
-                        createConsumer("PLAINTEXT://localhost:$kafkaPort").use { consumer ->
+                        createConsumer(getBootstrapKafkaServers(), commit).use { consumer ->
                             val topic = it.kafkaMessagePattern?.target ?: ""
-                            consumer.assign(listOf(TopicPartition(topic, 0)))
-                            consumer.poll(Duration.ofSeconds(1))
-                            consumer.seekToBeginning(listOf(TopicPartition(topic, 0)))
+                            consumer.subscribe(listOf(topic))
 
                             val messages = consumer.poll(Duration.ofSeconds(1)).map {
                                 KafkaMessage(topic, it.key()?.let { key -> StringValue(key) }, parsedValue(it.value()))
@@ -107,6 +104,18 @@ open class QontractJUnitSupport {
                 }
             }
         }.toList()
+    }
+
+    private fun getBootstrapKafkaServers(): String {
+        return when {
+            System.getProperty("kafkaBootstrapServers") != null && System.getProperty("kafkaBootstrapServers").isNotEmpty() ->
+                System.getProperty("kafkaBootstrapServers")
+            else -> {
+                val kafkaPort = System.getProperty("kafkaPort")?.toInt() ?: 9093
+                val kafkaHost = System.getProperty("kafkaHost") ?: "localhost"
+                """PLAINTEXT://$kafkaHost:$kafkaPort"""
+            }
+        }
     }
 
     private fun checkBackwardCompatibilityInPath(path: String) {

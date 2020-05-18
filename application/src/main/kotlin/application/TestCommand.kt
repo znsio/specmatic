@@ -33,8 +33,17 @@ class TestCommand : Callable<Void> {
     @Option(names = ["--checkBackwardCompatibility", "--check", "-c"], description = ["Identify versions of the contract prior to the one specified, and verify backward compatibility from the earliest to the latest"])
     var checkBackwardCompatibility: Boolean = false
 
-    @Option(names = ["--kafkaPort"], description = ["The port on which to connect to Kafka"])
-    var kafkaPort: Int = 0
+    @Option(names = ["--kafkaBootstrapServers"], description = ["Kafka's Bootstrap servers"], required=false)
+    var kafkaBootstrapServers: String = ""
+
+    @Option(names = ["--kafkaHost"], description = ["The host on which to connect to Kafka"], required=false)
+    var kafkaHost: String = "localhost"
+
+    @Option(names = ["--kafkaPort"], description = ["The port on which to connect to Kafka"], required=false)
+    var kafkaPort: Int = 9093
+
+    @Option(names = ["--commit"], description = ["Commit kafka messages that have been read"], required=false)
+    var commit: Boolean = false
 
     override fun call(): Void? {
         try {
@@ -53,6 +62,11 @@ class TestCommand : Callable<Void> {
             System.setProperty("suggestions", suggestionsPath)
             System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
             System.setProperty("protocol", protocol)
+
+            System.setProperty("kafkaBootstrapServers", kafkaBootstrapServers)
+            System.setProperty("kafkaHost", kafkaHost)
+            System.setProperty("kafkaPort", kafkaPort.toString())
+            System.setProperty("commit", commit.toString())
 
             if(kafkaPort != 0)
                 System.setProperty("kafkaPort", kafkaPort.toString())

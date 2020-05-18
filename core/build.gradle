@@ -29,12 +29,10 @@ dependencies {
     implementation 'org.eclipse.jgit:org.eclipse.jgit:5.7.0.202003110725-r'
     implementation 'org.eclipse.jgit:org.eclipse.jgit.ssh.apache:5.7.0.202003110725-r'
 
-    implementation 'org.apache.kafka:kafka_2.13:2.5.0'
-    implementation 'org.apache.zookeeper:zookeeper:3.6.1'
-    implementation 'io.dropwizard.metrics:metrics-core:4.1.7'
-
     implementation "org.testcontainers:testcontainers:1.14.1"
     implementation 'org.testcontainers:kafka:1.14.1'
+
+    implementation 'org.apache.kafka:kafka-clients:2.5.0'
 
     testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine:5.4.2')
 

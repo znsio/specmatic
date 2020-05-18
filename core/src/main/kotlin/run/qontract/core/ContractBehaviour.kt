@@ -113,9 +113,12 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
         }
 
     fun assertMatchesMockKafkaMessage(kafkaMessage: KafkaMessage) {
-        scenarios.asSequence().map {
+        val results = scenarios.asSequence().map {
             it.matchesMock(kafkaMessage)
-        }.find { it is Result.Success } ?: throw NoMatchingScenario()
+        }
+
+        if(results.none { it is Result.Success })
+            throw NoMatchingScenario(resultReport(results.first()))
     }
 
     fun matchingMockResponse(mockScenario: MockScenario): Triple<Resolver, Scenario, HttpResponse> =
@@ -123,6 +126,18 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
 
     fun clearServerState() {
         serverState = emptyMap()
+    }
+
+    fun lookupKafkaScenario(olderKafkaMessagePattern: KafkaMessagePattern, olderResolver: Resolver): Sequence<Pair<Scenario, Result>> {
+        try {
+            return scenarios.asSequence()
+                    .filter { it.kafkaMessagePattern != null }
+                    .map { newerScenario ->
+                        Pair(newerScenario, olderKafkaMessagePattern.encompasses(newerScenario.kafkaMessagePattern as KafkaMessagePattern, newerScenario.resolver, olderResolver))
+                    }
+        } finally {
+            serverState = emptyMap()
+        }
     }
 }
 
@@ -211,7 +226,7 @@ fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
     return when (parts.size) {
         2 -> {
             val (name, type) = parts
-            KafkaMessagePattern(name, content = parsedPattern(type))
+            KafkaMessagePattern(name, value = parsedPattern(type))
         }
         3 -> {
             val (name, key, contentType) = parts

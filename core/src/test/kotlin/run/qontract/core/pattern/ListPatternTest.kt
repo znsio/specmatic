@@ -44,4 +44,14 @@ internal class ListPatternTest {
         val stringPattern = ListPattern(parsedPattern("""(string)"""))
         assertThat(numberPattern.encompasses2(stringPattern, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
+
+    @Test
+    fun `a list should encompass a json array with items matching the list`() {
+        val bigger = ListPattern(AnyPattern(listOf(NumberTypePattern, NullPattern)))
+        val smaller1Element = parsedPattern("""["(number)"]""")
+        val smaller1ElementAndRest = parsedPattern("""["(number)", "(number...)"]""")
+
+        assertThat(bigger.encompasses2(smaller1Element, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses2(smaller1ElementAndRest, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
 }

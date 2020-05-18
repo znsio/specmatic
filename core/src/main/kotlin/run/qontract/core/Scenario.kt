@@ -154,7 +154,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
 
         return if(kafkaMessagePattern != null)
-            scenarioDescription.append(kafkaMessagePattern.target).toString()
+            scenarioDescription.append(kafkaMessagePattern.topic).toString()
         else
             scenarioDescription.append("$httpRequestPattern").toString()
     }

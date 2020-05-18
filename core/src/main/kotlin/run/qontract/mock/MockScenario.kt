@@ -21,20 +21,20 @@ data class MockScenario(val request: HttpRequest = HttpRequest(), val response: 
     }
 }
 
-private const val MOCK_KAFKA_MESSAGE = "message"
+private const val MOCK_KAFKA_MESSAGE = "kafka-message"
 private const val MOCK_HTTP_REQUEST = "mock-http-request"
 private const val MOCK_HTTP_RESPONSE = "mock-http-response"
 
 fun validateMock(mockSpec: Map<String, Any?>) {
     if (!mockSpec.containsKey(MOCK_KAFKA_MESSAGE)) {
-        if (!mockSpec.containsKey(MOCK_HTTP_REQUEST)) throw ContractException(errorMessage = "This spec does contain not information about the request to be mocked.")
+        if (!mockSpec.containsKey(MOCK_HTTP_REQUEST)) throw ContractException(errorMessage = "This spec does not contain information about either the kafka message or the request to be mocked.")
         if (!mockSpec.containsKey(MOCK_HTTP_RESPONSE)) throw ContractException(errorMessage = "This spec does not contain information about the response to be mocked.")
     }
 }
 
 fun mockFromJSON(mockSpec: Map<String, Value>): MockScenario {
     return when {
-        mockSpec.contains(MOCK_KAFKA_MESSAGE) -> MockScenario(kafkaMessage = messageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, mockSpec)))
+        mockSpec.contains(MOCK_KAFKA_MESSAGE) -> MockScenario(kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, mockSpec)))
         else -> {
             val mockRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST, mockSpec))
             val mockResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE, mockSpec))
@@ -44,16 +44,20 @@ fun mockFromJSON(mockSpec: Map<String, Value>): MockScenario {
     }
 }
 
-fun messageFromJSON(json: Map<String, Value>): KafkaMessage {
-    if("target" !in json)
-        throw ContractException("Async message stub info must contain a target (queue / topic name)")
+private const val KAFKA_TOPIC_KEY = "topic"
+private const val KAFKA_VALUE_KEY = "value"
+private const val KAFKA_KEY_KEY = "key"
 
-    if("value" !in json)
-        throw ContractException("Async message stub info must contain a payload")
+fun kafkaMessageFromJSON(json: Map<String, Value>): KafkaMessage {
+    if(KAFKA_TOPIC_KEY !in json)
+        throw ContractException("Kafka message stub info must contain a target (queue / topic name)")
 
-    val target = json.getValue("target")
-    val key = json.get("key")
-    val value = json.getValue("value")
+    if(KAFKA_VALUE_KEY !in json)
+        throw ContractException("Kafka message stub info must contain a payload")
+
+    val target = json.getValue(KAFKA_TOPIC_KEY)
+    val key = json[KAFKA_KEY_KEY]
+    val value = json.getValue(KAFKA_VALUE_KEY)
 
     return KafkaMessage(target.toStringValue(), key?.let { StringValue(it.toStringValue()) }, value)
 }

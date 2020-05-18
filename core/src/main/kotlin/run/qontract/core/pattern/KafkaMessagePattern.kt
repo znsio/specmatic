@@ -6,13 +6,13 @@ import run.qontract.core.breadCrumb
 import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.NullValue
 
-data class KafkaMessagePattern(val target: String = "", val key: Pattern = NoContentPattern, val value: Pattern = StringPattern) {
+data class KafkaMessagePattern(val topic: String = "", val key: Pattern = NoContentPattern, val value: Pattern = StringPattern) {
     fun matches(message: KafkaMessage, resolver: Resolver): Result {
         return attempt("KAFKA-MESSAGE") { _matches(message, resolver).breadCrumb("KAFKA-MESSAGE") }
     }
     fun _matches(message: KafkaMessage, resolver: Resolver): Result {
-        if(message.target != target)
-            return Result.Failure("Expected target $target, got $message.target").breadCrumb("TARGET")
+        if(message.topic != topic)
+            return Result.Failure("Expected topic $topic, got $message.topic").breadCrumb("TOPIC")
 
         val keyMatch = key.matches(message.key ?: NullValue, resolver)
         if(keyMatch !is Result.Success)
@@ -26,8 +26,8 @@ data class KafkaMessagePattern(val target: String = "", val key: Pattern = NoCon
     }
 
     fun _encompasses(other: KafkaMessagePattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(target != other.target)
-            return Result.Failure("Expected target $target, got ${other.target}").breadCrumb("TARGET")
+        if(topic != other.topic)
+            return Result.Failure("Expected topic $topic, got ${other.topic}").breadCrumb("TOPIC")
 
         val keyResult = key.encompasses2(other.key, otherResolver, thisResolver)
         if(keyResult is Result.Failure)
@@ -42,7 +42,7 @@ data class KafkaMessagePattern(val target: String = "", val key: Pattern = NoCon
 
         return newKeys.flatMap { newKey ->
             newValues.map { newValue ->
-                KafkaMessagePattern(target, newKey, newValue)
+                KafkaMessagePattern(topic, newKey, newValue)
             }
         }
     }

@@ -57,4 +57,46 @@ internal class JSONArrayPatternTest {
         assertThat(bigger.encompasses2(smallerLess, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
         assertThat(bigger.encompasses2(smallerMore, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
+
+    @Test
+    fun `finite array should not encompass a list`() {
+        val smaller = parsedPattern("""["(number)", "(number)"]""")
+        val bigger = ListPattern(NumberTypePattern)
+
+        assertThat(smaller.encompasses2(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should encompass a list containing a subtype of all elements`() {
+        val bigger = parsedPattern("""["(number)", "(number...)"]""")
+        val alsoBigger = parsedPattern("""["(number...)"]""")
+        val matching = ListPattern(NumberTypePattern)
+
+        assertThat(bigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(alsoBigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `finite array should not encompass an infinite array`() {
+        val bigger = parsedPattern("""["(number)", "(number...)"]""")
+        val smaller = parsedPattern("""["(number)", "(number)", "(number)"]""")
+
+        assertThat(smaller.encompasses2(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `smaller infinite array should match larger infinite array if all types match`() {
+        val bigger = parsedPattern("""["(number)", "(number...)"]""")
+        val matching = parsedPattern("""["(number)", "(number)", "(number...)"]""")
+
+        assertThat(bigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `bigger infinite array should match smaller infinite array if all types match`() {
+        val bigger = parsedPattern("""["(number)", "(number)", "(number...)"]""")
+        val matching = parsedPattern("""["(number)", "(number...)"]""")
+
+        assertThat(bigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
 }

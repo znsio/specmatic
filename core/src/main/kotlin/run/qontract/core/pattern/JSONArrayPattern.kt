@@ -2,11 +2,44 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.breadCrumb
 import run.qontract.core.utilities.stringTooPatternArray
 import run.qontract.core.value.*
 import java.util.*
 
-data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) : Pattern {
+data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) : Pattern, EncompassableList {
+    override fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> {
+        if(count > pattern.size && pattern.last() !is RestPattern)
+            throw ContractException("The lengths of the expected and actual array patterns don't match.")
+
+        if(count > pattern.size) {
+            if(pattern.indexOfFirst { it is RestPattern } < pattern.lastIndex)
+                throw ContractException("A rest operator ... can only be used in the last entry of an array.")
+
+            val missingEntryCount = count - pattern.size
+            val missingEntries = 0.until(missingEntryCount).map { pattern.last() }
+            val paddedPattern = pattern.plus(missingEntries)
+            return _getEncompassableList(paddedPattern, resolver)
+        }
+
+        return getEncompassableList(resolver)
+    }
+
+    override fun isEndless(): Boolean = pattern.last() is RestPattern
+
+    fun getEncompassableList(resolver: Resolver): List<Pattern> {
+        return _getEncompassableList(pattern, resolver)
+    }
+
+    private fun _getEncompassableList(pattern: List<Pattern>, resolver: Resolver): List<Pattern> {
+        return pattern.mapIndexed { index, patternEntry ->
+            when (patternEntry) {
+                !is RestPattern -> resolvedHop(patternEntry, resolver)
+                else -> resolvedHop(patternEntry.pattern, resolver)
+            }
+        }
+    }
+
     constructor(jsonString: String) : this(stringTooPatternArray(jsonString))
 
     @Throws(Exception::class)
@@ -58,40 +91,24 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is JSONArrayPattern
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern !is JSONArrayPattern)
-            return Result.Failure("Expected array, got ${otherPattern.typeName}")
+        if(otherPattern !is EncompassableList)
+            return Result.Failure("Expected array or list, got ${otherPattern.typeName}")
 
-        val resolverWithNumberType = thisResolver.copy(newPatterns = thisResolver.newPatterns.plus("(number)" to NumberTypePattern))
+        if(otherPattern.isEndless() && !this.isEndless())
+            return Result.Failure("Finite list is not a superset of an infinite list.")
 
-        val resolvedPattern = pattern.map {
-            when(it) {
-                is DeferredPattern -> it.resolvePattern(thisResolver)
-                else -> it
+        return try {
+            val otherEncompassables = otherPattern.getEncompassableList(pattern.size, otherResolver)
+            val encompassables = if (otherEncompassables.size > pattern.size) getEncompassableList(otherEncompassables.size, thisResolver) else getEncompassableList(thisResolver)
+
+            val results = encompassables.asSequence().zip(otherEncompassables.asSequence()).mapIndexed { index, (bigger, smaller) ->
+                Pair(index, bigger.encompasses2(smaller, thisResolver, otherResolver))
             }
+
+            results.find { it.second is Result.Success }?.second ?: results.firstOrNull()?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
+        } catch (e: ContractException) {
+            return Result.Failure(e.report())
         }
-
-        for (index in resolvedPattern.indices) {
-            when(val patternValue = resolvedPattern[index]) {
-                is RestPattern -> {
-                    val rest = if(index == otherPattern.pattern.size) emptyList() else otherPattern.pattern.slice(index..otherPattern.pattern.lastIndex)
-                    return when (val result = patternValue.encompasses2(JSONArrayPattern(rest), thisResolver, otherResolver)) {
-                        is Result.Failure -> result.breadCrumb("[$index...${otherPattern.pattern.lastIndex}]")
-                        else -> result
-                    }
-                }
-                else -> {
-                    if(index == otherPattern.pattern.size)
-                        return Result.Failure("Expected an array type of length ${pattern.size}, actual length ${otherPattern.pattern.size}")
-
-                    val otherPatternItem = otherPattern.pattern[index]
-                    when (val result = patternValue.encompasses2(otherPatternItem, resolverWithNumberType, otherResolver)) {
-                        is Result.Failure -> return result.breadCrumb("""[$index]""")
-                    }
-                }
-            }
-        }
-
-        return Result.Success()
     }
 
     override val typeName: String = "json array"

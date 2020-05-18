@@ -1,13 +1,17 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.Resolver
-import run.qontract.core.Result
-import run.qontract.core.mismatchResult
+import run.qontract.core.*
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.Value
-import run.qontract.core.withNumericStringPattern
 
-data class ListPattern(override val pattern: Pattern) : Pattern {
+data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableList {
+    override fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> {
+        val resolvedPattern = resolvedHop(pattern, resolver)
+        return 0.until(count).map { resolvedPattern }
+    }
+
+    override fun isEndless(): Boolean = true
+
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONArrayValue)
             return mismatchResult("JSON array", sampleData)
@@ -33,8 +37,20 @@ data class ListPattern(override val pattern: Pattern) : Pattern {
 
     override fun patternSet(resolver: Resolver): List<Pattern> = pattern.patternSet(resolver)
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(otherPattern is JSONArrayPattern) {
+            return try {
+                val results = otherPattern.getEncompassableList(otherResolver).asSequence().mapIndexed { index, otherPatternEntry ->
+                    Pair(index, pattern.encompasses2(otherPatternEntry, thisResolver, otherResolver))
+                }
+
+                results.find { it.second is Result.Success }?.second ?: results.firstOrNull()?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
+            } catch (e: ContractException) {
+                return Result.Failure(e.report())
+            }
+        }
+
         if(otherPattern !is ListPattern)
-            return Result.Failure("Expected list type, got ${otherPattern.typeName}")
+            return Result.Failure("Expected array or list type, got ${otherPattern.typeName}")
 
         return otherPattern.fitsWithin2(patternSet(thisResolver), otherResolver, thisResolver)
     }

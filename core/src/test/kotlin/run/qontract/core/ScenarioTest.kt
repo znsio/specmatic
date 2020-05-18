@@ -1,13 +1,12 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.Examples
-import run.qontract.core.pattern.Row
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.pattern.KafkaMessagePattern
-import run.qontract.core.pattern.ContractException
+import run.qontract.core.pattern.*
+import run.qontract.core.value.KafkaMessage
+import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
 import java.util.*
@@ -68,5 +67,18 @@ internal class ScenarioTest {
 
         assertThat(newState.getValue("id").toStringValue()).isNotEqualTo("(string)")
         assertThat(newState.getValue("id").toStringValue().trim().length).isGreaterThan(0)
+    }
+
+    @Test
+    fun `scenario will match a kafka message`() {
+        val row = Row(listOf("id"), listOf("(string)"))
+        val example = Examples(mutableListOf("id"))
+        example.addRows(listOf(row))
+
+        val kafkaMessagePattern = KafkaMessagePattern("customers", StringPattern, StringPattern)
+        val scenario = Scenario("Test", HttpRequestPattern(), HttpResponsePattern(), emptyMap(), emptyList(), emptyMap(), emptyMap(), kafkaMessagePattern)
+
+        val kafkaMessage = KafkaMessage("customers", StringValue("name"), StringValue("John Doe"))
+        assertThat(scenario.matchesMock(kafkaMessage)).isInstanceOf(Result.Success::class.java)
     }
 }

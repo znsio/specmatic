@@ -65,7 +65,7 @@ open class QontractJUnitSupport {
                         val commit = "true" == System.getProperty("commit")
 
                         createConsumer(getBootstrapKafkaServers(), commit).use { consumer ->
-                            val topic = it.kafkaMessagePattern?.target ?: ""
+                            val topic = it.kafkaMessagePattern?.topic ?: ""
                             consumer.subscribe(listOf(topic))
 
                             val messages = consumer.poll(Duration.ofSeconds(1)).map {

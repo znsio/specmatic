@@ -11,6 +11,21 @@ import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.stringToMockScenario
 import java.io.File
 
+fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
+    val contractBehaviour = ContractBehaviour(contractGherkin)
+
+    val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->
+        println("Loading data from ${file.name}")
+
+        stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))
+                .also {
+                    contractBehaviour.matchingMockResponse(it)
+                }
+    }
+
+    return ContractFake(listOf(Pair(contractBehaviour, mocks)), host, port, kafkaPort, ::consoleLog)
+}
+
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 

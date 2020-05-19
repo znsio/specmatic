@@ -4,7 +4,6 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.testBackwardCompatibility2
 import run.qontract.core.utilities.readFile
 import java.util.concurrent.Callable

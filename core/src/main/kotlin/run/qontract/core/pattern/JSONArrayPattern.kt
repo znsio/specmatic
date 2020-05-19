@@ -101,11 +101,11 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
             val otherEncompassables = otherPattern.getEncompassableList(pattern.size, otherResolver)
             val encompassables = if (otherEncompassables.size > pattern.size) getEncompassableList(otherEncompassables.size, thisResolver) else getEncompassableList(thisResolver)
 
-            val results = encompassables.asSequence().zip(otherEncompassables.asSequence()).mapIndexed { index, (bigger, smaller) ->
+            val results = encompassables.zip(otherEncompassables).mapIndexed { index, (bigger, smaller) ->
                 Pair(index, bigger.encompasses2(smaller, thisResolver, otherResolver))
             }
 
-            results.find { it.second is Result.Success }?.second ?: results.firstOrNull()?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
+            results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
         } catch (e: ContractException) {
             return Result.Failure(e.report())
         }

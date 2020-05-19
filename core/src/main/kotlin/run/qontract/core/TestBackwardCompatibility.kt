@@ -32,37 +32,6 @@ fun testBackwardCompatibility2(older: ContractBehaviour, newerBehaviour: Contrac
     }
 }
 
-fun testBackwardCompatibility(older: ContractBehaviour, newer: ContractBehaviour): Results =
-        older.generateTestScenarios().fold(Results()) { results, olderScenario ->
-            newer.setServerState(olderScenario.expectedFacts)
-
-            var request: HttpRequest? = null
-
-            try {
-                request = olderScenario.generateHttpRequest()
-                val responses = newer.lookupAllResponses(request)
-
-                val (response, result) = when {
-                    responses.singleOrNull()?.headers?.get("X-Qontract-Result") == "failure" -> Pair(responses.first(), Result.Failure(responses.first().body?.displayableValue() ?: ""))
-                    else -> {
-                        val matchResults = responses.asSequence().map { response ->
-                            Pair(response, olderScenario.matches(response))
-                        }
-
-                        matchResults.find { it.second is Result.Failure } ?: Pair(responses.first(), Result.Success())
-                    }
-                }
-
-                results.copy(results = results.results.plus(Triple(result, request, response)).toMutableList())
-            }
-            catch(contractException: ContractException) {
-                results.copy(results = results.results.plus(Triple(contractException.result(), request, null)).toMutableList())
-            }
-            catch(throwable: Throwable) {
-                results.copy(results = results.results.plus(Triple(Result.Failure("Exception: ${throwable.localizedMessage}"), request, null)).toMutableList())
-            }
-        }
-
 data class Comparison(val older: String, val newer: String, val results: Results)
 
 sealed class CompatibilityResult

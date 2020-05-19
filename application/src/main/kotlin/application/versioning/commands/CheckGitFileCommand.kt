@@ -8,7 +8,6 @@ import org.eclipse.jgit.treewalk.TreeWalk
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import run.qontract.core.ContractBehaviour
-import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.testBackwardCompatibility2
 import java.io.File
 import java.io.FileNotFoundException

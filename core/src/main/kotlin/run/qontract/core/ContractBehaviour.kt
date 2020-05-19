@@ -42,7 +42,7 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
         try {
             val scenarios = lookupScenario(httpRequest, scenarios)
             val matchingScenario = matchingScenario(scenarios)
-            matchingScenario ?: throw ContractException("Couldn't find response for this scenario.", scenario = matchingScenario)
+            matchingScenario ?: scenarios.firstOrNull()?.second?.let { throw ContractException(resultReport(it), scenario = matchingScenario) } ?: throw ContractException("The contract is empty.")
         } finally {
             serverState = emptyMap()
         }

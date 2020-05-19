@@ -43,7 +43,7 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
                     Pair(index, pattern.encompasses2(otherPatternEntry, thisResolver, otherResolver))
                 }
 
-                results.find { it.second is Result.Success }?.second ?: results.firstOrNull()?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
+                results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
             } catch (e: ContractException) {
                 return Result.Failure(e.report())
             }

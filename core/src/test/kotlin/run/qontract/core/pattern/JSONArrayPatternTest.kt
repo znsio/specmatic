@@ -99,4 +99,12 @@ internal class JSONArrayPatternTest {
 
         assertThat(bigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
+
+    @Test
+    fun `should fail if there are any match failures at all`() {
+        val bigger = parsedPattern("""["(number)", "(number...)"]""")
+        val matching = parsedPattern("""["(number)", "(string...)"]""")
+
+        assertThat(bigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
 }

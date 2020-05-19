@@ -16,12 +16,12 @@ interface Pattern {
             patternSet(resolver).all { it in patterns }
 
     fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result
-    fun fitsWithin2(otherPatterns: List<Pattern>, myResolver: Resolver, otherResolver: Resolver): Result {
-        val myPatternSet = patternSet(myResolver)
+    fun fitsWithin2(otherPatterns: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver): Result {
+        val myPatternSet = patternSet(thisResolver)
 
         val result = myPatternSet.map { my ->
             val encompassResult = otherPatterns.asSequence().map { other ->
-                other.encompasses2(my, myResolver, otherResolver)
+                other.encompasses2(my, thisResolver, otherResolver)
             }
 
             encompassResult.find { it is Result.Success } ?: encompassResult.first()

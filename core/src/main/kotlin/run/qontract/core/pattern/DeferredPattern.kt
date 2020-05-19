@@ -28,7 +28,7 @@ data class DeferredPattern(override val pattern: String, override val key: Strin
     }
 
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        return thisResolver.getPattern(pattern).encompasses2(resolvedHop(otherPattern, otherResolver), otherResolver, thisResolver)
+        return thisResolver.getPattern(pattern).encompasses2(resolvedHop(otherPattern, otherResolver), thisResolver, otherResolver)
     }
 
     override fun parse(value: String, resolver: Resolver): Value =

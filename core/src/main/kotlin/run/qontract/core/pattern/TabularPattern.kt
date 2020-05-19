@@ -53,13 +53,13 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
             val bigger = pattern.getValue(key)
             val smaller = otherPattern.pattern[key] ?: otherPattern.pattern[withoutOptionality(key)]
 
-            Pair(key,
-                    if(smaller != null)
-                        bigger.encompasses2(resolvedHop(smaller, otherResolverWithNumberType), thisResolverWithNumberType, otherResolverWithNumberType)
-                    else Result.Success())
+            val result = if (smaller != null)
+                                    bigger.encompasses2(resolvedHop(smaller, otherResolverWithNumberType), thisResolverWithNumberType, otherResolverWithNumberType)
+                                else Result.Success()
+            Pair(key, result)
         }.find { it.second is Result.Failure }
 
-        return result?.second?.breadCrumb(breadCrumb = result?.first) ?: Result.Success()
+        return result?.second?.breadCrumb(breadCrumb = result.first) ?: Result.Success()
     }
 
     override val typeName: String = "json object"

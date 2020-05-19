@@ -41,7 +41,7 @@ data class LookupRowPattern(override val pattern: Pattern, val key: String) : Pa
             pattern.encompasses(otherPattern, resolver)
 
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        return pattern.encompasses2(resolvedHop(otherPattern, otherResolver), otherResolver, thisResolver)
+        return pattern.encompasses2(resolvedHop(otherPattern, otherResolver), thisResolver, otherResolver)
     }
 
     override val typeName: String = pattern.typeName

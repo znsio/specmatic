@@ -23,11 +23,8 @@ object NumberTypePattern : Pattern {
 
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is NumberTypePattern
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        return when(otherPattern) {
-            is DeferredPattern -> return encompasses2(otherPattern.resolvePattern(thisResolver), thisResolver, otherResolver)
-            is NumberTypePattern -> return Result.Success()
-            else -> Result.Failure("Expected number, got ${otherPattern.typeName}")
-        }
+        if(otherPattern is NumberTypePattern) return Result.Success()
+        return Result.Failure("Expected number, got ${otherPattern.typeName}")
     }
 
     override val typeName: String = "number"

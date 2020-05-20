@@ -17,7 +17,7 @@ class StubCommand : Callable<Unit> {
     @Parameters(arity = "1..*", description = ["Contract file paths"])
     lateinit var paths: List<String>
 
-    @Option(names = ["--data"], description = ["Directory in which contract data may be found"])
+    @Option(names = ["--data"], description = ["Directory in which contract data may be found"], required = false)
     var dataDirs: List<String> = mutableListOf()
 
     @Option(names = ["--host"], description = ["Host for the http stub"], defaultValue = "localhost")

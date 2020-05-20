@@ -32,7 +32,7 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
 
         val firstPart = listOf(statusLine, headerString).joinToString("\n").trim()
 
-        val formattedBody = (body ?: EmptyString).displayableValue()
+        val formattedBody = (body ?: EmptyString).toStringValue()
 
         val responseString = listOf(firstPart, "", formattedBody).joinToString("\n")
         return startLinesWith(responseString, prefix)

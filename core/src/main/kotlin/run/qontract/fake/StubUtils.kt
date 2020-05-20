@@ -7,6 +7,7 @@ import run.qontract.core.ContractBehaviour
 import run.qontract.core.DATA_DIR_SUFFIX
 import run.qontract.core.utilities.readFile
 import run.qontract.core.value.StringValue
+import run.qontract.mock.MockScenario
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.stringToMockScenario
 import java.io.File
@@ -30,8 +31,7 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
-    val dataDirs = dataDirPaths.map { File(it) }
-    if(dataDirs.any { !it.exists() || !it.isDirectory }) throw Exception("Data directory $dataDirPaths does not exist.")
+    val dataDirs = dataDirPaths.map { File(it) }.filter { it.isDirectory }
 
     val behaviours = contractPaths.map { path ->
         Pair(File(path), ContractBehaviour(readFile(path)))
@@ -43,7 +43,7 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
 
     val mockData = dataFiles.map { Pair(it, stringToMockScenario(StringValue(it.readText()))) }
 
-    val contractInfo = mockData.mapNotNull { (mockFile, mock) ->
+    val contractInfoFromMocks = mockData.mapNotNull { (mockFile, mock) ->
         val matchResults = behaviours.asSequence().map { (contractFile, behaviour) ->
             try {
                 val kafkaMessage = mock.kafkaMessage
@@ -68,6 +68,11 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
             else -> Pair(behaviour, mock)
         }
     }.groupBy { it.first }.mapValues { it.value.map { it.second } }.entries.map { Pair(it.key, it.value)}
+
+    val mockedBehaviours = contractInfoFromMocks.map { it.first }
+    val missingBehaviours = behaviours.map { it.second }.filter { it !in mockedBehaviours }
+
+    val contractInfo = contractInfoFromMocks.plus(missingBehaviours.map { Pair(it, emptyList<MockScenario>())})
 
     return ContractFake(contractInfo, host, port, kafkaPort, ::consoleLog)
 }

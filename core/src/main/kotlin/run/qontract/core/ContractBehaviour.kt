@@ -329,7 +329,7 @@ private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChil
 private fun scenarios(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
         featureChildren.filter { it.valueCase.name != "BACKGROUND" }
 
-private fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Triple<Result, HttpRequest, HttpResponse?> {
+fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Triple<Result, HttpRequest, HttpResponse?> {
     testExecutor.setServerState(scenario.serverState)
 
     val request = scenario.generateHttpRequest()

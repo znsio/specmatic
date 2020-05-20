@@ -115,7 +115,6 @@ class ContractFake(private val contractInfo: List<Pair<ContractBehaviour, List<M
     }
 
     init {
-        println("Starting http server...")
         server.start()
 
         if(stubs.kafka.isNotEmpty()) {

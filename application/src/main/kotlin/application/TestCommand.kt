@@ -24,8 +24,11 @@ class TestCommand : Callable<Void> {
     @Option(names = ["--port"], description = ["The port to bind to"])
     var port: Int = 0
 
-    @Option(names = ["--suggestions"], description = ["Location of the suggestions file"], defaultValue = "")
+    @Option(names = ["--suggestionsPath"], description = ["Location of the suggestions file"], defaultValue = "")
     lateinit var suggestionsPath: String
+
+    @Option(names = ["--suggestions"], description = ["A json value with scenario name and multiple suggestions"], defaultValue = "")
+    var suggestions: String = ""
 
     @Option(names = ["--https"], description = ["Use https instead of the default http"], required = false)
     var useHttps: Boolean = false
@@ -59,7 +62,8 @@ class TestCommand : Callable<Void> {
             System.setProperty("path", path)
             System.setProperty("host", host)
             System.setProperty("port", port.toString())
-            System.setProperty("suggestions", suggestionsPath)
+            System.setProperty("suggestionsPath", suggestionsPath)
+            System.setProperty("suggestions", suggestions)
             System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
             System.setProperty("protocol", protocol)
 
@@ -74,6 +78,7 @@ class TestCommand : Callable<Void> {
             val launcher = LauncherFactory.create()
             val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
                     .selectors(selectClass(QontractJUnitSupport::class.java))
+                    .configurationParameter("key", "value")
                     .build()
             launcher.discover(request)
             val contractExecutionListener = ContractExecutionListener()

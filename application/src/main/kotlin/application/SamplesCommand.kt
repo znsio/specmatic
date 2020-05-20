@@ -25,7 +25,7 @@ class SamplesCommand : Callable<Void> {
             val gherkin = readFile(contractPath)
 
             ContractFake(gherkin, emptyList(), host, port).use { fake ->
-                Contract(gherkin).test(fake)
+                Contract(gherkin).samples(fake)
             }
         }
         catch(e: ContractException) {

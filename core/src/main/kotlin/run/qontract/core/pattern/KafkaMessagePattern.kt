@@ -5,6 +5,7 @@ import run.qontract.core.Result
 import run.qontract.core.breadCrumb
 import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.NullValue
+import run.qontract.core.value.StringValue
 
 data class KafkaMessagePattern(val topic: String = "", val key: Pattern = NoContentPattern, val value: Pattern = StringPattern) {
     fun matches(message: KafkaMessage, resolver: Resolver): Result {
@@ -46,4 +47,7 @@ data class KafkaMessagePattern(val topic: String = "", val key: Pattern = NoCont
             }
         }
     }
+
+    fun generate(resolver: Resolver): KafkaMessage =
+            KafkaMessage(topic, key.generate(resolver) as StringValue, value.generate(resolver) as StringValue)
 }

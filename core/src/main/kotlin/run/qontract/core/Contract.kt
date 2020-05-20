@@ -16,8 +16,21 @@ data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val 
             throw ContractException(results.report())
     }
 
-    fun test(fake: ContractFake) {
-        test(fake.endPoint)
+    fun test(fake: ContractFake) = test(fake.endPoint)
+
+    fun samples(fake: ContractFake) = samples(fake.endPoint)
+    fun samples(endPoint: String) {
+        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val httpClient = HttpClient(endPoint)
+
+        contractBehaviour.generateTestScenarios(emptyList()).fold(Results()) { results, scenario ->
+            scenario.kafkaMessagePattern?.let { kafkaMessagePattern ->
+                val message = """KAFKA MESSAGE
+${kafkaMessagePattern.generate(scenario.resolver).toDisplayableString()}""".trimMargin().prependIndent("| ")
+                println(message)
+                Results(results = results.results.plus(Triple(Result.Success(), null, null)).toMutableList())
+            } ?: Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
+        }
     }
 
     companion object {

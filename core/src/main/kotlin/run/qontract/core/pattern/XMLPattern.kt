@@ -15,7 +15,6 @@ import java.io.StringReader
 import java.util.*
 import javax.xml.parsers.DocumentBuilderFactory
 
-
 data class XMLPattern(val node: Node) : Pattern {
     override val pattern = xmlToString(node)
 
@@ -82,7 +81,7 @@ data class XMLPattern(val node: Node) : Pattern {
             val sampleChildNodes = sampleNode.childNodes
             val firstPatternNode = patternChildNodes.item(0)
             if (isRepeatingPattern(firstPatternNode.nodeValue)) {
-                return matchManyNodes(firstPatternNode, sampleNode, resolver)
+                return matchRepeatingNodes(firstPatternNode, sampleNode, resolver)
             }
             if (patternChildNodes.length != sampleChildNodes.length)
                 return Result.Failure("Node ${sampleNode.nodeName} does not have matching number of children. Expected: ${patternChildNodes.length} Actual: ${sampleChildNodes.length}")
@@ -115,7 +114,7 @@ data class XMLPattern(val node: Node) : Pattern {
         }
     }
 
-    private fun matchManyNodes(pattern: Node, sample: Node, resolver: Resolver): Result {
+    private fun matchRepeatingNodes(pattern: Node, sample: Node, resolver: Resolver): Result {
         val sampleChildNodes = sample.childNodes
         val newPattern = pattern.cloneNode(true)
         newPattern.nodeValue = withoutRepeatingToken(newPattern.nodeValue)
@@ -222,10 +221,10 @@ data class XMLPattern(val node: Node) : Pattern {
     override fun parse(value: String, resolver: Resolver): Value = XMLValue(value)
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is XMLPattern
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern is XMLPattern)
-            return Result.Success()
+        if(otherPattern !is XMLPattern)
+            return Result.Failure("Expected XMLPattern")
 
-        return Result.Failure("Expected XMLPattern")
+        return Result.Success()
     }
 
     override val typeName: String = "xml"

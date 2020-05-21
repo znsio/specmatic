@@ -31,13 +31,13 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
-    val dataDirs = dataDirPaths.map { File(it) }.filter { it.isDirectory }
+    val dataDirFileList = pathToFileListRecursive(dataDirPaths)
 
     val behaviours = contractPaths.map { path ->
         Pair(File(path), ContractBehaviour(readFile(path)))
     }
 
-    val dataFiles = dataDirs.flatMap { it.listFiles()?.toList() ?: emptyList<File>() }.filter { it.extension == "json" }
+    val dataFiles = dataDirFileList.flatMap { it.listFiles()?.toList() ?: emptyList<File>() }.filter { it.extension == "json" }
     if(dataFiles.size > 0)
         println("Reading the stub files below:${System.lineSeparator()}${dataFiles.joinToString(System.lineSeparator())}")
 
@@ -76,6 +76,22 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
 
     return ContractFake(contractInfo, host, port, kafkaPort, ::consoleLog)
 }
+
+private fun pathToFileListRecursive(dataDirPaths: List<String>): List<File> =
+        dataDirPaths.map { File(it) }.filter {
+            it.isDirectory
+        }.flatMap {
+            val fileList: List<File> = it.listFiles()?.toList()?.filterNotNull() ?: emptyList()
+            _pathToFileListRecursive(fileList).plus(it)
+        }
+
+private fun _pathToFileListRecursive(dataDirFiles: List<File>): List<File> =
+        dataDirFiles.filter {
+            it.isDirectory
+        }.map {
+            val fileList: List<File> = it.listFiles()?.toList()?.filterNotNull() ?: emptyList()
+            _pathToFileListRecursive(fileList).plus(it)
+        }.flatten()
 
 fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
     val dataDirPaths = contractPaths.map { contractFilePathToStubDataDir(it).absolutePath }

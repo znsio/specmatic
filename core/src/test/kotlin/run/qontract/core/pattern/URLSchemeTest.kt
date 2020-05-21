@@ -1,5 +1,6 @@
 package run.qontract.core.pattern
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -11,7 +12,7 @@ import run.qontract.core.value.StringValue
 internal class URLSchemeTest {
     @Test
     fun `should generate an https url`() {
-        val value = parsedPattern("(url https)").generate(Resolver())
+        val value = parsedPattern("(url-https)").generate(Resolver())
 
         if(value !is StringValue) fail("Expectected StringValue, got ${value.javaClass.name}")
         assertTrue(value.string.startsWith("https://"))
@@ -19,7 +20,7 @@ internal class URLSchemeTest {
 
     @Test
     fun `should generate an http url`() {
-        val value = parsedPattern("(url http)").generate(Resolver())
+        val value = parsedPattern("(url-http)").generate(Resolver())
 
         if(value !is StringValue) fail("Expectected StringValue, got ${value.javaClass.name}")
         assertTrue(value.string.startsWith("http://"))
@@ -54,5 +55,15 @@ internal class URLSchemeTest {
     @Test
     fun `url path pattern should match a url path without a scheme`() {
         StringValue("/one/two") shouldMatch URLPattern(URLScheme.PATH)
+    }
+
+    @Test
+    fun `url path pattern should match a url path without a scheme or trailing prefix`() {
+        StringValue("one/two") shouldMatch URLPattern(URLScheme.PATH)
+    }
+
+    @Test
+    fun `url path pattern should match a path that does not end with a tld`() {
+        assertFalse(URLPattern(URLScheme.PATH).generate(Resolver()).string.endsWith(".com"))
     }
 }

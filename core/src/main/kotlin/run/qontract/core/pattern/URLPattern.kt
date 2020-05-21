@@ -14,7 +14,7 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS): Pattern {
             is StringValue -> {
                 if(scheme.matches(parse(sampleData.string, resolver))) {
                     Result.Success()
-                } else Result.Failure("Expected URL prefix ${scheme.prefix} in url ${sampleData.string}")
+                } else Result.Failure("Expected ${sampleData.string} to be ${scheme.type}")
             }
             else -> Result.Failure("URLs can only be held in strings.")
         }

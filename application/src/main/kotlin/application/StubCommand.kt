@@ -3,8 +3,11 @@ package application
 import picocli.CommandLine.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.fake.ContractStub
+import run.qontract.fake.implicitContractDataDir
 import run.qontract.fake.createStubFromContracts
+import run.qontract.fake.allDirsInTree
 import run.qontract.mock.NoMatchingScenario
+import java.io.File
 import java.nio.file.*
 import java.util.concurrent.Callable
 
@@ -29,38 +32,68 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--kafkaPort"], description = ["Port for the Kafka stub"], defaultValue = "9093")
     var kafkaPort: Int = 9093
 
-    override fun call() {
-        try {
-            startServer()
-            println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
-            addShutdownHook()
+    override fun call() = try {
+        startServer()
+        println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
+        addShutdownHook()
 
-            val watchService = FileSystems.getDefault().newWatchService()
-            val contractPaths = paths.map { Paths.get(it).toAbsolutePath() }
-
-            contractPaths.forEach { contractPath ->
-                contractPath.parent.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
-            }
-
-            var key: WatchKey
-            while (watchService.take().also { key = it } != null) {
-                key.pollEvents().forEach { event ->
-                    when {
-                        event.context() in contractPaths.map { it.fileName } -> {
-                            println("""Restarting stub server. Change in ${event.context()}""")
-                            restartServer()
-                        }
-                    }
-                }
-                key.reset()
-            }
-        } catch (e: NoMatchingScenario) {
-            println(e.localizedMessage)
-        } catch (e:ContractException) {
-            println(e.report())
-        } catch (e: Throwable) {
-            println("An error occurred: ${e.localizedMessage}")
+        val contractPathParentPaths = paths.map {
+            File(it).absoluteFile.parentFile.toPath()
         }
+        val contractPathDataDirPaths = paths.flatMap { contractFilePath ->
+            allDirsInTree(implicitContractDataDir(contractFilePath).absolutePath).map { it.toPath() }
+        }
+        val dataDirPaths = dataDirs.flatMap {
+            allDirsInTree(it).map { it.absoluteFile.toPath() }
+        }
+
+        val pathsToWatch = when {
+            dataDirs.isNotEmpty() -> contractPathParentPaths.plus(dataDirPaths)
+            else -> contractPathParentPaths.plus(contractPathDataDirPaths)
+        }
+
+        while(true) { watchForChanges(pathsToWatch) }
+    } catch (e: NoMatchingScenario) {
+        println(e.localizedMessage)
+    } catch (e:ContractException) {
+        println(e.report())
+    } catch (e: Throwable) {
+        println("An error occurred: ${e.localizedMessage}")
+    }
+
+    private fun watchForChanges(contractPaths: List<Path>) {
+        val watchService = FileSystems.getDefault().newWatchService()
+
+        contractPaths.forEach { contractPath ->
+            contractPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE)
+        }
+
+        var key: WatchKey
+        while (watchService.take().also { key = it } != null) {
+            println("Detected a change...")
+            key.reset()
+
+            val (restartNeeded, changedFile) = isRestartNeeded(key)
+            if(restartNeeded) {
+                println("""Restarting stub server. Change in ${changedFile}""")
+                restartServer()
+            }
+        }
+    }
+
+    private fun isRestartNeeded(key: WatchKey): Pair<Boolean, String> {
+        key.pollEvents().forEach { event ->
+            when {
+                event.context().toString().endsWith(".json") || event.context().toString().endsWith(".qontract") -> {
+                    return Pair(true, event.context().toString())
+                }
+                else -> {
+                    println("Ingoring change ${event.kind()} to ${event.context()}")
+                }
+            }
+        }
+
+        return Pair(false, "")
     }
 
     private fun startServer() {
@@ -76,9 +109,12 @@ class StubCommand : Callable<Unit> {
 
     private fun restartServer() {
         println("Stopping servers...")
-        stopServer()
-        startServer()
-        println("Stopped.")
+        try {
+            stopServer()
+            println("Stopped.")
+        } catch (e: Throwable) { println("Error stopping server: ${e.localizedMessage}")}
+
+        try { startServer() } catch (e: Throwable) { println("Error starting server: ${e.localizedMessage}")}
     }
 
     private fun stopServer() {

@@ -31,7 +31,7 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
-    val dataDirFileList = pathToFileListRecursive(dataDirPaths)
+    val dataDirFileList = allDirsInTree(dataDirPaths)
 
     val behaviours = contractPaths.map { path ->
         Pair(File(path), ContractBehaviour(readFile(path)))
@@ -77,7 +77,8 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
     return ContractFake(contractInfo, host, port, kafkaPort, ::consoleLog)
 }
 
-private fun pathToFileListRecursive(dataDirPaths: List<String>): List<File> =
+fun allDirsInTree(dataDirPath: String): List<File> = allDirsInTree(listOf(dataDirPath))
+fun allDirsInTree(dataDirPaths: List<String>): List<File> =
         dataDirPaths.map { File(it) }.filter {
             it.isDirectory
         }.flatMap {
@@ -94,11 +95,11 @@ private fun _pathToFileListRecursive(dataDirFiles: List<File>): List<File> =
         }.flatten()
 
 fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
-    val dataDirPaths = contractPaths.map { contractFilePathToStubDataDir(it).absolutePath }
+    val dataDirPaths = contractPaths.map { implicitContractDataDir(it).absolutePath }
     return createStubFromContracts(contractPaths, dataDirPaths, host, port, kafkaPort)
 }
 
-private fun contractFilePathToStubDataDir(path: String): File {
+fun implicitContractDataDir(path: String): File {
     val contractFile = File(path)
     return File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
 }

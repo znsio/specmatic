@@ -31,8 +31,7 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS): Pattern {
     }
 
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(this == otherPattern) return Result.Success()
-        return Result.Failure("Expected ${this.typeName}, got ${otherPattern.typeName}")
+        return encompasses(this, otherPattern, thisResolver, otherResolver)
     }
 
     override val typeName: String = "url"

@@ -34,12 +34,12 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern)
     override fun patternSet(resolver: Resolver): List<Pattern> =
             pattern.patternSet(resolver)
 
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern !is PatternInStringPattern)
-            return Result.Failure("Expected type in string type, got ${otherPattern.typeName}")
-
-        return otherPattern.pattern.fitsWithin2(patternSet(thisResolver), otherResolver, thisResolver)
-    }
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+            when (otherPattern) {
+                is ExactValuePattern -> matches(otherPattern.pattern, thisResolver)
+                !is PatternInStringPattern -> Result.Failure("Expected type in string type, got ${otherPattern.typeName}")
+                else -> otherPattern.pattern.fitsWithin2(patternSet(thisResolver), otherResolver, thisResolver)
+            }
 
     override val typeName: String = "${pattern.typeName} in string"
 }

@@ -90,14 +90,11 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONArrayPattern> = newBasedOn(pattern, row, resolver).map { JSONArrayPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is JSONArrayPattern
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern !is EncompassableList)
-            return Result.Failure("Expected array or list, got ${otherPattern.typeName}")
-
-        if(otherPattern.isEndless() && !this.isEndless())
-            return Result.Failure("Finite list is not a superset of an infinite list.")
-
-        return try {
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result = when {
+        otherPattern is ExactValuePattern -> otherPattern.fitsWithin2(listOf(this), otherResolver, thisResolver)
+        otherPattern !is EncompassableList -> Result.Failure("Expected array or list, got ${otherPattern.typeName}")
+        otherPattern.isEndless() && !this.isEndless() -> Result.Failure("Finite list is not a superset of an infinite list.")
+        else -> try {
             val otherEncompassables = otherPattern.getEncompassableList(pattern.size, otherResolver)
             val encompassables = if (otherEncompassables.size > pattern.size) getEncompassableList(otherEncompassables.size, thisResolver) else getEncompassableList(thisResolver)
 
@@ -105,9 +102,10 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
                 Pair(index, bigger.encompasses2(smaller, thisResolver, otherResolver))
             }
 
-            results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
+            results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") }
+                    ?: Result.Success()
         } catch (e: ContractException) {
-            return Result.Failure(e.report())
+            Result.Failure(e.report())
         }
     }
 

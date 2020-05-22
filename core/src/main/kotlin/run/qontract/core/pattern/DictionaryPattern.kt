@@ -34,7 +34,6 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
 
             obj.plus(key to value)
         })
-
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
@@ -53,15 +52,17 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
             (otherPattern.valuePattern.encompasses(this.keyPattern, resolver) || this.valuePattern.encompasses(otherPattern.valuePattern, resolver)))
     }
 
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern !is DictionaryPattern)
-            return Result.Failure("Expected dictionary type, got ${otherPattern.typeName}")
-
-        return listOf(
-                { this.keyPattern.encompasses2(otherPattern, thisResolver, otherResolver) },
-                { this.valuePattern.encompasses2(otherPattern, thisResolver, otherResolver) }
-        ).asSequence().map { it.invoke() }.firstOrNull { it is Result.Failure } ?: Result.Success()
-    }
+    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+            when (otherPattern) {
+                is ExactValuePattern -> otherPattern.fitsWithin2(listOf(this), otherResolver, thisResolver)
+                !is DictionaryPattern -> Result.Failure("Expected dictionary type, got ${otherPattern.typeName}")
+                else -> {
+                    listOf(
+                            { this.keyPattern.encompasses2(otherPattern, thisResolver, otherResolver) },
+                            { this.valuePattern.encompasses2(otherPattern, thisResolver, otherResolver) }
+                    ).asSequence().map { it.invoke() }.firstOrNull { it is Result.Failure } ?: Result.Success()
+                }
+            }
 
     override val typeName: String = "object with key type ${keyPattern.typeName} and value type ${valuePattern.typeName}"
 

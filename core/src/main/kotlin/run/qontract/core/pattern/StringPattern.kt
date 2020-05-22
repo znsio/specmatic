@@ -18,8 +18,7 @@ object StringPattern : Pattern {
     }
 
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern is StringPattern) return Result.Success()
-        return Result.Failure("Expected string, got ${otherPattern.typeName}")
+        return encompasses(this, otherPattern, thisResolver, otherResolver)
     }
 
     override fun generate(resolver: Resolver): Value = StringValue(randomString())

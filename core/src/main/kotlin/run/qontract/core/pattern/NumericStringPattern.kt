@@ -21,11 +21,7 @@ object NumericStringPattern : Pattern {
     override fun parse(value: String, resolver: Resolver): Value = NumberValue(convertToNumber(value))
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is NumericStringPattern
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern is NumericStringPattern) return Result.Success()
-        if(otherPattern is ExactValuePattern && otherPattern.pattern is StringValue && try { convertToNumber(otherPattern.pattern.string); true } catch(e: Throwable) { false })
-            return Result.Success()
-
-        return Result.Failure("Expected number, got ${otherPattern.typeName}")
+        return encompasses(this, otherPattern, thisResolver, otherResolver)
     }
 
     override val typeName: String = "number"
@@ -33,4 +29,15 @@ object NumericStringPattern : Pattern {
     override fun toString() = pattern.toString()
 
     override val pattern: Any = "(number)"
+}
+
+fun encompasses(thisPattern: Pattern, otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+        when {
+            otherPattern::class == thisPattern::class -> Result.Success()
+            otherPattern is ExactValuePattern -> otherPattern.fitsWithin2(thisPattern.patternSet(thisResolver), otherResolver, thisResolver)
+            else -> mismatchResult(thisPattern, otherPattern)
+        }
+
+fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern): Result.Failure {
+    return mismatchResult(thisPattern.typeName, otherPattern.typeName)
 }

@@ -221,42 +221,43 @@ data class XMLPattern(val node: Node) : Pattern {
     override fun parse(value: String, resolver: Resolver): Value = XMLValue(value)
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is XMLPattern
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern !is XMLPattern)
-            return Result.Failure("Expected XMLPattern")
+        when {
+            otherPattern is ExactValuePattern -> return otherPattern.fitsWithin2(listOf(this), otherResolver, thisResolver)
+            otherPattern !is XMLPattern -> return Result.Failure("Expected XMLPattern")
+            node.nodeName != otherPattern.node.nodeName -> return Result.Failure("Expected a node named ${node.nodeName}, but got ${otherPattern.node.nodeName} instead.")
+            else -> {
+                val thisResolverWithNumericString = withNumericStringPattern(thisResolver)
+                val otherResolverWithNumericString = withNumericStringPattern(otherResolver)
 
-        if(node.nodeName != otherPattern.node.nodeName)
-            return Result.Failure("Expected a node named ${node.nodeName}, but got ${otherPattern.node.nodeName} instead.")
+                for (i in (0.until(node.attributes?.length ?: 0))) {
+                    val thisAttribute = node.attributes.item(i)
+                    val otherAttribute = otherPattern.node.attributes.getNamedItem(thisAttribute.nodeName)
+                            ?: return Result.Failure("Encompassing type has attribute ${thisAttribute.nodeName} but smaller didn't.")
 
-        val thisResolverWithNumericString = withNumericStringPattern(thisResolver)
-        val otherResolverWithNumericString = withNumericStringPattern(otherResolver)
+                    val result = attributeEncompasses(thisAttribute, otherAttribute, thisResolverWithNumericString, otherResolverWithNumericString)
+                    if (result is Result.Failure) {
+                        return result.breadCrumb(thisAttribute.nodeName)
+                    }
+                }
 
-        for(i in (0.until(node.attributes?.length ?: 0))) {
-            val thisAttribute = node.attributes.item(i)
-            val otherAttribute = otherPattern.node.attributes.getNamedItem(thisAttribute.nodeName)
-                    ?: return Result.Failure("Encompassing type has attribute ${thisAttribute.nodeName} but smaller didn't.")
+                val (theseEncompassables, otherEncompassables) = if (containsRepeatingPattern(node)) {
+                    val others = otherPattern.getEncompassables(otherResolverWithNumericString).map { resolvedHop(it, otherResolverWithNumericString) }
+                    val these = getEncompassables(others.size, thisResolverWithNumericString).map { resolvedHop(it, thisResolverWithNumericString) }
+                    Pair(these, others)
+                } else {
+                    val others = otherPattern.getEncompassables(node.childNodes.length, otherResolverWithNumericString).map { resolvedHop(it, otherResolverWithNumericString) }
+                    if (others.size != node.childNodes.length)
+                        return Result.Failure("The lengths of the two XML types are unequal.")
 
-            val result = attributeEncompasses(thisAttribute, otherAttribute, thisResolverWithNumericString, otherResolverWithNumericString)
-            if(result is Result.Failure) {
-                return result.breadCrumb(thisAttribute.nodeName)
+                    val these = getEncompassables(thisResolverWithNumericString).map { resolvedHop(it, thisResolverWithNumericString) }
+                    Pair(these, others)
+                }
+
+                return theseEncompassables.zip(otherEncompassables).map { (thisOne, otherOne) ->
+                    thisOne.encompasses2(otherOne, thisResolverWithNumericString, otherResolverWithNumericString)
+                }.find { it is Result.Failure } ?: Result.Success()
             }
         }
-
-        val (theseEncompassables, otherEncompassables) = if(containsRepeatingPattern(node)) {
-            val others = otherPattern.getEncompassables(otherResolverWithNumericString).map { resolvedHop(it, otherResolverWithNumericString) }
-            val these = getEncompassables(others.size, thisResolverWithNumericString).map { resolvedHop(it, thisResolverWithNumericString) }
-            Pair(these, others)
-        } else {
-            val others = otherPattern.getEncompassables(node.childNodes.length, otherResolverWithNumericString).map { resolvedHop(it, otherResolverWithNumericString) }
-            if(others.size != node.childNodes.length)
-                return Result.Failure("The lengths of the two XML types are unequal.")
-
-            val these = getEncompassables(thisResolverWithNumericString).map { resolvedHop(it, thisResolverWithNumericString) }
-            Pair(these, others)
-        }
-
-        return theseEncompassables.zip(otherEncompassables).map { (thisOne, otherOne) ->
-            thisOne.encompasses2(otherOne, thisResolverWithNumericString, otherResolverWithNumericString)
-        }.find { it is Result.Failure } ?: Result.Success()
     }
 
     private fun getEncompassables(size: Int, resolver: Resolver): List<Pattern> = when {

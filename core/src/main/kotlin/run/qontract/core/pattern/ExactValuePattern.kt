@@ -20,6 +20,11 @@ data class ExactValuePattern(override val pattern: Value) : Pattern {
         return Result.Success()
     }
 
+    override fun fitsWithin2(otherPatterns: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver): Result {
+        val results = otherPatterns.map { it.matches(pattern, otherResolver) }
+        return results.find { it is Result.Success } ?: results.firstOrNull() ?: Result.Failure("No matching patterns.")
+    }
+
     override fun generate(resolver: Resolver) = pattern
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = pattern.type().parse(value, resolver)

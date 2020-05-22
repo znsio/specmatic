@@ -27,8 +27,7 @@ object NullPattern : Pattern {
 
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern == NullPattern
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern is NullPattern) return Result.Success()
-        return Result.Failure("Expected null, got ${otherPattern.typeName}")
+        return encompasses(this, otherPattern, thisResolver, otherResolver)
     }
 
     override val typeName: String = "null"

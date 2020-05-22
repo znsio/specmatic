@@ -9,30 +9,33 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
     constructor(jsonContent: String) : this(stringToPatternMap(jsonContent))
 
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern !is JSONObjectPattern)
-            return Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
+        when (otherPattern) {
+            is ExactValuePattern -> return otherPattern.fitsWithin2(listOf(this), otherResolver, thisResolver)
+            !is JSONObjectPattern -> return Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
+            else -> {
+                val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
+                val otherRequiredKeys = otherPattern.pattern.keys.filter { !isOptional(it) }
 
-        val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
-        val otherRequiredKeys = otherPattern.pattern.keys.filter { !isOptional(it) }
+                val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
+                if (missingFixedKey != null)
+                    return Result.Failure("Key $missingFixedKey was missing", breadCrumb = missingFixedKey)
 
-        val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
-        if(missingFixedKey != null)
-            return Result.Failure("Key $missingFixedKey was missing", breadCrumb = missingFixedKey)
+                val thisResolverWithNumberType = withNumberTypePattern(thisResolver)
+                val otherResolverWithNumberType = withNumberTypePattern(otherResolver)
 
-        val thisResolverWithNumberType = withNumberTypePattern(thisResolver)
-        val otherResolverWithNumberType = withNumberTypePattern(otherResolver)
+                val result = pattern.keys.asSequence().map { key ->
+                    val bigger = pattern.getValue(key)
+                    val smaller = otherPattern.pattern[key] ?: otherPattern.pattern[withoutOptionality(key)]
 
-        val result = pattern.keys.asSequence().map { key ->
-            val bigger = pattern.getValue(key)
-            val smaller = otherPattern.pattern[key] ?: otherPattern.pattern[withoutOptionality(key)]
+                    Pair(key,
+                            if (smaller != null)
+                                bigger.encompasses2(resolvedHop(smaller, otherResolverWithNumberType), thisResolverWithNumberType, otherResolverWithNumberType)
+                            else Result.Success())
+                }.find { it.second is Result.Failure }
 
-            Pair(key,
-                    if(smaller != null)
-                        bigger.encompasses2(resolvedHop(smaller, otherResolverWithNumberType), thisResolverWithNumberType, otherResolverWithNumberType)
-                    else Result.Success())
-        }.find { it.second is Result.Failure }
-
-        return result?.second?.breadCrumb(breadCrumb = result?.first) ?: Result.Success()
+                return result?.second?.breadCrumb(breadCrumb = result?.first) ?: Result.Success()
+            }
+        }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {

@@ -56,7 +56,7 @@ data class XMLPattern(val node: Node) : Pattern {
     private fun matchesNode(patternNode: Node, sampleNode: Node, resolver: Resolver): Result {
         if (patternNode.nodeName != sampleNode.nodeName) {
             return if (isPatternToken(patternNode.nodeValue)) {
-                val pattern = resolver.getPattern(withoutRestTokenForXML(patternNode.nodeValue))
+                val pattern = resolver.getPattern(patternNode.nodeValue)
                 val sampleValue = XMLValue(sampleNode)
 
                 when (val result = resolver.matchesPattern(sampleNode.nodeName, pattern, sampleValue)) {
@@ -266,13 +266,27 @@ data class XMLPattern(val node: Node) : Pattern {
                     else
                         node.firstChild.nodeValue = row.getField(nodeName)
                 } else {
-                    if (isPatternToken(node.firstChild.nodeValue)) {
-                        putValueIntoNode(
-                                resolver.generate(nodeName, resolver.getPattern(withoutRestTokenForXML(node.firstChild.nodeValue))),
-                                node)
+                    when {
+                        isRepeatingPattern(node.firstChild.nodeValue) ->
+                            putValuesIntoNode(nodeName, resolvedHop(resolver.getPattern(withoutRepeatingToken(node.firstChild.nodeValue)), resolver), node, resolver)
+                        isPatternToken(node.firstChild.nodeValue) ->
+                            putValueIntoNode(resolver.generate(nodeName, resolver.getPattern(node.firstChild.nodeValue)), node)
                     }
                 }
             }
+        }
+    }
+
+    private fun putValuesIntoNode(key: String, pattern: Pattern, node: Node, resolver: Resolver) {
+        if(pattern !is XMLPattern) throw ContractException("Only XML types can be used within an XML type. ${pattern.typeName} is not an XML type.")
+        node.removeChild(node.firstChild)
+
+        repeat(randomNumber(10)) {
+            val value = resolver.generate(key, pattern)
+            if(value !is XMLValue) throw ContractException("Only XML types can be used within an XML type.  ${pattern.typeName} is not an XML type.")
+
+            val nodeCopy = node.ownerDocument.importNode(value.node, true)
+            node.appendChild(nodeCopy)
         }
     }
 
@@ -285,12 +299,6 @@ data class XMLPattern(val node: Node) : Pattern {
             node.firstChild.nodeValue = newNodeValue.toStringValue()
         }
     }
-
-    private fun withoutRestTokenForXML(value: String): String =
-        when {
-            isPatternToken(value) -> withoutRestToken(value)
-            else -> value
-        }
 
     private fun updateAttributesBasedOnRow(node: Node, row: Row, resolver: Resolver) {
         val attributes = node.attributes

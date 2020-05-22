@@ -42,7 +42,7 @@ class ContractFakeShouldRunOverTCP {
                     "  Scenario: XML API to create locations\n" +
                     "    Given pattern Location <city><id>(number)</id><name>(string)</name></city>\n" +
                     "    When POST /locations_xml\n" +
-                    "    And request-body <locations>(Location...)</locations>\n" +
+                    "    And request-body <locations>(Location*)</locations>\n" +
                     "    Then status 200\n" +
                     "  Scenario: api call\n\n" +
                     "    Given fact account_id 10\n" +

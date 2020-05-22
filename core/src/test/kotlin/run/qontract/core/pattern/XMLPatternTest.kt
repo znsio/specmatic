@@ -1,7 +1,9 @@
 package run.qontract.core.pattern
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
+import run.qontract.core.Result
 import run.qontract.core.shouldMatch
 import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.NullValue
@@ -27,9 +29,9 @@ internal class XMLPatternTest {
     fun temp() {
         val numberInfoPattern = XMLPattern("<number>(number)</number>")
         val resolver = Resolver(newPatterns = mapOf("(NumberInfo)" to numberInfoPattern))
-        val answerPattern = XMLPattern("<answer>(NumberInfo...)</answer>")
-        val value = XMLValue("<answer><number>10</number></answer>")
+        val answerPattern = XMLPattern("<answer>(NumberInfo*)</answer>")
+        val value = XMLValue("<answer><number>10</number><number>20</number></answer>")
 
-        resolver.matchesPattern(null, answerPattern, value)
+        assertThat(resolver.matchesPattern(null, answerPattern, value)).isInstanceOf(Result.Success::class.java)
     }
 }

@@ -30,7 +30,6 @@ interface Pattern {
         return result.find { it is Result.Failure } ?: Result.Success()
     }
 
-
     val typeName: String
     val pattern: Any
 }

@@ -576,7 +576,7 @@ Couldn't convert "abc" to number""")
         val contractGherkin = "Feature: Contract for /locations API\n" +
                 "  Scenario: api call\n" +
                 "    Given pattern Location <city>(string)</city>\n" +
-                "    And pattern Locations <locations>(Location...)</locations>\n" +
+                "    And pattern Locations <locations>(Location*)</locations>\n" +
                 "    When POST /locations\n" +
                 "    And request-body (Locations)\n" +
                 "    Then status 200\n"
@@ -590,7 +590,7 @@ Couldn't convert "abc" to number""")
                 "  Scenario: api call\n" +
                 "    Given pattern Location <city>(string)</city>\n" +
                 "    When POST /locations\n" +
-                "    And request-body <locations>(Location...)</locations>\n" +
+                "    And request-body <locations>(Location*)</locations>\n" +
                 "    Then status 200\n"
         verifyXMLArrayGenerationInRequestBody(contractGherkin)
     }

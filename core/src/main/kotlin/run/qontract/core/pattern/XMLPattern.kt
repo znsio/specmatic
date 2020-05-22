@@ -6,8 +6,8 @@ import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.mismatchResult
 import run.qontract.core.utilities.xmlToString
-import run.qontract.core.value.NullValue
 import run.qontract.core.value.Value
 import run.qontract.core.value.XMLValue
 import run.qontract.core.withNumericStringPattern
@@ -21,8 +21,8 @@ data class XMLPattern(val node: Node) : Pattern {
     constructor(bodyContent: String): this(parseXML(bodyContent).documentElement)
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if(sampleData is NullValue)
-            return Result.Failure("Got null, but expected xml of the form $pattern")
+        if(sampleData !is XMLValue)
+            return mismatchResult(this, sampleData)
 
         return when (val result = matchesXMLData(sampleData, withNumericStringPattern(resolver))) {
             is Result.Failure -> result.reason("XML did not match")

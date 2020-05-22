@@ -37,7 +37,3 @@ fun encompasses(thisPattern: Pattern, otherPattern: Pattern, thisResolver: Resol
             otherPattern is ExactValuePattern -> otherPattern.fitsWithin2(thisPattern.patternSet(thisResolver), otherResolver, thisResolver)
             else -> mismatchResult(thisPattern, otherPattern)
         }
-
-fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern): Result.Failure {
-    return mismatchResult(thisPattern.typeName, otherPattern.typeName)
-}

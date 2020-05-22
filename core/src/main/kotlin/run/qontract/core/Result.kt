@@ -53,6 +53,9 @@ fun mismatchResult(expected: String, actual: Value?): Result.Failure = mismatchR
 fun mismatchResult(expected: Value, actual: Value?): Result = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "")
 fun mismatchResult(expected: Pattern, actual: String): Result.Failure = mismatchResult(expected.typeName, actual)
 fun mismatchResult(pattern: Pattern, sampleData: Value?): Result.Failure = mismatchResult(pattern, sampleData?.toStringValue() ?: "null")
+fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern): Result.Failure {
+    return mismatchResult(thisPattern.typeName, otherPattern.typeName)
+}
 
 fun valueError(value: Value?): String? {
     return value?.let { "${it.displayableType()}: ${it.displayableValue()}" }

@@ -1,5 +1,6 @@
 package run.qontract.core.pattern
 
+import org.w3c.dom.Node
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.value.Value

@@ -224,7 +224,84 @@ data class XMLPattern(val node: Node) : Pattern {
         if(otherPattern !is XMLPattern)
             return Result.Failure("Expected XMLPattern")
 
-        return Result.Success()
+        if(node.nodeName != otherPattern.node.nodeName)
+            return Result.Failure("Expected a node named ${node.nodeName}, but got ${otherPattern.node.nodeName} instead.")
+
+        val thisResolverWithNumericString = withNumericStringPattern(thisResolver)
+        val otherResolverWithNumericString = withNumericStringPattern(otherResolver)
+
+        for(i in (0.until(node.attributes?.length ?: 0))) {
+            val thisAttribute = node.attributes.item(i)
+            val otherAttribute = otherPattern.node.attributes.getNamedItem(thisAttribute.nodeName)
+                    ?: return Result.Failure("Encompassing type has attribute ${thisAttribute.nodeName} but smaller didn't.")
+
+            val result = attributeEncompasses(thisAttribute, otherAttribute, thisResolverWithNumericString, otherResolverWithNumericString)
+            if(result is Result.Failure) {
+                return result.breadCrumb(thisAttribute.nodeName)
+            }
+        }
+
+        val (theseEncompassables, otherEncompassables) = if(containsRepeatingPattern(node)) {
+            val others = otherPattern.getEncompassables(otherResolverWithNumericString).map { resolvedHop(it, otherResolverWithNumericString) }
+            val these = getEncompassables(others.size, thisResolverWithNumericString).map { resolvedHop(it, thisResolverWithNumericString) }
+            Pair(these, others)
+        } else {
+            val others = otherPattern.getEncompassables(node.childNodes.length, otherResolverWithNumericString).map { resolvedHop(it, otherResolverWithNumericString) }
+            if(others.size != node.childNodes.length)
+                return Result.Failure("The lengths of the two XML types are unequal.")
+
+            val these = getEncompassables(thisResolverWithNumericString).map { resolvedHop(it, thisResolverWithNumericString) }
+            Pair(these, others)
+        }
+
+        return theseEncompassables.zip(otherEncompassables).map { (thisOne, otherOne) ->
+            thisOne.encompasses2(otherOne, thisResolverWithNumericString, otherResolverWithNumericString)
+        }.find { it is Result.Failure } ?: Result.Success()
+    }
+
+    private fun getEncompassables(size: Int, resolver: Resolver): List<Pattern> = when {
+        containsRepeatingPattern(node) -> {
+            val xmlPattern = resolver.getPattern(withoutRepeatingToken(node.firstChild.nodeValue))
+            0.until(size).map { xmlPattern }
+        }
+        containsPattern(node) -> {
+            listOf(resolver.getPattern(node.firstChild.nodeValue))
+        }
+        containsTextNode(node) -> {
+            listOf(parsedPattern(node.firstChild.nodeValue))
+        }
+        else -> {
+            0.until(node.childNodes?.length ?: 0).map {
+                XMLPattern(node.childNodes.item(it))
+            }
+        }
+    }
+
+    private fun containsTextNode(node: Node): Boolean = node.hasChildNodes() && node.firstChild.nodeName == "#text"
+
+    private fun containsPattern(node: Node): Boolean =
+            node.hasChildNodes() && node.childNodes.length == 1 && node.firstChild.nodeName == "#text" && isPatternToken(node.firstChild.nodeValue)
+
+    private fun getEncompassables(resolver: Resolver): List<Pattern> = when {
+        node.hasChildNodes() && node.childNodes.length == 1 && node.firstChild.nodeName == "#text" && isPatternToken(node.firstChild.nodeValue) -> listOf(resolver.getPattern(withoutRepeatingToken(node.firstChild.nodeValue)))
+        containsTextNode(node) -> {
+            listOf(parsedPattern(node.firstChild.nodeValue))
+        }
+        else -> {
+            0.until(node.childNodes?.length ?: 0).map {
+                XMLPattern(node.childNodes.item(it))
+            }
+        }
+    }
+
+    private fun containsRepeatingPattern(node: Node): Boolean =
+            node.hasChildNodes() && node.childNodes.length == 1 && node.firstChild.nodeName == "#text" && isRepeatingPattern(node.firstChild.nodeValue)
+
+    private fun attributeEncompasses(thisAttribute: Node, otherAttribute: Node, thisResolver: Resolver, otherResolver: Resolver): Result {
+        val bigger = if(isPatternToken(thisAttribute.nodeValue)) thisResolver.getPattern(thisAttribute.nodeValue) else parsedPattern(thisAttribute.nodeValue)
+        val smaller = if(isPatternToken(thisAttribute.nodeValue)) otherResolver.getPattern(otherAttribute.nodeValue) else parsedPattern(otherAttribute.nodeValue)
+
+        return bigger.encompasses2(smaller, thisResolver, otherResolver)
     }
 
     override val typeName: String = "xml"

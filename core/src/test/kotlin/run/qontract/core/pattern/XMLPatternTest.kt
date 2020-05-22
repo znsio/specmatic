@@ -26,12 +26,108 @@ internal class XMLPatternTest {
     }
 
     @Test
-    fun temp() {
+    fun `list type should match multiple xml values of the same type` () {
         val numberInfoPattern = XMLPattern("<number>(number)</number>")
         val resolver = Resolver(newPatterns = mapOf("(NumberInfo)" to numberInfoPattern))
         val answerPattern = XMLPattern("<answer>(NumberInfo*)</answer>")
         val value = XMLValue("<answer><number>10</number><number>20</number></answer>")
 
         assertThat(resolver.matchesPattern(null, answerPattern, value)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `sanity check for pattern encompassing` () {
+        val numberInfoPattern = XMLPattern("<number>(number)</number>")
+        val resolver = Resolver()
+
+        assertThat(numberInfoPattern.encompasses2(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `sanity check for pattern encompassing with raw values` () {
+        val numberInfoPattern = XMLPattern("<number>100</number>")
+        val resolver = Resolver()
+
+        assertThat(numberInfoPattern.encompasses2(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `sanity check for xml with number type encompassing another with raw number` () {
+        val pattern1 = XMLPattern("<number>(number)</number>")
+        val pattern2 = XMLPattern("<number>100</number>")
+        val resolver = Resolver()
+
+        assertThat(pattern1.encompasses2(pattern2, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `pattern by name should encompass another pattern of the same structure` () {
+        val numberInfoPattern = XMLPattern("<number>(number)</number>")
+        val resolver = Resolver(newPatterns = mapOf("(Number)" to XMLPattern("<number>(number)</number>")))
+
+        assertThat(resolver.getPattern("(Number)").encompasses2(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `sanity check for nested pattern encompassing` () {
+        val answersPattern = XMLPattern("<answer><number>(number)</number><name>(string)</name></answer>")
+        val resolver = Resolver()
+
+        assertThat(answersPattern.encompasses2(answersPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `pattern should not encompass another with different order` () {
+        val answersPattern1 = XMLPattern("<answer><number>(number)</number><name>(string)</name></answer>")
+        val answersPattern2 = XMLPattern("<answer><name>(string)</name><number>(number)</number></answer>")
+        val resolver = Resolver()
+
+        assertThat(answersPattern1.encompasses2(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `repeating pattern should encompass another with similar elements` () {
+        val answersPattern1 = XMLPattern("<answers>(Number*)</answers>")
+        val answersPattern2 = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
+        val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+
+        assertThat(answersPattern1.encompasses2(answersPattern2, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `repeating pattern should not encompass another with dissimilar elements` () {
+        val answersPattern1 = XMLPattern("<answers>(Number*)</answers>")
+        val answersPattern2 = XMLPattern("<answers><number>(string)</number><number>(number)</number></answers>")
+        val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+
+        assertThat(answersPattern1.encompasses2(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `node with finite number of children should not encompass repeating pattern with similar type` () {
+        val answersPattern1 = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
+        val answersPattern2 = XMLPattern("<answer>(Number*)</answer>")
+        val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+
+        assertThat(answersPattern1.encompasses2(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `sanity check for attributes`() {
+        val pattern = XMLPattern("""<number val="(number)">(number)</number>""")
+        assertThat(pattern.encompasses2(pattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `sanity check for attributes with raw values`() {
+        val pattern = XMLPattern("""<number val="10">(number)</number>""")
+        assertThat(pattern.encompasses2(pattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `different raw values in attributes should not match`() {
+        val pattern1 = XMLPattern("""<number val="10">(number)</number>""")
+        val pattern2 = XMLPattern("""<number val="20">(number)</number>""")
+        assertThat(pattern1.encompasses2(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

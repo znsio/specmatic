@@ -22,6 +22,9 @@ object NumericStringPattern : Pattern {
     override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is NumericStringPattern
     override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         if(otherPattern is NumericStringPattern) return Result.Success()
+        if(otherPattern is ExactValuePattern && otherPattern.pattern is StringValue && try { convertToNumber(otherPattern.pattern.string); true } catch(e: Throwable) { false })
+            return Result.Success()
+
         return Result.Failure("Expected number, got ${otherPattern.typeName}")
     }
 

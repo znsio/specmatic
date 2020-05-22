@@ -24,33 +24,10 @@ data class XMLPattern(val node: Node) : Pattern {
         if(sampleData !is XMLValue)
             return mismatchResult(this, sampleData)
 
-        return when (val result = matchesXMLData(sampleData, withNumericStringPattern(resolver))) {
+        return when (val result = matchesNode(node, sampleData.node, withNumericStringPattern(resolver))) {
             is Result.Failure -> result.reason("XML did not match")
             else -> result
         }
-    }
-
-    private fun matchesXMLData(sampleXMLValue: Any?, resolver: Resolver): Result {
-        when (sampleXMLValue) {
-            is Document -> {
-                return matchesDocument(sampleXMLValue, resolver)
-            }
-            is XMLValue -> {
-                return matchesNode(node, sampleXMLValue.node, resolver)
-            }
-            is Node -> {
-                return matchesNode(node, sampleXMLValue, resolver)
-            }
-            else -> return try {
-                matchesDocument(parseXML(sampleXMLValue as String), resolver)
-            } catch (ignored: Exception) {
-                Result.Success()
-            }
-        }
-    }
-
-    private fun matchesDocument(sampleXMLDocument: Document, resolver: Resolver): Result {
-        return matchesNode(node, sampleXMLDocument.documentElement, resolver)
     }
 
     private fun matchesNode(patternNode: Node, sampleNode: Node, resolver: Resolver): Result {
@@ -118,15 +95,10 @@ data class XMLPattern(val node: Node) : Pattern {
         val sampleChildNodes = sample.childNodes
         val newPattern = pattern.cloneNode(true)
         newPattern.nodeValue = withoutRepeatingToken(newPattern.nodeValue)
-        for (index in 0 until sampleChildNodes.length) {
-            when (val result = matchesNode(newPattern, sampleChildNodes.item(index), resolver)) {
-                is Result.Failure -> return result
-                else -> {
 
-                }
-            }
-        }
-        return Result.Success()
+        return 0.until(sampleChildNodes.length).asSequence().map { index ->
+            matchesNode(newPattern, sampleChildNodes.item(index), resolver)
+        }.find { it is Result.Failure } ?: Result.Success()
     }
 
     private fun matchingAttributes(pattern: NamedNodeMap, sample: NamedNodeMap, resolver: Resolver): Boolean {

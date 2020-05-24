@@ -29,13 +29,7 @@ class QontractKafka(kafkaPort: Int = 9093) : Closeable {
     fun setupTopic(topic: String) = setupTopics(listOf(topic))
 
     fun setupTopics(topics: List<String>) {
-        AdminClient.create(mapOf(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers)).use { adminClient ->
-            for(topic in topics) {
-                val createTopicFuture = adminClient.createTopics(listOf(NewTopic(topic, 1, 1)))
-                val topicCreationResult = createTopicFuture.values().get(topic)
-                topicCreationResult?.get()
-            }
-        }
+        createTopics(topics, kafkaContainer.bootstrapServers)
     }
 
     fun send(topic: String, key: String, message: String) {
@@ -90,10 +84,20 @@ fun createConsumer(brokers: String, commit: Boolean): Consumer<String, String> {
     return KafkaConsumer<String, String>(props)
 }
 
-private fun createProducer(brokers: String): Producer<String, String> {
+fun createProducer(brokers: String): Producer<String, String> {
     val props = Properties()
     props["bootstrap.servers"] = brokers
     props["key.serializer"] = StringSerializer::class.java.canonicalName
     props["value.serializer"] = StringSerializer::class.java.canonicalName
     return KafkaProducer<String, String>(props)
+}
+
+fun createTopics(topics: List<String>, bootstrapServers: String) {
+    AdminClient.create(mapOf(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers)).use { adminClient ->
+        for (topic in topics) {
+            val createTopicFuture = adminClient.createTopics(listOf(NewTopic(topic, 1, 1)))
+            val topicCreationResult = createTopicFuture.values().get(topic)
+            topicCreationResult?.get()
+        }
+    }
 }

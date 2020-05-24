@@ -1,11 +1,10 @@
 package application
 
 import picocli.CommandLine.*
+import run.qontract.consoleLog
+import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
-import run.qontract.fake.ContractStub
-import run.qontract.fake.implicitContractDataDir
-import run.qontract.fake.createStubFromContracts
-import run.qontract.fake.allDirsInTree
+import run.qontract.fake.*
 import run.qontract.mock.NoMatchingScenario
 import java.io.File
 import java.nio.file.*
@@ -15,7 +14,8 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Start a stub server with contract"])
 class StubCommand : Callable<Unit> {
-    lateinit var contractFake: ContractStub
+    var contractFake: ContractStub? = null
+    var qontractKafka: QontractKafka? = null
 
     @Parameters(arity = "1..*", description = ["Contract file paths"])
     lateinit var paths: List<String>
@@ -29,12 +29,17 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = "9000")
     var port: Int = 9000
 
-    @Option(names = ["--kafkaPort"], description = ["Port for the Kafka stub"], defaultValue = "9093")
+    @Option(names = ["--startKafka"], description = ["Host on which to dump the stubbed kafka message"], defaultValue = "false")
+    var startKafka: Boolean = false
+
+    @Option(names = ["--kafkaHost"], description = ["Host on which to dump the stubbed kafka message"], defaultValue = "localhost", required = false)
+    var kafkaHost: String = "127.0.0.1"
+
+    @Option(names = ["--kafkaPort"], description = ["Port for the Kafka stub"], defaultValue = "9093", required = false)
     var kafkaPort: Int = 9093
 
     override fun call() = try {
         startServer()
-        println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
         addShutdownHook()
 
         val contractPathParentPaths = paths.map {
@@ -70,7 +75,6 @@ class StubCommand : Callable<Unit> {
 
         var key: WatchKey
         while (watchService.take().also { key = it } != null) {
-            println("Detected a change...")
             key.reset()
 
             val (restartNeeded, changedFile) = isRestartNeeded(key)
@@ -87,9 +91,6 @@ class StubCommand : Callable<Unit> {
                 event.context().toString().endsWith(".json") || event.context().toString().endsWith(".qontract") -> {
                     return Pair(true, event.context().toString())
                 }
-                else -> {
-                    println("Ingoring change ${event.kind()} to ${event.context()}")
-                }
             }
         }
 
@@ -97,13 +98,61 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun startServer() {
+        val stubs = loadContractStubs(paths, when {
+            dataDirs.isNotEmpty() -> dataDirs
+            else -> implicitContractDataDirs(paths)
+        })
+
+        val behaviours = stubs.map { it.first }
+
         contractFake = when {
-            dataDirs.isNotEmpty() -> createStubFromContracts(paths, dataDirs, host, port, kafkaPort)
-            else -> createStubFromContracts(paths, host, port, kafkaPort)
+            hasHttpScenarios(behaviours) -> {
+                val httpExpectations = contractInfoToHttpExpectations(stubs)
+                val httpBehaviours = behaviours.map {
+                    it.copy(scenarios = it.scenarios.filter { scenario ->
+                        scenario.kafkaMessagePattern == null
+                    })
+                }
+
+                ContractFake(httpBehaviours, httpExpectations, host, port, ::consoleLog).also {
+                    println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
+                }
+            }
+            else -> null
         }
 
-        if(contractFake.getKafkaInstance() != null) {
-            println("Started Kafka: ${contractFake.getKafkaInstance()?.bootstrapServers}")
+        val kafkaExpectations = contractInfoToKafkaExpectations(stubs)
+        val validationResults = kafkaExpectations.map { stubData ->
+            behaviours.asSequence().map { it.matchesMockKafkaMessage(stubData.kafkaMessage) }.find { it is Result.Failure } ?: Result.Success()
+        }
+
+        if(validationResults.any { it is Result.Failure }) {
+            val results = Results(validationResults.map { Triple(it, null, null) }.toMutableList())
+            println("Can't load Kafka mocks:\n${results.report()}")
+        }
+        else if(hasKafkaScenarios(behaviours)) {
+            if(startKafka) {
+                qontractKafka = QontractKafka(kafkaPort)
+                println("Started local Kafka server: ${qontractKafka?.bootstrapServers}")
+            }
+
+            kafkaStub(kafkaExpectations, qontractKafka?.bootstrapServers ?: "PLAINTEXT://$kafkaHost:$kafkaPort")
+        }
+    }
+
+    private fun hasKafkaScenarios(behaviours: List<ContractBehaviour>): Boolean {
+        return behaviours.any {
+            it.scenarios.any { scenario ->
+                scenario.kafkaMessagePattern != null
+            }
+        }
+    }
+
+    private fun hasHttpScenarios(behaviours: List<ContractBehaviour>): Boolean {
+        return behaviours.any {
+            it.scenarios.any { scenario ->
+                scenario.kafkaMessagePattern == null
+            }
         }
     }
 
@@ -118,15 +167,20 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun stopServer() {
-        contractFake.close()
+        contractFake?.close()
+        contractFake = null
+
+        qontractKafka?.close()
+        qontractKafka = null
     }
 
     private fun addShutdownHook() {
         Runtime.getRuntime().addShutdownHook(object : Thread() {
             override fun run() {
                 try {
-                    println("Shutting down stub server")
-                    contractFake.close()
+                    println("Shutting down stub servers")
+                    contractFake?.close()
+                    qontractKafka?.close()
                 } catch (e: InterruptedException) {
                     currentThread().interrupt()
                 }

@@ -113,12 +113,17 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
         }
 
     fun assertMatchesMockKafkaMessage(kafkaMessage: KafkaMessage) {
+        val result = matchesMockKafkaMessage(kafkaMessage)
+        if (result is Result.Failure)
+            throw NoMatchingScenario(resultReport(result))
+    }
+
+    fun matchesMockKafkaMessage(kafkaMessage: KafkaMessage): Result {
         val results = scenarios.asSequence().map {
             it.matchesMock(kafkaMessage)
         }
 
-        if(results.none { it is Result.Success })
-            throw NoMatchingScenario(resultReport(results.first()))
+        return results.first { it is Result.Success }
     }
 
     fun matchingMockResponse(mockScenario: MockScenario): Triple<Resolver, Scenario, HttpResponse> =

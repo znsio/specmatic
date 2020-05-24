@@ -12,7 +12,7 @@ import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.stringToMockScenario
 import java.io.File
 
-fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
+fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 900): ContractStub {
     val contractBehaviour = ContractBehaviour(contractGherkin)
 
     val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->
@@ -24,15 +24,18 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
                 }
     }
 
-    return ContractFake(listOf(Pair(contractBehaviour, mocks)), host, port, kafkaPort, ::consoleLog)
+    return ContractFake(contractBehaviour, mocks, host, port, ::consoleLog)
 }
 
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
-fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
+fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
     val contractInfo = loadContractStubs(contractPaths, dataDirPaths)
-    return ContractFake(contractInfo, host, port, kafkaPort, ::consoleLog)
+    val behaviours = contractInfo.map { it.first }
+    val httpExpectations = contractInfoToHttpExpectations(contractInfo)
+
+    return ContractFake(behaviours, httpExpectations, host, port, ::consoleLog)
 }
 
 fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<ContractBehaviour, List<MockScenario>>> {
@@ -100,10 +103,13 @@ private fun _pathToFileListRecursive(dataDirFiles: List<File>): List<File> =
             _pathToFileListRecursive(fileList).plus(it)
         }.flatten()
 
-fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000, kafkaPort: Int = 9093): ContractStub {
-    val dataDirPaths = contractPaths.map { implicitContractDataDir(it).absolutePath }
-    return createStubFromContracts(contractPaths, dataDirPaths, host, port, kafkaPort)
+fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
+    val dataDirPaths = implicitContractDataDirs(contractPaths)
+    return createStubFromContracts(contractPaths, dataDirPaths, host, port)
 }
+
+fun implicitContractDataDirs(contractPaths: List<String>) =
+        contractPaths.map { implicitContractDataDir(it).absolutePath }
 
 fun implicitContractDataDir(path: String): File {
     val contractFile = File(path)

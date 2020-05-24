@@ -13,7 +13,6 @@ import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
 import java.io.File
 import java.time.Duration
-import java.util.*
 import kotlin.system.exitProcess
 
 val pass = Unit
@@ -21,10 +20,9 @@ val pass = Unit
 open class QontractJUnitSupport {
     @TestFactory()
     fun contractAsTest(): Collection<DynamicTest> {
-        val testScenarios: List<Scenario>
         val path = System.getProperty("path")
 
-        val suggestions = System.getProperty("suggestions") ?: ""
+        val suggestionsData = System.getProperty("suggestions") ?: ""
         val suggestionsPath = System.getProperty("suggestionsPath") ?: ""
         val checkBackwardCompatibility = (System.getProperty("checkBackwardCompatibility") ?: "false").toBoolean()
 
@@ -32,68 +30,27 @@ open class QontractJUnitSupport {
             checkBackwardCompatibilityInPath(path)
         }
 
-        val contractGherkin = try {
-            readFile(path)
-        } catch (exception: Throwable) {
-            println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
-            throw exception
-        }
-
         val contractBehaviour = try {
-            ContractBehaviour(contractGherkin)
+            ContractBehaviour(readFile(path))
         } catch (exception: Throwable) {
             println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
             throw exception
         }
 
-        testScenarios = when {
-            suggestionsPath.isNotEmpty() -> {
-                val suggestionsGherkin = readFile(suggestionsPath)
-                contractBehaviour.generateTestScenarios(Suggestions(suggestionsGherkin).scenarios)
-            }
-            suggestions.isNotEmpty() -> {
-                val suggestionsValue = parsedValue(suggestions)
-                if(suggestionsValue !is JSONObjectValue)
-                    throw ContractException("Suggestions must be a json value with scenario name as the key, and json array with 1 or more json objects containing suggestions")
-
-                val exampleScenarios = suggestionsValue.jsonObject.mapValues { (_, exampleData) ->
-                    if(exampleData !is JSONArrayValue)
-                        throw ContractException("The value of a scenario must be a list of examples")
-
-                    if(exampleData.list.size == 0)
-                        Examples()
-                    else {
-                        val firstRow = exampleData.list.get(0)
-                        if(firstRow !is JSONObjectValue)
-                            throw ContractException("Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
-
-                        val columns = firstRow.jsonObject.keys.toList()
-
-                        Examples(columns.toMutableList()).apply {
-                            for(row in exampleData.list) {
-                                if(row !is JSONObjectValue)
-                                    throw ContractException("Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
-
-                                val rowValues = columns.map { row.jsonObject.getValue(it).toStringValue() }
-                                this.addRow(rowValues)
-                            }
-                        }
-                    }
-                }.entries.map { (name, examples) ->
-                    Scenario(name, HttpRequestPattern(), HttpResponsePattern(), emptyMap(), listOf(examples), emptyMap(), emptyMap(), null)
-                }
-
-                contractBehaviour.generateTestScenarios(exampleScenarios)
-            }
-            else -> contractBehaviour.generateTestScenarios(LinkedList())
+        val suggestions = when {
+            suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
+            suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)
+            else -> emptyList()
         }
+
+        val testScenarios = contractBehaviour.generateTestScenarios(suggestions)
 
         return testScenarios.map {
             DynamicTest.dynamicTest("$it") {
-                val asyncMessage = it.kafkaMessagePattern
+                val kafkaMessage = it.kafkaMessagePattern
 
                 when {
-                    asyncMessage != null -> {
+                    kafkaMessage != null -> {
                         if (System.getProperty("kafkaPort") == null) {
                             println("The contract has a kafka message. Please specify the port of the Kafka instance to connect to.")
                             exitProcess(1)
@@ -109,7 +66,7 @@ open class QontractJUnitSupport {
                                 KafkaMessage(topic, it.key()?.let { key -> StringValue(key) }, parsedValue(it.value()))
                             }
 
-                            val result = asyncMessage.matches(messages.single(), it.resolver)
+                            val result = kafkaMessage.matches(messages.single(), it.resolver)
                             ResultAssert.assertThat(result).isSuccess()
                         }
                     }
@@ -141,6 +98,44 @@ open class QontractJUnitSupport {
                 }
             }
         }.toList()
+    }
+
+    private fun suggestionsFromFile(suggestionsPath: String): List<Scenario> {
+        val suggestionsGherkin = readFile(suggestionsPath)
+        return Suggestions(suggestionsGherkin).scenarios
+    }
+
+    private fun suggestionsFromCommandLine(suggestions: String): List<Scenario> {
+        val suggestionsValue = parsedValue(suggestions)
+        if (suggestionsValue !is JSONObjectValue)
+            throw ContractException("Suggestions must be a json value with scenario name as the key, and json array with 1 or more json objects containing suggestions")
+
+        return suggestionsValue.jsonObject.mapValues { (_, exampleData) ->
+            if (exampleData !is JSONArrayValue)
+                throw ContractException("The value of a scenario must be a list of examples")
+
+            if (exampleData.list.size == 0)
+                Examples()
+            else {
+                val firstRow = exampleData.list.get(0)
+                if (firstRow !is JSONObjectValue)
+                    throw ContractException("Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
+
+                val columns = firstRow.jsonObject.keys.toList()
+
+                Examples(columns.toMutableList()).apply {
+                    for (row in exampleData.list) {
+                        if (row !is JSONObjectValue)
+                            throw ContractException("Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
+
+                        val rowValues = columns.map { row.jsonObject.getValue(it).toStringValue() }
+                        this.addRow(rowValues)
+                    }
+                }
+            }
+        }.entries.map { (name, examples) ->
+            Scenario(name, HttpRequestPattern(), HttpResponsePattern(), emptyMap(), listOf(examples), emptyMap(), emptyMap(), null)
+        }
     }
 
     private fun getBootstrapKafkaServers(): String {

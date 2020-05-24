@@ -24,11 +24,11 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
                 val keyWithoutOptionality = withoutOptionality(key)
                 it.containsKey(keyWithoutOptionality) || it.containsKey("$keyWithoutOptionality?")
             }
-        } ?: headers
+        } ?: withoutContentTypeGeneratedByQontract(headers, pattern)
 
         val missingKey = resolver.findMissingKey(pattern, headersWithRelevantKeys.mapValues { StringValue(it.value) } )
         if(missingKey != null) {
-            return MatchFailure(Result.Failure("Header $missingKey was missing", null, missingKey))
+            return MatchFailure(missingKeyToResult(missingKey, "header"))
         }
 
         this.pattern.forEach { (key, pattern) ->
@@ -51,6 +51,14 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
         }
 
         return MatchSuccess(parameters)
+    }
+
+    private fun withoutContentTypeGeneratedByQontract(headers: Map<String, String>, pattern: Map<String, Pattern>): Map<String, String> {
+        val contentTypeHeader = "Content-Type"
+        return when {
+            contentTypeHeader in headers && contentTypeHeader !in pattern && "$contentTypeHeader?" !in pattern -> headers.minus(contentTypeHeader)
+            else -> headers
+        }
     }
 
     fun generate(resolver: Resolver): Map<String, String> {

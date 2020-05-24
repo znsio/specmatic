@@ -70,7 +70,7 @@ internal class ScenarioTest {
     }
 
     @Test
-    fun `scenario will match a kafka message`() {
+    fun `scenario will match a kafka mock message`() {
         val row = Row(listOf("id"), listOf("(string)"))
         val example = Examples(mutableListOf("id"))
         example.addRows(listOf(row))
@@ -80,5 +80,41 @@ internal class ScenarioTest {
 
         val kafkaMessage = KafkaMessage("customers", StringValue("name"), StringValue("John Doe"))
         assertThat(scenario.matchesMock(kafkaMessage)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `will not match a mock http request with unexpected request headers`() {
+        val scenario = Scenario("Test", HttpRequestPattern(method="GET", urlMatcher = URLMatcher(emptyMap(), emptyList(), "/"), headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern))), HttpResponsePattern(status = 200), emptyMap(), emptyList(), emptyMap(), emptyMap(), null)
+        val mockRequest = HttpRequest(method = "GET", path = "/", headers = mapOf("X-Expected" to "value", "X-Unexpected" to "value"))
+        val mockResponse = HttpResponse.OK
+
+        assertThat(scenario.matchesMock(mockRequest, mockResponse)).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `will not match a mock http request with unexpected response headers`() {
+        val scenario = Scenario("Test", HttpRequestPattern(method="GET", urlMatcher = URLMatcher(emptyMap(), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap())), HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern))), emptyMap(), emptyList(), emptyMap(), emptyMap(), null)
+        val mockRequest = HttpRequest(method = "GET", path = "/")
+        val mockResponse = HttpResponse.OK.copy(headers = mapOf("X-Expected" to "value", "X-Unexpected" to "value"))
+
+        assertThat(scenario.matchesMock(mockRequest, mockResponse)).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `will not match a mock http request with unexpected query params`() {
+        val scenario = Scenario("Test", HttpRequestPattern(method="GET", urlMatcher = URLMatcher(mapOf("expected" to StringPattern), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap(), null)), HttpResponsePattern(status = 200), emptyMap(), emptyList(), emptyMap(), emptyMap(), null)
+        val mockRequest = HttpRequest(method = "GET", path = "/", queryParams = mapOf("expected" to "value", "unexpected" to "value"))
+        val mockResponse = HttpResponse.OK
+
+        assertThat(scenario.matchesMock(mockRequest, mockResponse)).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `will not match a mock json body with unexpected keys`() {
+        val scenario = Scenario("Test", HttpRequestPattern(method="POST", urlMatcher = URLMatcher(mapOf("expected" to StringPattern), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap(), null), body = parsedPattern("""{"expected": "value"}""")), HttpResponsePattern(status = 200), emptyMap(), emptyList(), emptyMap(), emptyMap(), null)
+        val mockRequest = HttpRequest(method = "POST", path = "/", body = parsedValue("""{"unexpected": "value"}"""))
+        val mockResponse = HttpResponse.OK
+
+        assertThat(scenario.matchesMock(mockRequest, mockResponse)).isInstanceOf(Result.Failure::class.java)
     }
 }

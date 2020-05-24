@@ -1,17 +1,11 @@
 package run.qontract.mock
 
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
 import run.qontract.core.*
 import run.qontract.core.Result.Success
-import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 
 internal class MockScenarioKtTest {

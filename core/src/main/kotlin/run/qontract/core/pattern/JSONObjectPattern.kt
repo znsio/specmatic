@@ -33,7 +33,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
                             else Result.Success())
                 }.find { it.second is Result.Failure }
 
-                return result?.second?.breadCrumb(breadCrumb = result?.first) ?: Result.Success()
+                return result?.second?.breadCrumb(breadCrumb = result.first) ?: Result.Success()
             }
         }
     }
@@ -44,7 +44,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
         val missingKey = resolver.findMissingKey(pattern, sampleData.jsonObject)
         if(missingKey != null)
-            return Result.Failure("Missing key $missingKey")
+            return missingKeyToResult(missingKey, "key")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = withNumberTypePattern(resolver).matchesPattern(key, patternValue, sampleValue)) {

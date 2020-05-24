@@ -12,7 +12,7 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
 
         val missingKey = resolver.findMissingKey(pattern, sampleData.jsonObject)
         if(missingKey != null)
-            return Result.Failure("Missing key $missingKey")
+            return missingKeyToResult(missingKey, "key")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = withNumberTypePattern(resolver).matchesPattern(key, patternValue, sampleValue)) {

@@ -13,6 +13,7 @@ import org.springframework.web.client.postForEntity
 import org.w3c.dom.Node
 import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NullValue
@@ -465,7 +466,39 @@ Scenario: JSON API to get account details with fact check
                 val map: MultiValueMap<String, String> = LinkedMultiValueMap()
                 map.add("Data", "10")
 
-                val request: HttpEntity<MultiValueMap<String, String>> = HttpEntity<MultiValueMap<String, String>>(map, headers)
+                val request: HttpEntity<MultiValueMap<String, String>> = HttpEntity(map, headers)
+
+                val response = RestTemplate().postForEntity<String>(URI.create("${mock.baseURL}/variables"), request)
+                assertThat(response.statusCode.value()).isEqualTo(200)
+            } catch (e: HttpClientErrorException) {
+                fail("Threw exception: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    @Test
+    fun `should be able to stub out a json request body`() {
+        val contractGherkin = """Feature: Contract for /store API
+  Scenario Outline: api call
+    When POST /variables
+    And request-body
+      | name | (string) |
+      | age  | (number) |
+    Then status 200
+""".trimIndent()
+
+        ContractMock.fromGherkin(contractGherkin).use { mock ->
+            mock.start()
+            val expectedRequest = HttpRequest(method = "POST", path = "/variables", body = parsedValue("""{"name": "John Doe", "age": 10}"""))
+
+            val expectedResponse = HttpResponse.OK
+            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+
+            try {
+                val headers = HttpHeaders()
+                headers.contentType = MediaType.APPLICATION_JSON
+
+                val request: HttpEntity<String> = HttpEntity("""{"name": "John Doe", "age": 10}""", headers)
 
                 val response = RestTemplate().postForEntity<String>(URI.create("${mock.baseURL}/variables"), request)
                 assertThat(response.statusCode.value()).isEqualTo(200)

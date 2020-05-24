@@ -66,9 +66,9 @@ Expected string: "balance", actual was string: "balance2"""")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
         assertThat(httpResponse.body?.toStringValue()).isEqualTo("""In scenario "Get balance info"
->> REQUEST.HEADERS.x-loginId
+>> REQUEST.HEADERS
 
-Header x-loginId was missing""".trimIndent())
+Expected header x-loginId was missing""".trimIndent())
     }
 
     @Test

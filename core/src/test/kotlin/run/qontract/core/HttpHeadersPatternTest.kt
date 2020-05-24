@@ -55,7 +55,7 @@ internal class HttpHeadersPatternTest {
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
             assertThat((it as Result.Failure).report())
-                    .isEqualTo(FailureReport(listOf("HEADERS", "key"), listOf("Header key was missing")))
+                    .isEqualTo(FailureReport(listOf("HEADERS"), listOf("Expected header key was missing")))
         }
     }
 
@@ -92,6 +92,18 @@ internal class HttpHeadersPatternTest {
         }
 
         assertThat(expectedHeaders.matches(actualHeaders, Resolver()).isTrue()).isTrue()
+    }
+
+    @Test
+    fun `should validate extra headers when mocking`() {
+        val expectedHeaders = HttpHeadersPattern(mapOf("X-Expected" to stringToPattern("(string)", "X-Expected")))
+
+        val actualHeaders = HashMap<String, String>().apply {
+            put("X-Expected", "application/json")
+            put("X-Unspecified-Header", "Can't accept this header in a mock")
+        }
+
+        assertThat(expectedHeaders.matches(actualHeaders, Resolver(findMissingKey = checkAllKeys))).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test

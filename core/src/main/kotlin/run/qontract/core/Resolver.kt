@@ -5,7 +5,7 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
 
-data class Resolver(val factStore: FactStore = CheckFacts(), val matchPatternInValue: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Any>, actual: Map<String, Any>) -> String? = checkOnlyPatternKeys ) {
+data class Resolver(val factStore: FactStore = CheckFacts(), val matchPatternInValue: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Any>, actual: Map<String, Any>) -> Pair<String?, String?>? = checkOnlyPatternKeys ) {
     constructor(facts: Map<String, Value> = emptyMap(), matchPattern: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), matchPattern, newPatterns)
     constructor() : this(emptyMap(), false)
 
@@ -70,12 +70,22 @@ fun withNumberTypePattern(resolver: Resolver): Resolver =
         resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberTypePattern))
 
 val checkOnlyPatternKeys = { pattern: Map<String, Any>, actual: Map<String, Any> ->
-    pattern.keys.find { key -> isMissingKey(actual, key) }
+    pattern.keys.find { key -> isMissingKey(actual, key) }?.let { Pair(it, null) }
 }
 
 val checkAllKeys = { pattern: Map<String, Any>, actual: Map<String, Any> ->
-    pattern.keys.find { key -> isMissingKey(actual, key) } ?: actual.keys.find { key ->
+    pattern.keys.find { key -> isMissingKey(actual, key) }?.let { Pair(it, null) } ?: actual.keys.find { key ->
         val keyWithoutOptionality = withoutOptionality(key)
         key !in pattern && "$keyWithoutOptionality?" !in pattern
-    }
+    }?.let { Pair(null, it) }
+}
+
+fun missingKeyToResult(missingKey: Pair<String?, String?>, keyName: String): Result.Failure {
+    val (expectedMissingInActual, actualMissingInExpected) = missingKey
+
+    return Result.Failure(when {
+        expectedMissingInActual != null -> "Expected ${keyName.toLowerCase()} $expectedMissingInActual was missing"
+        actualMissingInExpected != null -> "${keyName.toLowerCase().capitalize()} $actualMissingInExpected was unexpected"
+        else -> throw ContractException("Missing key result ($missingKey) is confusing")
+    })
 }

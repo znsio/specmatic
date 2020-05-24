@@ -207,7 +207,7 @@ Feature: Math API
     }
 
     @Test
-    fun `stubbing out a contract pattern in request body by specifing a sub pattern in stub data`() {
+    fun `stubbing out a contract pattern in request body by specifying a sub pattern in stub data`() {
         val behaviour = ContractBehaviour("""
 Feature: Math API
 

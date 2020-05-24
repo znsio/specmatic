@@ -34,7 +34,7 @@ fun <ReturnType> attempt(f: ()->ReturnType): ReturnType {
     }
 }
 
-fun <ReturnType> scenarioBreadCrumb(scenario: Scenario, f: ()->ReturnType): ReturnType {
+inline fun <ReturnType> scenarioBreadCrumb(scenario: Scenario, f: ()->ReturnType): ReturnType {
     try {
         return f()
     } catch(e: ContractException) {

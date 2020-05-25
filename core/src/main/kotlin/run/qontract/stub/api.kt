@@ -1,18 +1,17 @@
-@file:JvmName("StubUtils")
+@file:JvmName("API")
 package run.qontract.stub
 
 import run.qontract.consoleLog
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.core.ContractBehaviour
-import run.qontract.core.DATA_DIR_SUFFIX
+import run.qontract.core.*
+import run.qontract.core.pattern.ContractException
+import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.readFile
+import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
-import run.qontract.mock.MockScenario
-import run.qontract.mock.NoMatchingScenario
-import run.qontract.mock.kafkaMessageFromJSON
-import run.qontract.mock.stringToMockScenario
+import run.qontract.mock.*
 import java.io.File
+import java.time.Duration
 
 fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 900): HttpStub {
     val contractBehaviour = ContractBehaviour(contractGherkin)
@@ -118,7 +117,41 @@ fun implicitContractDataDir(path: String): File {
     return File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
 }
 
-fun stubKafkaMessage(contractPath: String, message: String) {
-    val kafkaMessage = kafkaMessageFromJSON(jsonStringToValueMap(message))
+fun stubKafkaMessage(contractPath: String, message: String, bootstrapServers: String) {
+    val kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, jsonStringToValueMap(message)))
     ContractBehaviour(File(contractPath).readText()).assertMatchesMockKafkaMessage(kafkaMessage)
+    createProducer(bootstrapServers).use {
+        it.send(producerRecord(kafkaMessage))
+    }
+}
+
+fun testKafkaMessage(contractPath: String, bootstrapServers: String, commit: Boolean) {
+    val contractBehaviour = ContractBehaviour(File(contractPath).readText())
+
+    val results = contractBehaviour.scenarios.map {
+        testKafkaMessages(it, bootstrapServers, commit)
+    }
+
+    if(results.any { it is Result.Failure }) {
+        throw ContractException(toResults(results).report())
+    }
+}
+
+fun testKafkaMessages(scenario: Scenario, bootstrapServers: String, commit: Boolean): Result {
+    return createConsumer(bootstrapServers, commit).use { consumer ->
+        if(scenario.kafkaMessagePattern == null) throw ContractException("No kafka message found to test with")
+
+        val topic = scenario.kafkaMessagePattern.topic
+        consumer.subscribe(listOf(topic))
+
+        val messages = consumer.poll(Duration.ofSeconds(1)).map {
+            KafkaMessage(topic, it.key()?.let { key -> StringValue(key) }, parsedValue(it.value()))
+        }
+
+        val results = messages.map {
+            scenario.kafkaMessagePattern.matches(it, scenario.resolver)
+        }
+
+        toResults(results).toResultIfAny()
+    }
 }

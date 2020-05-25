@@ -9,10 +9,8 @@ import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.readFile
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.KafkaMessage
-import run.qontract.core.value.StringValue
+import run.qontract.stub.testKafkaMessages
 import java.io.File
-import java.time.Duration
 import kotlin.system.exitProcess
 
 val pass = Unit
@@ -47,10 +45,10 @@ open class QontractJUnitSupport {
 
         return testScenarios.map {
             DynamicTest.dynamicTest("$it") {
-                val kafkaMessage = it.kafkaMessagePattern
+                val kafkaMessagePattern = it.kafkaMessagePattern
 
                 when {
-                    kafkaMessage != null -> {
+                    kafkaMessagePattern != null -> {
                         if (System.getProperty("kafkaPort") == null) {
                             println("The contract has a kafka message. Please specify the port of the Kafka instance to connect to.")
                             exitProcess(1)
@@ -58,17 +56,8 @@ open class QontractJUnitSupport {
 
                         val commit = "true" == System.getProperty("commit")
 
-                        createConsumer(getBootstrapKafkaServers(), commit).use { consumer ->
-                            val topic = it.kafkaMessagePattern?.topic ?: ""
-                            consumer.subscribe(listOf(topic))
-
-                            val messages = consumer.poll(Duration.ofSeconds(1)).map {
-                                KafkaMessage(topic, it.key()?.let { key -> StringValue(key) }, parsedValue(it.value()))
-                            }
-
-                            val result = kafkaMessage.matches(messages.single(), it.resolver)
-                            ResultAssert.assertThat(result).isSuccess()
-                        }
+                        val result = testKafkaMessages(it, getBootstrapKafkaServers(), commit)
+                        ResultAssert.assertThat(result).isSuccess()
                     }
                     else -> {
                         val host = System.getProperty("host")
@@ -114,7 +103,7 @@ open class QontractJUnitSupport {
             if (exampleData !is JSONArrayValue)
                 throw ContractException("The value of a scenario must be a list of examples")
 
-            if (exampleData.list.size == 0)
+            if (exampleData.list.isEmpty())
                 Examples()
             else {
                 val firstRow = exampleData.list.get(0)
@@ -174,5 +163,4 @@ open class QontractJUnitSupport {
             is NoContractsFound -> throw ContractException("Something is wrong, no contracts were found.")
         }
     }
-
 }

@@ -7,7 +7,7 @@ import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.*
 import run.qontract.mock.MockScenario
 
-internal class StubUtilsTest {
+internal class ApiKtTest {
     @Test
     fun `given an expectation json with a key and one without, the request with the key should always match`() {
         val behaviour = ContractBehaviour("""

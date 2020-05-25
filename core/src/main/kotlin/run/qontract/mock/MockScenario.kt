@@ -2,6 +2,7 @@ package run.qontract.mock
 
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
+import run.qontract.core.utilities.valueMapToPrettyJsonString
 import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
@@ -21,9 +22,9 @@ data class MockScenario(val request: HttpRequest = HttpRequest(), val response: 
     }
 }
 
-private const val MOCK_KAFKA_MESSAGE = "kafka-message"
-private const val MOCK_HTTP_REQUEST = "mock-http-request"
-private const val MOCK_HTTP_RESPONSE = "mock-http-response"
+const val MOCK_KAFKA_MESSAGE = "kafka-message"
+const val MOCK_HTTP_REQUEST = "mock-http-request"
+const val MOCK_HTTP_RESPONSE = "mock-http-response"
 
 fun validateMock(mockSpec: Map<String, Any?>) {
     if (!mockSpec.containsKey(MOCK_KAFKA_MESSAGE)) {
@@ -50,7 +51,7 @@ private const val KAFKA_KEY_KEY = "key"
 
 fun kafkaMessageFromJSON(json: Map<String, Value>): KafkaMessage {
     if(KAFKA_TOPIC_KEY !in json)
-        throw ContractException("Kafka message stub info must contain a target (queue / topic name)")
+        throw ContractException("Kafka message stub info must contain a topic name")
 
     if(KAFKA_VALUE_KEY !in json)
         throw ContractException("Kafka message stub info must contain a payload")
@@ -62,7 +63,7 @@ fun kafkaMessageFromJSON(json: Map<String, Value>): KafkaMessage {
     return KafkaMessage(target.toStringValue(), key?.let { StringValue(it.toStringValue()) }, value)
 }
 
-private fun getJSONObjectValue(key: String, mapData: Map<String, Value>): Map<String, Value> {
+fun getJSONObjectValue(key: String, mapData: Map<String, Value>): Map<String, Value> {
     val data = mapData.getValue(key)
     if(data !is JSONObjectValue) throw ContractException("$key should be a json object")
     return data.jsonObject

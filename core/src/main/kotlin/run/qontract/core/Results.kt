@@ -5,6 +5,7 @@ fun resultListToResults(results: List<Result>): Results {
     return Results(resultList)
 }
 
+fun toResults(results: List<Result>) = Results(results.map { Triple(it, null as HttpRequest?, null as HttpResponse?) }.toMutableList())
 data class Results(val results: MutableList<Triple<Result, HttpRequest?, HttpResponse?>> = mutableListOf()) {
     fun hasFailures(): Boolean = results.any { it.first is Result.Failure }
     fun hasSuccess(): Boolean = results.any { it.first is Result.Success }

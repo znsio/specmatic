@@ -17,7 +17,6 @@ import kotlinx.coroutines.runBlocking
 import run.qontract.core.value.*
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.pattern.parsedValue
 import java.io.Closeable
 
 typealias Expectation = Triple<HttpRequestPattern, Resolver, HttpResponse>
@@ -30,7 +29,7 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
         intercept(ApplicationCallPipeline.Call) {
             val httpRequest = ktorHttpRequestToHttpRequest(call)
 
-            if(isMockRequest(httpRequest))
+            if(isStubRequest(httpRequest))
                  registerExpectation(call, httpRequest)
             else
                 respond(call, expectations, httpRequest)
@@ -61,9 +60,6 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
         val (resolver, _, mockedResponse) = contractBehaviour.matchingMockResponse(mocked.request, mocked.response)
         expectations.add(Expectation(mocked.request.toPattern(), resolver, mockedResponse))
     }
-
-    private fun isMockRequest(httpRequest: HttpRequest) =
-        httpRequest.path == "/_mock_setup" && httpRequest.method == "POST"
 
     override fun close() {
         server.stop(0, 5000)
@@ -131,3 +127,6 @@ fun writeBadRequest(call: ApplicationCall, errorMessage: String?) {
     call.response.header("X-Qontract-Result", "failure")
     runBlocking { call.respondText(errorMessage ?: "") }
 }
+
+fun isStubRequest(httpRequest: HttpRequest) =
+        httpRequest.path == "/_stub_setup" && httpRequest.method == "POST"

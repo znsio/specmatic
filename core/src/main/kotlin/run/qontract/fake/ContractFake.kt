@@ -27,15 +27,16 @@ import run.qontract.core.value.EmptyString
 import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
-import run.qontract.mock.MockScenario
+import run.qontract.mock.*
 import run.qontract.nullLog
 import java.io.ByteArrayOutputStream
 import java.util.*
 
-class ContractFake(private val behaviours: List<ContractBehaviour>, private val stubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
-    constructor(behaviour: ContractBehaviour, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(behaviour), contractInfoToHttpExpectations(listOf(Pair(behaviour, stubInfo))), host, port, log)
-    constructor(gherkinData: String, stubInfo: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(ContractBehaviour(gherkinData), stubInfo, host, port, log)
+class ContractFake(private val behaviours: List<ContractBehaviour>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
+    constructor(behaviour: ContractBehaviour, mockScenarios: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(behaviour), contractInfoToHttpExpectations(listOf(Pair(behaviour, mockScenarios))), host, port, log)
+    constructor(gherkinData: String, mockScenarios: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(ContractBehaviour(gherkinData), mockScenarios, host, port, log)
 
+    private var httpStubs = Vector<HttpStubData>(_httpStubs)
     val endPoint = "http://$host:$port"
 
     private val server: ApplicationEngine = embeddedServer(Netty, host = host, port = port) {
@@ -56,19 +57,9 @@ class ContractFake(private val behaviours: List<ContractBehaviour>, private val 
                 val httpRequest = ktorHttpRequestToHttpRequest(call)
 
                 when {
-                    isSetupRequest(httpRequest) -> {
-                        setupServerState(httpRequest)
-                        call.response.status(HttpStatusCode.OK)
-                    }
-                    else -> {
-                        log(">> Request Start At ${Date()}")
-                        log(httpRequest.toLogString("-> "))
-                        val response = stubResponse(httpRequest, behaviours, stubs)
-                        log(response.toLogString("<- "))
-                        log("<< Response At ${Date()} == ")
-                        log(System.lineSeparator())
-                        respondToKtorHttpResponse(call, response)
-                    }
+                    isStubRequest(httpRequest) -> handleStubRequest(call, httpRequest)
+                    isStateSetupRequest(httpRequest) -> handleServerStateRequest(call, httpRequest)
+                    else -> serveStubResponse(call, httpRequest)
                 }
             }
             catch(e: ContractException) {
@@ -86,11 +77,56 @@ class ContractFake(private val behaviours: List<ContractBehaviour>, private val 
         }
     }
 
+    private fun serveStubResponse(call: ApplicationCall, httpRequest: HttpRequest) {
+        log(">> Request Start At ${Date()}")
+        log(httpRequest.toLogString("-> "))
+        val response = stubResponse(httpRequest, behaviours, httpStubs)
+        log(response.toLogString("<- "))
+        log("<< Response At ${Date()} == ")
+        log(System.lineSeparator())
+        respondToKtorHttpResponse(call, response)
+    }
+
+    private fun handleStubRequest(call: ApplicationCall, httpRequest: HttpRequest) {
+        try {
+            val mock = stringToMockScenario(httpRequest.body ?: throw ContractException("Expectation payload was empty"))
+            if(mock.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
+
+            val results = behaviours.asSequence().map { behaviour ->
+                try {
+                    val mockResponse = behaviour.matchingMockResponse(mock.request, mock.response)
+                    Pair(Result.Success(), mockResponse)
+                } catch(e: NoMatchingScenario) { Pair(Result.Failure(e.localizedMessage), null) }
+            }
+
+            val result = results.find { it.first is Result.Success }
+
+            when(result?.first) {
+                is Result.Success -> {
+                    val (resolver, scenario, response) = result.second!!
+                    httpStubs.add(httpMockToStub(mock, scenario, response, resolver))
+                }
+                else -> throw NoMatchingScenario(toResults(results.map { it.first }.toList()).report())
+            }
+
+            call.response.status(HttpStatusCode.OK)
+        }
+        catch(e: NoMatchingScenario) {
+            writeBadRequest(call, e.message)
+        }
+        catch(e: ContractException) {
+            writeBadRequest(call, e.report())
+        }
+        catch (e: Exception) {
+            writeBadRequest(call, e.message)
+        }
+    }
+
     override fun close() {
         server.stop(0, 5000)
     }
 
-    private fun setupServerState(httpRequest: HttpRequest) {
+    private fun handleServerStateRequest(call: ApplicationCall, httpRequest: HttpRequest) {
         val body = httpRequest.body
         val serverState = body?.let { toMap(it) } ?: mutableMapOf()
 
@@ -102,10 +138,12 @@ class ContractFake(private val behaviours: List<ContractBehaviour>, private val 
         }
 
         log("# << Complete At ${Date()}")
+
+        call.response.status(HttpStatusCode.OK)
     }
 
-    private fun isSetupRequest(httpRequest: HttpRequest): Boolean {
-        return httpRequest.path == "/_server_state" && httpRequest.method == "POST"
+    private fun isStateSetupRequest(httpRequest: HttpRequest): Boolean {
+        return httpRequest.path == "/_state_setup" && httpRequest.method == "POST"
     }
 
     init {
@@ -257,13 +295,16 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<ContractBehaviour, Li
     return contractInfo.flatMap { (behaviour, mocks) ->
         mocks.filter { it.kafkaMessage == null }.map { mock ->
             val (resolver, scenario, httpResponse) = behaviour.matchingMockResponse(mock)
-
-            val requestPattern = mock.request.toPattern()
-            val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
-
-            HttpStubData(requestPatternWithHeaderAncestor, httpResponse, resolver)
+            httpMockToStub(mock, scenario, httpResponse, resolver)
         }
     }
+}
+
+private fun httpMockToStub(mock: MockScenario, scenario: Scenario, httpResponse: HttpResponse, resolver: Resolver): HttpStubData {
+    val requestPattern = mock.request.toPattern()
+    val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
+
+    return HttpStubData(requestPatternWithHeaderAncestor, httpResponse, resolver)
 }
 
 fun badRequest(errorMessage: String?): HttpResponse {

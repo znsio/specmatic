@@ -28,7 +28,7 @@ import java.net.URL
 import java.util.*
 
 class HttpClient(private val baseURL: String, private val log: (event: String) -> Unit = ::consoleLog) : TestExecutor {
-    private val serverStateURL = "/_server_state"
+    private val serverStateURL = "/_state_setup"
     @OptIn(KtorExperimentalAPI::class)
     @Throws(IOException::class, URISyntaxException::class)
     override fun execute(request: HttpRequest): HttpResponse {

@@ -20,7 +20,7 @@ import run.qontract.core.startLinesWith
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
-import run.qontract.fake.toParams
+import run.qontract.stub.toParams
 import java.io.File
 import java.io.IOException
 import java.net.URISyntaxException

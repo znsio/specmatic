@@ -1,4 +1,4 @@
-package run.qontract.fake
+package run.qontract.stub
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

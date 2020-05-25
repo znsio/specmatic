@@ -4,7 +4,7 @@ import picocli.CommandLine.*
 import run.qontract.core.Contract
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.readFile
-import run.qontract.fake.HttpStub
+import run.qontract.stub.HttpStub
 import java.util.concurrent.Callable
 
 @Command(name = "samples",

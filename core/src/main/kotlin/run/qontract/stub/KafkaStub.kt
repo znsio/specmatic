@@ -1,4 +1,4 @@
-package run.qontract.fake
+package run.qontract.stub
 
 import org.apache.kafka.clients.producer.ProducerRecord
 import run.qontract.core.*
@@ -26,7 +26,7 @@ class KafkaStub(val behaviours: List<ContractBehaviour>, kafkaStubs: List<KafkaS
     }
 }
 
-fun kafkaStub(kafkaStubs: List<KafkaStubData>, bootstrapServers: String) {
+fun stubKafkaContracts(kafkaStubs: List<KafkaStubData>, bootstrapServers: String) {
     createConsumer(bootstrapServers, false).use {
         createTopics(kafkaStubs.map { it.kafkaMessage.topic }, bootstrapServers)
     }

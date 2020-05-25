@@ -1,7 +1,7 @@
 package run.qontract.core
 
 import com.intuit.karate.junit5.Karate
-import run.qontract.fake.HttpStub
+import run.qontract.stub.HttpStub
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 

@@ -1,18 +1,20 @@
 @file:JvmName("StubUtils")
-package run.qontract.fake
+package run.qontract.stub
 
 import run.qontract.consoleLog
 import run.qontract.core.CONTRACT_EXTENSION
 import run.qontract.core.ContractBehaviour
 import run.qontract.core.DATA_DIR_SUFFIX
+import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.readFile
 import run.qontract.core.value.StringValue
 import run.qontract.mock.MockScenario
 import run.qontract.mock.NoMatchingScenario
+import run.qontract.mock.kafkaMessageFromJSON
 import run.qontract.mock.stringToMockScenario
 import java.io.File
 
-fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 900): ContractStub {
+fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 900): HttpStub {
     val contractBehaviour = ContractBehaviour(contractGherkin)
 
     val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->
@@ -30,7 +32,7 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
-fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
+fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
     val contractInfo = loadContractStubs(contractPaths, dataDirPaths)
     val behaviours = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
@@ -114,4 +116,9 @@ fun implicitContractDataDirs(contractPaths: List<String>) =
 fun implicitContractDataDir(path: String): File {
     val contractFile = File(path)
     return File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
+}
+
+fun stubKafkaMessage(contractPath: String, message: String) {
+    val kafkaMessage = kafkaMessageFromJSON(jsonStringToValueMap(message))
+    ContractBehaviour(File(contractPath).readText()).assertMatchesMockKafkaMessage(kafkaMessage)
 }

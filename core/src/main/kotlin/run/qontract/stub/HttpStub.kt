@@ -1,4 +1,4 @@
-package run.qontract.fake
+package run.qontract.stub
 
 import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline
@@ -90,24 +90,7 @@ class HttpStub(private val behaviours: List<ContractBehaviour>, _httpStubs: List
     private fun handleStubRequest(call: ApplicationCall, httpRequest: HttpRequest) {
         try {
             val mock = stringToMockScenario(httpRequest.body ?: throw ContractException("Expectation payload was empty"))
-            if(mock.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
-
-            val results = behaviours.asSequence().map { behaviour ->
-                try {
-                    val mockResponse = behaviour.matchingMockResponse(mock.request, mock.response)
-                    Pair(Result.Success(), mockResponse)
-                } catch(e: NoMatchingScenario) { Pair(Result.Failure(e.localizedMessage), null) }
-            }
-
-            val result = results.find { it.first is Result.Success }
-
-            when(result?.first) {
-                is Result.Success -> {
-                    val (resolver, scenario, response) = result.second!!
-                    httpStubs.add(httpMockToStub(mock, scenario, response, resolver))
-                }
-                else -> throw NoMatchingScenario(toResults(results.map { it.first }.toList()).report())
-            }
+            createStub(mock)
 
             call.response.status(HttpStatusCode.OK)
         }
@@ -119,6 +102,35 @@ class HttpStub(private val behaviours: List<ContractBehaviour>, _httpStubs: List
         }
         catch (e: Exception) {
             writeBadRequest(call, e.message)
+        }
+    }
+
+    // For use from Karate
+    fun createStub(json: String) {
+        val mock = stringToMockScenario(StringValue(json))
+        createStub(mock)
+    }
+
+    private fun createStub(mock: MockScenario) {
+        if (mock.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
+
+        val results = behaviours.asSequence().map { behaviour ->
+            try {
+                val mockResponse = behaviour.matchingMockResponse(mock.request, mock.response)
+                Pair(Result.Success(), mockResponse)
+            } catch (e: NoMatchingScenario) {
+                Pair(Result.Failure(e.localizedMessage), null)
+            }
+        }
+
+        val result = results.find { it.first is Result.Success }
+
+        when (result?.first) {
+            is Result.Success -> {
+                val (resolver, scenario, response) = result.second!!
+                httpStubs.add(httpMockToStub(mock, scenario, response, resolver))
+            }
+            else -> throw NoMatchingScenario(toResults(results.map { it.first }.toList()).report())
         }
     }
 

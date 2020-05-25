@@ -12,7 +12,7 @@ import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.*
-import run.qontract.fake.HttpStub
+import run.qontract.stub.HttpStub
 import run.qontract.test.TestExecutor
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException

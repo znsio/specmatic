@@ -4,7 +4,7 @@ import picocli.CommandLine.*
 import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
-import run.qontract.fake.*
+import run.qontract.stub.*
 import run.qontract.mock.NoMatchingScenario
 import java.io.File
 import java.nio.file.*
@@ -136,7 +136,7 @@ class StubCommand : Callable<Unit> {
                 println("Started local Kafka server: ${qontractKafka?.bootstrapServers}")
             }
 
-            kafkaStub(kafkaExpectations, qontractKafka?.bootstrapServers ?: "PLAINTEXT://$kafkaHost:$kafkaPort")
+            stubKafkaContracts(kafkaExpectations, qontractKafka?.bootstrapServers ?: "PLAINTEXT://$kafkaHost:$kafkaPort")
         }
     }
 

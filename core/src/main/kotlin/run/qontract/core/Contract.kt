@@ -3,7 +3,7 @@ package run.qontract.core
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.contractFilePath
 import run.qontract.core.utilities.readFile
-import run.qontract.fake.HttpStub
+import run.qontract.stub.HttpStub
 import run.qontract.test.HttpClient
 
 data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val minorVersion: Int = 0) {

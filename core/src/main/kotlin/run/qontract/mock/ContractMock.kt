@@ -1,8 +1,8 @@
 package run.qontract.mock
 
 import run.qontract.core.utilities.*
-import run.qontract.fake.ktorHttpRequestToHttpRequest
-import run.qontract.fake.respondToKtorHttpResponse
+import run.qontract.stub.ktorHttpRequestToHttpRequest
+import run.qontract.stub.respondToKtorHttpResponse
 import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline
 import io.ktor.application.call

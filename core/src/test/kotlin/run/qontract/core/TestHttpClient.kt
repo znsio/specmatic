@@ -1,6 +1,6 @@
 package run.qontract.core
 
-import run.qontract.fake.HttpStub
+import run.qontract.stub.HttpStub
 import run.qontract.test.HttpClient
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions

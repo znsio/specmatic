@@ -13,7 +13,7 @@ import run.qontract.mock.*
 import java.io.File
 import java.time.Duration
 
-fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 900): HttpStub {
+fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): HttpStub {
     val contractBehaviour = ContractBehaviour(contractGherkin)
 
     val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->

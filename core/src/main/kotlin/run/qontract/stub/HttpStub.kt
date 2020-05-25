@@ -130,7 +130,7 @@ class HttpStub(private val behaviours: List<ContractBehaviour>, _httpStubs: List
                 val (resolver, scenario, response) = result.second!!
                 httpStubs.add(httpMockToStub(mock, scenario, response, resolver))
             }
-            else -> throw NoMatchingScenario(toResults(results.map { it.first }.toList()).report())
+            else -> throw NoMatchingScenario(Results(results.map { it.first }.toMutableList()).report())
         }
     }
 

@@ -8,25 +8,24 @@ fun testBackwardCompatibility2(older: ContractBehaviour, newerBehaviour: Contrac
         if(olderScenario.kafkaMessagePattern != null) {
             val scenarioMatchResults = newerBehaviour.lookupKafkaScenario(olderScenario.kafkaMessagePattern, olderScenario.resolver)
 
-            val result = resultListToResults(scenarioMatchResults.map { it.second }.toList()).toResultIfAny()
+            val result = Results(scenarioMatchResults.map { it.second }.toMutableList()).toResultIfAny()
 
-            results.copy(results = results.results.plus(Triple(result, null, null)).toMutableList())
+            results.copy(results = results.results.plus(result).toMutableList())
         } else {
             newerBehaviour.setServerState(olderScenario.expectedFacts)
-            var request: HttpRequest? = null
 
             try {
-                request = olderScenario.generateHttpRequest()
+                val request = olderScenario.generateHttpRequest()
                 val newerScenario = newerBehaviour.lookupScenario(request)
                 val newerResponsePattern = newerScenario.httpResponsePattern
 
                 val result: Result = olderScenario.httpResponsePattern.encompasses(newerResponsePattern, olderScenario.resolver, newerScenario.resolver)
 
-                results.copy(results = results.results.plus(Triple(result, request, null)).toMutableList())
+                results.copy(results = results.results.plus(result).toMutableList())
             } catch (contractException: ContractException) {
-                results.copy(results = results.results.plus(Triple(contractException.result(), request, null)).toMutableList())
+                results.copy(results = results.results.plus(contractException.result()).toMutableList())
             } catch (throwable: Throwable) {
-                results.copy(results = results.results.plus(Triple(Result.Failure("Exception: ${throwable.localizedMessage}"), request, null)).toMutableList())
+                results.copy(results = results.results.plus(Result.Failure("Exception: ${throwable.localizedMessage}")).toMutableList())
             }
         }
     }

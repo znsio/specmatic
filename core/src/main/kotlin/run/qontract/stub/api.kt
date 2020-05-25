@@ -133,7 +133,7 @@ fun testKafkaMessage(contractPath: String, bootstrapServers: String, commit: Boo
     }
 
     if(results.any { it is Result.Failure }) {
-        throw ContractException(toResults(results).report())
+        throw ContractException(Results(results.toMutableList()).report())
     }
 }
 
@@ -152,6 +152,6 @@ fun testKafkaMessages(scenario: Scenario, bootstrapServers: String, commit: Bool
             scenario.kafkaMessagePattern.matches(it, scenario.resolver)
         }
 
-        toResults(results).toResultIfAny()
+        Results(results.toMutableList()).toResultIfAny()
     }
 }

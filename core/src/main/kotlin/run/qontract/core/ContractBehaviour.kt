@@ -24,7 +24,7 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
             val resultList = lookupScenario(httpRequest, scenarios)
-            return matchingScenario(resultList)?.generateHttpResponse(serverState) ?: errorResponse(resultList, httpRequest)
+            return matchingScenario(resultList)?.generateHttpResponse(serverState) ?: errorResponse(resultList)
         } finally {
             serverState = emptyMap()
         }
@@ -33,7 +33,7 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
     fun lookupAllResponses(httpRequest: HttpRequest): List<HttpResponse> =
         try {
             val scenarios = lookupScenario(httpRequest, scenarios)
-            matchingScenario(scenarios)?.generateHttpResponses(serverState) ?: listOf(errorResponse(scenarios, httpRequest))
+            matchingScenario(scenarios)?.generateHttpResponses(serverState) ?: listOf(errorResponse(scenarios))
         } finally {
             serverState = emptyMap()
         }
@@ -47,8 +47,8 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
             serverState = emptyMap()
         }
 
-    private fun errorResponse(resultList: Sequence<Pair<Scenario, Result>>, httpRequest: HttpRequest) =
-            Results(resultList.map { Triple(it.second, httpRequest, null) }.toMutableList()).generateErrorHttpResponse()
+    private fun errorResponse(resultList: Sequence<Pair<Scenario, Result>>) =
+            Results(resultList.map { it.second }.toMutableList()).generateErrorHttpResponse()
 
     private fun matchingScenario(resultList: Sequence<Pair<Scenario, Result>>): Scenario? {
         return resultList.find {
@@ -89,12 +89,11 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
                             Triple(it.first, scenario, it.second)
                         }
                         is Result.Failure -> {
-                            results.add(mockMatches
-                                    .updateScenario(scenario), request, response)
+                            results.add(mockMatches.updateScenario(scenario))
                         }
                     }
                 } catch (contractException: ContractException) {
-                    results.add(contractException.result(), request, response)
+                    results.add(contractException.result())
                 }
             }
 
@@ -334,7 +333,7 @@ private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChil
 private fun scenarios(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
         featureChildren.filter { it.valueCase.name != "BACKGROUND" }
 
-fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Triple<Result, HttpRequest, HttpResponse?> {
+fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Result {
     testExecutor.setServerState(scenario.serverState)
 
     val request = scenario.generateHttpRequest()
@@ -343,15 +342,15 @@ fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Triple<Result, 
         val response = testExecutor.execute(request)
         when {
             response.headers.get("X-Qontract-Result") == "failure" -> {
-                Triple(Result.Failure(response.body?.displayableValue() ?: ""), request, response)
+                Result.Failure(response.body?.displayableValue() ?: "")
             }
-            else -> Triple(scenario.matches(response), request, response)
+            else -> scenario.matches(response)
         }
     }
     catch(contractException: ContractException) {
-        Triple(contractException.result().also { it.updateScenario(scenario) }, request, null)
+        contractException.result().updateScenario(scenario)
     }
     catch(throwable: Throwable) {
-        Triple(Result.Failure("Error: ${throwable.message}").also { it.updateScenario(scenario) }, request, null)
+        Result.Failure("Error: ${throwable.message}").updateScenario(scenario)
     }
 }

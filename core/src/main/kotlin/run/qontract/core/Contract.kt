@@ -28,7 +28,7 @@ data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val 
                 val message = """KAFKA MESSAGE
 ${kafkaMessagePattern.generate(scenario.resolver).toDisplayableString()}""".trimMargin().prependIndent("| ")
                 println(message)
-                Results(results = results.results.plus(Triple(Result.Success(), null, null)).toMutableList())
+                Results(results = results.results.plus(Result.Success()).toMutableList())
             } ?: Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
         }
     }

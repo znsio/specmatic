@@ -127,7 +127,7 @@ class StubCommand : Callable<Unit> {
         }
 
         if(validationResults.any { it is Result.Failure }) {
-            val results = Results(validationResults.map { Triple(it, null, null) }.toMutableList())
+            val results = Results(validationResults.toMutableList())
             println("Can't load Kafka mocks:\n${results.report()}")
         }
         else if(hasKafkaScenarios(behaviours)) {

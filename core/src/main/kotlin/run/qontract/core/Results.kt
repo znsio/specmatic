@@ -1,28 +1,22 @@
 package run.qontract.core
 
-fun resultListToResults(results: List<Result>): Results {
-    val resultList: MutableList<Triple<Result, HttpRequest?, HttpResponse?>> = results.map { Triple(it, null, null) }.toMutableList()
-    return Results(resultList)
-}
-
-fun toResults(results: List<Result>) = Results(results.map { Triple(it, null as HttpRequest?, null as HttpResponse?) }.toMutableList())
-data class Results(val results: MutableList<Triple<Result, HttpRequest?, HttpResponse?>> = mutableListOf()) {
-    fun hasFailures(): Boolean = results.any { it.first is Result.Failure }
-    fun hasSuccess(): Boolean = results.any { it.first is Result.Success }
+data class Results(val results: MutableList<Result> = mutableListOf()) {
+    fun hasFailures(): Boolean = results.any { it is Result.Failure }
+    fun hasSuccess(): Boolean = results.any { it is Result.Success }
     fun success(): Boolean = hasSuccess() && !hasFailures()
 
     fun toResultIfAny(): Result {
-        return results.find { it.first is Result.Success }?.first ?: Result.Failure(results.joinToString("\n\n") { resultReport(it.first) })
+        return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { resultReport(it) })
     }
 
     val failureCount
-        get(): Int = results.count { it.first is Result.Failure }
+        get(): Int = results.count { it is Result.Failure }
 
     val successCount
-        get(): Int = results.count { it.first is Result.Success }
+        get(): Int = results.count { it is Result.Success }
 
-    fun add(result: Result, httpRequest: HttpRequest, httpResponse: HttpResponse?) {
-        results.add(Triple(result, httpRequest, httpResponse))
+    fun add(result: Result) {
+        results.add(result)
     }
 
     fun generateErrorHttpResponse() =
@@ -32,7 +26,7 @@ data class Results(val results: MutableList<Triple<Result, HttpRequest?, HttpRes
             generateFeedback()
 
     private fun generateFeedback(): String {
-        return results.map { it.first }.map { result ->
+        return results.map { it }.map { result ->
             resultReport(result)
         }.filter { it.isNotBlank() }.joinToString("\n\n")
     }

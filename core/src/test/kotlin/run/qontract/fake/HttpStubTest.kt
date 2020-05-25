@@ -7,7 +7,6 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.http.RequestEntity
-import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
@@ -20,7 +19,7 @@ import run.qontract.core.value.StringValue
 import run.qontract.mock.MockScenario
 import java.net.URI
 
-internal class ContractFakeTest {
+internal class HttpStubTest {
     @Test
     fun `should serve mocked data before stub`() {
         val gherkin = """
@@ -36,7 +35,7 @@ Scenario: Square of a number
         val request = HttpRequest(method = "POST", path = "/number", body = NumberValue(10))
         val response = HttpResponse(status = 200, body = "100")
 
-        ContractFake(gherkin, listOf(MockScenario(request, response))).use { fake ->
+        HttpStub(gherkin, listOf(MockScenario(request, response))).use { fake ->
             val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/number", "10")
             assertThat(postResponse.body).isEqualTo("100")
         }
@@ -53,7 +52,7 @@ Scenario: Get a number
   And response-body (number)
 """.trim()
 
-        ContractFake(gherkin).use { fake ->
+        HttpStub(gherkin).use { fake ->
             val mockData = """{"mock-http-request": {"method": "GET", "path": "/number"}, "mock-http-response": {"status": 200, "body": 10}}"""
             val stubSetupURL = "${fake.endPoint}/_stub_setup"
             val headers = HttpHeaders()
@@ -80,7 +79,7 @@ And response-body (string)
         val request = HttpRequest("POST", "/date", emptyMap(), StringValue("(datetime)"))
         val mock = MockScenario(request, HttpResponse(200, "done"))
 
-        ContractFake(gherkin, listOf(mock)).use { fake ->
+        HttpStub(gherkin, listOf(mock)).use { fake ->
             val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/date", "2020-04-12T00:00:00")
             assertThat(postResponse.statusCode.value()).isEqualTo(200)
             assertThat(postResponse.body).isEqualTo("done")
@@ -101,7 +100,7 @@ And response-body (string)
         val request = HttpRequest("POST", "/date", emptyMap(), parsedValue("""{"date": "(datetime)"}"""))
         val mock = MockScenario(request, HttpResponse(200, "done"))
 
-        ContractFake(gherkin, listOf(mock)).use { fake ->
+        HttpStub(gherkin, listOf(mock)).use { fake ->
             val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/date", """{"date": "2020-04-12T00:00:00"}""")
             assertThat(postResponse.statusCode.value()).isEqualTo(200)
             assertThat(postResponse.body).isEqualTo("done")
@@ -123,7 +122,7 @@ And response-body (string)
         val mock = MockScenario(request, HttpResponse(200, "done"))
 
         try {
-            ContractFake(gherkin, listOf(mock)).use { fake ->
+            HttpStub(gherkin, listOf(mock)).use { fake ->
                 val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/date", """2020-04-12T00:00:00""")
                 assertThat(postResponse.statusCode.value()).isEqualTo(200)
                 assertThat(postResponse.body).isEqualTo("done")

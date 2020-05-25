@@ -12,7 +12,7 @@ import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.*
-import run.qontract.fake.ContractFake
+import run.qontract.fake.HttpStub
 import run.qontract.test.TestExecutor
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
@@ -865,7 +865,7 @@ Given GET /d
 Then status 200"""
 
         assertThrows(Throwable::class.java) {
-            ContractFake(oldContract, emptyList()).use { fake ->
+            HttpStub(oldContract, emptyList()).use { fake ->
                 Contract.fromGherkin(newContract, 0, 0).test(fake)
             }
         }

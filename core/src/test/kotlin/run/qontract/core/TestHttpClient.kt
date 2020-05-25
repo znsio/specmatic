@@ -1,13 +1,11 @@
 package run.qontract.core
 
-import run.qontract.fake.ContractFake
+import run.qontract.fake.HttpStub
 import run.qontract.test.HttpClient
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import run.qontract.core.value.StringValue
-import run.qontract.core.value.Value
-import java.util.*
 
 class TestHttpClient {
     @Test
@@ -25,7 +23,7 @@ class TestHttpClient {
         val port = 8080
         val url = "http://localhost:$port"
         val client = HttpClient(url)
-        ContractFake(contractGherkin, emptyList(), host, port).use {
+        HttpStub(contractGherkin, emptyList(), host, port).use {
             val response = client.execute(request)
             Assertions.assertNotNull(response)
             Assertions.assertEquals(200, response.status)
@@ -51,7 +49,7 @@ class TestHttpClient {
         val url = "http://localhost:$port"
         val client = HttpClient(url)
 
-        ContractFake(contractGherkin, emptyList(), host, port).use {
+        HttpStub(contractGherkin, emptyList(), host, port).use {
             client.setServerState(mapOf("server" to StringValue("state")))
             val response = client.execute(request)
             Assertions.assertNotNull(response)

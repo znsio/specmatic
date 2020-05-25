@@ -114,7 +114,7 @@ class StubCommand : Callable<Unit> {
                     })
                 }
 
-                ContractFake(httpBehaviours, httpExpectations, host, port, ::consoleLog).also {
+                HttpStub(httpBehaviours, httpExpectations, host, port, ::consoleLog).also {
                     println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
                 }
             }

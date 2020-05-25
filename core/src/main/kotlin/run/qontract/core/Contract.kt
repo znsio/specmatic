@@ -3,11 +3,11 @@ package run.qontract.core
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.contractFilePath
 import run.qontract.core.utilities.readFile
-import run.qontract.fake.ContractFake
+import run.qontract.fake.HttpStub
 import run.qontract.test.HttpClient
 
 data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val minorVersion: Int = 0) {
-    fun startFake(port: Int) = ContractFake(contractGherkin, emptyList(), "localhost", port)
+    fun startFake(port: Int) = HttpStub(contractGherkin, emptyList(), "localhost", port)
 
     fun test(endPoint: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
@@ -16,9 +16,9 @@ data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val 
             throw ContractException(results.report())
     }
 
-    fun test(fake: ContractFake) = test(fake.endPoint)
+    fun test(fake: HttpStub) = test(fake.endPoint)
 
-    fun samples(fake: ContractFake) = samples(fake.endPoint)
+    fun samples(fake: HttpStub) = samples(fake.endPoint)
     fun samples(endPoint: String) {
         val contractBehaviour = ContractBehaviour(contractGherkin)
         val httpClient = HttpClient(endPoint)

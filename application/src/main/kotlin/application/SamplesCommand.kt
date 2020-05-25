@@ -4,7 +4,7 @@ import picocli.CommandLine.*
 import run.qontract.core.Contract
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.readFile
-import run.qontract.fake.ContractFake
+import run.qontract.fake.HttpStub
 import java.util.concurrent.Callable
 
 @Command(name = "samples",
@@ -24,7 +24,7 @@ class SamplesCommand : Callable<Void> {
         try {
             val gherkin = readFile(contractPath)
 
-            ContractFake(gherkin, emptyList(), host, port).use { fake ->
+            HttpStub(gherkin, emptyList(), host, port).use { fake ->
                 Contract(gherkin).samples(fake)
             }
         }

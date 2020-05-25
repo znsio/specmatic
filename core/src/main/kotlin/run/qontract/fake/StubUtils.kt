@@ -24,7 +24,7 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
                 }
     }
 
-    return ContractFake(contractBehaviour, mocks, host, port, ::consoleLog)
+    return HttpStub(contractBehaviour, mocks, host, port, ::consoleLog)
 }
 
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
@@ -35,7 +35,7 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
     val behaviours = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
-    return ContractFake(behaviours, httpExpectations, host, port, ::consoleLog)
+    return HttpStub(behaviours, httpExpectations, host, port, ::consoleLog)
 }
 
 fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<ContractBehaviour, List<MockScenario>>> {

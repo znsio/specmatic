@@ -1,18 +1,18 @@
 package run.qontract.core
 
 import com.intuit.karate.junit5.Karate
-import run.qontract.fake.ContractFake
+import run.qontract.fake.HttpStub
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 
-class ContractFakeShouldRunOverTCP {
+class HttpStubShouldRunOverTCP {
     @Karate.Test
     fun fakeShouldServeSingleFeatureContract(): Karate {
         return Karate().relativeTo(javaClass).feature("classpath:ContractFakeShouldRunOverTCP.feature")
     }
 
     companion object {
-        var contractFake: ContractFake? = null
+        var httpStub: HttpStub? = null
         @BeforeAll
         @Throws(Throwable::class)
         @JvmStatic
@@ -49,13 +49,13 @@ class ContractFakeShouldRunOverTCP {
                     "    When GET /balance?account_id=10\n" +
                     "    Then status 200\n" +
                     "    And response-body {calls_left: 10, messages_left: 20}"
-            contractFake = ContractFake(data, emptyList(), "127.0.0.1", 8080)
+            httpStub = HttpStub(data, emptyList(), "127.0.0.1", 8080)
         }
 
         @AfterAll
         @JvmStatic
         fun stopServer() {
-            contractFake!!.close()
+            httpStub!!.close()
         }
     }
 }

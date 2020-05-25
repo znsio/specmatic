@@ -32,7 +32,7 @@ import run.qontract.nullLog
 import java.io.ByteArrayOutputStream
 import java.util.*
 
-class ContractFake(private val behaviours: List<ContractBehaviour>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
+class HttpStub(private val behaviours: List<ContractBehaviour>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
     constructor(behaviour: ContractBehaviour, mockScenarios: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(behaviour), contractInfoToHttpExpectations(listOf(Pair(behaviour, mockScenarios))), host, port, log)
     constructor(gherkinData: String, mockScenarios: List<MockScenario> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(ContractBehaviour(gherkinData), mockScenarios, host, port, log)
 

@@ -1,7 +1,9 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.ContractException
 
 internal class ResolverTest {
     @Test
@@ -110,5 +112,10 @@ internal class ResolverTest {
         val missing = checkOnlyPatternKeys(expected, actual)
 
         assertThat(missing).isEqualTo(null)
+    }
+
+    @Test
+    fun `it should throw an exception when the request pattern does not exist`() {
+        assertThatThrownBy { Resolver().getPattern("(NonExistentPattern)") }.isInstanceOf(ContractException::class.java)
     }
 }

@@ -3,8 +3,14 @@ package run.qontract.fake
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
+import org.springframework.http.MediaType
+import org.springframework.http.RequestEntity
+import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
+import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
@@ -12,6 +18,7 @@ import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import run.qontract.mock.MockScenario
+import java.net.URI
 
 internal class ContractFakeTest {
     @Test
@@ -32,6 +39,31 @@ Scenario: Square of a number
         ContractFake(gherkin, listOf(MockScenario(request, response))).use { fake ->
             val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/number", "10")
             assertThat(postResponse.body).isEqualTo("100")
+        }
+    }
+
+    @Test
+    fun `should accept mocks over http`() {
+        val gherkin = """
+Feature: Math API
+
+Scenario: Get a number
+  When GET /number
+  Then status 200
+  And response-body (number)
+""".trim()
+
+        ContractFake(gherkin).use { fake ->
+            val mockData = """{"mock-http-request": {"method": "GET", "path": "/number"}, "mock-http-response": {"status": 200, "body": 10}}"""
+            val stubSetupURL = "${fake.endPoint}/_stub_setup"
+            val headers = HttpHeaders()
+            headers.contentType = MediaType.APPLICATION_JSON
+            val stubRequest = RequestEntity(mockData, headers, HttpMethod.POST, URI.create(stubSetupURL))
+            val stubResponse = RestTemplate().postForEntity<String>(stubSetupURL, stubRequest)
+            assertThat(stubResponse.statusCodeValue).isEqualTo(200)
+
+            val postResponse = RestTemplate().getForEntity<String>(fake.endPoint + "/number")
+            assertThat(postResponse.body).isEqualTo("10")
         }
     }
 

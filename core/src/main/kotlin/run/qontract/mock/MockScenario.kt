@@ -2,7 +2,6 @@ package run.qontract.mock
 
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.utilities.valueMapToPrettyJsonString
 import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
@@ -23,13 +22,15 @@ data class MockScenario(val request: HttpRequest = HttpRequest(), val response: 
 }
 
 const val MOCK_KAFKA_MESSAGE = "kafka-message"
-const val MOCK_HTTP_REQUEST = "mock-http-request"
-const val MOCK_HTTP_RESPONSE = "mock-http-response"
+const val MOCK_HTTP_REQUEST = "http-request"
+const val MOCK_HTTP_RESPONSE = "http-response"
+val MOCK_HTTP_REQUEST_ALL_KEYS = listOf("mock-http-request", MOCK_HTTP_REQUEST)
+val MOCK_HTTP_RESPONSE_ALL_KEYS = listOf("mock-http-response", MOCK_HTTP_RESPONSE)
 
 fun validateMock(mockSpec: Map<String, Any?>) {
     if (!mockSpec.containsKey(MOCK_KAFKA_MESSAGE)) {
-        if (!mockSpec.containsKey(MOCK_HTTP_REQUEST)) throw ContractException(errorMessage = "This spec does not contain information about either the kafka message or the request to be mocked.")
-        if (!mockSpec.containsKey(MOCK_HTTP_RESPONSE)) throw ContractException(errorMessage = "This spec does not contain information about the response to be mocked.")
+        if (MOCK_HTTP_REQUEST_ALL_KEYS.none { mockSpec.containsKey(it) }) throw ContractException(errorMessage = "This spec does not contain information about either the kafka message or the request to be mocked.")
+        if (MOCK_HTTP_RESPONSE_ALL_KEYS.none { mockSpec.containsKey(it) }) throw ContractException(errorMessage = "This spec does not contain information about the response to be mocked.")
     }
 }
 
@@ -37,8 +38,8 @@ fun mockFromJSON(mockSpec: Map<String, Value>): MockScenario {
     return when {
         mockSpec.contains(MOCK_KAFKA_MESSAGE) -> MockScenario(kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, mockSpec)))
         else -> {
-            val mockRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST, mockSpec))
-            val mockResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE, mockSpec))
+            val mockRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
+            val mockResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
 
             MockScenario(request = mockRequest, response = mockResponse)
         }
@@ -61,6 +62,11 @@ fun kafkaMessageFromJSON(json: Map<String, Value>): KafkaMessage {
     val value = json.getValue(KAFKA_VALUE_KEY)
 
     return KafkaMessage(target.toStringValue(), key?.let { StringValue(it.toStringValue()) }, value)
+}
+
+fun getJSONObjectValue(keys: List<String>, mapData: Map<String, Value>): Map<String, Value> {
+    val key = keys.first { mapData.containsKey(it) }
+    return getJSONObjectValue(key, mapData)
 }
 
 fun getJSONObjectValue(key: String, mapData: Map<String, Value>): Map<String, Value> {

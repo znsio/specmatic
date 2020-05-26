@@ -3,7 +3,7 @@ Feature: Test invocation of Qontract from within Karate
 Scenario: API call
   * def StubUtils = Java.type("run.qontract.stub.StubUtils")
 #  * def httpStub = StubUtils.createStubFromContracts(["/Users/joel/Source/files/random.qontract"], [], "localhost", 9000)
-#  * httpStub.createStub('{"mock-http-request": {"method": "GET", "path": "/random"}, "mock-http-response": {"status": 200, "body": 10}}')
+#  * httpStub.createStub('{"http-request": {"method": "GET", "path": "/random"}, "mock-http-response": {"status": 200, "body": 10}}')
 #  * url 'http://localhost:9000/random'
 #  * method get
 #  * status 200

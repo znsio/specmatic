@@ -13,7 +13,7 @@ internal class MockScenarioKtTest {
     fun `conversion of json string to mock should load form fields`() {
         val mockString = """
 {
-    "mock-http-request": {
+    "http-request": {
         "method": "POST",
         "form-fields": {
             "Data": "10"
@@ -36,7 +36,7 @@ internal class MockScenarioKtTest {
     fun `nullable number in string should load from a mock`() {
         val mockText = """
 {
-  "mock-http-request": {
+  "http-request": {
     "method": "POST",
     "path": "/square",
     "body": {
@@ -65,7 +65,7 @@ internal class MockScenarioKtTest {
     fun `should deserialize multipart content form data mock`() {
         val mockText = """
 {
-  "mock-http-request": {
+  "http-request": {
     "method": "POST",
     "path": "/square",
     "multipart-formdata": [
@@ -96,7 +96,7 @@ internal class MockScenarioKtTest {
     fun `should deserialize multipart file form data mock`() {
         val mockText = """
 {
-  "mock-http-request": {
+  "http-request": {
     "method": "POST",
     "path": "/square",
     "multipart-formdata": [
@@ -131,7 +131,7 @@ internal class MockScenarioKtTest {
     fun `should generate request pattern containing multipart content from mock data`() {
         val mockText = """
 {
-  "mock-http-request": {
+  "http-request": {
     "method": "POST",
     "path": "/square",
     "multipart-formdata": [
@@ -178,7 +178,7 @@ internal class MockScenarioKtTest {
     fun `should generate request pattern containing multipart file from mock data`() {
         val mockText = """
 {
-  "mock-http-request": {
+  "http-request": {
     "method": "POST",
     "path": "/square",
     "multipart-formdata": [

@@ -41,7 +41,15 @@ open class QontractJUnitSupport {
             else -> emptyList()
         }
 
-        val testScenarios = contractBehaviour.generateTestScenarios(suggestions)
+        val testScenarios = try {
+            contractBehaviour.generateTestScenarios(suggestions)
+        } catch(e: ContractException) {
+            println(e.report())
+            throw e
+        } catch(e: Throwable) {
+            println(e.localizedMessage)
+            throw e
+        }
 
         return testScenarios.map {
             DynamicTest.dynamicTest("$it") {

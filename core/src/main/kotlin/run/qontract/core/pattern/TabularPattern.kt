@@ -78,9 +78,12 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
                     val rowValue = row.getField(keyWithoutOptionality)
                     if(isPatternToken(rowValue)) {
                         val rowPattern = resolver.getPattern(rowValue)
+
                         attempt(breadCrumb = key) {
-                            if (!pattern.encompasses(rowPattern, resolver))
-                                throw ContractException("In the scenario, $key contained a ${pattern.typeName}, but the corresponding example contained ${rowPattern.typeName}")
+                            when(val result = pattern.encompasses2(rowPattern, resolver, resolver)) {
+                                is Result.Success -> rowPattern.newBasedOn(row, resolver)
+                                else -> throw ContractException(resultReport(result))
+                            }
                         }
 
                         rowPattern.newBasedOn(row, resolver)

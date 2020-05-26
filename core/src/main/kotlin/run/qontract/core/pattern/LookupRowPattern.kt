@@ -2,6 +2,7 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.resultReport
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 
@@ -22,9 +23,10 @@ data class LookupRowPattern(override val pattern: Pattern, val key: String) : Pa
                 when {
                     isPatternToken(rowValue) -> {
                         val rowPattern = parsedPattern(rowValue)
-                        if(pattern.encompasses(rowPattern, resolver)) {
-                            listOf(rowPattern)
-                        } else throw ContractException("Expected ${pattern.typeName} but got $rowValue in row in column $key")
+                        when(val result = pattern.encompasses2(rowPattern, resolver, resolver)) {
+                            is Result.Success -> listOf(rowPattern)
+                            else -> throw ContractException(resultReport(result))
+                        }
                     }
                     else -> listOf(ExactValuePattern(pattern.parse(rowValue, resolver)))
                 }

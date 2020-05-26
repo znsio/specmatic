@@ -62,10 +62,10 @@ internal class PatternInStringPatternTest {
         val pattern1 = PatternInStringPattern(NumberTypePattern)
         val pattern2 = PatternInStringPattern(NumberTypePattern)
 
-        assertThat(pattern1.encompasses(pattern2, Resolver())).isTrue()
+        assertThat(pattern1.encompasses2(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val pattern3 = PatternInStringPattern(BooleanPattern)
-        assertThat(pattern1.encompasses(pattern3, Resolver())).isFalse()
+        assertThat(pattern1.encompasses2(pattern3, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test

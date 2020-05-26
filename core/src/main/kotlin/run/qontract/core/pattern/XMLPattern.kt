@@ -4,13 +4,10 @@ import org.w3c.dom.Document
 import org.w3c.dom.NamedNodeMap
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
-import run.qontract.core.Resolver
-import run.qontract.core.Result
-import run.qontract.core.mismatchResult
+import run.qontract.core.*
 import run.qontract.core.utilities.xmlToString
 import run.qontract.core.value.Value
 import run.qontract.core.value.XMLValue
-import run.qontract.core.withNumericStringPattern
 import java.io.StringReader
 import java.util.*
 import javax.xml.parsers.DocumentBuilderFactory
@@ -302,10 +299,9 @@ data class XMLPattern(val node: Node) : Pattern {
                         when {
                             isPatternToken(rowValue) -> {
                                 val rowPattern = resolver.getPattern(rowValue)
-                                if(!nodePattern.encompasses(rowPattern, resolver))
-                                    throw ContractException("Type $rowValue in example did not match ${node.nodeValue} in the xml document")
-                                else {
-                                    putValueIntoNode(resolver.generate(nodeName, rowPattern), node)
+                                when(val result = nodePattern.encompasses2(rowPattern, resolver, resolver)) {
+                                    is Result.Success -> putValueIntoNode(resolver.generate(nodeName, rowPattern), node)
+                                    else -> throw ContractException(resultReport(result))
                                 }
                             }
                             else -> {

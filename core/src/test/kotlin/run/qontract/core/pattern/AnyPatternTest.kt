@@ -45,7 +45,7 @@ internal class AnyPatternTest {
 
     @Test
     fun `AnyPattern of null and string patterns should encompass null pattern`() {
-        assertThat(AnyPattern(listOf(NullPattern, StringPattern)).encompasses(NullPattern, Resolver())).isTrue()
+        assertThat(AnyPattern(listOf(NullPattern, StringPattern)).encompasses2(NullPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test

@@ -3,6 +3,7 @@ package run.qontract.core.value
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
+import run.qontract.core.Result
 import run.qontract.core.pattern.AnyPattern
 import run.qontract.core.pattern.DeferredPattern
 import run.qontract.core.pattern.NullPattern
@@ -19,7 +20,7 @@ internal class StringValueTest {
         println(pattern)
         println(constructedPattern)
 
-        assertThat(pattern.encompasses(constructedPattern, Resolver())).isTrue()
+        assertThat(pattern.encompasses2(constructedPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
 
         StringValue("data") shouldMatch  pattern
         NullValue shouldMatch  pattern

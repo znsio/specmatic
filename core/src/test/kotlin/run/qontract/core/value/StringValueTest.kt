@@ -20,7 +20,7 @@ internal class StringValueTest {
         println(pattern)
         println(constructedPattern)
 
-        assertThat(pattern.encompasses2(constructedPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(pattern.encompasses(constructedPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
 
         StringValue("data") shouldMatch  pattern
         NullValue shouldMatch  pattern

@@ -45,7 +45,7 @@ internal class JSONArrayPatternTest {
     @Test
     fun `should encompass itself`() {
         val type = parsedPattern("""["(number)", "(number)"]""")
-        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -54,8 +54,8 @@ internal class JSONArrayPatternTest {
         val smallerLess = parsedPattern("""["(number)"]""")
         val smallerMore = parsedPattern("""["(number)"]""")
 
-        assertThat(bigger.encompasses2(smallerLess, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
-        assertThat(bigger.encompasses2(smallerMore, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(bigger.encompasses(smallerLess, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(bigger.encompasses(smallerMore, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
@@ -63,7 +63,7 @@ internal class JSONArrayPatternTest {
         val smaller = parsedPattern("""["(number)", "(number)"]""")
         val bigger = ListPattern(NumberTypePattern)
 
-        assertThat(smaller.encompasses2(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(smaller.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
@@ -72,8 +72,8 @@ internal class JSONArrayPatternTest {
         val alsoBigger = parsedPattern("""["(number...)"]""")
         val matching = ListPattern(NumberTypePattern)
 
-        assertThat(bigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
-        assertThat(alsoBigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(alsoBigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -81,7 +81,7 @@ internal class JSONArrayPatternTest {
         val bigger = parsedPattern("""["(number)", "(number...)"]""")
         val smaller = parsedPattern("""["(number)", "(number)", "(number)"]""")
 
-        assertThat(smaller.encompasses2(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(smaller.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
@@ -89,7 +89,7 @@ internal class JSONArrayPatternTest {
         val bigger = parsedPattern("""["(number)", "(number...)"]""")
         val matching = parsedPattern("""["(number)", "(number)", "(number...)"]""")
 
-        assertThat(bigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -97,7 +97,7 @@ internal class JSONArrayPatternTest {
         val bigger = parsedPattern("""["(number)", "(number)", "(number...)"]""")
         val matching = parsedPattern("""["(number)", "(number...)"]""")
 
-        assertThat(bigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -105,6 +105,6 @@ internal class JSONArrayPatternTest {
         val bigger = parsedPattern("""["(number)", "(number...)"]""")
         val matching = parsedPattern("""["(number)", "(string...)"]""")
 
-        assertThat(bigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(bigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

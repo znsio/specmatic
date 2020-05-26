@@ -21,8 +21,7 @@ object NumberTypePattern : Pattern {
         return NumberValue(convertToNumber(value))
     }
 
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is NumberTypePattern
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver)
     }
 

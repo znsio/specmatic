@@ -27,18 +27,14 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern)
 
     override fun parse(value: String, resolver: Resolver): Value = StringValue(pattern.parse(value, resolver).toStringValue())
 
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
-            otherPattern is PatternInStringPattern
-                    && otherPattern.pattern.fitsWithin(pattern.patternSet(resolver), resolver)
-
     override fun patternSet(resolver: Resolver): List<Pattern> =
             pattern.patternSet(resolver)
 
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
             when (otherPattern) {
                 is ExactValuePattern -> matches(otherPattern.pattern, thisResolver)
                 !is PatternInStringPattern -> Result.Failure("Expected type in string type, got ${otherPattern.typeName}")
-                else -> otherPattern.pattern.fitsWithin2(patternSet(thisResolver), otherResolver, thisResolver)
+                else -> otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
             }
 
     override val typeName: String = "${pattern.typeName} in string"

@@ -40,7 +40,7 @@ internal class XMLPatternTest {
         val numberInfoPattern = XMLPattern("<number>(number)</number>")
         val resolver = Resolver()
 
-        assertThat(numberInfoPattern.encompasses2(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        assertThat(numberInfoPattern.encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -48,7 +48,7 @@ internal class XMLPatternTest {
         val numberInfoPattern = XMLPattern("<number>100</number>")
         val resolver = Resolver()
 
-        assertThat(numberInfoPattern.encompasses2(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        assertThat(numberInfoPattern.encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -57,7 +57,7 @@ internal class XMLPatternTest {
         val pattern2 = XMLPattern("<number>100</number>")
         val resolver = Resolver()
 
-        assertThat(pattern1.encompasses2(pattern2, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        assertThat(pattern1.encompasses(pattern2, resolver, resolver)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -65,7 +65,7 @@ internal class XMLPatternTest {
         val numberInfoPattern = XMLPattern("<number>(number)</number>")
         val resolver = Resolver(newPatterns = mapOf("(Number)" to XMLPattern("<number>(number)</number>")))
 
-        assertThat(resolver.getPattern("(Number)").encompasses2(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        assertThat(resolver.getPattern("(Number)").encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -73,7 +73,7 @@ internal class XMLPatternTest {
         val answersPattern = XMLPattern("<answer><number>(number)</number><name>(string)</name></answer>")
         val resolver = Resolver()
 
-        assertThat(answersPattern.encompasses2(answersPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        assertThat(answersPattern.encompasses(answersPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -82,7 +82,7 @@ internal class XMLPatternTest {
         val answersPattern2 = XMLPattern("<answer><name>(string)</name><number>(number)</number></answer>")
         val resolver = Resolver()
 
-        assertThat(answersPattern1.encompasses2(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
+        assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
@@ -91,7 +91,7 @@ internal class XMLPatternTest {
         val answersPattern2 = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
         val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
 
-        assertThat(answersPattern1.encompasses2(answersPattern2, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -100,7 +100,7 @@ internal class XMLPatternTest {
         val answersPattern2 = XMLPattern("<answers><number>(string)</number><number>(number)</number></answers>")
         val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
 
-        assertThat(answersPattern1.encompasses2(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
+        assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
@@ -109,25 +109,25 @@ internal class XMLPatternTest {
         val answersPattern2 = XMLPattern("<answer>(Number*)</answer>")
         val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
 
-        assertThat(answersPattern1.encompasses2(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
+        assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
     fun `sanity check for attributes`() {
         val pattern = XMLPattern("""<number val="(number)">(number)</number>""")
-        assertThat(pattern.encompasses2(pattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(pattern.encompasses(pattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `sanity check for attributes with raw values`() {
         val pattern = XMLPattern("""<number val="10">(number)</number>""")
-        assertThat(pattern.encompasses2(pattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(pattern.encompasses(pattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `different raw values in attributes should not match`() {
         val pattern1 = XMLPattern("""<number val="10">(number)</number>""")
         val pattern2 = XMLPattern("""<number val="20">(number)</number>""")
-        assertThat(pattern1.encompasses2(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(pattern1.encompasses(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

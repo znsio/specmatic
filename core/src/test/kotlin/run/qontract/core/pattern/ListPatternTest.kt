@@ -26,7 +26,7 @@ internal class ListPatternTest {
     @Test
     fun `should encompass itself`() {
         val type = ListPattern(NumberTypePattern)
-        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -34,15 +34,15 @@ internal class ListPatternTest {
         val bigger = ListPattern(parsedPattern("""(number?)"""))
         val smallerWithNumber = ListPattern(parsedPattern("""(number)"""))
         val smallerWithNull = ListPattern(parsedPattern("""(number)"""))
-        assertThat(bigger.encompasses2(smallerWithNumber, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
-        assertThat(bigger.encompasses2(smallerWithNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smallerWithNumber, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smallerWithNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should not encompass another list with different type`() {
         val numberPattern = ListPattern(parsedPattern("""(number?)"""))
         val stringPattern = ListPattern(parsedPattern("""(string)"""))
-        assertThat(numberPattern.encompasses2(stringPattern, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(numberPattern.encompasses(stringPattern, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
@@ -51,8 +51,8 @@ internal class ListPatternTest {
         val smaller1Element = parsedPattern("""["(number)"]""")
         val smaller1ElementAndRest = parsedPattern("""["(number)", "(number...)"]""")
 
-        assertThat(bigger.encompasses2(smaller1Element, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
-        assertThat(bigger.encompasses2(smaller1ElementAndRest, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smaller1Element, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smaller1ElementAndRest, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -60,6 +60,6 @@ internal class ListPatternTest {
         val bigger = ListPattern(NumberTypePattern)
         val matching = parsedPattern("""["(number)", "(string...)"]""")
 
-        assertThat(bigger.encompasses2(matching, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(bigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

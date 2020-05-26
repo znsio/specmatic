@@ -16,14 +16,12 @@ data class URLPathPattern(override val pattern: Pattern, val key: String? = null
             pattern.newBasedOn(row, resolver).map { URLPathPattern(it, key) }
 
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
-            otherPattern is URLPathPattern && otherPattern.pattern.encompasses(this.pattern, resolver)
 
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         if(otherPattern !is URLPathPattern)
             return Result.Failure("Expected url type, got ${otherPattern.typeName}")
 
-        return otherPattern.pattern.fitsWithin2(patternSet(thisResolver), otherResolver, thisResolver)
+        return otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
     }
 
     override val typeName: String = "url path"

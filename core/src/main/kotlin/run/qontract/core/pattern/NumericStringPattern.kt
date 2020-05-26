@@ -19,8 +19,7 @@ object NumericStringPattern : Pattern {
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = NumberValue(convertToNumber(value))
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is NumericStringPattern
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver)
     }
 
@@ -34,6 +33,6 @@ object NumericStringPattern : Pattern {
 fun encompasses(thisPattern: Pattern, otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
         when {
             otherPattern::class == thisPattern::class -> Result.Success()
-            otherPattern is ExactValuePattern -> otherPattern.fitsWithin2(thisPattern.patternSet(thisResolver), otherResolver, thisResolver)
+            otherPattern is ExactValuePattern -> otherPattern.fitsWithin(thisPattern.patternSet(thisResolver), otherResolver, thisResolver)
             else -> mismatchResult(thisPattern, otherPattern)
         }

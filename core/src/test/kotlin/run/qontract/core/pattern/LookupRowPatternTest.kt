@@ -29,7 +29,7 @@ internal class LookupRowPatternTest {
     @Test
     fun `should encompass itself`() {
         val lookupRowPattern = LookupRowPattern(StringPattern, "name")
-        val result = lookupRowPattern.encompasses2(lookupRowPattern, Resolver(), Resolver())
+        val result = lookupRowPattern.encompasses(lookupRowPattern, Resolver(), Resolver())
 
         println(resultReport(result))
         assertThat(result).isInstanceOf(Result.Success::class.java)
@@ -38,12 +38,12 @@ internal class LookupRowPatternTest {
     @Test
     fun `should resolve deferreds that it has to lookup when testing encompassment`() {
         val lookupRowPattern = LookupRowPattern(DeferredPattern("(string)"), "name")
-        assertThat(lookupRowPattern.encompasses2(StringPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(lookupRowPattern.encompasses(StringPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should encompass enclosed pattern`() {
         val lookupRowPattern = LookupRowPattern(StringPattern, "name")
-        assertThat(lookupRowPattern.encompasses2(StringPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(lookupRowPattern.encompasses(StringPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

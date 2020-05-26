@@ -15,7 +15,7 @@ data class Resolver(val factStore: FactStore = CheckFacts(), val matchPatternInV
         if (matchPatternInValue
                 && sampleValue is StringValue
                 && isPatternToken(sampleValue.string)
-                && pattern.encompasses2(getPattern(sampleValue.string), this, this).isTrue())
+                && pattern.encompasses(getPattern(sampleValue.string), this, this).isTrue())
             return Result.Success()
 
         when (val result = pattern.matches(sampleValue, this)) {

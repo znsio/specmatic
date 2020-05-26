@@ -188,10 +188,9 @@ data class XMLPattern(val node: Node) : Pattern {
     }
 
     override fun parse(value: String, resolver: Resolver): Value = XMLValue(value)
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is XMLPattern
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         when {
-            otherPattern is ExactValuePattern -> return otherPattern.fitsWithin2(listOf(this), otherResolver, thisResolver)
+            otherPattern is ExactValuePattern -> return otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
             otherPattern !is XMLPattern -> return Result.Failure("Expected XMLPattern")
             node.nodeName != otherPattern.node.nodeName -> return Result.Failure("Expected a node named ${node.nodeName}, but got ${otherPattern.node.nodeName} instead.")
             else -> {
@@ -223,7 +222,7 @@ data class XMLPattern(val node: Node) : Pattern {
                 }
 
                 return theseEncompassables.zip(otherEncompassables).map { (thisOne, otherOne) ->
-                    thisOne.encompasses2(otherOne, thisResolverWithNumericString, otherResolverWithNumericString)
+                    thisOne.encompasses(otherOne, thisResolverWithNumericString, otherResolverWithNumericString)
                 }.find { it is Result.Failure } ?: Result.Success()
             }
         }
@@ -271,7 +270,7 @@ data class XMLPattern(val node: Node) : Pattern {
         val bigger = if(isPatternToken(thisAttribute.nodeValue)) thisResolver.getPattern(thisAttribute.nodeValue) else parsedPattern(thisAttribute.nodeValue)
         val smaller = if(isPatternToken(thisAttribute.nodeValue)) otherResolver.getPattern(otherAttribute.nodeValue) else parsedPattern(otherAttribute.nodeValue)
 
-        return bigger.encompasses2(smaller, thisResolver, otherResolver)
+        return bigger.encompasses(smaller, thisResolver, otherResolver)
     }
 
     override val typeName: String = "xml"
@@ -299,7 +298,7 @@ data class XMLPattern(val node: Node) : Pattern {
                         when {
                             isPatternToken(rowValue) -> {
                                 val rowPattern = resolver.getPattern(rowValue)
-                                when(val result = nodePattern.encompasses2(rowPattern, resolver, resolver)) {
+                                when(val result = nodePattern.encompasses(rowPattern, resolver, resolver)) {
                                     is Result.Success -> putValueIntoNode(resolver.generate(nodeName, rowPattern), node)
                                     else -> throw ContractException(resultReport(result))
                                 }

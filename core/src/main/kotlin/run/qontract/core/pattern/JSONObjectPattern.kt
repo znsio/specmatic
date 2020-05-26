@@ -8,9 +8,9 @@ import run.qontract.core.value.*
 data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap()) : Pattern {
     constructor(jsonContent: String) : this(stringToPatternMap(jsonContent))
 
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         when (otherPattern) {
-            is ExactValuePattern -> return otherPattern.fitsWithin2(listOf(this), otherResolver, thisResolver)
+            is ExactValuePattern -> return otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
             !is JSONObjectPattern -> return Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
             else -> {
                 val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
@@ -29,7 +29,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
                     Pair(key,
                             if (smaller != null)
-                                bigger.encompasses2(resolvedHop(smaller, otherResolverWithNumberType), thisResolverWithNumberType, otherResolverWithNumberType)
+                                bigger.encompasses(resolvedHop(smaller, otherResolverWithNumberType), thisResolverWithNumberType, otherResolverWithNumberType)
                             else Result.Success())
                 }.find { it.second is Result.Failure }
 
@@ -60,7 +60,6 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> =
             newBasedOn(pattern, row, resolver).map { JSONObjectPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is JSONObjectPattern
     override val typeName: String = "json object"
 }
 

@@ -16,6 +16,6 @@ internal class DeferredPatternTest {
     @Test
     fun `should encompass itself`() {
         val deferredPattern = DeferredPattern("(string)")
-        assertThat(deferredPattern.encompasses2(deferredPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(deferredPattern.encompasses(deferredPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

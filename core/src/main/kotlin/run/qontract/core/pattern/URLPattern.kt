@@ -26,11 +26,8 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS): Pattern {
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
 
     override fun parse(value: String, resolver: Resolver): StringValue = StringValue(URI.create(value).toString())
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean {
-        return this == otherPattern
-    }
 
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         return when(otherPattern) {
             this -> Result.Success()
             is URLPattern -> Result.Failure("Expected ${scheme.type}, got ${otherPattern.scheme.type}")

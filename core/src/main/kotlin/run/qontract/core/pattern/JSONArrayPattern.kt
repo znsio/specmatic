@@ -89,9 +89,8 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONArrayPattern> = newBasedOn(pattern, row, resolver).map { JSONArrayPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is JSONArrayPattern
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result = when {
-        otherPattern is ExactValuePattern -> otherPattern.fitsWithin2(listOf(this), otherResolver, thisResolver)
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result = when {
+        otherPattern is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
         otherPattern !is EncompassableList -> Result.Failure("Expected array or list, got ${otherPattern.typeName}")
         otherPattern.isEndless() && !this.isEndless() -> Result.Failure("Finite list is not a superset of an infinite list.")
         else -> try {
@@ -99,7 +98,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
             val encompassables = if (otherEncompassables.size > pattern.size) getEncompassableList(otherEncompassables.size, thisResolver) else getEncompassableList(thisResolver)
 
             val results = encompassables.zip(otherEncompassables).mapIndexed { index, (bigger, smaller) ->
-                Pair(index, bigger.encompasses2(smaller, thisResolver, otherResolver))
+                Pair(index, bigger.encompasses(smaller, thisResolver, otherResolver))
             }
 
             results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") }

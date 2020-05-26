@@ -89,7 +89,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
                     }
                 },
                 { headersPattern.encompasses(other.headersPattern, Resolver(), Resolver()) },
-                { resolvedHop(body, olderResolver).encompasses2(resolvedHop(other.body, newerResolver), olderResolver, newerResolver) }
+                { resolvedHop(body, olderResolver).encompasses(resolvedHop(other.body, newerResolver), olderResolver, newerResolver) }
         ).asSequence().map { it.invoke() }.firstOrNull { it is Result.Failure } ?: Result.Success()
 
         return result.breadCrumb("RESPONSE")

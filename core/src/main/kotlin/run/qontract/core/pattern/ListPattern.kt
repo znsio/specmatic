@@ -32,17 +32,15 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
         })
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolver).map { ListPattern(it) } }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
-            otherPattern is ListPattern && otherPattern.pattern.fitsWithin(pattern.patternSet(resolver), resolver)
 
     override fun patternSet(resolver: Resolver): List<Pattern> = pattern.patternSet(resolver)
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
             when (otherPattern) {
-                is ExactValuePattern -> otherPattern.fitsWithin2(listOf(this), otherResolver, thisResolver)
+                is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
                 is JSONArrayPattern -> {
                     try {
                         val results = otherPattern.getEncompassableList(otherResolver).asSequence().mapIndexed { index, otherPatternEntry ->
-                            Pair(index, pattern.encompasses2(otherPatternEntry, thisResolver, otherResolver))
+                            Pair(index, pattern.encompasses(otherPatternEntry, thisResolver, otherResolver))
                         }
 
                         results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
@@ -51,7 +49,7 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
                     }
                 }
                 !is ListPattern -> Result.Failure("Expected array or list type, got ${otherPattern.typeName}")
-                else -> otherPattern.fitsWithin2(patternSet(thisResolver), otherResolver, thisResolver)
+                else -> otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
             }
 
     override val typeName: String = "list of ${pattern.typeName}"

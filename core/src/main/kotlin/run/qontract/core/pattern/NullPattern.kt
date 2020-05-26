@@ -25,8 +25,7 @@ object NullPattern : Pattern {
             else -> throw ContractException("Failed to parse $value: it is not null.")
         }
 
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern == NullPattern
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver)
     }
 

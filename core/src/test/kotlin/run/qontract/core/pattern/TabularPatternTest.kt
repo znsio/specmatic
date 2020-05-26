@@ -298,7 +298,7 @@ Given request-body
         val smaller = TabularPattern(mapOf("key1" to StringPattern, "key2" to StringPattern))
         val bigger = TabularPattern(mapOf("key1" to StringPattern))
 
-        assertThat(bigger.encompasses2(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -306,19 +306,19 @@ Given request-body
         val smaller = TabularPattern(mapOf("key1" to StringPattern, "key2" to StringPattern))
         val bigger = TabularPattern(mapOf("key1" to StringPattern))
 
-        assertThat(smaller.encompasses2(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(smaller.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
     fun `it should encompass itself`() {
         val type = TabularPattern(mapOf("number" to NumberTypePattern))
-        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `it should encompass itself with a nullable value`() {
         val type = TabularPattern(mapOf("number" to parsedPattern("(number?)")))
-        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -327,28 +327,28 @@ Given request-body
         val smallerWithNumber = TabularPattern(mapOf("number" to NumberTypePattern))
         val smallerWithNull = TabularPattern(mapOf("number" to NullPattern))
 
-        assertThat(bigger.encompasses2(smallerWithNumber, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
-        assertThat(bigger.encompasses2(smallerWithNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smallerWithNumber, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smallerWithNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `it should encompass with an optional key`() {
         val type = TabularPattern(mapOf("number?" to parsedPattern("(number)")))
-        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `it should encompass another with the optional key missing`() {
         val bigger = TabularPattern(mapOf("required" to NumberTypePattern, "optional?" to NumberTypePattern))
         val smaller = TabularPattern(mapOf("required" to NumberTypePattern))
-        assertThat(bigger.encompasses2(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `it should encompass another with an unheard of key`() {
         val bigger = TabularPattern(mapOf("required" to NumberTypePattern))
         val smaller = TabularPattern(mapOf("required" to NumberTypePattern, "extra" to NumberTypePattern))
-        assertThat(bigger.encompasses2(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }
 

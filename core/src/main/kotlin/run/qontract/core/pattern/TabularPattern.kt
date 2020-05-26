@@ -34,10 +34,9 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
         }.map { TabularPattern(it) }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean = otherPattern is TabularPattern
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         when (otherPattern) {
-            is ExactValuePattern -> return otherPattern.fitsWithin2(listOf(this), otherResolver, thisResolver)
+            is ExactValuePattern -> return otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
             !is TabularPattern -> return Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
             else -> {
                 val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
@@ -55,7 +54,7 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
                     val smaller = otherPattern.pattern[key] ?: otherPattern.pattern[withoutOptionality(key)]
 
                     val result = if (smaller != null)
-                        bigger.encompasses2(resolvedHop(smaller, otherResolverWithNumberType), thisResolverWithNumberType, otherResolverWithNumberType)
+                        bigger.encompasses(resolvedHop(smaller, otherResolverWithNumberType), thisResolverWithNumberType, otherResolverWithNumberType)
                     else Result.Success()
                     Pair(key, result)
                 }.find { it.second is Result.Failure }
@@ -80,7 +79,7 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
                         val rowPattern = resolver.getPattern(rowValue)
 
                         attempt(breadCrumb = key) {
-                            when(val result = pattern.encompasses2(rowPattern, resolver, resolver)) {
+                            when(val result = pattern.encompasses(rowPattern, resolver, resolver)) {
                                 is Result.Success -> rowPattern.newBasedOn(row, resolver)
                                 else -> throw ContractException(resultReport(result))
                             }

@@ -45,7 +45,7 @@ internal class AnyPatternTest {
 
     @Test
     fun `AnyPattern of null and string patterns should encompass null pattern`() {
-        assertThat(AnyPattern(listOf(NullPattern, StringPattern)).encompasses2(NullPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(AnyPattern(listOf(NullPattern, StringPattern)).encompasses(NullPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -54,14 +54,14 @@ internal class AnyPatternTest {
         val smallerString = StringPattern
         val smallerNull = NullPattern
 
-        assertThat(bigger.encompasses2(smallerString, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
-        assertThat(bigger.encompasses2(smallerNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smallerString, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smallerNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should encompass itself`() {
         val bigger = parsedPattern("""(string?)""")
-        assertThat(bigger.encompasses2(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -69,26 +69,26 @@ internal class AnyPatternTest {
         val bigger = parsedPattern("""(string?)""")
         val anyOfString = AnyPattern(listOf(StringPattern))
 
-        assertThat(bigger.encompasses2(anyOfString, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(anyOfString, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should encompass itself with a list type`() {
         val bigger = parsedPattern("""(string*?)""")
-        assertThat(bigger.encompasses2(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should encompass a matching string list type`() {
         val bigger = parsedPattern("""(string*?)""")
         val smallerStringList = parsedPattern("(string*)")
-        assertThat(bigger.encompasses2(smallerStringList, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smallerStringList, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should encompass a matching null type`() {
         val bigger = parsedPattern("""(string*?)""")
         val smallerNull = NullPattern
-        assertThat(bigger.encompasses2(smallerNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smallerNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

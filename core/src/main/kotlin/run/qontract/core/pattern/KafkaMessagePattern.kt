@@ -30,11 +30,11 @@ data class KafkaMessagePattern(val topic: String = "", val key: Pattern = NoCont
         if(topic != other.topic)
             return Result.Failure("Expected topic $topic, got ${other.topic}").breadCrumb("TOPIC")
 
-        val keyResult = key.encompasses2(other.key, otherResolver, thisResolver)
+        val keyResult = key.encompasses(other.key, otherResolver, thisResolver)
         if(keyResult is Result.Failure)
             return keyResult.breadCrumb("KEY")
 
-        return value.encompasses2(other.value, thisResolver, otherResolver).breadCrumb("VALUE")
+        return value.encompasses(other.value, thisResolver, otherResolver).breadCrumb("VALUE")
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<KafkaMessagePattern> {

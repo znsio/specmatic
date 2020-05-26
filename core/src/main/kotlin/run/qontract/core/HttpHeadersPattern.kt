@@ -93,7 +93,7 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
 
         val valueResults =
             thisWithoutOptionality.keys.asSequence().map {
-                Pair(it, thisWithoutOptionality.getValue(it).encompasses2(resolvedHop(otherWithoutOptionality.getValue(it), otherResolver), thisResolver, otherResolver))
+                Pair(it, thisWithoutOptionality.getValue(it).encompasses(resolvedHop(otherWithoutOptionality.getValue(it), otherResolver), thisResolver, otherResolver))
             }
 
         val result = valueResults.firstOrNull { it.second is Result.Failure }

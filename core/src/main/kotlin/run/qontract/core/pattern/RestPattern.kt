@@ -14,17 +14,15 @@ data class RestPattern(override val pattern: Pattern) : Pattern {
     override fun generate(resolver: Resolver): JSONArrayValue = listPattern.generate(resolver)
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = pattern.newBasedOn(row, resolver).map { RestPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = listPattern.parse(value, resolver)
-    override fun encompasses(otherPattern: Pattern, resolver: Resolver): Boolean =
-            otherPattern is RestPattern && otherPattern.pattern.fitsWithin(pattern.patternSet(resolver), resolver)
 
     override fun patternSet(resolver: Resolver): List<Pattern> =
             pattern.patternSet(resolver).map { RestPattern(it) }
 
-    override fun encompasses2(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
             when (otherPattern) {
-                is ExactValuePattern -> otherPattern.fitsWithin2(listOf(this), otherResolver, thisResolver)
+                is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
                 !is RestPattern -> Result.Failure("Expected rest in string type, got ${otherPattern.typeName}")
-                else -> otherPattern.pattern.fitsWithin2(patternSet(thisResolver), otherResolver, thisResolver)
+                else -> otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
             }
 
     override val typeName: String = "the rest are ${pattern.typeName}"

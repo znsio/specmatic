@@ -62,22 +62,22 @@ internal class PatternInStringPatternTest {
         val pattern1 = PatternInStringPattern(NumberTypePattern)
         val pattern2 = PatternInStringPattern(NumberTypePattern)
 
-        assertThat(pattern1.encompasses2(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(pattern1.encompasses(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val pattern3 = PatternInStringPattern(BooleanPattern)
-        assertThat(pattern1.encompasses2(pattern3, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(pattern1.encompasses(pattern3, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
     fun `should encompass itself`() {
         val type = parsedPattern("""(number in string)""")
-        assertThat(type.encompasses2(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should not encompass another contained type`() {
         val numberInString = parsedPattern("""(number in string)""")
         val booleanInString = parsedPattern("""(boolean in string)""")
-        assertThat(numberInString.encompasses2(booleanInString, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(numberInString.encompasses(booleanInString, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

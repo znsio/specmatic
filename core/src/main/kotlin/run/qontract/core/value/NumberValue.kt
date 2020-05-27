@@ -10,10 +10,11 @@ data class NumberValue(val number: Number) : Value {
     override fun displayableValue(): String = toStringValue()
     override fun toStringValue() = number.toString()
     override fun displayableType(): String = "number"
-    override fun toPattern(): Pattern = ExactValuePattern(this)
-    override fun type(): Pattern {
-        return NumberTypePattern
-    }
+    override fun toExactType(): Pattern = ExactValuePattern(this)
+    override fun type(): Pattern = NumberTypePattern
+
+    override fun typeDeclaration(typeName: String): TypeDeclaration =
+            TypeDeclaration("(${displayableType()})")
 
     override fun toString() = number.toString()
 }

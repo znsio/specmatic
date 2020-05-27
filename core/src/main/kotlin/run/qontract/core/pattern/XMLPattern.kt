@@ -91,7 +91,7 @@ data class XMLPattern(val node: Node) : Pattern {
     private fun matchRepeatingNodes(pattern: Node, sample: Node, resolver: Resolver): Result {
         val sampleChildNodes = sample.childNodes
         val newPattern = pattern.cloneNode(true)
-        newPattern.nodeValue = withoutRepeatingToken(newPattern.nodeValue)
+        newPattern.nodeValue = withoutListToken(newPattern.nodeValue)
 
         return 0.until(sampleChildNodes.length).asSequence().map { index ->
             matchesNode(newPattern, sampleChildNodes.item(index), resolver)
@@ -144,7 +144,7 @@ data class XMLPattern(val node: Node) : Pattern {
         if (childNodes.length > 0 && isRepeatingPattern(childNodes.item(0).nodeValue)) {
             val repeatingPattern = childNodes.item(0)
             parentNode.removeChild(repeatingPattern)
-            val pattern = withoutRepeatingToken(repeatingPattern.nodeValue)
+            val pattern = withoutListToken(repeatingPattern.nodeValue)
             val random = Random()
             val count = random.nextInt(9) + 1
             for (i in 0 until count) {
@@ -230,7 +230,7 @@ data class XMLPattern(val node: Node) : Pattern {
 
     private fun getEncompassables(size: Int, resolver: Resolver): List<Pattern> = when {
         containsRepeatingPattern(node) -> {
-            val xmlPattern = resolver.getPattern(withoutRepeatingToken(node.firstChild.nodeValue))
+            val xmlPattern = resolver.getPattern(withoutListToken(node.firstChild.nodeValue))
             0.until(size).map { xmlPattern }
         }
         containsPattern(node) -> {
@@ -252,7 +252,7 @@ data class XMLPattern(val node: Node) : Pattern {
             node.hasChildNodes() && node.childNodes.length == 1 && node.firstChild.nodeName == "#text" && isPatternToken(node.firstChild.nodeValue)
 
     private fun getEncompassables(resolver: Resolver): List<Pattern> = when {
-        node.hasChildNodes() && node.childNodes.length == 1 && node.firstChild.nodeName == "#text" && isPatternToken(node.firstChild.nodeValue) -> listOf(resolver.getPattern(withoutRepeatingToken(node.firstChild.nodeValue)))
+        node.hasChildNodes() && node.childNodes.length == 1 && node.firstChild.nodeName == "#text" && isPatternToken(node.firstChild.nodeValue) -> listOf(resolver.getPattern(withoutListToken(node.firstChild.nodeValue)))
         containsTextNode(node) -> {
             listOf(parsedPattern(node.firstChild.nodeValue))
         }
@@ -313,7 +313,7 @@ data class XMLPattern(val node: Node) : Pattern {
                 } else {
                     when {
                         isRepeatingPattern(node.firstChild.nodeValue) ->
-                            putValuesIntoNode(nodeName, resolvedHop(resolver.getPattern(withoutRepeatingToken(node.firstChild.nodeValue)), resolver), node, resolver)
+                            putValuesIntoNode(nodeName, resolvedHop(resolver.getPattern(withoutListToken(node.firstChild.nodeValue)), resolver), node, resolver)
                         isPatternToken(node.firstChild.nodeValue) ->
                             putValueIntoNode(resolver.generate(nodeName, resolver.getPattern(node.firstChild.nodeValue)), node)
                     }

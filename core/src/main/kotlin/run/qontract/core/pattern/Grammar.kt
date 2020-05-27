@@ -81,7 +81,7 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
 fun withoutPatternDelimiters(patternValue: String) = patternValue.removeSurrounding("(", ")")
 fun withPatternDelimiters(name: String): String = "($name)"
 
-fun withoutRepeatingToken(patternValue: Any): String {
+fun withoutListToken(patternValue: Any): String {
     val patternString = (patternValue as String).trim()
     return "(" + withoutPatternDelimiters(patternString).removeSuffix("*") + ")"
 }
@@ -108,7 +108,7 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             }
             isNullablePattern(it) -> AnyPattern(listOf(NullPattern, parsedPattern(withoutNullToken(it))))
             isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
-            isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutRepeatingToken(it)))
+            isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutListToken(it)))
             it == "(number)" -> DeferredPattern(it, null)
             isBuiltInPattern(it) -> getBuiltInPattern(it)
             isPatternToken(it) -> DeferredPattern(it, key)

@@ -9,8 +9,10 @@ object NullValue : Value {
     override fun displayableValue(): String = "null"
     override fun toStringValue() = ""
     override fun displayableType(): String = "null"
-    override fun toPattern(): Pattern = NullPattern
+    override fun toExactType(): Pattern = NullPattern
     override fun type(): Pattern = NullPattern
+    override fun typeDeclaration(typeName: String): TypeDeclaration =
+            TypeDeclaration("(${displayableType()})")
 
     override fun toString() = ""
 }

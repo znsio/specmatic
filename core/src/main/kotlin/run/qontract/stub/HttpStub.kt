@@ -21,6 +21,7 @@ import kotlinx.coroutines.runBlocking
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
+import run.qontract.core.pattern.withoutOptionality
 import run.qontract.core.utilities.toMap
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.EmptyString
@@ -49,6 +50,14 @@ class HttpStub(private val behaviours: List<ContractBehaviour>, _httpStubs: List
             method(HttpMethod.Patch)
             header(HttpHeaders.Authorization)
             allowCredentials = true
+            allowNonSimpleContentTypes = true
+
+            behaviours.flatMap { behaviour ->
+                behaviour.scenarios.flatMap { scenario ->
+                    scenario.httpRequestPattern.headersPattern.pattern.keys.map { withoutOptionality(it) }
+                }
+            }.forEach { header(it) }
+
             anyHost()
         }
 

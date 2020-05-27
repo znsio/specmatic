@@ -9,7 +9,7 @@ sealed class MultiPartFormDataValue(open val name: String) {
 
 data class MultiPartContentValue(override val name: String, val content: Value, val boundary: String = "#####") : MultiPartFormDataValue(name) {
     override fun toPattern(): MultiPartFormDataPattern {
-        return MultiPartContentPattern(name, content.toPattern())
+        return MultiPartContentPattern(name, content.toExactType())
     }
 
     override fun toDisplayableValue(): String = """

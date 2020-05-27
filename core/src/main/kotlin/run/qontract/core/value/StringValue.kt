@@ -11,7 +11,7 @@ data class StringValue(val string: String = "") : Value {
     override fun displayableValue(): String = toStringValue().quote()
     override fun toStringValue() = string
     override fun displayableType(): String = "string"
-    override fun toPattern(): Pattern {
+    override fun toExactType(): Pattern {
         return when {
             isPatternToken() -> DeferredPattern(string)
             else -> ExactValuePattern(this)
@@ -19,6 +19,8 @@ data class StringValue(val string: String = "") : Value {
     }
 
     override fun type(): Pattern = StringPattern
+    override fun typeDeclaration(typeName: String): TypeDeclaration =
+            TypeDeclaration("(${displayableType()})")
 
     override fun toString() = string
 

@@ -8,7 +8,7 @@ import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
 
 class KafkaTest {
-    @Karate.Test
+//    @Karate.Test
     fun karateTest(): Karate {
         return Karate().relativeTo(javaClass).feature("classpath:mock.feature")
     }

@@ -1,6 +1,8 @@
 package run.qontract.core
 
 import io.ktor.http.HttpStatusCode
+import run.qontract.core.GherkinSection.Then
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.*
 
@@ -75,3 +77,12 @@ fun getHeaders(jsonObject: Map<String, Value>): MutableMap<String, String> =
         (jsonObject.getOrDefault("headers", JSONObjectValue()) as JSONObjectValue).jsonObject.mapValues {
             it.value.toString()
         }.toMutableMap()
+
+fun toGherkinClauses(response: HttpResponse): List<GherkinClause> {
+    return emptyList<GherkinClause>().let {
+        val status = if(response.status > 0) response.status else throw ContractException("Can't generate a contract without a response status")
+        it.plus(GherkinClause("status $status", Then))
+    }.plus(headersToGherkin(response.headers, "response-header", Then)).let {
+        it.plus(bodyToGherkinClauses("ResponseBody", "response-body", response.body, Then)?: it)
+    }
+}

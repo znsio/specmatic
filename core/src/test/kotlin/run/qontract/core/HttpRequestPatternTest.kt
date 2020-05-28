@@ -2,10 +2,8 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.pattern.Row
-import run.qontract.core.pattern.StringPattern
-import run.qontract.core.pattern.parsedPattern
-import run.qontract.core.pattern.stringToPattern
+import run.qontract.core.GherkinSection.*
+import run.qontract.core.pattern.*
 import java.net.URI
 import kotlin.test.assertEquals
 

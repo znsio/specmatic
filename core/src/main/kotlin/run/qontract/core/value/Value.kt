@@ -12,4 +12,3 @@ interface Value {
     fun type(): Pattern
     fun typeDeclaration(typeName: String): TypeDeclaration
 }
-

@@ -1,9 +1,10 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import run.qontract.core.GherkinSection.Then
 import run.qontract.core.pattern.*
+import run.qontract.core.value.Value
 
 internal class HttpResponsePatternTest {
     @Test

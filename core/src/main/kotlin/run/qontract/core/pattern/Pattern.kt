@@ -1,7 +1,9 @@
 package run.qontract.core.pattern
 
+import run.qontract.core.GherkinClause
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.value.TypeDeclaration
 import run.qontract.core.value.Value
 
 interface Pattern {

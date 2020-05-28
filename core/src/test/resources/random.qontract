@@ -4,4 +4,3 @@ Feature: Random Number API
     When GET /random
     Then status 200
     And response-body (number)
-

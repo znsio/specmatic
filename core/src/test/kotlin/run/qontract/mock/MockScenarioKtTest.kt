@@ -4,7 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.*
 import run.qontract.core.Result.Success
-import run.qontract.core.pattern.parsedValue
+import run.qontract.core.pattern.*
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.StringValue
 
@@ -203,4 +203,85 @@ internal class MockScenarioKtTest {
         assertThat(pattern.multiPartFormDataPattern).hasSize(1)
         assertThat(pattern.multiPartFormDataPattern.single().matches(MultiPartFileValue("employees", "@employees.csv", "text/csv", "gzip"), Resolver())).isInstanceOf(Success::class.java)
     }
+
+    @Test
+    fun `basic request-response to gherkin string`() {
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParams = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
+        val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
+
+        `convert to qontract and validate it against the original request`(request, response)
+    }
+
+    @Test
+    fun `request-response with headers to gherkin string`() {
+        val request = HttpRequest(method = "POST", path="/customer", headers = mapOf("X-Header1" to "value 1", "X-Header2" to "value 2"), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParams = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
+        val response = HttpResponse(status = 200, headers = mapOf("X-Required" to "this is a must", "X-Extra" to "something more"), body = parsedValue("""{"id": 10}"""))
+
+        `convert to qontract and validate it against the original request`(request, response)
+    }
+
+    @Test
+    fun `request-response with form fields to gherkin string`() {
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = mapOf("X-FormData1" to "some value", "X-FormData1" to "some value"), multiPartFormData = emptyList())
+        val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
+
+        `convert to qontract and validate it against the original request`(request, response)
+    }
+
+    @Test
+    fun `request-response with multipart form data content to gherkin string`() {
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartContentValue("name", StringValue("John Doe"))))
+        val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
+
+        `convert to qontract and validate it against the original request`(request, response)
+    }
+
+    @Test
+    fun `request-response with multipart form data file to gherkin string`() {
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartFileValue("customer_csv", "@customer.csv", "text/csv", "identity")))
+        val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
+
+        `convert to qontract and validate it against the original request`(request, response)
+    }
+
+    @Test
+    fun `converts mock json to gherkin`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "multipart-formdata": [
+      {
+        "name": "employees",
+        "filename": "@employees.csv",
+        "contentType": "text/csv",
+        "contentEncoding": "gzip"
+      }
+    ]
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
 }
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        `convert to qontract and validate it against the original request`(mock.request, mock.response)
+    }
+}
+
+private fun `convert to qontract and validate it against the original request`(request: HttpRequest, response: HttpResponse) {
+    try {
+        val behaviour = toBehaviour(request, response)
+        behaviour.matchingMockResponse(request, response)
+    } catch (e: Throwable) {
+        println(e.localizedMessage)
+        throw e
+    }
+}
+
+fun toBehaviour(request: HttpRequest, response: HttpResponse): ContractBehaviour =
+        ContractBehaviour(toGherkinString(MockScenario(request, response)))

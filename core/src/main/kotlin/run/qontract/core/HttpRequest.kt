@@ -2,6 +2,7 @@ package run.qontract.core
 
 import run.qontract.core.utilities.URIUtils.parseQuery
 import io.netty.buffer.ByteBuf
+import run.qontract.core.GherkinSection.When
 import run.qontract.core.pattern.*
 import run.qontract.core.value.*
 import java.io.UnsupportedEncodingException
@@ -123,7 +124,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
 
 fun s(json: Map<String, Value>, key: String): String = (json.getValue(key) as StringValue).string
 
-fun requestFromJSON(json: Map<String, Value>): HttpRequest =
+fun requestFromJSON(json: Map<String, Value>) =
     HttpRequest()
         .updateMethod(s(json, "method"))
         .updatePath(if ("path" in json) s(json, "path") else "/")
@@ -165,6 +166,46 @@ fun requestFromJSON(json: Map<String, Value>): HttpRequest =
             }
         }
 
-internal fun startLinesWith(str: String, startValue: String): String {
-    return str.split("\n").map { "$startValue$it" }.joinToString("\n")
+internal fun startLinesWith(str: String, startValue: String) =
+        str.split("\n").map { "$startValue$it" }.joinToString("\n")
+
+fun toGherkinClauses(request: HttpRequest): List<GherkinClause> {
+    return emptyList<GherkinClause>().let {
+        val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
+        val path = request.path ?: throw ContractException("Can't generate a qontract without the url.")
+
+        it.plus(GherkinClause("$method $path", When))
+    }.plus(headersToGherkin(request.headers, "request-header", When)).let {
+        it.plus(when {
+            request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData)
+            request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields)
+            else -> bodyToGherkinClauses("RequestBody", "request-body", request.body, When)?: it
+        })
+    }
 }
+
+fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>) =
+        multiPartFormData.flatMap { part ->
+            when(part) {
+                is MultiPartContentValue -> {
+                    val typeName = "FormData${part.name}"
+                    val typeDeclaration = part.content.typeDeclaration(typeName)
+
+                    toGherkinClauses(typeDeclaration.types).plus(GherkinClause("request-part ${part.name} ${typeDeclaration.typeValue}", When))
+                }
+                is MultiPartFileValue -> {
+                    val contentType = part.contentType
+                    val contentEncoding = contentType?.let { part.contentEncoding }
+
+                    listOf(GherkinClause("request-part ${part.name} ${part.filename} $contentType $contentEncoding".trim(), When))
+                }
+            }
+        }
+
+fun formFieldsToGherkin(formFields: Map<String, String>): List<GherkinClause> =
+        formFields.mapValues { parsedValue(it.value) }.entries.flatMap {
+            val typeName = "FormField${it.key.capitalize()}"
+            val typeDeclaration = it.value.typeDeclaration(typeName)
+
+            toGherkinClauses(typeDeclaration.types).plus(GherkinClause("form-field ${it.key} ${typeDeclaration.typeValue}", When))
+        }

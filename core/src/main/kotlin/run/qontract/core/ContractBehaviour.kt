@@ -74,8 +74,7 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
     }
 
     fun matches(request: HttpRequest, response: HttpResponse): Boolean {
-        return scenarios.filter { it.matches(request, serverState) is Result.Success }
-                .none { it.matches(response) is Result.Success }
+        return scenarios.firstOrNull { it.matches(request, serverState) is Result.Success }?.matches(response) is Result.Success
     }
 
     fun matchingMockResponse(request: HttpRequest, response: HttpResponse): Triple<Resolver, Scenario, HttpResponse> {
@@ -353,4 +352,12 @@ fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Result {
     catch(throwable: Throwable) {
         Result.Failure("Error: ${throwable.message}").updateScenario(scenario)
     }
+}
+
+fun toGherkinString(mock: MockScenario): String {
+    val requestClauses = toGherkinClauses(mock.request)
+    val responseClauses = toGherkinClauses(mock.response)
+    val allClauses = requestClauses.plus(responseClauses)
+
+    return toGherkinString(allClauses)
 }

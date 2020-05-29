@@ -39,7 +39,7 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
     return HttpStub(behaviours, httpExpectations, host, port, ::consoleLog)
 }
 
-fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<ContractBehaviour, List<MockScenario>>> {
+fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<ContractBehaviour, List<StubScenario>>> {
     val dataDirFileList = allDirsInTree(dataDirPaths)
 
     val behaviours = contractPaths.map { path ->
@@ -83,7 +83,7 @@ fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): 
     val mockedBehaviours = contractInfoFromMocks.map { it.first }
     val missingBehaviours = behaviours.map { it.second }.filter { it !in mockedBehaviours }
 
-    val contractInfo = contractInfoFromMocks.plus(missingBehaviours.map { Pair(it, emptyList<MockScenario>()) })
+    val contractInfo = contractInfoFromMocks.plus(missingBehaviours.map { Pair(it, emptyList<StubScenario>()) })
     return contractInfo
 }
 

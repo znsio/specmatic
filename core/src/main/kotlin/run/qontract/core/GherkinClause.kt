@@ -21,16 +21,18 @@ fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
     return patterns.entries.map { (key, pattern) -> toClause(key, pattern) }
 }
 
-fun headersToGherkin(headers: Map<String, String>, keyword: String, section: GherkinSection): List<GherkinClause> = headers.entries.map {
-    "$keyword ${it.key} (string)"
-}.map { GherkinClause(it, section) }
+fun headersToGherkin(headers: Map<String, String>, keyword: String, section: GherkinSection): List<GherkinClause> {
+    return headers.entries.map {
+        "$keyword ${it.key} (string)"
+    }.map { GherkinClause(it, section) }
+}
 
 fun toClause(key: String, type: Pattern): GherkinClause {
     val title = "type ${withoutPatternDelimiters(key)}"
 
     val table = when (type) {
         is TabularPattern -> patternMapToString(type.pattern)
-        else -> "| $key | ${type.pattern} |"
+        else -> "  | $key | ${type.pattern} |"
     }
 
     return GherkinClause("$title\n$table", GherkinSection.Given)
@@ -38,11 +40,25 @@ fun toClause(key: String, type: Pattern): GherkinClause {
 
 private fun patternMapToString(json: Map<String, Pattern>): String {
     return json.entries.joinToString("\n") {
-        "| ${it.key} | ${it.value.pattern} |"
+        "  | ${it.key} | ${it.value.pattern} |"
     }
 }
 
-fun toGherkinString(clauses: List<GherkinClause>): String {
+fun withFeatureClause(scenarios: String): String {
+    return """Feature: New Feature
+${scenarios.prependIndent("  ")}
+"""
+}
+
+fun withScenarioClause(scenarioName: String, scenarioData: String): String {
+    return """Scenario: $scenarioName
+${scenarioData.prependIndent("  ")}
+"""
+}
+
+fun toGherkinFeature(scenarioName: String, clauses: List<GherkinClause>): String = withFeatureClause(toGherkinScenario(scenarioName, clauses))
+
+fun toGherkinScenario(scenarioName: String, clauses: List<GherkinClause>): String {
     val groupedClauses = clauses.groupBy { it.section }
 
     val statements = listOf(GherkinSection.Given, GherkinSection.When, GherkinSection.Then).flatMap { section ->
@@ -51,11 +67,5 @@ fun toGherkinString(clauses: List<GherkinClause>): String {
         sectionClauses.zip(prefixes).map { (clause, prefix) -> GherkinStatement(clause.content, prefix) }
     }
 
-    val apiContract = statements.joinToString("\n") { it.toGherkinString() }
-
-    return """Feature: New Feature
-  Scenario: New Scenario
-${apiContract.prependIndent("    ")}
-"""
-
+    return withScenarioClause(scenarioName, statements.joinToString("\n") { it.toGherkinString() })
 }

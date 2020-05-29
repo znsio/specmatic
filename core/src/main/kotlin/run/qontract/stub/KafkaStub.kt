@@ -3,8 +3,7 @@ package run.qontract.stub
 import org.apache.kafka.clients.producer.ProducerRecord
 import run.qontract.core.*
 import run.qontract.core.value.KafkaMessage
-import run.qontract.core.value.StringValue
-import run.qontract.mock.MockScenario
+import run.qontract.mock.StubScenario
 import run.qontract.nullLog
 
 class KafkaStub(val behaviours: List<ContractBehaviour>, kafkaStubs: List<KafkaStubData> = emptyList(), kafkaPort: Int = 9093, log: (event: String) -> Unit = nullLog) {
@@ -47,7 +46,7 @@ fun producerRecord(kafkaMessage: KafkaMessage): ProducerRecord<String, String> {
     return if (key != null) ProducerRecord(kafkaMessage.topic, key.toStringValue(), kafkaMessage.value.toStringValue()) else ProducerRecord(kafkaMessage.topic, kafkaMessage.value.toStringValue())
 }
 
-fun contractInfoToKafkaExpectations(contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>>): List<KafkaStubData> {
+fun contractInfoToKafkaExpectations(contractInfo: List<Pair<ContractBehaviour, List<StubScenario>>>): List<KafkaStubData> {
     return contractInfo.flatMap { (_, mocks) ->
         mocks.mapNotNull { it.kafkaMessage }.fold(emptyList<KafkaStubData>()) { innerStubs, kafkaMessage ->
             innerStubs.plus(KafkaStubData(kafkaMessage))

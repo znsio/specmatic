@@ -16,7 +16,7 @@ import run.qontract.core.HttpResponse
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
-import run.qontract.mock.MockScenario
+import run.qontract.mock.StubScenario
 import java.net.URI
 
 internal class HttpStubTest {
@@ -35,7 +35,7 @@ Scenario: Square of a number
         val request = HttpRequest(method = "POST", path = "/number", body = NumberValue(10))
         val response = HttpResponse(status = 200, body = "100")
 
-        HttpStub(gherkin, listOf(MockScenario(request, response))).use { fake ->
+        HttpStub(gherkin, listOf(StubScenario(request, response))).use { fake ->
             val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/number", "10")
             assertThat(postResponse.body).isEqualTo("100")
         }
@@ -77,7 +77,7 @@ And response-body (string)
         """.trim()
 
         val request = HttpRequest("POST", "/date", emptyMap(), StringValue("(datetime)"))
-        val mock = MockScenario(request, HttpResponse(200, "done"))
+        val mock = StubScenario(request, HttpResponse(200, "done"))
 
         HttpStub(gherkin, listOf(mock)).use { fake ->
             val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/date", "2020-04-12T00:00:00")
@@ -98,7 +98,7 @@ And response-body (string)
         """.trim()
 
         val request = HttpRequest("POST", "/date", emptyMap(), parsedValue("""{"date": "(datetime)"}"""))
-        val mock = MockScenario(request, HttpResponse(200, "done"))
+        val mock = StubScenario(request, HttpResponse(200, "done"))
 
         HttpStub(gherkin, listOf(mock)).use { fake ->
             val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/date", """{"date": "2020-04-12T00:00:00"}""")
@@ -119,7 +119,7 @@ And response-body (string)
         """.trim()
 
         val request = HttpRequest("POST", "/date", emptyMap(), parsedValue("""{"date": "(datetime)"}"""))
-        val mock = MockScenario(request, HttpResponse(200, "done"))
+        val mock = StubScenario(request, HttpResponse(200, "done"))
 
         try {
             HttpStub(gherkin, listOf(mock)).use { fake ->

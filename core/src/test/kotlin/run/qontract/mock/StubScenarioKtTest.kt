@@ -8,7 +8,7 @@ import run.qontract.core.pattern.*
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.StringValue
 
-internal class MockScenarioKtTest {
+internal class StubScenarioKtTest {
     @Test
     fun `conversion of json string to mock should load form fields`() {
         val mockString = """
@@ -205,11 +205,11 @@ internal class MockScenarioKtTest {
     }
 
     @Test
-    fun `basic request-response to gherkin string`() {
+    fun `request-response with json body in request to gherkin string`() {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParams = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        `convert to qontract and validate it against the original request`(request, response)
+        convertAndTest(request, response)
     }
 
     @Test
@@ -217,7 +217,7 @@ internal class MockScenarioKtTest {
         val request = HttpRequest(method = "POST", path="/customer", headers = mapOf("X-Header1" to "value 1", "X-Header2" to "value 2"), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParams = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, headers = mapOf("X-Required" to "this is a must", "X-Extra" to "something more"), body = parsedValue("""{"id": 10}"""))
 
-        `convert to qontract and validate it against the original request`(request, response)
+        convertAndTest(request, response)
     }
 
     @Test
@@ -225,7 +225,7 @@ internal class MockScenarioKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = mapOf("X-FormData1" to "some value", "X-FormData1" to "some value"), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        `convert to qontract and validate it against the original request`(request, response)
+        convertAndTest(request, response)
     }
 
     @Test
@@ -233,7 +233,7 @@ internal class MockScenarioKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartContentValue("name", StringValue("John Doe"))))
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        `convert to qontract and validate it against the original request`(request, response)
+        convertAndTest(request, response)
     }
 
     @Test
@@ -241,7 +241,7 @@ internal class MockScenarioKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartFileValue("customer_csv", "@customer.csv", "text/csv", "identity")))
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        `convert to qontract and validate it against the original request`(request, response)
+        convertAndTest(request, response)
     }
 
     @Test
@@ -269,14 +269,15 @@ internal class MockScenarioKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        `convert to qontract and validate it against the original request`(mock.request, mock.response)
+        convertAndTest(mock.request, mock.response)
     }
 }
 
-private fun `convert to qontract and validate it against the original request`(request: HttpRequest, response: HttpResponse) {
+fun convertAndTest(request: HttpRequest, response: HttpResponse) {
     try {
-        val behaviour = toBehaviour(request, response)
-        behaviour.matchingMockResponse(request, response)
+        val cleanedUpResponse = dropContentAndCORSResponseHeaders(response)
+        val behaviour = toBehaviour(request, cleanedUpResponse)
+        behaviour.matchingMockResponse(request, cleanedUpResponse)
     } catch (e: Throwable) {
         println(e.localizedMessage)
         throw e
@@ -284,4 +285,4 @@ private fun `convert to qontract and validate it against the original request`(r
 }
 
 fun toBehaviour(request: HttpRequest, response: HttpResponse): ContractBehaviour =
-        ContractBehaviour(toGherkinString(MockScenario(request, response)))
+        ContractBehaviour(toGherkinFeature(NamedStub("New scenario", StubScenario(request, response))).also { println(it) })

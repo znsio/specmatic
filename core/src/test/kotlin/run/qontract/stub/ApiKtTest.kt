@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.*
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.*
-import run.qontract.mock.MockScenario
+import run.qontract.mock.StubScenario
 
 internal class ApiKtTest {
     @Test
@@ -25,8 +25,8 @@ Feature: Math API
         val request1 = HttpRequest("POST", "/square", emptyMap(), parsedValue("""{"number": 10}"""))
         val request2 = HttpRequest("POST", "/square", emptyMap(), parsedValue("""{"number": 10, "description": "10"}"""))
 
-        val mock1 = MockScenario(request1, HttpResponse.OK(1))
-        val mock2 = MockScenario(request2, HttpResponse.OK(2))
+        val mock1 = StubScenario(request1, HttpResponse.OK(1))
+        val mock2 = StubScenario(request2, HttpResponse.OK(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
         val response = stubResponse(request2, contractInfo)
 
@@ -90,7 +90,7 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", mapOf("X-Optional-Header" to "some value"), NumberValue(10))
-        val mock = MockScenario(request, HttpResponse.OK(10))
+        val mock = StubScenario(request, HttpResponse.OK(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
@@ -113,7 +113,7 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", emptyMap(), NumberValue(10))
-        val mock = MockScenario(request, HttpResponse.OK(10))
+        val mock = StubScenario(request, HttpResponse.OK(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
@@ -139,8 +139,8 @@ Feature: Math API
         val request1 = HttpRequest("POST", "/square", mapOf("X-Required" to "some value"), parsedValue("""10"""))
         val request2 = HttpRequest("POST", "/square", mapOf("X-Required" to "some value", "X-Optional" to "some other value"), parsedValue("""10"""))
 
-        val mock1 = MockScenario(request1, HttpResponse.OK(1))
-        val mock2 = MockScenario(request2, HttpResponse.OK(2))
+        val mock1 = StubScenario(request1, HttpResponse.OK(1))
+        val mock2 = StubScenario(request2, HttpResponse.OK(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
         val response = stubResponse(request2, contractInfo)
 
@@ -162,8 +162,8 @@ Feature: Math API
         val request1 = HttpRequest("GET", "/number", queryParams = mapOf("param1" to "some value"))
         val request2 = HttpRequest("GET", "/number", queryParams = mapOf("param1" to "some value", "param2" to "some other value"))
 
-        val mock1 = MockScenario(request1, HttpResponse.OK(1))
-        val mock2 = MockScenario(request2, HttpResponse.OK(2))
+        val mock1 = StubScenario(request1, HttpResponse.OK(1))
+        val mock2 = StubScenario(request2, HttpResponse.OK(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
         val response = stubResponse(request2, contractInfo)
 
@@ -187,8 +187,8 @@ Feature: Math API
         val mockRequest1 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to StringValue("(number)"))))
         val mockRequest2 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to StringValue("(null)"))))
 
-        val mock1 = MockScenario(mockRequest1, HttpResponse.OK(NumberValue(1)))
-        val mock2 = MockScenario(mockRequest2, HttpResponse.OK(NumberValue(2)))
+        val mock1 = StubScenario(mockRequest1, HttpResponse.OK(NumberValue(1)))
+        val mock2 = StubScenario(mockRequest2, HttpResponse.OK(NumberValue(2)))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
 
         val actualRequest1 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to NumberValue(10))))
@@ -221,8 +221,8 @@ Feature: Math API
         val mockRequest1 = HttpRequest("POST", "/square", body = StringValue("(number)"))
         val mockRequest2 = HttpRequest("POST", "/square", body = StringValue("(null)"))
 
-        val mock1 = MockScenario(mockRequest1, HttpResponse.OK(1))
-        val mock2 = MockScenario(mockRequest2, HttpResponse.OK(2))
+        val mock1 = StubScenario(mockRequest1, HttpResponse.OK(1))
+        val mock2 = StubScenario(mockRequest2, HttpResponse.OK(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
 
         val actualRequest1 = HttpRequest("POST", "/square", body = NumberValue(10))
@@ -253,7 +253,7 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartContentValue("number", NumberValue(10))))
-        val mock = MockScenario(request, HttpResponse.OK(10))
+        val mock = StubScenario(request, HttpResponse.OK(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
@@ -296,7 +296,7 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "@number.txt", "text/plain", null)))
-        val mock = MockScenario(request, HttpResponse.OK(10))
+        val mock = StubScenario(request, HttpResponse.OK(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
@@ -330,7 +330,7 @@ Feature: Math API
         return stubResponse(request, listOf(Pair(behaviour, emptyList())))
     }
 
-    private fun stubResponse(request: HttpRequest, contractInfo: List<Pair<ContractBehaviour, List<MockScenario>>>): HttpResponse {
+    private fun stubResponse(request: HttpRequest, contractInfo: List<Pair<ContractBehaviour, List<StubScenario>>>): HttpResponse {
         val expectations = contractInfoToExpectations(contractInfo)
         return stubResponse(request, contractInfo, expectations)
     }

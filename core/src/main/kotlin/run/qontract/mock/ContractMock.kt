@@ -56,7 +56,7 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
         }
     }
 
-    fun createMockScenario(mocked: MockScenario) {
+    fun createMockScenario(mocked: StubScenario) {
         val (resolver, _, mockedResponse) = contractBehaviour.matchingMockResponse(mocked.request, mocked.response)
         expectations.add(Expectation(mocked.request.toPattern(), resolver, mockedResponse))
     }
@@ -96,7 +96,7 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
     }
 }
 
-fun stringToMockScenario(text: Value): MockScenario {
+fun stringToMockScenario(text: Value): StubScenario {
     val mockSpec =
             jsonStringToValueMap(text.toStringValue()).also {
                 validateMock(it)

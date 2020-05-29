@@ -172,14 +172,26 @@ internal fun startLinesWith(str: String, startValue: String) =
 fun toGherkinClauses(request: HttpRequest): List<GherkinClause> {
     return emptyList<GherkinClause>().let {
         val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
-        val path = request.path ?: throw ContractException("Can't generate a qontract without the url.")
+
+        if(request.path == null)
+            throw ContractException("Can't generate a qontract without the url.")
+
+        val query = when {
+            request.queryParams.isNotEmpty() -> {
+                val query = request.queryParams.entries.joinToString("&") { (key, value) -> "$key=$value" }
+                "?$query"
+            }
+            else -> ""
+        }
+
+        val path = "${request.path}$query"
 
         it.plus(GherkinClause("$method $path", When))
     }.plus(headersToGherkin(request.headers, "request-header", When)).let {
         it.plus(when {
             request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData)
             request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields)
-            else -> bodyToGherkinClauses("RequestBody", "request-body", request.body, When)?: it
+            else -> bodyToGherkinClauses("RequestBody", "request-body", request.body, When)?: emptyList()
         })
     }
 }

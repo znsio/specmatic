@@ -32,11 +32,11 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             return MatchSuccess(parameters)
 
         if (multiPartFormDataPattern.isEmpty() && httpRequest.multiPartFormData.isNotEmpty()) {
-            throw ContractException("The contract expected no multipart data, but the request contained ${httpRequest.multiPartFormData.size} parts.", breadCrumb = "MULTIPART-FORMDATA")
+            return MatchFailure(Failure("The contract expected no multipart data, but the request contained ${httpRequest.multiPartFormData.size} parts.", breadCrumb = "MULTIPART-FORMDATA"))
         }
 
         if (multiPartFormDataPattern.size != httpRequest.multiPartFormData.size) {
-            throw ContractException("The contract expected ${multiPartFormDataPattern.size} parts, but the request contained ${httpRequest.multiPartFormData.size} parts.", breadCrumb = "MULTIPART-FORMDATA")
+            return MatchFailure(Failure("The contract expected ${multiPartFormDataPattern.size} parts, but the request contained ${httpRequest.multiPartFormData.size} parts.", breadCrumb = "MULTIPART-FORMDATA"))
         }
 
         val results = multiPartFormDataPattern.mapIndexed { index, type ->

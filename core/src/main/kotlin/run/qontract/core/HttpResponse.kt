@@ -78,11 +78,20 @@ fun getHeaders(jsonObject: Map<String, Value>): MutableMap<String, String> =
             it.value.toString()
         }.toMutableMap()
 
-fun toGherkinClauses(response: HttpResponse): List<GherkinClause> {
+val responseHeadersToExcludeFromConversion = listOf("Vary", "X-Qontract-Result")
+
+fun toGherkinClauses(response: HttpResponse): List<GherkinClause> = _toGherkinClauses(dropContentAndCORSResponseHeaders(response))
+
+private fun _toGherkinClauses(response: HttpResponse): List<GherkinClause> {
     return emptyList<GherkinClause>().let {
-        val status = if(response.status > 0) response.status else throw ContractException("Can't generate a contract without a response status")
+        val status = if (response.status > 0) response.status else throw ContractException("Can't generate a contract without a response status")
         it.plus(GherkinClause("status $status", Then))
-    }.plus(headersToGherkin(response.headers, "response-header", Then)).let {
-        it.plus(bodyToGherkinClauses("ResponseBody", "response-body", response.body, Then)?: it)
+    }.let { clauses ->
+        clauses.plus(headersToGherkin(response.headers, "response-header", Then))
+    }.let {
+        it.plus(bodyToGherkinClauses("ResponseBody", "response-body", response.body, Then) ?: it)
     }
 }
+
+fun dropContentAndCORSResponseHeaders(response: HttpResponse) =
+        response.copy(headers = response.headers.filterNot { it.key in responseHeadersToExcludeFromConversion || it.key.startsWith("Content-") || it.key.startsWith("Access-Control-") })

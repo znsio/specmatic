@@ -12,7 +12,7 @@ import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
-import run.qontract.mock.MockScenario
+import run.qontract.mock.StubScenario
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.test.TestExecutor
 import java.net.URI
@@ -124,8 +124,8 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
         return results.first { it is Result.Success }
     }
 
-    fun matchingMockResponse(mockScenario: MockScenario): Triple<Resolver, Scenario, HttpResponse> =
-            matchingMockResponse(mockScenario.request, mockScenario.response)
+    fun matchingMockResponse(stubScenario: StubScenario): Triple<Resolver, Scenario, HttpResponse> =
+            matchingMockResponse(stubScenario.request, stubScenario.response)
 
     fun clearServerState() {
         serverState = emptyMap()
@@ -354,10 +354,18 @@ fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Result {
     }
 }
 
-fun toGherkinString(mock: MockScenario): String {
-    val requestClauses = toGherkinClauses(mock.request)
-    val responseClauses = toGherkinClauses(mock.response)
-    val allClauses = requestClauses.plus(responseClauses)
+fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature(stub.name, stubToClauses(stub))
 
-    return toGherkinString(allClauses)
+private fun stubToClauses(namedStub: NamedStub): List<GherkinClause> {
+    val requestClauses = toGherkinClauses(namedStub.stub.request)
+    val responseClauses = toGherkinClauses(namedStub.stub.response)
+    return requestClauses.plus(responseClauses)
+}
+
+fun toGherkinFeature(stubs: List<NamedStub>): String {
+    val scenarioStrings = stubs.map { stub ->
+        toGherkinScenario(stub.name, stubToClauses(stub)).trim()
+    }
+
+    return withFeatureClause(scenarioStrings.joinToString("\n\n"))
 }

@@ -25,4 +25,28 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 
         return TypeDeclaration("($typeName)", mergedTypeMap)
     }
+
+    fun getString(key: String): String {
+        return (jsonObject.getValue(key) as StringValue).string
+    }
+
+    fun getBoolean(key: String): Boolean {
+        return (jsonObject.getValue(key) as BooleanValue).booleanValue
+    }
+
+    fun getInt(key: String): Int {
+        return (jsonObject.getValue(key) as NumberValue).number.toInt()
+    }
+
+    fun getJSONObject(key: String): Map<String, Value> {
+        return (jsonObject.getValue(key) as JSONObjectValue).jsonObject
+    }
+
+    fun getJSONObjectValue(key: String): JSONObjectValue {
+        return jsonObject.getValue(key) as JSONObjectValue
+    }
+
+    fun getJSONArray(key: String): List<Value> {
+        return (jsonObject.getValue(key) as JSONArrayValue).list
+    }
 }

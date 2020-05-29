@@ -6,6 +6,7 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.request.request
 import io.ktor.client.statement.readText
 import io.ktor.client.statement.request
+import io.ktor.client.utils.EmptyContent
 import io.ktor.http.*
 import io.ktor.http.content.TextContent
 import io.ktor.util.KtorExperimentalAPI
@@ -157,7 +158,6 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
                 throw Exception("API responded with ${ktorResponse.status}")
         }
     }
-
 }
 
 private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpRequest, qontractRequest: HttpRequest): HttpRequest {
@@ -166,6 +166,7 @@ private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpReq
             is FormDataContent -> Triple(EmptyString, qontractRequest.formFields, emptyList())
             is TextContent -> Triple(qontractRequest.body ?: EmptyString, emptyMap<String, String>(), emptyList<MultiPartFormDataValue>())
             is MultiPartFormDataContent -> Triple(EmptyString, emptyMap(), qontractRequest.multiPartFormData)
+            is EmptyContent -> Triple(EmptyString, emptyMap(), emptyList())
             else -> throw ContractException("Unknown type of body content sent in the request")
         }
 

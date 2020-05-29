@@ -20,7 +20,7 @@ import run.qontract.core.value.NullValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import run.qontract.mock.ContractMock
-import run.qontract.mock.MockScenario
+import run.qontract.mock.StubScenario
 import run.qontract.mock.NoMatchingScenario
 import java.net.URI
 import java.util.*
@@ -137,7 +137,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
             val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: 100, smses-left: 200}")
-            Assertions.assertThrows(NoMatchingScenario::class.java) { mock.createMockScenario(MockScenario(expectedRequest, expectedResponse)) }
+            Assertions.assertThrows(NoMatchingScenario::class.java) { mock.createMockScenario(StubScenario(expectedRequest, expectedResponse)) }
         }
     }
 
@@ -209,7 +209,7 @@ Scenario: JSON API to get account details with fact check
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -221,7 +221,7 @@ Scenario: JSON API to get account details with fact check
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/special_locations")
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -233,7 +233,7 @@ Scenario: JSON API to get account details with fact check
             val requestBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody(requestBody)
             val expectedResponse = HttpResponse.OK.let { it.copy(headers = it.headers.plus("Content-Type" to "application/json"))}
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -258,7 +258,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val expectedResponse = HttpResponse(200, "{\"cities\":[{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}] }")
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -266,7 +266,7 @@ Scenario: JSON API to get account details with fact check
     private fun validateAndRespond(contractGherkinString: String, httpRequest: HttpRequest, httpResponse: HttpResponse): ResponseEntity<String> {
         ContractMock.fromGherkin(contractGherkinString).use { mock ->
             mock.start()
-            mock.createMockScenario(MockScenario(httpRequest, httpResponse))
+            mock.createMockScenario(StubScenario(httpRequest, httpResponse))
             val restTemplate = RestTemplate()
             return restTemplate.exchange(URI.create(httpRequest.getURL("http://localhost:8080")), HttpMethod.GET, null, String::class.java)
         }
@@ -286,7 +286,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody("10")
             val expectedResponse = HttpResponse(200, "10")
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -303,7 +303,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NumberValue(10))
             val expectedResponse = HttpResponse.OK
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -320,7 +320,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NullValue)
             val expectedResponse = HttpResponse.OK
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -337,7 +337,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
             val expectedResponse = HttpResponse(200, "10")
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -354,7 +354,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
             val expectedResponse = HttpResponse(200, "")
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
         }
     }
 
@@ -371,7 +371,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").updateBody(JSONObjectValue(mapOf("one" to NumberValue(1), "two" to NumberValue(2))))
             val expectedResponse = HttpResponse.OK
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
             val restTemplate = RestTemplate()
             try {
                 val response = restTemplate.postForEntity<String>(URI.create("${mock.baseURL}/variables"), """{"one": 1, "two": 2}""")
@@ -395,7 +395,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/variables")
             val expectedResponse = HttpResponse(200, """{"one": 1, "two": 2}""")
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
             val restTemplate = RestTemplate()
             try {
                 val response = restTemplate.getForEntity<String>(URI.create("${mock.baseURL}/variables"))
@@ -428,7 +428,7 @@ Scenario: JSON API to get account details with fact check
             mock.start()
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").updateBody("""{"number": "10"}""")
             val expectedResponse = HttpResponse(200, """{"number": "20"}""")
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
             val restTemplate = RestTemplate()
             try {
                 val response = restTemplate.postForEntity<String>(URI.create("${mock.baseURL}/variables"), """{"number": "10"}""")
@@ -457,7 +457,7 @@ Scenario: JSON API to get account details with fact check
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").copy(formFields = mapOf("Data" to "10"))
 
             val expectedResponse = HttpResponse.OK
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
 
             try {
                 val headers = HttpHeaders()
@@ -492,7 +492,7 @@ Scenario: JSON API to get account details with fact check
             val expectedRequest = HttpRequest(method = "POST", path = "/variables", body = parsedValue("""{"name": "John Doe", "age": 10}"""))
 
             val expectedResponse = HttpResponse.OK
-            mock.createMockScenario(MockScenario(expectedRequest, expectedResponse))
+            mock.createMockScenario(StubScenario(expectedRequest, expectedResponse))
 
             try {
                 val headers = HttpHeaders()

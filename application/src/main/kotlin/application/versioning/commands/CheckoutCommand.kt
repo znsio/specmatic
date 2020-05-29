@@ -4,7 +4,7 @@ import run.qontract.core.versioning.ContractIdentifier
 import run.qontract.core.versioning.getRepoProvider
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
-import run.qontract.core.CONTRACT_EXTENSION
+import run.qontract.core.QONTRACT_EXTENSION
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 
@@ -35,5 +35,5 @@ class CheckoutCommand: Callable<Unit> {
 fun currentWorkingDir(): String = Paths.get("").toAbsolutePath().toString()
 
 fun newContractFile(contractIdentifier: ContractIdentifier): FileExists {
-    return FileExists("${currentWorkingDir()}/${contractIdentifier.name}.$CONTRACT_EXTENSION")
+    return FileExists("${currentWorkingDir()}/${contractIdentifier.name}.$QONTRACT_EXTENSION")
 }

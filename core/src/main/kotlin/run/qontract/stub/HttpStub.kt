@@ -34,8 +34,8 @@ import java.io.ByteArrayOutputStream
 import java.util.*
 
 class HttpStub(private val behaviours: List<ContractBehaviour>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
-    constructor(behaviour: ContractBehaviour, stubScenarios: List<StubScenario> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(behaviour), contractInfoToHttpExpectations(listOf(Pair(behaviour, stubScenarios))), host, port, log)
-    constructor(gherkinData: String, stubScenarios: List<StubScenario> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(ContractBehaviour(gherkinData), stubScenarios, host, port, log)
+    constructor(behaviour: ContractBehaviour, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(behaviour), contractInfoToHttpExpectations(listOf(Pair(behaviour, scenarioStubs))), host, port, log)
+    constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(ContractBehaviour(gherkinData), scenarioStubs, host, port, log)
 
     private var httpStubs = Vector<HttpStubData>(_httpStubs)
     val endPoint = "http://$host:$port"
@@ -120,7 +120,7 @@ class HttpStub(private val behaviours: List<ContractBehaviour>, _httpStubs: List
         createStub(mock)
     }
 
-    private fun createStub(stub: StubScenario) {
+    private fun createStub(stub: ScenarioStub) {
         if (stub.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
 
         val results = behaviours.asSequence().map { behaviour ->
@@ -268,7 +268,7 @@ fun stubResponse(httpRequest: HttpRequest, behaviours: List<ContractBehaviour>, 
     }
 }
 
-fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehaviour, List<StubScenario>>>, stubs: StubDataItems): HttpResponse {
+fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehaviour, List<ScenarioStub>>>, stubs: StubDataItems): HttpResponse {
     return try {
         when (val mock = stubs.http.find { (requestPattern, _, resolver) ->
             requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)) is Result.Success
@@ -293,7 +293,7 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehav
     }
 }
 
-fun contractInfoToExpectations(contractInfo: List<Pair<ContractBehaviour, List<StubScenario>>>): StubDataItems {
+fun contractInfoToExpectations(contractInfo: List<Pair<ContractBehaviour, List<ScenarioStub>>>): StubDataItems {
     return contractInfo.fold(StubDataItems()) { stubsAcc, (behaviour, mocks) ->
         val newStubs = mocks.fold(StubDataItems()) { stubs, mock ->
             if(mock.kafkaMessage != null) {
@@ -312,7 +312,7 @@ fun contractInfoToExpectations(contractInfo: List<Pair<ContractBehaviour, List<S
     }
 }
 
-fun contractInfoToHttpExpectations(contractInfo: List<Pair<ContractBehaviour, List<StubScenario>>>): List<HttpStubData> {
+fun contractInfoToHttpExpectations(contractInfo: List<Pair<ContractBehaviour, List<ScenarioStub>>>): List<HttpStubData> {
     return contractInfo.flatMap { (behaviour, mocks) ->
         mocks.filter { it.kafkaMessage == null }.map { mock ->
             val (resolver, scenario, httpResponse) = behaviour.matchingMockResponse(mock)
@@ -321,7 +321,7 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<ContractBehaviour, Li
     }
 }
 
-private fun httpMockToStub(stub: StubScenario, scenario: Scenario, httpResponse: HttpResponse, resolver: Resolver): HttpStubData {
+private fun httpMockToStub(stub: ScenarioStub, scenario: Scenario, httpResponse: HttpResponse, resolver: Resolver): HttpStubData {
     val requestPattern = stub.request.toPattern()
     val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
 

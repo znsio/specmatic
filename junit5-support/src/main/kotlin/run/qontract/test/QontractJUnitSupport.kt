@@ -150,7 +150,7 @@ open class QontractJUnitSupport {
     private fun checkBackwardCompatibilityInPath(path: String) {
         val contractFile = File(path).absoluteFile
         val (majorVersion, minorVersion) = try {
-            if (!path.endsWith(".$CONTRACT_EXTENSION"))
+            if (!path.endsWith(".$QONTRACT_EXTENSION"))
                 throw ContractException("The path $path does not end with .qontract. Please make sure that the name is of the format <majorVesion>.<minorVersion if any>.qontract, for versioning to work properly.")
 
             val versionTokens = contractFile.nameWithoutExtension.split(".").map { it.toInt() }

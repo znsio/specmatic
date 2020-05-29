@@ -8,79 +8,142 @@ import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
-import run.qontract.mock.StubScenario
+import run.qontract.mock.ScenarioStub
 import run.qontract.nullLog
 import run.qontract.test.HttpClient
 import java.net.URI
 import java.net.URL
 
 fun postmanCollectionToGherkin(postmanContent: String): Pair<String, List<NamedStub>> {
-    val items = postmanItems(postmanContent)
+    val stubs = stubsFromPostmanItems(postmanContent)
 
-    val stubs = items.map { item ->
-        val response = HttpClient(item.baseURL, nullLog).execute(item.request)
-        NamedStub(item.name ?: "New scenario", StubScenario(item.request, response))
+    return when {
+        stubs.isNotEmpty() -> {
+            val gherkinString = toGherkinFeature(stubs)
+            Pair(gherkinString, stubs)
+        }
+        else -> Pair("", emptyList())
     }
-
-    val gherkinString = toGherkinFeature(stubs)
-    return Pair(gherkinString, stubs)
 }
 
-private fun postmanItems(postmanContent: String): List<PostmanItem> {
+private fun stubsFromPostmanItems(postmanContent: String): List<NamedStub> {
     val json = jsonStringToValueMap(postmanContent)
     val items = json.getValue("item") as JSONArrayValue
 
-    return items.list.map { it as JSONObjectValue }.map { item ->
+    return items.list.map { it as JSONObjectValue }.mapIndexed { index, item ->
         val request = item.getJSONObjectValue("request")
-        val method = request.getString("method")
-        val url = toURL(request.jsonObject.getValue("url"))
+        val scenarioName = if (item.jsonObject.contains("name")) item.getString("name") else "New scenario"
 
-        val baseURL = "${url.protocol}://${url.authority}"
-        val query: Map<String, String> = url.query?.split("&")?.map { it.split("=").let { parts -> Pair(parts[0], parts[1]) } }?.fold(emptyMap()) { acc, entry -> acc.plus(entry) }
-                ?: emptyMap()
-        val headers: Map<String, String> = request.getJSONArray("header").map { it as JSONObjectValue }.fold(emptyMap()) { headers, header ->
-            headers.plus(Pair(header.getString("name"), header.getString("value")))
+        try {
+            val responses = item.getJSONArray("response")
+            val namedStubsFromResponses = namedStubsFromPostmanResponses(responses)
+
+            val (baseURL, httpRequest) = postmanItemRequest(request)
+
+            val baseNamedStub = try {
+                val response = HttpClient(baseURL, nullLog).execute(httpRequest)
+                NamedStub(scenarioName, ScenarioStub(httpRequest, response))
+            } catch (e: Throwable) {
+                println("Failed to generate a response for the Postman request item[$index] \"${scenarioName}\". Couldn't reach the server because of an exception: ${e.localizedMessage}")
+                null
+            }
+
+            listOf(baseNamedStub).plus(namedStubsFromResponses).filterNotNull()
+        } catch (e: Throwable) {
+            println("Exception thrown when parsing item[$index]. ${e.localizedMessage}")
+            emptyList<NamedStub>()
         }
+    }.flatten()
+}
 
-        val scenarioName = if(item.jsonObject.contains("name")) item.getString("name") else "New scenario"
+private fun namedStubsFromPostmanResponses(responses: List<Value>): List<NamedStub> {
+    return responses.map {
+        val responseItem = it as JSONObjectValue
 
-        val (body, formFields, formData) = when {
-            request.jsonObject.contains("body") -> when (val mode = request.getJSONObjectValue("body").getString("mode")) {
-                "raw" -> Triple(parsedValue(request.getJSONObjectValue("body").getString(mode)), emptyMap<String, String>(), emptyList<MultiPartFormDataValue>())
-                "urlencoded" -> {
-                    val rawFormFields = request.getJSONObjectValue("body").getJSONArray(mode)
-                    val formFields = rawFormFields.map {
-                        val formField = it as JSONObjectValue
-                        val name = formField.getString("key")
-                        val value = formField.getString("value")
+        val scenarioName = if (responseItem.jsonObject.contains("name")) responseItem.getString("name") else "New scenario"
+        val innerRequest = responseItem.getJSONObjectValue("originalRequest")
 
-                        Pair(name, value)
-                    }.fold(emptyMap<String, String>()) { acc, entry -> acc.plus(entry) }
+        val innerHttpRequest = postmanItemRequest(innerRequest)
+        val innerHttpResponse: HttpResponse = postmanItemResponse(responseItem)
 
-                    Triple(EmptyString, formFields, emptyList())
+        NamedStub(scenarioName, ScenarioStub(innerHttpRequest.second, innerHttpResponse))
+    }
+}
+
+fun postmanItemResponse(responseItem: JSONObjectValue): HttpResponse {
+    val status = responseItem.getInt("code")
+
+    val headers: Map<String, String> = when {
+        responseItem.jsonObject.containsKey("header") -> {
+            val rawHeaders = responseItem.jsonObject.getValue("header") as JSONArrayValue
+            emptyMap<String, String>().plus(rawHeaders.list.map {
+                val rawHeader = it as JSONObjectValue
+
+                val name = rawHeader.getString("key")
+                val value = rawHeader.getString("value")
+
+                Pair(name, value)
+            })
+        }
+        else -> emptyMap()
+    }
+
+    val body: Value = when {
+        responseItem.jsonObject.containsKey("body") -> parsedValue(responseItem.jsonObject.getValue("body").toString())
+        else -> EmptyString
+    }
+
+    return HttpResponse(status, headers, body)
+}
+
+private fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpRequest> {
+    val method = request.getString("method")
+    val url = toURL(request.jsonObject.getValue("url"))
+
+    val baseURL = "${url.protocol}://${url.authority}"
+    val query: Map<String, String> = url.query?.split("&")?.map { it.split("=").let { parts -> Pair(parts[0], parts[1]) } }?.fold(emptyMap()) { acc, entry -> acc.plus(entry) }
+            ?: emptyMap()
+    val headers: Map<String, String> = request.getJSONArray("header").map { it as JSONObjectValue }.fold(emptyMap()) { headers, header ->
+        headers.plus(Pair(header.getString("name"), header.getString("value")))
+    }
+
+    val (body, formFields, formData) = when {
+        request.jsonObject.contains("body") -> when (val mode = request.getJSONObjectValue("body").getString("mode")) {
+            "raw" -> Triple(parsedValue(request.getJSONObjectValue("body").getString(mode)), emptyMap<String, String>(), emptyList<MultiPartFormDataValue>())
+            "urlencoded" -> {
+                val rawFormFields = request.getJSONObjectValue("body").getJSONArray(mode)
+                val formFields = rawFormFields.map {
+                    val formField = it as JSONObjectValue
+                    val name = formField.getString("key")
+                    val value = formField.getString("value")
+
+                    Pair(name, value)
+                }.fold(emptyMap<String, String>()) { acc, entry -> acc.plus(entry) }
+
+                Triple(EmptyString, formFields, emptyList())
+            }
+            "formdata" -> {
+                val rawFormData = request.getJSONObjectValue("body").getJSONArray(mode)
+                val formData = rawFormData.map {
+                    val formField = it as JSONObjectValue
+                    val name = formField.getString("key")
+                    val value = formField.getString("value")
+
+                    MultiPartContentValue(name, parsedValue(value))
                 }
-                "formdata" -> {
-                    val rawFormData = request.getJSONObjectValue("body").getJSONArray(mode)
-                    val formData = rawFormData.map {
-                        val formField = it as JSONObjectValue
-                        val name = formField.getString("key")
-                        val value = formField.getString("value")
 
-                        MultiPartContentValue(name, parsedValue(value))
-                    }
-
-                    Triple(EmptyString, emptyMap(), formData)
-                }
-                "file" -> {
-                    throw ContractException("File mode is NOT supported yet.")
-                }
-                else -> Triple(EmptyString, emptyMap(), emptyList())
+                Triple(EmptyString, emptyMap(), formData)
+            }
+            "file" -> {
+                throw ContractException("File mode is NOT supported yet.")
             }
             else -> Triple(EmptyString, emptyMap(), emptyList())
         }
-
-        PostmanItem(scenarioName, baseURL, HttpRequest(method, url.path, headers, body, query, formFields, formData))
+        else -> Triple(EmptyString, emptyMap(), emptyList())
     }
+
+    val httpRequest = HttpRequest(method, url.path, headers, body, query, formFields, formData)
+    return Pair(baseURL, httpRequest)
 }
 
 private fun toURL(urlData: Value): URL {

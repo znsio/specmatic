@@ -7,7 +7,7 @@ import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
-data class StubScenario(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null) {
+data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null) {
     @Throws(MockException::class)
     fun toJSON(): MutableMap<String, Any> {
         val mockInteraction = mutableMapOf<String, Any>()
@@ -34,14 +34,14 @@ fun validateMock(mockSpec: Map<String, Any?>) {
     }
 }
 
-fun mockFromJSON(mockSpec: Map<String, Value>): StubScenario {
+fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     return when {
-        mockSpec.contains(MOCK_KAFKA_MESSAGE) -> StubScenario(kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, mockSpec)))
+        mockSpec.contains(MOCK_KAFKA_MESSAGE) -> ScenarioStub(kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, mockSpec)))
         else -> {
             val mockRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
             val mockResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
 
-            StubScenario(request = mockRequest, response = mockResponse)
+            ScenarioStub(request = mockRequest, response = mockResponse)
         }
     }
 }

@@ -12,7 +12,7 @@ import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
-import run.qontract.mock.StubScenario
+import run.qontract.mock.ScenarioStub
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.test.TestExecutor
 import java.net.URI
@@ -124,8 +124,8 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
         return results.first { it is Result.Success }
     }
 
-    fun matchingMockResponse(stubScenario: StubScenario): Triple<Resolver, Scenario, HttpResponse> =
-            matchingMockResponse(stubScenario.request, stubScenario.response)
+    fun matchingMockResponse(scenarioStub: ScenarioStub): Triple<Resolver, Scenario, HttpResponse> =
+            matchingMockResponse(scenarioStub.request, scenarioStub.response)
 
     fun clearServerState() {
         serverState = emptyMap()

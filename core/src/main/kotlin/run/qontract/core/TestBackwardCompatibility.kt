@@ -40,9 +40,9 @@ object NoContractsFound : CompatibilityResult()
 
 fun testBackwardCompatibilityInDirectory(directory: File, majorVersion: Int, minorVersion: Int?): CompatibilityResult {
     val files = (directory.listFiles()?.toList() ?: emptyList()).asSequence().filterNotNull().filter {
-        it.name.startsWith("$majorVersion.") && it.name.endsWith(".$CONTRACT_EXTENSION")
+        it.name.startsWith("$majorVersion.") && it.name.endsWith(".$QONTRACT_EXTENSION")
     }.map {
-        val pieces = it.name.removeSuffix(".$CONTRACT_EXTENSION").split(".").filter { it.isNotBlank() }.map { it.toInt() }
+        val pieces = it.name.removeSuffix(".$QONTRACT_EXTENSION").split(".").filter { it.isNotBlank() }.map { it.toInt() }
         Triple(it, pieces.first(), pieces.getOrElse(1) { 0 })
     }.sortedWith(compareBy({it.second}, {it.third}) ).filter { (_, _, fileMinorVersion) ->
         minorVersion == null || fileMinorVersion <= minorVersion

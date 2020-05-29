@@ -5,7 +5,7 @@ import run.qontract.core.versioning.PointerInfo
 import run.qontract.core.versioning.findLatestVersion
 import run.qontract.core.versioning.getRepoProvider
 import picocli.CommandLine
-import run.qontract.core.CONTRACT_EXTENSION
+import run.qontract.core.QONTRACT_EXTENSION
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -15,7 +15,7 @@ class IncrementCommand: Callable<Unit> {
     var contractPath: String = ""
 
     override fun call() {
-        val name = File(contractPath).name.removeSuffix(".$CONTRACT_EXTENSION")
+        val name = File(contractPath).name.removeSuffix(".$QONTRACT_EXTENSION")
         val version = findLatestVersion(name)
 
         if(version == null) {

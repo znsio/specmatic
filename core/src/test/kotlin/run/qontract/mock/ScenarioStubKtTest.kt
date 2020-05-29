@@ -8,7 +8,7 @@ import run.qontract.core.pattern.*
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.StringValue
 
-internal class StubScenarioKtTest {
+internal class ScenarioStubKtTest {
     @Test
     fun `conversion of json string to mock should load form fields`() {
         val mockString = """
@@ -285,4 +285,4 @@ fun convertAndTest(request: HttpRequest, response: HttpResponse) {
 }
 
 fun toBehaviour(request: HttpRequest, response: HttpResponse): ContractBehaviour =
-        ContractBehaviour(toGherkinFeature(NamedStub("New scenario", StubScenario(request, response))).also { println(it) })
+        ContractBehaviour(toGherkinFeature(NamedStub("New scenario", ScenarioStub(request, response))).also { println(it) })

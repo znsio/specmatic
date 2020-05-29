@@ -68,5 +68,5 @@ fun identifierToContractGitFile(repoName: String, identifier: ContractIdentifier
             .plus(identifier.version.toString())
             .joinToString(File.separator)
 
-    return "$fragment.$CONTRACT_EXTENSION"
+    return "$fragment.$QONTRACT_EXTENSION"
 }

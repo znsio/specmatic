@@ -29,7 +29,7 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
 }
 
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
-    File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
+    File(dirContainingContracts).listFiles()?.filter { it.extension == QONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
     val contractInfo = loadContractStubs(contractPaths, dataDirPaths)
@@ -39,7 +39,7 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
     return HttpStub(behaviours, httpExpectations, host, port, ::consoleLog)
 }
 
-fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<ContractBehaviour, List<StubScenario>>> {
+fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<ContractBehaviour, List<ScenarioStub>>> {
     val dataDirFileList = allDirsInTree(dataDirPaths)
 
     val behaviours = contractPaths.map { path ->
@@ -83,7 +83,7 @@ fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): 
     val mockedBehaviours = contractInfoFromMocks.map { it.first }
     val missingBehaviours = behaviours.map { it.second }.filter { it !in mockedBehaviours }
 
-    val contractInfo = contractInfoFromMocks.plus(missingBehaviours.map { Pair(it, emptyList<StubScenario>()) })
+    val contractInfo = contractInfoFromMocks.plus(missingBehaviours.map { Pair(it, emptyList<ScenarioStub>()) })
     return contractInfo
 }
 

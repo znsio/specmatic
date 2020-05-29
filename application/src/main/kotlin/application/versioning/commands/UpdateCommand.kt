@@ -3,7 +3,7 @@ package application.versioning.commands
 import run.qontract.core.versioning.ContractIdentifier
 import run.qontract.core.versioning.getRepoProvider
 import picocli.CommandLine
-import run.qontract.core.CONTRACT_EXTENSION
+import run.qontract.core.QONTRACT_EXTENSION
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -16,7 +16,7 @@ class UpdateCommand: Callable<Unit> {
     var version: Int = 0
 
     override fun call() {
-        val identifier = ContractIdentifier(File(contractPath).name.removeSuffix(".$CONTRACT_EXTENSION"), version)
+        val identifier = ContractIdentifier(File(contractPath).name.removeSuffix(".$QONTRACT_EXTENSION"), version)
         val contractFile = File(contractPath)
 
         if(!identifier.getCacheDescriptorFile().exists()) {

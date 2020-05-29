@@ -1,5 +1,5 @@
 package run.qontract.core
 
-import run.qontract.mock.StubScenario
+import run.qontract.mock.ScenarioStub
 
-data class NamedStub(val name: String, val stub: StubScenario)
+data class NamedStub(val name: String, val stub: ScenarioStub)

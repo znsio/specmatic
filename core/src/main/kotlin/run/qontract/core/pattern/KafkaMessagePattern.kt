@@ -11,13 +11,14 @@ data class KafkaMessagePattern(val topic: String = "", val key: Pattern = NoCont
     fun matches(message: KafkaMessage, resolver: Resolver): Result {
         return attempt("KAFKA-MESSAGE") { _matches(message, resolver).breadCrumb("KAFKA-MESSAGE") }
     }
+
     fun _matches(message: KafkaMessage, resolver: Resolver): Result {
         if(message.topic != topic)
             return Result.Failure("Expected topic $topic, got $message.topic").breadCrumb("TOPIC")
 
         try {
             val parsedKey = when (message.key) {
-                is StringValue -> key.parse(message.key.string, resolver)
+                is StringValue -> try { key.parse(message.key.string, resolver) } catch(e: ContractException) { return e.failure().breadCrumb("KEY") }
                 else -> message.key
             }
 
@@ -26,7 +27,7 @@ data class KafkaMessagePattern(val topic: String = "", val key: Pattern = NoCont
                 return keyMatch.breadCrumb("KEY")
 
             val parsedValue = when (message.value) {
-                is StringValue -> key.parse(message.value.string, resolver)
+                is StringValue -> try { value.parse(message.value.string, resolver) } catch(e: ContractException) { return e.failure().breadCrumb("VALUE")}
                 else -> message.value
             }
 

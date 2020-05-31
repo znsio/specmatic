@@ -14,7 +14,7 @@ import run.qontract.core.value.*
 import java.util.*
 import java.util.stream.Stream
 
-class ContractBehaviourTest {
+class FeatureTest {
     @DisplayName("Single Feature Contract")
     @ParameterizedTest
     @MethodSource("singleFeatureContractSource")

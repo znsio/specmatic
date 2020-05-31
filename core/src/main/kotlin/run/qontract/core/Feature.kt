@@ -5,13 +5,12 @@ import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.Messages.GherkinDocument
+import run.qontract.core.GherkinSection.`*`
 import run.qontract.core.pattern.*
 import run.qontract.core.pattern.Examples.Companion.examplesFrom
+import run.qontract.core.toGherkinClauses
 import run.qontract.core.utilities.jsonStringToValueMap
-import run.qontract.core.value.KafkaMessage
-import run.qontract.core.value.StringValue
-import run.qontract.core.value.True
-import run.qontract.core.value.Value
+import run.qontract.core.value.*
 import run.qontract.mock.ScenarioStub
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.test.TestExecutor
@@ -121,7 +120,7 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
             it.matchesMock(kafkaMessage)
         }
 
-        return results.first { it is Result.Success }
+        return results.find { it is Result.Success } ?: results.firstOrNull() ?: Result.Failure("No scenarios found, couldn't check the message")
     }
 
     fun matchingStubResponse(scenarioStub: ScenarioStub): Triple<Resolver, Scenario, HttpResponse> =
@@ -357,9 +356,14 @@ fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Result {
 fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature(stub.name, stubToClauses(stub))
 
 private fun stubToClauses(namedStub: NamedStub): List<GherkinClause> {
-    val requestClauses = toGherkinClauses(namedStub.stub.request)
-    val responseClauses = toGherkinClauses(namedStub.stub.response)
-    return requestClauses.plus(responseClauses)
+    return when (namedStub.stub.kafkaMessage) {
+        null -> {
+            val requestClauses = toGherkinClauses(namedStub.stub.request)
+            val responseClauses = toGherkinClauses(namedStub.stub.response)
+            requestClauses.plus(responseClauses)
+        }
+        else -> toGherkinClauses(namedStub.stub.kafkaMessage)
+    }
 }
 
 fun toGherkinFeature(stubs: List<NamedStub>): String {

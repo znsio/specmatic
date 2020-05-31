@@ -2,12 +2,13 @@ package run.qontract.core
 
 import run.qontract.conversions.guessType
 import run.qontract.core.pattern.*
+import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.Value
 
 data class GherkinClause(val content: String, val section: GherkinSection)
 
 enum class GherkinSection(val prefix: String) {
-    Given("Given"), When("When"), Then("Then")
+    Given("Given"), When("When"), Then("Then"), `*`("*")
 }
 
 fun bodyToGherkinClauses(typeName: String, qontractKeyword: String, body: Value?, section: GherkinSection): List<GherkinClause>? =
@@ -62,7 +63,7 @@ fun toGherkinFeature(scenarioName: String, clauses: List<GherkinClause>): String
 fun toGherkinScenario(scenarioName: String, clauses: List<GherkinClause>): String {
     val groupedClauses = clauses.groupBy { it.section }
 
-    val statements = listOf(GherkinSection.Given, GherkinSection.When, GherkinSection.Then).flatMap { section ->
+    val statements = listOf(GherkinSection.Given, GherkinSection.When, GherkinSection.Then, GherkinSection.`*`).flatMap { section ->
         val sectionClauses = groupedClauses[section] ?: emptyList()
         val prefixes = listOf(section.prefix).plus(1.until(sectionClauses.size).map { "And" })
         sectionClauses.zip(prefixes).map { (clause, prefix) -> GherkinStatement(clause.content, prefix) }

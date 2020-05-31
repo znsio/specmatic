@@ -29,7 +29,14 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         pathPattern.zip(pathParts).forEach { (urlPathPattern, token) ->
             try {
-                val parsedValue = urlPathPattern.pattern.parse(token, resolver)
+                val parsedValue = try {
+                    urlPathPattern.pattern.parse(token, resolver)
+                } catch (e: Throwable) {
+                    if(isPatternToken(token) && token.contains(":"))
+                        StringValue(withPatternDelimiters(withoutPatternDelimiters(token).split(":".toRegex(), 2)[1]))
+                    else
+                        StringValue(token)
+                }
                 when (val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)) {
                     is Result.Failure -> return when (urlPathPattern.key) {
                         null -> result.breadCrumb("PATH ($uri)")
@@ -142,6 +149,8 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         return url.toString()
     }
 }
+
+internal fun toURLPattern(url: String): URLMatcher = toURLPattern(URI.create(url))
 
 internal fun toURLPattern(urlPattern: URI): URLMatcher {
     val path = urlPattern.path

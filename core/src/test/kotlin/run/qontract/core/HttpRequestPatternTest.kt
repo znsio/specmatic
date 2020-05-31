@@ -3,6 +3,7 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.*
+import run.qontract.core.value.StringValue
 import java.net.URI
 import kotlin.test.assertEquals
 
@@ -95,10 +96,34 @@ internal class HttpRequestPatternTest {
     }
 
     @Test
-    fun `headers should match a pattern value only when resolver has mock matching on`() {
-        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern))
-        assertThat(headersPattern.matches(mapOf("X-Data" to "10"), Resolver())).isInstanceOf(Result.Success::class.java)
-        assertThat(headersPattern.matches(mapOf("X-Data" to "(number)"), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
-        assertThat(headersPattern.matches(mapOf("X-Data" to "(number)"), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
+    fun `number bodies should match numerical strings`() {
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLPattern("/"), body = NumberPattern)
+        val request = HttpRequest("GET", path = "/", body = StringValue("10"))
+
+        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `boolean bodies should match boolean strings`() {
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLPattern("/"), body = BooleanPattern)
+        val request = HttpRequest("GET", path = "/", body = StringValue("true"))
+
+        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `boolean bodies should not match non-boolean strings`() {
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLPattern("/"), body = BooleanPattern)
+        val request = HttpRequest("GET", path = "/", body = StringValue("10"))
+
+        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `integer bodies should not match non-integer strings`() {
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLPattern("/"), body = NumberPattern)
+        val request = HttpRequest("GET", path = "/", body = StringValue("not a number"))
+
+        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

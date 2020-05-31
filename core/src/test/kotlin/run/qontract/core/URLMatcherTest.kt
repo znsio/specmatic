@@ -173,10 +173,34 @@ internal class URLMatcherTest {
     }
 
     @Test
-    fun `should match a pattern only when resolver has mock matching on`() {
+    fun `should match a number in a query only when resolver has mock matching on`() {
         val matcher = toURLPattern(URI("/pets?id=(number)"))
         assertThat(matcher.matches(URI.create("/pets"), mapOf("id" to "10"), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets"), mapOf("id" to "(number)"), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets"), mapOf("id" to "(number)"), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should match a boolean in a query only when resolver has mock matching on`() {
+        val matcher = toURLPattern(URI("/pets?available=(boolean)"))
+        assertThat(matcher.matches(URI.create("/pets"), mapOf("available" to "true"), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(matcher.matches(URI.create("/pets"), mapOf("available" to "(boolean)"), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
+        assertThat(matcher.matches(URI.create("/pets"), mapOf("available" to "(boolean)"), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should match a number in a path only when resolver has mock matching on`() {
+        val matcher = toURLPattern(URI("/pets/(id:number)"))
+        assertThat(matcher.matches(URI.create("/pets/10"), emptyMap(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(matcher.matches(URI.create("/pets/(id:number)"), emptyMap(), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
+        assertThat(matcher.matches(URI.create("/pets/(id:number)"), emptyMap(), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should match a boolean in a path only when resolver has mock matching on`() {
+        val matcher = toURLPattern(URI("/pets/(status:boolean)"))
+        assertThat(matcher.matches(URI.create("/pets/true"), emptyMap(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(matcher.matches(URI.create("/pets/(status:boolean)"), emptyMap(), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
+        assertThat(matcher.matches(URI.create("/pets/(status:boolean)"), emptyMap(), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
     }
 }

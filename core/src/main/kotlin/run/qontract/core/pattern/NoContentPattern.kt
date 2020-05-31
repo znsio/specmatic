@@ -26,13 +26,13 @@ object NoContentPattern : Pattern {
     override fun parse(value: String, resolver: Resolver): Value {
         return when {
             value.isEmpty() -> EmptyString
-            else -> throw ContractException("""Parsing to $javaClass, but "$value" is not empty""")
+            else -> throw ContractException("""No data was expected, but got "$value" instead""")
         }
     }
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         if(otherPattern is NoContentPattern) return Result.Success()
-        return Result.Failure("Expected no content, got ${otherPattern.typeName}")
+        return Result.Failure("No data was expected, but got \"${otherPattern.typeName}\" instead")
     }
 
     override val typeName: String = "nothing"

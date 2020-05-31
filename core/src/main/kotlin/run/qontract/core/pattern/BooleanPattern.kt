@@ -3,6 +3,7 @@ package run.qontract.core.pattern
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.mismatchResult
+import run.qontract.core.resultReport
 import run.qontract.core.value.BooleanValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
@@ -22,7 +23,10 @@ object BooleanPattern : Pattern {
         }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
-    override fun parse(value: String, resolver: Resolver): Value = BooleanValue(value.toBoolean())
+    override fun parse(value: String, resolver: Resolver): Value = when {
+        value !in (listOf("true", "false")) -> throw ContractException(resultReport(mismatchResult(BooleanPattern, value)))
+        else -> BooleanValue(value.toBoolean())
+    }
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver)
     }

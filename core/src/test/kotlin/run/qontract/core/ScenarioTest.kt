@@ -164,7 +164,7 @@ And response-header X-ResponseKey (number)
     }
 
     @Test
-    fun `should mock a query with a pattern value`() {
+    fun `should mock a query with a number type`() {
         val gherkin = """Feature: Test API
 Scenario: Test Scenario
 When GET /resource?query=(number)
@@ -198,6 +198,46 @@ Then status 200
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertThat(matchingResponse.third.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `should mock a query with a boolean type`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When GET /resource?query=(boolean)
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "(boolean)"))
+        val stub = ScenarioStub(request, HttpResponse.OK)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true")), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertThat(matchingResponse.third.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `should mock a query with a primitive boolean`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When GET /resource?query=(boolean)
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true"))
+        val stub = ScenarioStub(request, HttpResponse.OK)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStubResponse(stub)
         assertThat(matchingResponse.third.status).isEqualTo(200)

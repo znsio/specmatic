@@ -140,7 +140,7 @@ class StubCommand : Callable<Unit> {
         }
     }
 
-    private fun hasKafkaScenarios(behaviours: List<ContractBehaviour>): Boolean {
+    private fun hasKafkaScenarios(behaviours: List<Feature>): Boolean {
         return behaviours.any {
             it.scenarios.any { scenario ->
                 scenario.kafkaMessagePattern != null
@@ -148,7 +148,7 @@ class StubCommand : Callable<Unit> {
         }
     }
 
-    private fun hasHttpScenarios(behaviours: List<ContractBehaviour>): Boolean {
+    private fun hasHttpScenarios(behaviours: List<Feature>): Boolean {
         return behaviours.any {
             it.scenarios.any { scenario ->
                 scenario.kafkaMessagePattern == null

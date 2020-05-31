@@ -7,7 +7,7 @@ import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.treewalk.TreeWalk
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
-import run.qontract.core.ContractBehaviour
+import run.qontract.core.Feature
 import run.qontract.core.testBackwardCompatibility2
 import java.io.File
 import java.io.FileNotFoundException
@@ -23,7 +23,7 @@ class CheckGitFileCommand: Callable<Unit> {
         try {
             val gitFile = File(filePath)
             val (commitId, older) = getOlder(gitFile)
-            val newer = ContractBehaviour(gitFile.readText())
+            val newer = Feature(gitFile.readText())
 
             val results = testBackwardCompatibility2(older, newer)
 
@@ -42,7 +42,7 @@ class CheckGitFileCommand: Callable<Unit> {
     }
 }
 
-private fun getOlder(newer: File): Pair<String, ContractBehaviour> {
+private fun getOlder(newer: File): Pair<String, Feature> {
     if(!newer.exists()) {
         throw FileNotFoundException("${newer.absoluteFile} does not exist.")
     }
@@ -51,7 +51,7 @@ private fun getOlder(newer: File): Pair<String, ContractBehaviour> {
         val relativeFile = newer.absoluteFile.relativeTo(findParentGitDir(newer).absoluteFile)
         val commit = git.log().call().first()
 
-        Pair(commit.name, ContractBehaviour(getContent(git, commit, relativeFile.path) ?: throw Exception("Couldn't find the file in git history.")))
+        Pair(commit.name, Feature(getContent(git, commit, relativeFile.path) ?: throw Exception("Couldn't find the file in git history.")))
     }
 }
 

@@ -16,7 +16,7 @@ class SuggestCommand : Callable<Unit> {
     var contractDirPath: String = ""
 
     override fun call() {
-        val newer = ContractBehaviour(File(contractFilePath).readText())
+        val newer = Feature(File(contractFilePath).readText())
 
         val contractDir = File(contractDirPath)
         val majorVersionNumbers = contractDir.listFiles()?.map {
@@ -50,7 +50,7 @@ class SuggestCommand : Callable<Unit> {
             when (olderFilePath) {
                 null -> null
                 else -> {
-                    val older = ContractBehaviour(File(olderFilePath).readText())
+                    val older = Feature(File(olderFilePath).readText())
                     try {
                         val results = testBackwardCompatibility2(older, newer)
 

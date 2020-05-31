@@ -214,7 +214,7 @@ fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>) 
         }
 
 fun formFieldsToGherkin(formFields: Map<String, String>): List<GherkinClause> =
-        formFields.mapValues { parsedValue(it.value) }.entries.flatMap {
+        formFields.mapValues { guessType(parsedValue(it.value)) }.entries.flatMap {
             val typeName = "FormField${it.key.capitalize()}"
             val typeDeclaration = it.value.typeDeclaration(typeName)
 

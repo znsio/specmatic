@@ -31,7 +31,7 @@ class ContractAsTest {
 
         val flags = mutableMapOf<String, Boolean>()
 
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val jsonResponseString = "{calls_left: 20, messages_left: 20}"
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
@@ -71,7 +71,7 @@ class ContractAsTest {
                     And response-header length (number)
                     And response-body {calls_left: 10, messages_left: 30}
         """
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val headers: HashMap<String, String> = hashMapOf(
@@ -86,7 +86,7 @@ class ContractAsTest {
         assertThat(results.report()).isEqualTo("""In scenario "Get balance"
 >> RESPONSE.HEADERS.length
 
-Expected number, actual was "abc"""")
+Expected number, actual was string: "abc"""")
     }
 
     @Test
@@ -99,7 +99,7 @@ Expected number, actual was "abc"""")
                     And request-header test (number)
                     Then status 200
         """
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers.keys).contains("test")
@@ -125,7 +125,7 @@ Expected number, actual was "abc"""")
                 And request-body {"health": "good"}
                 Then status 202
         """
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.method).isEqualTo("PATCH")
@@ -151,7 +151,7 @@ Expected number, actual was "abc"""")
                     | x-loginId |
                     | a@b.com   |
         """
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers.keys).contains("x-loginId")
@@ -182,7 +182,7 @@ Expected number, actual was "abc"""")
 
         val flags = mutableMapOf<String, Boolean>()
 
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -226,7 +226,7 @@ Expected number, actual was "abc"""")
 
         val flags = mutableMapOf<String, Boolean>()
 
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val suggestions = lex(parseGherkinString(parameters))
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
@@ -257,7 +257,7 @@ Expected number, actual was "abc"""")
                 "    When GET /accounts?account_id=(number)\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val jsonResponseString = "{calls_left: 20, messages_left: 20}"
 
         val flags = emptyList<String>().toMutableList()
@@ -294,7 +294,7 @@ Expected number, actual was "abc"""")
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val jsonResponseString = "{calls_left: 20, messages_left: \"20\"}"
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -328,7 +328,7 @@ Expected number, actual was "abc"""")
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val jsonResponseString = "{calls_left: 20, messages_left: 20.1}"
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -360,7 +360,7 @@ Expected number, actual was "abc"""")
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"(string)\", linked_ids: [1,2,3]}\n" +
                 "    Then status 200"
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
@@ -390,7 +390,7 @@ Expected number, actual was "abc"""")
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"(string)\", linked_ids: [1,2,3, {a: \"(number)\", b: \"(string)\"}]}\n" +
                 "    Then status 200"
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
@@ -423,7 +423,7 @@ Expected number, actual was "abc"""")
                 "    And request-body <account><name>John Doe</name><address>(string)</address></account>\n" +
                 "    Then status 200\n" +
                 "    And response-body <balance><calls_left>(number)</calls_left><messages_left>(number)</messages_left></balance>"
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val xmlResponseString = "<balance><calls_left>20</calls_left><messages_left>20</messages_left></balance>"
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -463,7 +463,7 @@ Expected number, actual was "abc"""")
   | userid | name |
   | 10       | jack    |
 """
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
@@ -506,7 +506,7 @@ Expected number, actual was "abc"""")
 
     @Throws(Throwable::class)
     private fun verifyJsonArrayGenerationInRequestBody(contractGherkin: String) {
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
@@ -554,7 +554,7 @@ Expected number, actual was "abc"""")
 
     @Throws(Throwable::class)
     private fun verifyJsonArrayGenerationInResponseBody(contractGherkin: String) {
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
@@ -595,7 +595,7 @@ Expected number, actual was "abc"""")
     }
 
     private fun verifyXMLArrayGenerationInRequestBody(contractGherkin: String) {
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
@@ -653,7 +653,7 @@ Expected number, actual was "abc"""")
 
     @Throws(Throwable::class)
     private fun verifyXMLArrayGenerationInResponseBody(contractGherkin: String) {
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/locations", request.path)
@@ -680,7 +680,7 @@ Expected number, actual was "abc"""")
                 "    When GET /locations\n" +
                 "    Then status 200\n" +
                 "    And response-body (Cities)"
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val setupStatus = arrayOf("Setup didn\"t happen")
         val setupSuccess = "Setup happened"
 
@@ -719,7 +719,7 @@ Expected number, actual was "abc"""")
   | cities_exist | 
   | city_list | 
     """
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val setupStatus = arrayOf("Setup didn\"t happen")
         val setupSuccess = "Setup happened"
 
@@ -752,7 +752,7 @@ Expected number, actual was "abc"""")
                 "  When POST /pets\n" +
                 "  And request-body (Pet)\n" +
                 "  Then status 200\n"
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val setupStatus = arrayOf("Setup didn\"t happen")
         val setupSuccess = "Setup happened"
         val idFound = intArrayOf(0)
@@ -794,7 +794,7 @@ Scenario: Update pet details
   And request-body (Pet)
   Then status 200
 """
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val setupStatus = arrayOf("Setup didn't happen")
         val setupSuccess = "Setup happened"
         val idFound = intArrayOf(0)
@@ -830,7 +830,7 @@ Scenario: GET and POST number
   Then status 200
   And response-body (number)
 """
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val flags = mutableMapOf<String, Boolean>()
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
@@ -879,7 +879,7 @@ And request-body (string: number)
 Then status 200
 """
 
-        val results = ContractBehaviour(gherkin).executeTests(object : TestExecutor {
+        val results = Feature(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val body = request.body
                 if (body !is JSONObjectValue) fail("Expected JSONObjectValue")
@@ -912,7 +912,7 @@ Then status 200
 And response-body (string: number)
 """
 
-        val results = ContractBehaviour(gherkin).executeTests(object : TestExecutor {
+        val results = Feature(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val response = """{"one": 1, "two": 2}"""
                 return HttpResponse(200, response)
@@ -937,7 +937,7 @@ Then status 200
 And response-body (string: string)
 """
 
-        val results = ContractBehaviour(gherkin).executeTests(object : TestExecutor {
+        val results = Feature(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val response = """{"one": 1, "two": 2}"""
                 return HttpResponse(200, response)
@@ -963,7 +963,7 @@ And response-body
 | id | (number in string) |
 """
 
-        val results = ContractBehaviour(gherkin).executeTests(object : TestExecutor {
+        val results = Feature(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val body = request.body
                 if(body !is JSONObjectValue)

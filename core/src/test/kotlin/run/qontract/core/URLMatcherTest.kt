@@ -48,7 +48,7 @@ internal class URLMatcherTest {
 
         urlPattern.matches(URI("/pets"), queryParameters, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("QUERY-PARAMS", "petid"), listOf("""Expected number, actual was "text"""")))
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("QUERY-PARAMS", "petid"), listOf("""Expected number, actual was string: "text"""")))
         }
     }
 
@@ -170,5 +170,13 @@ internal class URLMatcherTest {
     fun `request url query params should match a url with unknown query params`() {
         val matcher = toURLPattern(URI("/pets?id=(string)"))
         assertThat(matcher.matches(URI("/pets"), mapOf("name" to "Jack Daniel"))).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should match a pattern only when resolver has mock matching on`() {
+        val matcher = toURLPattern(URI("/pets?id=(number)"))
+        assertThat(matcher.matches(URI.create("/pets"), mapOf("id" to "10"), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(matcher.matches(URI.create("/pets"), mapOf("id" to "(number)"), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
+        assertThat(matcher.matches(URI.create("/pets"), mapOf("id" to "(number)"), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
     }
 }

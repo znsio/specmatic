@@ -29,7 +29,7 @@ open class QontractJUnitSupport {
         }
 
         val contractBehaviour = try {
-            ContractBehaviour(readFile(path))
+            Feature(readFile(path))
         } catch (exception: Throwable) {
             println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
             throw exception

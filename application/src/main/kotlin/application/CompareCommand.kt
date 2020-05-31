@@ -2,7 +2,7 @@ package application
 
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
-import run.qontract.core.ContractBehaviour
+import run.qontract.core.Feature
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.testBackwardCompatibility2
 import run.qontract.core.utilities.readFile
@@ -40,8 +40,8 @@ private fun showPath(path1: String, path2: String) {
 }
 
 private fun mutualCompatibility(path1: String, path2: String): Pair<Boolean, Boolean> {
-    val behaviour1 = ContractBehaviour(readFile(path1))
-    val behaviour2 = ContractBehaviour(readFile(path2))
+    val behaviour1 = Feature(readFile(path1))
+    val behaviour2 = Feature(readFile(path2))
 
     showPath(path1, path2)
     val successWith1To2 = backwardCompatible(behaviour1, behaviour2)
@@ -55,7 +55,7 @@ private fun mutualCompatibility(path1: String, path2: String): Pair<Boolean, Boo
     return Pair(successWith1To2, successWith2To1)
 }
 
-fun backwardCompatible(behaviour1: ContractBehaviour, behaviour2: ContractBehaviour): Boolean =
+fun backwardCompatible(behaviour1: Feature, behaviour2: Feature): Boolean =
         try {
             testBackwardCompatibility2(behaviour1, behaviour2).let { results ->
                 when {

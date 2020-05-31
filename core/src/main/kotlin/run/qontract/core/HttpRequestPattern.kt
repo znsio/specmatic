@@ -7,7 +7,6 @@ import run.qontract.core.value.StringValue
 import java.net.URI
 
 data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val urlMatcher: URLMatcher? = null, val method: String? = null, val body: Pattern = NoContentPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap(), val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList()) {
-    @Throws(Exception::class)
     fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver): Result {
         val result = incomingHttpRequest to resolver to
                 ::matchUrl then
@@ -43,7 +42,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             val results = httpRequest.multiPartFormData.map { value ->
                 when (val result = type.matches(value, resolver)) {
                     is Success -> Pair(value, result)
-                    is Failure -> Pair(value, result)
+                    is Failure -> Pair(value, result.breadCrumb(index.toString()))
                 }
             }
 
@@ -66,21 +65,21 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
 
         val keys: List<String> = formFieldsPattern.keys.filter { key -> isOptional(key) && withoutOptionality(key) !in httpRequest.formFields }
         if(keys.isNotEmpty())
-            return MatchFailure(Failure(message = "Fields $keys not found", breadCrumb = "FORM FIELDS"))
+            return MatchFailure(Failure(message = "Fields $keys not found", breadCrumb = "FORM-FIELDS"))
 
         val result: Result? = formFieldsPattern
             .filterKeys { key -> withoutOptionality(key) in httpRequest.formFields }
             .map { (key, pattern) -> Triple(withoutOptionality(key), pattern, httpRequest.formFields.getValue(key)) }
             .map { (key, pattern, value) ->
                 try {
-                    when (val result = resolver.matchesPattern(key, pattern, pattern.parse(value, resolver))) {
-                        is Failure -> result.breadCrumb("FORM FIELDS").breadCrumb(key)
+                    when (val result = resolver.matchesPattern(key, pattern, try { pattern.parse(value, resolver) } catch (e: Throwable) { StringValue(value) } )) {
+                        is Failure -> result.breadCrumb(key).breadCrumb("FORM-FIELDS")
                         else -> result
                     }
                 } catch(e: ContractException) {
-                    mismatchResult(pattern, value).breadCrumb("FORM FIELDS").breadCrumb(key)
+                    mismatchResult(pattern, value).breadCrumb(key).breadCrumb("FORM-FIELDS")
                 } catch(e: Throwable) {
-                    mismatchResult(pattern, value).breadCrumb("FORM FIELDS").breadCrumb(key)
+                    mismatchResult(pattern, value).breadCrumb(key).breadCrumb("FORM-FIELDS")
                 }
             }
             .firstOrNull { it is Failure }

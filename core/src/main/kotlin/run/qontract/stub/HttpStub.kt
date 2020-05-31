@@ -33,9 +33,9 @@ import run.qontract.nullLog
 import java.io.ByteArrayOutputStream
 import java.util.*
 
-class HttpStub(private val behaviours: List<ContractBehaviour>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
-    constructor(behaviour: ContractBehaviour, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(behaviour), contractInfoToHttpExpectations(listOf(Pair(behaviour, scenarioStubs))), host, port, log)
-    constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(ContractBehaviour(gherkinData), scenarioStubs, host, port, log)
+class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
+    constructor(behaviour: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(behaviour), contractInfoToHttpExpectations(listOf(Pair(behaviour, scenarioStubs))), host, port, log)
+    constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(Feature(gherkinData), scenarioStubs, host, port, log)
 
     private var httpStubs = Vector<HttpStubData>(_httpStubs)
     val endPoint = "http://$host:$port"
@@ -125,7 +125,7 @@ class HttpStub(private val behaviours: List<ContractBehaviour>, _httpStubs: List
 
         val results = behaviours.asSequence().map { behaviour ->
             try {
-                val mockResponse = behaviour.matchingMockResponse(stub.request, stub.response)
+                val mockResponse = behaviour.matchingStubResponse(stub.request, stub.response)
                 Pair(Result.Success(), mockResponse)
             } catch (e: NoMatchingScenario) {
                 Pair(Result.Failure(e.localizedMessage), null)
@@ -243,7 +243,7 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     }
 }
 
-fun stubResponse(httpRequest: HttpRequest, behaviours: List<ContractBehaviour>, stubs: List<HttpStubData>): HttpResponse {
+fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: List<HttpStubData>): HttpResponse {
     return try {
         when (val mock = stubs.find { (requestPattern, _, resolver) ->
             requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)) is Result.Success
@@ -268,7 +268,7 @@ fun stubResponse(httpRequest: HttpRequest, behaviours: List<ContractBehaviour>, 
     }
 }
 
-fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehaviour, List<ScenarioStub>>>, stubs: StubDataItems): HttpResponse {
+fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>, stubs: StubDataItems): HttpResponse {
     return try {
         when (val mock = stubs.http.find { (requestPattern, _, resolver) ->
             requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)) is Result.Success
@@ -293,13 +293,13 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<ContractBehav
     }
 }
 
-fun contractInfoToExpectations(contractInfo: List<Pair<ContractBehaviour, List<ScenarioStub>>>): StubDataItems {
+fun contractInfoToExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): StubDataItems {
     return contractInfo.fold(StubDataItems()) { stubsAcc, (behaviour, mocks) ->
         val newStubs = mocks.fold(StubDataItems()) { stubs, mock ->
             if(mock.kafkaMessage != null) {
                 StubDataItems(stubs.http, stubs.kafka.plus(KafkaStubData(mock.kafkaMessage)))
             } else {
-                val (resolver, scenario, httpResponse) = behaviour.matchingMockResponse(mock)
+                val (resolver, scenario, httpResponse) = behaviour.matchingStubResponse(mock)
 
                 val requestPattern = mock.request.toPattern()
                 val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
@@ -312,10 +312,10 @@ fun contractInfoToExpectations(contractInfo: List<Pair<ContractBehaviour, List<S
     }
 }
 
-fun contractInfoToHttpExpectations(contractInfo: List<Pair<ContractBehaviour, List<ScenarioStub>>>): List<HttpStubData> {
+fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<HttpStubData> {
     return contractInfo.flatMap { (behaviour, mocks) ->
         mocks.filter { it.kafkaMessage == null }.map { mock ->
-            val (resolver, scenario, httpResponse) = behaviour.matchingMockResponse(mock)
+            val (resolver, scenario, httpResponse) = behaviour.matchingStubResponse(mock)
             httpMockToStub(mock, scenario, httpResponse, resolver)
         }
     }

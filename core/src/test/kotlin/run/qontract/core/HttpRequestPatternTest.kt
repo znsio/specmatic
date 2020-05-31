@@ -2,7 +2,6 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.GherkinSection.*
 import run.qontract.core.pattern.*
 import java.net.URI
 import kotlin.test.assertEquals
@@ -93,5 +92,13 @@ internal class HttpRequestPatternTest {
         }
 
         flagsContain(flags, listOf("with", "without"))
+    }
+
+    @Test
+    fun `headers should match a pattern value only when resolver has mock matching on`() {
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern))
+        assertThat(headersPattern.matches(mapOf("X-Data" to "10"), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(headersPattern.matches(mapOf("X-Data" to "(number)"), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
+        assertThat(headersPattern.matches(mapOf("X-Data" to "(number)"), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
     }
 }

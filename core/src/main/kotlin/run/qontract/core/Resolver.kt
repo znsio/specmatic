@@ -5,14 +5,14 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
 
-data class Resolver(val factStore: FactStore = CheckFacts(), val matchPatternInValue: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Any>, actual: Map<String, Any>) -> Pair<String?, String?>? = checkOnlyPatternKeys ) {
-    constructor(facts: Map<String, Value> = emptyMap(), matchPattern: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), matchPattern, newPatterns)
+data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Any>, actual: Map<String, Any>) -> Pair<String?, String?>? = checkOnlyPatternKeys ) {
+    constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
 
     val patterns = builtInPatterns.plus(newPatterns)
 
     fun matchesPattern(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
-        if (matchPatternInValue
+        if (mockMode
                 && sampleValue is StringValue
                 && isPatternToken(sampleValue.string)
                 && pattern.encompasses(getPattern(sampleValue.string), this, this).isTrue())

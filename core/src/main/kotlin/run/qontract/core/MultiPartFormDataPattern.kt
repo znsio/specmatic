@@ -32,7 +32,7 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
             name != value.name -> Failure("The contract expected part name to be $name, but got ${value.name}", breadCrumb = "name")
             value.content is StringValue -> {
                 try {
-                    val parsedContent = content.parse(value.content.toStringValue(), resolver)
+                    val parsedContent = try { content.parse(value.content.toStringValue(), resolver) } catch (e: Throwable) { StringValue(value.content.toStringValue()) }
                     content.matches(parsedContent, resolver)
                 } catch (e: ContractException) {
                     Failure(e.report(), breadCrumb = "content")

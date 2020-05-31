@@ -22,7 +22,7 @@ import java.io.Closeable
 typealias Expectation = Triple<HttpRequestPattern, Resolver, HttpResponse>
 
 class ContractMock(contractGherkin: String, port: Int) : Closeable {
-    private val contractBehaviour: ContractBehaviour = ContractBehaviour(contractGherkin)
+    private val contractBehaviour: Feature = Feature(contractGherkin)
     private val expectations: MutableList<Expectation> = mutableListOf()
 
     private val server: ApplicationEngine = embeddedServer(Netty, port) {
@@ -57,7 +57,7 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
     }
 
     fun createMockScenario(mocked: ScenarioStub) {
-        val (resolver, _, mockedResponse) = contractBehaviour.matchingMockResponse(mocked.request, mocked.response)
+        val (resolver, _, mockedResponse) = contractBehaviour.matchingStubResponse(mocked.request, mocked.response)
         expectations.add(Expectation(mocked.request.toPattern(), resolver, mockedResponse))
     }
 

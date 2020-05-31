@@ -6,7 +6,7 @@ import run.qontract.core.value.KafkaMessage
 import run.qontract.mock.ScenarioStub
 import run.qontract.nullLog
 
-class KafkaStub(val behaviours: List<ContractBehaviour>, kafkaStubs: List<KafkaStubData> = emptyList(), kafkaPort: Int = 9093, log: (event: String) -> Unit = nullLog) {
+class KafkaStub(val behaviours: List<Feature>, kafkaStubs: List<KafkaStubData> = emptyList(), kafkaPort: Int = 9093, log: (event: String) -> Unit = nullLog) {
     private var qontractKafka: QontractKafka? = null
 
     init {
@@ -46,7 +46,7 @@ fun producerRecord(kafkaMessage: KafkaMessage): ProducerRecord<String, String> {
     return if (key != null) ProducerRecord(kafkaMessage.topic, key.toStringValue(), kafkaMessage.value.toStringValue()) else ProducerRecord(kafkaMessage.topic, kafkaMessage.value.toStringValue())
 }
 
-fun contractInfoToKafkaExpectations(contractInfo: List<Pair<ContractBehaviour, List<ScenarioStub>>>): List<KafkaStubData> {
+fun contractInfoToKafkaExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<KafkaStubData> {
     return contractInfo.flatMap { (_, mocks) ->
         mocks.mapNotNull { it.kafkaMessage }.fold(emptyList<KafkaStubData>()) { innerStubs, kafkaMessage ->
             innerStubs.plus(KafkaStubData(kafkaMessage))

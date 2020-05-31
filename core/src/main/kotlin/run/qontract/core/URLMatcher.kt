@@ -8,10 +8,15 @@ import java.net.URI
 data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
     fun matches(uri: URI, sampleQuery: Map<String, String> = emptyMap(), resolver: Resolver = Resolver()): Result {
 
-        matchesPath(uri, resolver).let {
-            return when (it) {
-                is Result.Success -> matchesQuery(sampleQuery, resolver)
-                else -> it
+        matchesPath(uri, resolver).let { pathResult ->
+            return when (pathResult) {
+                is Result.Success -> matchesQuery(sampleQuery, resolver).let { queryResult ->
+                    when(queryResult) {
+                        is Result.Success -> queryResult
+                        else -> queryResult.breadCrumb("QUERY-PARAMS")
+                    }
+                }
+                else -> pathResult
             }
         }
     }
@@ -62,14 +67,14 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                     val patternValue = queryPattern.getValue(key)
                     val sampleValue = sampleQuery.getValue(key)
 
-                    val parsedValue = patternValue.parse(sampleValue, resolver)
+                    val parsedValue = try { patternValue.parse(sampleValue, resolver) } catch(e: Exception) { StringValue(sampleValue) }
                     when (val result = resolver.matchesPattern(key, patternValue, parsedValue)) {
-                        is Result.Failure -> return result.breadCrumb("QUERY-PARAMS").breadCrumb(key)
+                        is Result.Failure -> return result.breadCrumb(key)
                     }
                 } catch(e: ContractException) {
-                    return e.failure().breadCrumb(key).breadCrumb("QUERY-PARAMS")
+                    return e.failure().breadCrumb(key)
                 } catch(e: Throwable) {
-                    return Result.Failure(e.localizedMessage).breadCrumb(key).breadCrumb("QUERY-PARAMS")
+                    return Result.Failure(e.localizedMessage).breadCrumb(key)
                 }
             }
         }

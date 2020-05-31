@@ -10,7 +10,7 @@ import run.qontract.mock.ScenarioStub
 internal class ApiKtTest {
     @Test
     fun `given an expectation json with a key and one without, the request with the key should always match`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -36,7 +36,7 @@ Feature: Math API
 
     @Test
     fun `given an expectation with optional header, a request without the header should match`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -57,7 +57,7 @@ Feature: Math API
 
     @Test
     fun `given an expectation with optional header, a request with the header should match`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -78,7 +78,7 @@ Feature: Math API
 
     @Test
     fun `should be able to setup a mock with an optional header`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -101,7 +101,7 @@ Feature: Math API
 
     @Test
     fun `should be able to setup a mock without an optional header`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -124,7 +124,7 @@ Feature: Math API
 
     @Test
     fun `given a mock with fewer headers before a mock with more params, the mock with fewer should not eat up all requests with its subset of headers`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -150,7 +150,7 @@ Feature: Math API
 
     @Test
     fun `given a mock with fewer query params before a mock with more params, the mock with fewer should not eat up all requests with its subset of headers`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Some number
@@ -173,7 +173,7 @@ Feature: Math API
 
     @Test
     fun `stubbing out a contract pattern in json by specifing a sub pattern in stub data`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -208,7 +208,7 @@ Feature: Math API
 
     @Test
     fun `stubbing out a contract pattern in request body by specifying a sub pattern in stub data`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -242,7 +242,7 @@ Feature: Math API
 
     @Test
     fun `should load a stub with a form content part and match such a request`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -264,7 +264,7 @@ Feature: Math API
 
     @Test
     fun `should match multipart content part`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -285,7 +285,7 @@ Feature: Math API
 
     @Test
     fun `should load a stub with a file part and match such a request`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -307,7 +307,7 @@ Feature: Math API
 
     @Test
     fun `should match multipart file part`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -326,11 +326,11 @@ Feature: Math API
         assertThat(response.body).isInstanceOf(NumberValue::class.java)
     }
 
-    private fun fakeResponse(request: HttpRequest, behaviour: ContractBehaviour): HttpResponse {
+    private fun fakeResponse(request: HttpRequest, behaviour: Feature): HttpResponse {
         return stubResponse(request, listOf(Pair(behaviour, emptyList())))
     }
 
-    private fun stubResponse(request: HttpRequest, contractInfo: List<Pair<ContractBehaviour, List<ScenarioStub>>>): HttpResponse {
+    private fun stubResponse(request: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>): HttpResponse {
         val expectations = contractInfoToExpectations(contractInfo)
         return stubResponse(request, contractInfo, expectations)
     }

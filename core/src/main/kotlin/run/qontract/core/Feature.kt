@@ -17,7 +17,7 @@ import run.qontract.mock.NoMatchingScenario
 import run.qontract.test.TestExecutor
 import java.net.URI
 
-data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap<String, Value>()) {
+data class Feature(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap()) {
     constructor(contractGherkinDocument: GherkinDocument) : this(lex(contractGherkinDocument))
     constructor(gherkinData: String) : this(parseGherkinString(gherkinData))
 
@@ -77,7 +77,7 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
         return scenarios.firstOrNull { it.matches(request, serverState) is Result.Success }?.matches(response) is Result.Success
     }
 
-    fun matchingMockResponse(request: HttpRequest, response: HttpResponse): Triple<Resolver, Scenario, HttpResponse> {
+    fun matchingStubResponse(request: HttpRequest, response: HttpResponse): Triple<Resolver, Scenario, HttpResponse> {
         try {
             val results = Results()
 
@@ -124,8 +124,8 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
         return results.first { it is Result.Success }
     }
 
-    fun matchingMockResponse(scenarioStub: ScenarioStub): Triple<Resolver, Scenario, HttpResponse> =
-            matchingMockResponse(scenarioStub.request, scenarioStub.response)
+    fun matchingStubResponse(scenarioStub: ScenarioStub): Triple<Resolver, Scenario, HttpResponse> =
+            matchingStubResponse(scenarioStub.request, scenarioStub.response)
 
     fun clearServerState() {
         serverState = emptyMap()

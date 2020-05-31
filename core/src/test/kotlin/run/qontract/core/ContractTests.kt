@@ -52,7 +52,7 @@ And request-body (Value)
 Then status 200
     """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableMapOf<String, Int>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -95,7 +95,7 @@ Examples:
 | 10       |
     """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableMapOf<String, Int>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -129,7 +129,7 @@ And request-body (Value)
 Then status 200
     """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableSetOf<String>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -166,7 +166,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableMapOf<String, Boolean>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -196,7 +196,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableMapOf<String, Boolean>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -227,7 +227,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableMapOf<String, Boolean>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -300,7 +300,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableSetOf<String>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -339,7 +339,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableSetOf<String>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -375,7 +375,7 @@ Then status 200
     And response-body (number?)
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
 
         val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -406,7 +406,7 @@ Examples:
 | 10 |
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         var invocationCount = 0
 
         val results = contract.executeTests(object : TestExecutor {
@@ -446,7 +446,7 @@ Examples:
 | (null) |
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         var invocationCount = 0
 
         val results = contract.executeTests(object : TestExecutor {
@@ -481,7 +481,7 @@ And request-body (number*)
 Then status 200
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         var invocationCount = 0
 
         val results = contract.executeTests(object : TestExecutor {
@@ -518,7 +518,7 @@ And request-header X-Optional? (string)
 Then status 200
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableListOf<String>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -550,7 +550,7 @@ When GET /queryNumber?type=(string)
 Then status 200
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableListOf<String>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -586,7 +586,7 @@ Examples:
 | some kind |
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableListOf<String>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -614,7 +614,7 @@ And request-part number (number)
 Then status 200
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableListOf<String>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -647,7 +647,7 @@ And request-part number @number.txt text/plain
 Then status 200
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableListOf<String>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -681,7 +681,7 @@ And request-part number @number.txt
 Then status 200
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableListOf<String>()
 
         val results = contract.executeTests(object : TestExecutor {
@@ -718,7 +718,7 @@ Examples:
 | 10     |
 """.trim()
 
-        val contract = ContractBehaviour(gherkin)
+        val contract = Feature(gherkin)
         val flags = mutableSetOf<String>()
 
         val results = contract.executeTests(object : TestExecutor {

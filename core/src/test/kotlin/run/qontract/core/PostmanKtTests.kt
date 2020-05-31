@@ -135,7 +135,7 @@ class PostmanKtTests {
 						},
 						{
 							"key": "Connection",
-							"value": "keep-alive"
+							"value": "1000"
 						}
 					],
 					"cookie": [],
@@ -153,7 +153,7 @@ class PostmanKtTests {
 					"urlencoded": [
 						{
 							"key": "field1",
-							"value": "value1",
+							"value": "10",
 							"type": "text"
 						}
 					]
@@ -182,7 +182,7 @@ class PostmanKtTests {
 					"formdata": [
 						{
 							"key": "part1",
-							"value": "value1",
+							"value": "10",
 							"type": "text"
 						}
 					]
@@ -213,10 +213,10 @@ class PostmanKtTests {
     }
 
     private fun validate(gherkinString: String, stubs: List<NamedStub>) {
-        val behaviour = ContractBehaviour(gherkinString)
+        val behaviour = Feature(gherkinString)
         val cleanedUpStubs = stubs.map { it.stub }.map { it.copy(response = dropContentAndCORSResponseHeaders(it.response) ) }
         for(stub in cleanedUpStubs) {
-            behaviour.matchingMockResponse(stub)
+            behaviour.matchingStubResponse(stub)
         }
     }
 
@@ -259,7 +259,7 @@ Scenario: With form data
   And response-body (number)
 """
 
-            val contractBehaviour = ContractBehaviour(gherkin)
+            val contractBehaviour = Feature(gherkin)
             stub = HttpStub(contractBehaviour)
         }
 

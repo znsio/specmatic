@@ -85,7 +85,7 @@ fun postmanItemResponse(responseItem: JSONObjectValue): HttpResponse {
     }
 
     val body: Value = when {
-        responseItem.jsonObject.containsKey("body") -> parsedValue(responseItem.jsonObject.getValue("body").toString())
+        responseItem.jsonObject.containsKey("body") -> guessType(parsedValue(responseItem.jsonObject.getValue("body").toString()))
         else -> EmptyString
     }
 
@@ -125,7 +125,7 @@ private fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpReque
                     val name = formField.getString("key")
                     val value = formField.getString("value")
 
-                    MultiPartContentValue(name, parsedValue(value))
+                    MultiPartContentValue(name, guessType(parsedValue(value)))
                 }
 
                 Triple(EmptyString, emptyMap(), formData)

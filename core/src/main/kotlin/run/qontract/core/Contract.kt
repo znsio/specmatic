@@ -10,7 +10,7 @@ data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val 
     fun startFake(port: Int) = HttpStub(contractGherkin, emptyList(), "localhost", port)
 
     fun test(endPoint: String) {
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(HttpClient(endPoint))
         if (results.hasFailures())
             throw ContractException(results.report())
@@ -20,7 +20,7 @@ data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val 
 
     fun samples(fake: HttpStub) = samples(fake.endPoint)
     fun samples(endPoint: String) {
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val httpClient = HttpClient(endPoint)
 
         contractBehaviour.generateTestScenarios(emptyList()).fold(Results()) { results, scenario ->
@@ -40,7 +40,7 @@ ${kafkaMessagePattern.generate(scenario.resolver).toDisplayableString()}""".trim
         }
 
         @JvmStatic
-        fun behaviourFromFile(contractFilePath: String) = ContractBehaviour(readFile(contractFilePath))
+        fun behaviourFromFile(contractFilePath: String) = Feature(readFile(contractFilePath))
 
         @JvmStatic
         fun behaviourFromServiceContractFile() = behaviourFromFile(contractFilePath)

@@ -1,5 +1,6 @@
 package run.qontract.core
 
+import run.qontract.conversions.guessType
 import run.qontract.core.pattern.*
 import run.qontract.core.value.Value
 
@@ -23,7 +24,7 @@ fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
 
 fun headersToGherkin(headers: Map<String, String>, keyword: String, section: GherkinSection): List<GherkinClause> {
     return headers.entries.map {
-        "$keyword ${it.key} (string)"
+        "$keyword ${it.key} ${guessType(parsedValue(it.value)).type().pattern}"
     }.map { GherkinClause(it, section) }
 }
 

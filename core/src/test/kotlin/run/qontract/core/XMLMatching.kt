@@ -19,7 +19,7 @@ class XMLMatching {
                 "    Then status 200\n" +
                 "    And response-body <account type=\"(string)\"><name>(string)</name><address>(string)</address><age>(number)</age></account>\n" +
                 ""
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val request = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account_id", "10")
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
@@ -44,7 +44,7 @@ class XMLMatching {
                 "    And request-body <account type=\"(string)\"><name>(string)</name><address>(string)</address><age>(number)</age></account>\n" +
                 "    Then status 200\n" +
                 ""
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("<account type=\"user\"><name>John</name><address>Mumbai</address><age>25</age></account>")
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)

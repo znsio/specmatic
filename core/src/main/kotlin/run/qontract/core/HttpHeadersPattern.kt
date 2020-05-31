@@ -37,7 +37,7 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
 
             when {
                 sampleValue != null -> try {
-                    when (val result = resolver.matchesPattern(keyWithoutOptionality, pattern, attempt(breadCrumb = keyWithoutOptionality) { pattern.parse(sampleValue, resolver) })) {
+                    when (val result = resolver.matchesPattern(keyWithoutOptionality, pattern, attempt(breadCrumb = keyWithoutOptionality) { try { pattern.parse(sampleValue, resolver) } catch(e: Throwable) { StringValue(sampleValue)} })) {
                         is Result.Failure -> {
                             return MatchFailure(result.breadCrumb(keyWithoutOptionality))
                         }

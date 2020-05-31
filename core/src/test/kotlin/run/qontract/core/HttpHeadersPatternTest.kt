@@ -43,7 +43,7 @@ internal class HttpHeadersPatternTest {
         headers["key"] = "abc"
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("HEADERS", "key"), listOf("Expected number, actual was \"abc\"")))
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("HEADERS", "key"), listOf("Expected number, actual was string: \"abc\"")))
         }
     }
 
@@ -181,5 +181,13 @@ internal class HttpHeadersPatternTest {
         val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional" to StringPattern))
         val result = bigger.encompasses(smaller, Resolver(), Resolver())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should match a pattern only when resolver has mock matching on`() {
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern))
+        assertThat(headersPattern.matches(mapOf("X-Data" to "10"), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(headersPattern.matches(mapOf("X-Data" to "(number)"), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
+        assertThat(headersPattern.matches(mapOf("X-Data" to "(number)"), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
     }
 }

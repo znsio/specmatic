@@ -44,7 +44,7 @@ class SetupFacts {
 
     @Throws(Throwable::class)
     private fun setupServerStateTest(contractGherkin: String) {
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val request = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account_id", "54321")
         contractBehaviour.setServerState(mapOf("account_id" to NumberValue(54321)))
         val response = contractBehaviour.lookupResponse(request)
@@ -65,7 +65,7 @@ class SetupFacts {
                 "    And request-body {name: \"jack\", address: \"(string)\"}\n" +
                 "    Then status 409\n" +
                 ""
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         var serverStateForValidation = emptyMap<String, Value>()
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
@@ -98,7 +98,7 @@ Feature: Contract for /balance API
     Then status 200
 """
 
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val serverStateForValidation = HashMap<String, Value>()
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
@@ -131,7 +131,7 @@ Feature: Contract for /balance API
     Then status 200
 """
 
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val serverStateForValidation = HashMap<String, Value>()
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
@@ -167,7 +167,7 @@ Feature: Contract for /balance API
                 "    And request-body {name: \"john\", address: \"(string)\"}\n" +
                 "    Then status 200\n" +
                 ""
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val serverStateForValidation = emptyMap<String, Value>().toMutableMap()
         val logs: MutableList<String> = mutableListOf()
 
@@ -242,7 +242,7 @@ Feature: Contract for /balance API
                 "    When GET /accounts?userid=(number)\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/accounts").updateQueryParam("userid", "10")
         contractBehaviour.setServerState(object : HashMap<String, Value>() {
             init {
@@ -268,7 +268,7 @@ Feature: Contract for /balance API
                 "    Then status 200\n" +
                 "    And response-body {\"name\": \"(string)\"}" +
                 ""
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val serverState: HashMap<String, Value> = object : HashMap<String, Value>() {
             init {
                 put("account_id", NumberValue(10))
@@ -294,7 +294,7 @@ Feature: Contract for /balance API
                 "    Then status 200\n" +
                 "    And response-body {\"name\": \"(string)\"}" +
                 ""
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val serverState: HashMap<String, Value> = object : HashMap<String, Value>() {
             init {
                 put("account_id", NumberValue(10))
@@ -320,7 +320,7 @@ Feature: Contract for /balance API
                 "    Then status 200\n" +
                 "    And response-body {\"name\": \"(string)\"}" +
                 ""
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
         val serverState: HashMap<String, Value> = object : HashMap<String, Value>() {
             init {
                 put("account_id", NumberValue(10))

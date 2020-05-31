@@ -4,11 +4,10 @@ import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import run.qontract.core.pattern.*
-import run.qontract.core.value.KafkaMessage
-import run.qontract.core.value.StringValue
-import run.qontract.core.value.True
-import run.qontract.core.value.Value
+import run.qontract.core.value.*
+import run.qontract.mock.ScenarioStub
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -116,5 +115,198 @@ internal class ScenarioTest {
         val mockResponse = HttpResponse.OK
 
         assertThat(scenario.matchesMock(mockRequest, mockResponse)).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should mock a header with a pattern value`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When GET /resource
+And request-header X-RequestKey (number)
+Then status 200
+And response-header X-ResponseKey (number)
+        """.trim()
+
+        val request = HttpRequest("GET", "/resource", mapOf("X-RequestKey" to "(number)"), EmptyString)
+        val response = HttpResponse(200, "", mapOf("X-ResponseKey" to "(number)"))
+        val stub = ScenarioStub(request, response)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", mapOf("X-RequestKey" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertDoesNotThrow { matchingResponse.third.headers.getValue("X-ResponseKey").toInt() }
+    }
+
+    @Test
+    fun `should mock a header with a primitive number`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When GET /resource
+And request-header X-RequestKey (number)
+Then status 200
+And response-header X-ResponseKey (number)
+        """.trim()
+
+        val request = HttpRequest("GET", "/resource", mapOf("X-RequestKey" to "10"), EmptyString)
+        val response = HttpResponse(200, "", mapOf("X-ResponseKey" to "20"))
+        val stub = ScenarioStub(request, response)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", mapOf("X-RequestKey" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertThat(matchingResponse.third.headers.getValue("X-ResponseKey")).isEqualTo("20")
+    }
+
+    @Test
+    fun `should mock a query with a pattern value`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When GET /resource?query=(number)
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "(number)"))
+        val stub = ScenarioStub(request, HttpResponse.OK)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertThat(matchingResponse.third.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `should mock a query with a primitive number`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When GET /resource?query=(number)
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10"))
+        val stub = ScenarioStub(request, HttpResponse.OK)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertThat(matchingResponse.third.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `should mock a form field with a pattern value`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When POST /resource
+And form-field value (number)
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/resource", formFields = mapOf("value" to "(number)"))
+        val stub = ScenarioStub(request, HttpResponse.OK)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("POST", "/resource", formFields = mapOf("value" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertThat(matchingResponse.third.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `should mock a form field with a primitive value`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When POST /resource
+And form-field value (number)
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/resource", formFields = mapOf("value" to "10"))
+        val stub = ScenarioStub(request, HttpResponse.OK)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("POST", "/resource", formFields = mapOf("value" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertThat(matchingResponse.third.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `should mock a multipart part with a pattern value`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When POST /resource
+And request-part value (number)
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/resource", multiPartFormData = listOf(MultiPartContentValue("value", StringValue("(number)"))))
+        val stub = ScenarioStub(request, HttpResponse.OK)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("POST", "/resource", multiPartFormData = listOf(MultiPartContentValue("value", StringValue("10")))), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertThat(matchingResponse.third.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `should mock a multipart part with a primitive value`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When POST /resource
+And request-part value (number)
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/resource", multiPartFormData = listOf(MultiPartContentValue("value", StringValue("10"))))
+        val stub = ScenarioStub(request, HttpResponse.OK)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("POST", "/resource", multiPartFormData = listOf(MultiPartContentValue("value", StringValue("10")))), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertThat(matchingResponse.third.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `should mock a body with a primitive pattern`() {
+        val gherkin = """Feature: Test API
+Scenario: Test Scenario
+When POST /resource
+And request-body (number)
+Then status 200
+And response-body (number)
+        """.trim()
+
+        val request = HttpRequest("POST", "/resource", body = StringValue("(number)"))
+        val response = HttpResponse(200, body = StringValue("(number)"))
+        val stub = ScenarioStub(request, response)
+
+        val feature = Feature(gherkin)
+
+        val requestPattern = request.toPattern()
+        assertThat(requestPattern.matches(HttpRequest("POST", "/resource", body = StringValue("10")), Resolver())).isInstanceOf(Result.Success::class.java)
+
+        val matchingResponse = feature.matchingStubResponse(stub)
+        assertDoesNotThrow { (matchingResponse.third.body?.toStringValue() ?: "not a number").toInt() }
     }
 }

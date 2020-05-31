@@ -4,7 +4,6 @@ package run.qontract.stub
 import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.readFile
 import run.qontract.core.value.KafkaMessage
@@ -14,14 +13,14 @@ import java.io.File
 import java.time.Duration
 
 fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): HttpStub {
-    val contractBehaviour = ContractBehaviour(contractGherkin)
+    val contractBehaviour = Feature(contractGherkin)
 
     val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->
         println("Loading data from ${file.name}")
 
         stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))
                 .also {
-                    contractBehaviour.matchingMockResponse(it)
+                    contractBehaviour.matchingStubResponse(it)
                 }
     }
 
@@ -39,11 +38,11 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
     return HttpStub(behaviours, httpExpectations, host, port, ::consoleLog)
 }
 
-fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<ContractBehaviour, List<ScenarioStub>>> {
+fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
     val dataDirFileList = allDirsInTree(dataDirPaths)
 
     val behaviours = contractPaths.map { path ->
-        Pair(File(path), ContractBehaviour(readFile(path)))
+        Pair(File(path), Feature(readFile(path)))
     }
 
     val dataFiles = dataDirFileList.flatMap {
@@ -61,7 +60,7 @@ fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): 
                 if (kafkaMessage != null) {
                     behaviour.assertMatchesMockKafkaMessage(kafkaMessage)
                 } else {
-                    behaviour.matchingMockResponse(mock.request, mock.response)
+                    behaviour.matchingStubResponse(mock.request, mock.response)
                 }
                 Pair(behaviour, null)
             } catch (e: NoMatchingScenario) {
@@ -119,14 +118,14 @@ fun implicitContractDataDir(path: String): File {
 
 fun stubKafkaMessage(contractPath: String, message: String, bootstrapServers: String) {
     val kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, jsonStringToValueMap(message)))
-    ContractBehaviour(File(contractPath).readText()).assertMatchesMockKafkaMessage(kafkaMessage)
+    Feature(File(contractPath).readText()).assertMatchesMockKafkaMessage(kafkaMessage)
     createProducer(bootstrapServers).use {
         it.send(producerRecord(kafkaMessage))
     }
 }
 
 fun testKafkaMessage(contractPath: String, bootstrapServers: String, commit: Boolean) {
-    val contractBehaviour = ContractBehaviour(File(contractPath).readText())
+    val contractBehaviour = Feature(File(contractPath).readText())
 
     val results = contractBehaviour.scenarios.map {
         testKafkaMessages(it, bootstrapServers, commit)

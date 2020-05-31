@@ -277,12 +277,12 @@ fun convertAndTest(request: HttpRequest, response: HttpResponse) {
     try {
         val cleanedUpResponse = dropContentAndCORSResponseHeaders(response)
         val behaviour = toBehaviour(request, cleanedUpResponse)
-        behaviour.matchingMockResponse(request, cleanedUpResponse)
+        behaviour.matchingStubResponse(request, cleanedUpResponse)
     } catch (e: Throwable) {
         println(e.localizedMessage)
         throw e
     }
 }
 
-fun toBehaviour(request: HttpRequest, response: HttpResponse): ContractBehaviour =
-        ContractBehaviour(toGherkinFeature(NamedStub("New scenario", ScenarioStub(request, response))).also { println(it) })
+fun toBehaviour(request: HttpRequest, response: HttpResponse): Feature =
+        Feature(toGherkinFeature(NamedStub("New scenario", ScenarioStub(request, response))).also { println(it) })

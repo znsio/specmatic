@@ -55,8 +55,8 @@ data class GitRepoProvider(val repoName: String) : RepoProvider {
     override fun getContractFilePath(identifier: ContractIdentifier): String = contractFileInRepo(identifier).absolutePath
 
     override fun testBackwardCompatibility(identifier: ContractIdentifier, contractFile: File): Results {
-        val older = ContractBehaviour(contractFileInRepo(identifier).readText())
-        val newer = ContractBehaviour(contractFile.readText())
+        val older = Feature(contractFileInRepo(identifier).readText())
+        val newer = Feature(contractFile.readText())
 
         return testBackwardCompatibility2(older, newer)
     }

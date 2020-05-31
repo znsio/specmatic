@@ -24,7 +24,7 @@ class LexTest {
               And response-body (number)
         """.trimIndent()
 
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
 
         val request = HttpRequest().updateMethod("POST").updatePath("/add").updateBody("[1, 2]")
 
@@ -51,7 +51,7 @@ class LexTest {
               And response-body (number)
         """.trimIndent()
 
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
 
         val request = HttpRequest().updateMethod("POST").updatePath("/pets").updateBody("""{"name": "Benny", "description": "Fluffy and white"}""")
         val response = contractBehaviour.lookupResponse(request)
@@ -72,7 +72,7 @@ class LexTest {
                 | name | (string) |
         """.trimIndent()
 
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
 
         val request = HttpRequest().updateMethod("GET").updatePath("/pets/10")
         val response = contractBehaviour.lookupResponse(request)
@@ -96,7 +96,7 @@ class LexTest {
               Then status 202
         """.trimIndent()
 
-        val contractBehaviour = ContractBehaviour(contractGherkin)
+        val contractBehaviour = Feature(contractGherkin)
 
         val request = HttpRequest().updateMethod("PATCH").updatePath("/pets").updateBody("""{"health": "good"}""")
 
@@ -107,7 +107,7 @@ class LexTest {
 
     @Test
     fun `should parse multipart file spec`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
             Feature: Customer Data API
             
             Scenario: Upload customer information
@@ -125,7 +125,7 @@ class LexTest {
 
     @Test
     fun `should parse multipart file spec without content encoding`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
             Feature: Customer Data API
             
             Scenario: Upload customer information
@@ -143,7 +143,7 @@ class LexTest {
 
     @Test
     fun `should parse multipart file spec without content type and content encoding`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
             Feature: Customer Data API
             
             Scenario: Upload customer information
@@ -161,7 +161,7 @@ class LexTest {
 
     @Test
     fun `should parse multipart content spec`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
             Feature: Customer Data API
             
             Scenario: Upload multipart info
@@ -192,7 +192,7 @@ class LexTest {
 
     @Test
     fun `should parse a row lookup pattern`() {
-        val behaviour = ContractBehaviour("""
+        val behaviour = Feature("""
             Feature: Customer Data API
 
             Scenario: Upload multipart info

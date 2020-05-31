@@ -3,7 +3,7 @@ package run.qontract.core
 import run.qontract.core.pattern.ContractException
 import java.io.File
 
-fun testBackwardCompatibility2(older: ContractBehaviour, newerBehaviour: ContractBehaviour): Results {
+fun testBackwardCompatibility2(older: Feature, newerBehaviour: Feature): Results {
     return older.generateTestScenarios().fold(Results()) { results, olderScenario ->
         if(olderScenario.kafkaMessagePattern != null) {
             val scenarioMatchResults = newerBehaviour.lookupKafkaScenario(olderScenario.kafkaMessagePattern, olderScenario.resolver)
@@ -56,7 +56,7 @@ fun testBackwardCompatibilityInDirectory(directory: File, majorVersion: Int, min
         return JustOne(files.first().path)
 
     return TestResults(files.zipWithNext().asSequence().map { (older, newer) ->
-        val results = testBackwardCompatibility2(ContractBehaviour(older.readText()), ContractBehaviour(newer.readText()))
+        val results = testBackwardCompatibility2(Feature(older.readText()), Feature(newer.readText()))
         Comparison(older.absolutePath, newer.absolutePath, results)
     })
 }

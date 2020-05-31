@@ -197,9 +197,9 @@ Expected number, actual was string: "test"""")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
         assertThat(httpResponse.body?.toStringValue()).isEqualTo("""In scenario "Get account balance"
->> REQUEST.URL.account-id.QUERY PARAMS
+>> REQUEST.URL.QUERY-PARAMS.account-id
 
-Expected number, actual was string: "abc"""")
+Expected number, actual was "abc"""")
     }
 
     @Test
@@ -436,7 +436,7 @@ Feature: Contract for /balance API
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        assertTrue(NumericStringPattern.matches(httpResponse.body ?: EmptyString, Resolver()) is Result.Success)
+        assertTrue(NumberPattern.matches(httpResponse.body?.let { NumberValue(it.toStringValue().toInt()) } ?: EmptyString, Resolver()) is Result.Success)
     }
 
     @Test
@@ -643,14 +643,14 @@ Feature: Contract for /balance API
 
     @Test
     fun `successfully matches valid form fields`() {
-        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, NoContentPattern, mapOf("Data" to NumberTypePattern))
+        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, NoContentPattern, mapOf("Data" to NumberPattern))
         val request = HttpRequest().copy(formFields = mapOf("Data" to "10"))
         assertTrue(requestPattern.matchFormFields(request to Resolver()) is MatchSuccess)
     }
 
     @Test
     fun `returns error for form fields`() {
-        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, NoContentPattern, mapOf("Data" to NumberTypePattern))
+        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, NoContentPattern, mapOf("Data" to NumberPattern))
         val request = HttpRequest().copy(formFields = mapOf("Data" to "hello"))
         assertTrue(requestPattern.matchFormFields(request to Resolver()) is MatchFailure)
     }

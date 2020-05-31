@@ -3,13 +3,10 @@ package run.qontract.core
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.Examples.Companion.fromPSV
+import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.pattern.StringPattern
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.StringValue
-import run.qontract.core.value.Value
-import run.qontract.core.value.XMLValue
+import run.qontract.core.value.*
 import run.qontract.test.TestExecutor
 import java.util.*
 import kotlin.test.assertEquals
@@ -54,7 +51,7 @@ class ContractAsTestWithSamplesInTable {
                     pathParts[pathParts.size - 1]
                 }
                 Assertions.assertEquals("GET", request.method)
-                Assertions.assertTrue(NumericStringPattern.matches(StringValue(accountId), Resolver()) is Result.Success)
+                Assertions.assertTrue(NumberPattern.matches(NumberValue(accountId.toInt()), Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")

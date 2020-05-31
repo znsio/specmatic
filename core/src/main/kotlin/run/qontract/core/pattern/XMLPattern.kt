@@ -6,6 +6,7 @@ import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import run.qontract.core.*
 import run.qontract.core.utilities.xmlToString
+import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import run.qontract.core.value.XMLValue
 import java.io.StringReader
@@ -21,7 +22,7 @@ data class XMLPattern(val node: Node) : Pattern {
         if(sampleData !is XMLValue)
             return mismatchResult(this, sampleData)
 
-        return when (val result = matchesNode(node, sampleData.node, withNumericStringPattern(resolver))) {
+        return when (val result = matchesNode(node, sampleData.node, resolver)) {
             is Result.Failure -> result.reason("XML did not match")
             else -> result
         }
@@ -79,7 +80,7 @@ data class XMLPattern(val node: Node) : Pattern {
                     else -> result
                 }
             } catch(e: ContractException) {
-                e.result()
+                e.failure()
             }
             else -> when (patternValue) {
                 sampleValue -> Result.Success()
@@ -108,12 +109,11 @@ data class XMLPattern(val node: Node) : Pattern {
             when {
                 isPatternToken(patternValue) -> {
                     val resolvedPattern = resolver.getPattern(patternValue)
-                    val resolvedValue = resolvedPattern.parse(sampleValue, resolver)
+                    val resolvedValue = try { resolvedPattern.parse(sampleValue, resolver) } catch(e: Throwable) { return false }
 
                     if(!resolver.matchesPattern(name, resolvedPattern, resolvedValue).isTrue()) return false
                 }
                 else -> if (patternValue != sampleValue) return false
-
             }
         }
         return true
@@ -194,35 +194,37 @@ data class XMLPattern(val node: Node) : Pattern {
             otherPattern !is XMLPattern -> return Result.Failure("Expected XMLPattern")
             node.nodeName != otherPattern.node.nodeName -> return Result.Failure("Expected a node named ${node.nodeName}, but got ${otherPattern.node.nodeName} instead.")
             else -> {
-                val thisResolverWithNumericString = withNumericStringPattern(thisResolver)
-                val otherResolverWithNumericString = withNumericStringPattern(otherResolver)
-
                 for (i in (0.until(node.attributes?.length ?: 0))) {
                     val thisAttribute = node.attributes.item(i)
                     val otherAttribute = otherPattern.node.attributes.getNamedItem(thisAttribute.nodeName)
                             ?: return Result.Failure("Encompassing type has attribute ${thisAttribute.nodeName} but smaller didn't.")
 
-                    val result = attributeEncompasses(thisAttribute, otherAttribute, thisResolverWithNumericString, otherResolverWithNumericString)
+                    val result = attributeEncompasses(thisAttribute, otherAttribute, thisResolver, otherResolver)
                     if (result is Result.Failure) {
                         return result.breadCrumb(thisAttribute.nodeName)
                     }
                 }
 
                 val (theseEncompassables, otherEncompassables) = if (containsRepeatingPattern(node)) {
-                    val others = otherPattern.getEncompassables(otherResolverWithNumericString).map { resolvedHop(it, otherResolverWithNumericString) }
-                    val these = getEncompassables(others.size, thisResolverWithNumericString).map { resolvedHop(it, thisResolverWithNumericString) }
+                    val others = otherPattern.getEncompassables(otherResolver).map { resolvedHop(it, otherResolver) }
+                    val these = getEncompassables(others.size, thisResolver).map { resolvedHop(it, thisResolver) }
                     Pair(these, others)
                 } else {
-                    val others = otherPattern.getEncompassables(node.childNodes.length, otherResolverWithNumericString).map { resolvedHop(it, otherResolverWithNumericString) }
+                    val others = otherPattern.getEncompassables(node.childNodes.length, otherResolver).map { resolvedHop(it, otherResolver) }
                     if (others.size != node.childNodes.length)
                         return Result.Failure("The lengths of the two XML types are unequal.")
 
-                    val these = getEncompassables(thisResolverWithNumericString).map { resolvedHop(it, thisResolverWithNumericString) }
+                    val these = getEncompassables(thisResolver).map { resolvedHop(it, thisResolver) }
                     Pair(these, others)
                 }
 
                 return theseEncompassables.zip(otherEncompassables).map { (thisOne, otherOne) ->
-                    thisOne.encompasses(otherOne, thisResolverWithNumericString, otherResolverWithNumericString)
+                    when {
+                        otherOne is ExactValuePattern && otherOne.pattern is StringValue -> {
+                            ExactValuePattern(thisOne.parse(otherOne.pattern.toStringValue(), thisResolver))
+                        }
+                        else -> otherOne
+                    }.let{ otherOneAdjustedForExactValue -> thisOne.encompasses(otherOneAdjustedForExactValue, thisResolver, otherResolver) }
                 }.find { it is Result.Failure } ?: Result.Success()
             }
         }

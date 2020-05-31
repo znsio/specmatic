@@ -2,6 +2,7 @@ package run.qontract.core
 
 import run.qontract.core.utilities.URIUtils.parseQuery
 import io.netty.buffer.ByteBuf
+import run.qontract.conversions.guessType
 import run.qontract.core.GherkinSection.When
 import run.qontract.core.pattern.*
 import run.qontract.core.value.*
@@ -171,29 +172,27 @@ internal fun startLinesWith(str: String, startValue: String) =
 
 fun toGherkinClauses(request: HttpRequest): List<GherkinClause> {
     return emptyList<GherkinClause>().let {
-        val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
+    val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
 
-        if(request.path == null)
-            throw ContractException("Can't generate a qontract without the url.")
+    if(request.path == null)
+        throw ContractException("Can't generate a qontract without the url.")
 
-        val query = when {
-            request.queryParams.isNotEmpty() -> {
-                val query = request.queryParams.entries.joinToString("&") { (key, value) -> "$key=$value" }
-                "?$query"
-            }
-            else -> ""
+    val query = when {
+        request.queryParams.isNotEmpty() -> {
+            val query = request.queryParams.entries.joinToString("&") { (key, value) -> "$key=${guessType(parsedValue(value)).type().pattern}" }
+            "?$query"
         }
-
-        val path = "${request.path}$query"
-
-        it.plus(GherkinClause("$method $path", When))
-    }.plus(headersToGherkin(request.headers, "request-header", When)).let {
-        it.plus(when {
-            request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData)
-            request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields)
-            else -> bodyToGherkinClauses("RequestBody", "request-body", request.body, When)?: emptyList()
-        })
+        else -> ""
     }
+
+    val path = "${request.path}$query"
+
+    it.plus(GherkinClause("$method $path", When))
+}.plus(headersToGherkin(request.headers, "request-header", When)).plus(when {
+        request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData)
+        request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields)
+        else -> bodyToGherkinClauses("RequestBody", "request-body", request.body, When)?: emptyList()
+    })
 }
 
 fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>) =

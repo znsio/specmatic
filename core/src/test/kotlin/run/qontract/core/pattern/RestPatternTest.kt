@@ -9,7 +9,7 @@ import run.qontract.core.value.NullValue
 internal class RestPatternTest {
     @Test
     fun `should match even if there are no elements left`() {
-        val pattern = RestPattern(NumberTypePattern)
+        val pattern = RestPattern(NumberPattern)
         val value = JSONArrayValue(emptyList())
 
         value shouldMatch pattern
@@ -17,6 +17,6 @@ internal class RestPatternTest {
 
     @Test
     fun `should fail to match nulls gracefully`() {
-        NullValue shouldNotMatch RestPattern(NumberTypePattern)
+        NullValue shouldNotMatch RestPattern(NumberPattern)
     }
 }

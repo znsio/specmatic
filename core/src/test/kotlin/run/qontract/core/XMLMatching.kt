@@ -1,10 +1,11 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.NumericStringPattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.utilities.parseXML
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.NumberPattern
+import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 
 class XMLMatching {
@@ -30,7 +31,7 @@ class XMLMatching {
         Assertions.assertTrue(StringPattern.matches(StringValue(type), Resolver()) is Result.Success)
         Assertions.assertTrue(StringPattern.matches(StringValue(name), Resolver()) is Result.Success)
         Assertions.assertTrue(StringPattern.matches(StringValue(address), Resolver()) is Result.Success)
-        Assertions.assertTrue(NumericStringPattern.matches(StringValue(age), Resolver()) is Result.Success)
+        Assertions.assertTrue(NumberPattern.matches(NumberValue(age.toInt()), Resolver()) is Result.Success)
     }
 
     @Test

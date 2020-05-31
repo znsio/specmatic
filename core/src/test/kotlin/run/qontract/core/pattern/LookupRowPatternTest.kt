@@ -10,7 +10,7 @@ import run.qontract.core.value.NumberValue
 internal class LookupRowPatternTest {
     @Test
     fun `it should return a new exact value pattern when generating pattern from row with a matching key`() {
-        val pattern = LookupRowPattern(NumberTypePattern, "customerId")
+        val pattern = LookupRowPattern(NumberPattern, "customerId")
         val row = Row(listOf("customerId"), listOf("10"))
 
         val newPattern = pattern.newBasedOn(row, Resolver())
@@ -19,11 +19,11 @@ internal class LookupRowPatternTest {
 
     @Test
     fun `it should return a new exact value pattern when generating pattern from row with no matching key`() {
-        val pattern = LookupRowPattern(NumberTypePattern, "customerId")
+        val pattern = LookupRowPattern(NumberPattern, "customerId")
         val row = Row(emptyList(), emptyList())
 
         val newPattern = pattern.newBasedOn(row, Resolver())
-        assertThat(newPattern.single()).isEqualTo(NumberTypePattern)
+        assertThat(newPattern.single()).isEqualTo(NumberPattern)
     }
 
     @Test

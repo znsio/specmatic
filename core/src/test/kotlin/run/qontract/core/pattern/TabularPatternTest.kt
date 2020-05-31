@@ -311,7 +311,7 @@ Given request-body
 
     @Test
     fun `it should encompass itself`() {
-        val type = TabularPattern(mapOf("number" to NumberTypePattern))
+        val type = TabularPattern(mapOf("number" to NumberPattern))
         assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
@@ -324,7 +324,7 @@ Given request-body
     @Test
     fun `having a nullable value it should encompass another with a non null value of the same type`() {
         val bigger = TabularPattern(mapOf("number" to parsedPattern("(number?)")))
-        val smallerWithNumber = TabularPattern(mapOf("number" to NumberTypePattern))
+        val smallerWithNumber = TabularPattern(mapOf("number" to NumberPattern))
         val smallerWithNull = TabularPattern(mapOf("number" to NullPattern))
 
         assertThat(bigger.encompasses(smallerWithNumber, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -339,15 +339,15 @@ Given request-body
 
     @Test
     fun `it should encompass another with the optional key missing`() {
-        val bigger = TabularPattern(mapOf("required" to NumberTypePattern, "optional?" to NumberTypePattern))
-        val smaller = TabularPattern(mapOf("required" to NumberTypePattern))
+        val bigger = TabularPattern(mapOf("required" to NumberPattern, "optional?" to NumberPattern))
+        val smaller = TabularPattern(mapOf("required" to NumberPattern))
         assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `it should encompass another with an unheard of key`() {
-        val bigger = TabularPattern(mapOf("required" to NumberTypePattern))
-        val smaller = TabularPattern(mapOf("required" to NumberTypePattern, "extra" to NumberTypePattern))
+        val bigger = TabularPattern(mapOf("required" to NumberPattern))
+        val smaller = TabularPattern(mapOf("required" to NumberPattern, "extra" to NumberPattern))
         assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

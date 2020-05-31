@@ -23,7 +23,7 @@ fun testBackwardCompatibility2(older: ContractBehaviour, newerBehaviour: Contrac
 
                 results.copy(results = results.results.plus(result).toMutableList())
             } catch (contractException: ContractException) {
-                results.copy(results = results.results.plus(contractException.result()).toMutableList())
+                results.copy(results = results.results.plus(contractException.failure()).toMutableList())
             } catch (throwable: Throwable) {
                 results.copy(results = results.results.plus(Result.Failure("Exception: ${throwable.localizedMessage}")).toMutableList())
             }

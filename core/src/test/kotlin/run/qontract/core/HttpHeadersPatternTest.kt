@@ -2,7 +2,7 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.pattern.NumberTypePattern
+import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.pattern.Row
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.pattern.stringToPattern
@@ -43,7 +43,7 @@ internal class HttpHeadersPatternTest {
         headers["key"] = "abc"
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("HEADERS", "key"), listOf("Couldn't convert \"abc\" to number")))
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("HEADERS", "key"), listOf("Expected number, actual was \"abc\"")))
         }
     }
 
@@ -169,7 +169,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `a header pattern with an optional header should match one without that header`() {
-        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional?" to NumberTypePattern))
+        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional?" to NumberPattern))
         val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern))
         val result = bigger.encompasses(smaller, Resolver(), Resolver())
         assertThat(result).isInstanceOf(Result.Success::class.java)
@@ -177,7 +177,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `a header pattern with an optional header should match one with that header if present`() {
-        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional?" to NumberTypePattern))
+        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional?" to NumberPattern))
         val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional" to StringPattern))
         val result = bigger.encompasses(smaller, Resolver(), Resolver())
         assertThat(result).isInstanceOf(Result.Failure::class.java)

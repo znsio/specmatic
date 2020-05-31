@@ -20,7 +20,7 @@ internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
         }
 
 internal val builtInPatterns = mapOf(
-    "(number)" to NumberTypePattern,
+    "(number)" to NumberPattern,
     "(string)" to StringPattern,
     "(boolean)" to BooleanPattern,
     "(null)" to NullPattern,
@@ -140,8 +140,8 @@ private fun penultimate(parts: List<String>) = parts[parts.size - 2]
 fun parsedJSONStructure(content: String): Value {
     return content.trim().let {
         when {
-            it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
-            it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
+            it.startsWith("{") -> try { JSONObjectValue(jsonStringToValueMap(it)) } catch(e: Throwable) { throw ContractException("String started with { but couldn't be parsed as json object") }
+            it.startsWith("[") -> try { JSONArrayValue(jsonStringToValueArray(it)) } catch(e: Throwable) { throw ContractException("String started with [ but couldn't be parsed as json array") }
             else -> throw ContractException("Expected json, actual $content.")
         }
     }
@@ -153,8 +153,6 @@ fun parsedValue(content: String?): Value {
             it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
             it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
             it.startsWith("<") -> XMLValue(it)
-            it == "true" -> BooleanValue(true)
-            it == "false" -> BooleanValue(false)
             else -> StringValue(it)
         }
     } ?: EmptyString

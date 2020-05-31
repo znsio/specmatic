@@ -17,7 +17,7 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
             return mismatchResult("JSON array", sampleData)
 
         return sampleData.list.asSequence().map {
-            pattern.matches(it, withNumericStringPattern(resolver))
+            pattern.matches(it, resolver)
         }.mapIndexed { index, result -> Pair(index, result) }.find { it.second is Result.Failure }?.let { (index, result) ->
             when(result) {
                 is Result.Failure -> result.breadCrumb("[$index]")

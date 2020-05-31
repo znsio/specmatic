@@ -3,7 +3,6 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.*
-import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
@@ -183,12 +182,12 @@ class LexTest {
         assertThat(patterns[0].name).isEqualTo("customer_info")
         val pattern0 = deferredToJsonPatternData(patterns[0].content, resolver)
         val contentPattern0 = deferredToNumberPattern(pattern0.getValue("customerId"), resolver)
-        assertThat(contentPattern0).isEqualTo(NumberTypePattern)
+        assertThat(contentPattern0).isEqualTo(NumberPattern)
 
         assertThat(patterns[1].name).isEqualTo("order_info")
         val pattern1 = deferredToJsonPatternData(patterns[1].content, resolver)
         val contentPattern1 = deferredToNumberPattern(pattern1.getValue("orderId"), resolver)
-        assertThat(contentPattern1).isEqualTo(NumberTypePattern)
+        assertThat(contentPattern1).isEqualTo(NumberPattern)
     }
 
     @Test
@@ -218,8 +217,8 @@ class LexTest {
     private fun deferredToJsonPatternData(pattern: Pattern, resolver: Resolver): Map<String, Pattern> =
             ((pattern as DeferredPattern).resolvePattern(resolver) as TabularPattern).pattern
 
-    private fun deferredToNumberPattern(pattern: Pattern, resolver: Resolver): NumberTypePattern =
-            (pattern as DeferredPattern).resolvePattern(resolver) as NumberTypePattern
+    private fun deferredToNumberPattern(pattern: Pattern, resolver: Resolver): NumberPattern =
+            (pattern as DeferredPattern).resolvePattern(resolver) as NumberPattern
 
     private fun resolveDeferred(pattern: Pattern, resolver: Resolver): Pattern =
             (pattern as DeferredPattern).resolvePattern(resolver)

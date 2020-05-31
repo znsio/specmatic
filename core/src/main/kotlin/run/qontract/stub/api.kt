@@ -145,7 +145,7 @@ fun testKafkaMessages(scenario: Scenario, bootstrapServers: String, commit: Bool
         consumer.subscribe(listOf(topic))
 
         val messages = consumer.poll(Duration.ofSeconds(1)).map {
-            KafkaMessage(topic, it.key()?.let { key -> StringValue(key) }, parsedValue(it.value()))
+            KafkaMessage(topic, it.key()?.let { key -> StringValue(key) }, StringValue(it.value()))
         }
 
         val results = messages.map {

@@ -48,7 +48,7 @@ internal class URLMatcherTest {
 
         urlPattern.matches(URI("/pets"), queryParameters, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("petid", "QUERY PARAMS"), listOf("""Expected number, actual was string: "text"""")))
+            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("QUERY-PARAMS", "petid"), listOf("""Expected number, actual was "text"""")))
         }
     }
 

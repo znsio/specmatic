@@ -23,14 +23,8 @@ import java.util.*
 class QontractKafka(kafkaPort: Int = 9093) : Closeable {
     private val kafkaContainer = KafkaContainer()
 
-    val bootstrapServers
+    val bootstrapServers: String
         get() = kafkaContainer.bootstrapServers
-
-    fun setupTopic(topic: String) = setupTopics(listOf(topic))
-
-    fun setupTopics(topics: List<String>) {
-        createTopics(topics, kafkaContainer.bootstrapServers)
-    }
 
     fun send(topic: String, key: String, message: String) {
         createProducer(kafkaContainer.bootstrapServers).use { producer ->
@@ -45,18 +39,6 @@ class QontractKafka(kafkaPort: Int = 9093) : Closeable {
             val producerRecord = ProducerRecord<String, String>(topic, message)
             val future = producer.send(producerRecord)
             future.get()
-        }
-    }
-
-    fun fetch(topic: String): List<KafkaMessage> {
-        return createConsumer(kafkaContainer.bootstrapServers, false).use { consumer ->
-            consumer.subscribe(listOf(topic))
-            consumer.poll(Duration.ofSeconds(1))
-            consumer.seekToBeginning(listOf(TopicPartition(topic, 0)))
-            val messages = consumer.poll(Duration.ofSeconds(1))
-            messages.map {
-                KafkaMessage(topic, it.key()?.let { key -> StringValue(key) }, parsedValue(it.value()))
-            }
         }
     }
 

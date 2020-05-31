@@ -8,7 +8,7 @@ import org.junit.jupiter.api.fail
 import org.xml.sax.SAXException
 import run.qontract.core.HttpResponse.Companion.jsonResponse
 import run.qontract.core.HttpResponse.Companion.xmlResponse
-import run.qontract.core.pattern.NumericStringPattern
+import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.*
@@ -86,7 +86,7 @@ class ContractAsTest {
         assertThat(results.report()).isEqualTo("""In scenario "Get balance"
 >> RESPONSE.HEADERS.length
 
-Couldn't convert "abc" to number""")
+Expected number, actual was "abc"""")
     }
 
     @Test
@@ -267,8 +267,7 @@ Couldn't convert "abc" to number""")
                 assertEquals("/accounts", request.path)
                 if (request.queryParams.contains("account_id")) {
                     flags.add("with")
-                    assertTrue(NumericStringPattern
-                            .matches(StringValue(request.queryParams.getValue("account_id")), Resolver()) is Result.Success)
+                    assertTrue(NumberPattern.matches(NumberValue(request.queryParams.getValue("account_id").toInt()), Resolver()) is Result.Success)
                 } else flags.add("without")
 
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {

@@ -7,7 +7,7 @@ import run.qontract.core.value.NumberValue
 import run.qontract.core.value.Value
 import java.util.*
 
-object NumberTypePattern : Pattern {
+object NumberPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when(sampleData is NumberValue) {
             true -> Result.Success()
@@ -30,3 +30,10 @@ object NumberTypePattern : Pattern {
     override val pattern: Any = "(number)"
     override fun toString(): String = pattern.toString()
 }
+
+fun encompasses(thisPattern: Pattern, otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+        when {
+            otherPattern::class == thisPattern::class -> Result.Success()
+            otherPattern is ExactValuePattern -> otherPattern.fitsWithin(thisPattern.patternSet(thisResolver), otherResolver, thisResolver)
+            else -> mismatchResult(thisPattern, otherPattern)
+        }

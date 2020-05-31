@@ -79,6 +79,8 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
                     }
                 } catch(e: ContractException) {
                     mismatchResult(pattern, value).breadCrumb("FORM FIELDS").breadCrumb(key)
+                } catch(e: Throwable) {
+                    mismatchResult(pattern, value).breadCrumb("FORM FIELDS").breadCrumb(key)
                 }
             }
             .firstOrNull { it is Failure }
@@ -101,15 +103,13 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
     private fun matchBody(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
 
-        val resolverWithNumericString = withNumericStringPattern(resolver)
-
         val bodyValue = try {
-            if (isPatternToken(httpRequest.bodyString)) StringValue(httpRequest.bodyString) else body.parse(httpRequest.bodyString, resolverWithNumericString)
+            if (isPatternToken(httpRequest.bodyString)) StringValue(httpRequest.bodyString) else body.parse(httpRequest.bodyString, resolver)
         } catch(e: ContractException) {
-            return MatchFailure(e.result().breadCrumb("BODY"))
+            return MatchFailure(e.failure().breadCrumb("BODY"))
         }
 
-        return when (val result = resolverWithNumericString.matchesPattern(null, body, bodyValue)) {
+        return when (val result = resolver.matchesPattern(null, body, bodyValue)) {
             is Failure -> MatchFailure(result.breadCrumb("BODY"))
             else -> MatchSuccess(parameters)
         }

@@ -11,7 +11,7 @@ import run.qontract.core.value.NullValue
 internal class ListPatternTest {
     @Test
     fun `should generate a list of patterns each of which is a list pattern`() {
-        val patterns = ListPattern(NumberTypePattern).newBasedOn(Row(), Resolver())
+        val patterns = ListPattern(NumberPattern).newBasedOn(Row(), Resolver())
 
         for(pattern in patterns) {
             assertTrue(pattern is ListPattern)
@@ -25,7 +25,7 @@ internal class ListPatternTest {
 
     @Test
     fun `should encompass itself`() {
-        val type = ListPattern(NumberTypePattern)
+        val type = ListPattern(NumberPattern)
         assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
@@ -47,7 +47,7 @@ internal class ListPatternTest {
 
     @Test
     fun `a list should encompass a json array with items matching the list`() {
-        val bigger = ListPattern(AnyPattern(listOf(NumberTypePattern, NullPattern)))
+        val bigger = ListPattern(AnyPattern(listOf(NumberPattern, NullPattern)))
         val smaller1Element = parsedPattern("""["(number)"]""")
         val smaller1ElementAndRest = parsedPattern("""["(number)", "(number...)"]""")
 
@@ -57,7 +57,7 @@ internal class ListPatternTest {
 
     @Test
     fun `should fail if there are any match failures at all`() {
-        val bigger = ListPattern(NumberTypePattern)
+        val bigger = ListPattern(NumberPattern)
         val matching = parsedPattern("""["(number)", "(string...)"]""")
 
         assertThat(bigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)

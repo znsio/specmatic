@@ -1,7 +1,7 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
-import run.qontract.core.pattern.NumberTypePattern
+import run.qontract.core.pattern.NumberPattern
 import run.qontract.test.TestExecutor
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
@@ -136,9 +136,9 @@ Feature: Contract for /balance API
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertTrue(NumberTypePattern.matches(serverStateForValidation["id"], Resolver()) is Result.Success)
+                assertTrue(NumberPattern.matches(serverStateForValidation["id"], Resolver()) is Result.Success)
                 val jsonBody = jsonObject(request.body)
-                assertTrue(NumberTypePattern.matches(jsonBody["id"], Resolver()) is Result.Success)
+                assertTrue(NumberPattern.matches(jsonBody["id"], Resolver()) is Result.Success)
                 return HttpResponse(200, null, HashMap())
             }
 

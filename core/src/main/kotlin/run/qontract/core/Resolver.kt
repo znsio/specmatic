@@ -67,11 +67,8 @@ data class Resolver(val factStore: FactStore = CheckFacts(), val matchPatternInV
     }
 }
 
-fun withNumericStringPattern(resolver: Resolver): Resolver =
-        resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumericStringPattern))
-
 fun withNumberTypePattern(resolver: Resolver): Resolver =
-        resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberTypePattern))
+        resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberPattern))
 
 val checkOnlyPatternKeys = { pattern: Map<String, Any>, actual: Map<String, Any> ->
     pattern.keys.find { key -> isMissingKey(actual, key) }?.let { Pair(it, null) }

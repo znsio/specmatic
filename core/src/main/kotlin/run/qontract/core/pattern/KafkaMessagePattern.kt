@@ -15,11 +15,25 @@ data class KafkaMessagePattern(val topic: String = "", val key: Pattern = NoCont
         if(message.topic != topic)
             return Result.Failure("Expected topic $topic, got $message.topic").breadCrumb("TOPIC")
 
-        val keyMatch = key.matches(message.key ?: NullValue, resolver)
-        if(keyMatch !is Result.Success)
-            return keyMatch.breadCrumb("KEY")
+        try {
+            val parsedKey = when (message.key) {
+                is StringValue -> key.parse(message.key.string, resolver)
+                else -> message.key
+            }
 
-        return value.matches(message.value, resolver).breadCrumb("VALUE")
+            val keyMatch = key.matches(parsedKey ?: NullValue, resolver)
+            if (keyMatch !is Result.Success)
+                return keyMatch.breadCrumb("KEY")
+
+            val parsedValue = when (message.value) {
+                is StringValue -> key.parse(message.value.string, resolver)
+                else -> message.value
+            }
+
+            return value.matches(parsedValue, resolver).breadCrumb("VALUE")
+        } catch(e: ContractException) {
+            return e.failure()
+        }
     }
 
     fun encompasses(other: KafkaMessagePattern, thisResolver: Resolver, otherResolver: Resolver): Result {

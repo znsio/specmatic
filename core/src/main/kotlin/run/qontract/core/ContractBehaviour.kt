@@ -92,7 +92,7 @@ data class ContractBehaviour(val scenarios: List<Scenario> = emptyList(), privat
                         }
                     }
                 } catch (contractException: ContractException) {
-                    results.add(contractException.result())
+                    results.add(contractException.failure())
                 }
             }
 
@@ -347,7 +347,7 @@ fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Result {
         }
     }
     catch(contractException: ContractException) {
-        contractException.result().updateScenario(scenario)
+        contractException.failure().updateScenario(scenario)
     }
     catch(throwable: Throwable) {
         Result.Failure("Error: ${throwable.message}").updateScenario(scenario)

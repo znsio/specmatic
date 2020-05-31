@@ -7,13 +7,10 @@ import java.net.URI
 
 data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
     fun matches(uri: URI, sampleQuery: Map<String, String> = emptyMap(), resolver: Resolver = Resolver()): Result {
-        val newResolver = withNumericStringPattern(resolver)
 
-        matchesPath(uri, newResolver).let {
+        matchesPath(uri, resolver).let {
             return when (it) {
-                is Result.Success -> {
-                    matchesQuery(sampleQuery, newResolver)
-                }
+                is Result.Success -> matchesQuery(sampleQuery, resolver)
                 else -> it
             }
         }
@@ -26,10 +23,27 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
             return Result.Failure("Expected $uri (having ${pathParts.size} path segments) to match $path (which has ${pathPattern.size} path segments).", breadCrumb = "PATH")
 
         pathPattern.zip(pathParts).forEach { (urlPathPattern, token) ->
-            when (val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, StringValue(token))) {
-                is Result.Failure -> return when(urlPathPattern.key) {
-                    null -> result.breadCrumb("PATH ($uri)")
-                    else -> result.breadCrumb("PATH ($uri)").breadCrumb(urlPathPattern.key)
+            try {
+                val parsedValue = urlPathPattern.pattern.parse(token, resolver)
+                when (val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)) {
+                    is Result.Failure -> return when (urlPathPattern.key) {
+                        null -> result.breadCrumb("PATH ($uri)")
+                        else -> result.breadCrumb("PATH ($uri)").breadCrumb(urlPathPattern.key)
+                    }
+                }
+            } catch(e: ContractException) {
+                e.failure().breadCrumb("PATH ($uri)").let {
+                    when(urlPathPattern.key) {
+                        null -> it
+                        else -> it.breadCrumb(urlPathPattern.key)
+                    }
+                }
+            } catch(e: Throwable) {
+                Result.Failure(e.localizedMessage).breadCrumb("PATH ($uri)").let {
+                    when(urlPathPattern.key) {
+                        null -> it
+                        else -> it.breadCrumb(urlPathPattern.key)
+                    }
                 }
             }
         }
@@ -44,11 +58,18 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         for (key in queryPattern.keys) {
             if (sampleQuery.containsKey(key)) {
-                val patternValue = queryPattern.getValue(key)
-                val sampleValue = sampleQuery.getValue(key)
+                try {
+                    val patternValue = queryPattern.getValue(key)
+                    val sampleValue = sampleQuery.getValue(key)
 
-                when (val result = resolver.matchesPattern(key, patternValue, StringValue(sampleValue))) {
-                    is Result.Failure -> return result.breadCrumb("QUERY PARAMS").breadCrumb(key)
+                    val parsedValue = patternValue.parse(sampleValue, resolver)
+                    when (val result = resolver.matchesPattern(key, patternValue, parsedValue)) {
+                        is Result.Failure -> return result.breadCrumb("QUERY-PARAMS").breadCrumb(key)
+                    }
+                } catch(e: ContractException) {
+                    return e.failure().breadCrumb(key).breadCrumb("QUERY-PARAMS")
+                } catch(e: Throwable) {
+                    return Result.Failure(e.localizedMessage).breadCrumb(key).breadCrumb("QUERY-PARAMS")
                 }
             }
         }
@@ -67,7 +88,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     fun generateQuery(resolver: Resolver): Map<String, String> {
-        return attempt(breadCrumb = "QUERY PARAMS") {
+        return attempt(breadCrumb = "QUERY-PARAMS") {
             queryPattern.map { (name, pattern) ->
                 attempt(breadCrumb = name) { name to resolver.generate(name, pattern).toString() }
             }.toMap()
@@ -75,8 +96,6 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<URLMatcher> {
-        val newResolver = withNumericStringPattern(resolver)
-
         val newPathPartsList = newBasedOn(pathPattern.mapIndexed { index, it ->
             val key = it.key
 
@@ -84,20 +103,20 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                 when {
                     key !== null && row.containsField(key) -> {
                         val rowValue = row.getField(key)
-                        attempt("Format error in example of \"$key\"") { URLPathPattern(ExactValuePattern(it.parse(rowValue, newResolver))) }
+                        attempt("Format error in example of \"$key\"") { URLPathPattern(ExactValuePattern(it.parse(rowValue, resolver))) }
                     }
                     else -> it
                 }
             }
-        }, row, newResolver)
+        }, row, resolver)
 
         val newURLPathPatternsList = newPathPartsList.map { list -> list.map { it as URLPathPattern } }
 
-        val newQueryParamsList = attempt(breadCrumb = "QUERY PARAMS") {
+        val newQueryParamsList = attempt(breadCrumb = "QUERY-PARAMS") {
             val optionalQueryParams = queryPattern.mapKeys { "${it.key}?" }
 
             multipleValidKeys(optionalQueryParams, row) {
-                newBasedOn(it.mapKeys { withoutOptionality(it.key) }, row, newResolver)
+                newBasedOn(it.mapKeys { withoutOptionality(it.key) }, row, resolver)
             }
         }
 

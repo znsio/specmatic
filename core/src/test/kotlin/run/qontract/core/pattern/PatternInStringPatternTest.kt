@@ -11,7 +11,7 @@ import run.qontract.core.value.StringValue
 internal class PatternInStringPatternTest {
     @Test
     fun `should match a number in string`() {
-        StringValue("10") shouldMatch PatternInStringPattern(NumberTypePattern)
+        StringValue("10") shouldMatch PatternInStringPattern(NumberPattern)
     }
 
     @Test
@@ -21,7 +21,7 @@ internal class PatternInStringPatternTest {
 
     @Test
     fun `should generate a number in a string`() {
-        val value = PatternInStringPattern(NumberTypePattern).generate(Resolver())
+        val value = PatternInStringPattern(NumberPattern).generate(Resolver())
 
         assertThat(value).isInstanceOf(StringValue::class.java)
         if(value !is StringValue)
@@ -36,7 +36,7 @@ internal class PatternInStringPatternTest {
 
     @Test
     fun `should generate a list of patterns based on a Row`() {
-        val patterns = PatternInStringPattern(NumberTypePattern).newBasedOn(Row(), Resolver())
+        val patterns = PatternInStringPattern(NumberPattern).newBasedOn(Row(), Resolver())
 
         assertThat(patterns).hasSize(1)
 
@@ -46,12 +46,12 @@ internal class PatternInStringPatternTest {
 
         if(pattern !is PatternInStringPattern) fail("Expected PatternInStringPattern")
 
-        assertThat(pattern.pattern).isInstanceOf(NumberTypePattern::class.java)
+        assertThat(pattern.pattern).isInstanceOf(NumberPattern::class.java)
     }
 
     @Test
     fun `should parse a string`() {
-        val pattern = PatternInStringPattern(NumberTypePattern)
+        val pattern = PatternInStringPattern(NumberPattern)
         val value = pattern.parse("10", Resolver())
 
         assertThat(value).isEqualTo(StringValue("10"))
@@ -59,8 +59,8 @@ internal class PatternInStringPatternTest {
 
     @Test
     fun `should match another pattern-in-string of the same inner pattern type`() {
-        val pattern1 = PatternInStringPattern(NumberTypePattern)
-        val pattern2 = PatternInStringPattern(NumberTypePattern)
+        val pattern1 = PatternInStringPattern(NumberPattern)
+        val pattern2 = PatternInStringPattern(NumberPattern)
 
         assertThat(pattern1.encompasses(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
 

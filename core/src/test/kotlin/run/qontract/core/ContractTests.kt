@@ -1,11 +1,10 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
-import org.checkerframework.common.value.qual.StringVal
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import run.qontract.core.Contract.Companion.fromGherkin
-import run.qontract.core.pattern.NumberTypePattern
+import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.value.*
 import run.qontract.test.TestExecutor
 import kotlin.test.*
@@ -202,7 +201,7 @@ Then status 200
 
         val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertTrue(NumberTypePattern.parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
+                assertTrue(NumberPattern.parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
                 flags["parsed number"] = true
                 return HttpResponse(200, "100")
             }
@@ -233,7 +232,7 @@ Then status 200
 
         val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertTrue(NumberTypePattern.parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
+                assertTrue(NumberPattern.parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
                 flags["parsed number"] = true
                 return HttpResponse(200, "100")
             }

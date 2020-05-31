@@ -2,9 +2,8 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.GherkinSection.Then
 import run.qontract.core.pattern.*
-import run.qontract.core.value.Value
+import run.qontract.core.value.StringValue
 
 internal class HttpResponsePatternTest {
     @Test
@@ -34,5 +33,13 @@ internal class HttpResponsePatternTest {
         val bigger = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Required" to StringPattern)), body = TabularPattern(mapOf("data" to AnyPattern(listOf(StringPattern, NullPattern)))))
         val smaller = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Extra" to StringPattern)), body = TabularPattern(mapOf("data" to StringPattern)))
         assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `when validating a response string against a response type number, should return an error`() {
+        val response = HttpResponse(200, emptyMap(), StringValue("not a number"))
+        val pattern = HttpResponsePattern(status = 200, body = NumberPattern)
+
+        assertThat(pattern.matches(response, Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

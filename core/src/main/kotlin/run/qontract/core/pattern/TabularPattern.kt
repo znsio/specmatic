@@ -84,8 +84,6 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
                                 else -> throw ContractException(resultReport(result))
                             }
                         }
-
-                        rowPattern.newBasedOn(row, resolver)
                     } else {
                         attempt("Format error in example of \"$keyWithoutOptionality\"") { listOf(ExactValuePattern(pattern.parse(rowValue, resolver))) }
                     }
@@ -189,7 +187,7 @@ fun convertToNumber(value: String): Number {
         } catch (ignored: Exception) {
         }
 
-        throw ContractException("""Couldn't convert "$value" to number""")
+        throw ContractException("""Expected number, actual was "$value"""")
     }
 }
 

@@ -1,6 +1,7 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.*
+import run.qontract.core.value.StringValue
 
 data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = NoContentPattern) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body?.toExactType() ?: NoContentPattern)
@@ -36,8 +37,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
             }
         }
 
-    fun matchesMock(response: HttpResponse, resolver: Resolver) =
-            matches(response, resolver.copy(matchPatternInValue = true, newPatterns = resolver.newPatterns.plus(mapOf("(number)" to NumericStringPattern))))
+    fun matchesMock(response: HttpResponse, resolver: Resolver) = matches(response, resolver)
 
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, _) = parameters
@@ -57,8 +57,17 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
 
     private fun matchBody(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
-        val resolverWithNumericString = resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumericStringPattern))
-        when (val result = body.matches(response.body, resolverWithNumericString)) {
+
+        val parsedValue = when (response.body) {
+            is StringValue -> try {
+                body.parse(response.body.string, resolver)
+            } catch(e: Throwable) {
+                return MatchFailure(Result.Failure("Couldn't parse ${response.body.string} as ${body.typeName}").breadCrumb("BODY"))
+            }
+            else -> response.body
+        }
+
+        when (val result = body.matches(parsedValue, resolver)) {
             is Result.Failure -> return MatchFailure(result.breadCrumb("BODY"))
         }
         return MatchSuccess(parameters)

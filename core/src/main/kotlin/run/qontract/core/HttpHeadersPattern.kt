@@ -5,7 +5,7 @@ import run.qontract.core.value.StringValue
 
 data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), val ancestorHeaders: Map<String, Pattern>? = null) {
     fun matches(headers: Map<String, String>, resolver: Resolver): Result {
-        val result = headers to resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumericStringPattern)) to
+        val result = headers to resolver to
                 ::matchEach otherwise
                 ::handleError toResult
                 ::returnResult
@@ -43,7 +43,9 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
                         }
                     }
                 } catch(e: ContractException) {
-                    return MatchFailure(e.result())
+                    return MatchFailure(e.failure())
+                } catch(e: Throwable) {
+                    return MatchFailure(Result.Failure(e.localizedMessage, breadCrumb = key))
                 }
                 !key.endsWith("?") ->
                     return MatchFailure(Result.Failure(message = """Header $key was missing""", breadCrumb = key))
@@ -92,8 +94,8 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
         val thisWithoutOptionality = pattern.filterKeys { withoutOptionality(it) in otherWithoutOptionality }.mapKeys { withoutOptionality(it.key) }
 
         val valueResults =
-            thisWithoutOptionality.keys.asSequence().map {
-                Pair(it, thisWithoutOptionality.getValue(it).encompasses(resolvedHop(otherWithoutOptionality.getValue(it), otherResolver), thisResolver, otherResolver))
+            thisWithoutOptionality.keys.asSequence().map { key ->
+                Pair(key, thisWithoutOptionality.getValue(key).encompasses(resolvedHop(otherWithoutOptionality.getValue(key), otherResolver), thisResolver, otherResolver))
             }
 
         val result = valueResults.firstOrNull { it.second is Result.Failure }

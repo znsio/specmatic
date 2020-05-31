@@ -50,7 +50,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
         if(sampleData.list.isEmpty())
             return Result.Success()
 
-        val resolverWithNumberType = resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberTypePattern))
+        val resolverWithNumberType = resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberPattern))
 
         val resolvedPattern = pattern.map {
             when(it) {

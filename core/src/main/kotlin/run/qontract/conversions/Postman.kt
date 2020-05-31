@@ -1,13 +1,9 @@
 package run.qontract.conversions
 
 import run.qontract.core.*
-import run.qontract.core.pattern.ContractException
-import run.qontract.core.pattern.parsedValue
+import run.qontract.core.pattern.*
 import run.qontract.core.utilities.jsonStringToValueMap
-import run.qontract.core.value.EmptyString
-import run.qontract.core.value.JSONArrayValue
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.Value
+import run.qontract.core.value.*
 import run.qontract.mock.ScenarioStub
 import run.qontract.nullLog
 import run.qontract.test.HttpClient
@@ -109,7 +105,7 @@ private fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpReque
 
     val (body, formFields, formData) = when {
         request.jsonObject.contains("body") -> when (val mode = request.getJSONObjectValue("body").getString("mode")) {
-            "raw" -> Triple(parsedValue(request.getJSONObjectValue("body").getString(mode)), emptyMap<String, String>(), emptyList<MultiPartFormDataValue>())
+            "raw" -> Triple(guessType(parsedValue(request.getJSONObjectValue("body").getString(mode))), emptyMap<String, String>(), emptyList<MultiPartFormDataValue>())
             "urlencoded" -> {
                 val rawFormFields = request.getJSONObjectValue("body").getJSONArray(mode)
                 val formFields = rawFormFields.map {
@@ -151,4 +147,15 @@ private fun toURL(urlData: Value): URL {
         is JSONObjectValue -> urlData.jsonObject.getValue("raw").toStringValue()
         else -> urlData.toStringValue()
     }).toURL()
+}
+
+fun guessType(value: Value): Value = when(value) {
+    is StringValue -> when {
+        isNumber(value) -> NumberValue(convertToNumber(value.string))
+        value.string.toLowerCase() in listOf("true", "false") -> BooleanValue(value.string.toLowerCase().toBoolean())
+        value.string.startsWith("{") || value.string.startsWith("[") -> parsedJSONStructure(value.string)
+        value.string.startsWith("<") -> XMLValue(parseXML(value.string))
+        else -> value
+    }
+    else -> value
 }

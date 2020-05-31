@@ -11,7 +11,7 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
 import org.w3c.dom.Node
-import run.qontract.core.pattern.NumericStringPattern
+import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.parseXML
@@ -186,7 +186,7 @@ Scenario: JSON API to get account details with fact check
             val root: Node = xmlResponse.documentElement
             Assertions.assertEquals("balance", root.nodeName)
             Assertions.assertEquals("sms_messages_left", root.lastChild.nodeName)
-            Assertions.assertTrue(NumericStringPattern.matches(StringValue(root.firstChild.lastChild.nodeValue), Resolver()) is Result.Success)
+            Assertions.assertTrue(NumberPattern.matches(NumberValue(root.firstChild.lastChild.nodeValue.toInt()), Resolver()) is Result.Success)
         } ?: fail("Expected body in the response")
     }
 

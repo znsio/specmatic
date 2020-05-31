@@ -12,15 +12,26 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
 
-        val resolverWithNumericString = resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumericStringPattern))
-
         sampleData.jsonObject.forEach { (key, value) ->
-            when(val result = resolverWithNumericString.matchesPattern(null, keyPattern, StringValue(key))) {
-                is Result.Failure -> return result.breadCrumb(key)
+            try {
+                val parsedKey = keyPattern.parse(key, resolver)
+                when (val result = resolver.matchesPattern(null, keyPattern, parsedKey)) {
+                    is Result.Failure -> return result.breadCrumb(key)
+                }
+            } catch(e: ContractException) {
+                return e.failure().breadCrumb(key)
             }
 
-            when(val result = resolver.matchesPattern(null, valuePattern, value)) {
-                is Result.Failure -> return result.breadCrumb("\"$key\"=${value.toStringValue()}")
+            try {
+                val parsedValue = when (value) {
+                    is StringValue -> valuePattern.parse(value.string, resolver)
+                    else -> value
+                }
+                when (val result = resolver.matchesPattern(null, valuePattern, parsedValue)) {
+                    is Result.Failure -> return result.breadCrumb("\"$key\"=${value.toStringValue()}")
+                }
+            } catch(e: ContractException) {
+                return e.failure().breadCrumb("\"$key\"=${value.toStringValue()}")
             }
         }
 
@@ -44,7 +55,7 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
         }
     }
 
-    override fun parse(value: String, resolver: Resolver): Value = parsedValue(value)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
             when (otherPattern) {

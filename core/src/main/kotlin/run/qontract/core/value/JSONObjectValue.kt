@@ -19,11 +19,13 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 
         val newType = TabularPattern(rawTypeMap.mapValues { DeferredPattern(it.value.typeValue) })
 
+        val newTypeName = generateSequence(typeName) { "${it}_" }.first { it !in rawTypeMap }.let { "($it)" }
+
         val mergedTypeMap = rawTypeMap.entries.fold(emptyMap<String, Pattern>()) { acc, entry ->
             acc.plus(entry.value.types)
-        }.plus("($typeName)" to newType)
+        }.plus(newTypeName to newType)
 
-        return TypeDeclaration("($typeName)", mergedTypeMap)
+        return TypeDeclaration(newTypeName, mergedTypeMap)
     }
 
     fun getString(key: String): String {

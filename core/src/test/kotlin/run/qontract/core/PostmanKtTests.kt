@@ -1,9 +1,15 @@
 package run.qontract.core
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import run.qontract.conversions.postmanCollectionToGherkin
+import run.qontract.conversions.*
+import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.value.EmptyString
+import run.qontract.core.value.JSONArrayValue
+import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.NumberValue
 import run.qontract.stub.HttpStub
 
 class PostmanKtTests {
@@ -209,7 +215,131 @@ class PostmanKtTests {
 
         println(gherkinString)
 
+        val expectedGherkinString = """Feature: New Feature
+  Scenario: With no body or params
+    When GET /stuff
+    Then status 200
+    And response-body (string)
+  
+  Scenario: With JSON body
+    Given type RequestBody
+      | data | (string) |
+    When POST /stuff
+    And request-body (RequestBody)
+    Then status 200
+    And response-body (string)
+  
+  Scenario: With query
+    When GET /stuff?one=(number)
+    Then status 200
+    And response-body (string)
+  
+  Scenario: Square Of A Number 2
+    When POST /square
+    And request-body (number)
+    Then status 200
+    And response-header Connection (number)
+    And response-body (number)
+  
+  Scenario: With form fields
+    When POST /stuff
+    And form-field field1 (number)
+    Then status 200
+    And response-body (string)
+  
+  Scenario: With form data
+    When POST /stuff
+    And request-part part1 (number)
+    Then status 200
+    And response-body (string)
+"""
+        assertThat(gherkinString.trim()).isEqualTo(expectedGherkinString.trim())
+
         validate(gherkinString, stubs)
+    }
+
+    @Test
+    fun `should convert response info to an http response`() {
+        val response = postmanItemResponse(parsedJSONStructure("""				{
+					"name": "Square Of A Number 2",
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "plain",
+					"header": [
+						{
+							"key": "X-Header",
+							"value": "right value"
+						}
+					],
+					"cookie": [],
+					"body": "100"
+				}""") as JSONObjectValue)
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isEqualTo(NumberValue(100))
+        assertThat(response.headers).hasSize(1)
+        assertThat(response.headers.getOrDefault("X-Header", "does not exist")).isEqualTo("right value")
+    }
+
+    @Test
+    fun `postman response conversion to qontract`() {
+        val namedStubs = namedStubsFromPostmanResponses((parsedJSONStructure("""[
+				{
+					"name": "Square Of A Number 2",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "10",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:9000/square",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								"square"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "plain",
+					"header": [
+						{
+							"key": "X-Header",
+							"value": "right value"
+						}
+					],
+					"cookie": [],
+					"body": "100"
+				}
+            ]""") as JSONArrayValue).list)
+
+        assertThat(namedStubs).hasSize(1)
+
+        val namedStub = namedStubs.first()
+        assertThat(namedStub.name).isEqualTo("Square Of A Number 2")
+
+        val request = namedStub.stub.request
+        assertThat(request.method).isEqualTo("POST")
+        assertThat(request.path).isEqualTo("/square")
+        assertThat(request.headers).hasSize(0)
+        assertThat(request.body).isEqualTo(NumberValue(10))
+
+        val response = namedStub.stub.response
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isEqualTo(NumberValue(100))
+        assertThat(response.headers).hasSize(1)
+        assertThat(response.headers.getOrDefault("X-Header", "does not exist")).isEqualTo("right value")
     }
 
     private fun validate(gherkinString: String, stubs: List<NamedStub>) {
@@ -218,6 +348,203 @@ class PostmanKtTests {
         for(stub in cleanedUpStubs) {
             behaviour.matchingStubResponse(stub)
         }
+    }
+
+    @Test
+    fun `postman request with body to HttpRequest object with body`() {
+        val (baseURL, request) = postmanItemRequest(parsedJSONStructure("""{
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "10",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:9000/square",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								"square"
+							]
+						}
+					}""") as JSONObjectValue)
+
+        assertThat(baseURL).isEqualTo("http://localhost:9000")
+
+        assertThat(request.method).isEqualTo("POST")
+        assertThat(request.path).isEqualTo("/square")
+        assertThat(request.headers).isEmpty()
+        assertThat(request.body).isEqualTo(NumberValue(10))
+    }
+
+    @Test
+    fun `postman request with form fields to HttpRequest object with form fields`() {
+        val (baseURL, request) = postmanItemRequest(parsedJSONStructure("""{
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "field1",
+							"value": "10",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:9000/stuff",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"stuff"
+					]
+				}
+            }""") as JSONObjectValue)
+
+        assertThat(baseURL).isEqualTo("http://localhost:9000")
+
+        assertThat(request.method).isEqualTo("POST")
+        assertThat(request.path).isEqualTo("/stuff")
+        assertThat(request.body).isEqualTo(EmptyString)
+        assertThat(request.formFields.getOrDefault("field1", "does not exist")).isEqualTo("10")
+    }
+
+    @Test
+    fun `postman request with form data to HttpRequest object with form data content`() {
+        val (baseURL, request) = postmanItemRequest(parsedJSONStructure("""{
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "part1",
+							"value": "10",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:9000/stuff",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"stuff"
+					]
+				}
+			}""") as JSONObjectValue)
+
+        assertThat(baseURL).isEqualTo("http://localhost:9000")
+
+        assertThat(request.method).isEqualTo("POST")
+        assertThat(request.path).isEqualTo("/stuff")
+        assertThat(request.body).isEqualTo(EmptyString)
+        assertThat(request.formFields).isEmpty()
+        val part = request.multiPartFormData.first() as MultiPartContentValue
+        assertThat(part.name).isEqualTo("part1")
+        assertThat(part.content).isEqualTo(NumberValue(10))
+    }
+
+    @Test
+    fun `parses an items list inside postman with request and response into multiple scenarios`() {
+        val postmanString = """{"item": [{
+			"name": "With query",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9000/stuff?one=1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"stuff"
+					],
+					"query": [
+						{
+							"key": "one",
+							"value": "1"
+						}
+					]
+				}
+			},
+            "response": [
+				{
+					"name": "Square Of A Number 2",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:9000/square",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								"square"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "plain",
+					"header": [
+						{
+							"key": "Vary",
+							"value": "Origin"
+						},
+						{
+							"key": "X-Qontract-Result",
+							"value": "success"
+						},
+						{
+							"key": "Content-Length",
+							"value": "3"
+						},
+						{
+							"key": "Content-Type",
+							"value": "text/plain"
+						},
+						{
+							"key": "Connection",
+							"value": "1000"
+						}
+					],
+					"cookie": [],
+					"body": "100"
+				}
+            ]
+        }]}"""
+
+        val namedStubs = stubsFromPostmanCollection(postmanString)
+
+        val stub1 = namedStubs[0]
+        assertThat(stub1.name).isEqualTo("With query")
+        assertThat(stub1.stub.request.method).isEqualTo("GET")
+        assertThat(stub1.stub.request.queryParams.getOrDefault("one", "not found")).isEqualTo("1")
+
+        val stub2 = namedStubs[1]
+        assertThat(stub2.name).isEqualTo("Square Of A Number 2")
+        assertThat(stub2.stub.request.method).isEqualTo("POST")
+        assertThat(stub2.stub.response.headers).hasSize(5)
     }
 
     companion object {

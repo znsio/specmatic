@@ -19,6 +19,9 @@ internal class KafkaMessageTest {
 
         val feature = Feature(featureString)
         assertThat(feature.matchesMockKafkaMessage(message)).isInstanceOf(Result.Success::class.java)
+        assertThat(featureString.trim()).isEqualTo("""Feature: New Feature
+  Scenario: New Kafka scenario
+    * kafka-message customers (string) (string)""")
     }
 
     @Test
@@ -31,5 +34,8 @@ internal class KafkaMessageTest {
 
         val feature = Feature(featureString)
         assertThat(feature.matchesMockKafkaMessage(message)).isInstanceOf(Result.Success::class.java)
+        assertThat(featureString.trim()).isEqualTo("""Feature: New Feature
+  Scenario: New Kafka scenario
+    * kafka-message customers (string)""")
     }
 }

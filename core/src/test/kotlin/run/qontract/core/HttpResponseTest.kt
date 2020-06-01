@@ -1,7 +1,9 @@
 package run.qontract.core
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import run.qontract.core.GherkinSection.Then
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONObjectValue
@@ -35,5 +37,38 @@ internal class HttpResponseTest {
             assertEquals("John Doe", responseBody.jsonObject.getValue("name").toStringValue())
             assertEquals("application/json", it.headers.getOrDefault("Content-Type", ""))
         }
+    }
+
+    @Test
+    fun `gherkin clauses from simple 200 response`() {
+        val clauses = toGherkinClauses(HttpResponse.OK)
+
+        assertThat(clauses).hasSize(1)
+        assertThat(clauses.single().section).isEqualTo(Then)
+        assertThat(clauses.single().content).isEqualTo("status 200")
+    }
+
+    @Test
+    fun `gherkin clauses from response with headers`() {
+        val clauses = toGherkinClauses(HttpResponse(200, headers = mapOf("X-Value" to "10"), body = EmptyString))
+
+        assertThat(clauses).hasSize(2)
+        assertThat(clauses.first().section).isEqualTo(Then)
+        assertThat(clauses.first().content).isEqualTo("status 200")
+
+        assertThat(clauses[1].section).isEqualTo(Then)
+        assertThat(clauses[1].content).isEqualTo("response-header X-Value (number)")
+    }
+
+    @Test
+    fun `gherkin clauses from response with body`() {
+        val clauses = toGherkinClauses(HttpResponse(200, headers = emptyMap(), body = StringValue("response data")))
+
+        assertThat(clauses).hasSize(2)
+        assertThat(clauses.first().section).isEqualTo(Then)
+        assertThat(clauses.first().content).isEqualTo("status 200")
+
+        assertThat(clauses[1].section).isEqualTo(Then)
+        assertThat(clauses[1].content).isEqualTo("response-body (string)")
     }
 }

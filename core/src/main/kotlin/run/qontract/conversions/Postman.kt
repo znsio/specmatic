@@ -11,7 +11,7 @@ import java.net.URI
 import java.net.URL
 
 fun postmanCollectionToGherkin(postmanContent: String): Pair<String, List<NamedStub>> {
-    val stubs = stubsFromPostmanItems(postmanContent)
+    val stubs = stubsFromPostmanCollection(postmanContent)
 
     return when {
         stubs.isNotEmpty() -> {
@@ -22,7 +22,7 @@ fun postmanCollectionToGherkin(postmanContent: String): Pair<String, List<NamedS
     }
 }
 
-private fun stubsFromPostmanItems(postmanContent: String): List<NamedStub> {
+fun stubsFromPostmanCollection(postmanContent: String): List<NamedStub> {
     val json = jsonStringToValueMap(postmanContent)
     val items = json.getValue("item") as JSONArrayValue
 
@@ -52,7 +52,7 @@ private fun stubsFromPostmanItems(postmanContent: String): List<NamedStub> {
     }.flatten()
 }
 
-private fun namedStubsFromPostmanResponses(responses: List<Value>): List<NamedStub> {
+fun namedStubsFromPostmanResponses(responses: List<Value>): List<NamedStub> {
     return responses.map {
         val responseItem = it as JSONObjectValue
 
@@ -92,7 +92,7 @@ fun postmanItemResponse(responseItem: JSONObjectValue): HttpResponse {
     return HttpResponse(status, headers, body)
 }
 
-private fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpRequest> {
+fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpRequest> {
     val method = request.getString("method")
     val url = toURL(request.jsonObject.getValue("url"))
 

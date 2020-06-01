@@ -2,6 +2,7 @@ package run.qontract.core
 
 import run.qontract.conversions.guessType
 import run.qontract.core.pattern.*
+import run.qontract.core.value.EmptyString
 import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.Value
 
@@ -11,13 +12,17 @@ enum class GherkinSection(val prefix: String) {
     Given("Given"), When("When"), Then("Then"), `*`("*")
 }
 
-fun bodyToGherkinClauses(typeName: String, qontractKeyword: String, body: Value?, section: GherkinSection): List<GherkinClause>? =
-        body?.typeDeclaration(typeName)?.let { typeDeclaration ->
-            val responseBodyClause = GherkinClause("$qontractKeyword ${typeDeclaration.typeValue}", section)
-            val typeDefinitionClauses = toGherkinClauses(typeDeclaration.types)
+fun bodyToGherkinClauses(typeName: String, qontractKeyword: String, body: Value?, section: GherkinSection): List<GherkinClause>? {
+    if(body == EmptyString)
+        return emptyList()
 
-            listOf(responseBodyClause).plus(typeDefinitionClauses)
-        }
+    return body?.typeDeclaration(typeName)?.let { typeDeclaration ->
+        val responseBodyClause = GherkinClause("$qontractKeyword ${typeDeclaration.typeValue}", section)
+        val typeDefinitionClauses = toGherkinClauses(typeDeclaration.types)
+
+        listOf(responseBodyClause).plus(typeDefinitionClauses)
+    }
+}
 
 fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
     return patterns.entries.map { (key, pattern) -> toClause(key, pattern) }

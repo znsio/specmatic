@@ -10,6 +10,6 @@ import run.qontract.core.value.StringValue
 class KafkaTest {
     @Karate.Test
     fun karateTest(): Karate {
-        return Karate().relativeTo(javaClass).feature("classpath:mock.feature")
+        return Karate().relativeTo(javaClass).feature("classpath:stub.feature")
     }
 }

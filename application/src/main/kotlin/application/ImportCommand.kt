@@ -17,7 +17,7 @@ import java.util.concurrent.Callable
         description = ["Converts a files of various formats into their respective Qontract equivalents"])
 class ImportCommand : Callable<Unit> {
     @Command(name="stub")
-    fun stub(@Parameters(description = [ "Converts a stub json file to a Qontract file" ], index = "0") path: String, @Option(names = ["-o", "--outputFile"], description = [ "Write the contract into this file"], required = false) outputFile: String?) {
+    fun stub(@Parameters(description = [ "Converts a stub json file to a Qontract file" ], index = "0") path: String, @Option(names = ["-o", "--output"], description = [ "Write the contract into this file"], required = false) outputFile: String?) {
         val inputFile = File(path)
         val stub = mockFromJSON(jsonStringToValueMap(inputFile.readText()))
         val gherkin = toGherkinFeature(NamedStub("New scenario", stub))
@@ -26,7 +26,7 @@ class ImportCommand : Callable<Unit> {
     }
 
     @Command(name="postman")
-    fun postman(@Parameters(description = [ "Converts a postman collection to a Qontract file" ], index = "0") path: String, @Option(names = ["-o", "--outputFile"], description = [ "Write the contract into this file"], required = false) outputFile: String?) {
+    fun postman(@Parameters(description = [ "Converts a postman collection to a Qontract file" ], index = "0") path: String, @Option(names = ["-o", "--output"], description = [ "Write the contract into this file"], required = false) outputFile: String?) {
         val inputFile = File(path)
         val (gherkin, _) = postmanCollectionToGherkin(inputFile.readText())
 

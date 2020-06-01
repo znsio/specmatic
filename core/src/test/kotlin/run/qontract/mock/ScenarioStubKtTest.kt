@@ -390,7 +390,7 @@ internal class ScenarioStubKtTest {
     }
 
     @Test
-    fun `converts array of json objects request body where the first contains a key not in the other to gherkin`() {
+    fun `converts array of json objects in the request body where the first contains a key not in the other to gherkin`() {
         val mockText = """
 {
   "http-request": {
@@ -427,7 +427,7 @@ internal class ScenarioStubKtTest {
     }
 
     @Test
-    fun `converts array of json objects request body where the second contains a key not in the other to gherkin`() {
+    fun `converts array of json objects in the request body where the second contains a key not in the other to gherkin`() {
         val mockText = """
 {
   "http-request": {
@@ -464,7 +464,7 @@ internal class ScenarioStubKtTest {
     }
 
     @Test
-    fun `converts array of json objects request body where the keys are identical but a value in the first is to gherkin`() {
+    fun `converts array of 2 json objects in the request body where a value in the second is null to gherkin`() {
         val mockText = """
 {
   "http-request": {
@@ -501,7 +501,126 @@ internal class ScenarioStubKtTest {
     }
 
     @Test
-    fun `converts array of json objects request body where the keys are identical but a value in the second is to gherkin`() {
+    fun `converts array of 3 json objects in the request body where a value in the first is null to gherkin`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": [
+      {
+        "name": null
+      },
+      {
+        "name": "John Doe",
+        "address": null
+      },
+      {
+        "name": "John Doe",
+        "address": "High Street"
+      }
+    ]
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
+}
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    Given type RequestBody
+      | name | (string?) |
+      | address? | (string?) |
+    When POST /square
+    And request-body (RequestBody*)
+    Then status 200
+    And response-body (number)""")
+    }
+
+    @Test
+    fun `converts array of 3 json objects in the request body where a value in the first and second is null to gherkin`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": [
+      {
+        "name": null
+      },
+      {
+        "name": null,
+        "address": null
+      },
+      {
+        "name": "John Doe",
+        "address": "High Street"
+      }
+    ]
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
+}
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    Given type RequestBody
+      | name | (string?) |
+      | address? | (string?) |
+    When POST /square
+    And request-body (RequestBody*)
+    Then status 200
+    And response-body (number)""")
+    }
+    @Test
+    fun `converts array of 3 json objects in the request body where a value in the first and third is null to gherkin`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": [
+      {
+        "name": null
+      },
+      {
+        "name": "John Doe"
+      },
+      {
+        "name": null
+      }
+    ]
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
+}
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    Given type RequestBody
+      | name | (string?) |
+    When POST /square
+    And request-body (RequestBody*)
+    Then status 200
+    And response-body (number)""")
+    }
+
+    @Test
+    fun `converts array of json objects in the request body where the keys are identical but a value in the second is to gherkin`() {
         val mockText = """
 {
   "http-request": {

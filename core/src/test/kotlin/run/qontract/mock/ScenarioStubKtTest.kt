@@ -209,7 +209,20 @@ internal class ScenarioStubKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParams = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        convertAndTest(request, response)
+        validateStubAndQontract(request, response, """Feature: New Feature
+  Scenario: New scenario
+    Given type Address
+      | street | (string) |
+      | city | (string) |
+    And type RequestBody
+      | name | (string) |
+      | address | (Address) |
+    And type ResponseBody
+      | id | (number) |
+    When POST /customer
+    And request-body (RequestBody)
+    Then status 200
+    And response-body (ResponseBody)""")
     }
 
     @Test
@@ -217,7 +230,24 @@ internal class ScenarioStubKtTest {
         val request = HttpRequest(method = "POST", path="/customer", headers = mapOf("X-Header1" to "value 1", "X-Header2" to "value 2"), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParams = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, headers = mapOf("X-Required" to "this is a must", "X-Extra" to "something more"), body = parsedValue("""{"id": 10}"""))
 
-        convertAndTest(request, response)
+        validateStubAndQontract(request, response, """Feature: New Feature
+  Scenario: New scenario
+    Given type Address
+      | street | (string) |
+      | city | (string) |
+    And type RequestBody
+      | name | (string) |
+      | address | (Address) |
+    And type ResponseBody
+      | id | (number) |
+    When POST /customer
+    And request-header X-Header1 (string)
+    And request-header X-Header2 (string)
+    And request-body (RequestBody)
+    Then status 200
+    And response-header X-Required (string)
+    And response-header X-Extra (string)
+    And response-body (ResponseBody)""")
     }
 
     @Test
@@ -225,7 +255,14 @@ internal class ScenarioStubKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = mapOf("X-FormData1" to "some value", "X-FormData1" to "some value"), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        convertAndTest(request, response)
+        validateStubAndQontract(request, response, """Feature: New Feature
+  Scenario: New scenario
+    Given type ResponseBody
+      | id | (number) |
+    When POST /customer
+    And form-field X-FormData1 (string)
+    Then status 200
+    And response-body (ResponseBody)""")
     }
 
     @Test
@@ -233,7 +270,14 @@ internal class ScenarioStubKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartContentValue("name", StringValue("John Doe"))))
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        convertAndTest(request, response)
+        validateStubAndQontract(request, response, """Feature: New Feature
+  Scenario: New scenario
+    Given type ResponseBody
+      | id | (number) |
+    When POST /customer
+    And request-part name (string)
+    Then status 200
+    And response-body (ResponseBody)""")
     }
 
     @Test
@@ -241,7 +285,14 @@ internal class ScenarioStubKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartFileValue("customer_csv", "@customer.csv", "text/csv", "identity")))
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        convertAndTest(request, response)
+        validateStubAndQontract(request, response, """Feature: New Feature
+  Scenario: New scenario
+    Given type ResponseBody
+      | id | (number) |
+    When POST /customer
+    And request-part customer_csv @customer.csv text/csv identity
+    Then status 200
+    And response-body (ResponseBody)""")
     }
 
     @Test
@@ -269,20 +320,237 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        convertAndTest(mock.request, mock.response)
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    When POST /square
+    And request-part employees @employees.csv text/csv gzip
+    Then status 200
+    And response-body (number)""")
+    }
+
+    @Test
+    fun `converts array in request body to gherkin`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": [ "one", "two", "three" ]
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
+}
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    When POST /square
+    And request-body (string*)
+    Then status 200
+    And response-body (number)""")
+    }
+
+    @Test
+    fun `converts array of identically structured json objects in request body to gherkin`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": [
+      {
+        "name": "John Doe"
+      },
+      {
+        "name": "John Doe"
+      }
+    ]
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
+}
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    Given type RequestBody
+      | name | (string) |
+    When POST /square
+    And request-body (RequestBody*)
+    Then status 200
+    And response-body (number)""")
+    }
+
+    @Test
+    fun `converts array of json objects request body where the first contains a key not in the other to gherkin`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": [
+      {
+        "name": "John Doe",
+        "address": "High Street"
+      },
+      {
+        "name": "John Doe"
+      }
+    ]
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
+}
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    Given type RequestBody
+      | name | (string) |
+      | address? | (string) |
+    When POST /square
+    And request-body (RequestBody*)
+    Then status 200
+    And response-body (number)""")
+    }
+
+    @Test
+    fun `converts array of json objects request body where the second contains a key not in the other to gherkin`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": [
+      {
+        "name": "John Doe"
+      },
+      {
+        "name": "John Doe",
+        "address": "High Street"
+      }
+    ]
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
+}
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    Given type RequestBody
+      | name | (string) |
+      | address? | (string) |
+    When POST /square
+    And request-body (RequestBody*)
+    Then status 200
+    And response-body (number)""")
+    }
+
+    @Test
+    fun `converts array of json objects request body where the keys are identical but a value in the first is to gherkin`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": [
+      {
+        "name": "John Doe",
+        "address": "High Street"
+      },
+      {
+        "name": null
+      }
+    ]
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
+}
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    Given type RequestBody
+      | name | (string?) |
+      | address? | (string) |
+    When POST /square
+    And request-body (RequestBody*)
+    Then status 200
+    And response-body (number)""")
+    }
+
+    @Test
+    fun `converts array of json objects request body where the keys are identical but a value in the second is to gherkin`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": [
+      {
+        "name": "John Doe"
+      },
+      {
+        "name": null,
+        "address": "High Street"
+      }
+    ]
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
+}
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    Given type RequestBody
+      | name | (string?) |
+      | address? | (string) |
+    When POST /square
+    And request-body (RequestBody*)
+    Then status 200
+    And response-body (number)""")
     }
 }
 
-fun convertAndTest(request: HttpRequest, response: HttpResponse) {
+fun validateStubAndQontract(request: HttpRequest, response: HttpResponse, expectedGherkin: String? = null) {
     try {
         val cleanedUpResponse = dropContentAndCORSResponseHeaders(response)
-        val behaviour = toBehaviour(request, cleanedUpResponse)
+        val gherkin = toGherkinFeature(NamedStub("New scenario", ScenarioStub(request, cleanedUpResponse))).also { println(it) }
+
+        if(expectedGherkin != null) {
+            assertThat(gherkin.trim()).isEqualTo(expectedGherkin.trim())
+        }
+
+        val behaviour = Feature(gherkin)
         behaviour.matchingStubResponse(request, cleanedUpResponse)
     } catch (e: Throwable) {
         println(e.localizedMessage)
         throw e
     }
 }
-
-fun toBehaviour(request: HttpRequest, response: HttpResponse): Feature =
-        Feature(toGherkinFeature(NamedStub("New scenario", ScenarioStub(request, response))).also { println(it) })

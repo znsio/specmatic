@@ -102,16 +102,18 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             it.startsWith("{") -> JSONObjectPattern(it)
             it.startsWith("[") -> JSONArrayPattern(it)
             it.startsWith("<") -> XMLPattern(it)
-            isLookupRowPattern(it) -> {
-                val (pattern, lookupKey) = parseLookupRowPattern(it)
-                LookupRowPattern(parsedPattern(pattern), lookupKey)
+            isPatternToken(it) -> when {
+                isLookupRowPattern(it) -> {
+                    val (pattern, lookupKey) = parseLookupRowPattern(it)
+                    LookupRowPattern(parsedPattern(pattern), lookupKey)
+                }
+                isNullablePattern(it) -> AnyPattern(listOf(NullPattern, parsedPattern(withoutNullToken(it))))
+                isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
+                isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutListToken(it)))
+                it == "(number)" -> DeferredPattern(it, null)
+                isBuiltInPattern(it) -> getBuiltInPattern(it)
+                else -> DeferredPattern(it, key)
             }
-            isNullablePattern(it) -> AnyPattern(listOf(NullPattern, parsedPattern(withoutNullToken(it))))
-            isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
-            isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutListToken(it)))
-            it == "(number)" -> DeferredPattern(it, null)
-            isBuiltInPattern(it) -> getBuiltInPattern(it)
-            isPatternToken(it) -> DeferredPattern(it, key)
             else -> ExactValuePattern(StringValue(it))
         }
     }

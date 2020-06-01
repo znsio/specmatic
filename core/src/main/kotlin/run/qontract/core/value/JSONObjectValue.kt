@@ -20,12 +20,13 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
         val newType = TabularPattern(rawTypeMap.mapValues { DeferredPattern(it.value.typeValue) })
 
         val newTypeName = generateSequence(typeName) { "${it}_" }.first { it !in rawTypeMap }.let { "($it)" }
+        val collidingName = if(newTypeName != typeName) typeName else null
 
         val mergedTypeMap = rawTypeMap.entries.fold(emptyMap<String, Pattern>()) { acc, entry ->
             acc.plus(entry.value.types)
         }.plus(newTypeName to newType)
 
-        return TypeDeclaration(newTypeName, mergedTypeMap)
+        return TypeDeclaration(newTypeName, mergedTypeMap, collidingName)
     }
 
     fun getString(key: String): String {

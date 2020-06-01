@@ -14,10 +14,24 @@ data class JSONArrayValue(val list: List<Value>) : Value {
 
     override fun typeDeclaration(typeName: String): TypeDeclaration = when {
         list.isEmpty() -> TypeDeclaration("[]")
-        else -> list.asSequence().map {
-            val typeDeclaration = it.typeDeclaration(typeName)
-            TypeDeclaration("(${withoutPatternDelimiters(typeDeclaration.typeValue)}*)", typeDeclaration.types)
-        }.first()
+        else -> {
+            val typeDeclarations = list.map {
+                val typeDeclaration = it.typeDeclaration(typeName)
+                TypeDeclaration("(${withoutPatternDelimiters(typeDeclaration.typeValue)}*)", typeDeclaration.types)
+            }
+
+            val collision = typeDeclarations.asSequence().map { it.collidingName }.filterNotNull().firstOrNull()
+
+            when {
+                collision != null -> {
+                    println("Type name collision detected in type $collision, convergence of the array containing this type will be avoided")
+                    typeDeclarations.first()
+                }
+                else -> {
+                    typeDeclarations.reduce { converged, current -> convergeTypeDeclarations(converged, current) }
+                }
+            }
+        }
     }
 
     override fun toString() = valueArrayToJsonString(list)

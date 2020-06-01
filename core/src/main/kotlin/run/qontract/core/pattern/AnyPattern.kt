@@ -40,7 +40,15 @@ data class AnyPattern(override val pattern: List<Pattern>, override val key: Str
         return otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
     }
 
-    override val typeName: String = pattern.joinToString(" or ") { inner -> inner.typeName }
+    override val typeName: String
+        get() {
+            return if(pattern.size == 2 && NullPattern in pattern) {
+                val concreteTypeName = withoutPatternDelimiters(pattern.filterNot { it is NullPattern }.first().typeName)
+                "($concreteTypeName?)"
+            }
+            else
+                "(${pattern.joinToString(" or ") { inner -> withoutPatternDelimiters(inner.typeName) }})"
+        }
 }
 
 private fun failedToFindAny(description: String, results: List<Result.Failure>, sampleData: Value?): Result.Failure {

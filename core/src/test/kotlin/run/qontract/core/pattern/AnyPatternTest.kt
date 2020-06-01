@@ -91,4 +91,10 @@ internal class AnyPatternTest {
         val smallerNull = NullPattern
         assertThat(bigger.encompasses(smallerNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
+
+    @Test
+    fun `typeName should show nullable when one of the types is null`() {
+        val type = AnyPattern(listOf(NullPattern, NumberPattern))
+        assertThat(type.typeName).isEqualTo("(number?)")
+    }
 }

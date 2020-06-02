@@ -18,7 +18,7 @@ class PostmanKtTests {
         val postmanContent = """{
 	"info": {
 		"_postman_id": "8bd0c42a-983a-492e-99bd-a2f1936bc02e",
-		"name": "Zuul",
+		"name": "Test API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
 	},
 	"item": [
@@ -215,11 +215,11 @@ class PostmanKtTests {
 
         println(gherkinString)
 
-        val expectedGherkinString = """Feature: New Feature
+        val expectedGherkinString = """Feature: Test API
   Scenario: With no body or params
     When GET /stuff
     Then status 200
-    And response-body (string)
+    And response-body (number)
   
   Scenario: With JSON body
     Given type RequestBody
@@ -227,12 +227,12 @@ class PostmanKtTests {
     When POST /stuff
     And request-body (RequestBody)
     Then status 200
-    And response-body (string)
+    And response-body (number)
   
   Scenario: With query
     When GET /stuff?one=(number)
     Then status 200
-    And response-body (string)
+    And response-body (number)
   
   Scenario: Square Of A Number 2
     When POST /square
@@ -245,14 +245,14 @@ class PostmanKtTests {
     When POST /stuff
     And form-field field1 (number)
     Then status 200
-    And response-body (string)
+    And response-body (number)
   
   Scenario: With form data
     When POST /stuff
     And request-part part1 (number)
     Then status 200
-    And response-body (string)
-"""
+    And response-body (number)"""
+
         assertThat(gherkinString.trim()).isEqualTo(expectedGherkinString.trim())
 
         validate(gherkinString, stubs)
@@ -534,14 +534,14 @@ class PostmanKtTests {
             ]
         }]}"""
 
-        val namedStubs = stubsFromPostmanCollection(postmanString)
+        val postmanCollection = stubsFromPostmanCollection(postmanString)
 
-        val stub1 = namedStubs[0]
+        val stub1 = postmanCollection.stubs[0]
         assertThat(stub1.name).isEqualTo("With query")
         assertThat(stub1.stub.request.method).isEqualTo("GET")
         assertThat(stub1.stub.request.queryParams.getOrDefault("one", "not found")).isEqualTo("1")
 
-        val stub2 = namedStubs[1]
+        val stub2 = postmanCollection.stubs[1]
         assertThat(stub2.name).isEqualTo("Square Of A Number 2")
         assertThat(stub2.stub.request.method).isEqualTo("POST")
         assertThat(stub2.stub.response.headers).hasSize(5)

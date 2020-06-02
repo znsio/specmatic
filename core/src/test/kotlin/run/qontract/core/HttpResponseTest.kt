@@ -71,4 +71,16 @@ internal class HttpResponseTest {
         assertThat(clauses[1].section).isEqualTo(Then)
         assertThat(clauses[1].content).isEqualTo("response-body (string)")
     }
+
+    @Test
+    fun `gherkin clauses from response with number body`() {
+        val clauses = toGherkinClauses(HttpResponse(200, headers = emptyMap(), body = StringValue("10")))
+
+        assertThat(clauses).hasSize(2)
+        assertThat(clauses.first().section).isEqualTo(Then)
+        assertThat(clauses.first().content).isEqualTo("status 200")
+
+        assertThat(clauses[1].section).isEqualTo(Then)
+        assertThat(clauses[1].content).isEqualTo("response-body (number)")
+    }
 }

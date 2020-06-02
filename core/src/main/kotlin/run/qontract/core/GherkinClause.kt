@@ -51,8 +51,8 @@ private fun patternMapToString(json: Map<String, Pattern>): String {
     }
 }
 
-fun withFeatureClause(scenarios: String): String {
-    return """Feature: New Feature
+fun withFeatureClause(name: String, scenarios: String): String {
+    return """Feature: $name
 ${scenarios.prependIndent("  ")}
 """
 }
@@ -63,7 +63,7 @@ ${scenarioData.prependIndent("  ")}
 """
 }
 
-fun toGherkinFeature(scenarioName: String, clauses: List<GherkinClause>): String = withFeatureClause(toGherkinScenario(scenarioName, clauses))
+fun toGherkinFeature(scenarioName: String, clauses: List<GherkinClause>): String = withFeatureClause("New Feature", toGherkinScenario(scenarioName, clauses))
 
 fun toGherkinScenario(scenarioName: String, clauses: List<GherkinClause>): String {
     val groupedClauses = clauses.groupBy { it.section }

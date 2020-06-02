@@ -366,10 +366,10 @@ private fun stubToClauses(namedStub: NamedStub): List<GherkinClause> {
     }
 }
 
-fun toGherkinFeature(stubs: List<NamedStub>): String {
+fun toGherkinFeature(name: String, stubs: List<NamedStub>): String {
     val scenarioStrings = stubs.map { stub ->
         toGherkinScenario(stub.name, stubToClauses(stub)).trim()
     }
 
-    return withFeatureClause(scenarioStrings.joinToString("\n\n"))
+    return withFeatureClause(name, scenarioStrings.joinToString("\n\n"))
 }

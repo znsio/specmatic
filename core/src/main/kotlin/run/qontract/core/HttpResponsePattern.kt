@@ -59,11 +59,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         val (response, resolver) = parameters
 
         val parsedValue = when (response.body) {
-            is StringValue -> try {
-                try { body.parse(response.body.string, resolver) } catch(e: Throwable) { response.body }
-            } catch(e: Throwable) {
-                return MatchFailure(Result.Failure("Couldn't parse ${response.body.displayableValue()} as ${body.typeName}").breadCrumb("BODY"))
-            }
+            is StringValue -> try { body.parse(response.body.string, resolver) } catch(e: Throwable) { response.body }
             else -> response.body
         }
 

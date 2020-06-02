@@ -1,6 +1,7 @@
 package run.qontract.core
 
 import io.ktor.http.HttpStatusCode
+import run.qontract.conversions.guessType
 import run.qontract.core.GherkinSection.Then
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
@@ -88,8 +89,8 @@ private fun _toGherkinClauses(response: HttpResponse): List<GherkinClause> {
         it.plus(GherkinClause("status $status", Then))
     }.let { clauses ->
         clauses.plus(headersToGherkin(response.headers, "response-header", Then))
-    }.let {
-        it.plus(bodyToGherkinClauses("ResponseBody", "response-body", response.body, Then) ?: it)
+    }.let { clauses ->
+        clauses.plus(bodyToGherkinClauses("ResponseBody", "response-body", response.body?.let { guessType(it) }, Then) ?: clauses)
     }
 }
 

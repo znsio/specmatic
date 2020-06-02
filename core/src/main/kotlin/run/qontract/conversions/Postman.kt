@@ -11,22 +11,33 @@ import java.net.URI
 import java.net.URL
 
 fun postmanCollectionToGherkin(postmanContent: String): Pair<String, List<NamedStub>> {
-    val stubs = stubsFromPostmanCollection(postmanContent)
+    val postmanCollection = stubsFromPostmanCollection(postmanContent)
 
     return when {
-        stubs.isNotEmpty() -> {
-            val gherkinString = toGherkinFeature(stubs)
-            Pair(gherkinString, stubs)
+        postmanCollection.stubs.isNotEmpty() -> {
+            val gherkinString = toGherkinFeature(postmanCollection)
+            Pair(gherkinString, postmanCollection.stubs)
         }
         else -> Pair("", emptyList())
     }
 }
 
-fun stubsFromPostmanCollection(postmanContent: String): List<NamedStub> {
+fun toGherkinFeature(postmanCollection: PostmanCollection): String =
+        toGherkinFeature(postmanCollection.name, postmanCollection.stubs)
+
+data class PostmanCollection(val name: String, val stubs: List<NamedStub>)
+
+fun stubsFromPostmanCollection(postmanContent: String): PostmanCollection {
     val json = jsonStringToValueMap(postmanContent)
     val items = json.getValue("item") as JSONArrayValue
 
-    return items.list.map { it as JSONObjectValue }.mapIndexed { index, item ->
+    val name = when {
+        json.containsKey("info") && (json.getValue("info") as JSONObjectValue).jsonObject.containsKey("name") ->
+            (json.getValue("info") as JSONObjectValue).getString("name")
+        else -> "New Feature"
+    }
+
+    return PostmanCollection(name, items.list.map { it as JSONObjectValue }.mapIndexed { index, item ->
         val request = item.getJSONObjectValue("request")
         val scenarioName = if (item.jsonObject.contains("name")) item.getString("name") else "New scenario"
 
@@ -49,7 +60,7 @@ fun stubsFromPostmanCollection(postmanContent: String): List<NamedStub> {
             println("Exception thrown when parsing item[$index]. ${e.localizedMessage}")
             emptyList<NamedStub>()
         }
-    }.flatten()
+    }.flatten())
 }
 
 fun namedStubsFromPostmanResponses(responses: List<Value>): List<NamedStub> {

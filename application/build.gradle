@@ -2,6 +2,7 @@ plugins {
     id 'application'
     id 'com.github.johnrengelman.shadow' version '5.2.0'
     id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 application {
@@ -41,6 +42,17 @@ dependencies {
 
     implementation(project(':core'))
     implementation(project(':junit5-support'))
+
+    testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine:5.4.2')
+
+    testImplementation 'io.mockk:mockk:1.9.3.kotlin12'
+    testImplementation 'org.assertj:assertj-core:3.14.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.4.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.5.2'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {

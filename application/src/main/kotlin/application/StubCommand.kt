@@ -98,7 +98,7 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun startServer() {
-        val stubs = loadContractStubs(paths, when {
+        val stubs = loadContractStubsFromFiles(paths, when {
             dataDirs.isNotEmpty() -> dataDirs
             else -> implicitContractDataDirs(paths)
         })

@@ -133,4 +133,10 @@ And response-body (string)
 
         fail("Should have thrown an exception")
     }
+
+    @Test
+    fun `generate a bad request from an error message`() {
+        val expectedResponse = HttpResponse(status = 422, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue("error occurred"))
+        assertThat(badRequest("error occurred")).isEqualTo(expectedResponse)
+    }
 }

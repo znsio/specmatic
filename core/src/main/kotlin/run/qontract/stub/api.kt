@@ -31,18 +31,18 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == QONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
-    val contractInfo = loadContractStubs(contractPaths, dataDirPaths)
-    val behaviours = contractInfo.map { it.first }
+    val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
+    val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
-    return HttpStub(behaviours, httpExpectations, host, port, ::consoleLog)
+    return HttpStub(features, httpExpectations, host, port, ::consoleLog)
 }
 
-fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
+fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
     val dataDirFileList = allDirsInTree(dataDirPaths)
 
-    val behaviours = contractPaths.map { path ->
-        Pair(File(path), Feature(readFile(path)))
+    val features = contractPaths.map { path ->
+        Pair(path, Feature(readFile(path)))
     }
 
     val dataFiles = dataDirFileList.flatMap {
@@ -51,39 +51,42 @@ fun loadContractStubs(contractPaths: List<String>, dataDirPaths: List<String>): 
     if (dataFiles.isNotEmpty())
         println("Reading the stub files below:${System.lineSeparator()}${dataFiles.joinToString(System.lineSeparator())}")
 
-    val mockData = dataFiles.map { Pair(it, stringToMockScenario(StringValue(it.readText()))) }
+    val mockData = dataFiles.map { Pair(it.path, stringToMockScenario(StringValue(it.readText()))) }
 
-    val contractInfoFromMocks = mockData.mapNotNull { (mockFile, mock) ->
-        val matchResults = behaviours.asSequence().map { (contractFile, behaviour) ->
+    return loadQontractStubs(features, mockData)
+}
+
+fun loadQontractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
+    val contractInfoFromStubs = stubData.mapNotNull { (stubFile, stub) ->
+        val matchResults = features.asSequence().map { (qontractFile, feature) ->
             try {
-                val kafkaMessage = mock.kafkaMessage
+                val kafkaMessage = stub.kafkaMessage
                 if (kafkaMessage != null) {
-                    behaviour.assertMatchesMockKafkaMessage(kafkaMessage)
+                    feature.assertMatchesMockKafkaMessage(kafkaMessage)
                 } else {
-                    behaviour.matchingStubResponse(mock.request, mock.response)
+                    feature.matchingStubResponse(stub.request, stub.response)
                 }
-                Pair(behaviour, null)
+                Pair(feature, null)
             } catch (e: NoMatchingScenario) {
-                Pair(null, Pair(e, contractFile))
+                Pair(null, Pair(e, qontractFile))
             }
         }
 
-        when (val behaviour = matchResults.mapNotNull { it.first }.firstOrNull()) {
+        when (val feature = matchResults.mapNotNull { it.first }.firstOrNull()) {
             null -> {
                 println(matchResults.mapNotNull { it.second }.map { (exception, contractFile) ->
-                    "${mockFile.absolutePath} didn't match ${contractFile.absolutePath}${System.lineSeparator()}${exception.message}"
+                    "$stubFile didn't match $contractFile${System.lineSeparator()}${exception.message}"
                 }.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
                 null
             }
-            else -> Pair(behaviour, mock)
+            else -> Pair(feature, stub)
         }
     }.groupBy { it.first }.mapValues { it.value.map { it.second } }.entries.map { Pair(it.key, it.value) }
 
-    val mockedBehaviours = contractInfoFromMocks.map { it.first }
-    val missingBehaviours = behaviours.map { it.second }.filter { it !in mockedBehaviours }
+    val stubbedFeatures = contractInfoFromStubs.map { it.first }
+    val missingFeatures = features.map { it.second }.filter { it !in stubbedFeatures }
 
-    val contractInfo = contractInfoFromMocks.plus(missingBehaviours.map { Pair(it, emptyList<ScenarioStub>()) })
-    return contractInfo
+    return contractInfoFromStubs.plus(missingFeatures.map { Pair(it, emptyList<ScenarioStub>()) })
 }
 
 fun allDirsInTree(dataDirPath: String): List<File> = allDirsInTree(listOf(dataDirPath))
@@ -92,15 +95,15 @@ fun allDirsInTree(dataDirPaths: List<String>): List<File> =
             it.isDirectory
         }.flatMap {
             val fileList: List<File> = it.listFiles()?.toList()?.filterNotNull() ?: emptyList()
-            _pathToFileListRecursive(fileList).plus(it)
+            pathToFileListRecursive(fileList).plus(it)
         }
 
-private fun _pathToFileListRecursive(dataDirFiles: List<File>): List<File> =
+private fun pathToFileListRecursive(dataDirFiles: List<File>): List<File> =
         dataDirFiles.filter {
             it.isDirectory
         }.map {
             val fileList: List<File> = it.listFiles()?.toList()?.filterNotNull() ?: emptyList()
-            _pathToFileListRecursive(fileList).plus(it)
+            pathToFileListRecursive(fileList).plus(it)
         }.flatten()
 
 fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
@@ -125,9 +128,9 @@ fun stubKafkaMessage(contractPath: String, message: String, bootstrapServers: St
 }
 
 fun testKafkaMessage(contractPath: String, bootstrapServers: String, commit: Boolean) {
-    val contractBehaviour = Feature(File(contractPath).readText())
+    val feature = Feature(File(contractPath).readText())
 
-    val results = contractBehaviour.scenarios.map {
+    val results = feature.scenarios.map {
         testKafkaMessages(it, bootstrapServers, commit)
     }
 

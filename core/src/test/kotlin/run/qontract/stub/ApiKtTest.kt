@@ -6,6 +6,8 @@ import run.qontract.core.*
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.*
 import run.qontract.mock.ScenarioStub
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
 
 internal class ApiKtTest {
     @Test
@@ -307,7 +309,7 @@ Feature: Math API
 
     @Test
     fun `should match multipart file part`() {
-        val behaviour = Feature("""
+        val feature = Feature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -319,11 +321,113 @@ Feature: Math API
 
         val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "@number.txt", "text/plain", null)))
 
-        val response = stubResponse(request, listOf(Pair(behaviour, emptyList())))
+        val response = stubResponse(request, listOf(Pair(feature, emptyList())))
 
         println(response.toLogString())
         assertThat(response.status).isEqualTo(200)
         assertThat(response.body).isInstanceOf(NumberValue::class.java)
+    }
+
+    @Test
+    fun `should get a stub out of a qontract and a matching stub file`() {
+        val feature = Feature("""
+Feature: Math API
+    Scenario: Square of a number
+        When POST /square
+        And request-body (number)
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val stubInfo = loadQontractStubs(listOf(Pair("math.qontract", feature)), listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("10")), HttpResponse(status = 200, body = "20")))))
+        assertThat(stubInfo.single().first).isEqualTo(feature)
+
+        val stub = stubInfo.single().second.single()
+        val expectedRequest = HttpRequest("POST", path = "/square", body = StringValue("10"))
+        val expectedResponse = HttpResponse(status = 200, body = StringValue("20"))
+
+        assertThat(stub.request).isEqualTo(expectedRequest)
+        assertThat(stub.response).isEqualTo(expectedResponse)
+    }
+
+    @Test
+    fun `qontract should reject a stub file that does not match the qontract`() {
+        val feature = Feature("""
+Feature: Math API
+    Scenario: Square of a number
+        When POST /square
+        And request-body (number)
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val (stdout, stubInfo) =  captureStandardOutput {
+            loadQontractStubs(listOf(Pair("math.qontract", feature)), listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("10")), HttpResponse(status = 200, body = "not a number")))))
+        }
+
+        val expectedOnStandardOutput = """sample.json didn't match math.qontract
+In scenario "Square of a number"
+>> RESPONSE.BODY
+
+Expected number, actual was string: "not a number""""
+
+        assertThat(stubInfo.single().first).isEqualTo(feature)
+        assertThat(stubInfo.single().second).isEmpty()
+        assertThat(stdout).isEqualTo(expectedOnStandardOutput)
+    }
+
+    @Test
+    fun `should get a stub out of two qontracts and a single stub file that matches only one of them`() {
+        val squareFeature = Feature("""
+Feature: Square API
+    Scenario: Square of a number
+        When POST /square
+        And request-body (number)
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val cubeFeature = Feature("""
+Feature: Cube API
+    Scenario: Cube of a number
+        When POST /cube
+        And request-body (number)
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val features = listOf(Pair("square.qontract", squareFeature), Pair("cube.qontract", cubeFeature))
+        val rawStubInfo = listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("10")), HttpResponse(status = 200, body = "20"))))
+        val stubInfo = loadQontractStubs(features, rawStubInfo)
+        assertThat(stubInfo.map { it.first }).contains(squareFeature)
+        assertThat(stubInfo.map { it.first }).contains(cubeFeature)
+        assertThat(stubInfo).hasSize(2)
+
+        val squareStub = stubInfo.first { it.first == squareFeature }
+        val cubeStub = stubInfo.first { it.first == cubeFeature }
+
+        val expectedRequest = HttpRequest("POST", path = "/square", body = StringValue("10"))
+        val expectedResponse = HttpResponse(status = 200, body = StringValue("20"))
+
+        assertThat(squareStub.second.single().request).isEqualTo(expectedRequest)
+        assertThat(squareStub.second.single().response).isEqualTo(expectedResponse)
+    }
+
+    @Test
+    fun `should get a stub out of a qontract and a matching kafka stub file`() {
+        val feature = Feature("""
+Feature: Customer Data
+    Scenario: Send customer info
+        * kafka-message customers (string)
+""".trim())
+
+        val stubInfo = loadQontractStubs(listOf(Pair("customers.qontract", feature)), listOf(Pair("sample.json", ScenarioStub(kafkaMessage = KafkaMessage("customers", value = StringValue("some data"))))))
+        assertThat(stubInfo.single().first).isEqualTo(feature)
+
+        val stub = stubInfo.single().second.single()
+        val expectedMessage = KafkaMessage("customers", value = StringValue("some data"))
+
+        assertThat(stub.kafkaMessage).isEqualTo(expectedMessage)
     }
 
     private fun fakeResponse(request: HttpRequest, behaviour: Feature): HttpResponse {
@@ -333,5 +437,39 @@ Feature: Math API
     private fun stubResponse(request: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>): HttpResponse {
         val expectations = contractInfoToExpectations(contractInfo)
         return stubResponse(request, contractInfo, expectations)
+    }
+}
+
+fun <ReturnType> captureStandardOutput(fn: () -> ReturnType): Pair<String, ReturnType> {
+    val originalOut = System.out
+
+    val byteArrayOutputStream = ByteArrayOutputStream()
+    val newOut = PrintStream(byteArrayOutputStream)
+    System.setOut(newOut)
+
+    val result = fn()
+
+    System.out.flush()
+    System.setOut(originalOut) // So you can print again
+    return Pair(String(byteArrayOutputStream.toByteArray()).trim(), result)
+}
+
+fun contractInfoToExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): StubDataItems {
+    return contractInfo.fold(StubDataItems()) { stubsAcc, (behaviour, mocks) ->
+        val newStubs = mocks.fold(StubDataItems()) { stubs, mock ->
+            val kafkaMessage = mock.kafkaMessage
+            if(kafkaMessage != null) {
+                StubDataItems(stubs.http, stubs.kafka.plus(KafkaStubData(kafkaMessage)))
+            } else {
+                val (resolver, scenario, httpResponse) = behaviour.matchingStubResponse(mock)
+
+                val requestPattern = mock.request.toPattern()
+                val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
+
+                StubDataItems(stubs.http.plus(HttpStubData(requestPatternWithHeaderAncestor, httpResponse, resolver)), stubs.kafka)
+            }
+        }
+
+        StubDataItems(stubsAcc.http.plus(newStubs.http), stubsAcc.kafka.plus(newStubs.kafka))
     }
 }

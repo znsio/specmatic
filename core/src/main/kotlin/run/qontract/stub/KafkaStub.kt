@@ -6,27 +6,6 @@ import run.qontract.core.value.KafkaMessage
 import run.qontract.mock.ScenarioStub
 import run.qontract.nullLog
 
-class KafkaStub(val behaviours: List<Feature>, kafkaStubs: List<KafkaStubData> = emptyList(), kafkaPort: Int = 9093, log: (event: String) -> Unit = nullLog) {
-    private var qontractKafka: QontractKafka? = null
-
-    init {
-        if(kafkaStubs.isNotEmpty()) {
-            log("Starting Kafka...")
-            val qontractKafka = QontractKafka(kafkaPort)
-            this.qontractKafka = qontractKafka
-
-            for(stub in kafkaStubs) {
-                val (target, key, content) = stub.kafkaMessage
-
-                if(key != null)
-                    qontractKafka.send(target, key.string, content.toStringValue())
-                else
-                    qontractKafka.send(target, content.toStringValue())
-            }
-        }
-    }
-}
-
 fun stubKafkaContracts(kafkaStubs: List<KafkaStubData>, bootstrapServers: String) {
     createConsumer(bootstrapServers, false).use {
         createTopics(kafkaStubs.map { it.kafkaMessage.topic }, bootstrapServers)

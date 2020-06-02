@@ -73,15 +73,11 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
             }
             catch(e: ContractException) {
                 val response = badRequest(e.report())
-                log(response.toLogString("<- "))
-                log("<< Response At ${Date()} == ")
-                respondToKtorHttpResponse(call, response)
+                writeAndLogResponse(call, response, log)
             }
             catch(e: Throwable) {
                 val response = badRequest(e.message)
-                log(response.toLogString("<- "))
-                log("<< Response At ${Date()} == ")
-                respondToKtorHttpResponse(call, response)
+                writeAndLogResponse(call, response, log)
             }
         }
     }
@@ -90,10 +86,7 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
         log(">> Request Start At ${Date()}")
         log(httpRequest.toLogString("-> "))
         val response = stubResponse(httpRequest, behaviours, httpStubs)
-        log(response.toLogString("<- "))
-        log("<< Response At ${Date()} == ")
-        log(System.lineSeparator())
-        respondToKtorHttpResponse(call, response)
+        writeAndLogResponse(call, response, log)
     }
 
     private fun handleStubRequest(call: ApplicationCall, httpRequest: HttpRequest) {
@@ -102,9 +95,6 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
             createStub(mock)
 
             call.response.status(HttpStatusCode.OK)
-        }
-        catch(e: NoMatchingScenario) {
-            writeBadRequest(call, e.message)
         }
         catch(e: ContractException) {
             writeBadRequest(call, e.report())
@@ -293,25 +283,6 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List
     }
 }
 
-fun contractInfoToExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): StubDataItems {
-    return contractInfo.fold(StubDataItems()) { stubsAcc, (behaviour, mocks) ->
-        val newStubs = mocks.fold(StubDataItems()) { stubs, mock ->
-            if(mock.kafkaMessage != null) {
-                StubDataItems(stubs.http, stubs.kafka.plus(KafkaStubData(mock.kafkaMessage)))
-            } else {
-                val (resolver, scenario, httpResponse) = behaviour.matchingStubResponse(mock)
-
-                val requestPattern = mock.request.toPattern()
-                val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
-
-                StubDataItems(stubs.http.plus(HttpStubData(requestPatternWithHeaderAncestor, httpResponse, resolver)), stubs.kafka)
-            }
-        }
-
-        StubDataItems(stubsAcc.http.plus(newStubs.http), stubsAcc.kafka.plus(newStubs.kafka))
-    }
-}
-
 fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<HttpStubData> {
     return contractInfo.flatMap { (behaviour, mocks) ->
         mocks.filter { it.kafkaMessage == null }.map { mock ->
@@ -343,3 +314,10 @@ data class HttpStubData(val requestPattern: HttpRequestPattern, val response: Ht
 data class KafkaStubData(val kafkaMessage: KafkaMessage) : StubData
 
 data class StubDataItems(val http: List<HttpStubData> = emptyList(), val kafka: List<KafkaStubData> = emptyList())
+
+fun writeAndLogResponse(call: ApplicationCall, response: HttpResponse, log: (event: String) -> Unit) {
+    log(response.toLogString("<- "))
+    log("<< Response At ${Date()} == ")
+    respondToKtorHttpResponse(call, response)
+}
+

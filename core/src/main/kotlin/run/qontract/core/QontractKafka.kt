@@ -9,15 +9,10 @@ import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.testcontainers.containers.KafkaContainer
-import run.qontract.core.pattern.parsedValue
-import run.qontract.core.value.KafkaMessage
-import run.qontract.core.value.StringValue
 import java.io.Closeable
-import java.time.Duration
 import java.util.*
 
 class QontractKafka(kafkaPort: Int = 9093) : Closeable {

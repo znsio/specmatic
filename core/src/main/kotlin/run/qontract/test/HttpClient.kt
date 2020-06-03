@@ -1,5 +1,6 @@
 package run.qontract.test
 
+import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.ClientRequestException
 import io.ktor.client.request.forms.*
@@ -28,12 +29,12 @@ import java.net.URISyntaxException
 import java.net.URL
 import java.util.*
 
-class HttpClient(private val baseURL: String, private val log: (event: String) -> Unit = ::consoleLog) : TestExecutor {
+class HttpClient(private val baseURL: String, private val log: (event: String) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(CIO) { expectSuccess = false }) : TestExecutor {
     private val serverStateURL = "/_state_setup"
+
     @OptIn(KtorExperimentalAPI::class)
     @Throws(IOException::class, URISyntaxException::class)
     override fun execute(request: HttpRequest): HttpResponse {
-        val ktorClient = io.ktor.client.HttpClient(CIO) { expectSuccess = false }
         val url = URL(request.getURL(baseURL))
 
         val startTime = Date()
@@ -133,7 +134,6 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
     override fun setServerState(serverState: Map<String, Value>) {
         if (serverState.isEmpty()) return
 
-        val ktorClient = io.ktor.client.HttpClient(CIO)
         val url = URL(baseURL + serverStateURL)
 
         val startTime = Date()

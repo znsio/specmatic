@@ -1,15 +1,13 @@
 package run.qontract.stub
 
+import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
-import run.qontract.core.*
+import run.qontract.core.Feature
 import run.qontract.core.value.KafkaMessage
 import run.qontract.mock.ScenarioStub
-import run.qontract.nullLog
 
-fun stubKafkaContracts(kafkaStubs: List<KafkaStubData>, bootstrapServers: String) {
-    createConsumer(bootstrapServers, false).use {
-        createTopics(kafkaStubs.map { it.kafkaMessage.topic }, bootstrapServers)
-    }
+fun stubKafkaContracts(kafkaStubs: List<KafkaStubData>, bootstrapServers: String, createTopics: (List<String>, String) -> Unit, createProducer: (String) -> Producer<String, String>) {
+    createTopics(kafkaStubs.map { it.kafkaMessage.topic }, bootstrapServers)
 
     createProducer(bootstrapServers).use { producer ->
         for(stub in kafkaStubs) {
@@ -21,8 +19,10 @@ fun stubKafkaContracts(kafkaStubs: List<KafkaStubData>, bootstrapServers: String
 }
 
 fun producerRecord(kafkaMessage: KafkaMessage): ProducerRecord<String, String> {
-    val key = kafkaMessage.key
-    return if (key != null) ProducerRecord(kafkaMessage.topic, key.toStringValue(), kafkaMessage.value.toStringValue()) else ProducerRecord(kafkaMessage.topic, kafkaMessage.value.toStringValue())
+    return when(val key = kafkaMessage.key) {
+        null -> ProducerRecord(kafkaMessage.topic, kafkaMessage.value.toStringValue())
+        else -> ProducerRecord(kafkaMessage.topic, key.toStringValue(), kafkaMessage.value.toStringValue())
+    }
 }
 
 fun contractInfoToKafkaExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<KafkaStubData> {

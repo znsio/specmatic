@@ -1,7 +1,7 @@
 package application
 
 import run.qontract.test.QontractJUnitSupport
-import run.qontract.test.ContractExecutionListener
+import application.test.ContractExecutionListener
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder

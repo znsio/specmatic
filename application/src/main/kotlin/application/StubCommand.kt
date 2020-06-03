@@ -136,7 +136,7 @@ class StubCommand : Callable<Unit> {
                 println("Started local Kafka server: ${qontractKafka?.bootstrapServers}")
             }
 
-            stubKafkaContracts(kafkaExpectations, qontractKafka?.bootstrapServers ?: "PLAINTEXT://$kafkaHost:$kafkaPort")
+            stubKafkaContracts(kafkaExpectations, qontractKafka?.bootstrapServers ?: "PLAINTEXT://$kafkaHost:$kafkaPort", ::createTopics, ::createProducer)
         }
     }
 

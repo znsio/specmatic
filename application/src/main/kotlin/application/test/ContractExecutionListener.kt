@@ -1,4 +1,4 @@
-package run.qontract.test
+package application.test
 
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener

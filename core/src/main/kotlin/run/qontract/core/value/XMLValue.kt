@@ -18,7 +18,7 @@ data class XMLValue(val node: Node) : Value {
     override fun toExactType(): Pattern = XMLPattern(node)
     override fun type(): Pattern = XMLPattern("<empty/>")
 
-    override fun typeDeclaration(typeName: String): TypeDeclaration {
+    override fun typeDeclaration(typeName: String): Pair<TypeDeclaration, ExampleDeclaration> {
         TODO("Not yet implemented")
     }
 

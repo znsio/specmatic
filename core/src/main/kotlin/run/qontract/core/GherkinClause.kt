@@ -3,7 +3,7 @@ package run.qontract.core
 import run.qontract.conversions.guessType
 import run.qontract.core.pattern.*
 import run.qontract.core.value.EmptyString
-import run.qontract.core.value.KafkaMessage
+import run.qontract.core.value.ExampleDeclaration
 import run.qontract.core.value.Value
 
 data class GherkinClause(val content: String, val section: GherkinSection)
@@ -12,15 +12,15 @@ enum class GherkinSection(val prefix: String) {
     Given("Given"), When("When"), Then("Then"), `*`("*")
 }
 
-fun bodyToGherkinClauses(typeName: String, qontractKeyword: String, body: Value?, section: GherkinSection): List<GherkinClause>? {
+fun bodyToGherkinClauses(typeName: String, qontractKeyword: String, body: Value?, section: GherkinSection): Pair<List<GherkinClause>, ExampleDeclaration>? {
     if(body == EmptyString)
-        return emptyList()
+        return Pair(emptyList(), ExampleDeclaration())
 
-    return body?.typeDeclaration(typeName)?.let { typeDeclaration ->
-        val responseBodyClause = GherkinClause("$qontractKeyword ${typeDeclaration.typeValue}", section)
+    return body?.typeDeclaration(typeName)?.let { (typeDeclaration, exampleDeclaration) ->
+        val bodyClause = GherkinClause("$qontractKeyword ${typeDeclaration.typeValue}", section)
         val typeDefinitionClauses = toGherkinClauses(typeDeclaration.types)
 
-        listOf(responseBodyClause).plus(typeDefinitionClauses)
+        Pair(listOf(bodyClause).plus(typeDefinitionClauses), exampleDeclaration)
     }
 }
 
@@ -63,9 +63,10 @@ ${scenarioData.prependIndent("  ")}
 """
 }
 
-fun toGherkinFeature(scenarioName: String, clauses: List<GherkinClause>): String = withFeatureClause("New Feature", toGherkinScenario(scenarioName, clauses))
+fun toGherkinFeature(scenarioName: String, clauses: Pair<List<GherkinClause>, ExampleDeclaration>): String = withFeatureClause("New Feature", toGherkinScenario(scenarioName, clauses))
 
-fun toGherkinScenario(scenarioName: String, clauses: List<GherkinClause>): String {
+fun toGherkinScenario(scenarioName: String, declarations: Pair<List<GherkinClause>, ExampleDeclaration>): String {
+    val (clauses, exampleDeclaration) = declarations
     val groupedClauses = clauses.groupBy { it.section }
 
     val statements = listOf(GherkinSection.Given, GherkinSection.When, GherkinSection.Then, GherkinSection.`*`).flatMap { section ->
@@ -74,5 +75,18 @@ fun toGherkinScenario(scenarioName: String, clauses: List<GherkinClause>): Strin
         sectionClauses.zip(prefixes).map { (clause, prefix) -> GherkinStatement(clause.content, prefix) }
     }
 
-    return withScenarioClause(scenarioName, statements.joinToString("\n") { it.toGherkinString() })
+    val statementString = statements.joinToString("\n") { it.toGherkinString() }
+
+    val scenarioGherkin = when {
+        exampleDeclaration.examples.isNotEmpty() -> {
+            val entries = exampleDeclaration.examples.entries.toList()
+            val heading = """| ${entries.joinToString(" | ") { it.key }} |"""
+            val firstRow = """| ${entries.joinToString(" | ") { it.value }} |"""
+
+            "$statementString\n\nExamples:\n$heading\n$firstRow"
+        }
+        else -> statementString
+    }
+
+    return withScenarioClause(scenarioName, scenarioGherkin)
 }

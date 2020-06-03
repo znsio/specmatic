@@ -355,14 +355,14 @@ fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Result {
 
 fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature(stub.name, stubToClauses(stub))
 
-private fun stubToClauses(namedStub: NamedStub): List<GherkinClause> {
+private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, ExampleDeclaration> {
     return when (namedStub.stub.kafkaMessage) {
         null -> {
-            val requestClauses = toGherkinClauses(namedStub.stub.request)
+            val (requestClauses, examples) = toGherkinClauses(namedStub.stub.request)
             val responseClauses = toGherkinClauses(namedStub.stub.response)
-            requestClauses.plus(responseClauses)
+            Pair(requestClauses.plus(responseClauses), examples)
         }
-        else -> toGherkinClauses(namedStub.stub.kafkaMessage)
+        else -> Pair(toGherkinClauses(namedStub.stub.kafkaMessage), ExampleDeclaration())
     }
 }
 

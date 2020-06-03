@@ -4,6 +4,8 @@ import run.qontract.core.pattern.*
 
 data class TypeDeclaration(val typeValue: String, val types: Map<String, Pattern> = emptyMap(), val collidingName: String? = null)
 
+data class ExampleDeclaration(val examples: Map<String, String> = emptyMap(), val newValue: String? = null)
+
 fun convergeTypeDeclarations(accumulator: TypeDeclaration, newPattern: TypeDeclaration): TypeDeclaration {
     return try {
         val differences = accumulator.types.filterKeys { it !in newPattern.types }.plus(newPattern.types.filterKeys { it !in accumulator.types })

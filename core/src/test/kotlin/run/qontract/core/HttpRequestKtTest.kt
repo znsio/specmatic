@@ -38,7 +38,7 @@ internal class HttpRequestKtTest {
     @Test
     fun `gherkin clauses from request with number body`() {
         val request = HttpRequest("POST", "/data", emptyMap(), StringValue("10"))
-        val clauses = toGherkinClauses(request)
+        val (clauses, _) = toGherkinClauses(request)
 
         assertThat(clauses).hasSize(2)
 
@@ -52,7 +52,7 @@ internal class HttpRequestKtTest {
     @Test
     fun `gherkin clauses from request with query`() {
         val request = HttpRequest("GET", "/data", queryParams = mapOf("count" to "1"))
-        val clauses = toGherkinClauses(request)
+        val (clauses, _) = toGherkinClauses(request)
 
         assertThat(clauses).hasSize(1)
 
@@ -63,7 +63,7 @@ internal class HttpRequestKtTest {
     @Test
     fun `gherkin clauses from request with headers`() {
         val request = HttpRequest("POST", "/data", mapOf("X-Custom" to "data"), EmptyString)
-        val clauses = toGherkinClauses(request)
+        val (clauses, _) = toGherkinClauses(request)
 
         assertThat(clauses).hasSize(2)
 
@@ -77,7 +77,7 @@ internal class HttpRequestKtTest {
     @Test
     fun `gherkin clauses from request with form fields`() {
         val request = HttpRequest("POST", "/data", formFields = mapOf("field" to "10"))
-        val clauses = toGherkinClauses(request)
+        val (clauses, _) = toGherkinClauses(request)
 
         assertThat(clauses).hasSize(2)
 
@@ -91,7 +91,7 @@ internal class HttpRequestKtTest {
     @Test
     fun `gherkin clauses from request with form data`() {
         val request = HttpRequest("POST", "/data", multiPartFormData = listOf(MultiPartContentValue("field", NumberValue(20))))
-        val clauses = toGherkinClauses(request)
+        val (clauses, _) = toGherkinClauses(request)
 
         assertThat(clauses).hasSize(2)
 

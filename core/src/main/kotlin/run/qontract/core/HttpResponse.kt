@@ -90,7 +90,7 @@ private fun _toGherkinClauses(response: HttpResponse): List<GherkinClause> {
     }.let { clauses ->
         clauses.plus(headersToGherkin(response.headers, "response-header", Then))
     }.let { clauses ->
-        clauses.plus(bodyToGherkinClauses("ResponseBody", "response-body", response.body?.let { guessType(it) }, Then) ?: clauses)
+        clauses.plus(bodyToGherkinClauses("ResponseBody", "response-body", response.body?.let { guessType(it) }, Then)?.first ?: clauses)
     }
 }
 

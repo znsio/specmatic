@@ -229,6 +229,10 @@ class PostmanKtTests {
     Then status 200
     And response-body (number)
   
+    Examples:
+    | data |
+    | value |
+  
   Scenario: With query
     When GET /stuff?one=(number)
     Then status 200

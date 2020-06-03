@@ -12,11 +12,11 @@ data class JSONArrayValue(val list: List<Value>) : Value {
     override fun toExactType(): Pattern = JSONArrayPattern(list.map { it.toExactType() })
     override fun type(): Pattern = JSONArrayPattern()
 
-    override fun typeDeclaration(typeName: String): TypeDeclaration = when {
-        list.isEmpty() -> TypeDeclaration("[]")
+    override fun typeDeclaration(typeName: String): Pair<TypeDeclaration, ExampleDeclaration> = when {
+        list.isEmpty() -> Pair(TypeDeclaration("[]"), ExampleDeclaration())
         else -> {
             val typeDeclarations = list.map {
-                val typeDeclaration = it.typeDeclaration(typeName)
+                val (typeDeclaration, examples) = it.typeDeclaration(typeName)
                 TypeDeclaration("(${withoutPatternDelimiters(typeDeclaration.typeValue)}*)", typeDeclaration.types)
             }
 
@@ -25,10 +25,10 @@ data class JSONArrayValue(val list: List<Value>) : Value {
             when {
                 collision != null -> {
                     println("Type name collision detected in type $collision, convergence of the array containing this type will be avoided")
-                    typeDeclarations.first()
+                    Pair(typeDeclarations.first(), ExampleDeclaration())
                 }
                 else -> {
-                    typeDeclarations.reduce { converged, current -> convergeTypeDeclarations(converged, current) }
+                    Pair(typeDeclarations.reduce { converged, current -> convergeTypeDeclarations(converged, current) }, ExampleDeclaration())
                 }
             }
         }

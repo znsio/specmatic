@@ -222,7 +222,11 @@ internal class ScenarioStubKtTest {
     When POST /customer
     And request-body (RequestBody)
     Then status 200
-    And response-body (ResponseBody)""")
+    And response-body (ResponseBody)
+  
+    Examples:
+    | street | city | name |
+    | High Street | Manchester | John Doe |""")
     }
 
     @Test
@@ -247,7 +251,11 @@ internal class ScenarioStubKtTest {
     Then status 200
     And response-header X-Required (string)
     And response-header X-Extra (string)
-    And response-body (ResponseBody)""")
+    And response-body (ResponseBody)
+  
+    Examples:
+    | street | city | name |
+    | High Street | Manchester | John Doe |""")
     }
 
     @Test

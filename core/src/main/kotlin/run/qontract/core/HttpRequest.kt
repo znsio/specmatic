@@ -170,53 +170,66 @@ fun requestFromJSON(json: Map<String, Value>) =
 internal fun startLinesWith(str: String, startValue: String) =
         str.split("\n").map { "$startValue$it" }.joinToString("\n")
 
-fun toGherkinClauses(request: HttpRequest): List<GherkinClause> {
-    return emptyList<GherkinClause>().let {
-    val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
+fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDeclaration> {
+    val gherkinClauses = emptyList<GherkinClause>().let {
+        val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
 
-    if(request.path == null)
-        throw ContractException("Can't generate a qontract without the url.")
+        if (request.path == null)
+            throw ContractException("Can't generate a qontract without the url.")
 
-    val query = when {
-        request.queryParams.isNotEmpty() -> {
-            val query = request.queryParams.entries.joinToString("&") { (key, value) -> "$key=${guessType(parsedValue(value)).type().pattern}" }
-            "?$query"
+        val query = when {
+            request.queryParams.isNotEmpty() -> {
+                val query = request.queryParams.entries.joinToString("&") { (key, value) -> "$key=${guessType(parsedValue(value)).type().pattern}" }
+                "?$query"
+            }
+            else -> ""
         }
-        else -> ""
+
+        val path = "${request.path}$query"
+
+        it.plus(GherkinClause("$method $path", When))
+    }.plus(headersToGherkin(request.headers, "request-header", When))
+
+    val (bodyClauses, bodyExamples) = when {
+        request.multiPartFormData.isNotEmpty() -> Pair(multiPartFormDataToGherkin(request.multiPartFormData), ExampleDeclaration())
+        request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields)
+        else -> bodyToGherkinClauses("RequestBody", "request-body", request.body, When)?: Pair(emptyList<GherkinClause>(), ExampleDeclaration())
     }
 
-    val path = "${request.path}$query"
-
-    it.plus(GherkinClause("$method $path", When))
-}.plus(headersToGherkin(request.headers, "request-header", When)).plus(when {
-        request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData)
-        request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields)
-        else -> bodyToGherkinClauses("RequestBody", "request-body", request.body, When)?: emptyList()
-    })
+    return Pair(gherkinClauses.plus(bodyClauses), bodyExamples)
 }
 
-fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>) =
-        multiPartFormData.flatMap { part ->
-            when(part) {
-                is MultiPartContentValue -> {
-                    val typeName = "FormData${part.name}"
-                    val typeDeclaration = part.content.typeDeclaration(typeName)
+fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>): List<GherkinClause> {
+    return multiPartFormData.flatMap { part ->
+        when(part) {
+            is MultiPartContentValue -> {
+                val typeName = "FormData${part.name}"
+                val (typeDeclaration, _) = part.content.typeDeclaration(typeName)
 
-                    toGherkinClauses(typeDeclaration.types).plus(GherkinClause("request-part ${part.name} ${typeDeclaration.typeValue}", When))
-                }
-                is MultiPartFileValue -> {
-                    val contentType = part.contentType
-                    val contentEncoding = contentType?.let { part.contentEncoding }
+                toGherkinClauses(typeDeclaration.types).plus(GherkinClause("request-part ${part.name} ${typeDeclaration.typeValue}", When))
+            }
+            is MultiPartFileValue -> {
+                val contentType = part.contentType
+                val contentEncoding = contentType?.let { part.contentEncoding }
 
-                    listOf(GherkinClause("request-part ${part.name} ${part.filename} $contentType $contentEncoding".trim(), When))
-                }
+                listOf(GherkinClause("request-part ${part.name} ${part.filename} $contentType $contentEncoding".trim(), When))
             }
         }
+    }
+}
 
-fun formFieldsToGherkin(formFields: Map<String, String>): List<GherkinClause> =
-        formFields.mapValues { guessType(parsedValue(it.value)) }.entries.flatMap {
-            val typeName = "FormField${it.key.capitalize()}"
-            val typeDeclaration = it.value.typeDeclaration(typeName)
+fun formFieldsToGherkin(formFields: Map<String, String>): Pair<List<GherkinClause>, ExampleDeclaration> {
+    val declarations = formFields.mapValues { guessType(parsedValue(it.value)) }.entries.map {
+        val typeName = "FormField${it.key.capitalize()}"
+        val (typeDeclaration, exampleDeclaration) = it.value.typeDeclaration(typeName)
 
-            toGherkinClauses(typeDeclaration.types).plus(GherkinClause("form-field ${it.key} ${typeDeclaration.typeValue}", When))
-        }
+        Pair(toGherkinClauses(typeDeclaration.types).plus(GherkinClause("form-field ${it.key} ${typeDeclaration.typeValue}", When)), exampleDeclaration)
+    }
+
+    val clauses = declarations.flatMap { it.first }
+    val examples = declarations.map { it.second }.fold(ExampleDeclaration()) { acc, exampleDeclaration ->
+        ExampleDeclaration(acc.examples.plus(exampleDeclaration.examples))
+    }
+
+    return Pair(clauses, examples)
+}

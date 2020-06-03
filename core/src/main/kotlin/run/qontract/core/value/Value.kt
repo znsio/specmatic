@@ -10,5 +10,5 @@ interface Value {
     fun displayableType(): String
     fun toExactType(): Pattern
     fun type(): Pattern
-    fun typeDeclaration(typeName: String): TypeDeclaration
+    fun typeDeclaration(typeName: String): Pair<TypeDeclaration, ExampleDeclaration>
 }

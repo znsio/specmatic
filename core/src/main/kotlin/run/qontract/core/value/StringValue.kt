@@ -19,8 +19,8 @@ data class StringValue(val string: String = "") : Value {
     }
 
     override fun type(): Pattern = StringPattern
-    override fun typeDeclaration(typeName: String): TypeDeclaration =
-            TypeDeclaration("(${displayableType()})")
+    override fun typeDeclaration(typeName: String): Pair<TypeDeclaration, ExampleDeclaration> =
+            Pair(TypeDeclaration("(${displayableType()})"), ExampleDeclaration(newValue = string))
 
     override fun toString() = string
 

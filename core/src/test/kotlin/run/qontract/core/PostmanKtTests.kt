@@ -238,6 +238,10 @@ class PostmanKtTests {
     Then status 200
     And response-body (number)
   
+    Examples:
+    | one |
+    | 1 |
+  
   Scenario: Square Of A Number 2
     When POST /square
     And request-body (number)
@@ -251,11 +255,19 @@ class PostmanKtTests {
     Then status 200
     And response-body (number)
   
+    Examples:
+    | field1 |
+    | 10 |
+  
   Scenario: With form data
     When POST /stuff
     And request-part part1 (number)
     Then status 200
-    And response-body (number)"""
+    And response-body (number)
+  
+    Examples:
+    | part1 |
+    | 10 |"""
 
         assertThat(gherkinString.trim()).isEqualTo(expectedGherkinString.trim())
 

@@ -6,6 +6,7 @@ import run.qontract.core.*
 import run.qontract.core.Result.Success
 import run.qontract.core.pattern.*
 import run.qontract.core.utilities.jsonStringToValueMap
+import run.qontract.core.value.EmptyString
 import run.qontract.core.value.StringValue
 
 internal class ScenarioStubKtTest {
@@ -254,13 +255,13 @@ internal class ScenarioStubKtTest {
     And response-body (ResponseBody)
   
     Examples:
-    | street | city | name |
-    | High Street | Manchester | John Doe |""")
+    | X-Header1 | X-Header2 | street | city | name |
+    | value 1 | value 2 | High Street | Manchester | John Doe |""")
     }
 
     @Test
     fun `request-response with form fields to gherkin string`() {
-        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = mapOf("X-FormData1" to "some value", "X-FormData1" to "some value"), multiPartFormData = emptyList())
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = mapOf("X-FormData1" to "some value"), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
         validateStubAndQontract(request, response, """Feature: New Feature
@@ -270,7 +271,11 @@ internal class ScenarioStubKtTest {
     When POST /customer
     And form-field X-FormData1 (string)
     Then status 200
-    And response-body (ResponseBody)""")
+    And response-body (ResponseBody)
+  
+    Examples:
+    | X-FormData1 |
+    | some value |""")
     }
 
     @Test
@@ -285,7 +290,11 @@ internal class ScenarioStubKtTest {
     When POST /customer
     And request-part name (string)
     Then status 200
-    And response-body (ResponseBody)""")
+    And response-body (ResponseBody)
+  
+    Examples:
+    | name |
+    | John Doe |""")
     }
 
     @Test

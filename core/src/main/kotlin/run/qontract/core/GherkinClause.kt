@@ -5,6 +5,7 @@ import run.qontract.core.pattern.*
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.ExampleDeclaration
 import run.qontract.core.value.Value
+import run.qontract.core.value.toExampleDeclaration
 
 data class GherkinClause(val content: String, val section: GherkinSection)
 
@@ -28,10 +29,10 @@ fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
     return patterns.entries.map { (key, pattern) -> toClause(key, pattern) }
 }
 
-fun headersToGherkin(headers: Map<String, String>, keyword: String, section: GherkinSection): List<GherkinClause> {
-    return headers.entries.map {
+fun headersToGherkin(headers: Map<String, String>, keyword: String, section: GherkinSection): Pair<List<GherkinClause>, ExampleDeclaration> {
+    return Pair(headers.entries.map {
         "$keyword ${it.key} ${guessType(parsedValue(it.value)).type().pattern}"
-    }.map { GherkinClause(it, section) }
+    }.map { GherkinClause(it, section) }, toExampleDeclaration(headers))
 }
 
 fun toClause(key: String, type: Pattern): GherkinClause {

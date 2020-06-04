@@ -43,44 +43,44 @@ internal class HttpResponseTest {
     fun `gherkin clauses from simple 200 response`() {
         val clauses = toGherkinClauses(HttpResponse.OK)
 
-        assertThat(clauses).hasSize(1)
-        assertThat(clauses.single().section).isEqualTo(Then)
-        assertThat(clauses.single().content).isEqualTo("status 200")
+        assertThat(clauses.first).hasSize(1)
+        assertThat(clauses.first.single().section).isEqualTo(Then)
+        assertThat(clauses.first.single().content).isEqualTo("status 200")
     }
 
     @Test
     fun `gherkin clauses from response with headers`() {
         val clauses = toGherkinClauses(HttpResponse(200, headers = mapOf("X-Value" to "10"), body = EmptyString))
 
-        assertThat(clauses).hasSize(2)
-        assertThat(clauses.first().section).isEqualTo(Then)
-        assertThat(clauses.first().content).isEqualTo("status 200")
+        assertThat(clauses.first).hasSize(2)
+        assertThat(clauses.first.first().section).isEqualTo(Then)
+        assertThat(clauses.first.first().content).isEqualTo("status 200")
 
-        assertThat(clauses[1].section).isEqualTo(Then)
-        assertThat(clauses[1].content).isEqualTo("response-header X-Value (number)")
+        assertThat(clauses.first[1].section).isEqualTo(Then)
+        assertThat(clauses.first[1].content).isEqualTo("response-header X-Value (number)")
     }
 
     @Test
     fun `gherkin clauses from response with body`() {
         val clauses = toGherkinClauses(HttpResponse(200, headers = emptyMap(), body = StringValue("response data")))
 
-        assertThat(clauses).hasSize(2)
-        assertThat(clauses.first().section).isEqualTo(Then)
-        assertThat(clauses.first().content).isEqualTo("status 200")
+        assertThat(clauses.first).hasSize(2)
+        assertThat(clauses.first.first().section).isEqualTo(Then)
+        assertThat(clauses.first.first().content).isEqualTo("status 200")
 
-        assertThat(clauses[1].section).isEqualTo(Then)
-        assertThat(clauses[1].content).isEqualTo("response-body (string)")
+        assertThat(clauses.first[1].section).isEqualTo(Then)
+        assertThat(clauses.first[1].content).isEqualTo("response-body (string)")
     }
 
     @Test
     fun `gherkin clauses from response with number body`() {
         val clauses = toGherkinClauses(HttpResponse(200, headers = emptyMap(), body = StringValue("10")))
 
-        assertThat(clauses).hasSize(2)
-        assertThat(clauses.first().section).isEqualTo(Then)
-        assertThat(clauses.first().content).isEqualTo("status 200")
+        assertThat(clauses.first).hasSize(2)
+        assertThat(clauses.first.first().section).isEqualTo(Then)
+        assertThat(clauses.first.first().content).isEqualTo("status 200")
 
-        assertThat(clauses[1].section).isEqualTo(Then)
-        assertThat(clauses[1].content).isEqualTo("response-body (number)")
+        assertThat(clauses.first[1].section).isEqualTo(Then)
+        assertThat(clauses.first[1].content).isEqualTo("response-body (number)")
     }
 }

@@ -101,4 +101,43 @@ internal class HttpRequestKtTest {
         assertThat(clauses[1].section).isEqualTo(When)
         assertThat(clauses[1].content).isEqualTo("request-part field (number)")
     }
+
+    @Test
+    fun `query param pattern value should not be added as an example`() {
+        val request = HttpRequest(method = "POST", path = "/customer", queryParams = mapOf("key" to "(string)"))
+
+        val (clauses, examples) = toGherkinClauses(request)
+        assertThat(clauses.first().content).isEqualTo("POST /customer?key=(string)")
+        assertThat(examples.examples).isEmpty()
+    }
+
+    @Test
+    fun `header pattern value should not be added as an example`() {
+        val request = HttpRequest(method = "POST", path = "/customer", headers = mapOf("key" to "(string)"))
+
+        val (clauses, examples) = toGherkinClauses(request)
+        assertThat(clauses[0].content).isEqualTo("POST /customer")
+        assertThat(clauses[1].content).isEqualTo("request-header key (string)")
+        assertThat(examples.examples).isEmpty()
+    }
+
+    @Test
+    fun `form field value should not be added as an example`() {
+        val request = HttpRequest(method = "POST", path = "/customer", formFields = mapOf("key" to "(string)"))
+
+        val (clauses, examples) = toGherkinClauses(request)
+        assertThat(clauses[0].content).isEqualTo("POST /customer")
+        assertThat(clauses[1].content).isEqualTo("form-field key (string)")
+        assertThat(examples.examples).isEmpty()
+    }
+
+    @Test
+    fun `form data value should not be added as an example`() {
+        val request = HttpRequest(method = "POST", path = "/customer", multiPartFormData = listOf(MultiPartContentValue("key", StringValue("(string)"))))
+
+        val (clauses, examples) = toGherkinClauses(request)
+        assertThat(clauses[0].content).isEqualTo("POST /customer")
+        assertThat(clauses[1].content).isEqualTo("request-part key (string)")
+        assertThat(examples.examples).isEmpty()
+    }
 }

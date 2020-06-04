@@ -359,7 +359,12 @@ private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, Examp
     return when (namedStub.stub.kafkaMessage) {
         null -> {
             val (requestClauses, examples) = toGherkinClauses(namedStub.stub.request)
-            val responseClauses = toGherkinClauses(namedStub.stub.response)
+
+            for(message in examples.messages) {
+                println(message)
+            }
+
+            val (responseClauses, _) = toGherkinClauses(namedStub.stub.response)
             Pair(requestClauses.plus(responseClauses), examples)
         }
         else -> Pair(toGherkinClauses(namedStub.stub.kafkaMessage), ExampleDeclaration())

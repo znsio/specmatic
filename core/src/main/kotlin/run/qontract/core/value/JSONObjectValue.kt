@@ -34,9 +34,9 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 
         val typeDeclaration = TypeDeclaration(newTypeName, mergedTypeMap, collidingName)
 
+        val duplicateKeysErrorMessage = "Duplicate keys names found, skipping the generation of examples"
         if(allKeys.size > uniqueKeys.size) {
-            println("Duplicate keys names found, skipping the generation of examples")
-            return Pair(typeDeclaration, ExampleDeclaration())
+            return Pair(typeDeclaration, ExampleDeclaration(messages = examples.flatMap { it.messages }.plus(duplicateKeysErrorMessage)))
         }
 
         val consolidatedExamples = examples.fold(ExampleDeclaration()) { acc, exampleDeclaration ->
@@ -49,8 +49,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
         }
 
         if(newExampleEntries.any { it.first in consolidatedExamples.examples}) {
-            println("Duplicate keys names found, skipping the generation of examples")
-            return Pair(typeDeclaration, ExampleDeclaration())
+            return Pair(typeDeclaration, ExampleDeclaration(messages = examples.flatMap { it.messages }.plus(duplicateKeysErrorMessage)))
         }
 
         return Pair(typeDeclaration, newExampleEntries.fold(consolidatedExamples) { acc, entry ->

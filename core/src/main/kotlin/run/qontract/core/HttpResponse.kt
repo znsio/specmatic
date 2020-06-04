@@ -81,16 +81,23 @@ fun getHeaders(jsonObject: Map<String, Value>): MutableMap<String, String> =
 
 val responseHeadersToExcludeFromConversion = listOf("Vary", "X-Qontract-Result")
 
-fun toGherkinClauses(response: HttpResponse): List<GherkinClause> = _toGherkinClauses(dropContentAndCORSResponseHeaders(response))
+fun toGherkinClauses(response: HttpResponse): Pair<List<GherkinClause>, ExampleDeclaration> {
+    val cleanedUpResponse = dropContentAndCORSResponseHeaders(response)
 
-private fun _toGherkinClauses(response: HttpResponse): List<GherkinClause> {
-    return emptyList<GherkinClause>().let {
-        val status = if (response.status > 0) response.status else throw ContractException("Can't generate a contract without a response status")
-        it.plus(GherkinClause("status $status", Then))
-    }.let { clauses ->
-        clauses.plus(headersToGherkin(response.headers, "response-header", Then))
-    }.let { clauses ->
-        clauses.plus(bodyToGherkinClauses("ResponseBody", "response-body", response.body?.let { guessType(it) }, Then)?.first ?: clauses)
+    return Pair(emptyList<GherkinClause>(), ExampleDeclaration()).let { (clauses, examples) ->
+        val status = if (cleanedUpResponse.status > 0) cleanedUpResponse.status else throw ContractException("Can't generate a contract without a response status")
+        Pair(clauses.plus(GherkinClause("status $status", Then)), examples)
+    }.let { (clauses, _) ->
+        val (newClauses, _) = headersToGherkin(cleanedUpResponse.headers, "response-header", Then)
+        Pair(clauses.plus(newClauses), ExampleDeclaration())
+    }.let { (clauses, examples) ->
+        when(val result = bodyToGherkinClauses("ResponseBody", "response-body", cleanedUpResponse.body?.let { guessType(it) }, Then)) {
+            null -> Pair(clauses, examples)
+            else -> {
+                val (newClauses, _) = result
+                Pair(clauses.plus(newClauses), ExampleDeclaration())
+            }
+        }
     }
 }
 

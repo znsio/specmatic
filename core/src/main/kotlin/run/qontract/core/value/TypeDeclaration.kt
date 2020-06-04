@@ -19,6 +19,13 @@ data class ExampleDeclaration constructor(val examples: Map<String, String> = em
         isPatternToken(more.second) -> this
         else -> this.copy(examples = examples.plus(more))
     }
+
+    fun plusNew(key: String): ExampleDeclaration {
+        return when(newValue) {
+            null -> this
+            else -> this.plus(key to newValue)
+        }
+    }
 }
 
 internal fun messageWhenDuplicateKeysExist(more: ExampleDeclaration, examples: Map<String, String>): List<String> {

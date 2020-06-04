@@ -91,7 +91,7 @@ fun toGherkinClauses(response: HttpResponse): Pair<List<GherkinClause>, ExampleD
         val (newClauses, _) = headersToGherkin(cleanedUpResponse.headers, "response-header", Then)
         Pair(clauses.plus(newClauses), ExampleDeclaration())
     }.let { (clauses, examples) ->
-        when(val result = bodyToGherkinClauses("ResponseBody", "response-body", cleanedUpResponse.body?.let { guessType(it) }, Then)) {
+        when(val result = responseBodyToGherkinClauses("ResponseBody", cleanedUpResponse.body?.let { guessType(it) })) {
             null -> Pair(clauses, examples)
             else -> {
                 val (newClauses, _) = result

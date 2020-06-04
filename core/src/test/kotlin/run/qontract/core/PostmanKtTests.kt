@@ -244,10 +244,14 @@ class PostmanKtTests {
   
   Scenario: Square Of A Number 2
     When POST /square
-    And request-body (number)
+    And request-body (number from RequestBody)
     Then status 200
     And response-header Connection (number)
     And response-body (number)
+  
+    Examples:
+    | RequestBody |
+    | 10 |
   
   Scenario: With form fields
     When POST /stuff

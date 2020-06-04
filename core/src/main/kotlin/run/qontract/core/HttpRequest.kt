@@ -196,12 +196,11 @@ fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDec
         val (bodyClauses, bodyExamples) = when {
             request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData)
             request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields)
-            else -> bodyToGherkinClauses("RequestBody", "request-body", request.body, When)?: Pair(emptyList(), ExampleDeclaration())
+            else -> requestBodyToGherkinClauses("RequestBody", request.body)?: Pair(emptyList(), ExampleDeclaration())
         }
 
-        Pair(clauses.plus(bodyClauses), examples.plus(bodyExamples))
+        Pair(clauses.plus(bodyClauses), examples.plus(bodyExamples).plusNew("RequestBody"))
     }
-
 }
 
 fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>): Pair<List<GherkinClause>, ExampleDeclaration> {
@@ -214,7 +213,7 @@ fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>):
                 val (typeDeclaration, newExamples) = part.content.typeDeclaration(typeName)
 
                 Pair(clauses.plus(toGherkinClauses(typeDeclaration.types).plus(GherkinClause("request-part ${part.name} ${typeDeclaration.typeValue}", When))),
-                        examples.plus(newExamples).plus(part.name to part.content.toStringValue()))
+                        examples.plus(newExamples.plusNew(part.name)))
             }
             is MultiPartFileValue -> {
                 val contentType = part.contentType

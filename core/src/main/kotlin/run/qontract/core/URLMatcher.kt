@@ -1,5 +1,6 @@
 package run.qontract.core
 
+import run.qontract.core.Result.Success
 import run.qontract.core.pattern.*
 import run.qontract.core.utilities.URIUtils
 import run.qontract.core.value.StringValue
@@ -10,9 +11,9 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         matchesPath(uri, resolver).let { pathResult ->
             return when (pathResult) {
-                is Result.Success -> matchesQuery(sampleQuery, resolver).let { queryResult ->
+                is Success -> matchesQuery(sampleQuery, resolver).let { queryResult ->
                     when(queryResult) {
-                        is Result.Success -> queryResult
+                        is Success -> queryResult
                         else -> queryResult.breadCrumb("QUERY-PARAMS")
                     }
                 }
@@ -60,7 +61,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
             }
         }
 
-        return Result.Success()
+        return Success()
     }
 
     private fun matchesQuery(sampleQuery: Map<String, String>, resolver: Resolver): Result {
@@ -85,7 +86,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                 }
             }
         }
-        return Result.Success()
+        return Success()
     }
 
     fun generatePath(resolver: Resolver): String {
@@ -108,16 +109,25 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<URLMatcher> {
-        val newPathPartsList = newBasedOn(pathPattern.mapIndexed { index, it ->
-            val key = it.key
+        val newPathPartsList = newBasedOn(pathPattern.mapIndexed { index, urlPathPattern ->
+            val key = urlPathPattern.key
 
             attempt(breadCrumb = "[$index]") {
                 when {
                     key !== null && row.containsField(key) -> {
                         val rowValue = row.getField(key)
-                        attempt("Format error in example of \"$key\"") { URLPathPattern(ExactValuePattern(it.parse(rowValue, resolver))) }
+                        when {
+                            isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathPattern.key}\""){
+                                val rowPattern = resolver.getPattern(rowValue)
+                                when(val result = urlPathPattern.encompasses(rowPattern, resolver, resolver)) {
+                                    is Success -> urlPathPattern.copy(pattern = rowPattern)
+                                    else -> throw ContractException(resultReport(result))
+                                }
+                            }
+                            else -> attempt("Format error in example of \"$key\"") { URLPathPattern(ExactValuePattern(urlPathPattern.parse(rowValue, resolver))) }
+                        }
                     }
-                    else -> it
+                    else -> urlPathPattern
                 }
             }
         }, row, resolver)

@@ -203,4 +203,9 @@ internal class URLMatcherTest {
         assertThat(matcher.matches(URI.create("/pets/(status:boolean)"), emptyMap(), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets/(status:boolean)"), emptyMap(), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
     }
+
+    @Test
+    fun temp() {
+
+    }
 }

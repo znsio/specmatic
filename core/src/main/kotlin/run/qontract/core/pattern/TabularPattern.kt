@@ -70,34 +70,34 @@ class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
 fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
     val patternCollection = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) {
-            val keyWithoutOptionality = withoutOptionality(key)
-
-            when {
-                row.containsField(keyWithoutOptionality) -> {
-                    val rowValue = row.getField(keyWithoutOptionality)
-                    if(isPatternToken(rowValue)) {
-                        val rowPattern = resolver.getPattern(rowValue)
-
-                        attempt(breadCrumb = key) {
-                            when(val result = pattern.encompasses(rowPattern, resolver, resolver)) {
-                                is Result.Success -> rowPattern.newBasedOn(row, resolver)
-                                else -> throw ContractException(resultReport(result))
-                            }
-                        }
-                    } else {
-                        attempt("Format error in example of \"$keyWithoutOptionality\"") { listOf(ExactValuePattern(pattern.parse(rowValue, resolver))) }
-                    }
-                }
-                else ->
-                    when (pattern) {
-                        is DeferredPattern -> pattern.copy(key = key)
-                        else -> pattern
-                    }.newBasedOn(row, resolver)
-            }
+            newBasedOn(row, key, pattern, resolver)
         }
     }
 
     return patternList(patternCollection)
+}
+
+fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): List<Pattern> {
+    val keyWithoutOptionality = withoutOptionality(key)
+
+    return when {
+        row.containsField(keyWithoutOptionality) -> {
+            val rowValue = row.getField(keyWithoutOptionality)
+            if (isPatternToken(rowValue)) {
+                val rowPattern = resolver.getPattern(rowValue)
+
+                attempt(breadCrumb = key) {
+                    when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
+                        is Result.Success -> rowPattern.newBasedOn(row, resolver)
+                        else -> throw ContractException(resultReport(result))
+                    }
+                }
+            } else {
+                attempt("Format error in example of \"$keyWithoutOptionality\"") { listOf(ExactValuePattern(pattern.parse(rowValue, resolver))) }
+            }
+        }
+        else -> pattern.newBasedOn(row, resolver)
+    }
 }
 
 fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): List<Map<String, ValueType>> {

@@ -2,7 +2,6 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
 import run.qontract.core.Result
-import run.qontract.core.resultReport
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 
@@ -16,25 +15,7 @@ data class LookupRowPattern(override val pattern: Pattern, val key: String) : Pa
     override fun generate(resolver: Resolver): Value = pattern.generate(resolver)
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return when {
-            row.containsField(key) -> {
-                val rowValue = row.getField(key)
-
-                when {
-                    isPatternToken(rowValue) -> {
-                        val rowPattern = parsedPattern(rowValue)
-                        when(val result = pattern.encompasses(rowPattern, resolver, resolver)) {
-                            is Result.Success -> listOf(rowPattern)
-                            else -> throw ContractException(resultReport(result))
-                        }
-                    }
-                    else -> listOf(ExactValuePattern(pattern.parse(rowValue, resolver)))
-                }
-            }
-            else -> {
-                pattern.newBasedOn(row, resolver)
-            }
-        }
+        return newBasedOn(row, key, pattern, resolver)
     }
 
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)

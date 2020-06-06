@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.GherkinSection.*
 import run.qontract.core.HttpResponse.Companion.OK
+import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONObjectValue
@@ -139,5 +140,27 @@ internal class HttpRequestKtTest {
         assertThat(clauses[0].content).isEqualTo("POST /customer")
         assertThat(clauses[1].content).isEqualTo("request-part key (string)")
         assertThat(examples.examples).isEmpty()
+    }
+
+    @Test
+    fun `examples of conflicting keys should be resolved by introducing a new key`() {
+        val request = HttpRequest(method = "POST", path = "/customer", body = parsedValue("""{"one": {"key": "1"}, "two": {"key": "2"}}"""))
+
+        val (clauses, examples) = toGherkinClauses(request)
+
+        assertThat(examples.examples).hasSize(2)
+        assertThat(examples.examples.getValue("key")).isEqualTo("1")
+        assertThat(examples.examples.getValue("key_")).isEqualTo("2")
+
+        assertThat(clauses).hasSize(5)
+        assertThat(clauses).contains(GherkinClause("POST /customer", When))
+        assertThat(clauses).contains(GherkinClause("request-body (RequestBody)", When))
+        assertThat(clauses).contains(GherkinClause("""type One
+  | key | (string) |""", Given))
+        assertThat(clauses).contains(GherkinClause("""type Two
+  | key | (key_: string) |""", Given))
+        assertThat(clauses).contains(GherkinClause("""type RequestBody
+  | one | (One) |
+  | two | (Two) |""", Given))
     }
 }

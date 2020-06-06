@@ -82,7 +82,7 @@ fun primitiveTypeDeclarationWithKey(key: String, examples: ExampleDeclaration, d
         !in examples.examples -> Pair("$displayableType", key)
         else -> {
             val exampleKey = getNewTypeName(key, examples.examples.keys)
-            Pair("($exampleKey: ${withoutPatternDelimiters(displayableType)})", exampleKey)
+            Pair("$exampleKey: ${withoutPatternDelimiters(displayableType)}", exampleKey)
         }
     }
 
@@ -94,7 +94,7 @@ fun primitiveTypeDeclarationWithoutKey(key: String, examples: ExampleDeclaration
         !in examples.examples -> Pair("$key: $displayableType", key)
         else -> {
             val exampleKey = getNewTypeName(key, examples.examples.keys)
-            Pair("($exampleKey: ${withoutPatternDelimiters(displayableType)})", exampleKey)
+            Pair("$exampleKey: ${withoutPatternDelimiters(displayableType)}", exampleKey)
         }
     }
 

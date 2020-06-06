@@ -33,7 +33,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
             acc.plus(entry.value.types)
         }.plus(newTypeName to newType)
 
-        val typeDeclaration = TypeDeclaration(newTypeName, mergedTypeMap, collidingName)
+        val typeDeclaration = TypeDeclaration("($newTypeName)", mergedTypeMap, collidingName)
 
         return Pair(typeDeclaration, newExamples)
     }
@@ -67,6 +67,6 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 }
 
 fun getNewTypeName(typeName: String, keys: Collection<String>): String {
-    return generateSequence(typeName) { "${it}_" }.first { it !in keys }.let { "($it)" }
+    return generateSequence(typeName) { "${it}_" }.first { it !in keys }
 }
 

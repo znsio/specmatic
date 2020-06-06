@@ -5,14 +5,12 @@ import run.qontract.core.Result
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 
-data class DeferredPattern(override val pattern: String, override val key: String? = null) : Pattern, Keyed {
+data class DeferredPattern(override val pattern: String, val key: String? = null) : Pattern {
     override fun equals(other: Any?): Boolean = when(other) {
         is DeferredPattern -> other.pattern == pattern
         else -> false
     }
     override fun hashCode(): Int = pattern.hashCode()
-
-    override fun withKey(key: String?): Pattern = this.copy(key = key)
 
     override fun matches(sampleData: Value?, resolver: Resolver) =
             resolver.matchesPattern(key, resolver.getPattern(pattern), sampleData ?: EmptyString)

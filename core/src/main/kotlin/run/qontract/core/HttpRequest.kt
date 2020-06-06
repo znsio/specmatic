@@ -196,10 +196,10 @@ fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDec
         val (bodyClauses, bodyExamples) = when {
             request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData)
             request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields)
-            else -> requestBodyToGherkinClauses("RequestBody", request.body)?: Pair(emptyList(), ExampleDeclaration())
+            else -> requestBodyToGherkinClauses(request.body)?: Pair(emptyList(), ExampleDeclaration())
         }
 
-        Pair(clauses.plus(bodyClauses), examples.plus(bodyExamples).plusNew("RequestBody"))
+        Pair(clauses.plus(bodyClauses), examples.plus(bodyExamples))
     }
 }
 
@@ -209,11 +209,11 @@ fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>):
 
         when(part) {
             is MultiPartContentValue -> {
-                val typeName = "FormData${part.name}"
-                val (typeDeclaration, newExamples) = part.content.typeDeclaration(typeName)
+                val typeName = "${part.name}"
+                val (typeDeclaration, newExamples) = part.content.typeDeclarationWithKey(typeName, examples)
 
                 Pair(clauses.plus(toGherkinClauses(typeDeclaration.types).plus(GherkinClause("request-part ${part.name} ${typeDeclaration.typeValue}", When))),
-                        examples.plus(newExamples.plusNew(part.name)))
+                        examples.plus(newExamples))
             }
             is MultiPartFileValue -> {
                 val contentType = part.contentType
@@ -226,16 +226,10 @@ fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>):
 }
 
 fun formFieldsToGherkin(formFields: Map<String, String>): Pair<List<GherkinClause>, ExampleDeclaration> {
-    val declarations = formFields.mapValues { guessType(parsedValue(it.value)) }.entries.map {
-        val typeName = "FormField${it.key.capitalize()}"
-        val (typeDeclaration, exampleDeclaration) = it.value.typeDeclaration(typeName)
-
-        Pair(toGherkinClauses(typeDeclaration.types).plus(GherkinClause("form-field ${it.key} ${typeDeclaration.typeValue}", When)), exampleDeclaration)
-    }
-
-    val clauses = declarations.flatMap { it.first }
-    val examples = declarations.map { it.second }.fold(ExampleDeclaration()) { acc, exampleDeclaration ->
-        ExampleDeclaration(acc.examples.plus(exampleDeclaration.examples))
+    val (clauses, examples) = formFields.entries.fold(Pair(emptyList<GherkinClause>(), ExampleDeclaration())) { acc, entry ->
+        val value = guessType(parsedValue(entry.value))
+        val (typeDeclaration, newExamples) = value.typeDeclarationWithKey(entry.key, acc.second)
+        Pair(acc.first.plus(toGherkinClauses(typeDeclaration.types).plus(GherkinClause("form-field ${entry.key} ${typeDeclaration.typeValue}", When))), acc.second.plus(newExamples))
     }
 
     return Pair(clauses, examples.plus(toExampleDeclaration(formFields)))

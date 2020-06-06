@@ -160,9 +160,9 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 }
 
-internal fun toURLPattern(url: String): URLMatcher = toURLPattern(URI.create(url))
+internal fun toURLMatcher(url: String): URLMatcher = toURLMatcher(URI.create(url))
 
-internal fun toURLPattern(urlPattern: URI): URLMatcher {
+internal fun toURLMatcher(urlPattern: URI): URLMatcher {
     val path = urlPattern.path
 
     val pathPattern = pathToPattern(urlPattern.rawPath)

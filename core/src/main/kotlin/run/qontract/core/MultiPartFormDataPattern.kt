@@ -5,6 +5,7 @@ import run.qontract.core.Result.Success
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.Row
+import run.qontract.core.pattern.isPatternToken
 import run.qontract.core.value.StringValue
 
 sealed class MultiPartFormDataPattern(open val name: String) {
@@ -14,8 +15,9 @@ sealed class MultiPartFormDataPattern(open val name: String) {
 }
 
 data class MultiPartContentPattern(override val name: String, val content: Pattern) : MultiPartFormDataPattern(name) {
-    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern> =
-            content.newBasedOn(row, resolver).map { copy(content = it) }
+    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern> {
+        return run.qontract.core.pattern.newBasedOn(row, name, content, resolver).map { newContent -> MultiPartContentPattern(name, newContent) }
+    }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
             MultiPartContentValue(name, content.generate(resolver))

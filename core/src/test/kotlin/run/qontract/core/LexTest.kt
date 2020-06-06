@@ -197,8 +197,8 @@ class LexTest {
 
             Scenario: Upload multipart info
               Given json Data
-                | id1 | (number from customerId) |
-                | id2 | (number from orderId)    |
+                | id1 | (customerId:number) |
+                | id2 | (orderId:number)    |
               When POST /data
               And request-body (Data)
               Then status 200
@@ -210,8 +210,8 @@ class LexTest {
 
         val pattern = behaviour.scenarios.single().patterns.getValue("(Data)") as TabularPattern
 
-        assertThat(pattern.pattern.getValue("id1")).isEqualTo(LookupRowPattern(DeferredPattern("(number)"), "customerId"))
-        assertThat(pattern.pattern.getValue("id2")).isEqualTo(LookupRowPattern(DeferredPattern("(number)"), "orderId"))
+        assertThat(pattern.pattern.getValue("id1")).isEqualTo(LookupRowPattern(NumberPattern, "customerId"))
+        assertThat(pattern.pattern.getValue("id2")).isEqualTo(LookupRowPattern(NumberPattern, "orderId"))
     }
 
     private fun deferredToJsonPatternData(pattern: Pattern, resolver: Resolver): Map<String, Pattern> =

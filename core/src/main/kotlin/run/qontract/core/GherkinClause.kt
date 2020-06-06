@@ -19,7 +19,7 @@ fun responseBodyToGherkinClauses(typeName: String, body: Value?): Pair<List<Gher
     if(body == EmptyString)
         return Pair(emptyList(), ExampleDeclaration())
 
-    return body?.typeDeclaration(typeName)?.let { (typeDeclaration, _) ->
+    return body?.typeDeclarationWithKey(typeName, ExampleDeclaration())?.let { (typeDeclaration, _) ->
         val bodyClause = GherkinClause("response-body ${typeDeclaration.typeValue}", Then)
         val typeDefinitionClauses = toGherkinClauses(typeDeclaration.types)
 
@@ -27,23 +27,17 @@ fun responseBodyToGherkinClauses(typeName: String, body: Value?): Pair<List<Gher
     }
 }
 
-fun requestBodyToGherkinClauses(typeName: String, body: Value?): Pair<List<GherkinClause>, ExampleDeclaration>? {
+fun requestBodyToGherkinClauses(body: Value?): Pair<List<GherkinClause>, ExampleDeclaration>? {
     if(body == EmptyString)
         return Pair(emptyList(), ExampleDeclaration())
 
-    return body?.typeDeclaration(typeName)?.let { (typeDeclaration, exampleDeclaration) ->
-        val typeValue = when {
-            exampleDeclaration.newValue != null -> {
-                val newTypeName = withoutPatternDelimiters(typeDeclaration.typeValue)
-                "($newTypeName from $typeName)"
-            }
-            else -> typeDeclaration.typeValue
-        }
+    return body?.typeDeclarationWithoutKey("RequestBody", ExampleDeclaration())?.let { (typeDeclaration, exampleDeclaration) ->
+        val typeValue = typeDeclaration.typeValue
 
         val bodyClause = GherkinClause("request-body $typeValue", When)
         val typeDefinitionClauses = toGherkinClauses(typeDeclaration.types)
 
-        Pair(listOf(bodyClause).plus(typeDefinitionClauses), exampleDeclaration.plusNew(typeName))
+        Pair(listOf(bodyClause).plus(typeDefinitionClauses), exampleDeclaration)
     }
 }
 

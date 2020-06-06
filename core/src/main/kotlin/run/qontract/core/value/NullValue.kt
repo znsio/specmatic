@@ -11,8 +11,11 @@ object NullValue : Value {
     override fun displayableType(): String = "null"
     override fun toExactType(): Pattern = NullPattern
     override fun type(): Pattern = NullPattern
-    override fun typeDeclaration(typeName: String): Pair<TypeDeclaration, ExampleDeclaration> =
-            Pair(TypeDeclaration("(${displayableType()})"), ExampleDeclaration(newValue = "null"))
+    override fun typeDeclarationWithKey(key: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            primitiveTypeDeclarationWithKey(key, examples, displayableType(), "null")
+
+    override fun typeDeclarationWithoutKey(exampleKey: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            primitiveTypeDeclarationWithoutKey(exampleKey, examples, displayableType(), "null")
 
     override fun toString() = ""
 }

@@ -710,7 +710,7 @@ Feature: Dumb API
 
 Scenario: api call
 When POST /number
-And request-body (number from number)
+And request-body (number:number)
 Then status 200
 
 Examples:

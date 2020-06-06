@@ -13,8 +13,11 @@ data class BooleanValue(val booleanValue: Boolean) : Value {
     override fun toExactType(): Pattern = ExactValuePattern(this)
     override fun type(): Pattern = BooleanPattern
 
-    override fun typeDeclaration(typeName: String): Pair<TypeDeclaration, ExampleDeclaration> =
-            Pair(TypeDeclaration("(${displayableType()})"), ExampleDeclaration(newValue = booleanValue.toString()))
+    override fun typeDeclarationWithKey(key: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            primitiveTypeDeclarationWithKey(key, examples, displayableType(), booleanValue.toString())
+
+    override fun typeDeclarationWithoutKey(exampleKey: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            primitiveTypeDeclarationWithoutKey(exampleKey, examples, displayableType(), booleanValue.toString())
 
     override fun toString() = booleanValue.toString()
 }

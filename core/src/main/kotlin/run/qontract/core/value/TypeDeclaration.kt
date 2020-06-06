@@ -8,7 +8,7 @@ fun toExampleDeclaration(examples: Map<String, String>): ExampleDeclaration {
     return ExampleDeclaration(examples.filterNot { isPatternToken(it.value) })
 }
 
-data class ExampleDeclaration constructor(val examples: Map<String, String> = emptyMap(), val newValue: String? = null, val messages: List<String> = emptyList()) {
+data class ExampleDeclaration constructor(val examples: Map<String, String> = emptyMap(), val messages: List<String> = emptyList()) {
     fun plus(more: ExampleDeclaration): ExampleDeclaration {
         val duplicateMessage = messageWhenDuplicateKeysExist(more, examples)
 
@@ -20,12 +20,6 @@ data class ExampleDeclaration constructor(val examples: Map<String, String> = em
         else -> this.copy(examples = examples.plus(more))
     }
 
-    fun plusNew(key: String): ExampleDeclaration {
-        return when(newValue) {
-            null -> this
-            else -> this.plus(key to newValue)
-        }
-    }
 }
 
 internal fun messageWhenDuplicateKeysExist(more: ExampleDeclaration, examples: Map<String, String>): List<String> {
@@ -81,4 +75,28 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
     return TabularPattern(common.plus(missingIn1).plus(missingIn2))
 }
 
-class ShortCircuitException(message: String) : Throwable()
+class ShortCircuitException(message: String) : Exception(message)
+
+fun primitiveTypeDeclarationWithKey(key: String, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
+    val (newTypeName, exampleKey) = when (key) {
+        !in examples.examples -> Pair("$displayableType", key)
+        else -> {
+            val exampleKey = getNewTypeName(key, examples.examples.keys)
+            Pair("($exampleKey: ${withoutPatternDelimiters(displayableType)})", exampleKey)
+        }
+    }
+
+    return Pair(TypeDeclaration("(${newTypeName})"), ExampleDeclaration(examples = examples.examples.plus(exampleKey to stringValue)))
+}
+
+fun primitiveTypeDeclarationWithoutKey(key: String, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
+    val (newTypeName, exampleKey) = when (key) {
+        !in examples.examples -> Pair("$key: $displayableType", key)
+        else -> {
+            val exampleKey = getNewTypeName(key, examples.examples.keys)
+            Pair("($exampleKey: ${withoutPatternDelimiters(displayableType)})", exampleKey)
+        }
+    }
+
+    return Pair(TypeDeclaration("(${newTypeName})"), ExampleDeclaration(examples = examples.examples.plus(exampleKey to stringValue)))
+}

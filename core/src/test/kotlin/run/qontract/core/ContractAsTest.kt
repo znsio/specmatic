@@ -875,7 +875,7 @@ Then status 200"""
         val gherkin = """Feature: Contract
 Scenario: api call
 Given POST /
-And request-body (string: number)
+And request-body (dictionary string number)
 Then status 200
 """
 
@@ -909,7 +909,7 @@ Then status 200
 Scenario: api call
 Given GET /
 Then status 200
-And response-body (string: number)
+And response-body (dictionary string number)
 """
 
         val results = Feature(gherkin).executeTests(object : TestExecutor {

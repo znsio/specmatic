@@ -12,11 +12,11 @@ data class JSONArrayValue(val list: List<Value>) : Value {
     override fun toExactType(): Pattern = JSONArrayPattern(list.map { it.toExactType() })
     override fun type(): Pattern = JSONArrayPattern()
 
-    override fun typeDeclaration(typeName: String): Pair<TypeDeclaration, ExampleDeclaration> = when {
+    override fun typeDeclarationWithKey(key: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> = when {
         list.isEmpty() -> Pair(TypeDeclaration("[]"), ExampleDeclaration())
         else -> {
             val typeDeclarations = list.map {
-                val (typeDeclaration, examples) = it.typeDeclaration(typeName)
+                val (typeDeclaration, examples) = it.typeDeclarationWithKey(key, examples)
                 TypeDeclaration("(${withoutPatternDelimiters(typeDeclaration.typeValue)}*)", typeDeclaration.types)
             }
 
@@ -33,6 +33,9 @@ data class JSONArrayValue(val list: List<Value>) : Value {
             }
         }
     }
+
+    override fun typeDeclarationWithoutKey(exampleKey: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            typeDeclarationWithKey(exampleKey, examples)
 
     override fun toString() = valueArrayToJsonString(list)
 }

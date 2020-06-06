@@ -46,7 +46,7 @@ internal class HttpRequestKtTest {
         assertThat(clauses.first().content).isEqualTo("POST /data")
 
         assertThat(clauses[1].section).isEqualTo(When)
-        assertThat(clauses[1].content).isEqualTo("request-body (string from RequestBody)")
+        assertThat(clauses[1].content).isEqualTo("request-body (RequestBody: string)")
     }
 
     @Test

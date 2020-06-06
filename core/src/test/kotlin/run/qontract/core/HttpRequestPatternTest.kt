@@ -11,7 +11,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should not match when url does not match`() {
         val httpRequestPattern = HttpRequestPattern(
-                urlMatcher = toURLPattern(URI("/matching_path")))
+                urlMatcher = toURLMatcher(URI("/matching_path")))
         val httpRequest = HttpRequest().updateWith(URI("/unmatched_path"))
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Result.Failure::class.java)
@@ -22,7 +22,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should not match when method does not match`() {
         val httpRequestPattern = HttpRequestPattern(
-                urlMatcher = toURLPattern(URI("/matching_path")),
+                urlMatcher = toURLMatcher(URI("/matching_path")),
                 method = "POST")
         val httpRequest = HttpRequest()
             .updateWith(URI("/matching_path"))
@@ -37,7 +37,7 @@ internal class HttpRequestPatternTest {
     fun `should not match when body does not match`() {
         val httpRequestPattern =
                 HttpRequestPattern(
-                        urlMatcher = toURLPattern(URI("/matching_path")),
+                        urlMatcher = toURLMatcher(URI("/matching_path")),
                         method = "POST",
                         body = parsedPattern("""{"name": "Hari"}"""))
         val httpRequest = HttpRequest()
@@ -53,7 +53,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should match when request matches url, method and body`() {
         val httpRequestPattern = HttpRequestPattern(
-                urlMatcher =  toURLPattern(URI("/matching_path")),
+                urlMatcher =  toURLMatcher(URI("/matching_path")),
                 method = "POST",
                 body = parsedPattern("""{"name": "Hari"}"""))
         val httpRequest = HttpRequest()
@@ -69,7 +69,7 @@ internal class HttpRequestPatternTest {
     fun `a clone request pattern request should include the headers specified`() {
         val pattern = HttpRequestPattern(
                 headersPattern = HttpHeadersPattern(mapOf("Test-Header" to stringToPattern("(string)", "Test-Header"))),
-                urlMatcher = toURLPattern(URI("/")),
+                urlMatcher = toURLMatcher(URI("/")),
                 method = "GET"
         )
 
@@ -80,7 +80,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `a request with an optional header should result in 2 options for newBasedOn`() {
         val requests = HttpRequestPattern(method = "GET",
-                urlMatcher = toURLPattern(URI("/")),
+                urlMatcher = toURLMatcher(URI("/")),
                 headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern))).newBasedOn(Row(), Resolver())
 
         assertThat(requests).hasSize(2)
@@ -97,7 +97,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `number bodies should match numerical strings`() {
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLPattern("/"), body = NumberPattern)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = NumberPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("10"))
 
         assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -105,7 +105,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `boolean bodies should match boolean strings`() {
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLPattern("/"), body = BooleanPattern)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = BooleanPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("true"))
 
         assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -113,7 +113,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `boolean bodies should not match non-boolean strings`() {
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLPattern("/"), body = BooleanPattern)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = BooleanPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("10"))
 
         assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Failure::class.java)
@@ -121,7 +121,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `integer bodies should not match non-integer strings`() {
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLPattern("/"), body = NumberPattern)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = NumberPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("not a number"))
 
         assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Failure::class.java)

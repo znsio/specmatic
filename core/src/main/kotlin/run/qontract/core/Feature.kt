@@ -5,10 +5,8 @@ import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.Messages.GherkinDocument
-import run.qontract.core.GherkinSection.`*`
 import run.qontract.core.pattern.*
 import run.qontract.core.pattern.Examples.Companion.examplesFrom
-import run.qontract.core.toGherkinClauses
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.*
 import run.qontract.mock.ScenarioStub
@@ -187,7 +185,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
                     scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
-                                            urlMatcher = toURLPattern(URI.create(step.rest)),
+                                            urlMatcher = toURLMatcher(URI.create(step.rest)),
                                             method = step.keyword.toUpperCase()))
                 } ?: throw ContractException("Line ${step.line}: $step.text")
             }

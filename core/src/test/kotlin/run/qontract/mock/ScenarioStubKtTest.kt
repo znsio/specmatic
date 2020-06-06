@@ -226,8 +226,8 @@ internal class ScenarioStubKtTest {
     And response-body (ResponseBody)
   
     Examples:
-    | street | city | name |
-    | High Street | Manchester | John Doe |""")
+    | name | street | city |
+    | John Doe | High Street | Manchester |""")
     }
 
     @Test
@@ -255,8 +255,8 @@ internal class ScenarioStubKtTest {
     And response-body (ResponseBody)
   
     Examples:
-    | X-Header1 | X-Header2 | street | city | name |
-    | value 1 | value 2 | High Street | Manchester | John Doe |""")
+    | X-Header1 | X-Header2 | name | street | city |
+    | value 1 | value 2 | John Doe | High Street | Manchester |""")
     }
 
     @Test

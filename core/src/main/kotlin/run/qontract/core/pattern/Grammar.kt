@@ -35,13 +35,22 @@ fun isBuiltInPattern(pattern: Any): Boolean =
         is String -> when {
             pattern in builtInPatterns -> true
             isPatternToken(pattern) -> when {
-                ":" in pattern || " in " in pattern -> true
+                ":" in pattern || " in " in pattern || isDictionaryPattern(pattern) -> true
                 else -> false
             }
             else -> false
         }
         else -> false
     }
+
+fun isDictionaryPattern(pattern: String): Boolean {
+    val pieces = withoutPatternDelimiters(pattern).trim().split("\\s+".toRegex())
+
+    return when(pieces[0]) {
+        "dictionary" -> pieces.size == 3
+        else -> false
+    }
+}
 
 fun isPatternToken(patternValue: Any?) =
     when(patternValue) {
@@ -54,12 +63,24 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
         when {
             isPatternToken(patternString) -> builtInPatterns.getOrElse(patternString) {
                 when {
-                    patternString.contains(":") -> {
-                        val patternParts = withoutPatternDelimiters(patternString).split(":").map { parsedPattern(withPatternDelimiters(it.trim())) }
+                    isDictionaryPattern(patternString) ->  {
+                        val pieces = withoutPatternDelimiters(patternString).split("\\s+".toRegex())
+                        if(pieces.size != 3)
+                            throw ContractException("Dictionary type must have 3 parts: type name, key and value")
 
-                        if(patternParts.size == 2) {
-                            DictionaryPattern(patternParts[0], patternParts[1])
-                        } else throw ContractException("Type $patternString does not exist.")
+                        val patterns = pieces.slice(1..2).map { parsedPattern(withPatternDelimiters(it.trim())) }
+                        DictionaryPattern(patterns[0], patterns[1])
+                    }
+                    patternString.contains(":") -> {
+                        val patternParts = withoutPatternDelimiters(patternString).split(":")
+
+                        if(patternParts.size != 2)
+                            throw ContractException("Type with key must have the key before the colon and the type specification after it. Got $patternString")
+
+                        val (key, patternSpec) = patternParts
+                        val pattern = parsedPattern(withPatternDelimiters(patternSpec))
+
+                        LookupRowPattern(pattern, key)
                     }
                     patternString.contains(" in ") -> {
                         val patternParts = withoutPatternDelimiters(patternString).split(" in ").map { it.trim().toLowerCase() }
@@ -120,19 +141,19 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
 }
 
 fun parseLookupRowPattern(token: String): Pair<String, String> {
-    val parts = withoutPatternDelimiters(token).split("\\s+".toRegex())
+    val parts = withoutPatternDelimiters(token).split(":".toRegex(), 2).map { it.trim() }
 
-    val key = parts.last()
-    val subPatternParts = parts.dropLast(2)
+    val key = parts.first()
+    val patternToken = parts[1]
 
-    return Pair(withPatternDelimiters(subPatternParts.joinToString(" ")), key)
+    return Pair(withPatternDelimiters(patternToken), key)
 }
 
 fun isLookupRowPattern(token: String): Boolean {
     val parts = withoutPatternDelimiters(token).split("\\s+".toRegex())
 
     return when {
-        parts.size >= 3 && penultimate(parts).toLowerCase() == "from" -> true
+        parts.size == 2 -> true
         else -> false
     }
 }

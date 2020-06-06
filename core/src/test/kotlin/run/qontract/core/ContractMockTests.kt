@@ -363,7 +363,7 @@ Scenario: JSON API to get account details with fact check
         val contractGherkin = """Feature: Contract for /store API
   Scenario Outline: api call
     When POST /variables
-    And request-body (string: number)
+    And request-body (dictionary string number)
     Then status 200
 """.trimIndent()
 
@@ -388,7 +388,7 @@ Scenario: JSON API to get account details with fact check
   Scenario Outline: api call
     When GET /variables
     Then status 200
-    And response-body (string: number)
+    And response-body (dictionary string number)
 """.trimIndent()
 
         ContractMock.fromGherkin(contractGherkin).use { mock ->

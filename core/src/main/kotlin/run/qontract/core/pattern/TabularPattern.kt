@@ -78,7 +78,10 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
 }
 
 fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): List<Pattern> {
-    val keyWithoutOptionality = withoutOptionality(key)
+    val keyWithoutOptionality = withoutOptionality(when(pattern) {
+        is Keyed -> pattern.key ?: key
+        else -> key
+    })
 
     return when {
         row.containsField(keyWithoutOptionality) -> {

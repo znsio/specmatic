@@ -17,7 +17,7 @@ object BooleanPattern : Pattern {
         }
 
     override fun generate(resolver: Resolver): Value =
-        when(Random().nextInt(1)) {
+        when(Random().nextInt(2)) {
             0 -> BooleanValue(false)
             else -> BooleanValue(true)
         }

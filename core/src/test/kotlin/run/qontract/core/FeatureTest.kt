@@ -784,7 +784,7 @@ Then status 200
 Feature: Order API
 
 Scenario: Order products
-Given json Quantities (string: number)
+Given json Quantities (dictionary string number)
 When POST /order
     And request-body (Quantities)
 Then status 200
@@ -803,7 +803,7 @@ Then status 200
 Feature: Order API
 
 Scenario: Order products
-Given json Quantities (string: number)
+Given json Quantities (dictionary string number)
 When GET /order
 Then status 200
     And response-body (Quantities)

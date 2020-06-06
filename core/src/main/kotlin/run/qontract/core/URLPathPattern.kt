@@ -1,11 +1,12 @@
 package run.qontract.core
 
+import run.qontract.core.pattern.Keyed
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.Row
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.Value
 
-data class URLPathPattern(override val pattern: Pattern, val key: String? = null) : Pattern {
+data class URLPathPattern(override val pattern: Pattern, override val key: String? = null) : Pattern, Keyed {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
             resolver.matchesPattern(key, pattern, sampleData ?: NullValue)
 

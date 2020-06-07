@@ -209,7 +209,7 @@ internal class HttpRequestKtTest {
 
         assertThat(clauses).hasSize(2)
         assertThat(clauses).contains(GherkinClause("POST /customer?one=(string)", When))
-        assertThat(clauses).contains(GherkinClause("form-field one (string)", When))
+        assertThat(clauses).contains(GherkinClause("form-field one (one_: string)", When))
     }
 
     @Test

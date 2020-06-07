@@ -177,18 +177,23 @@ fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDec
         if (request.path == null)
             throw ContractException("Can't generate a qontract without the url.")
 
-        val (query, queryExamples) = when {
+        val (query, typeDeclarations, queryExamples) = when {
             request.queryParams.isNotEmpty() -> {
-                val queryExamples = toExampleDeclaration(request.queryParams)
-                val query = request.queryParams.entries.joinToString("&") { (key, value) -> "$key=${guessType(parsedValue(value)).type().pattern}" }
-                Pair("?$query", queryExamples)
+                val (typeDeclarations, examples) = dictionaryToDeclarations(request.queryParams.mapValues { guessType(parsedValue(it.value)) }, exampleDeclaration)
+
+                val query = typeDeclarations.entries.joinToString("&") { (key, typeDeclaration) -> "$key=${typeDeclaration.typeValue}" }
+                Triple("?$query", typeDeclarations, examples)
             }
-            else -> Pair("", ExampleDeclaration())
+            else -> Triple("", emptyMap(), exampleDeclaration)
         }
 
         val path = "${request.path}$query"
 
-        Pair(clauses.plus(GherkinClause("$method $path", When)), exampleDeclaration.plus(queryExamples))
+        val newClauses = typeDeclarations.entries.flatMap { typeDeclaration -> typeDeclaration.value.types.map { toClause(it.key, it.value) } }
+
+        val requestLineGherkin = GherkinClause("$method $path", When)
+
+        Pair(clauses.plus(newClauses.plus(requestLineGherkin)), exampleDeclaration.plus(queryExamples))
     }.let { (clauses, examples) ->
         val (newClauses, newExamples) = headersToGherkin(request.headers, "request-header", When)
         Pair(clauses.plus(newClauses), examples.plus(newExamples))

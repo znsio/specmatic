@@ -15,12 +15,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     override fun toString() = valueMapToPrettyJsonString(jsonObject)
 
     override fun typeDeclarationWithKey(key: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {
-        val (typeDeclarations, newExamples) = jsonObject
-                .entries
-                .fold(Pair(emptyMap<String, TypeDeclaration>(), examples)) { acc, entry ->
-            val (typeDeclaration, newExamples) = entry.value.typeDeclarationWithKey(entry.key, acc.second)
-            Pair(acc.first.plus(mapOf(entry.key to typeDeclaration)), newExamples)
-        }
+        val (typeDeclarations, newExamples) = dictionaryToDeclarations(jsonObject, examples)
 
         val newType = TabularPattern(typeDeclarations.mapValues {
             DeferredPattern(it.value.typeValue)
@@ -70,3 +65,11 @@ fun getNewTypeName(typeName: String, keys: Collection<String>): String {
     return generateSequence(typeName) { "${it}_" }.first { it !in keys }
 }
 
+fun dictionaryToDeclarations(jsonObject: Map<String, Value>, examples: ExampleDeclaration): Pair<Map<String, TypeDeclaration>, ExampleDeclaration> {
+    return jsonObject
+            .entries
+            .fold(Pair(emptyMap(), examples)) { acc, entry ->
+                val (typeDeclaration, newExamples) = entry.value.typeDeclarationWithKey(entry.key, acc.second)
+                Pair(acc.first.plus(mapOf(entry.key to typeDeclaration)), newExamples)
+            }
+}

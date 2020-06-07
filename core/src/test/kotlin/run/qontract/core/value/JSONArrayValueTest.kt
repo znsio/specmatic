@@ -1,9 +1,8 @@
 package run.qontract.core.value
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.parsedValue
-import run.qontract.core.printToConsole
-import run.qontract.core.toClause
 
 internal class JSONArrayValueTest {
     @Test
@@ -11,6 +10,16 @@ internal class JSONArrayValueTest {
         val array = parsedValue("""["one", "two", "three"]""")
         val (typeDeclaration, exampleDeclaration) = array.typeDeclarationWithKey("array", ExampleDeclaration())
 
-        printToConsole(typeDeclaration.types.entries.map { toClause(it.key, it.value) }, exampleDeclaration)
+        assertThat(typeDeclaration.types).isEmpty()
+        assertThat(exampleDeclaration.examples.isEmpty())
+    }
+
+    @Test
+    fun `empty array test`() {
+        val array = parsedValue("""[]""")
+        val (typeDeclaration, exampleDeclaration) = array.typeDeclarationWithKey("array", ExampleDeclaration())
+
+        assertThat(typeDeclaration.types).isEmpty()
+        assertThat(exampleDeclaration.examples.isEmpty())
     }
 }

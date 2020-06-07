@@ -24,11 +24,11 @@ fun responseBodyToGherkinClauses(typeName: String, body: Value?): Pair<List<Gher
     }
 }
 
-fun requestBodyToGherkinClauses(body: Value?): Pair<List<GherkinClause>, ExampleDeclaration>? {
+fun requestBodyToGherkinClauses(body: Value?, exampleDeclaration: ExampleDeclaration): Pair<List<GherkinClause>, ExampleDeclaration>? {
     if(body == EmptyString)
-        return Pair(emptyList(), ExampleDeclaration())
+        return Pair(emptyList(), exampleDeclaration)
 
-    return body?.typeDeclarationWithoutKey("RequestBody", ExampleDeclaration())?.let { (typeDeclaration, exampleDeclaration) ->
+    return body?.typeDeclarationWithoutKey("RequestBody", exampleDeclaration)?.let { (typeDeclaration, exampleDeclaration) ->
         val typeValue = typeDeclaration.typeValue
 
         val bodyClause = GherkinClause("request-body $typeValue", When)

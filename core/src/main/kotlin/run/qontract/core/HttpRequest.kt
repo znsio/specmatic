@@ -200,7 +200,7 @@ fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDec
         val (bodyClauses, bodyExamples) = when {
             request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData, examples)
             request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields, examples)
-            else -> requestBodyToGherkinClauses(request.body)?: Pair(emptyList(), ExampleDeclaration())
+            else -> requestBodyToGherkinClauses(request.body, examples)?: Pair(emptyList(), ExampleDeclaration())
         }
 
         Pair(clauses.plus(bodyClauses), examples.plus(bodyExamples))

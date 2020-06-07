@@ -179,7 +179,7 @@ fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDec
 
         val (query, typeDeclarations, queryExamples) = when {
             request.queryParams.isNotEmpty() -> {
-                val (typeDeclarations, examples) = dictionaryToDeclarations(request.queryParams.mapValues { guessType(parsedValue(it.value)) }, exampleDeclaration)
+                val (typeDeclarations, examples) = dictionaryToDeclarations(stringMapToValueMap(request.queryParams), exampleDeclaration)
 
                 val query = typeDeclarations.entries.joinToString("&") { (key, typeDeclaration) -> "$key=${typeDeclaration.typeValue}" }
                 Triple("?$query", typeDeclarations, examples)
@@ -189,13 +189,12 @@ fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDec
 
         val path = "${request.path}$query"
 
-        val newClauses = typeDeclarations.entries.flatMap { typeDeclaration -> typeDeclaration.value.types.map { toClause(it.key, it.value) } }
-
         val requestLineGherkin = GherkinClause("$method $path", When)
+        val newClauses = typeDeclarationsToGherkin(typeDeclarations).plus(requestLineGherkin)
 
-        Pair(clauses.plus(newClauses.plus(requestLineGherkin)), exampleDeclaration.plus(queryExamples))
+        Pair(clauses.plus(newClauses), exampleDeclaration.plus(queryExamples))
     }.let { (clauses, examples) ->
-        val (newClauses, newExamples) = headersToGherkin(request.headers, "request-header", When)
+        val (newClauses, newExamples) = headersToGherkin(request.headers, "request-header", examples, When)
         Pair(clauses.plus(newClauses), examples.plus(newExamples))
     }.let { (clauses, examples) ->
         val (bodyClauses, bodyExamples) = when {
@@ -207,6 +206,12 @@ fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDec
         Pair(clauses.plus(bodyClauses), examples.plus(bodyExamples))
     }
 }
+
+fun typeDeclarationsToGherkin(typeDeclarations: Map<String, TypeDeclaration>) =
+        typeDeclarations.entries.flatMap { typeDeclaration -> typeDeclaration.value.types.map { toClause(it.key, it.value) } }
+
+fun stringMapToValueMap(stringStringMap: Map<String, String>) =
+        stringStringMap.mapValues { guessType(parsedValue(it.value)) }
 
 fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>): Pair<List<GherkinClause>, ExampleDeclaration> {
     return multiPartFormData.fold(Pair(emptyList(), ExampleDeclaration())) { acc, part ->

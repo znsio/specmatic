@@ -88,7 +88,7 @@ fun toGherkinClauses(response: HttpResponse): Pair<List<GherkinClause>, ExampleD
         val status = if (cleanedUpResponse.status > 0) cleanedUpResponse.status else throw ContractException("Can't generate a contract without a response status")
         Pair(clauses.plus(GherkinClause("status $status", Then)), examples)
     }.let { (clauses, _) ->
-        val (newClauses, _) = headersToGherkin(cleanedUpResponse.headers, "response-header", Then)
+        val (newClauses, _) = headersToGherkin(cleanedUpResponse.headers, "response-header", ExampleDeclaration(), Then)
         Pair(clauses.plus(newClauses), ExampleDeclaration())
     }.let { (clauses, examples) ->
         when(val result = responseBodyToGherkinClauses("ResponseBody", cleanedUpResponse.body?.let { guessType(it) })) {

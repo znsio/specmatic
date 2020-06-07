@@ -4,9 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.*
 import run.qontract.core.Result.Success
-import run.qontract.core.pattern.*
+import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
-import run.qontract.core.value.EmptyString
 import run.qontract.core.value.StringValue
 
 internal class ScenarioStubKtTest {
@@ -403,7 +402,11 @@ internal class ScenarioStubKtTest {
     When POST /square
     And request-body (RequestBody*)
     Then status 200
-    And response-body (number)""")
+    And response-body (number)
+  
+    Examples:
+    | name |
+    | John Doe |""")
     }
 
     @Test
@@ -440,7 +443,11 @@ internal class ScenarioStubKtTest {
     When POST /square
     And request-body (RequestBody*)
     Then status 200
-    And response-body (number)""")
+    And response-body (number)
+  
+    Examples:
+    | name | address |
+    | John Doe | High Street |""")
     }
 
     @Test
@@ -477,7 +484,11 @@ internal class ScenarioStubKtTest {
     When POST /square
     And request-body (RequestBody*)
     Then status 200
-    And response-body (number)""")
+    And response-body (number)
+  
+    Examples:
+    | name |
+    | John Doe |""")
     }
 
     @Test
@@ -514,7 +525,11 @@ internal class ScenarioStubKtTest {
     When POST /square
     And request-body (RequestBody*)
     Then status 200
-    And response-body (number)""")
+    And response-body (number)
+  
+    Examples:
+    | name | address |
+    | John Doe | High Street |""")
     }
 
     @Test
@@ -555,7 +570,11 @@ internal class ScenarioStubKtTest {
     When POST /square
     And request-body (RequestBody*)
     Then status 200
-    And response-body (number)""")
+    And response-body (number)
+  
+    Examples:
+    | name |
+    | null |""")
     }
 
     @Test
@@ -596,7 +615,11 @@ internal class ScenarioStubKtTest {
     When POST /square
     And request-body (RequestBody*)
     Then status 200
-    And response-body (number)""")
+    And response-body (number)
+  
+    Examples:
+    | name |
+    | null |""")
     }
     @Test
     fun `converts array of 3 json objects in the request body where a value in the first and third is null to gherkin`() {
@@ -633,7 +656,11 @@ internal class ScenarioStubKtTest {
     When POST /square
     And request-body (RequestBody*)
     Then status 200
-    And response-body (number)""")
+    And response-body (number)
+  
+    Examples:
+    | name |
+    | null |""")
     }
 
     @Test
@@ -670,7 +697,11 @@ internal class ScenarioStubKtTest {
     When POST /square
     And request-body (RequestBody*)
     Then status 200
-    And response-body (number)""")
+    And response-body (number)
+  
+    Examples:
+    | name |
+    | John Doe |""")
     }
 }
 

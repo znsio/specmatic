@@ -4,7 +4,7 @@ import run.qontract.core.pattern.BooleanPattern
 import run.qontract.core.pattern.ExactValuePattern
 import run.qontract.core.pattern.Pattern
 
-data class BooleanValue(val booleanValue: Boolean) : Value {
+data class BooleanValue(val booleanValue: Boolean) : Value, ScalarValue {
     override val httpContentType = "text/plain"
 
     override fun displayableValue(): String = toStringValue()

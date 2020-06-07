@@ -79,7 +79,7 @@ class ShortCircuitException(message: String) : Exception(message)
 
 fun primitiveTypeDeclarationWithKey(key: String, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
     val (newTypeName, exampleKey) = when (key) {
-        !in examples.examples -> Pair("$displayableType", key)
+        !in examples.examples -> Pair(displayableType, key)
         else -> {
             val exampleKey = getNewTypeName(key, examples.examples.keys)
             Pair("$exampleKey: ${withoutPatternDelimiters(displayableType)}", exampleKey)

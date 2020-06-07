@@ -3,7 +3,7 @@ package run.qontract.core.value
 import run.qontract.core.pattern.NullPattern
 import run.qontract.core.pattern.Pattern
 
-object NullValue : Value {
+object NullValue : Value, ScalarValue {
     override val httpContentType: String = "text/pain"
 
     override fun displayableValue(): String = "null"

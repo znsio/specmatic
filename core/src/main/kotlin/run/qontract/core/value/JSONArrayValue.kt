@@ -1,6 +1,8 @@
 package run.qontract.core.value
 
-import run.qontract.core.pattern.*
+import run.qontract.core.pattern.JSONArrayPattern
+import run.qontract.core.pattern.Pattern
+import run.qontract.core.pattern.withoutPatternDelimiters
 import run.qontract.core.utilities.valueArrayToJsonString
 
 data class JSONArrayValue(val list: List<Value>) : Value {
@@ -12,30 +14,43 @@ data class JSONArrayValue(val list: List<Value>) : Value {
     override fun toExactType(): Pattern = JSONArrayPattern(list.map { it.toExactType() })
     override fun type(): Pattern = JSONArrayPattern()
 
-    override fun typeDeclarationWithKey(key: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> = when {
+    private fun typeDeclaration(key: String, examples: ExampleDeclaration, typeDeclarationCall: (Value, String, ExampleDeclaration) -> Pair<TypeDeclaration, ExampleDeclaration>): Pair<TypeDeclaration, ExampleDeclaration> = when {
         list.isEmpty() -> Pair(TypeDeclaration("[]"), ExampleDeclaration())
         else -> {
-            val typeDeclarations = list.map {
-                val (typeDeclaration, examples) = it.typeDeclarationWithKey(key, examples)
-                TypeDeclaration("(${withoutPatternDelimiters(typeDeclaration.typeValue)}*)", typeDeclaration.types)
-            }
-
-            val collision = typeDeclarations.asSequence().map { it.collidingName }.filterNotNull().firstOrNull()
-
-            when {
-                collision != null -> {
-                    println("Type name collision detected in type $collision, convergence of the array containing this type will be avoided")
-                    Pair(typeDeclarations.first(), ExampleDeclaration())
-                }
-                else -> {
-                    Pair(typeDeclarations.reduce { converged, current -> convergeTypeDeclarations(converged, current) }, ExampleDeclaration())
+            val declarations = list.map {
+                val (typeDeclaration, newExamples) = typeDeclarationCall(it, key, examples)
+                Pair(TypeDeclaration("(${withoutPatternDelimiters(typeDeclaration.typeValue)}*)", typeDeclaration.types), newExamples)
+            }.let { declarations ->
+                when {
+                    list.first() is ScalarValue -> declarations.map { Pair(removeKey(it.first), ExampleDeclaration()) }
+                    else -> declarations
                 }
             }
+
+            val newExamples = declarations.first().second
+            val convergedType = declarations.map { it.first }.reduce { converged, current -> convergeTypeDeclarations(converged, current) }
+
+            Pair(convergedType, newExamples)
         }
     }
 
+    private fun removeKey(declaration: TypeDeclaration): TypeDeclaration {
+        val newTypeValue = when {
+            declaration.typeValue.contains(":") -> {
+                val withoutKey = withoutPatternDelimiters(declaration.typeValue).split(":")[1].trim()
+                "($withoutKey)"
+            }
+            else -> declaration.typeValue
+        }
+
+        return declaration.copy(typeValue = newTypeValue)
+    }
+
+    override fun typeDeclarationWithKey(key: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            typeDeclaration(key, examples) { value, innerKey, newExamples -> value.typeDeclarationWithKey(innerKey, newExamples) }
+
     override fun typeDeclarationWithoutKey(exampleKey: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            typeDeclarationWithKey(exampleKey, examples)
+            typeDeclaration(exampleKey, examples) { value, innerKey, newExamples -> value.typeDeclarationWithoutKey(innerKey, newExamples) }
 
     override fun toString() = valueArrayToJsonString(list)
 }

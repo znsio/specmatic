@@ -4,7 +4,7 @@ import run.qontract.core.pattern.ExactValuePattern
 import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.pattern.Pattern
 
-data class NumberValue(val number: Number) : Value {
+data class NumberValue(val number: Number) : Value, ScalarValue {
     override val httpContentType = "text/plain"
 
     override fun displayableValue(): String = toStringValue()

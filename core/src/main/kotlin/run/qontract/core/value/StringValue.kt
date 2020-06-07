@@ -4,7 +4,7 @@ import io.ktor.http.quote
 import io.ktor.util.InternalAPI
 import run.qontract.core.pattern.*
 
-data class StringValue(val string: String = "") : Value {
+data class StringValue(val string: String = "") : Value, ScalarValue {
     override val httpContentType = "text/plain"
 
     @OptIn(InternalAPI::class)

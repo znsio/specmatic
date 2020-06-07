@@ -703,6 +703,32 @@ internal class ScenarioStubKtTest {
     | name |
     | John Doe |""")
     }
+
+    @Test
+    fun `empty array`() {
+        val mockText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": []
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": 100
+  }
+}
+        """.trim()
+
+        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+  Scenario: New scenario
+    When POST /square
+    And request-body []
+    Then status 200
+    And response-body (number)""")
+    }
 }
 
 fun validateStubAndQontract(request: HttpRequest, response: HttpResponse, expectedGherkin: String? = null) {
@@ -712,6 +738,8 @@ fun validateStubAndQontract(request: HttpRequest, response: HttpResponse, expect
 
         if(expectedGherkin != null) {
             assertThat(gherkin.trim()).isEqualTo(expectedGherkin.trim())
+        } else {
+            println(gherkin)
         }
 
         val behaviour = Feature(gherkin)

@@ -2,14 +2,11 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.GherkinSection.*
-import run.qontract.core.HttpResponse.Companion.OK
+import run.qontract.core.GherkinSection.Given
+import run.qontract.core.GherkinSection.When
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
-import run.qontract.core.value.EmptyString
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.NumberValue
-import run.qontract.core.value.StringValue
+import run.qontract.core.value.*
 
 internal class HttpRequestKtTest {
     @Test
@@ -143,7 +140,7 @@ internal class HttpRequestKtTest {
     }
 
     @Test
-    fun `examples of conflicting keys should be resolved by introducing a new key`() {
+    fun `examples of conflicting keys within the request body should be resolved by introducing a new key`() {
         val request = HttpRequest(method = "POST", path = "/customer", body = parsedValue("""{"one": {"key": "1"}, "two": {"key": "2"}}"""))
 
         val (clauses, examples) = toGherkinClauses(request)
@@ -163,4 +160,77 @@ internal class HttpRequestKtTest {
   | one | (One) |
   | two | (Two) |""", Given))
     }
+
+    @Test
+    fun `examples of conflicting keys between header and query param should be resolved by introducing a new key`() {
+        val request = HttpRequest(method = "POST", path = "/customer", queryParams = mapOf("one" to "one query"), headers = mapOf("one" to "one header"))
+
+        val (clauses, examples) = toGherkinClauses(request)
+
+        assertThat(examples.examples).hasSize(2)
+        assertThat(examples.examples.getValue("one")).isEqualTo("one query")
+        assertThat(examples.examples.getValue("one_")).isEqualTo("one header")
+
+        assertThat(clauses).hasSize(2)
+        assertThat(clauses).contains(GherkinClause("POST /customer?one=(string)", When))
+        assertThat(clauses).contains(GherkinClause("request-header one (one_: string)", When))
+    }
+
+    @Test
+    fun `examples of conflicting keys between query param and json body should be resolved by introducing a new key`() {
+        val request = HttpRequest(method = "POST", path = "/customer", queryParams = mapOf("one" to "one query"), body = parsedValue("""{"one": "one json"}"""))
+
+        val (clauses, examples) = toGherkinClauses(request)
+
+        printToConsole(clauses, examples)
+
+        assertThat(examples.examples).hasSize(2)
+        assertThat(examples.examples.getValue("one")).isEqualTo("one query")
+        assertThat(examples.examples.getValue("one_")).isEqualTo("one json")
+
+        assertThat(clauses).hasSize(3)
+        assertThat(clauses).contains(GherkinClause("POST /customer?one=(string)", When))
+        assertThat(clauses).contains(GherkinClause("request-body (RequestBody)", When))
+        assertThat(clauses).contains(GherkinClause("""type RequestBody
+  | one | (one_: string) |""", Given))
+    }
+
+    @Test
+    fun `examples of conflicting keys between query param and form fields should be resolved by introducing a new key`() {
+        val request = HttpRequest(method = "POST", path = "/customer", queryParams = mapOf("one" to "one query"), formFields = mapOf("one" to "one field"))
+
+        val (clauses, examples) = toGherkinClauses(request)
+
+        printToConsole(clauses, examples)
+
+        assertThat(examples.examples).hasSize(2)
+        assertThat(examples.examples.getValue("one")).isEqualTo("one query")
+        assertThat(examples.examples.getValue("one_")).isEqualTo("one field")
+
+        assertThat(clauses).hasSize(2)
+        assertThat(clauses).contains(GherkinClause("POST /customer?one=(string)", When))
+        assertThat(clauses).contains(GherkinClause("form-field one (string)", When))
+    }
+
+    @Test
+    fun `examples of conflicting keys between query param and a request part should be resolved by introducing a new key`() {
+        val request = HttpRequest(method = "POST", path = "/customer", queryParams = mapOf("one" to "one query"), multiPartFormData = listOf(MultiPartContentValue(name = "one", content = StringValue("one part"))))
+
+        val (clauses, examples) = toGherkinClauses(request)
+
+        printToConsole(clauses, examples)
+
+        assertThat(examples.examples).hasSize(2)
+        assertThat(examples.examples.getValue("one")).isEqualTo("one query")
+        assertThat(examples.examples.getValue("one_")).isEqualTo("one part")
+
+        assertThat(clauses).hasSize(2)
+        assertThat(clauses).contains(GherkinClause("POST /customer?one=(string)", When))
+        assertThat(clauses).contains(GherkinClause("request-part one (one_: string)", When))
+    }
+}
+
+fun printToConsole(clauses: List<GherkinClause>, examples: ExampleDeclaration) {
+    for(clause in clauses) println(clause)
+    for(example in examples.examples) println(example)
 }

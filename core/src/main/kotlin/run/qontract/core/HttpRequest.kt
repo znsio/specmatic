@@ -1,10 +1,10 @@
 package run.qontract.core
 
-import run.qontract.core.utilities.URIUtils.parseQuery
 import io.netty.buffer.ByteBuf
 import run.qontract.conversions.guessType
 import run.qontract.core.GherkinSection.When
 import run.qontract.core.pattern.*
+import run.qontract.core.utilities.URIUtils.parseQuery
 import run.qontract.core.value.*
 import java.io.UnsupportedEncodingException
 import java.net.URI
@@ -236,11 +236,10 @@ fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>, 
 }
 
 fun formFieldsToGherkin(formFields: Map<String, String>, exampleDeclaration: ExampleDeclaration): Pair<List<GherkinClause>, ExampleDeclaration> {
-    val (clauses, examples) = formFields.entries.fold(Pair(emptyList<GherkinClause>(), exampleDeclaration)) { acc, entry ->
-        val value = guessType(parsedValue(entry.value))
-        val (typeDeclaration, newExamples) = value.typeDeclarationWithKey(entry.key, acc.second)
-        Pair(acc.first.plus(toGherkinClauses(typeDeclaration.types).plus(GherkinClause("form-field ${entry.key} ${typeDeclaration.typeValue}", When))), acc.second.plus(newExamples))
-    }
+    val (typeDeclarations, newExamples) = dictionaryToDeclarations(stringMapToValueMap(formFields), exampleDeclaration)
 
-    return Pair(clauses, examples.plus(toExampleDeclaration(formFields)))
+    val clauses = typeDeclarationsToGherkin(typeDeclarations)
+    val formFieldClauses = typeDeclarations.entries.map { entry -> GherkinClause("form-field ${entry.key} ${entry.value.typeValue}", When) }
+
+    return Pair(clauses.plus(formFieldClauses), exampleDeclaration.plus(newExamples))
 }

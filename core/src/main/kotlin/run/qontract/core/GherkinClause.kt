@@ -1,10 +1,14 @@
 package run.qontract.core
 
-import run.qontract.conversions.guessType
 import run.qontract.core.GherkinSection.Then
 import run.qontract.core.GherkinSection.When
-import run.qontract.core.pattern.*
-import run.qontract.core.value.*
+import run.qontract.core.pattern.Pattern
+import run.qontract.core.pattern.TabularPattern
+import run.qontract.core.pattern.withoutPatternDelimiters
+import run.qontract.core.value.EmptyString
+import run.qontract.core.value.ExampleDeclaration
+import run.qontract.core.value.Value
+import run.qontract.core.value.dictionaryToDeclarations
 
 data class GherkinClause(val content: String, val section: GherkinSection)
 
@@ -43,7 +47,7 @@ fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
 }
 
 fun headersToGherkin(headers: Map<String, String>, keyword: String, exampleDeclaration: ExampleDeclaration, section: GherkinSection): Pair<List<GherkinClause>, ExampleDeclaration> {
-    val (typeDeclarations, exampleDeclaration) = dictionaryToDeclarations(stringMapToValueMap(headers), exampleDeclaration)
+    val (typeDeclarations, newExamples) = dictionaryToDeclarations(stringMapToValueMap(headers), exampleDeclaration)
 
     val returnedTypeClauses = typeDeclarationsToGherkin(typeDeclarations)
 
@@ -51,7 +55,7 @@ fun headersToGherkin(headers: Map<String, String>, keyword: String, exampleDecla
         "$keyword ${it.key} ${it.value.typeValue}"
     }.map { GherkinClause(it, section) }
 
-    return Pair(returnedTypeClauses.plus(headerClauses), exampleDeclaration)
+    return Pair(returnedTypeClauses.plus(headerClauses), newExamples)
 }
 
 fun toClause(key: String, type: Pattern): GherkinClause {

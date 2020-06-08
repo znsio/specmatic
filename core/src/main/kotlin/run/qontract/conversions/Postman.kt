@@ -111,7 +111,7 @@ fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpRequest> {
     val query: Map<String, String> = url.query?.split("&")?.map { it.split("=").let { parts -> Pair(parts[0], parts[1]) } }?.fold(emptyMap()) { acc, entry -> acc.plus(entry) }
             ?: emptyMap()
     val headers: Map<String, String> = request.getJSONArray("header").map { it as JSONObjectValue }.fold(emptyMap()) { headers, header ->
-        headers.plus(Pair(header.getString("name"), header.getString("value")))
+        headers.plus(Pair(header.getString("key"), header.getString("value")))
     }
 
     val (body, formFields, formData) = when {

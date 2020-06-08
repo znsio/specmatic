@@ -406,6 +406,37 @@ class PostmanKtTests {
     }
 
     @Test
+    fun `postman request with headers to HttpRequest object with body`() {
+        val (baseURL, request) = postmanItemRequest(parsedJSONStructure("""{
+						"method": "GET",
+						"header": [
+                            {
+                                "key": "X-Header",
+                                "value": "data"
+                            }
+                        ],
+						"url": {
+							"raw": "http://localhost:9000/square",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								"square"
+							]
+						}
+					}""") as JSONObjectValue)
+
+        assertThat(baseURL).isEqualTo("http://localhost:9000")
+
+        assertThat(request.method).isEqualTo("GET")
+        assertThat(request.path).isEqualTo("/square")
+        assertThat(request.headers.getValue("X-Header")).isEqualTo("data")
+        assertThat(request.body).isEqualTo(EmptyString)
+    }
+
+    @Test
     fun `postman request with form fields to HttpRequest object with form fields`() {
         val (baseURL, request) = postmanItemRequest(parsedJSONStructure("""{
 				"method": "POST",

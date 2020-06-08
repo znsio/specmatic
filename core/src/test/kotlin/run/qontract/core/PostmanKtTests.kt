@@ -219,6 +219,7 @@ class PostmanKtTests {
   Scenario: With no body or params
     When GET /stuff
     Then status 200
+    And response-header Connection (string)
     And response-body (number)
   
   Scenario: With JSON body
@@ -227,6 +228,7 @@ class PostmanKtTests {
     When POST /stuff
     And request-body (RequestBody)
     Then status 200
+    And response-header Connection (string)
     And response-body (number)
   
     Examples:
@@ -236,6 +238,7 @@ class PostmanKtTests {
   Scenario: With query
     When GET /stuff?one=(number)
     Then status 200
+    And response-header Connection (string)
     And response-body (number)
   
     Examples:
@@ -257,6 +260,7 @@ class PostmanKtTests {
     When POST /stuff
     And form-field field1 (number)
     Then status 200
+    And response-header Connection (string)
     And response-body (number)
   
     Examples:
@@ -267,6 +271,7 @@ class PostmanKtTests {
     When POST /stuff
     And request-part part1 (number)
     Then status 200
+    And response-header Connection (string)
     And response-body (number)
   
     Examples:

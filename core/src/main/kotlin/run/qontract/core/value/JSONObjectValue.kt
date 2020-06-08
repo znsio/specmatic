@@ -22,13 +22,12 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
         })
 
         val newTypeName = getNewTypeName(key.capitalize(), typeDeclarations.keys)
-        val collidingName = if(newTypeName != key) key else null
 
         val mergedTypeMap = typeDeclarations.entries.fold(emptyMap<String, Pattern>()) { acc, entry ->
             acc.plus(entry.value.types)
         }.plus(newTypeName to newType)
 
-        val typeDeclaration = TypeDeclaration("($newTypeName)", mergedTypeMap, collidingName)
+        val typeDeclaration = TypeDeclaration("($newTypeName)", mergedTypeMap)
 
         return Pair(typeDeclaration, newExamples)
     }

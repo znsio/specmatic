@@ -2,7 +2,7 @@ package run.qontract.core.value
 
 import run.qontract.core.pattern.*
 
-data class TypeDeclaration(val typeValue: String, val types: Map<String, Pattern> = emptyMap(), val collidingName: String? = null)
+data class TypeDeclaration(val typeValue: String, val types: Map<String, Pattern> = emptyMap())
 
 fun toExampleDeclaration(examples: Map<String, String>): ExampleDeclaration {
     return ExampleDeclaration(examples.filterNot { isPatternToken(it.value) })
@@ -11,6 +11,8 @@ fun toExampleDeclaration(examples: Map<String, String>): ExampleDeclaration {
 data class ExampleDeclaration constructor(val examples: Map<String, String> = emptyMap(), val messages: List<String> = emptyList()) {
     fun plus(more: ExampleDeclaration): ExampleDeclaration {
         val duplicateMessage = messageWhenDuplicateKeysExist(more, examples)
+        for(message in duplicateMessage)
+            println(duplicateMessage)
 
         return this.copy(examples = examples.plus(more.examples.filterNot { isPatternToken(it.value) }), messages = messages.plus(more.messages).plus(duplicateMessage))
     }
@@ -21,13 +23,18 @@ data class ExampleDeclaration constructor(val examples: Map<String, String> = em
     }
 }
 
-internal fun messageWhenDuplicateKeysExist(more: ExampleDeclaration, examples: Map<String, String>): List<String> {
-    val duplicateKeys = more.examples.keys.filter { it in examples }
+internal fun messageWhenDuplicateKeysExist(newExamples: ExampleDeclaration, examples: Map<String, String>): List<String> {
+    val duplicateKeys = newExamples.examples.keys.filter { it in examples }.filter { key ->
+        val oldValue = examples.getValue(key)
+        val newValue = newExamples.examples.getValue(key)
+
+        oldValue != newValue
+    }
 
     return when {
         duplicateKeys.isNotEmpty() -> {
             val keysCsv = duplicateKeys.joinToString(", ")
-            listOf("Duplicate keys found: $keysCsv")
+            listOf("Duplicate keys with different values found: $keysCsv")
         }
         else -> emptyList()
     }

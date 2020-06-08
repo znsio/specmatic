@@ -1,7 +1,6 @@
 package application
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -51,13 +50,8 @@ internal class SamplesCommandKtTest {
 -> Accept: */*
 ->""".trimIndent())
 
-        assertThat(data).contains("""<- 200 OK
-<- Vary: Origin
-<- X-Qontract-Result: success
-<- Content-Length: 3
-<- Content-Type: text/plain
-<- 
-""".trimIndent())
+        assertThat(data).contains("<- 200 OK")
+        assertThat(data).contains("<- X-Qontract-Result: success")
     }
 
     @BeforeEach

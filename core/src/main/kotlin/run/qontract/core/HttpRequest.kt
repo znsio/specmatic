@@ -162,7 +162,7 @@ fun requestFromJSON(json: Map<String, Value>) =
 
                     httpRequest.copy(multiPartFormData = httpRequest.multiPartFormData.plus(multiPartData))
                 }
-                "body" in json -> httpRequest.updateBody(json.getValue("body"))
+                "body" in json -> httpRequest.updateBody(json["body"] ?: throw ContractException("Either body have a value or the key be absent from http-request"))
                 else -> httpRequest
             }
         }

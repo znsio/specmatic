@@ -19,7 +19,6 @@ data class ExampleDeclaration constructor(val examples: Map<String, String> = em
         isPatternToken(more.second) -> this
         else -> this.copy(examples = examples.plus(more))
     }
-
 }
 
 internal fun messageWhenDuplicateKeysExist(more: ExampleDeclaration, examples: Map<String, String>): List<String> {
@@ -86,7 +85,7 @@ fun primitiveTypeDeclarationWithKey(key: String, examples: ExampleDeclaration, d
         }
     }
 
-    return Pair(TypeDeclaration("(${newTypeName})"), ExampleDeclaration(examples = examples.examples.plus(exampleKey to stringValue)))
+    return Pair(TypeDeclaration("(${newTypeName})"), examples.plus(exampleKey to stringValue))
 }
 
 fun primitiveTypeDeclarationWithoutKey(key: String, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
@@ -98,5 +97,5 @@ fun primitiveTypeDeclarationWithoutKey(key: String, examples: ExampleDeclaration
         }
     }
 
-    return Pair(TypeDeclaration("(${newTypeName})"), ExampleDeclaration(examples = examples.examples.plus(exampleKey to stringValue)))
+    return Pair(TypeDeclaration("(${newTypeName})"), examples.plus(exampleKey to stringValue))
 }

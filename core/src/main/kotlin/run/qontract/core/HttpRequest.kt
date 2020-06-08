@@ -173,13 +173,13 @@ internal fun startLinesWith(str: String, startValue: String) =
 fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDeclaration> {
     return Pair(emptyList<GherkinClause>(), ExampleDeclaration()).let { (clauses, exampleDeclaration) ->
         val (newClauses, newExamples) = firstLineToGherkin(request, exampleDeclaration)
-        Pair(clauses.plus(newClauses), exampleDeclaration.plus(newExamples))
+        Pair(clauses.plus(newClauses), newExamples)
     }.let { (clauses, examples) ->
         val (newClauses, newExamples) = headersToGherkin(request.headers, "request-header", examples, When)
-        Pair(clauses.plus(newClauses), examples.plus(newExamples))
+        Pair(clauses.plus(newClauses), newExamples)
     }.let { (clauses, examples) ->
         val (newClauses, newExamples) = bodyToGherkin(request, examples)
-        Pair(clauses.plus(newClauses), examples.plus(newExamples))
+        Pair(clauses.plus(newClauses), newExamples)
     }
 }
 

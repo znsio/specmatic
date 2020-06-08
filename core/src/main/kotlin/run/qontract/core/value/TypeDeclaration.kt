@@ -70,11 +70,11 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
         val val2 = json2.getValue(withoutOptionality(it.key)) as DeferredPattern
 
         when {
-            val1.pattern == "(null)" && val2.pattern == "(null)" -> DeferredPattern("(null)")
-            withoutOptionality(withoutPatternDelimiters(val1.pattern)) == withoutPatternDelimiters(val2.pattern) -> val1
-            val1.pattern == "(null)" -> DeferredPattern("(${withoutPatternDelimiters(val2.pattern)}?)")
-            val2.pattern == "(null)" -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val1.pattern))}?)")
-            compatibleArrayTypes(val1.pattern, val2.pattern) -> concreteArrayType(val1.pattern, val2.pattern)
+            isNull(val1.pattern) && isNull(val2.pattern) -> val1
+            withoutVariable(withoutOptionality(withoutPatternDelimiters(val1.pattern))) == withoutVariable(withoutPatternDelimiters(val2.pattern)) -> val1
+            isNull(val1.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val2.pattern))}?)")
+            isNull(val2.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val1.pattern))}?)")
+            oneIsEmptyArray(val1.pattern, val2.pattern) -> selectConcreteArrayType(val1.pattern, val2.pattern)
             else -> throw(ShortCircuitException("Found two different types (${val1.pattern} and ${val2.pattern}) in one of the lists, can't converge on a common type for it"))
         }
     }
@@ -82,14 +82,31 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
     return TabularPattern(common.plus(missingIn1).plus(missingIn2))
 }
 
-fun concreteArrayType(type1: String, type2: String): DeferredPattern {
+fun isNull(type: String): Boolean {
+    return when {
+        !isPatternToken(type) -> false
+        else -> withoutVariable(type) == "(null)"
+    }
+}
+
+fun withoutVariable(type: String): String {
+    return when {
+        type.contains(":") -> {
+            val rawType = withoutPatternDelimiters(type).split(":".toRegex(), 2)[1].trim()
+            "($rawType)"
+        }
+        else -> type
+    }
+}
+
+fun selectConcreteArrayType(type1: String, type2: String): DeferredPattern {
     return DeferredPattern(when (type1) {
         "[]" -> type2
         else -> type1
     })
 }
 
-fun compatibleArrayTypes(type1: String, type2: String): Boolean {
+fun oneIsEmptyArray(type1: String, type2: String): Boolean {
     fun cleanup(type: String): String = "(${withoutOptionality(withoutPatternDelimiters(type))})"
     return (isRepeatingPattern(cleanup(type1)) && type2 == "[]") || (type1 == "[]" && isRepeatingPattern(cleanup(type2)))
 }

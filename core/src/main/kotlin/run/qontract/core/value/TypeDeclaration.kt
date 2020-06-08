@@ -74,11 +74,24 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
             withoutOptionality(withoutPatternDelimiters(val1.pattern)) == withoutPatternDelimiters(val2.pattern) -> val1
             val1.pattern == "(null)" -> DeferredPattern("(${withoutPatternDelimiters(val2.pattern)}?)")
             val2.pattern == "(null)" -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val1.pattern))}?)")
+            compatibleArrayTypes(val1.pattern, val2.pattern) -> concreteArrayType(val1.pattern, val2.pattern)
             else -> throw(ShortCircuitException("Found two different types (${val1.pattern} and ${val2.pattern}) in one of the lists, can't converge on a common type for it"))
         }
     }
 
     return TabularPattern(common.plus(missingIn1).plus(missingIn2))
+}
+
+fun concreteArrayType(type1: String, type2: String): DeferredPattern {
+    return DeferredPattern(when (type1) {
+        "[]" -> type2
+        else -> type1
+    })
+}
+
+fun compatibleArrayTypes(type1: String, type2: String): Boolean {
+    fun cleanup(type: String): String = "(${withoutOptionality(withoutPatternDelimiters(type))})"
+    return (isRepeatingPattern(cleanup(type1)) && type2 == "[]") || (type1 == "[]" && isRepeatingPattern(cleanup(type2)))
 }
 
 class ShortCircuitException(message: String) : Exception(message)

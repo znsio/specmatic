@@ -1,6 +1,5 @@
 package run.qontract.conversions
 
-import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.*
 import run.qontract.core.utilities.jsonStringToValueMap
@@ -52,7 +51,7 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<NamedStub> {
     val request = item.getJSONObjectValue("request")
     val scenarioName = if (item.jsonObject.contains("name")) item.getString("name") else "New scenario"
 
-    println("Processing $scenarioName")
+    println("Getting response for $scenarioName")
 
     return try {
         val responses = item.getJSONArray("response")
@@ -71,7 +70,7 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<NamedStub> {
 
         listOf(baseNamedStub).plus(namedStubsFromResponses)
     } catch (e: Throwable) {
-        println("Exception thrown when parsing request named \"$scenarioName\". ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
+        println("Exception thrown when processing Postman scenario \"$scenarioName\": ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
         emptyList()
     }
 }

@@ -5,7 +5,7 @@ import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.value.*
 
-class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
+data class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)

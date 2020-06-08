@@ -172,38 +172,14 @@ internal fun startLinesWith(str: String, startValue: String) =
 
 fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDeclaration> {
     return Pair(emptyList<GherkinClause>(), ExampleDeclaration()).let { (clauses, exampleDeclaration) ->
-        val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
-
-        if (request.path == null)
-            throw ContractException("Can't generate a qontract without the url.")
-
-        val (query, typeDeclarations, queryExamples) = when {
-            request.queryParams.isNotEmpty() -> {
-                val (typeDeclarations, examples) = dictionaryToDeclarations(stringMapToValueMap(request.queryParams), exampleDeclaration)
-
-                val query = typeDeclarations.entries.joinToString("&") { (key, typeDeclaration) -> "$key=${typeDeclaration.typeValue}" }
-                Triple("?$query", typeDeclarations, examples)
-            }
-            else -> Triple("", emptyMap(), exampleDeclaration)
-        }
-
-        val path = "${request.path}$query"
-
-        val requestLineGherkin = GherkinClause("$method $path", When)
-        val newClauses = typeDeclarationsToGherkin(typeDeclarations).plus(requestLineGherkin)
-
-        Pair(clauses.plus(newClauses), exampleDeclaration.plus(queryExamples))
+        val (newClauses, newExamples) = firstLineToGherkin(request, exampleDeclaration)
+        Pair(clauses.plus(newClauses), exampleDeclaration.plus(newExamples))
     }.let { (clauses, examples) ->
         val (newClauses, newExamples) = headersToGherkin(request.headers, "request-header", examples, When)
         Pair(clauses.plus(newClauses), examples.plus(newExamples))
     }.let { (clauses, examples) ->
-        val (bodyClauses, bodyExamples) = when {
-            request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData, examples)
-            request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields, examples)
-            else -> requestBodyToGherkinClauses(request.body, examples)?: Pair(emptyList(), ExampleDeclaration())
-        }
-
-        Pair(clauses.plus(bodyClauses), examples.plus(bodyExamples))
+        val (newClauses, newExamples) = bodyToGherkin(request, examples)
+        Pair(clauses.plus(newClauses), examples.plus(newExamples))
     }
 }
 
@@ -212,6 +188,38 @@ fun typeDeclarationsToGherkin(typeDeclarations: Map<String, TypeDeclaration>) =
 
 fun stringMapToValueMap(stringStringMap: Map<String, String>) =
         stringStringMap.mapValues { guessType(parsedValue(it.value)) }
+
+fun bodyToGherkin(request: HttpRequest, examples: ExampleDeclaration): Pair<List<GherkinClause>, ExampleDeclaration> {
+    return when {
+        request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData, examples)
+        request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields, examples)
+        else -> requestBodyToGherkinClauses(request.body, examples)?: Pair(emptyList(), ExampleDeclaration())
+    }
+}
+
+fun firstLineToGherkin(request: HttpRequest, exampleDeclaration: ExampleDeclaration): Pair<List<GherkinClause>, ExampleDeclaration> {
+    val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
+
+    if (request.path == null)
+        throw ContractException("Can't generate a qontract without the url.")
+
+    val (query, typeDeclarations, newExamples) = when {
+        request.queryParams.isNotEmpty() -> {
+            val (typeDeclarations, examples) = dictionaryToDeclarations(stringMapToValueMap(request.queryParams), exampleDeclaration)
+
+            val query = typeDeclarations.entries.joinToString("&") { (key, typeDeclaration) -> "$key=${typeDeclaration.typeValue}" }
+            Triple("?$query", typeDeclarations, examples)
+        }
+        else -> Triple("", emptyMap(), exampleDeclaration)
+    }
+
+    val path = "${request.path}$query"
+
+    val requestLineGherkin = GherkinClause("$method $path", When)
+    val newClauses = typeDeclarationsToGherkin(typeDeclarations).plus(requestLineGherkin)
+
+    return Pair(newClauses, newExamples)
+}
 
 fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>, exampleDeclaration: ExampleDeclaration): Pair<List<GherkinClause>, ExampleDeclaration> {
     return multiPartFormData.fold(Pair(emptyList(), exampleDeclaration)) { acc, part ->

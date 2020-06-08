@@ -6,7 +6,9 @@ import org.junit.jupiter.api.fail
 import run.qontract.core.pattern.*
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
+import run.qontract.mock.ScenarioStub
 import kotlin.test.assertEquals
 
 internal class HttpRequestTest {
@@ -91,5 +93,17 @@ internal class HttpRequestTest {
 
         assertThat(requestPattern.body.matches(parsedValue("""{"maybe": "present"}"""), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(requestPattern.body.matches(parsedValue("""{}"""), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun temp() {
+        val request = HttpRequest("POST", path = "/square", body = parsedValue("10"))
+        val featureGherkin = toGherkinFeature(NamedStub("Test", ScenarioStub(request, HttpResponse.OK(NumberValue(100)))))
+
+        println(featureGherkin)
+        val feature = Feature(featureGherkin)
+        val generatedRequest = feature.scenarios.first().generateHttpRequest()
+
+        println(generatedRequest)
     }
 }

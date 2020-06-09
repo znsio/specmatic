@@ -51,24 +51,27 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<NamedStub> {
     val request = item.getJSONObjectValue("request")
     val scenarioName = if (item.jsonObject.contains("name")) item.getString("name") else "New scenario"
 
+    println("Getting response for $scenarioName")
+
     return try {
         val responses = item.getJSONArray("response")
         val namedStubsFromResponses = namedStubsFromPostmanResponses(responses)
 
         val (baseURL, httpRequest) = postmanItemRequest(request)
 
-        val baseNamedStub = try {
-            val response = HttpClient(baseURL, nullLog).execute(httpRequest)
-            NamedStub(scenarioName, ScenarioStub(httpRequest, response))
+        val response = try {
+            HttpClient(baseURL, nullLog).execute(httpRequest)
         } catch (e: Throwable) {
-            println("Failed to generate a response for the Postman request named \"$scenarioName\". Couldn't reach the server because of an exception: ${e.localizedMessage}")
-            null
+            println("Failed to generate a response for the Postman request.")
+            throw e
         }
 
-        listOf(baseNamedStub).plus(namedStubsFromResponses).filterNotNull()
+        val baseNamedStub = NamedStub(scenarioName, ScenarioStub(httpRequest, response))
+
+        listOf(baseNamedStub).plus(namedStubsFromResponses)
     } catch (e: Throwable) {
-        println("Exception thrown when parsing request named \"$scenarioName\". ${e.localizedMessage}")
-        emptyList<NamedStub>()
+        println("Exception thrown when processing Postman scenario \"$scenarioName\": ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
+        emptyList()
     }
 }
 

@@ -2,7 +2,7 @@ package run.qontract.core.value
 
 import run.qontract.core.pattern.*
 
-data class TypeDeclaration(val typeValue: String, val types: Map<String, Pattern> = emptyMap(), val collidingName: String? = null)
+data class TypeDeclaration(val typeValue: String, val types: Map<String, Pattern> = emptyMap())
 
 fun toExampleDeclaration(examples: Map<String, String>): ExampleDeclaration {
     return ExampleDeclaration(examples.filterNot { isPatternToken(it.value) })
@@ -11,6 +11,8 @@ fun toExampleDeclaration(examples: Map<String, String>): ExampleDeclaration {
 data class ExampleDeclaration constructor(val examples: Map<String, String> = emptyMap(), val messages: List<String> = emptyList()) {
     fun plus(more: ExampleDeclaration): ExampleDeclaration {
         val duplicateMessage = messageWhenDuplicateKeysExist(more, examples)
+        for(message in duplicateMessage)
+            println(duplicateMessage)
 
         return this.copy(examples = examples.plus(more.examples.filterNot { isPatternToken(it.value) }), messages = messages.plus(more.messages).plus(duplicateMessage))
     }
@@ -21,13 +23,18 @@ data class ExampleDeclaration constructor(val examples: Map<String, String> = em
     }
 }
 
-internal fun messageWhenDuplicateKeysExist(more: ExampleDeclaration, examples: Map<String, String>): List<String> {
-    val duplicateKeys = more.examples.keys.filter { it in examples }
+internal fun messageWhenDuplicateKeysExist(newExamples: ExampleDeclaration, examples: Map<String, String>): List<String> {
+    val duplicateKeys = newExamples.examples.keys.filter { it in examples }.filter { key ->
+        val oldValue = examples.getValue(key)
+        val newValue = newExamples.examples.getValue(key)
+
+        oldValue != newValue
+    }
 
     return when {
         duplicateKeys.isNotEmpty() -> {
             val keysCsv = duplicateKeys.joinToString(", ")
-            listOf("Duplicate keys found: $keysCsv")
+            listOf("Duplicate keys with different values found: $keysCsv")
         }
         else -> emptyList()
     }
@@ -63,15 +70,45 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
         val val2 = json2.getValue(withoutOptionality(it.key)) as DeferredPattern
 
         when {
-            val1.pattern == "(null)" && val2.pattern == "(null)" -> DeferredPattern("(null)")
-            withoutOptionality(withoutPatternDelimiters(val1.pattern)) == withoutPatternDelimiters(val2.pattern) -> val1
-            val1.pattern == "(null)" -> DeferredPattern("(${withoutPatternDelimiters(val2.pattern)}?)")
-            val2.pattern == "(null)" -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val1.pattern))}?)")
+            isNull(val1.pattern) && isNull(val2.pattern) -> val1
+            withoutVariable(withoutOptionality(withoutPatternDelimiters(val1.pattern))) == withoutVariable(withoutPatternDelimiters(val2.pattern)) -> val1
+            isNull(val1.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val2.pattern))}?)")
+            isNull(val2.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val1.pattern))}?)")
+            oneIsEmptyArray(val1.pattern, val2.pattern) -> selectConcreteArrayType(val1.pattern, val2.pattern)
             else -> throw(ShortCircuitException("Found two different types (${val1.pattern} and ${val2.pattern}) in one of the lists, can't converge on a common type for it"))
         }
     }
 
     return TabularPattern(common.plus(missingIn1).plus(missingIn2))
+}
+
+fun isNull(type: String): Boolean {
+    return when {
+        !isPatternToken(type) -> false
+        else -> withoutVariable(type) == "(null)"
+    }
+}
+
+fun withoutVariable(type: String): String {
+    return when {
+        type.contains(":") -> {
+            val rawType = withoutPatternDelimiters(type).split(":".toRegex(), 2)[1].trim()
+            "($rawType)"
+        }
+        else -> type
+    }
+}
+
+fun selectConcreteArrayType(type1: String, type2: String): DeferredPattern {
+    return DeferredPattern(when (type1) {
+        "[]" -> type2
+        else -> type1
+    })
+}
+
+fun oneIsEmptyArray(type1: String, type2: String): Boolean {
+    fun cleanup(type: String): String = "(${withoutOptionality(withoutPatternDelimiters(type))})"
+    return (isRepeatingPattern(cleanup(type1)) && type2 == "[]") || (type1 == "[]" && isRepeatingPattern(cleanup(type2)))
 }
 
 class ShortCircuitException(message: String) : Exception(message)

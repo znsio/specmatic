@@ -1,17 +1,17 @@
 package run.qontract.test
 
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.ClientRequestException
 import io.ktor.client.request.forms.*
 import io.ktor.client.request.request
-import io.ktor.client.statement.readText
+import io.ktor.client.statement.readBytes
 import io.ktor.client.statement.request
 import io.ktor.client.utils.EmptyContent
 import io.ktor.http.*
 import io.ktor.http.content.TextContent
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.toMap
+import io.ktor.utils.io.charsets.Charset
 import io.ktor.utils.io.streams.asInput
 import kotlinx.coroutines.runBlocking
 import run.qontract.consoleLog
@@ -29,7 +29,9 @@ import java.net.URISyntaxException
 import java.net.URL
 import java.util.*
 
-class HttpClient(private val baseURL: String, private val log: (event: String) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(CIO) { expectSuccess = false }) : TestExecutor {
+class HttpClient(private val baseURL: String, private val log: (event: String) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(io.ktor.client.engine.apache.Apache) {
+    expectSuccess = false
+}) : TestExecutor {
     private val serverStateURL = "/_state_setup"
 
     @OptIn(KtorExperimentalAPI::class)
@@ -181,13 +183,25 @@ private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpReq
             multiPartFormData = multiPartFormData)
 }
 
-private suspend fun ktorResponseToHttpResponse(ktorResponse: io.ktor.client.statement.HttpResponse): HttpResponse =
-        HttpResponse(ktorResponse.status.value,
-                try {
-                    val data = ktorResponse.readText()
-                    data
-                } catch (e: ClientRequestException) {
-                    val data = e.response.readText()
-                    data
-                },
-                ktorResponse.headers.toMap().mapValues { it.value.first() }.toMutableMap())
+private suspend fun ktorResponseToHttpResponse(ktorResponse: io.ktor.client.statement.HttpResponse): HttpResponse {
+    val encoding = ktorResponse.headers.get("Content-Encoding")
+
+    return HttpResponse(ktorResponse.status.value,
+            try {
+                decodeData(ktorResponse.readBytes(), encoding, ktorResponse.charset())
+            } catch (e: ClientRequestException) {
+                decodeData(e.response.readBytes(), encoding, ktorResponse.charset())
+            },
+            ktorResponse.headers.toMap().mapValues { it.value.first() }.toMutableMap())
+}
+
+private fun decodeData(bytes: ByteArray, encoding: String?, receivedCharset: Charset?): String {
+    val charset = Charset.forName(receivedCharset?.name() ?: "UTF-8")
+
+    return when(encoding) {
+        "gzip" -> java.util.zip.GZIPInputStream(bytes.inputStream()).bufferedReader(charset).use {
+            it.readText()
+        }
+        else -> String(bytes)
+    }
+}

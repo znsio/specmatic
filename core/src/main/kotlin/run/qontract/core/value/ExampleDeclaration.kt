@@ -12,8 +12,8 @@ data class ExampleDeclaration constructor(val examples: Map<String, String> = em
     }
 
     fun plus(more: Pair<String, String>): ExampleDeclaration = when {
-        isPatternToken(more.second) -> this
-        else -> this.copy(examples = examples.plus(more))
+        !isPatternToken(more.second) || more.second == "(null)"-> this.copy(examples = examples.plus(more))
+        else -> this
     }
 }
 

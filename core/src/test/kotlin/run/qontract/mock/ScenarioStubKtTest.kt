@@ -574,7 +574,7 @@ internal class ScenarioStubKtTest {
   
     Examples:
     | name |
-    | null |""")
+    | (null) |""")
     }
 
     @Test
@@ -619,7 +619,7 @@ internal class ScenarioStubKtTest {
   
     Examples:
     | name |
-    | null |""")
+    | (null) |""")
     }
     @Test
     fun `converts array of 3 json objects in the request body where a value in the first and third is null to gherkin`() {
@@ -660,7 +660,7 @@ internal class ScenarioStubKtTest {
   
     Examples:
     | name |
-    | null |""")
+    | (null) |""")
     }
 
     @Test

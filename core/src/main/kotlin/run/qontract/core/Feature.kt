@@ -356,10 +356,10 @@ fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature(stub.name, stub
 private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, ExampleDeclaration> {
     return when (namedStub.stub.kafkaMessage) {
         null -> {
-//            println("NAME: ${namedStub.name}")
-//            println("REQUEST: ${namedStub.stub.request.toLogString()}")
-//            println("=================")
-//            println("RESPONSE: ${namedStub.stub.response.toLogString()}")
+            println("NAME: ${namedStub.name}")
+            println("REQUEST: ${namedStub.stub.request.toLogString()}")
+            println("=================")
+            println("RESPONSE: ${namedStub.stub.response.toLogString()}")
 
             val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
 

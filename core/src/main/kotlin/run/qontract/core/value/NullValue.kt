@@ -12,10 +12,10 @@ object NullValue : Value, ScalarValue {
     override fun toExactType(): Pattern = NullPattern
     override fun type(): Pattern = NullPattern
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            primitiveTypeDeclarationWithKey(key, types, examples, displayableType(), "null")
+            primitiveTypeDeclarationWithKey(key, types, examples, displayableType(), "(null)")
 
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            primitiveTypeDeclarationWithoutKey(exampleKey, types, examples, displayableType(), "null")
+            primitiveTypeDeclarationWithoutKey(exampleKey, types, examples, displayableType(), "(null)")
 
     override fun toString() = ""
 }

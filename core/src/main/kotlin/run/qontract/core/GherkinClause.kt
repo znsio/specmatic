@@ -22,17 +22,19 @@ fun responseBodyToGherkinClauses(typeName: String, body: Value?, types: Map<Stri
     }
 }
 
-fun requestBodyToGherkinClauses(body: Value?, types: Map<String, Pattern>, exampleDeclaration: ExampleDeclaration): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration>? {
+fun requestBodyToGherkinClauses(body: Value?, types: Map<String, Pattern>, exampleDeclaration: ExampleDeclaration): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
     if(body == EmptyString)
-        return Triple(emptyList(), emptyMap(), exampleDeclaration)
+        return Triple(emptyList(), types, exampleDeclaration)
 
-    return body?.typeDeclarationWithoutKey("RequestBody", types, exampleDeclaration)?.let { (typeDeclaration, exampleDeclaration) ->
+    val declarations = body?.typeDeclarationWithoutKey("RequestBody", types, exampleDeclaration)?.let { (typeDeclaration, exampleDeclaration) ->
         val typeValue = getNewTypeName(typeDeclaration.typeValue, typeDeclaration.types.keys)
 
         val bodyClause = GherkinClause("request-body $typeValue", When)
 
         Triple(listOf(bodyClause), typeDeclaration.types, exampleDeclaration)
     }
+
+    return declarations ?: Triple(emptyList(), types, exampleDeclaration)
 }
 
 fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
@@ -40,7 +42,7 @@ fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
 }
 
 fun headersToGherkin(headers: Map<String, String>, keyword: String, types: Map<String, Pattern>, exampleDeclaration: ExampleDeclaration, section: GherkinSection): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
-    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations2(stringMapToValueMap(headers), types, exampleDeclaration)
+    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations(stringMapToValueMap(headers), types, exampleDeclaration)
 
     val headerClauses = dictionaryTypeMap.entries.map {
         "$keyword ${it.key} ${it.value.pattern}"

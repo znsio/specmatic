@@ -27,23 +27,31 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
     val missingIn2 = json1.filterKeys { withoutOptionality(it) !in json2 }.mapKeys { "${withoutOptionality(it.key)}?" }
 
     val json1KeysWithoutOptionality = json1.keys.map { withoutOptionality(it) }
-    val missingIn1 = json2.filterKeys { it !in json1KeysWithoutOptionality }.mapKeys { "${it.key}?" }
+    val json2KeysWithoutOptionality = json2.keys.map { withoutOptionality(it) }
 
-    val common = json1.filterKeys { withoutOptionality(it) in json2 }.mapValues {
+    val missingIn1 = json2.filterKeys { withoutOptionality(it) !in json1KeysWithoutOptionality }.mapKeys { "${withoutOptionality(it.key)}?" }
+
+    val common = json1.filterKeys { withoutOptionality(it) in json2KeysWithoutOptionality }.mapValues {
         val val1 = json1.getValue(it.key) as DeferredPattern
-        val val2 = json2.getValue(withoutOptionality(it.key)) as DeferredPattern
+        val val2 = (json2[it.key] ?: json2[withoutOptionality(it.key)] ?: json2.getValue("${it.key}?")) as DeferredPattern
 
         when {
             isNull(val1.pattern) && isNull(val2.pattern) -> val1
-            withoutVariable(withoutOptionality(withoutPatternDelimiters(val1.pattern))) == withoutVariable(withoutPatternDelimiters(val2.pattern)) -> val1
-            isNull(val1.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val2.pattern))}?)")
-            isNull(val2.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val1.pattern))}?)")
+            withoutVariable(withoutOptionality(withoutPatternDelimiters(val1.pattern))) == withoutVariable(withoutOptionality(withoutPatternDelimiters(val2.pattern))) -> val1
+            isNull(val1.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val2.pattern.trim()))}?)")
+            isNull(val2.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val1.pattern.trim()))}?)")
             oneIsEmptyArray(val1.pattern, val2.pattern) -> selectConcreteArrayType(val1.pattern, val2.pattern)
             else -> throw(ShortCircuitException("Found two different types (${val1.pattern} and ${val2.pattern}) in one of the lists, can't converge on a common type for it"))
         }
     }
 
-    return TabularPattern(common.plus(missingIn1).plus(missingIn2))
+    val converged = common.plus(missingIn1).plus(missingIn2)
+
+    if(converged.any { it.key.contains("??") }) {
+        println(converged.keys)
+    }
+
+    return TabularPattern(converged)
 }
 
 fun isNull(type: String): Boolean {
@@ -71,7 +79,7 @@ fun selectConcreteArrayType(type1: String, type2: String): DeferredPattern {
 }
 
 fun oneIsEmptyArray(type1: String, type2: String): Boolean {
-    fun cleanup(type: String): String = "(${withoutOptionality(withoutPatternDelimiters(type))})"
+    fun cleanup(type: String): String = "(${withoutOptionality(withoutPatternDelimiters(type.trim()))})"
     return (isRepeatingPattern(cleanup(type1)) && type2 == "[]") || (type1 == "[]" && isRepeatingPattern(cleanup(type2)))
 }
 

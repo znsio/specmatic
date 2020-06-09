@@ -12,8 +12,8 @@ internal class TypeDeclarationKtTest {
         val emptyList = parsedValue("""{"list": []}""")
         val oneElementList = parsedValue("""{"list": [1]}""")
 
-        val (emptyDeclaration, _) = emptyList.typeDeclarationWithKey("List", ExampleDeclaration())
-        val (oneElementDeclaration, _) = oneElementList.typeDeclarationWithKey("List", ExampleDeclaration())
+        val (emptyDeclaration, _) = emptyList.typeDeclarationWithKey("List", emptyMap(), ExampleDeclaration())
+        val (oneElementDeclaration, _) = oneElementList.typeDeclarationWithKey("List", emptyMap(), ExampleDeclaration())
 
         val convergedOneWay = convergeTypeDeclarations(emptyDeclaration, oneElementDeclaration)
         val convergedTheOtherWay = convergeTypeDeclarations(oneElementDeclaration, emptyDeclaration)

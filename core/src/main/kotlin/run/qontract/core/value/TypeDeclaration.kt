@@ -4,42 +4,6 @@ import run.qontract.core.pattern.*
 
 data class TypeDeclaration(val typeValue: String, val types: Map<String, Pattern> = emptyMap())
 
-fun toExampleDeclaration(examples: Map<String, String>): ExampleDeclaration {
-    return ExampleDeclaration(examples.filterNot { isPatternToken(it.value) })
-}
-
-data class ExampleDeclaration constructor(val examples: Map<String, String> = emptyMap(), val messages: List<String> = emptyList()) {
-    fun plus(more: ExampleDeclaration): ExampleDeclaration {
-        val duplicateMessage = messageWhenDuplicateKeysExist(more, examples)
-        for(message in duplicateMessage)
-            println(duplicateMessage)
-
-        return this.copy(examples = examples.plus(more.examples.filterNot { isPatternToken(it.value) }), messages = messages.plus(more.messages).plus(duplicateMessage))
-    }
-
-    fun plus(more: Pair<String, String>): ExampleDeclaration = when {
-        isPatternToken(more.second) -> this
-        else -> this.copy(examples = examples.plus(more))
-    }
-}
-
-internal fun messageWhenDuplicateKeysExist(newExamples: ExampleDeclaration, examples: Map<String, String>): List<String> {
-    val duplicateKeys = newExamples.examples.keys.filter { it in examples }.filter { key ->
-        val oldValue = examples.getValue(key)
-        val newValue = newExamples.examples.getValue(key)
-
-        oldValue != newValue
-    }
-
-    return when {
-        duplicateKeys.isNotEmpty() -> {
-            val keysCsv = duplicateKeys.joinToString(", ")
-            listOf("Duplicate keys with different values found: $keysCsv")
-        }
-        else -> emptyList()
-    }
-}
-
 fun convergeTypeDeclarations(accumulator: TypeDeclaration, newPattern: TypeDeclaration): TypeDeclaration {
     return try {
         val differences = accumulator.types.filterKeys { it !in newPattern.types }.plus(newPattern.types.filterKeys { it !in accumulator.types })
@@ -113,7 +77,7 @@ fun oneIsEmptyArray(type1: String, type2: String): Boolean {
 
 class ShortCircuitException(message: String) : Exception(message)
 
-fun primitiveTypeDeclarationWithKey(key: String, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
+fun primitiveTypeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
     val (newTypeName, exampleKey) = when (key) {
         !in examples.examples -> Pair(displayableType, key)
         else -> {
@@ -122,10 +86,10 @@ fun primitiveTypeDeclarationWithKey(key: String, examples: ExampleDeclaration, d
         }
     }
 
-    return Pair(TypeDeclaration("(${newTypeName})"), examples.plus(exampleKey to stringValue))
+    return Pair(TypeDeclaration("(${newTypeName})", types), examples.plus(exampleKey to stringValue))
 }
 
-fun primitiveTypeDeclarationWithoutKey(key: String, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
+fun primitiveTypeDeclarationWithoutKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
     val (newTypeName, exampleKey) = when (key) {
         !in examples.examples -> Pair("$key: $displayableType", key)
         else -> {
@@ -134,5 +98,5 @@ fun primitiveTypeDeclarationWithoutKey(key: String, examples: ExampleDeclaration
         }
     }
 
-    return Pair(TypeDeclaration("(${newTypeName})"), examples.plus(exampleKey to stringValue))
+    return Pair(TypeDeclaration("(${newTypeName})", types), examples.plus(exampleKey to stringValue))
 }

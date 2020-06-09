@@ -4,6 +4,7 @@ import io.ktor.http.HttpStatusCode
 import run.qontract.conversions.guessType
 import run.qontract.core.GherkinSection.Then
 import run.qontract.core.pattern.ContractException
+import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.*
 
@@ -81,21 +82,24 @@ fun getHeaders(jsonObject: Map<String, Value>): MutableMap<String, String> =
 
 val responseHeadersToExcludeFromConversion = listOf("Vary", "X-Qontract-Result")
 
-fun toGherkinClauses(response: HttpResponse): Pair<List<GherkinClause>, ExampleDeclaration> {
+fun toGherkinClauses(response: HttpResponse, types: Map<String, Pattern> = emptyMap()): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
     val cleanedUpResponse = dropContentAndCORSResponseHeaders(response)
 
-    return Pair(emptyList<GherkinClause>(), ExampleDeclaration()).let { (clauses, examples) ->
-        val status = if (cleanedUpResponse.status > 0) cleanedUpResponse.status else throw ContractException("Can't generate a contract without a response status")
-        Pair(clauses.plus(GherkinClause("status $status", Then)), examples)
-    }.let { (clauses, _) ->
-        val (newClauses, _) = headersToGherkin(cleanedUpResponse.headers, "response-header", ExampleDeclaration(), Then)
-        Pair(clauses.plus(newClauses), ExampleDeclaration())
-    }.let { (clauses, examples) ->
-        when(val result = responseBodyToGherkinClauses("ResponseBody", cleanedUpResponse.body?.let { guessType(it) })) {
-            null -> Pair(clauses, examples)
+    return Triple(emptyList<GherkinClause>(), types, ExampleDeclaration()).let { (clauses, types, examples) ->
+        val status = when {
+            cleanedUpResponse.status > 0 -> cleanedUpResponse.status
+            else -> throw ContractException("Can't generate a contract without a response status")
+        }
+        Triple(clauses.plus(GherkinClause("status $status", Then)), types, examples)
+    }.let { (clauses, types, _) ->
+        val (newClauses, newTypes, _) = headersToGherkin(cleanedUpResponse.headers, "response-header", types, ExampleDeclaration(), Then)
+        Triple(clauses.plus(newClauses), newTypes, ExampleDeclaration())
+    }.let { (clauses, types, examples) ->
+        when(val result = responseBodyToGherkinClauses("ResponseBody", cleanedUpResponse.body?.let { guessType(it) }, types)) {
+            null -> Triple(clauses, types, examples)
             else -> {
-                val (newClauses, _) = result
-                Pair(clauses.plus(newClauses), ExampleDeclaration())
+                val (newClauses, newTypes, _) = result
+                Triple(clauses.plus(newClauses), newTypes, ExampleDeclaration())
             }
         }
     }

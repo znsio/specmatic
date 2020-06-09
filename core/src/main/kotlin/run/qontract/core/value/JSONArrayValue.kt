@@ -14,11 +14,11 @@ data class JSONArrayValue(val list: List<Value>) : Value {
     override fun toExactType(): Pattern = JSONArrayPattern(list.map { it.toExactType() })
     override fun type(): Pattern = JSONArrayPattern()
 
-    private fun typeDeclaration(key: String, examples: ExampleDeclaration, typeDeclarationCall: (Value, String, ExampleDeclaration) -> Pair<TypeDeclaration, ExampleDeclaration>): Pair<TypeDeclaration, ExampleDeclaration> = when {
+    private fun typeDeclaration(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration, typeDeclarationCall: (Value, String, Map<String, Pattern>, ExampleDeclaration) -> Pair<TypeDeclaration, ExampleDeclaration>): Pair<TypeDeclaration, ExampleDeclaration> = when {
         list.isEmpty() -> Pair(TypeDeclaration("[]"), ExampleDeclaration())
         else -> {
             val declarations = list.map {
-                val (typeDeclaration, newExamples) = typeDeclarationCall(it, key, examples)
+                val (typeDeclaration, newExamples) = typeDeclarationCall(it, key, types, examples)
                 Pair(TypeDeclaration("(${withoutPatternDelimiters(typeDeclaration.typeValue)}*)", typeDeclaration.types), newExamples)
             }.let { declarations ->
                 when {
@@ -46,11 +46,11 @@ data class JSONArrayValue(val list: List<Value>) : Value {
         return declaration.copy(typeValue = newTypeValue)
     }
 
-    override fun typeDeclarationWithKey(key: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            typeDeclaration(key, examples) { value, innerKey, newExamples -> value.typeDeclarationWithKey(innerKey, newExamples) }
+    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            typeDeclaration(key, types, examples) { value, innerKey, innerTypes, newExamples -> value.typeDeclarationWithKey(innerKey, innerTypes, newExamples) }
 
-    override fun typeDeclarationWithoutKey(exampleKey: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            typeDeclaration(exampleKey, examples) { value, innerKey, newExamples -> value.typeDeclarationWithoutKey(innerKey, newExamples) }
+    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            typeDeclaration(exampleKey, types, examples) { value, innerKey, innerTypes, newExamples -> value.typeDeclarationWithoutKey(innerKey, innerTypes, newExamples) }
 
     override fun toString() = valueArrayToJsonString(list)
 }

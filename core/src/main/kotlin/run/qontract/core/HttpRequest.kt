@@ -168,47 +168,52 @@ fun requestFromJSON(json: Map<String, Value>) =
         }
 
 internal fun startLinesWith(str: String, startValue: String) =
-        str.split("\n").map { "$startValue$it" }.joinToString("\n")
+        str.split("\n").joinToString("\n") { "$startValue$it" }
 
-fun toGherkinClauses(request: HttpRequest): Pair<List<GherkinClause>, ExampleDeclaration> {
-    return Pair(emptyList<GherkinClause>(), ExampleDeclaration()).let { (clauses, exampleDeclaration) ->
-        val (newClauses, newExamples) = firstLineToGherkin(request, exampleDeclaration)
-        Pair(clauses.plus(newClauses), newExamples)
-    }.let { (clauses, examples) ->
-        val (newClauses, newExamples) = headersToGherkin(request.headers, "request-header", examples, When)
-        Pair(clauses.plus(newClauses), newExamples)
-    }.let { (clauses, examples) ->
-        val (newClauses, newExamples) = bodyToGherkin(request, examples)
-        Pair(clauses.plus(newClauses), newExamples)
+fun toGherkinClauses(request: HttpRequest): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
+    return Triple(emptyList<GherkinClause>(), emptyMap<String, Pattern>(), ExampleDeclaration()).let { (clauses, types, exampleDeclaration) ->
+        val (newClauses, newTypes, newExamples) = firstLineToGherkin(request, types, exampleDeclaration)
+        Triple(clauses.plus(newClauses), newTypes, newExamples)
+    }.let { (clauses, types, examples) ->
+        val (newClauses, newTypes, newExamples) = headersToGherkin(request.headers, "request-header", types, examples, When)
+        Triple(clauses.plus(newClauses), newTypes, newExamples)
+    }.let { (clauses, types, examples) ->
+        val (newClauses, newTypes, newExamples) = bodyToGherkin(request, types, examples)
+        Triple(clauses.plus(newClauses), newTypes, newExamples)
+    }.let { (clauses, types, examples) ->
+        Triple(clauses, types, examples)
     }
 }
 
 fun typeDeclarationsToGherkin(typeDeclarations: Map<String, TypeDeclaration>) =
         typeDeclarations.entries.flatMap { typeDeclaration -> typeDeclaration.value.types.map { toClause(it.key, it.value) } }
 
+fun typesToGherkin(types: Map<String, Pattern>) =
+        types.entries.map { toClause(it.key, it.value) }
+
 fun stringMapToValueMap(stringStringMap: Map<String, String>) =
         stringStringMap.mapValues { guessType(parsedValue(it.value)) }
 
-fun bodyToGherkin(request: HttpRequest, examples: ExampleDeclaration): Pair<List<GherkinClause>, ExampleDeclaration> {
+fun bodyToGherkin(request: HttpRequest, types: Map<String, Pattern>, examples: ExampleDeclaration): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
     return when {
-        request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData, examples)
-        request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields, examples)
-        else -> requestBodyToGherkinClauses(request.body, examples)?: Pair(emptyList(), ExampleDeclaration())
+        request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData, types, examples)
+        request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields, types, examples)
+        else -> requestBodyToGherkinClauses(request.body, types, examples)?: Triple(emptyList(), emptyMap(), ExampleDeclaration())
     }
 }
 
-fun firstLineToGherkin(request: HttpRequest, exampleDeclaration: ExampleDeclaration): Pair<List<GherkinClause>, ExampleDeclaration> {
+fun firstLineToGherkin(request: HttpRequest, types: Map<String, Pattern>, exampleDeclaration: ExampleDeclaration): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
     val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
 
     if (request.path == null)
         throw ContractException("Can't generate a qontract without the url.")
 
-    val (query, typeDeclarations, newExamples) = when {
+    val (query, newTypes, newExamples) = when {
         request.queryParams.isNotEmpty() -> {
-            val (typeDeclarations, examples) = dictionaryToDeclarations(stringMapToValueMap(request.queryParams), exampleDeclaration)
+            val (dictionaryType, newTypes, examples) = dictionaryToDeclarations2(stringMapToValueMap(request.queryParams), types, exampleDeclaration)
 
-            val query = typeDeclarations.entries.joinToString("&") { (key, typeDeclaration) -> "$key=${typeDeclaration.typeValue}" }
-            Triple("?$query", typeDeclarations, examples)
+            val query = dictionaryType.entries.joinToString("&") { (key, typeDeclaration) -> "$key=${typeDeclaration.pattern}" }
+            Triple("?$query", newTypes, examples)
         }
         else -> Triple("", emptyMap(), exampleDeclaration)
     }
@@ -216,38 +221,36 @@ fun firstLineToGherkin(request: HttpRequest, exampleDeclaration: ExampleDeclarat
     val path = "${request.path}$query"
 
     val requestLineGherkin = GherkinClause("$method $path", When)
-    val newClauses = typeDeclarationsToGherkin(typeDeclarations).plus(requestLineGherkin)
 
-    return Pair(newClauses, newExamples)
+    return Triple(listOf(requestLineGherkin), newTypes, newExamples)
 }
 
-fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>, exampleDeclaration: ExampleDeclaration): Pair<List<GherkinClause>, ExampleDeclaration> {
-    return multiPartFormData.fold(Pair(emptyList(), exampleDeclaration)) { acc, part ->
-        val (clauses, examples) = acc
+fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>, types: Map<String, Pattern>, exampleDeclaration: ExampleDeclaration): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
+    return multiPartFormData.fold(Triple(emptyList(), types, exampleDeclaration)) { acc, part ->
+        val (clauses, types, examples) = acc
 
         when(part) {
             is MultiPartContentValue -> {
                 val typeName = part.name
-                val (typeDeclaration, newExamples) = part.content.typeDeclarationWithKey(typeName, examples)
+                val (typeDeclaration, newExamples) = part.content.typeDeclarationWithKey(typeName, types, examples)
 
-                Pair(clauses.plus(toGherkinClauses(typeDeclaration.types).plus(GherkinClause("request-part ${part.name} ${typeDeclaration.typeValue}", When))),
-                        examples.plus(newExamples))
+                val newGherkinClause = GherkinClause("request-part ${part.name} ${typeDeclaration.typeValue}", When)
+                Triple(clauses.plus(newGherkinClause), typeDeclaration.types, examples.plus(newExamples))
             }
             is MultiPartFileValue -> {
                 val contentType = part.contentType
                 val contentEncoding = contentType?.let { part.contentEncoding }
 
-                Pair(listOf(GherkinClause("request-part ${part.name} ${part.filename} $contentType $contentEncoding".trim(), When)), examples)
+                Triple(clauses.plus(GherkinClause("request-part ${part.name} ${part.filename} $contentType $contentEncoding".trim(), When)), types, examples)
             }
         }
     }
 }
 
-fun formFieldsToGherkin(formFields: Map<String, String>, exampleDeclaration: ExampleDeclaration): Pair<List<GherkinClause>, ExampleDeclaration> {
-    val (typeDeclarations, newExamples) = dictionaryToDeclarations(stringMapToValueMap(formFields), exampleDeclaration)
+fun formFieldsToGherkin(formFields: Map<String, String>, types: Map<String, Pattern>, exampleDeclaration: ExampleDeclaration): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
+    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations2(stringMapToValueMap(formFields), types, exampleDeclaration)
 
-    val clauses = typeDeclarationsToGherkin(typeDeclarations)
-    val formFieldClauses = typeDeclarations.entries.map { entry -> GherkinClause("form-field ${entry.key} ${entry.value.typeValue}", When) }
+    val formFieldClauses = dictionaryTypeMap.entries.map { entry -> GherkinClause("form-field ${entry.key} ${entry.value.pattern}", When) }
 
-    return Pair(clauses.plus(formFieldClauses), exampleDeclaration.plus(newExamples))
+    return Triple(formFieldClauses, newTypes, exampleDeclaration.plus(newExamples))
 }

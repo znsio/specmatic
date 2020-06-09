@@ -12,11 +12,12 @@ data class NumberValue(val number: Number) : Value, ScalarValue {
     override fun displayableType(): String = "number"
     override fun toExactType(): Pattern = ExactValuePattern(this)
     override fun type(): Pattern = NumberPattern
-    override fun typeDeclarationWithKey(key: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            primitiveTypeDeclarationWithKey(key, examples, displayableType(), number.toString())
 
-    override fun typeDeclarationWithoutKey(exampleKey: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            primitiveTypeDeclarationWithoutKey(key = exampleKey, examples = examples, displayableType = displayableType(), stringValue = number.toString())
+    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            primitiveTypeDeclarationWithKey(key, types, examples, displayableType(), number.toString())
+
+    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            primitiveTypeDeclarationWithoutKey(exampleKey, types, examples = examples, displayableType = displayableType(), stringValue = number.toString())
 
     override fun toString() = number.toString()
 }

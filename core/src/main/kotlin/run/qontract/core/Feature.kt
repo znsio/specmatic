@@ -356,18 +356,20 @@ fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature(stub.name, stub
 private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, ExampleDeclaration> {
     return when (namedStub.stub.kafkaMessage) {
         null -> {
-            println("NAME: ${namedStub.name}")
-            println("REQUEST: ${namedStub.stub.request.toLogString()}")
-            println("=================")
-            println("RESPONSE: ${namedStub.stub.response.toLogString()}")
-            val (requestClauses, examples) = toGherkinClauses(namedStub.stub.request)
+//            println("NAME: ${namedStub.name}")
+//            println("REQUEST: ${namedStub.stub.request.toLogString()}")
+//            println("=================")
+//            println("RESPONSE: ${namedStub.stub.response.toLogString()}")
+
+            val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
 
             for(message in examples.messages) {
                 println(message)
             }
 
-            val (responseClauses, _) = toGherkinClauses(namedStub.stub.response)
-            Pair(requestClauses.plus(responseClauses), examples)
+            val (responseClauses, allTypes, _) = toGherkinClauses(namedStub.stub.response, typesFromRequest)
+            val typeClauses = toGherkinClauses(allTypes)
+            Pair(typeClauses.plus(requestClauses).plus(responseClauses), examples)
         }
         else -> Pair(toGherkinClauses(namedStub.stub.kafkaMessage), ExampleDeclaration())
     }

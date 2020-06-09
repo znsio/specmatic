@@ -14,26 +14,26 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 
     override fun toString() = valueMapToPrettyJsonString(jsonObject)
 
-    override fun typeDeclarationWithKey(key: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {
-        val (typeDeclarations, newExamples) = dictionaryToDeclarations(jsonObject, examples)
+    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {
+        val (typeDeclarations, newTypes, newExamples) = dictionaryToDeclarations2(jsonObject, types, examples)
 
         val newType = TabularPattern(typeDeclarations.mapValues {
-            DeferredPattern(it.value.typeValue)
+            DeferredPattern(it.value.pattern)
         })
 
         val newTypeName = getNewTypeName(key.capitalize(), typeDeclarations.keys)
 
-        val mergedTypeMap = typeDeclarations.entries.fold(emptyMap<String, Pattern>()) { acc, entry ->
-            acc.plus(entry.value.types)
-        }.plus(newTypeName to newType)
+//        val mergedTypeMap = typeDeclarations.entries.fold(emptyMap<String, Pattern>()) { acc, entry ->
+//            acc.plus(entry.value.types)
+//        }.plus(newTypeName to newType)
 
-        val typeDeclaration = TypeDeclaration("($newTypeName)", mergedTypeMap)
+        val typeDeclaration = TypeDeclaration("($newTypeName)", newTypes.plus(newTypeName to newType))
 
         return Pair(typeDeclaration, newExamples)
     }
 
-    override fun typeDeclarationWithoutKey(exampleKey: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            typeDeclarationWithKey(exampleKey, examples)
+    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            typeDeclarationWithKey(exampleKey, types, examples)
 
     fun getString(key: String): String {
         return (jsonObject.getValue(key) as StringValue).string
@@ -64,11 +64,14 @@ fun getNewTypeName(typeName: String, keys: Collection<String>): String {
     return generateSequence(typeName) { "${it}_" }.first { it !in keys }
 }
 
-fun dictionaryToDeclarations(jsonObject: Map<String, Value>, examples: ExampleDeclaration): Pair<Map<String, TypeDeclaration>, ExampleDeclaration> {
+fun dictionaryToDeclarations2(jsonObject: Map<String, Value>, types: Map<String, Pattern>, examples: ExampleDeclaration): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclaration> {
     return jsonObject
             .entries
-            .fold(Pair(emptyMap(), examples)) { acc, entry ->
-                val (typeDeclaration, newExamples) = entry.value.typeDeclarationWithKey(entry.key, acc.second)
-                Pair(acc.first.plus(mapOf(entry.key to typeDeclaration)), newExamples)
+            .fold(Triple(emptyMap(), types, examples)) { acc, entry ->
+                val (jsonTypeMap, types, examples) = acc
+                val (key, value) = entry
+
+                val (newTypes, newExamples) = value.typeDeclarationWithKey(key, types, examples)
+                Triple(jsonTypeMap.plus(key to DeferredPattern(newTypes.typeValue)), newTypes.types, newExamples)
             }
 }

@@ -1,14 +1,10 @@
 package run.qontract.core
 
-import run.qontract.core.GherkinSection.Then
-import run.qontract.core.GherkinSection.When
+import run.qontract.core.GherkinSection.*
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.TabularPattern
 import run.qontract.core.pattern.withoutPatternDelimiters
-import run.qontract.core.value.EmptyString
-import run.qontract.core.value.ExampleDeclaration
-import run.qontract.core.value.Value
-import run.qontract.core.value.dictionaryToDeclarations
+import run.qontract.core.value.*
 
 data class GherkinClause(val content: String, val section: GherkinSection)
 
@@ -16,29 +12,26 @@ enum class GherkinSection(val prefix: String) {
     Given("Given"), When("When"), Then("Then"), `*`("*")
 }
 
-fun responseBodyToGherkinClauses(typeName: String, body: Value?): Pair<List<GherkinClause>, ExampleDeclaration>? {
+fun responseBodyToGherkinClauses(typeName: String, body: Value?, types: Map<String, Pattern>): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration>? {
     if(body == EmptyString)
-        return Pair(emptyList(), ExampleDeclaration())
+        return Triple(emptyList(), types, ExampleDeclaration())
 
-    return body?.typeDeclarationWithKey(typeName, ExampleDeclaration())?.let { (typeDeclaration, _) ->
+    return body?.typeDeclarationWithKey(typeName, types, ExampleDeclaration())?.let { (typeDeclaration, _) ->
         val bodyClause = GherkinClause("response-body ${typeDeclaration.typeValue}", Then)
-        val typeDefinitionClauses = toGherkinClauses(typeDeclaration.types)
-
-        Pair(listOf(bodyClause).plus(typeDefinitionClauses), ExampleDeclaration())
+        Triple(listOf(bodyClause), typeDeclaration.types, ExampleDeclaration())
     }
 }
 
-fun requestBodyToGherkinClauses(body: Value?, exampleDeclaration: ExampleDeclaration): Pair<List<GherkinClause>, ExampleDeclaration>? {
+fun requestBodyToGherkinClauses(body: Value?, types: Map<String, Pattern>, exampleDeclaration: ExampleDeclaration): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration>? {
     if(body == EmptyString)
-        return Pair(emptyList(), exampleDeclaration)
+        return Triple(emptyList(), emptyMap(), exampleDeclaration)
 
-    return body?.typeDeclarationWithoutKey("RequestBody", exampleDeclaration)?.let { (typeDeclaration, exampleDeclaration) ->
-        val typeValue = typeDeclaration.typeValue
+    return body?.typeDeclarationWithoutKey("RequestBody", types, exampleDeclaration)?.let { (typeDeclaration, exampleDeclaration) ->
+        val typeValue = getNewTypeName(typeDeclaration.typeValue, typeDeclaration.types.keys)
 
         val bodyClause = GherkinClause("request-body $typeValue", When)
-        val typeDefinitionClauses = toGherkinClauses(typeDeclaration.types)
 
-        Pair(listOf(bodyClause).plus(typeDefinitionClauses), exampleDeclaration)
+        Triple(listOf(bodyClause), typeDeclaration.types, exampleDeclaration)
     }
 }
 
@@ -46,16 +39,14 @@ fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
     return patterns.entries.map { (key, pattern) -> toClause(key, pattern) }
 }
 
-fun headersToGherkin(headers: Map<String, String>, keyword: String, exampleDeclaration: ExampleDeclaration, section: GherkinSection): Pair<List<GherkinClause>, ExampleDeclaration> {
-    val (typeDeclarations, newExamples) = dictionaryToDeclarations(stringMapToValueMap(headers), exampleDeclaration)
+fun headersToGherkin(headers: Map<String, String>, keyword: String, types: Map<String, Pattern>, exampleDeclaration: ExampleDeclaration, section: GherkinSection): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
+    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations2(stringMapToValueMap(headers), types, exampleDeclaration)
 
-    val returnedTypeClauses = typeDeclarationsToGherkin(typeDeclarations)
-
-    val headerClauses = typeDeclarations.entries.map {
-        "$keyword ${it.key} ${it.value.typeValue}"
+    val headerClauses = dictionaryTypeMap.entries.map {
+        "$keyword ${it.key} ${it.value.pattern}"
     }.map { GherkinClause(it, section) }
 
-    return Pair(returnedTypeClauses.plus(headerClauses), newExamples)
+    return Triple(headerClauses, newTypes, newExamples)
 }
 
 fun toClause(key: String, type: Pattern): GherkinClause {
@@ -66,7 +57,7 @@ fun toClause(key: String, type: Pattern): GherkinClause {
         else -> "  | $key | ${type.pattern} |"
     }
 
-    return GherkinClause("$title\n$table", GherkinSection.Given)
+    return GherkinClause("$title\n$table", Given)
 }
 
 private fun patternMapToString(json: Map<String, Pattern>): String {
@@ -93,7 +84,9 @@ fun toGherkinScenario(scenarioName: String, declarations: Pair<List<GherkinClaus
     val (clauses, exampleDeclaration) = declarations
     val groupedClauses = clauses.groupBy { it.section }
 
-    val statements = listOf(GherkinSection.Given, When, GherkinSection.Then, GherkinSection.`*`).flatMap { section ->
+    val prefixesInOrder = listOf(Given, When, Then, `*`)
+
+    val statements = prefixesInOrder.flatMap { section ->
         val sectionClauses = groupedClauses[section] ?: emptyList()
         val prefixes = listOf(section.prefix).plus(1.until(sectionClauses.size).map { "And" })
         sectionClauses.zip(prefixes).map { (clause, prefix) -> GherkinStatement(clause.content, prefix) }

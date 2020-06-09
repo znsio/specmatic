@@ -19,11 +19,12 @@ data class StringValue(val string: String = "") : Value, ScalarValue {
     }
 
     override fun type(): Pattern = StringPattern
-    override fun typeDeclarationWithKey(key: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            primitiveTypeDeclarationWithKey(key, examples, displayableType(), string)
 
-    override fun typeDeclarationWithoutKey(exampleKey: String, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            primitiveTypeDeclarationWithoutKey(exampleKey, examples, displayableType(), string)
+    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            primitiveTypeDeclarationWithKey(key, types, examples, displayableType(), string)
+
+    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
+            primitiveTypeDeclarationWithoutKey(exampleKey, types, examples, displayableType(), string)
 
     override fun toString() = string
 

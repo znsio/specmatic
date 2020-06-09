@@ -28,7 +28,7 @@ open class QontractJUnitSupport {
             checkBackwardCompatibilityInPath(path)
         }
 
-        val contractBehaviour = try {
+        val feature = try {
             Feature(readFile(path))
         } catch (exception: Throwable) {
             println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
@@ -42,7 +42,7 @@ open class QontractJUnitSupport {
         }
 
         val testScenarios = try {
-            contractBehaviour.generateTestScenarios(suggestions)
+            feature.generateTestScenarios(suggestions)
         } catch(e: ContractException) {
             println(e.report())
             throw e
@@ -81,7 +81,7 @@ open class QontractJUnitSupport {
                             httpClient.setServerState(it.serverState)
                             response = httpClient.execute(request)
                             when (response.status) {
-                                400 -> Result.Failure(response.body?.displayableValue()
+                                400 -> Result.Failure(response.body?.toStringValue()
                                         ?: "").also { failureResult -> failureResult.updateScenario(it) }
                                 else -> it.matches(response)
                             }
@@ -90,7 +90,7 @@ open class QontractJUnitSupport {
                                     .also { failure -> failure.updateScenario(it) }
                         }
 
-                        ResultAssert.assertThat(result).isSuccess(request, response)
+                        ResultAssert.assertThat(result).isSuccess()
                     }
                 }
             }

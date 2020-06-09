@@ -41,7 +41,7 @@ data class MultiPartFileValue(override val name: String, val filename: String, v
 --$boundary
 $headerString
 
-$content
+(File content not shown here.  Please examine the file ${filename.removePrefix("@")})
 """.trim()
     }
 }

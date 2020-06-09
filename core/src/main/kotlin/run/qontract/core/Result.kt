@@ -19,7 +19,7 @@ sealed class Result {
         override fun isTrue() = true
     }
 
-    data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "") : Result() {
+    data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "", val fluff: Boolean = false) : Result() {
         fun reason(errorMessage: String) = Failure(errorMessage, this)
         fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
 
@@ -61,13 +61,13 @@ fun valueError(value: Value?): String? {
     return value?.let { "${it.displayableType()}: ${it.displayableValue()}" }
 }
 
-fun resultReport(result: Result): String {
+fun resultReport(result: Result, scenarioMessage: String? = null): String {
     return when (result) {
         is Result.Failure -> {
             val firstLine = when(val scenario = result.scenario) {
                 null -> ""
                 else -> {
-                    """In scenario "${scenario.name}""""
+                    """${scenarioMessage ?: "In scenario"} "${scenario.name}""""
                 }
             }
 

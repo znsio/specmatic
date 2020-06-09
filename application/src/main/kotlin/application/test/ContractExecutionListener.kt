@@ -20,8 +20,8 @@ class ContractExecutionListener : TestExecutionListener {
             when (it) {
                 false -> {
                     failure++
-                    val message = testExecutionResult?.throwable?.get()?.message?.replace("\n", "\n\t")
-                    println("Reason: $message")
+                    val message = testExecutionResult?.throwable?.get()?.message?.replace("\n", "\n\t")?.trimIndent() ?: ""
+                    println("Reason: $message\n\n")
                 }
                 else -> {
                     success++

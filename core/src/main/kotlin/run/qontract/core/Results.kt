@@ -20,16 +20,25 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
     }
 
     fun generateErrorHttpResponse() =
-            HttpResponse(400, generateErrorResponseBody(), mutableMapOf("Content-Type" to "text/plain", "X-Qontract-Result" to "failure"))
+            HttpResponse(400, report(), mutableMapOf("Content-Type" to "text/plain", "X-Qontract-Result" to "failure"))
 
-    private fun generateErrorResponseBody() =
-            generateFeedback()
+    fun report(): String {
+        val filteredResults = results.filterNot { isFluff(it) }
 
-    private fun generateFeedback(): String {
-        return results.map { it }.map { result ->
-            resultReport(result)
-        }.filter { it.isNotBlank() }.joinToString("\n\n")
+        return when {
+            filteredResults.isNotEmpty() -> listToReport(filteredResults)
+            else -> "No scenario matched\n\n${listToReport(results)}"
+        }
     }
-
-    fun report() = generateErrorResponseBody()
 }
+
+private fun isFluff(it: Result?): Boolean {
+    return when(it) {
+        is Result.Failure -> it.fluff || isFluff(it.cause)
+        else -> false
+    }
+}
+
+private fun listToReport(list: List<Result>): String = list.map { result ->
+    resultReport(result)
+}.filter { it.isNotBlank() }.joinToString("\n\n")

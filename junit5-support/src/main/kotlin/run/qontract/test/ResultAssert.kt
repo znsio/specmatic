@@ -1,9 +1,7 @@
 package run.qontract.test
 
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
-import run.qontract.core.Result
 import org.assertj.core.api.AbstractAssert
+import run.qontract.core.Result
 import run.qontract.core.resultReport
 
 class ResultAssert(actual: Result) : AbstractAssert<ResultAssert, Result>(actual, ResultAssert::class.java) {
@@ -13,17 +11,10 @@ class ResultAssert(actual: Result) : AbstractAssert<ResultAssert, Result>(actual
         }
     }
 
-    fun isSuccess(request: HttpRequest, response: HttpResponse?) {
-        isNotNull
-
-        if(actual is Result.Failure)
-            failWithMessage(resultReport(actual))
-    }
-
     fun isSuccess() {
         isNotNull
 
         if(actual is Result.Failure)
-            failWithMessage(resultReport(actual))
+            failWithMessage(resultReport(actual, "Testing scenario"))
     }
 }

@@ -11,13 +11,13 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         matchesPath(uri, resolver).let { pathResult ->
             return when (pathResult) {
-                is Success -> matchesQuery(sampleQuery, resolver).let { queryResult ->
+                is Result.Failure -> pathResult.copy(fluff = true)
+                else -> matchesQuery(sampleQuery, resolver).let { queryResult ->
                     when(queryResult) {
                         is Success -> queryResult
                         else -> queryResult.breadCrumb("QUERY-PARAMS")
                     }
                 }
-                else -> pathResult
             }
         }
     }

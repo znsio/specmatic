@@ -211,7 +211,8 @@ class PostmanKtTests {
 	"protocolProfileBehavior": {}
 }"""
 
-        val (gherkinString, stubs) = postmanCollectionToGherkin(postmanContent)
+        val info = postmanCollectionToGherkin(postmanContent)
+        val (gherkinString, hostAndPort, stubs) = info.first()
 
         println(gherkinString)
 
@@ -352,15 +353,15 @@ class PostmanKtTests {
         assertThat(namedStubs).hasSize(1)
 
         val namedStub = namedStubs.first()
-        assertThat(namedStub.name).isEqualTo("Square Of A Number 2")
+        assertThat(namedStub.second.name).isEqualTo("Square Of A Number 2")
 
-        val request = namedStub.stub.request
+        val request = namedStub.second.stub.request
         assertThat(request.method).isEqualTo("POST")
         assertThat(request.path).isEqualTo("/square")
         assertThat(request.headers).hasSize(0)
         assertThat(request.body).isEqualTo(NumberValue(10))
 
-        val response = namedStub.stub.response
+        val response = namedStub.second.stub.response
         assertThat(response.status).isEqualTo(200)
         assertThat(response.body).isEqualTo(NumberValue(100))
         assertThat(response.headers).hasSize(1)
@@ -593,14 +594,14 @@ class PostmanKtTests {
         val postmanCollection = stubsFromPostmanCollection(postmanString)
 
         val stub1 = postmanCollection.stubs[0]
-        assertThat(stub1.name).isEqualTo("With query")
-        assertThat(stub1.stub.request.method).isEqualTo("GET")
-        assertThat(stub1.stub.request.queryParams.getOrDefault("one", "not found")).isEqualTo("1")
+        assertThat(stub1.second.name).isEqualTo("With query")
+        assertThat(stub1.second.stub.request.method).isEqualTo("GET")
+        assertThat(stub1.second.stub.request.queryParams.getOrDefault("one", "not found")).isEqualTo("1")
 
         val stub2 = postmanCollection.stubs[1]
-        assertThat(stub2.name).isEqualTo("Square Of A Number 2")
-        assertThat(stub2.stub.request.method).isEqualTo("POST")
-        assertThat(stub2.stub.response.headers).hasSize(5)
+        assertThat(stub2.second.name).isEqualTo("Square Of A Number 2")
+        assertThat(stub2.second.stub.request.method).isEqualTo("POST")
+        assertThat(stub2.second.stub.response.headers).hasSize(5)
     }
 
     companion object {

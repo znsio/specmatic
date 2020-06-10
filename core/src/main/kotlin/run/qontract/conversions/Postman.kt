@@ -11,22 +11,38 @@ import run.qontract.test.HttpClient
 import java.net.URI
 import java.net.URL
 
-fun postmanCollectionToGherkin(postmanContent: String): Pair<String, List<NamedStub>> {
+fun hostAndPort(uri: String): String {
+    return try {
+        val uri = URI.create(uri)
+        val port: String = if(uri.port > 0) ":${uri.port}" else ""
+        "${uri.host}$port"
+    } catch(e: Throwable) {
+        ""
+    }
+}
+
+fun postmanCollectionToGherkin(postmanContent: String): List<Triple<String, String, List<NamedStub>>> {
     val postmanCollection = stubsFromPostmanCollection(postmanContent)
 
     return when {
         postmanCollection.stubs.isNotEmpty() -> {
-            val gherkinString = toGherkinFeature(postmanCollection)
-            Pair(gherkinString, postmanCollection.stubs)
+            val groups = postmanCollection.stubs.groupBy { hostAndPort(it.first) }
+
+            groups.entries.map {
+                val collection = PostmanCollection(postmanCollection.name, it.value)
+                val gherkinString = toGherkinFeature(collection)
+
+                Triple(gherkinString, it.key, postmanCollection.stubs.map { it.second })
+            }
         }
-        else -> Pair("", emptyList())
+        else -> emptyList()
     }
 }
 
 fun toGherkinFeature(postmanCollection: PostmanCollection): String =
-        toGherkinFeature(postmanCollection.name, postmanCollection.stubs)
+        toGherkinFeature(postmanCollection.name, postmanCollection.stubs.map { it.second })
 
-data class PostmanCollection(val name: String, val stubs: List<NamedStub>)
+data class PostmanCollection(val name: String, val stubs: List<Pair<String, NamedStub>>)
 
 fun stubsFromPostmanCollection(postmanContent: String): PostmanCollection {
     val json = jsonStringToValueMap(postmanContent)
@@ -37,13 +53,17 @@ fun stubsFromPostmanCollection(postmanContent: String): PostmanCollection {
             (json.getValue("info") as JSONObjectValue).getString("name")
         else -> "New Feature"
     }
+    
+    items.list.map { it as JSONObjectValue }.map { item ->
+        postmanItemToStubs(item)
+    }
 
     return PostmanCollection(name, items.list.map { it as JSONObjectValue }.map { item ->
         postmanItemToStubs(item)
     }.flatten())
 }
 
-private fun postmanItemToStubs(item: JSONObjectValue): List<NamedStub> {
+private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<String, NamedStub>> {
     if(!item.jsonObject.containsKey("request")) {
         val items = item.getJSONArray("item").map { it as JSONObjectValue }
         return items.flatMap { postmanItemToStubs(it) }
@@ -68,7 +88,7 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<NamedStub> {
             throw e
         }
 
-        val baseNamedStub = NamedStub(scenarioName, ScenarioStub(httpRequest, response))
+        val baseNamedStub = Pair(baseURL, NamedStub(scenarioName, ScenarioStub(httpRequest, response)))
 
         listOf(baseNamedStub).plus(namedStubsFromResponses)
     } catch (e: Throwable) {
@@ -77,17 +97,17 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<NamedStub> {
     }
 }
 
-fun namedStubsFromPostmanResponses(responses: List<Value>): List<NamedStub> {
+fun namedStubsFromPostmanResponses(responses: List<Value>): List<Pair<String, NamedStub>> {
     return responses.map {
         val responseItem = it as JSONObjectValue
 
         val scenarioName = if (responseItem.jsonObject.contains("name")) responseItem.getString("name") else "New scenario"
         val innerRequest = responseItem.getJSONObjectValue("originalRequest")
 
-        val innerHttpRequest = postmanItemRequest(innerRequest)
+        val (baseURL, innerHttpRequest) = postmanItemRequest(innerRequest)
         val innerHttpResponse: HttpResponse = postmanItemResponse(responseItem)
 
-        NamedStub(scenarioName, ScenarioStub(innerHttpRequest.second, innerHttpResponse))
+        Pair(baseURL, NamedStub(scenarioName, ScenarioStub(innerHttpRequest, innerHttpResponse)))
     }
 }
 

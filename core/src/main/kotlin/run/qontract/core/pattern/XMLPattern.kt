@@ -5,6 +5,7 @@ import org.w3c.dom.NamedNodeMap
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import run.qontract.core.*
+import run.qontract.core.utilities.parseXML
 import run.qontract.core.utilities.xmlToString
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
@@ -362,13 +363,6 @@ data class XMLPattern(val node: Node) : Pattern {
             }
         }
     }
-}
-
-internal fun parseXML(xmlData: String): Document {
-    val builderFactory = DocumentBuilderFactory.newInstance()
-    val builder = builderFactory.newDocumentBuilder()
-
-    return builder.parse(InputSource(StringReader(xmlData)))
 }
 
 internal fun generateValue(key: String, value: String, resolver: Resolver): String {

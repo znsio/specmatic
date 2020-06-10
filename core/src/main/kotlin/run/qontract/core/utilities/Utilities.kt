@@ -19,10 +19,10 @@ fun readFile(filePath: String): String {
     return File(filePath).readText().trim()
 }
 
-@Throws(ParserConfigurationException::class, SAXException::class, IOException::class)
 fun parseXML(xmlData: String): Document {
     val builderFactory = DocumentBuilderFactory.newInstance()
     val builder = builderFactory.newDocumentBuilder()
+    builder.setErrorHandler(null)
     return builder.parse(InputSource(StringReader(xmlData)))
 }
 

@@ -3,6 +3,7 @@ package run.qontract.conversions
 import run.qontract.core.*
 import run.qontract.core.pattern.*
 import run.qontract.core.utilities.jsonStringToValueMap
+import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.*
 import run.qontract.mock.ScenarioStub
 import run.qontract.nullLog

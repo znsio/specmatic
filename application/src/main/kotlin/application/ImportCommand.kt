@@ -45,21 +45,21 @@ class ImportCommand : Callable<Unit> {
             null -> println(gherkin)
             else -> File(outputFile).let {
                 val tag = if(hostAndPort.isNotEmpty()) "-${hostAndPort.replace(":", "-")}" else ""
-                val taggedFile = fileWithTag(it, tag)
 
                 when {
-                    taggedFile.isFile || !it.exists() -> {
-                        it.writeText(gherkin)
-                        println("Written to file ${it.path}")
-                    }
                     it.isDirectory -> {
-                        val dir = it.absoluteFile.parentFile.path.removeSuffix(File.pathSeparator)
+                        val dir = it.absoluteFile.parentFile.path.removeSuffix(File.separator)
                         val name = inputFile.nameWithoutExtension
                         val extension = QONTRACT_EXTENSION
 
-                        val outputPath = "$dir${File.pathSeparator}$name$tag.$extension"
-                        fileWithTag(File(outputPath), tag).writeText(gherkin)
-                        println("Written to file $outputPath")
+                        val outputPath = "$dir${File.separator}$name.$extension"
+                        val withTag = fileWithTag(File(outputPath), tag)
+                        withTag.writeText(gherkin)
+                        println("Written to file ${withTag.path}")
+                    }
+                    else -> {
+                        fileWithTag(it, tag).writeText(gherkin)
+                        println("Written to file ${fileWithTag(it, tag).path}")
                     }
                 }
             }
@@ -72,7 +72,7 @@ class ImportCommand : Callable<Unit> {
 }
 
 private fun fileWithTag(file: File, tag: String): File {
-    val taggedFilePath = "${file.absoluteFile.parentFile.path.removeSuffix(File.pathSeparator)}${File.pathSeparator}${file.nameWithoutExtension}$tag${file.extension}"
+    val taggedFilePath = "${file.absoluteFile.parentFile.path.removeSuffix(File.separator)}${File.separator}${file.nameWithoutExtension}$tag.${file.extension}"
     return File(taggedFilePath)
 }
 

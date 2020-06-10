@@ -50,7 +50,7 @@ data class FailureReport(val breadCrumbs: List<String> = emptyList(), val errorM
 
 fun mismatchResult(expected: String, actual: String): Result.Failure = Result.Failure("Expected $expected, actual was $actual")
 fun mismatchResult(expected: String, actual: Value?): Result.Failure = mismatchResult(expected, valueError(actual) ?: "null")
-fun mismatchResult(expected: Value, actual: Value?): Result = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "")
+fun mismatchResult(expected: Value, actual: Value?): Result = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "nothing")
 fun mismatchResult(expected: Pattern, actual: String): Result.Failure = mismatchResult(expected.typeName, actual)
 fun mismatchResult(pattern: Pattern, sampleData: Value?): Result.Failure = mismatchResult(pattern, sampleData?.toStringValue() ?: "null")
 fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern): Result.Failure {

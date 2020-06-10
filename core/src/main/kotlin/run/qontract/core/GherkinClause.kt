@@ -56,7 +56,7 @@ fun toClause(key: String, type: Pattern): GherkinClause {
 
     val table = when (type) {
         is TabularPattern -> patternMapToString(type.pattern)
-        else -> "  | $key | ${type.pattern} |"
+        else -> "  | ${key.replace("|", "\\|")} | ${type.pattern.toString().replace("|", "\\|")} |"
     }
 
     return GherkinClause("$title\n$table", Given)
@@ -64,7 +64,7 @@ fun toClause(key: String, type: Pattern): GherkinClause {
 
 private fun patternMapToString(json: Map<String, Pattern>): String {
     return json.entries.joinToString("\n") {
-        "  | ${it.key} | ${it.value.pattern} |"
+        "  | ${it.key.replace("|", "\\|")} | ${it.value.pattern.toString().replace("|", "\\|")} |"
     }
 }
 
@@ -99,8 +99,8 @@ fun toGherkinScenario(scenarioName: String, declarations: Pair<List<GherkinClaus
     val scenarioGherkin = when {
         exampleDeclaration.examples.isNotEmpty() -> {
             val entries = exampleDeclaration.examples.entries.toList()
-            val heading = """| ${entries.joinToString(" | ") { it.key }} |"""
-            val firstRow = """| ${entries.joinToString(" | ") { it.value }} |"""
+            val heading = """| ${entries.joinToString(" | ") { it.key.replace("|", "\\|") }} |"""
+            val firstRow = """| ${entries.joinToString(" | ") { it.value.replace("|", "\\|") }} |"""
 
             "$statementString\n\nExamples:\n$heading\n$firstRow"
         }

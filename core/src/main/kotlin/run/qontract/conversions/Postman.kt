@@ -60,9 +60,10 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<NamedStub> {
         val (baseURL, httpRequest) = postmanItemRequest(request)
 
         val response = try {
+            println("Using base url $baseURL")
             HttpClient(baseURL, nullLog).execute(httpRequest)
         } catch (e: Throwable) {
-            println("Failed to generate a response for the Postman request.")
+            println("  Failed to generate a response for the Postman request.")
             throw e
         }
 
@@ -70,7 +71,7 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<NamedStub> {
 
         listOf(baseNamedStub).plus(namedStubsFromResponses)
     } catch (e: Throwable) {
-        println("Exception thrown when processing Postman scenario \"$scenarioName\": ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
+        println("  Exception thrown when processing Postman scenario \"$scenarioName\": ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
         emptyList()
     }
 }
@@ -167,8 +168,8 @@ fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpRequest> {
 
 private fun toURL(urlData: Value): URL {
     return URI.create(when(urlData) {
-        is JSONObjectValue -> urlData.jsonObject.getValue("raw").toStringValue()
-        else -> urlData.toStringValue()
+        is JSONObjectValue -> urlData.jsonObject.getValue("raw").toStringValue().trim()
+        else -> urlData.toStringValue().trim()
     }).toURL()
 }
 

@@ -5,19 +5,14 @@ import run.qontract.core.pattern.*
 data class TypeDeclaration(val typeValue: String, val types: Map<String, Pattern> = emptyMap())
 
 fun convergeTypeDeclarations(accumulator: TypeDeclaration, newPattern: TypeDeclaration): TypeDeclaration {
-    return try {
-        val differences = accumulator.types.filterKeys { it !in newPattern.types }.plus(newPattern.types.filterKeys { it !in accumulator.types })
+    val differences = accumulator.types.filterKeys { it !in newPattern.types }.plus(newPattern.types.filterKeys { it !in accumulator.types })
 
-        val similarities = accumulator.types.filterKeys { it in newPattern.types }.mapValues {
-            val (pattern1, pattern2) = listOf(accumulator, newPattern).map { typeDeclaration -> typeDeclaration.types.getValue(it.key) as TabularPattern }
-            converge(pattern1, pattern2)
-        }
-
-        TypeDeclaration(accumulator.typeValue, differences.plus(similarities))
-    } catch(e: ShortCircuitException) {
-        println(e.localizedMessage)
-        accumulator
+    val similarities = accumulator.types.filterKeys { it in newPattern.types }.mapValues {
+        val (pattern1, pattern2) = listOf(accumulator, newPattern).map { typeDeclaration -> typeDeclaration.types.getValue(it.key) as TabularPattern }
+        converge(pattern1, pattern2)
     }
+
+    return TypeDeclaration(accumulator.typeValue, differences.plus(similarities))
 }
 
 fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPattern {
@@ -41,7 +36,10 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
             isNull(val1.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val2.pattern.trim()))}?)")
             isNull(val2.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val1.pattern.trim()))}?)")
             oneIsEmptyArray(val1.pattern, val2.pattern) -> selectConcreteArrayType(val1.pattern, val2.pattern)
-            else -> throw(ShortCircuitException("Found two different types (${val1.pattern} and ${val2.pattern}) in one of the lists, can't converge on a common type for it"))
+            else -> {
+                println("Found two different types (${val1.pattern} and ${val2.pattern}) in one of the lists, can't converge on a common type for it. Choosing ${val1.pattern} for now.")
+                val1
+            }
         }
     }
 

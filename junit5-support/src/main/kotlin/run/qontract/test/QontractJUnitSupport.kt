@@ -80,9 +80,8 @@ open class QontractJUnitSupport {
                         val result: Result = try {
                             httpClient.setServerState(it.serverState)
                             response = httpClient.execute(request)
-                            when (response.status) {
-                                400 -> Result.Failure(response.body?.toStringValue()
-                                        ?: "").also { failureResult -> failureResult.updateScenario(it) }
+                            when(response.headers.getOrDefault("X-Qontract-Result", "success")) {
+                                "failure" -> Result.Failure(response.body?.toStringValue() ?: "").updateScenario(it)
                                 else -> it.matches(response)
                             }
                         } catch (exception: Throwable) {

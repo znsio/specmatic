@@ -158,8 +158,6 @@ fun isLookupRowPattern(token: String): Boolean {
     }
 }
 
-private fun penultimate(parts: List<String>) = parts[parts.size - 2]
-
 fun parsedJSONStructure(content: String): Value {
     return content.trim().let {
         when {
@@ -175,7 +173,7 @@ fun parsedValue(content: String?): Value {
         when {
             it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
             it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
-            it.startsWith("<") -> XMLValue(it)
+            it.startsWith("<") -> try { XMLValue(it) } catch(e: Throwable) { StringValue(it)}
             else -> StringValue(it)
         }
     } ?: EmptyString

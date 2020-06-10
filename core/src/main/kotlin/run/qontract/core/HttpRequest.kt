@@ -185,12 +185,6 @@ fun toGherkinClauses(request: HttpRequest): Triple<List<GherkinClause>, Map<Stri
     }
 }
 
-fun typeDeclarationsToGherkin(typeDeclarations: Map<String, TypeDeclaration>) =
-        typeDeclarations.entries.flatMap { typeDeclaration -> typeDeclaration.value.types.map { toClause(it.key, it.value) } }
-
-fun typesToGherkin(types: Map<String, Pattern>) =
-        types.entries.map { toClause(it.key, it.value) }
-
 fun stringMapToValueMap(stringStringMap: Map<String, String>) =
         stringStringMap.mapValues { guessType(parsedValue(it.value)) }
 

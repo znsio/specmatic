@@ -9,6 +9,9 @@ import java.util.*
 
 data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) : Pattern, EncompassableList {
     override fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> {
+        if(count > 0 && pattern.isEmpty())
+            throw ContractException("The lengths of the expected and actual array patterns don't match.")
+
         if(count > pattern.size && pattern.last() !is RestPattern)
             throw ContractException("The lengths of the expected and actual array patterns don't match.")
 
@@ -25,7 +28,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
         return getEncompassableList(resolver)
     }
 
-    override fun isEndless(): Boolean = pattern.last() is RestPattern
+    override fun isEndless(): Boolean = pattern.isNotEmpty() && pattern.last() is RestPattern
 
     fun getEncompassableList(resolver: Resolver): List<Pattern> {
         return _getEncompassableList(pattern, resolver)

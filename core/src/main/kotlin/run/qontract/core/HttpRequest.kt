@@ -156,7 +156,7 @@ fun requestFromJSON(json: Map<String, Value>) =
 
                         when {
                             multiPartSpec.containsKey("content") -> MultiPartContentValue(name, multiPartSpec.getValue("content"))
-                            else -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringValue(), multiPartSpec.getValue("contentType").toStringValue(), multiPartSpec["contentEncoding"]?.toStringValue())
+                            else -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringValue(), multiPartSpec["contentType"]?.toStringValue(), multiPartSpec["contentEncoding"]?.toStringValue())
                         }
                     }
 
@@ -221,11 +221,11 @@ fun firstLineToGherkin(request: HttpRequest, types: Map<String, Pattern>, exampl
 
 fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>, types: Map<String, Pattern>, exampleDeclaration: ExampleDeclaration): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
     return multiPartFormData.fold(Triple(emptyList(), types, exampleDeclaration)) { acc, part ->
-        val (clauses, types, examples) = acc
+        val (clauses, newTypes, examples) = acc
 
         when(part) {
             is MultiPartContentValue -> {
-                val (typeDeclaration, newExamples) = part.content.typeDeclarationWithKey(part.name, types, examples)
+                val (typeDeclaration, newExamples) = part.content.typeDeclarationWithKey(part.name, newTypes, examples)
 
                 val newGherkinClause = GherkinClause("request-part ${part.name} ${typeDeclaration.typeValue}", When)
                 Triple(clauses.plus(newGherkinClause), typeDeclaration.types, examples.plus(newExamples))
@@ -234,7 +234,7 @@ fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>, 
                 val contentType = part.contentType
                 val contentEncoding = contentType?.let { part.contentEncoding }
 
-                Triple(clauses.plus(GherkinClause("request-part ${part.name} ${part.filename} $contentType $contentEncoding".trim(), When)), types, examples)
+                Triple(clauses.plus(GherkinClause("request-part ${part.name} ${part.filename} $contentType $contentEncoding".trim(), When)), newTypes, examples)
             }
         }
     }

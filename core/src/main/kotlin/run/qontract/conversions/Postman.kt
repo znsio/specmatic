@@ -11,9 +11,9 @@ import run.qontract.test.HttpClient
 import java.net.URI
 import java.net.URL
 
-fun hostAndPort(uri: String): String {
+fun hostAndPort(uriString: String): String {
     return try {
-        val uri = URI.create(uri)
+        val uri = URI.create(uriString)
         val port: String = if(uri.port > 0) ":${uri.port}" else ""
         "${uri.host}$port"
     } catch(e: Throwable) {
@@ -85,7 +85,7 @@ private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<
     return try {
         val (baseURL, httpRequest) = postmanItemRequest(request)
 
-        println("Using base url $baseURL")
+        println("  Using base url $baseURL")
         val response = HttpClient(baseURL, nullLog).execute(httpRequest)
 
         listOf(Pair(baseURL, NamedStub(scenarioName, ScenarioStub(httpRequest, response))))
@@ -185,11 +185,18 @@ fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpRequest> {
     return Pair(baseURL, httpRequest)
 }
 
-private fun toURL(urlData: Value): URL {
-    return URI.create(when(urlData) {
-        is JSONObjectValue -> urlData.jsonObject.getValue("raw").toStringValue().trim()
-        else -> urlData.toStringValue().trim()
-    }).toURL()
+private fun toURL(urlValue: Value): URL {
+    return when(urlValue) {
+        is JSONObjectValue -> urlValue.jsonObject.getValue("raw")
+        else -> urlValue
+    }.toStringValue().trim().let {
+        if(it.startsWith("http://") || it.startsWith("https://"))
+            it
+        else
+            "http://$it"
+    }.let {
+        URI.create(it).toURL()
+    }
 }
 
 fun guessType(value: Value): Value = when(value) {

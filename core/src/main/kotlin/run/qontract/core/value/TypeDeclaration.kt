@@ -32,10 +32,13 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
 
         when {
             isNull(val1.pattern) && isNull(val2.pattern) -> val1
-            withoutVariable(withoutOptionality(withoutPatternDelimiters(val1.pattern))) == withoutVariable(withoutOptionality(withoutPatternDelimiters(val2.pattern))) -> val1
+            sameBaseType(val1, val2) -> when {
+                isOptional(withoutPatternDelimiters(val1.pattern)) -> val1
+                else -> val2
+            }
             isNull(val1.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val2.pattern.trim()))}?)")
             isNull(val2.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val1.pattern.trim()))}?)")
-            oneIsEmptyArray(val1.pattern, val2.pattern) -> selectConcreteArrayType(val1.pattern, val2.pattern)
+            isEmptyArrayAndRepeatingType(val1.pattern, val2.pattern) -> selectConcreteArrayType(val1.pattern, val2.pattern)
             else -> {
                 println("Found two different types (${val1.pattern} and ${val2.pattern}) in one of the lists, can't converge on a common type for it. Choosing ${val1.pattern} for now.")
                 val1
@@ -51,6 +54,9 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
 
     return TabularPattern(converged)
 }
+
+private fun sameBaseType(val1: DeferredPattern, val2: DeferredPattern) =
+        withoutVariable(withoutOptionality(withoutPatternDelimiters(val1.pattern))) == withoutVariable(withoutOptionality(withoutPatternDelimiters(val2.pattern)))
 
 fun isNull(type: String): Boolean {
     return when {
@@ -76,7 +82,7 @@ fun selectConcreteArrayType(type1: String, type2: String): DeferredPattern {
     })
 }
 
-fun oneIsEmptyArray(type1: String, type2: String): Boolean {
+fun isEmptyArrayAndRepeatingType(type1: String, type2: String): Boolean {
     fun cleanup(type: String): String = "(${withoutOptionality(withoutPatternDelimiters(type.trim()))})"
     return (isRepeatingPattern(cleanup(type1)) && type2 == "[]") || (type1 == "[]" && isRepeatingPattern(cleanup(type2)))
 }

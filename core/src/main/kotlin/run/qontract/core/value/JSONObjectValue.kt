@@ -1,6 +1,9 @@
 package run.qontract.core.value
 
-import run.qontract.core.pattern.*
+import run.qontract.core.pattern.DeferredPattern
+import run.qontract.core.pattern.JSONObjectPattern
+import run.qontract.core.pattern.Pattern
+import run.qontract.core.pattern.TabularPattern
 import run.qontract.core.utilities.valueMapToPrettyJsonString
 
 data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Value {
@@ -21,7 +24,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
             DeferredPattern(it.value.pattern)
         })
 
-        val newTypeName = getNewTypeName(key.capitalize(), newTypes.keys)
+        val newTypeName = getNewName(key.capitalize(), newTypes.keys)
 
         val typeDeclaration = TypeDeclaration("($newTypeName)", newTypes.plus(newTypeName to newType))
 
@@ -56,11 +59,11 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     }
 }
 
-fun getNewTypeName(typeName: String, keys: Collection<String>): String {
+internal fun getNewName(typeName: String, keys: Collection<String>): String {
     return generateSequence(typeName) { "${it}_" }.first { it !in keys }
 }
 
-fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map<String, Pattern>, examples: ExampleDeclaration): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclaration> {
+internal fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map<String, Pattern>, examples: ExampleDeclaration): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclaration> {
     return jsonObject
             .entries
             .fold(Triple(emptyMap(), types, examples)) { acc, entry ->

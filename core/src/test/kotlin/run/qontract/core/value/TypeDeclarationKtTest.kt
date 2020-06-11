@@ -8,7 +8,7 @@ import run.qontract.core.pattern.parsedValue
 
 internal class TypeDeclarationKtTest {
     @Test
-    fun `improved support for converging a list with an empty list`() {
+    fun `ability to converge a list with an empty list`() {
         val emptyList = parsedValue("""{"list": []}""")
         val oneElementList = parsedValue("""{"list": [1]}""")
 
@@ -22,4 +22,21 @@ internal class TypeDeclarationKtTest {
         assertThat((convergedTheOtherWay.types.getValue("List") as TabularPattern).pattern.getValue("list")).isEqualTo(DeferredPattern("(number*)"))
     }
 
+    @Test
+    fun `primitive with key should create a new variable if it already exists for an example`() {
+        val declaration = primitiveTypeDeclarationWithKey("name", emptyMap(), ExampleDeclaration(mapOf("name" to "John Doe")), "string", "Jane Doe")
+        assertThat(declaration).isEqualTo(Pair(TypeDeclaration("(name_: string)"), ExampleDeclaration(mapOf("name" to "John Doe", "name_" to "Jane Doe"))))
+    }
+
+    @Test
+    fun `primitive with key should not create a new variable if an example does not exist with that name`() {
+        val declaration = primitiveTypeDeclarationWithKey("name", emptyMap(), ExampleDeclaration(emptyMap()), "string", "Jane Doe")
+        assertThat(declaration).isEqualTo(Pair(TypeDeclaration("(string)"), ExampleDeclaration(mapOf("name" to "Jane Doe"))))
+    }
+
+    @Test
+    fun `primitive without key should create a new variable even if an example does not exist with that name`() {
+        val declaration = primitiveTypeDeclarationWithoutKey("name", emptyMap(), ExampleDeclaration(emptyMap()), "string", "Jane Doe")
+        assertThat(declaration).isEqualTo(Pair(TypeDeclaration("(name: string)"), ExampleDeclaration(mapOf("name" to "Jane Doe"))))
+    }
 }

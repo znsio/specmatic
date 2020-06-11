@@ -81,13 +81,11 @@ fun oneIsEmptyArray(type1: String, type2: String): Boolean {
     return (isRepeatingPattern(cleanup(type1)) && type2 == "[]") || (type1 == "[]" && isRepeatingPattern(cleanup(type2)))
 }
 
-class ShortCircuitException(message: String) : Exception(message)
-
 fun primitiveTypeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
     val (newTypeName, exampleKey) = when (key) {
         !in examples.examples -> Pair(displayableType, key)
         else -> {
-            val exampleKey = getNewTypeName(key, examples.examples.keys)
+            val exampleKey = getNewName(key, examples.examples.keys)
             Pair("$exampleKey: ${withoutPatternDelimiters(displayableType)}", exampleKey)
         }
     }
@@ -99,7 +97,7 @@ fun primitiveTypeDeclarationWithoutKey(key: String, types: Map<String, Pattern>,
     val (newTypeName, exampleKey) = when (key) {
         !in examples.examples -> Pair("$key: $displayableType", key)
         else -> {
-            val exampleKey = getNewTypeName(key, examples.examples.keys)
+            val exampleKey = getNewName(key, examples.examples.keys)
             Pair("$exampleKey: ${withoutPatternDelimiters(displayableType)}", exampleKey)
         }
     }

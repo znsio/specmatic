@@ -98,14 +98,19 @@ fun toGherkinScenario(scenarioName: String, declarations: Pair<List<GherkinClaus
 
     val scenarioGherkin = when {
         exampleDeclaration.examples.isNotEmpty() -> {
-            val entries = exampleDeclaration.examples.entries.toList()
-            val heading = """| ${entries.joinToString(" | ") { it.key.replace("|", "\\|") }} |"""
-            val firstRow = """| ${entries.joinToString(" | ") { it.value.replace("|", "\\|") }} |"""
-
-            "$statementString\n\nExamples:\n$heading\n$firstRow"
+            val examplesString = toExampleGherkinString(exampleDeclaration)
+            "$statementString\n\n$examplesString"
         }
         else -> statementString
     }
 
     return withScenarioClause(scenarioName, scenarioGherkin)
+}
+
+internal fun toExampleGherkinString(exampleDeclaration: ExampleDeclaration): String {
+    val entries = exampleDeclaration.examples.entries.toList()
+    val heading = """| ${entries.joinToString(" | ") { it.key.replace("|", "\\|") }} |"""
+    val firstRow = """| ${entries.joinToString(" | ") { it.value.replace("|", "\\|") }} |"""
+
+    return "Examples:\n$heading\n$firstRow"
 }

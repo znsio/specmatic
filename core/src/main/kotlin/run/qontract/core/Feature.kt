@@ -9,8 +9,8 @@ import run.qontract.core.pattern.*
 import run.qontract.core.pattern.Examples.Companion.examplesFrom
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.*
-import run.qontract.mock.ScenarioStub
 import run.qontract.mock.NoMatchingScenario
+import run.qontract.mock.ScenarioStub
 import run.qontract.test.TestExecutor
 import java.net.URI
 
@@ -356,10 +356,10 @@ fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature(stub.name, stub
 private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, ExampleDeclaration> {
     return when (namedStub.stub.kafkaMessage) {
         null -> {
-            println("NAME: ${namedStub.name}")
-            println("REQUEST: ${namedStub.stub.request.toLogString()}")
-            println("=================")
-            println("RESPONSE: ${namedStub.stub.response.toLogString()}")
+//            println("NAME: ${namedStub.name}")
+//            println("REQUEST: ${namedStub.stub.request.toLogString()}")
+//            println("=================")
+//            println("RESPONSE: ${namedStub.stub.response.toLogString()}")
 
             val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
 

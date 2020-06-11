@@ -2,9 +2,11 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.GherkinSection.Given
 import run.qontract.core.GherkinSection.When
-import run.qontract.core.pattern.*
+import run.qontract.core.pattern.DeferredPattern
+import run.qontract.core.pattern.TabularPattern
+import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.*
 
@@ -226,6 +228,24 @@ internal class HttpRequestKtTest {
         assertThat(clauses).hasSize(2)
         assertThat(clauses).contains(GherkinClause("POST /customer?one=(string)", When))
         assertThat(clauses).contains(GherkinClause("request-part one (one_: string)", When))
+    }
+
+    @Test
+    fun `when generating the request from JSON contentType of multipart form data should be optional`() {
+        val requestStubData = parsedJSONStructure("""
+        {
+            "method": "POST",
+            "path": "/",
+            "multipart-formdata": [
+                {"name": "name", "filename": "@test.csv"}
+            ]
+        }
+        """) as JSONObjectValue
+
+        val request = requestFromJSON(requestStubData.jsonObject)
+        assertThat(request.multiPartFormData.single().name).isEqualTo("name")
+        val filePart = request.multiPartFormData.single() as MultiPartFileValue
+        assertThat(filePart.filename).isEqualTo("@test.csv")
     }
 }
 

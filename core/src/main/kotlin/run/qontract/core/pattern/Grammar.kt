@@ -170,11 +170,15 @@ fun parsedJSONStructure(content: String): Value {
 
 fun parsedValue(content: String?): Value {
     return content?.trim()?.let {
-        when {
-            it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
-            it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
-            it.startsWith("<") -> try { XMLValue(it) } catch(e: Throwable) { StringValue(it)}
-            else -> StringValue(it)
+        try {
+            when {
+                it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
+                it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
+                it.startsWith("<") -> XMLValue(it)
+                else -> StringValue(it)
+            }
+        } catch(e: Throwable) {
+            StringValue(it)
         }
     } ?: EmptyString
 }

@@ -186,18 +186,33 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
         }
     }
 
+    private fun newBasedOn(jsonPattern: List<MultiPartFormDataPattern>, row: Row, resolver: Resolver): List<List<MultiPartFormDataPattern>> {
+        val values = jsonPattern.mapIndexed { index, pattern ->
+            attempt(breadCrumb = "[$index]") {
+                pattern.newBasedOn(row, resolver)
+            }
+        }
+
+        return multipleValidValues(values)
+    }
+
+    private fun multipleValidValues(values: List<List<MultiPartFormDataPattern>>): List<List<MultiPartFormDataPattern>> {
+        if(values.isEmpty())
+            return listOf(emptyList())
+
+        val value: List<MultiPartFormDataPattern> = values.last()
+        val subLists = multipleValidValues(values.dropLast(1))
+
+        return subLists.map { list -> list.plus(value) }
+    }
+
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
         return attempt(breadCrumb = "REQUEST") {
             val newURLMatchers = urlMatcher?.newBasedOn(row, resolver) ?: listOf<URLMatcher?>(null)
             val newBodies = attempt(breadCrumb = "BODY") { body.newBasedOn(row, resolver) }
             val newHeadersPattern = headersPattern.newBasedOn(row, resolver)
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
-            val newFormDataPartLists = multiPartFormDataPattern.map { it.newBasedOn(row, resolver) }.let {
-                if(it.isEmpty()) {
-                    listOf(multiPartFormDataPattern)
-                }
-                else it
-            }
+            val newFormDataPartLists = newBasedOn(multiPartFormDataPattern, row, resolver)
 
             newURLMatchers.flatMap { newURLMatcher ->
                 newBodies.flatMap { newBody ->

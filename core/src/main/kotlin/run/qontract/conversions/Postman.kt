@@ -54,10 +54,6 @@ fun stubsFromPostmanCollection(postmanContent: String): PostmanCollection {
         else -> "New Feature"
     }
     
-    items.list.map { it as JSONObjectValue }.map { item ->
-        postmanItemToStubs(item)
-    }
-
     return PostmanCollection(name, items.list.map { it as JSONObjectValue }.map { item ->
         postmanItemToStubs(item)
     }.flatten())
@@ -76,23 +72,25 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<String, NamedSt
 
     return try {
         val responses = item.getJSONArray("response")
-        val namedStubsFromResponses = namedStubsFromPostmanResponses(responses)
+        val namedStubsFromSavedResponses = namedStubsFromPostmanResponses(responses)
 
-        val (baseURL, httpRequest) = postmanItemRequest(request)
-
-        val response = try {
-            println("Using base url $baseURL")
-            HttpClient(baseURL, nullLog).execute(httpRequest)
-        } catch (e: Throwable) {
-            println("  Failed to generate a response for the Postman request.")
-            throw e
-        }
-
-        val baseNamedStub = Pair(baseURL, NamedStub(scenarioName, ScenarioStub(httpRequest, response)))
-
-        listOf(baseNamedStub).plus(namedStubsFromResponses)
+        baseNamedStub(request, scenarioName).plus(namedStubsFromSavedResponses)
     } catch (e: Throwable) {
         println("  Exception thrown when processing Postman scenario \"$scenarioName\": ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
+        emptyList()
+    }
+}
+
+private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<Pair<String, NamedStub>> {
+    return try {
+        val (baseURL, httpRequest) = postmanItemRequest(request)
+
+        println("Using base url $baseURL")
+        val response = HttpClient(baseURL, nullLog).execute(httpRequest)
+
+        listOf(Pair(baseURL, NamedStub(scenarioName, ScenarioStub(httpRequest, response))))
+    } catch (e: Throwable) {
+        println("  Failed to generate a response for the Postman request.")
         emptyList()
     }
 }
@@ -195,12 +193,16 @@ private fun toURL(urlData: Value): URL {
 }
 
 fun guessType(value: Value): Value = when(value) {
-    is StringValue -> when {
-        isNumber(value) -> NumberValue(convertToNumber(value.string))
-        value.string.toLowerCase() in listOf("true", "false") -> BooleanValue(value.string.toLowerCase().toBoolean())
-        value.string.startsWith("{") || value.string.startsWith("[") -> parsedJSONStructure(value.string)
-        value.string.startsWith("<") -> XMLValue(parseXML(value.string))
-        else -> value
+    is StringValue -> try {
+        when {
+            isNumber(value) -> NumberValue(convertToNumber(value.string))
+            value.string.toLowerCase() in listOf("true", "false") -> BooleanValue(value.string.toLowerCase().toBoolean())
+            value.string.startsWith("{") || value.string.startsWith("[") -> parsedJSONStructure(value.string)
+            value.string.startsWith("<") -> XMLValue(parseXML(value.string))
+            else -> value
+        }
+    } catch(e: Throwable) {
+        value
     }
     else -> value
 }

@@ -14,6 +14,9 @@ import io.ktor.util.toMap
 import io.ktor.utils.io.charsets.Charset
 import io.ktor.utils.io.streams.asInput
 import kotlinx.coroutines.runBlocking
+import org.apache.http.conn.ssl.NoopHostnameVerifier
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy
+import org.apache.http.ssl.SSLContextBuilder
 import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
@@ -31,6 +34,18 @@ import java.util.*
 
 class HttpClient(private val baseURL: String, private val log: (event: String) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(io.ktor.client.engine.apache.Apache) {
     expectSuccess = false
+
+    engine {
+        customizeClient {
+            setSSLContext(
+                    SSLContextBuilder
+                            .create()
+                            .loadTrustMaterial(TrustSelfSignedStrategy())
+                            .build()
+            )
+            setSSLHostnameVerifier(NoopHostnameVerifier())
+        }
+    }
 }) : TestExecutor {
     private val serverStateURL = "/_state_setup"
 

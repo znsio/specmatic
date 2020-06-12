@@ -34,27 +34,36 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             return MatchFailure(Failure("The contract expected no multipart data, but the request contained ${httpRequest.multiPartFormData.size} parts.", breadCrumb = "MULTIPART-FORMDATA"))
         }
 
-        if (multiPartFormDataPattern.size != httpRequest.multiPartFormData.size) {
-            return MatchFailure(Failure("The contract expected ${multiPartFormDataPattern.size} parts, but the request contained ${httpRequest.multiPartFormData.size} parts.", breadCrumb = "MULTIPART-FORMDATA"))
-        }
-
-        val results = multiPartFormDataPattern.mapIndexed { index, type ->
+        val results = multiPartFormDataPattern.map { type ->
             val results = httpRequest.multiPartFormData.map { value ->
-                when (val result = type.matches(value, resolver)) {
-                    is Success -> Pair(value, result)
-                    is Failure -> Pair(value, result.breadCrumb(index.toString()))
-                }
+                type.matches(value, resolver)
             }
 
-            results.find { (_, result) -> result is Success }?.let { listOf(it) } ?: results
+            results.find { it is Success } ?: results.find { it is Failure && !it.fluff }?.breadCrumb(type.name) ?: Failure("The part named ${type.name} was not found.", breadCrumb = type.name)
         }
 
-        if (results.any { it.first().second !is Success }) {
-            val reason = results.flatten().joinToString("\n\n") { (value, result) ->
-                "${value.toDisplayableValue()}\n${resultReport(result)}".prependIndent("  ")
+        if (results.any { it !is Success }) {
+            val reason = results.filter { it !is Success }.joinToString("\n\n") {
+                resultReport(it).prependIndent("  ")
             }
 
-            return MatchFailure(Failure("The multipart data in the request did not match the contract:\n$reason", null, "MULTIPART-FORMDATA"))
+            return MatchFailure(Failure("The multipart data in the request did not match the contract:\n$reason", breadCrumb = "MULTIPART-FORMDATA"))
+        }
+
+        val typeKeys = multiPartFormDataPattern.map { withoutOptionality(it.name) }.sorted()
+        val valueKeys = httpRequest.multiPartFormData.map { it.name }.sorted()
+
+        println(typeKeys.joinToString(", "))
+        println(valueKeys.joinToString(", "))
+
+        if(typeKeys != valueKeys) {
+            val missingInType = valueKeys.filter { it !in typeKeys }
+            if(missingInType.isNotEmpty())
+                return MatchFailure(Failure("Some parts in the request were missing from the contract. Their names are $missingInType.", breadCrumb = "MULTIPART-FORMDATA"))
+
+            val missingInValue = typeKeys.filter { it !in valueKeys }.joinToString(", ")
+            if(missingInValue.isNotEmpty())
+                return MatchFailure(Failure("Some parts in the contract were missing from the request. Their names are $missingInValue.", breadCrumb = "MULTIPART-FORMDATA"))
         }
 
         return MatchSuccess(parameters)

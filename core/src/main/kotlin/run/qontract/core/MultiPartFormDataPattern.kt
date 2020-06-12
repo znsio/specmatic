@@ -22,15 +22,9 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
             MultiPartContentValue(name, content.generate(resolver))
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
-        return _matches(value, resolver).let {
-            if (it is Failure) it.breadCrumb("MULTIPART-FORMDATA") else it
-        }
-    }
-
-    private fun _matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
         return when {
-            value !is MultiPartContentValue -> Failure("The contract expected a file, got a non-file part.")
-            name != value.name -> Failure("The contract expected part name to be $name, but got ${value.name}", breadCrumb = "name")
+            name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}", fluff = true)
+            value !is MultiPartContentValue -> Failure("The contract expected content, but got a file.")
             value.content is StringValue -> {
                 try {
                     val parsedContent = try { content.parse(value.content.toStringValue(), resolver) } catch (e: Throwable) { StringValue(value.content.toStringValue()) }
@@ -46,6 +40,7 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
             }
         }
     }
+
 }
 
 data class MultiPartFilePattern(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null) : MultiPartFormDataPattern(name) {
@@ -54,19 +49,12 @@ data class MultiPartFilePattern(override val name: String, val filename: String,
             MultiPartFileValue(name, filename, contentType, contentEncoding)
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
-        return _matches(value).let {
-            if (it is Failure) it.breadCrumb("MULTIPART-FORMDATA") else it
-        }
-    }
-
-    private fun _matches(value: MultiPartFormDataValue): Result {
         return when {
+            name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}.", fluff = true)
             value !is MultiPartFileValue -> Failure("The contract expected a file, but got content instead.")
-            name != value.name -> Failure("The contract expected part name to be $name, but got ${value.name}.", breadCrumb = "name")
-            value.contentType != contentType -> Failure("The contract expected ${contentType?.let { "content type $contentType" } ?: "no content type"}, but got ${value.contentType?.let { "content type $contentType" } ?: "no content type"}.", breadCrumb = "contentType")
-            value.contentEncoding != contentEncoding -> {
-                val contentEncodingMessage = contentEncoding?.let { "content encoding $contentEncoding" }
-                        ?: "no content encoding"
+            contentType != null && value.contentType != contentType -> Failure("The contract expected ${contentType.let { "content type $contentType" }}, but got ${value.contentType?.let { "content type $value.contentType" } ?: "no content type."}.")
+            contentEncoding != null && value.contentEncoding != contentEncoding -> {
+                val contentEncodingMessage = contentEncoding.let { "content encoding $contentEncoding" }
                 val receivedContentEncodingMessage = value.contentEncoding?.let { "content encoding ${value.contentEncoding}" }
                         ?: "no content encoding"
 

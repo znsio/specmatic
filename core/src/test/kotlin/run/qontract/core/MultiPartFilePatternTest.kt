@@ -1,13 +1,10 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import run.qontract.core.Result.Failure
 import run.qontract.core.Result.Success
 import run.qontract.core.pattern.Row
-import run.qontract.core.pattern.StringPattern
-import run.qontract.core.value.StringValue
 
 internal class MultiPartFilePatternTest {
     @Test
@@ -49,6 +46,13 @@ internal class MultiPartFilePatternTest {
     fun `it should generate a new part`() {
         val pattern = MultiPartFilePattern("employeecsv", "@employee.csv", "text/csv", "gzip")
         val value = MultiPartFileValue("employeecsv", "@employee.csv", "text/csv", "gzip")
+        assertThat(pattern.matches(value, Resolver())).isInstanceOf(Success::class.java)
+    }
+
+    @Test
+    fun `value file name should not have to match the pattern filename`() {
+        val pattern = MultiPartFilePattern("employeecsv", "@employee.csv")
+        val value = MultiPartFileValue("employeecsv", "@different_filename.csv")
         assertThat(pattern.matches(value, Resolver())).isInstanceOf(Success::class.java)
     }
 }

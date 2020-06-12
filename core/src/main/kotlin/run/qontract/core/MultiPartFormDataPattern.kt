@@ -5,7 +5,6 @@ import run.qontract.core.Result.Success
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.Row
-import run.qontract.core.pattern.isPatternToken
 import run.qontract.core.value.StringValue
 
 sealed class MultiPartFormDataPattern(open val name: String) {
@@ -64,7 +63,6 @@ data class MultiPartFilePattern(override val name: String, val filename: String,
         return when {
             value !is MultiPartFileValue -> Failure("The contract expected a file, but got content instead.")
             name != value.name -> Failure("The contract expected part name to be $name, but got ${value.name}.", breadCrumb = "name")
-            value.filename.removePrefix("@") != filename.removePrefix("@") -> Failure("The contract expected filename $filename, but got ${value.filename}.", breadCrumb = "filename")
             value.contentType != contentType -> Failure("The contract expected ${contentType?.let { "content type $contentType" } ?: "no content type"}, but got ${value.contentType?.let { "content type $contentType" } ?: "no content type"}.", breadCrumb = "contentType")
             value.contentEncoding != contentEncoding -> {
                 val contentEncodingMessage = contentEncoding?.let { "content encoding $contentEncoding" }

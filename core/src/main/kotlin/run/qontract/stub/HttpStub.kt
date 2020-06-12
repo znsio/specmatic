@@ -297,9 +297,9 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List
 }
 
 fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<HttpStubData> {
-    return contractInfo.flatMap { (behaviour, mocks) ->
+    return contractInfo.flatMap { (feature, mocks) ->
         mocks.filter { it.kafkaMessage == null }.map { mock ->
-            val (resolver, scenario, httpResponse) = behaviour.matchingStubResponse(mock)
+            val (resolver, scenario, httpResponse) = feature.matchingStubResponse(mock)
             httpMockToStub(mock, scenario, httpResponse, resolver)
         }
     }

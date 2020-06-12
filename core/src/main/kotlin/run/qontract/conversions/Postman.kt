@@ -46,9 +46,10 @@ fun runTests(contract: ImportedPostmanContracts) {
         val results = feature.executeTests(HttpClient(baseURL = baseURLInfo.originalBaseURL))
 
         println("### Test result for contract \"$name\" ###")
-        println("Tests run: ${results.successCount + results.failureCount}, Succeeded: ${results.successCount}, Failed: ${results.failureCount}")
+        val resultReport = "${results.report().trim()}\n\n".trim()
+        val testCounts = "Tests run: ${results.successCount + results.failureCount}, Passed: ${results.successCount}, Failed: ${results.failureCount}\n\n"
+        println("$testCounts$resultReport".trim())
         println()
-        println(results.report().trim())
         println()
     } catch(e: Throwable) {
         println("Test reported an exception: ${e.localizedMessage ?: e.message ?: e.javaClass.name}")

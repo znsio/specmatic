@@ -4,10 +4,13 @@ import picocli.CommandLine.*
 import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
-import run.qontract.stub.*
 import run.qontract.mock.NoMatchingScenario
+import run.qontract.stub.*
 import java.io.File
-import java.nio.file.*
+import java.nio.file.FileSystems
+import java.nio.file.Path
+import java.nio.file.StandardWatchEventKinds
+import java.nio.file.WatchKey
 import java.util.concurrent.Callable
 
 @Command(name = "stub",

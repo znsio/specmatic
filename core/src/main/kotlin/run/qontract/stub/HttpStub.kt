@@ -33,7 +33,7 @@ import run.qontract.nullLog
 import java.io.ByteArrayOutputStream
 import java.util.*
 
-class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog) : ContractStub {
+class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false) : ContractStub {
     constructor(behaviour: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(behaviour), contractInfoToHttpExpectations(listOf(Pair(behaviour, scenarioStubs))), host, port, log)
     constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(Feature(gherkinData), scenarioStubs, host, port, log)
 
@@ -85,7 +85,7 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
     private fun serveStubResponse(call: ApplicationCall, httpRequest: HttpRequest) {
         log(">> Request Start At ${Date()}")
         log(httpRequest.toLogString("-> "))
-        val response = stubResponse(httpRequest, behaviours, httpStubs)
+        val response = stubResponse(httpRequest, behaviours, httpStubs, strictMode)
         writeAndLogResponse(call, response, log)
     }
 
@@ -216,7 +216,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
 internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
 
 internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse) {
-    val headerString = httpResponse.headers.get("Content-Type") ?: "text/plain"
+    val headerString = httpResponse.headers["Content-Type"] ?: "text/plain"
     val textContent = TextContent(httpResponse.body?.toStringValue() ?: "", ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
 
     try {
@@ -233,21 +233,34 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     }
 }
 
-fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: List<HttpStubData>): HttpResponse {
+fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: List<HttpStubData>, strictMode: Boolean): HttpResponse {
     return try {
-        when (val mock = stubs.find { (requestPattern, _, resolver) ->
-            requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)) is Result.Success
-        }) {
-            null -> {
-                val responses = behaviours.asSequence().map { it ->
-                    it.lookupResponse(httpRequest)
-                }
+        val matchResults = stubs.map {
+            val (requestPattern, _, resolver) = it
+            Pair(requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)), it)
+        }
 
-                responses.firstOrNull {
-                    it.headers.getOrDefault("X-Qontract-Result", "none") != "failure"
-                } ?: HttpResponse(400, responses.map {
-                    it.body ?: EmptyString
-                }.filter { it != EmptyString }.joinToString("\n\n"))
+        when (val mock = matchResults.find { (result, _) -> result is Result.Success }?.second) {
+            null -> {
+                when(strictMode) {
+                    true -> {
+                        val failureResults = matchResults.filter { (result, _) -> result is Result.Failure && !result.fluff }.map { it.first }
+
+                        val results = Results(failureResults.toMutableList())
+                        HttpResponse(400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue(results.report()))
+                    }
+                    else -> {
+                        val responses = behaviours.asSequence().map {
+                            it.lookupResponse(httpRequest)
+                        }
+
+                        responses.firstOrNull {
+                            it.headers.getOrDefault("X-Qontract-Result", "none") != "failure"
+                        } ?: HttpResponse(400, responses.map {
+                            it.body ?: EmptyString
+                        }.filter { it != EmptyString }.joinToString("\n\n"))
+                    }
+                }
             }
             else -> mock.third
         }

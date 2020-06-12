@@ -28,7 +28,7 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
             value.content is StringValue -> {
                 try {
                     val parsedContent = try { content.parse(value.content.toStringValue(), resolver) } catch (e: Throwable) { StringValue(value.content.toStringValue()) }
-                    content.matches(parsedContent, resolver)
+                    resolver.matchesPattern(name, content, parsedContent)
                 } catch (e: ContractException) {
                     Failure(e.report(), breadCrumb = "content")
                 } catch (e: Throwable) {

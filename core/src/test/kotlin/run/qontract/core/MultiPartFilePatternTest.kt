@@ -30,9 +30,23 @@ internal class MultiPartFilePatternTest {
 
     @Test
     fun `should not match file parts with mismatched content encoding`() {
-        val pattern = MultiPartFilePattern("employeecsv", "@employee.csv", "text/plain")
+        val pattern = MultiPartFilePattern("employeecsv", "@employee.csv", "text/plain", "identity")
         val value = MultiPartFileValue("employeecsv", "@employee.csv", "text/plain", "gzip")
         assertThat(pattern.matches(value, Resolver())).isInstanceOf(Failure::class.java)
+    }
+
+    @Test
+    fun `ignores content type in value if type is null`() {
+        val pattern = MultiPartFilePattern("employeecsv", "@employee.csv")
+        val value = MultiPartFileValue("employeecsv", "@employee.csv", "text/plain", "gzip")
+        assertThat(pattern.matches(value, Resolver())).isInstanceOf(Success::class.java)
+    }
+
+    @Test
+    fun `ignores content encoding in value if type is null`() {
+        val pattern = MultiPartFilePattern("employeecsv", "@employee.csv", "text/plain")
+        val value = MultiPartFileValue("employeecsv", "@employee.csv", "text/plain", "gzip")
+        assertThat(pattern.matches(value, Resolver())).isInstanceOf(Success::class.java)
     }
 
     @Test

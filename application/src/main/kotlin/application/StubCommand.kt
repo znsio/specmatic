@@ -41,6 +41,9 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--kafkaPort"], description = ["Port for the Kafka stub"], defaultValue = "9093", required = false)
     var kafkaPort: Int = 9093
 
+    @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
+    var strictMode: Boolean = false
+
     override fun call() = try {
         startServer()
         addShutdownHook()
@@ -117,7 +120,7 @@ class StubCommand : Callable<Unit> {
                     })
                 }
 
-                HttpStub(httpBehaviours, httpExpectations, host, port, ::consoleLog).also {
+                HttpStub(httpBehaviours, httpExpectations, host, port, ::consoleLog, strictMode).also {
                     println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
                 }
             }

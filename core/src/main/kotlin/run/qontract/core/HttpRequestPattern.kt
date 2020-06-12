@@ -53,9 +53,6 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
         val typeKeys = multiPartFormDataPattern.map { withoutOptionality(it.name) }.sorted()
         val valueKeys = httpRequest.multiPartFormData.map { it.name }.sorted()
 
-        println(typeKeys.joinToString(", "))
-        println(valueKeys.joinToString(", "))
-
         if(typeKeys != valueKeys) {
             val missingInType = valueKeys.filter { it !in typeKeys }
             if(missingInType.isNotEmpty())

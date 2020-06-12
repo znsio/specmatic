@@ -44,4 +44,14 @@ internal class MultiPartContentPatternTest {
         assertThat(patterns.single().name).isEqualTo("id")
         assertThat(patterns.single().content).isEqualTo(ExactValuePattern(NumberValue(10)))
     }
+
+    @Test
+    fun `content pattern should match value with pattern content in mock mode`() {
+        val pattern = MultiPartContentPattern("id", NumberPattern)
+        val value = MultiPartContentValue("id", StringValue("(number)"))
+
+        val mockModeResolver = Resolver(mockMode = true)
+
+        assertThat(pattern.matches(value, mockModeResolver)).isInstanceOf(Success::class.java)
+    }
 }

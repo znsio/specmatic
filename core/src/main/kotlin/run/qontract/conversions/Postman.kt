@@ -46,14 +46,19 @@ data class PostmanCollection(val name: String, val stubs: List<Pair<String, Name
 
 fun stubsFromPostmanCollection(postmanContent: String): PostmanCollection {
     val json = jsonStringToValueMap(postmanContent)
-    val items = json.getValue("item") as JSONArrayValue
 
-    val name = when {
-        json.containsKey("info") && (json.getValue("info") as JSONObjectValue).jsonObject.containsKey("name") ->
-            (json.getValue("info") as JSONObjectValue).getString("name")
-        else -> "New Feature"
-    }
-    
+    if(!json.containsKey("info")) throw Exception("This doesn't look like a v2.1.0 Postman collection.")
+
+    val info = json.getValue("info") as JSONObjectValue
+
+    val schema = info.getString("schema")
+
+    if(schema != "https://schema.getpostman.com/json/collection/v2.1.0/collection.json")
+        throw Exception("Schema $schema is not supported :-) Please export this collection in v2.1.0 format. You might have to update to the latest version of Postman.")
+
+    val name = info.getString("name")
+
+    val items = json.getValue("item") as JSONArrayValue
     return PostmanCollection(name, items.list.map { it as JSONObjectValue }.map { item ->
         postmanItemToStubs(item)
     }.flatten())

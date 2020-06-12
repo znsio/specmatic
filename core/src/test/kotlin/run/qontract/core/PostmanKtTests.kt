@@ -19,7 +19,7 @@ class PostmanKtTests {
 	"info": {
 		"_postman_id": "8bd0c42a-983a-492e-99bd-a2f1936bc02e",
 		"name": "Test API",
-		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
@@ -519,7 +519,12 @@ class PostmanKtTests {
 
     @Test
     fun `parses an items list inside postman with request and response into multiple scenarios`() {
-        val postmanString = """{"item": [{
+        val postmanString = """{
+            "info": {
+				"name": "Test collection",
+				"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+            },
+            "item": [{
 			"name": "With query",
 			"request": {
 				"method": "GET",

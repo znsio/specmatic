@@ -4,6 +4,8 @@ import application.versioning.commands.RepoCommand
 import picocli.CommandLine
 import picocli.CommandLine.*
 import run.qontract.conversions.postmanCollectionToGherkin
+import run.qontract.conversions.runTests
+import run.qontract.conversions.toFragment
 import run.qontract.core.NamedStub
 import run.qontract.core.QONTRACT_EXTENSION
 import run.qontract.core.toGherkinFeature
@@ -30,11 +32,14 @@ class ImportCommand : Callable<Unit> {
         val inputFile = File(path)
         val contracts = postmanCollectionToGherkin(inputFile.readText())
 
+        for(contract in contracts) runTests(contract)
+
         when (contracts.size) {
-            1 -> writeOut(contracts.first().first, outputFile, inputFile, "")
+            1 -> writeOut(contracts.first().gherkin, outputFile, inputFile, toFragment(contracts.first().baseURLInfo))
             else -> {
-                for((gherkin, hostAndPort, _) in contracts) {
-                    writeOut(gherkin, outputFile, inputFile, hostAndPort)
+                for(contract in contracts) {
+                    val (_, gherkin, baseURLInfo, _) = contract
+                    writeOut(gherkin, outputFile, inputFile, toFragment(baseURLInfo))
                 }
             }
         }

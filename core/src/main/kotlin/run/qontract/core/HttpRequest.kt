@@ -90,7 +90,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         val bodyString = when {
             formFields.isNotEmpty() -> formFields.map { "${it.key}=${it.value}"}.joinToString("&")
             multiPartFormData.isNotEmpty() -> {
-                multiPartFormData.mapIndexed { index, part -> part.toDisplayableValue() }.joinToString("\n")
+                multiPartFormData.map { part -> part.toDisplayableValue() }.joinToString("\n")
             }
             else -> body.toString()
         }

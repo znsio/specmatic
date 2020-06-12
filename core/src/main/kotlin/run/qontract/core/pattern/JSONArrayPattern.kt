@@ -35,7 +35,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
     }
 
     private fun _getEncompassableList(pattern: List<Pattern>, resolver: Resolver): List<Pattern> {
-        return pattern.mapIndexed { index, patternEntry ->
+        return pattern.map { patternEntry ->
             when (patternEntry) {
                 !is RestPattern -> resolvedHop(patternEntry, resolver)
                 else -> resolvedHop(patternEntry.pattern, resolver)

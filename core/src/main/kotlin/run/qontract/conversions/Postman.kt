@@ -11,38 +11,54 @@ import run.qontract.test.HttpClient
 import java.net.URI
 import java.net.URL
 
-fun hostAndPort(uriString: String): String {
-    return try {
-        val uri = URI.create(uriString)
-        val port: String = if(uri.port > 0) ":${uri.port}" else ""
-        "${uri.host}$port"
-    } catch(e: Throwable) {
-        ""
+fun hostAndPort(uriString: String): BaseURLInfo {
+    val uri = URI.create(uriString)
+    return BaseURLInfo(uri.host, uri.port, uri.scheme, uriString.removeSuffix("/"))
+}
+
+data class BaseURLInfo(val host: String, val port: Int, val scheme: String, val originalBaseURL: String)
+
+fun toFragment(baseURLInfo: BaseURLInfo): String {
+    val port: String = if(baseURLInfo.port > 0) ":${baseURLInfo.port}" else ""
+    return "${baseURLInfo.host}$port"
+}
+
+data class ImportedPostmanContracts(val name: String, val gherkin: String, val baseURLInfo: BaseURLInfo, val stubs: List<NamedStub>)
+
+fun postmanCollectionToGherkin(postmanContent: String): List<ImportedPostmanContracts> {
+    val postmanCollection = stubsFromPostmanCollection(postmanContent)
+
+    val groups = postmanCollection.stubs.groupBy { it.first }
+
+    return groups.entries.map { (baseURLInfo, stubInfo) ->
+        val collection = PostmanCollection(postmanCollection.name, stubInfo)
+        val gherkinString = toGherkinFeature(collection)
+
+        ImportedPostmanContracts(collection.name, gherkinString, baseURLInfo, postmanCollection.stubs.map { it.second })
     }
 }
 
-fun postmanCollectionToGherkin(postmanContent: String): List<Triple<String, String, List<NamedStub>>> {
-    val postmanCollection = stubsFromPostmanCollection(postmanContent)
+fun runTests(contract: ImportedPostmanContracts) {
+    val (name, gherkin, baseURLInfo, _) = contract
+    println("Testing contract \"$name\" with base URL ${baseURLInfo.originalBaseURL}")
+    try {
+        val feature = Feature(gherkin)
+        val results = feature.executeTests(HttpClient(baseURL = baseURLInfo.originalBaseURL))
 
-    return when {
-        postmanCollection.stubs.isNotEmpty() -> {
-            val groups = postmanCollection.stubs.groupBy { hostAndPort(it.first) }
-
-            groups.entries.map {
-                val collection = PostmanCollection(postmanCollection.name, it.value)
-                val gherkinString = toGherkinFeature(collection)
-
-                Triple(gherkinString, it.key, postmanCollection.stubs.map { it.second })
-            }
-        }
-        else -> emptyList()
+        println("### Test result for contract \"$name\" ###")
+        println("Tests run: ${results.successCount + results.failureCount}, Succeeded: ${results.successCount}, Failed: ${results.failureCount}")
+        println()
+        println(results.report().trim())
+        println()
+    } catch(e: Throwable) {
+        println("Test reported an exception: ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
     }
 }
 
 fun toGherkinFeature(postmanCollection: PostmanCollection): String =
         toGherkinFeature(postmanCollection.name, postmanCollection.stubs.map { it.second })
 
-data class PostmanCollection(val name: String, val stubs: List<Pair<String, NamedStub>>)
+data class PostmanCollection(val name: String, val stubs: List<Pair<BaseURLInfo, NamedStub>>)
 
 fun stubsFromPostmanCollection(postmanContent: String): PostmanCollection {
     val json = jsonStringToValueMap(postmanContent)
@@ -64,7 +80,7 @@ fun stubsFromPostmanCollection(postmanContent: String): PostmanCollection {
     }.flatten())
 }
 
-private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<String, NamedStub>> {
+private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<BaseURLInfo, NamedStub>> {
     if(!item.jsonObject.containsKey("request")) {
         val items = item.getJSONArray("item").map { it as JSONObjectValue }
         return items.flatMap { postmanItemToStubs(it) }
@@ -86,21 +102,21 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<String, NamedSt
     }
 }
 
-private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<Pair<String, NamedStub>> {
+private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<Pair<BaseURLInfo, NamedStub>> {
     return try {
         val (baseURL, httpRequest) = postmanItemRequest(request)
 
         println("  Using base url $baseURL")
         val response = HttpClient(baseURL, nullLog).execute(httpRequest)
 
-        listOf(Pair(baseURL, NamedStub(scenarioName, ScenarioStub(httpRequest, response))))
+        listOf(Pair(hostAndPort(baseURL), NamedStub(scenarioName, ScenarioStub(httpRequest, response))))
     } catch (e: Throwable) {
         println("  Failed to generate a response for the Postman request.")
         emptyList()
     }
 }
 
-fun namedStubsFromPostmanResponses(responses: List<Value>): List<Pair<String, NamedStub>> {
+fun namedStubsFromPostmanResponses(responses: List<Value>): List<Pair<BaseURLInfo, NamedStub>> {
     return responses.map {
         val responseItem = it as JSONObjectValue
 
@@ -110,7 +126,7 @@ fun namedStubsFromPostmanResponses(responses: List<Value>): List<Pair<String, Na
         val (baseURL, innerHttpRequest) = postmanItemRequest(innerRequest)
         val innerHttpResponse: HttpResponse = postmanItemResponse(responseItem)
 
-        Pair(baseURL, NamedStub(scenarioName, ScenarioStub(innerHttpRequest, innerHttpResponse)))
+        Pair(hostAndPort(baseURL), NamedStub(scenarioName, ScenarioStub(innerHttpRequest, innerHttpResponse)))
     }
 }
 

@@ -75,11 +75,10 @@ open class QontractJUnitSupport {
                         val httpClient = HttpClient("$protocol://$host:$port")
 
                         val request = it.generateHttpRequest()
-                        var response: HttpResponse? = null
 
                         val result: Result = try {
                             httpClient.setServerState(it.serverState)
-                            response = httpClient.execute(request)
+                            val response = httpClient.execute(request)
                             when(response.headers.getOrDefault("X-Qontract-Result", "success")) {
                                 "failure" -> Result.Failure(response.body?.toStringValue() ?: "").updateScenario(it)
                                 else -> it.matches(response)

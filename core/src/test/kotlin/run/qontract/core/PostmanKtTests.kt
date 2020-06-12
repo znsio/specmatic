@@ -212,7 +212,7 @@ class PostmanKtTests {
 }"""
 
         val info = postmanCollectionToGherkin(postmanContent)
-        val (gherkinString, hostAndPort, stubs) = info.first()
+        val (_, gherkinString, _, stubs) = info.first()
 
         println(gherkinString)
 

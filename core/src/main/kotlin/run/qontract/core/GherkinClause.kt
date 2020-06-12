@@ -1,6 +1,7 @@
 package run.qontract.core
 
 import run.qontract.core.GherkinSection.*
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.TabularPattern
 import run.qontract.core.pattern.withoutPatternDelimiters
@@ -56,7 +57,7 @@ fun toClause(key: String, type: Pattern): GherkinClause {
 
     val table = when (type) {
         is TabularPattern -> patternMapToString(type.pattern)
-        else -> "  | ${key.replace("|", "\\|")} | ${type.pattern.toString().replace("|", "\\|")} |"
+        else -> throw ContractException("Type not recognised: ${type.toString()}")
     }
 
     return GherkinClause("$title\n$table", Given)

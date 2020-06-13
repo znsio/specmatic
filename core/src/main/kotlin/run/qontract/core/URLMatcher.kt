@@ -137,7 +137,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         val newQueryParamsList = attempt(breadCrumb = "QUERY-PARAMS") {
             val optionalQueryParams = queryPattern.mapKeys { "${it.key}?" }
 
-            multipleValidKeys(optionalQueryParams, row) {
+            keyCombinations(optionalQueryParams, row) {
                 newBasedOn(it.mapKeys { withoutOptionality(it.key) }, row, resolver)
             }
         }

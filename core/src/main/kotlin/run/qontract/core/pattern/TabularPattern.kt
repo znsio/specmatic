@@ -29,7 +29,7 @@ data class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern 
             })
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
-        multipleValidKeys(pattern, row) { pattern ->
+        keyCombinations(pattern, row) { pattern ->
             newBasedOn(pattern, row, resolver)
         }.map { TabularPattern(it) }
 
@@ -118,7 +118,7 @@ fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): Li
             }
 }
 
-fun <ValueType> multipleValidKeys(patternMap: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
+fun <ValueType> keyCombinations(patternMap: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
     keySets(patternMap.keys.toList(), row).map { keySet ->
         patternMap.filterKeys { key -> key in keySet }
     }.map { newPattern ->

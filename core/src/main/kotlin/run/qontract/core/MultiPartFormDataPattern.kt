@@ -2,20 +2,19 @@ package run.qontract.core
 
 import run.qontract.core.Result.Failure
 import run.qontract.core.Result.Success
-import run.qontract.core.pattern.ContractException
-import run.qontract.core.pattern.Pattern
-import run.qontract.core.pattern.Row
+import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
 
 sealed class MultiPartFormDataPattern(open val name: String) {
     abstract fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern>
     abstract fun generate(resolver: Resolver): MultiPartFormDataValue
     abstract fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result
+    abstract fun nonOptional(): MultiPartFormDataPattern
 }
 
 data class MultiPartContentPattern(override val name: String, val content: Pattern) : MultiPartFormDataPattern(name) {
     override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern> {
-        return run.qontract.core.pattern.newBasedOn(row, name, content, resolver).map { newContent -> MultiPartContentPattern(name, newContent) }
+        return newBasedOn(row, name, content, resolver).map { newContent -> MultiPartContentPattern(name, newContent) }
     }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
@@ -41,6 +40,9 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
         }
     }
 
+    override fun nonOptional(): MultiPartFormDataPattern {
+        return copy(name = withoutOptionality(name))
+    }
 }
 
 data class MultiPartFilePattern(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null) : MultiPartFormDataPattern(name) {
@@ -62,5 +64,9 @@ data class MultiPartFilePattern(override val name: String, val filename: String,
             }
             else -> Success()
         }
+    }
+
+    override fun nonOptional(): MultiPartFormDataPattern {
+        return copy(name = withoutOptionality(name))
     }
 }

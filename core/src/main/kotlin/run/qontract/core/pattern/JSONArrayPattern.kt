@@ -4,7 +4,8 @@ import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.breadCrumb
 import run.qontract.core.utilities.stringTooPatternArray
-import run.qontract.core.value.*
+import run.qontract.core.value.JSONArrayValue
+import run.qontract.core.value.Value
 import java.util.*
 
 data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) : Pattern, EncompassableList {
@@ -121,17 +122,21 @@ fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<L
         }
     }
 
-    return multipleValidValues(values)
+    return listCombinations(values)
 }
 
-fun multipleValidValues(values: List<List<Pattern>>): List<List<Pattern>> {
+fun listCombinations(values: List<List<Pattern>>): List<List<Pattern>> {
     if(values.isEmpty())
         return listOf(emptyList())
 
     val value: List<Pattern> = values.last()
-    val subLists = multipleValidValues(values.dropLast(1))
+    val subLists = listCombinations(values.dropLast(1))
 
-    return subLists.map { list -> list.plus(value) }
+    return subLists.flatMap { list ->
+        value.map { type ->
+            list.plus(type)
+        }
+    }
 }
 
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =

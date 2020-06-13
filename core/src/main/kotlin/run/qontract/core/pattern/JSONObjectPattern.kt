@@ -3,7 +3,8 @@ package run.qontract.core.pattern
 import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.stringToPatternMap
-import run.qontract.core.value.*
+import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.Value
 
 data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap()) : Pattern {
     constructor(jsonContent: String) : this(stringToPatternMap(jsonContent))
@@ -58,7 +59,10 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
     override fun generate(resolver: Resolver) = JSONObjectValue(generate(pattern, resolver))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> =
-            newBasedOn(pattern, row, resolver).map { JSONObjectPattern(it) }
+            keyCombinations(pattern, row) { pattern ->
+                newBasedOn(pattern, row, resolver)
+            }.map { JSONObjectPattern(it) }
+
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
     override val typeName: String = "json object"
 }

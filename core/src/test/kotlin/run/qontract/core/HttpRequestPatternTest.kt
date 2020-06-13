@@ -137,4 +137,17 @@ internal class HttpRequestPatternTest {
 
         assertThat(patterns.single().multiPartFormDataPattern).isEqualTo(parts)
     }
+
+    @Test
+    fun `request with an optional part should result in two requests`() {
+        val part = MultiPartContentPattern("data1?", StringPattern)
+
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
+        val patterns = requestPattern.newBasedOn(Row(), Resolver())
+
+        assertThat(patterns).hasSize(2)
+
+        assertThat(patterns).contains(HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = emptyList()))
+        assertThat(patterns).contains(HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part.nonOptional())))
+    }
 }

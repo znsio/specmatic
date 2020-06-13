@@ -13,9 +13,8 @@ sealed class MultiPartFormDataPattern(open val name: String) {
 }
 
 data class MultiPartContentPattern(override val name: String, val content: Pattern) : MultiPartFormDataPattern(name) {
-    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern> {
-        return newBasedOn(row, name, content, resolver).map { newContent -> MultiPartContentPattern(name, newContent) }
-    }
+    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartContentPattern> =
+            newBasedOn(row, name, content, resolver).map { newContent -> MultiPartContentPattern(name, newContent) }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
             MultiPartContentValue(name, content.generate(resolver))

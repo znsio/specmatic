@@ -140,7 +140,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `request with an optional part should result in two requests`() {
-        val part = MultiPartContentPattern("data1?", StringPattern)
+        val part = MultiPartContentPattern("data?", StringPattern)
 
         val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
         val patterns = requestPattern.newBasedOn(Row(), Resolver())
@@ -149,5 +149,33 @@ internal class HttpRequestPatternTest {
 
         assertThat(patterns).contains(HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = emptyList()))
         assertThat(patterns).contains(HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part.nonOptional())))
+    }
+
+    @Test
+    fun `request with a part json body with a key in a row should result in a request with the row value`() {
+        val part = MultiPartContentPattern("data", parsedPattern("""{"name": "(string)"}"""))
+        val example = Row(listOf("name"), listOf("John Doe"))
+
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
+        val patterns = requestPattern.newBasedOn(example, Resolver())
+
+        assertThat(patterns).hasSize(1)
+
+        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("data", JSONObjectPattern(mapOf("name" to ExactValuePattern(StringValue("John Doe")))))))
+        assertThat(patterns.single()).isEqualTo(expectedPattern)
+    }
+
+    @Test
+    fun `request having a part name the same as a key in a row should result in a request with a part having the specified value`() {
+        val part = MultiPartContentPattern("name", StringPattern)
+        val example = Row(listOf("name"), listOf("John Doe"))
+
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
+        val patterns = requestPattern.newBasedOn(example, Resolver())
+
+        assertThat(patterns).hasSize(1)
+
+        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("name", ExactValuePattern(StringValue("John Doe")))))
+        assertThat(patterns.single()).isEqualTo(expectedPattern)
     }
 }

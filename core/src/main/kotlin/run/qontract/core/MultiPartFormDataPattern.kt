@@ -6,15 +6,20 @@ import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
 
 sealed class MultiPartFormDataPattern(open val name: String) {
-    abstract fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern>
+    abstract fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?>
     abstract fun generate(resolver: Resolver): MultiPartFormDataValue
     abstract fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result
     abstract fun nonOptional(): MultiPartFormDataPattern
 }
 
 data class MultiPartContentPattern(override val name: String, val content: Pattern) : MultiPartFormDataPattern(name) {
-    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartContentPattern> =
-            newBasedOn(row, name, content, resolver).map { newContent -> MultiPartContentPattern(name, newContent) }
+    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartContentPattern?> =
+            newBasedOn(row, withoutOptionality(name), content, resolver).map { newContent -> MultiPartContentPattern(withoutOptionality(name), newContent) }.let {
+                when{
+                    isOptional(name) && !row.containsField(withoutOptionality(name)) -> listOf(null).plus(it)
+                    else -> it
+                }
+            }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
             MultiPartContentValue(name, content.generate(resolver))
@@ -45,7 +50,7 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
 }
 
 data class MultiPartFilePattern(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null) : MultiPartFormDataPattern(name) {
-    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern> = listOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?> = listOf(this)
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
             MultiPartFileValue(name, filename, contentType, contentEncoding)
 

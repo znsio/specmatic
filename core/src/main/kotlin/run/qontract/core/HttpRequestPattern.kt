@@ -39,7 +39,11 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
                 type.matches(value, resolver)
             }
 
-            results.find { it is Success } ?: results.find { it is Failure && !it.fluff }?.breadCrumb(type.name) ?: Failure("The part named ${type.name} was not found.", breadCrumb = type.name)
+            val result = results.find { it is Success } ?: results.find { it is Failure && !it.fluff }?.breadCrumb(type.name)
+            result ?: when {
+                    isOptional(type.name) -> Success()
+                    else -> Failure("The part named ${type.name} was not found.").breadCrumb(type.name)
+                }
         }
 
         if (results.any { it !is Success }) {
@@ -53,15 +57,14 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
         val typeKeys = multiPartFormDataPattern.map { withoutOptionality(it.name) }.sorted()
         val valueKeys = httpRequest.multiPartFormData.map { it.name }.sorted()
 
-        if(typeKeys != valueKeys) {
-            val missingInType = valueKeys.filter { it !in typeKeys }
-            if(missingInType.isNotEmpty())
-                return MatchFailure(Failure("Some parts in the request were missing from the contract. Their names are $missingInType.", breadCrumb = "MULTIPART-FORMDATA"))
+        val missingInType = valueKeys.filter { it !in typeKeys }
+        if(missingInType.isNotEmpty())
+            return MatchFailure(Failure("Some parts in the request were missing from the contract, and their names are $missingInType.", breadCrumb = "MULTIPART-FORMDATA"))
 
-            val missingInValue = typeKeys.filter { it !in valueKeys }.joinToString(", ")
-            if(missingInValue.isNotEmpty())
-                return MatchFailure(Failure("Some parts in the contract were missing from the request. Their names are $missingInValue.", breadCrumb = "MULTIPART-FORMDATA"))
-        }
+        val originalTypeKeys = multiPartFormDataPattern.map { it.name }.sorted()
+        val missingInValue = originalTypeKeys.filter { !isOptional(it) }.filter { withoutOptionality(it) !in valueKeys }.joinToString(", ")
+        if(missingInValue.isNotEmpty())
+            return MatchFailure(Failure("Some parts in the contract were missing from the request, and their names are $missingInValue", breadCrumb = "MULTIPART-FORMDATA"))
 
         return MatchSuccess(parameters)
     }
@@ -232,12 +235,7 @@ fun missingParam(missingValue: String): ContractException {
 fun newMultiPartBasedOn(partList: List<MultiPartFormDataPattern>, row: Row, resolver: Resolver): List<List<MultiPartFormDataPattern>> {
     val values = partList.map { part ->
         attempt(breadCrumb = part.name) {
-            part.nonOptional().newBasedOn(row, resolver).let {
-                when {
-                    isOptional(part.name) -> listOf(null).plus(it)
-                    else -> it
-                }
-            }
+            part.newBasedOn(row, resolver)
         }
     }
 

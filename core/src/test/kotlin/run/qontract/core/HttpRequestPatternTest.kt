@@ -2,6 +2,7 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.Result.*
 import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
 import java.net.URI
@@ -14,8 +15,8 @@ internal class HttpRequestPatternTest {
                 urlMatcher = toURLMatcher(URI("/matching_path")))
         val httpRequest = HttpRequest().updateWith(URI("/unmatched_path"))
         httpRequestPattern.matches(httpRequest, Resolver()).let {
-            assertThat(it).isInstanceOf(Result.Failure::class.java)
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "URL", "PATH (/unmatched_path)"), listOf("""Expected string: "matching_path", actual was string: "unmatched_path"""")))
+            assertThat(it).isInstanceOf(Failure::class.java)
+            assertThat((it as Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "URL", "PATH (/unmatched_path)"), listOf("""Expected string: "matching_path", actual was string: "unmatched_path"""")))
         }
     }
 
@@ -28,8 +29,8 @@ internal class HttpRequestPatternTest {
             .updateWith(URI("/matching_path"))
             .updateMethod("GET")
         httpRequestPattern.matches(httpRequest, Resolver()).let {
-            assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "METHOD"), listOf("Expected POST, actual was GET")))
+            assertThat(it is Failure).isTrue()
+            assertThat((it as Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "METHOD"), listOf("Expected POST, actual was GET")))
         }
     }
 
@@ -45,8 +46,8 @@ internal class HttpRequestPatternTest {
             .updateMethod("POST")
             .updateBody("""{"unmatchedKey": "unmatchedValue"}""")
         httpRequestPattern.matches(httpRequest, Resolver()).let {
-            assertThat(it).isInstanceOf(Result.Failure::class.java)
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "BODY"), listOf("Expected key name was missing")))
+            assertThat(it).isInstanceOf(Failure::class.java)
+            assertThat((it as Failure).report()).isEqualTo(FailureReport(listOf("REQUEST", "BODY"), listOf("Expected key name was missing")))
         }
     }
 
@@ -61,7 +62,7 @@ internal class HttpRequestPatternTest {
             .updateMethod("POST")
             .updateBody("""{"name": "Hari"}""")
         httpRequestPattern.matches(httpRequest, Resolver()).let {
-            assertThat(it).isInstanceOf(Result.Success::class.java)
+            assertThat(it).isInstanceOf(Success::class.java)
         }
     }
 
@@ -100,7 +101,7 @@ internal class HttpRequestPatternTest {
         val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = NumberPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("10"))
 
-        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Success::class.java)
     }
 
     @Test
@@ -108,7 +109,7 @@ internal class HttpRequestPatternTest {
         val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = BooleanPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("true"))
 
-        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Success::class.java)
     }
 
     @Test
@@ -116,7 +117,7 @@ internal class HttpRequestPatternTest {
         val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = BooleanPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("10"))
 
-        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Failure::class.java)
     }
 
     @Test
@@ -124,7 +125,7 @@ internal class HttpRequestPatternTest {
         val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = NumberPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("not a number"))
 
-        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Failure::class.java)
     }
 
     @Test
@@ -177,5 +178,30 @@ internal class HttpRequestPatternTest {
 
         val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("name", ExactValuePattern(StringValue("John Doe")))))
         assertThat(patterns.single()).isEqualTo(expectedPattern)
+    }
+
+    @Test
+    fun `request having an optional part name the same as a key in a row should result in a request with a part having the specified value`() {
+        val part = MultiPartContentPattern("name?", StringPattern)
+        val example = Row(listOf("name"), listOf("John Doe"))
+
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
+        val patterns = requestPattern.newBasedOn(example, Resolver())
+
+        assertThat(patterns).hasSize(1)
+
+        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("name", ExactValuePattern(StringValue("John Doe")))))
+        assertThat(patterns.single()).isEqualTo(expectedPattern)
+    }
+
+    @Test
+    fun `request type having an optional part name should match a request in which the part is missing`() {
+        val part = MultiPartContentPattern("name?", StringPattern)
+
+        val requestType = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
+
+        val request = HttpRequest("GET", "/")
+
+        assertThat(requestType.matches(request, Resolver())).isInstanceOf(Success::class.java)
     }
 }

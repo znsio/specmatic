@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.Result.*
 import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
+import run.qontract.mock.ScenarioStub
 import java.net.URI
 import kotlin.test.assertEquals
 

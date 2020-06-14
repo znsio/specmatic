@@ -30,5 +30,7 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
         return pattern.encompasses(resolvedHop(otherPattern, otherResolver), thisResolver, otherResolver)
     }
 
+    override fun patternSet(resolver: Resolver): List<Pattern> = pattern.patternSet(resolver)
+
     override val typeName: String = pattern.typeName
 }

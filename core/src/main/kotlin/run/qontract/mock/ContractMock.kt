@@ -57,8 +57,8 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
     }
 
     fun createMockScenario(mocked: ScenarioStub) {
-        val (resolver, _, mockedResponse) = contractBehaviour.matchingStubResponse(mocked.request, mocked.response)
-        expectations.add(Expectation(mocked.request.toPattern(), resolver, mockedResponse))
+        val stubData = contractBehaviour.matchingStub(mocked.request, mocked.response)
+        expectations.add(Expectation(stubData.requestType, stubData.resolver, stubData.response))
     }
 
     override fun close() {

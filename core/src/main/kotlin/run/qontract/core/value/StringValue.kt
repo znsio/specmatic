@@ -11,7 +11,7 @@ data class StringValue(val string: String = "") : Value, ScalarValue {
     override fun displayableValue(): String = toStringValue().quote()
     override fun toStringValue() = string
     override fun displayableType(): String = "string"
-    override fun toExactType(): Pattern {
+    override fun exactMatchElseType(): Pattern {
         return when {
             isPatternToken() -> DeferredPattern(string)
             else -> ExactValuePattern(this)

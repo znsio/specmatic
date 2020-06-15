@@ -11,7 +11,7 @@ data class JSONArrayValue(val list: List<Value>) : Value {
     override fun displayableValue(): String = toStringValue()
     override fun toStringValue() = valueArrayToJsonString(list)
     override fun displayableType(): String = "json array"
-    override fun toExactType(): Pattern = JSONArrayPattern(list.map { it.toExactType() })
+    override fun exactMatchElseType(): Pattern = JSONArrayPattern(list.map { it.exactMatchElseType() })
     override fun type(): Pattern = JSONArrayPattern()
 
     private fun typeDeclaration(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration, typeDeclarationCall: (Value, String, Map<String, Pattern>, ExampleDeclaration) -> Pair<TypeDeclaration, ExampleDeclaration>): Pair<TypeDeclaration, ExampleDeclaration> = when {

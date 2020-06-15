@@ -12,7 +12,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     override fun displayableValue() = toStringValue()
     override fun toStringValue() = valueMapToPrettyJsonString(jsonObject)
     override fun displayableType(): String = "json object"
-    override fun toExactType(): Pattern = JSONObjectPattern(jsonObject.mapValues { it.value.toExactType() })
+    override fun exactMatchElseType(): Pattern = JSONObjectPattern(jsonObject.mapValues { it.value.exactMatchElseType() })
     override fun type(): Pattern = JSONObjectPattern()
 
     override fun toString() = valueMapToPrettyJsonString(jsonObject)
@@ -67,10 +67,10 @@ internal fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map
     return jsonObject
             .entries
             .fold(Triple(emptyMap(), types, examples)) { acc, entry ->
-                val (jsonTypeMap, types, examples) = acc
+                val (jsonTypeMap, accTypes, accExamples) = acc
                 val (key, value) = entry
 
-                val (newTypes, newExamples) = value.typeDeclarationWithKey(key, types, examples)
+                val (newTypes, newExamples) = value.typeDeclarationWithKey(key, accTypes, accExamples)
                 Triple(jsonTypeMap.plus(key to DeferredPattern(newTypes.typeValue)), newTypes.types, newExamples)
             }
 }

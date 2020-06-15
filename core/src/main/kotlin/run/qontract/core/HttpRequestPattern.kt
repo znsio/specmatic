@@ -146,6 +146,81 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
         }
     }
 
+    fun generate(request: HttpRequest, resolver: Resolver): HttpRequestPattern {
+        var requestType = HttpRequestPattern()
+
+        return attempt(breadCrumb = "REQUEST") {
+            if (method == null) {
+                throw missingParam("HTTP method")
+            }
+            if (urlMatcher == null) {
+                throw missingParam("URL path")
+            }
+
+            requestType = requestType.copy(method = request.method)
+
+            requestType = attempt(breadCrumb = "URL") {
+                val path = request.path ?: ""
+                val pathTypes = pathToPattern(path)
+                val queryParamTypes = toTypeMap(request.queryParams, urlMatcher.queryPattern, resolver)
+
+                requestType.copy(urlMatcher = URLMatcher(queryParamTypes, pathTypes, path))
+            }
+
+            requestType = attempt(breadCrumb = "HEADERS") {
+                requestType.copy(headersPattern = HttpHeadersPattern(toTypeMap(request.headers, headersPattern.pattern, resolver)))
+            }
+
+            requestType = attempt(breadCrumb = "BODY") {
+                requestType.copy(body = when(request.body) {
+                    is StringValue -> encompassedType(request.bodyString, null, body, resolver)
+                    else -> request.body?.exactMatchElseType() ?: NoContentPattern
+                })
+            }
+
+            requestType = attempt(breadCrumb = "FORM FIELDS") {
+                requestType.copy(formFieldsPattern = toTypeMap(request.formFields, formFieldsPattern, resolver))
+            }
+
+            val multiPartFormDataRequestMap = request.multiPartFormData.fold(emptyMap<String, MultiPartFormDataValue>()) { acc, part ->
+                acc.plus(part.name to part)
+            }
+
+            attempt(breadCrumb = "MULTIPART DATA") {
+                requestType.copy(multiPartFormDataPattern = multiPartFormDataPattern.filter {
+                    withoutOptionality(it.name) in multiPartFormDataRequestMap
+                }.map {
+                    val key = withoutOptionality(it.name)
+                    multiPartFormDataRequestMap.getValue(key).inferType()
+                })
+            }
+        }
+    }
+
+    private fun toTypeMap(values: Map<String, String>, types: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {
+        return types.filterKeys { withoutOptionality(it) in values }.mapValues { it ->
+            val key = withoutOptionality(it.key)
+            val type = it.value
+
+            attempt(breadCrumb = key) {
+                val valueString = values.getValue(key)
+                encompassedType(valueString, key, type, resolver)
+            }
+        }
+    }
+
+    private fun encompassedType(valueString: String, key: String?, type: Pattern, resolver: Resolver): Pattern {
+        return when {
+            isPatternToken(valueString) -> parsedPattern(valueString, key).let { parsedType ->
+                when (val result = type.encompasses(parsedType, resolver, resolver)) {
+                    is Success -> parsedType
+                    else -> throw ContractException(resultReport(result))
+                }
+            }
+            else -> type.parse(valueString, resolver).exactMatchElseType()
+        }
+    }
+
     fun generate(resolver: Resolver): HttpRequest {
         var newRequest = HttpRequest()
 

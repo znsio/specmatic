@@ -20,7 +20,7 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
 
         stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))
                 .also {
-                    contractBehaviour.matchingStubResponse(it)
+                    contractBehaviour.matchingStub(it)
                 }
     }
 
@@ -64,7 +64,7 @@ fun loadQontractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
                 if (kafkaMessage != null) {
                     feature.assertMatchesMockKafkaMessage(kafkaMessage)
                 } else {
-                    feature.matchingStubResponse(stub.request, stub.response)
+                    feature.matchingStub(stub.request, stub.response)
                 }
                 Pair(feature, null)
             } catch (e: NoMatchingScenario) {

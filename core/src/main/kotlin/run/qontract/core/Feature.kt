@@ -11,6 +11,7 @@ import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.*
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.ScenarioStub
+import run.qontract.stub.HttpStubData
 import run.qontract.test.TestExecutor
 import java.net.URI
 
@@ -26,14 +27,6 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
             serverState = emptyMap()
         }
     }
-
-    fun lookupAllResponses(httpRequest: HttpRequest): List<HttpResponse> =
-        try {
-            val scenarios = lookupScenario(httpRequest, scenarios)
-            matchingScenario(scenarios)?.generateHttpResponses(serverState) ?: listOf(errorResponse(scenarios))
-        } finally {
-            serverState = emptyMap()
-        }
 
     fun lookupScenario(httpRequest: HttpRequest): Scenario =
         try {
@@ -74,15 +67,18 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
         return scenarios.firstOrNull { it.matches(request, serverState) is Result.Success }?.matches(response) is Result.Success
     }
 
-    fun matchingStubResponse(request: HttpRequest, response: HttpResponse): Triple<Resolver, Scenario, HttpResponse> {
+    fun matchingStub(request: HttpRequest, response: HttpResponse): HttpStubData {
         try {
             val results = Results()
 
             for (scenario in scenarios) {
                 try {
                     when(val mockMatches = scenario.matchesMock(request, response)) {
-                        is Result.Success -> return scenario.resolverAndResponseFrom(response).let {
-                            Triple(it.first, scenario, it.second)
+                        is Result.Success -> return scenario.resolverAndResponseFrom(response).let { (resolver, response) ->
+                            val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
+                            val requestTypeWithAncestors =
+                                    newRequestType.copy(headersPattern = newRequestType.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
+                            HttpStubData(response = response, resolver = resolver, requestType = requestTypeWithAncestors)
                         }
                         is Result.Failure -> {
                             results.add(mockMatches.updateScenario(scenario))
@@ -121,8 +117,8 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
         return results.find { it is Result.Success } ?: results.firstOrNull() ?: Result.Failure("No scenarios found, couldn't check the message")
     }
 
-    fun matchingStubResponse(scenarioStub: ScenarioStub): Triple<Resolver, Scenario, HttpResponse> =
-            matchingStubResponse(scenarioStub.request, scenarioStub.response)
+    fun matchingStub(scenarioStub: ScenarioStub): HttpStubData =
+            matchingStub(scenarioStub.request, scenarioStub.response)
 
     fun clearServerState() {
         serverState = emptyMap()
@@ -377,3 +373,4 @@ fun toGherkinFeature(name: String, stubs: List<NamedStub>): String {
 
     return withFeatureClause(name, scenarioStrings.joinToString("\n\n"))
 }
+

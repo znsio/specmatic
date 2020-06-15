@@ -10,7 +10,7 @@ data class NumberValue(val number: Number) : Value, ScalarValue {
     override fun displayableValue(): String = toStringValue()
     override fun toStringValue() = number.toString()
     override fun displayableType(): String = "number"
-    override fun toExactType(): Pattern = ExactValuePattern(this)
+    override fun exactMatchElseType(): Pattern = ExactValuePattern(this)
     override fun type(): Pattern = NumberPattern
 
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =

@@ -3,13 +3,13 @@ package run.qontract.core
 import run.qontract.core.value.Value
 
 sealed class MultiPartFormDataValue(open val name: String) {
-    abstract fun toPattern(): MultiPartFormDataPattern
+    abstract fun inferType(): MultiPartFormDataPattern
     abstract fun toDisplayableValue(): String
 }
 
 data class MultiPartContentValue(override val name: String, val content: Value, val boundary: String = "#####") : MultiPartFormDataValue(name) {
-    override fun toPattern(): MultiPartFormDataPattern {
-        return MultiPartContentPattern(name, content.toExactType())
+    override fun inferType(): MultiPartFormDataPattern {
+        return MultiPartContentPattern(name, content.exactMatchElseType())
     }
 
     override fun toDisplayableValue(): String = """
@@ -22,7 +22,7 @@ $content
 }
 
 data class MultiPartFileValue(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null, val content: String? = null, val boundary: String = "#####") : MultiPartFormDataValue(name) {
-    override fun toPattern(): MultiPartFormDataPattern {
+    override fun inferType(): MultiPartFormDataPattern {
         return MultiPartFilePattern(name, filename, contentType, contentEncoding)
     }
 

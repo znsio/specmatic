@@ -53,7 +53,7 @@ Scenario: Get a number
 """.trim()
 
         HttpStub(gherkin).use { fake ->
-            val mockData = """{"http-request": {"method": "GET", "path": "/number"}, "mock-http-response": {"status": 200, "body": 10}}"""
+            val mockData = """{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 10}}"""
             val stubSetupURL = "${fake.endPoint}/_stub_setup"
             val headers = HttpHeaders()
             headers.contentType = MediaType.APPLICATION_JSON

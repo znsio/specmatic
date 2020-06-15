@@ -10,7 +10,7 @@ data class BooleanValue(val booleanValue: Boolean) : Value, ScalarValue {
     override fun displayableValue(): String = toStringValue()
     override fun toStringValue() = booleanValue.toString()
     override fun displayableType(): String = "boolean"
-    override fun toExactType(): Pattern = ExactValuePattern(this)
+    override fun exactMatchElseType(): Pattern = ExactValuePattern(this)
     override fun type(): Pattern = BooleanPattern
 
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =

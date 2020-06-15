@@ -4,7 +4,7 @@ import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
 
 data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = NoContentPattern) {
-    constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body?.toExactType() ?: NoContentPattern)
+    constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body?.exactMatchElseType() ?: NoContentPattern)
 
     fun generateResponse(resolver: Resolver): HttpResponse {
         return attempt(breadCrumb = "RESPONSE") {

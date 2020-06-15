@@ -4,6 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.Result.*
 import run.qontract.core.pattern.*
+import run.qontract.core.value.JSONArrayValue
+import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import run.qontract.mock.ScenarioStub
 import java.net.URI
@@ -204,5 +206,19 @@ internal class HttpRequestPatternTest {
         val request = HttpRequest("GET", "/")
 
         assertThat(requestType.matches(request, Resolver())).isInstanceOf(Success::class.java)
+    }
+
+    @Test
+    fun `should generate a request with an array value if the array is in an example`() {
+        val example = Row(listOf("csv"), listOf("[1, 2, 3]"))
+
+        val type = parsedPattern("""{"csv": "(number*)"}""")
+        val newTypes = type.newBasedOn(example, Resolver())
+
+        assertThat(newTypes).hasSize(1)
+
+        val newType = newTypes.single() as JSONObjectPattern
+
+        assertThat(newType.pattern.getValue("csv")).isEqualTo(ExactValuePattern(JSONArrayValue(listOf(NumberValue(1), NumberValue(2), NumberValue(3)))))
     }
 }

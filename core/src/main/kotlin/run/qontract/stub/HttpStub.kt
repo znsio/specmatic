@@ -115,7 +115,7 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
 
         val results = behaviours.asSequence().map { behaviour ->
             try {
-                val mockResponse = behaviour.matchingStubResponse(stub.request, stub.response)
+                val mockResponse = behaviour.matchingStub(stub.request, stub.response)
                 Pair(Result.Success(), mockResponse)
             } catch (e: NoMatchingScenario) {
                 Pair(Result.Failure(e.localizedMessage), null)
@@ -125,10 +125,7 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
         val result = results.find { it.first is Result.Success }
 
         when (result?.first) {
-            is Result.Success -> {
-                val (resolver, scenario, response) = result.second!!
-                httpStubs.add(httpMockToStub(stub, scenario, response, resolver))
-            }
+            is Result.Success -> httpStubs.addElement(result.second)
             else -> throw NoMatchingScenario(Results(results.map { it.first }.toMutableList()).report())
         }
     }
@@ -299,8 +296,7 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List
 fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<HttpStubData> {
     return contractInfo.flatMap { (feature, mocks) ->
         mocks.filter { it.kafkaMessage == null }.map { mock ->
-            val (resolver, scenario, httpResponse) = feature.matchingStubResponse(mock)
-            httpMockToStub(mock, scenario, httpResponse, resolver)
+            feature.matchingStub(mock)
         }
     }
 }
@@ -318,8 +314,8 @@ fun badRequest(errorMessage: String?): HttpResponse {
 
 interface StubData
 
-data class HttpStubData(val requestPattern: HttpRequestPattern, val response: HttpResponse, val resolver: Resolver) : StubData {
-    val first = requestPattern
+data class HttpStubData(val requestType: HttpRequestPattern, val response: HttpResponse, val resolver: Resolver) : StubData {
+    val first = requestType
     val second = resolver
     val third = response
 }

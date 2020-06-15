@@ -372,7 +372,7 @@ class PostmanKtTests {
         val behaviour = Feature(gherkinString)
         val cleanedUpStubs = stubs.map { it.stub }.map { it.copy(response = dropContentAndCORSResponseHeaders(it.response) ) }
         for(stub in cleanedUpStubs) {
-            behaviour.matchingStubResponse(stub)
+            behaviour.matchingStub(stub)
         }
     }
 

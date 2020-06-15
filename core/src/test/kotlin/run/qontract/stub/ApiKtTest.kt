@@ -404,7 +404,6 @@ Feature: Cube API
         assertThat(stubInfo).hasSize(2)
 
         val squareStub = stubInfo.first { it.first == squareFeature }
-        val cubeStub = stubInfo.first { it.first == cubeFeature }
 
         val expectedRequest = HttpRequest("POST", path = "/square", body = StringValue("10"))
         val expectedResponse = HttpResponse(status = 200, body = StringValue("20"))
@@ -461,12 +460,8 @@ fun contractInfoToExpectations(contractInfo: List<Pair<Feature, List<ScenarioStu
             if(kafkaMessage != null) {
                 StubDataItems(stubs.http, stubs.kafka.plus(KafkaStubData(kafkaMessage)))
             } else {
-                val (resolver, scenario, httpResponse) = behaviour.matchingStubResponse(mock)
-
-                val requestPattern = mock.request.toPattern()
-                val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
-
-                StubDataItems(stubs.http.plus(HttpStubData(requestPatternWithHeaderAncestor, httpResponse, resolver)), stubs.kafka)
+                val stubData = behaviour.matchingStub(mock)
+                StubDataItems(stubs.http.plus(stubData), stubs.kafka)
             }
         }
 

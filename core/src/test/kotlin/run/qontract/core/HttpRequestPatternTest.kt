@@ -2,12 +2,13 @@ package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.Result.*
+import run.qontract.core.Result.Failure
+import run.qontract.core.Result.Success
 import run.qontract.core.pattern.*
 import run.qontract.core.value.JSONArrayValue
+import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
-import run.qontract.mock.ScenarioStub
 import java.net.URI
 import kotlin.test.assertEquals
 
@@ -220,5 +221,49 @@ internal class HttpRequestPatternTest {
         val newType = newTypes.single() as JSONObjectPattern
 
         assertThat(newType.pattern.getValue("csv")).isEqualTo(ExactValuePattern(JSONArrayValue(listOf(NumberValue(1), NumberValue(2), NumberValue(3)))))
+    }
+
+    @Test
+    fun `should generate a request with an object value if the object is in an example`() {
+        val example = Row(listOf("data"), listOf("""{"one": 1}"""))
+
+        val type = parsedPattern("""{"data": "(Data)"}""")
+        val newTypes = type.newBasedOn(example, Resolver(newPatterns = mapOf("(Data)" to TabularPattern(mapOf("one" to NumberPattern)))))
+
+        assertThat(newTypes).hasSize(1)
+
+        val newType = newTypes.single() as JSONObjectPattern
+
+        assertThat(newType.pattern.getValue("data")).isEqualTo(ExactValuePattern(JSONObjectValue(mapOf("one" to NumberValue(1)))))
+    }
+
+    @Test
+    fun `should generate a request with an array body if the array is in an example`() {
+        val example = Row(listOf("body"), listOf("[1, 2, 3]"))
+
+        val requestType = HttpRequestPattern(urlMatcher = toURLMatcher("/"), body = parsedPattern("(body: RequestBody)"))
+        val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to parsedPattern("""(number*)"""))))
+
+        assertThat(newRequestTypes).hasSize(1)
+
+        val newRequestType = newRequestTypes.single()
+        val requestBodyType = newRequestType.body as ExactValuePattern
+
+        assertThat(requestBodyType).isEqualTo(ExactValuePattern(JSONArrayValue(listOf(NumberValue(1), NumberValue(2), NumberValue(3)))))
+    }
+
+    @Test
+    fun `should generate a request with an object body if the object is in an example`() {
+        val example = Row(listOf("body"), listOf("""{"one": 1}"""))
+
+        val requestType = HttpRequestPattern(urlMatcher = toURLMatcher("/"), body = parsedPattern("(body: RequestBody)"))
+        val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to TabularPattern(mapOf("one" to NumberPattern)))))
+
+        assertThat(newRequestTypes).hasSize(1)
+
+        val newRequestType = newRequestTypes.single()
+        val requestBodyType = newRequestType.body as ExactValuePattern
+
+        assertThat(requestBodyType).isEqualTo(ExactValuePattern(JSONObjectValue(mapOf("one" to NumberValue(1)))))
     }
 }

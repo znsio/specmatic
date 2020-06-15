@@ -1,8 +1,12 @@
 package run.qontract.core.pattern
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.Resolver
 import run.qontract.core.shouldMatch
 import run.qontract.core.shouldNotMatch
+import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.StringValue
 
 internal class DictionaryPatternTest {
     @Test
@@ -34,5 +38,19 @@ internal class DictionaryPatternTest {
         val pattern = DictionaryPattern(DeferredPattern("(number)"), DeferredPattern("(string)"))
         parsedValue("""{"1": "1", "2": "two"}""") shouldMatch pattern
         parsedValue("""{"one": "1", "2": "two"}""") shouldNotMatch pattern
+    }
+
+    @Test
+    fun `should load a matching json object from examples`() {
+        val dictionaryType = DictionaryPattern(DeferredPattern("(number)"), DeferredPattern("(string)"))
+        val jsonType = TabularPattern(mapOf("data" to dictionaryType))
+
+        val example = Row(listOf("data"), listOf("""{"1": "one"}"""))
+        val newJsonTypes = jsonType.newBasedOn(example, Resolver())
+
+        assertThat(newJsonTypes).hasSize(1)
+
+        val exactJson = newJsonTypes.single() as TabularPattern
+        assertThat(exactJson).isEqualTo(TabularPattern(mapOf("data" to ExactValuePattern(JSONObjectValue(mapOf("1" to StringValue("one")))))))
     }
 }

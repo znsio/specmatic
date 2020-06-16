@@ -989,6 +989,50 @@ And response-body
         assertThat(results.failureCount).isZero()
         assertThat(results.successCount).isNotZero()
     }
+    @Test
+    fun `should generate data with a pipe when the example contains a pipe`() {
+        val gherkin = """
+Feature: Contract
+    Scenario: api call
+        Given POST /
+        And request-body
+        | data | (string) |
+        Then status 200
+
+    Examples:
+    | data    |
+    | 1\|2\|3 |
+"""
+
+        val flags = mutableListOf<String>()
+
+        val results = Feature(gherkin).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body
+                if(body !is JSONObjectValue)
+                    fail("Expected json object")
+
+                val data = body.jsonObject.getValue("data")
+                assertThat(data).isInstanceOf(StringValue::class.java)
+                assertThat(data.toStringValue()).isEqualTo("1|2|3")
+
+                flags.add("ran")
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        println(results.report())
+
+        assertThat(results.failureCount).isZero()
+        assertThat(results.successCount).isOne()
+
+        assertThat(flags.toList()).isEqualTo(listOf("ran"))
+    }
 }
 
 internal fun jsonObject(value: Value?): Map<String, Value> {

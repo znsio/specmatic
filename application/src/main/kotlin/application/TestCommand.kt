@@ -9,6 +9,7 @@ import org.junit.platform.launcher.core.LauncherFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
+import run.qontract.core.utilities.exceptionCauseMessage
 import java.util.concurrent.Callable
 
 @Command(name = "test",
@@ -51,46 +52,45 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--commit"], description = ["Commit kafka messages that have been read"], required=false)
     var commit: Boolean = false
 
-    override fun call() {
-        try {
-            if(port == 0) {
-                port = when {
-                    useHttps -> 443
-                    else -> 9000
-                }
+    override fun call() = try {
+        if(port == 0) {
+            port = when {
+                useHttps -> 443
+                else -> 9000
             }
-
-            val protocol = if(useHttps) "https" else "http"
-
-            System.setProperty("path", path)
-            System.setProperty("host", host)
-            System.setProperty("port", port.toString())
-            System.setProperty("timeout", timeout.toString())
-            System.setProperty("suggestionsPath", suggestionsPath)
-            System.setProperty("suggestions", suggestions)
-            System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
-            System.setProperty("protocol", protocol)
-
-            System.setProperty("kafkaBootstrapServers", kafkaBootstrapServers)
-            System.setProperty("kafkaHost", kafkaHost)
-            System.setProperty("kafkaPort", kafkaPort.toString())
-            System.setProperty("commit", commit.toString())
-
-            if(kafkaPort != 0)
-                System.setProperty("kafkaPort", kafkaPort.toString())
-
-            val launcher = LauncherFactory.create()
-            val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
-                    .selectors(selectClass(QontractJUnitSupport::class.java))
-                    .configurationParameter("key", "value")
-                    .build()
-            launcher.discover(request)
-            val contractExecutionListener = ContractExecutionListener()
-            launcher.registerTestExecutionListeners(contractExecutionListener)
-            launcher.execute(request)
-            contractExecutionListener.exitProcess()
-        } catch (exception: Throwable) {
-            println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
         }
+
+        val protocol = if(useHttps) "https" else "http"
+
+        System.setProperty("path", path)
+        System.setProperty("host", host)
+        System.setProperty("port", port.toString())
+        System.setProperty("timeout", timeout.toString())
+        System.setProperty("suggestionsPath", suggestionsPath)
+        System.setProperty("suggestions", suggestions)
+        System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
+        System.setProperty("protocol", protocol)
+
+        System.setProperty("kafkaBootstrapServers", kafkaBootstrapServers)
+        System.setProperty("kafkaHost", kafkaHost)
+        System.setProperty("kafkaPort", kafkaPort.toString())
+        System.setProperty("commit", commit.toString())
+
+        if(kafkaPort != 0)
+            System.setProperty("kafkaPort", kafkaPort.toString())
+
+        val launcher = LauncherFactory.create()
+        val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
+                .selectors(selectClass(QontractJUnitSupport::class.java))
+                .configurationParameter("key", "value")
+                .build()
+        launcher.discover(request)
+        val contractExecutionListener = ContractExecutionListener()
+        launcher.registerTestExecutionListeners(contractExecutionListener)
+        launcher.execute(request)
+        contractExecutionListener.exitProcess()
+    }
+    catch (e: Throwable) {
+        println(exceptionCauseMessage(e))
     }
 }

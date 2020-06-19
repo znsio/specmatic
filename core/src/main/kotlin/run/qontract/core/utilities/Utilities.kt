@@ -14,7 +14,21 @@ import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 
-@Throws(IOException::class)
+fun exceptionCauseMessage(e: Throwable): String =
+        when(val cause = e.cause) {
+            null -> e
+            else -> cause
+        }.let {
+            exceptionMessage(it)
+        }
+
+fun exceptionMessage(e: Throwable): String {
+    return when (val message = e.localizedMessage ?: e.message) {
+        null -> "Exception class=${e.javaClass.name}, no message found"
+        else -> "Error: $message"
+    }
+}
+
 fun readFile(filePath: String): String {
     return File(filePath).readText().trim()
 }

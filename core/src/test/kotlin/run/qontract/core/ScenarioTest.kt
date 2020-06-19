@@ -4,7 +4,7 @@ import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import run.qontract.core.pattern.*
 import run.qontract.core.value.*
 import run.qontract.mock.ScenarioStub

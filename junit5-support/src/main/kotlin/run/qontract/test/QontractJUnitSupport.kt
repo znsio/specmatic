@@ -6,6 +6,7 @@ import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Examples
 import run.qontract.core.pattern.parsedValue
+import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.readFile
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
@@ -32,7 +33,7 @@ open class QontractJUnitSupport {
         val feature = try {
             Feature(readFile(path))
         } catch (exception: Throwable) {
-            println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
+            println(exceptionCauseMessage(exception))
             throw exception
         }
 
@@ -85,7 +86,7 @@ open class QontractJUnitSupport {
                                 else -> it.matches(response)
                             }
                         } catch (exception: Throwable) {
-                            Result.Failure("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
+                            Result.Failure(exceptionCauseMessage(exception))
                                     .also { failure -> failure.updateScenario(it) }
                         }
 

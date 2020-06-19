@@ -1,8 +1,8 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
 import run.qontract.core.Contract.Companion.fromGherkin
 import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.value.*

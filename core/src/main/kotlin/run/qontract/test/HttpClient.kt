@@ -2,6 +2,7 @@ package run.qontract.test
 
 import io.ktor.client.HttpClient
 import io.ktor.client.features.ClientRequestException
+import io.ktor.client.features.HttpTimeout
 import io.ktor.client.request.forms.*
 import io.ktor.client.request.request
 import io.ktor.client.statement.readBytes
@@ -32,7 +33,7 @@ import java.net.URISyntaxException
 import java.net.URL
 import java.util.*
 
-class HttpClient(private val baseURL: String, private val log: (event: String) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(io.ktor.client.engine.apache.Apache) {
+class HttpClient(private val baseURL: String, private val timeout: Int = 60, private val log: (event: String) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(io.ktor.client.engine.apache.Apache) {
     expectSuccess = false
 
     engine {
@@ -45,6 +46,10 @@ class HttpClient(private val baseURL: String, private val log: (event: String) -
             )
             setSSLHostnameVerifier(NoopHostnameVerifier())
         }
+    }
+
+    install(HttpTimeout) {
+        requestTimeoutMillis = (timeout * 1000).toLong()
     }
 }) : TestExecutor {
     private val serverStateURL = "/_state_setup"

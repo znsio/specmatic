@@ -19,6 +19,7 @@ open class QontractJUnitSupport {
     @TestFactory()
     fun contractAsTest(): Collection<DynamicTest> {
         val path = System.getProperty("path")
+        val timeout = System.getProperty("timeout", "60").toInt()
 
         val suggestionsData = System.getProperty("suggestions") ?: ""
         val suggestionsPath = System.getProperty("suggestionsPath") ?: ""
@@ -72,7 +73,7 @@ open class QontractJUnitSupport {
                         val port = System.getProperty("port")
                         val protocol = System.getProperty("protocol") ?: "http"
 
-                        val httpClient = HttpClient("$protocol://$host:$port")
+                        val httpClient = HttpClient("$protocol://$host:$port", timeout = timeout)
 
                         val request = it.generateHttpRequest()
 

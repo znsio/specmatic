@@ -14,7 +14,7 @@ import java.util.concurrent.Callable
 @Command(name = "test",
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
-class TestCommand : Callable<Void> {
+class TestCommand : Callable<Unit> {
     @CommandLine.Parameters(index = "0", description = ["Contract file path"])
     lateinit var path: String
 
@@ -36,6 +36,9 @@ class TestCommand : Callable<Void> {
     @Option(names = ["--checkBackwardCompatibility", "--check", "-c"], description = ["Identify versions of the contract prior to the one specified, and verify backward compatibility from the earliest to the latest"])
     var checkBackwardCompatibility: Boolean = false
 
+    @Option(names = ["--timeout"], description = ["Specify a timeout for the test requests"], required = false, defaultValue = "60")
+    var timeout: Int = 60
+
     @Option(names = ["--kafkaBootstrapServers"], description = ["Kafka's Bootstrap servers"], required=false)
     var kafkaBootstrapServers: String = ""
 
@@ -48,7 +51,7 @@ class TestCommand : Callable<Void> {
     @Option(names = ["--commit"], description = ["Commit kafka messages that have been read"], required=false)
     var commit: Boolean = false
 
-    override fun call(): Void? {
+    override fun call() {
         try {
             if(port == 0) {
                 port = when {
@@ -62,6 +65,7 @@ class TestCommand : Callable<Void> {
             System.setProperty("path", path)
             System.setProperty("host", host)
             System.setProperty("port", port.toString())
+            System.setProperty("timeout", timeout.toString())
             System.setProperty("suggestionsPath", suggestionsPath)
             System.setProperty("suggestions", suggestions)
             System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
@@ -88,6 +92,5 @@ class TestCommand : Callable<Void> {
         } catch (exception: Throwable) {
             println("Exception (Class=${exception.javaClass.name}, Message=${exception.message ?: exception.localizedMessage})")
         }
-        return null
     }
 }

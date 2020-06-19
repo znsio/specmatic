@@ -108,7 +108,7 @@ private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<
         val (baseURL, httpRequest) = postmanItemRequest(request)
 
         println("  Using base url $baseURL")
-        val response = HttpClient(baseURL, nullLog).execute(httpRequest)
+        val response = HttpClient(baseURL, log = nullLog).execute(httpRequest)
 
         listOf(Pair(hostAndPort(baseURL), NamedStub(scenarioName, ScenarioStub(httpRequest, response))))
     } catch (e: Throwable) {

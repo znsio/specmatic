@@ -4,8 +4,7 @@ import io.cucumber.messages.Messages
 import io.cucumber.messages.Messages.GherkinDocument.Feature.Scenario.Examples
 import java.util.*
 
-class Examples(val columnNames: List<String> = mutableListOf()) {
-    val rows = mutableListOf<Row>()
+data class Examples(val columnNames: List<String> = mutableListOf(), val rows: MutableList<Row> = mutableListOf()) {
     val isEmpty: Boolean
         get() = rows.isEmpty()
 

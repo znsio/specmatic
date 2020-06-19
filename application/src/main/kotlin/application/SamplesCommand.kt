@@ -25,7 +25,7 @@ class SamplesCommand : Callable<Unit> {
             samples(qontractFile, host, port)
         }
         catch(e: ContractException) {
-            println(e.message)
+            println(e.report())
         }
         catch (exception: Throwable) {
             val indent = "  "

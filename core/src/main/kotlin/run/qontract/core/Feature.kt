@@ -89,7 +89,7 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
                 }
             }
 
-            throw NoMatchingScenario(results.report())
+            throw NoMatchingScenario(results.withoutFluff().report())
         } finally {
             serverState = emptyMap()
         }

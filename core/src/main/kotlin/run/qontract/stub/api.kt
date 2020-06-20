@@ -38,6 +38,25 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
     return HttpStub(features, httpExpectations, host, port, ::consoleLog)
 }
 
+fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
+    return contractPaths.flatMap { contractPath ->
+        println("Loading $contractPath")
+        val feature = Feature(readFile(contractPath))
+        val implicitDataDir = implicitContractDataDir(contractPath)
+
+        val stubData = when {
+            implicitDataDir.isDirectory -> {
+                println("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
+                val stubDataFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension == "json" } ?: emptyList()
+                stubDataFiles.map { Pair(it.path, stringToMockScenario(StringValue(it.readText())))}
+            }
+            else -> emptyList()
+        }
+
+        loadQontractStubs(listOf(Pair(contractPath, feature)), stubData)
+    }
+}
+
 fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
     val dataDirFileList = allDirsInTree(dataDirPaths)
 
@@ -75,8 +94,8 @@ fun loadQontractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
         when (val feature = matchResults.mapNotNull { it.first }.firstOrNull()) {
             null -> {
                 println(matchResults.mapNotNull { it.second }.map { (exception, contractFile) ->
-                    "$stubFile didn't match $contractFile${System.lineSeparator()}${exception.message}"
-                }.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
+                    "$stubFile didn't match $contractFile${System.lineSeparator()}${exception.message?.prependIndent("  ")}"
+                }.joinToString("${System.lineSeparator()}${System.lineSeparator()}").prependIndent( "  "))
                 null
             }
             else -> Pair(feature, stub)
@@ -114,8 +133,8 @@ fun createStubFromContracts(contractPaths: List<String>, host: String = "localho
 fun implicitContractDataDirs(contractPaths: List<String>) =
         contractPaths.map { implicitContractDataDir(it).absolutePath }
 
-fun implicitContractDataDir(path: String): File {
-    val contractFile = File(path)
+fun implicitContractDataDir(contractPath: String): File {
+    val contractFile = File(contractPath)
     return File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
 }
 

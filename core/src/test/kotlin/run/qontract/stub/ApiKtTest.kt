@@ -365,14 +365,15 @@ Feature: Math API
             loadQontractStubs(listOf(Pair("math.qontract", feature)), listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("10")), HttpResponse(status = 200, body = "not a number")))))
         }
 
-        val expectedOnStandardOutput = """sample.json didn't match math.qontract
-In scenario "Square of a number"
->> RESPONSE.BODY
-
-Expected number, actual was string: "not a number""""
-
         assertThat(stubInfo.single().first).isEqualTo(feature)
         assertThat(stubInfo.single().second).isEmpty()
+
+        val expectedOnStandardOutput = """sample.json didn't match math.qontract
+    In scenario "Square of a number"
+    >> RESPONSE.BODY
+  
+    Expected number, actual was string: "not a number""""
+
         assertThat(stdout).isEqualTo(expectedOnStandardOutput)
     }
 

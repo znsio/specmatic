@@ -5,6 +5,7 @@ import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.mock.NoMatchingScenario
+import run.qontract.mock.ScenarioStub
 import run.qontract.stub.*
 import java.io.File
 import java.nio.file.FileSystems
@@ -21,7 +22,7 @@ class StubCommand : Callable<Unit> {
     var qontractKafka: QontractKafka? = null
 
     @Parameters(arity = "1..*", description = ["Contract file paths"])
-    lateinit var paths: List<String>
+    lateinit var contractPaths: List<String>
 
     @Option(names = ["--data"], description = ["Directory in which contract data may be found"], required = false)
     var dataDirs: List<String> = mutableListOf()
@@ -48,10 +49,10 @@ class StubCommand : Callable<Unit> {
         startServer()
         addShutdownHook()
 
-        val contractPathParentPaths = paths.map {
+        val contractPathParentPaths = contractPaths.map {
             File(it).absoluteFile.parentFile.toPath()
         }
-        val contractPathDataDirPaths = paths.flatMap { contractFilePath ->
+        val contractPathDataDirPaths = contractPaths.flatMap { contractFilePath ->
             allDirsInTree(implicitContractDataDir(contractFilePath).absolutePath).map { it.toPath() }
         }
         val dataDirPaths = dataDirs.flatMap {
@@ -104,10 +105,14 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun startServer() {
-        val stubs = loadContractStubsFromFiles(paths, when {
-            dataDirs.isNotEmpty() -> dataDirs
-            else -> implicitContractDataDirs(paths)
-        })
+        val stubs = when {
+            dataDirs.isNotEmpty() -> loadContractStubsFromFiles(contractPaths, dataDirs)
+            else -> loadContractStubsFromImplicitPaths(contractPaths)
+        }
+//        val stubs = loadContractStubsFromFiles(contractPaths, when {
+//            dataDirs.isNotEmpty() -> dataDirs
+//            else -> implicitContractDataDirs(contractPaths)
+//        })
 
         val behaviours = stubs.map { it.first }
 

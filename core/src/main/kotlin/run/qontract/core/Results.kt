@@ -5,6 +5,8 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
     fun hasSuccess(): Boolean = results.any { it is Result.Success }
     fun success(): Boolean = hasSuccess() && !hasFailures()
 
+    fun withoutFluff(): Results = copy(results = results.filterNot { isFluff(it) }.toMutableList())
+
     fun toResultIfAny(): Result {
         return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { resultReport(it) })
     }
@@ -27,7 +29,7 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
 
         return when {
             filteredResults.isNotEmpty() -> listToReport(filteredResults)
-            else -> "No scenario matched\n\n${listToReport(results)}"
+            else -> "No scenario matched\n\n${listToReport(results)}".trim()
         }
     }
 }

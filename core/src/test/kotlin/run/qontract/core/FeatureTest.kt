@@ -45,12 +45,7 @@ class FeatureTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance2").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body?.toStringValue()).isEqualTo("""No scenario matched
-
-In scenario "Get account balance"
->> REQUEST.URL.PATH (/balance2)
-
-Expected string: "balance", actual was string: "balance2"""")
+        assertThat(httpResponse.body?.toStringValue()).isEqualTo("""Match not found""")
     }
 
     @Test

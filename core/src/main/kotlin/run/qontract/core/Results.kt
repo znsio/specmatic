@@ -29,12 +29,12 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
 
         return when {
             filteredResults.isNotEmpty() -> listToReport(filteredResults)
-            else -> "No scenario matched\n\n${listToReport(results)}".trim()
+            else -> "Match not found\n\n${listToReport(results)}".trim()
         }
     }
 }
 
-private fun isFluff(it: Result?): Boolean {
+internal fun isFluff(it: Result?): Boolean {
     return when(it) {
         is Result.Failure -> it.fluff || isFluff(it.cause)
         else -> false

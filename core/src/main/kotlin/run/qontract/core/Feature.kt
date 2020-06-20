@@ -22,6 +22,15 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
             val resultList = lookupScenario(httpRequest, scenarios)
+            return matchingScenario(resultList)?.generateHttpResponse(serverState) ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff().generateErrorHttpResponse()
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
+    fun lookupResponse2(httpRequest: HttpRequest): HttpResponse {
+        try {
+            val resultList = lookupScenario(httpRequest, scenarios)
             return matchingScenario(resultList)?.generateHttpResponse(serverState) ?: errorResponse(resultList)
         } finally {
             serverState = emptyMap()
@@ -114,7 +123,7 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
             it.matchesMock(kafkaMessage)
         }
 
-        return results.find { it is Result.Success } ?: results.firstOrNull() ?: Result.Failure("No scenarios found, couldn't check the message")
+        return results.find { it is Result.Success } ?: results.firstOrNull() ?: Result.Failure("No match found, couldn't check the message")
     }
 
     fun matchingStub(scenarioStub: ScenarioStub): HttpStubData =

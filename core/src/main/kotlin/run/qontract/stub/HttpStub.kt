@@ -241,9 +241,9 @@ fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: Lis
             null -> {
                 when(strictMode) {
                     true -> {
-                        val failureResults = matchResults.filter { (result, _) -> result is Result.Failure && !result.fluff }.map { it.first }
+                        val failureResults = matchResults.map { it.first }
 
-                        val results = Results(failureResults.toMutableList())
+                        val results = Results(failureResults.toMutableList()).withoutFluff()
                         HttpResponse(400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue(results.report()))
                     }
                     else -> {
@@ -259,7 +259,7 @@ fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: Lis
                     }
                 }
             }
-            else -> mock.third
+            else -> mock.response
         }
     } finally {
         behaviours.forEach { behaviour ->
@@ -284,7 +284,7 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List
                     it.body ?: EmptyString
                 }.filter { it != EmptyString }.joinToString("\n\n"))
             }
-            else -> mock.third
+            else -> mock.response
         }
     } finally {
         contractInfo.forEach { (behaviour, _) ->
@@ -314,11 +314,7 @@ fun badRequest(errorMessage: String?): HttpResponse {
 
 interface StubData
 
-data class HttpStubData(val requestType: HttpRequestPattern, val response: HttpResponse, val resolver: Resolver) : StubData {
-    val first = requestType
-    val second = resolver
-    val third = response
-}
+data class HttpStubData(val requestType: HttpRequestPattern, val response: HttpResponse, val resolver: Resolver) : StubData
 
 data class KafkaStubData(val kafkaMessage: KafkaMessage) : StubData
 

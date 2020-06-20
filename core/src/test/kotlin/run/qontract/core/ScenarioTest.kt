@@ -137,7 +137,7 @@ And response-header X-ResponseKey (number)
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", mapOf("X-RequestKey" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertDoesNotThrow { matchingResponse.third.headers.getValue("X-ResponseKey").toInt() }
+        assertDoesNotThrow { matchingResponse.response.headers.getValue("X-ResponseKey").toInt() }
     }
 
     @Test
@@ -160,7 +160,7 @@ And response-header X-ResponseKey (number)
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", mapOf("X-RequestKey" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertThat(matchingResponse.third.headers.getValue("X-ResponseKey")).isEqualTo("20")
+        assertThat(matchingResponse.response.headers.getValue("X-ResponseKey")).isEqualTo("20")
     }
 
     @Test
@@ -180,7 +180,7 @@ Then status 200
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertThat(matchingResponse.third.status).isEqualTo(200)
+        assertThat(matchingResponse.response.status).isEqualTo(200)
     }
 
     @Test
@@ -200,7 +200,7 @@ Then status 200
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertThat(matchingResponse.third.status).isEqualTo(200)
+        assertThat(matchingResponse.response.status).isEqualTo(200)
     }
 
     @Test
@@ -220,7 +220,7 @@ Then status 200
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertThat(matchingResponse.third.status).isEqualTo(200)
+        assertThat(matchingResponse.response.status).isEqualTo(200)
     }
 
     @Test
@@ -240,7 +240,7 @@ Then status 200
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertThat(matchingResponse.third.status).isEqualTo(200)
+        assertThat(matchingResponse.response.status).isEqualTo(200)
     }
 
     @Test
@@ -261,7 +261,7 @@ Then status 200
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", formFields = mapOf("value" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertThat(matchingResponse.third.status).isEqualTo(200)
+        assertThat(matchingResponse.response.status).isEqualTo(200)
     }
 
     @Test
@@ -282,7 +282,7 @@ Then status 200
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", formFields = mapOf("value" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertThat(matchingResponse.third.status).isEqualTo(200)
+        assertThat(matchingResponse.response.status).isEqualTo(200)
     }
 
     @Test
@@ -303,7 +303,7 @@ Then status 200
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", multiPartFormData = listOf(MultiPartContentValue("value", StringValue("10")))), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertThat(matchingResponse.third.status).isEqualTo(200)
+        assertThat(matchingResponse.response.status).isEqualTo(200)
     }
 
     @Test
@@ -324,7 +324,7 @@ Then status 200
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", multiPartFormData = listOf(MultiPartContentValue("value", StringValue("10")))), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertThat(matchingResponse.third.status).isEqualTo(200)
+        assertThat(matchingResponse.response.status).isEqualTo(200)
     }
 
     @Test
@@ -347,6 +347,6 @@ And response-body (number)
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", body = StringValue("10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertDoesNotThrow { (matchingResponse.third.body?.toStringValue() ?: "not a number").toInt() }
+        assertDoesNotThrow { (matchingResponse.response.body?.toStringValue() ?: "not a number").toInt() }
     }
 }

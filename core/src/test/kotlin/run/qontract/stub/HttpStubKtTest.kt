@@ -11,9 +11,7 @@ import run.qontract.mock.ScenarioStub
 
 internal class HttpStubKtTest {
     @Test
-    fun temp() {
-//        fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: List<HttpStubData>, strictMode: Boolean): HttpResponse {
-
+    fun `in strict mode the stub replies with an explanation of what broke instead of a randomly generated response`() {
         val gherkin = """
 Feature: Test
   Scenario: Test
@@ -32,7 +30,9 @@ Feature: Test
 
         assertThat(stubResponse.status).isEqualTo(400)
         assertThat(stubResponse.headers).containsEntry("X-Qontract-Result", "failure")
-        assertThat(stubResponse.body?.toStringValue()).isEqualTo(""">> REQUEST.BODY
+        assertThat(stubResponse.body?.toStringValue()).isEqualTo("""STRICT MODE ON
+
+>> REQUEST.BODY
 
 Expected number, actual was "Hello"""")
     }

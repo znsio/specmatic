@@ -244,7 +244,7 @@ fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: Lis
                         val failureResults = matchResults.map { it.first }
 
                         val results = Results(failureResults.toMutableList()).withoutFluff()
-                        HttpResponse(400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue(results.report()))
+                        HttpResponse(400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report()}"))
                     }
                     else -> {
                         val responses = behaviours.asSequence().map {

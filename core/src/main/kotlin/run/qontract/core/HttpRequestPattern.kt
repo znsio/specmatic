@@ -86,7 +86,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
                         else -> result
                     }
                 } catch(e: ContractException) {
-                    mismatchResult(pattern, value).breadCrumb(key).breadCrumb("FORM-FIELDS")
+                    e.failure().breadCrumb(key).breadCrumb("FORM-FIELDS")
                 } catch(e: Throwable) {
                     mismatchResult(pattern, value).breadCrumb(key).breadCrumb("FORM-FIELDS")
                 }

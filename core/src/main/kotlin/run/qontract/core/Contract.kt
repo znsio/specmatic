@@ -24,12 +24,15 @@ data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val 
         val httpClient = HttpClient(endPoint)
 
         contractBehaviour.generateTestScenarios(emptyList()).fold(Results()) { results, scenario ->
-            scenario.kafkaMessagePattern?.let { kafkaMessagePattern ->
-                val message = """KAFKA MESSAGE
+            when(val kafkaMessagePattern = scenario.kafkaMessagePattern) {
+                null -> Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
+                else -> {
+                    val message = """KAFKA MESSAGE
 ${kafkaMessagePattern.generate(scenario.resolver).toDisplayableString()}""".trimMargin().prependIndent("| ")
-                println(message)
-                Results(results = results.results.plus(Result.Success()).toMutableList())
-            } ?: Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
+                    println(message)
+                    Results(results = results.results.plus(Result.Success()).toMutableList())
+                }
+            }
         }
     }
 

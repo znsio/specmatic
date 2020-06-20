@@ -93,7 +93,14 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
                     }
                 }
             } else {
-                attempt("Format error in example of \"$keyWithoutOptionality\"") { listOf(ExactValuePattern(pattern.parse(rowValue, resolver))) }
+                val parsedRowValue = attempt("Format error in example of \"$keyWithoutOptionality\"") {
+                    pattern.parse(rowValue, resolver)
+                }
+
+                when(val matchResult = pattern.matches(parsedRowValue, resolver)) {
+                    is Result.Failure -> throw ContractException(resultReport(matchResult))
+                    else -> listOf(ExactValuePattern(parsedRowValue))
+                }
             }
         }
         else -> pattern.newBasedOn(row, resolver)

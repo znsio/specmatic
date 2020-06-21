@@ -19,12 +19,10 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
     private fun matchEach(parameters: Pair<Map<String, String>, Resolver>): MatchingResult<Pair<Map<String, String>, Resolver>> {
         val (headers, resolver) = parameters
 
-        val headersWithRelevantKeys = ancestorHeaders?.let {
-            headers.filterKeys { key ->
-                val keyWithoutOptionality = withoutOptionality(key)
-                it.containsKey(keyWithoutOptionality) || it.containsKey("$keyWithoutOptionality?")
-            }
-        } ?: withoutContentTypeGeneratedByQontract(headers, pattern)
+        val headersWithRelevantKeys = when {
+            ancestorHeaders != null -> withoutIgnorableHeaders(headers, ancestorHeaders)
+            else -> withoutContentTypeGeneratedByQontract(headers, pattern)
+        }
 
         val missingKey = resolver.findMissingKey(pattern, headersWithRelevantKeys.mapValues { StringValue(it.value) } )
         if(missingKey != null) {
@@ -45,7 +43,7 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
                 } catch(e: ContractException) {
                     return MatchFailure(e.failure())
                 } catch(e: Throwable) {
-                    return MatchFailure(Result.Failure(e.localizedMessage, breadCrumb = key))
+                    return MatchFailure(Result.Failure(e.localizedMessage, breadCrumb = keyWithoutOptionality))
                 }
                 !key.endsWith("?") ->
                     return MatchFailure(Result.Failure(message = """Header $key was missing""", breadCrumb = key))
@@ -53,6 +51,13 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
         }
 
         return MatchSuccess(parameters)
+    }
+
+    private fun withoutIgnorableHeaders(headers: Map<String, String>, ancestorHeaders: Map<String, Pattern>): Map<String, String> {
+        return headers.filterKeys { key ->
+            val keyWithoutOptionality = withoutOptionality(key)
+            ancestorHeaders.containsKey(keyWithoutOptionality) || ancestorHeaders.containsKey("$keyWithoutOptionality?")
+        }
     }
 
     private fun withoutContentTypeGeneratedByQontract(headers: Map<String, String>, pattern: Map<String, Pattern>): Map<String, String> {

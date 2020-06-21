@@ -7,11 +7,13 @@ import run.qontract.core.value.StringValue
 import java.net.URI
 
 data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val urlMatcher: URLMatcher? = null, val method: String? = null, val body: Pattern = NoContentPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap(), val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList()) {
-    fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver): Result {
+    fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null): Result {
         val result = incomingHttpRequest to resolver to
                 ::matchUrl then
                 ::matchMethod then
-                ::matchHeaders then
+                { (request, defaultResolver) ->
+                    matchHeaders(Triple(request, headersResolver, defaultResolver))
+                } then
                 ::matchFormFields then
                 ::matchMultiPartFormData then
                 ::matchBody otherwise
@@ -99,13 +101,13 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
         }
     }
 
-    private fun matchHeaders(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
-        val (httpRequest, resolver) = parameters
+    private fun matchHeaders(parameters: Triple<HttpRequest, Resolver?, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
+        val (httpRequest, headersResolver, defaultResolver) = parameters
         val headers = httpRequest.headers
-        when (val result = this.headersPattern.matches(headers, resolver)) {
+        when (val result = this.headersPattern.matches(headers, headersResolver ?: defaultResolver)) {
             is Failure -> return MatchFailure(result)
         }
-        return MatchSuccess(parameters)
+        return MatchSuccess(Pair(httpRequest, defaultResolver))
     }
 
     private fun matchBody(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {

@@ -24,10 +24,21 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
     fun matches(httpRequest: HttpRequest, serverState: Map<String, Value>): Result {
         val resolver = Resolver(serverState, false, patterns)
-        if (!serverStateMatches(serverState, resolver.copy())) {
+        return matches(httpRequest, serverState, resolver, resolver)
+    }
+
+    fun matchesStub(httpRequest: HttpRequest, serverState: Map<String, Value>): Result {
+        val headersResolver = Resolver(serverState, false, patterns)
+        val nonHeadersResolver = headersResolver.copy(findMissingKey = checkAllKeys)
+
+        return matches(httpRequest, serverState, nonHeadersResolver, headersResolver)
+    }
+
+    private fun matches(httpRequest: HttpRequest, serverState: Map<String, Value>, resolver: Resolver, headersResolver: Resolver): Result {
+        if (!serverStateMatches(serverState, resolver)) {
             return Result.Failure("Facts mismatch", breadCrumb = "FACTS").also { it.updateScenario(this) }
         }
-        return httpRequestPattern.matches(httpRequest, resolver).also {
+        return httpRequestPattern.matches(httpRequest, resolver, headersResolver).also {
             it.updateScenario(this)
         }
     }

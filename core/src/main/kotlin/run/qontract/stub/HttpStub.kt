@@ -248,14 +248,14 @@ fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: Lis
                     }
                     else -> {
                         val responses = behaviours.asSequence().map {
-                            it.lookupResponse(httpRequest)
-                        }
+                            it.stubResponse(httpRequest)
+                        }.toList()
 
                         responses.firstOrNull {
                             it.headers.getOrDefault("X-Qontract-Result", "none") != "failure"
-                        } ?: HttpResponse(400, responses.map {
+                        } ?: HttpResponse(400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue(responses.map {
                             it.body ?: EmptyString
-                        }.filter { it != EmptyString }.joinToString("\n\n"))
+                        }.filter { it != EmptyString }.joinToString("\n\n")))
                     }
                 }
             }

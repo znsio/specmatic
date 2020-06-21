@@ -28,10 +28,15 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
         }
     }
 
-    fun lookupResponse2(httpRequest: HttpRequest): HttpResponse {
+    fun stubResponse(httpRequest: HttpRequest): HttpResponse {
         try {
-            val resultList = lookupScenario(httpRequest, scenarios)
-            return matchingScenario(resultList)?.generateHttpResponse(serverState) ?: errorResponse(resultList)
+            val scenarioSequence = scenarios.asSequence()
+
+            val localCopyOfServerState = serverState
+            val resultList = scenarioSequence.zip(scenarioSequence.map {
+                it.matchesStub(httpRequest, localCopyOfServerState)
+            })
+            return matchingScenario(resultList)?.generateHttpResponse(serverState) ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff().generateErrorHttpResponse()
         } finally {
             serverState = emptyMap()
         }
@@ -39,15 +44,21 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
 
     fun lookupScenario(httpRequest: HttpRequest): Scenario =
         try {
-            val scenarios = lookupScenario(httpRequest, scenarios)
-            val matchingScenario = matchingScenario(scenarios)
-            matchingScenario ?: scenarios.firstOrNull()?.second?.let { throw ContractException(resultReport(it), scenario = matchingScenario) } ?: throw ContractException("The contract is empty.")
+            val resultList = lookupScenario(httpRequest, scenarios)
+            val matchingScenario = matchingScenario(resultList)
+
+            val firstRealResult = resultList.filterNot { isFluff(it.second) }.firstOrNull()
+            val resultsExist = resultList.firstOrNull() != null
+
+            when {
+                matchingScenario != null -> matchingScenario
+                firstRealResult != null -> throw ContractException(resultReport(firstRealResult.second))
+                resultsExist -> throw ContractException("Match not found")
+                else -> throw ContractException("The contract is empty.")
+            }
         } finally {
             serverState = emptyMap()
         }
-
-    private fun errorResponse(resultList: Sequence<Pair<Scenario, Result>>) =
-            Results(resultList.map { it.second }.toMutableList()).generateErrorHttpResponse()
 
     private fun matchingScenario(resultList: Sequence<Pair<Scenario, Result>>): Scenario? {
         return resultList.find {
@@ -58,8 +69,9 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
     private fun lookupScenario(httpRequest: HttpRequest, scenarios: List<Scenario>): Sequence<Pair<Scenario, Result>> {
         val scenarioSequence = scenarios.asSequence()
 
+        val localCopyOfServerState = serverState
         return scenarioSequence.zip(scenarioSequence.map {
-            it.matches(httpRequest, serverState)
+            it.matches(httpRequest, localCopyOfServerState)
         })
     }
 

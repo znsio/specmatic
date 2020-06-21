@@ -1,6 +1,7 @@
 package application
 
 import picocli.CommandLine.*
+import run.qontract.LogTail
 import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
@@ -144,6 +145,8 @@ class StubCommand : Callable<Unit> {
 
             stubKafkaContracts(kafkaExpectations, qontractKafka?.bootstrapServers ?: "PLAINTEXT://$kafkaHost:$kafkaPort", ::createTopics, ::createProducer)
         }
+
+        LogTail.storeLastLoadSnapshot()
     }
 
     private fun hasKafkaScenarios(behaviours: List<Feature>): Boolean {
@@ -167,10 +170,12 @@ class StubCommand : Callable<Unit> {
         try {
             stopServer()
             consoleLog("Stopped.")
-        } catch (e: Throwable) { consoleLog("Error stopping server: ${e.localizedMessage}")
+        } catch (e: Throwable) {
+            consoleLog("Error stopping server: ${e.localizedMessage}")
         }
 
-        try { startServer() } catch (e: Throwable) { consoleLog("Error starting server: ${e.localizedMessage}")
+        try { startServer() } catch (e: Throwable) {
+            consoleLog("Error starting server: ${e.localizedMessage}")
         }
     }
 

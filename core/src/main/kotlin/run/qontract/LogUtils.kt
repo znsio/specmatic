@@ -2,10 +2,11 @@ package run.qontract
 
 import java.util.*
 
-internal object LogTail {
+object LogTail {
     var n: Int = 5000
 
     private var logs = LinkedList<String>()
+    private var lastLoadSnapshot = emptyList<String>()
 
     fun appendLine(line: String) {
         logs.size
@@ -16,7 +17,12 @@ internal object LogTail {
         }
     }
 
+    fun storeLastLoadSnapshot() {
+        lastLoadSnapshot = logs.toList()
+    }
+
     fun getString(): String = logs.joinToString("\n")
+    fun getLoadLogString(): String = lastLoadSnapshot.joinToString("\n")
 }
 
 fun consoleLog(event: String) {

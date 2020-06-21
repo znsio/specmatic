@@ -69,6 +69,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                 when {
                     isStubRequest(httpRequest) -> handleStubRequest(call, httpRequest)
                     isFetchLogRequest(httpRequest) -> handleFetchLogRequest(call)
+                    isFetchLoadLogRequest(httpRequest) -> handleFetchLoadLogRequest(call)
                     isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest(call)
                     isStateSetupRequest(httpRequest) -> handleServerStateRequest(call, httpRequest)
                     else -> serveStubResponse(call, httpRequest)
@@ -85,8 +86,14 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         }
     }
 
+    private fun handleFetchLoadLogRequest(call: ApplicationCall) {
+        val response = HttpResponse.OK(StringValue(LogTail.getLoadLogString()))
+        respondToKtorHttpResponse(call, response)
+    }
+
     private fun handleFetchContractsRequest(call: ApplicationCall) {
-        respondToKtorHttpResponse(call, HttpResponse.OK(StringValue(features.joinToString("\n") { it.name })))
+        val response = HttpResponse
+        respondToKtorHttpResponse(call, response.OK(StringValue(features.joinToString("\n") { it.name })))
     }
 
     private fun handleFetchLogRequest(call: ApplicationCall) {
@@ -338,10 +345,13 @@ internal fun isStubRequest(httpRequest: HttpRequest) =
         httpRequest.path == "/_qontract/stub_setup" && httpRequest.method == "POST"
 
 internal fun isFetchLogRequest(httpRequest: HttpRequest): Boolean =
-        httpRequest.path == "/_qontract/logs" && httpRequest.method == "GET"
+        httpRequest.path == "/_qontract/log" && httpRequest.method == "GET"
 
 internal fun isStateSetupRequest(httpRequest: HttpRequest): Boolean =
         httpRequest.path == "/_qontract/state_setup" && httpRequest.method == "POST"
 
 internal fun isFetchContractsRequest(httpRequest: HttpRequest): Boolean =
         httpRequest.path == "/_qontract/contracts" && httpRequest.method == "GET"
+
+internal fun isFetchLoadLogRequest(httpRequest: HttpRequest): Boolean =
+        httpRequest.path == "/_qontract/load_log" && httpRequest.method == "GET"

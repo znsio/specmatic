@@ -34,8 +34,8 @@ import run.qontract.nullLog
 import java.io.ByteArrayOutputStream
 import java.util.*
 
-class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false) : ContractStub {
-    constructor(behaviour: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(behaviour), contractInfoToHttpExpectations(listOf(Pair(behaviour, scenarioStubs))), host, port, log)
+class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false) : ContractStub {
+    constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
     constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(Feature(gherkinData), scenarioStubs, host, port, log)
 
     private var httpStubs = Vector<HttpStubData>(_httpStubs)
@@ -53,8 +53,8 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
             allowCredentials = true
             allowNonSimpleContentTypes = true
 
-            behaviours.flatMap { behaviour ->
-                behaviour.scenarios.flatMap { scenario ->
+            features.flatMap { feature ->
+                feature.scenarios.flatMap { scenario ->
                     scenario.httpRequestPattern.headersPattern.pattern.keys.map { withoutOptionality(it) }
                 }
             }.forEach { header(it) }
@@ -69,6 +69,7 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
                 when {
                     isStubRequest(httpRequest) -> handleStubRequest(call, httpRequest)
                     isFetchLogRequest(httpRequest) -> handleFetchLogRequest(call)
+                    isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest(call)
                     isStateSetupRequest(httpRequest) -> handleServerStateRequest(call, httpRequest)
                     else -> serveStubResponse(call, httpRequest)
                 }
@@ -84,6 +85,10 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
         }
     }
 
+    private fun handleFetchContractsRequest(call: ApplicationCall) {
+        respondToKtorHttpResponse(call, HttpResponse.OK(StringValue(features.joinToString("\n") { it.name })))
+    }
+
     private fun handleFetchLogRequest(call: ApplicationCall) {
         val response = HttpResponse.OK(StringValue(LogTail.getString()))
         respondToKtorHttpResponse(call, response)
@@ -92,7 +97,7 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
     private fun serveStubResponse(call: ApplicationCall, httpRequest: HttpRequest) {
         log(">> Request Start At ${Date()}")
         log(httpRequest.toLogString("-> "))
-        val response = stubResponse(httpRequest, behaviours, httpStubs, strictMode)
+        val response = stubResponse(httpRequest, features, httpStubs, strictMode)
         writeAndLogResponse(call, response, log)
     }
 
@@ -120,9 +125,9 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
     private fun createStub(stub: ScenarioStub) {
         if (stub.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
 
-        val results = behaviours.asSequence().map { behaviour ->
+        val results = features.asSequence().map { feature ->
             try {
-                val mockResponse = behaviour.matchingStub(stub.request, stub.response)
+                val mockResponse = feature.matchingStub(stub.request, stub.response)
                 Pair(Result.Success(), mockResponse)
             } catch (e: NoMatchingScenario) {
                 Pair(Result.Failure(e.localizedMessage), null)
@@ -148,8 +153,8 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
         log("# >> Request Sent At ${Date()}")
         log(startLinesWith(valueMapToPlainJsonString(serverState), "# "))
 
-        behaviours.forEach { behaviour ->
-            behaviour.setServerState(serverState)
+        features.forEach { feature ->
+            feature.setServerState(serverState)
         }
 
         log("# << Complete At ${Date()}")
@@ -233,7 +238,7 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     }
 }
 
-fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: List<HttpStubData>, strictMode: Boolean): HttpResponse {
+fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<HttpStubData>, strictMode: Boolean): HttpResponse {
     return try {
         val matchResults = stubs.map {
             val (requestPattern, _, resolver) = it
@@ -250,7 +255,7 @@ fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: Lis
                         HttpResponse(400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report()}"))
                     }
                     else -> {
-                        val responses = behaviours.asSequence().map {
+                        val responses = features.asSequence().map {
                             it.stubResponse(httpRequest)
                         }.toList()
 
@@ -265,8 +270,8 @@ fun stubResponse(httpRequest: HttpRequest, behaviours: List<Feature>, stubs: Lis
             else -> mock.response
         }
     } finally {
-        behaviours.forEach { behaviour ->
-            behaviour.clearServerState()
+        features.forEach { feature ->
+            feature.clearServerState()
         }
     }
 }
@@ -277,8 +282,8 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List
             requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)) is Result.Success
         }) {
             null -> {
-                val responses = contractInfo.asSequence().map { (behaviour, _) ->
-                    behaviour.lookupResponse(httpRequest)
+                val responses = contractInfo.asSequence().map { (feature, _) ->
+                    feature.lookupResponse(httpRequest)
                 }
 
                 responses.firstOrNull {
@@ -290,8 +295,8 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List
             else -> mock.response
         }
     } finally {
-        contractInfo.forEach { (behaviour, _) ->
-            behaviour.clearServerState()
+        contractInfo.forEach { (feature, _) ->
+            feature.clearServerState()
         }
     }
 }
@@ -335,6 +340,8 @@ internal fun isStubRequest(httpRequest: HttpRequest) =
 internal fun isFetchLogRequest(httpRequest: HttpRequest): Boolean =
         httpRequest.path == "/_qontract/logs" && httpRequest.method == "GET"
 
-internal fun isStateSetupRequest(httpRequest: HttpRequest): Boolean {
-    return httpRequest.path == "/_qontract/state_setup" && httpRequest.method == "POST"
-}
+internal fun isStateSetupRequest(httpRequest: HttpRequest): Boolean =
+        httpRequest.path == "/_qontract/state_setup" && httpRequest.method == "POST"
+
+internal fun isFetchContractsRequest(httpRequest: HttpRequest): Boolean =
+        httpRequest.path == "/_qontract/contracts" && httpRequest.method == "GET"

@@ -15,9 +15,19 @@ import run.qontract.stub.HttpStubData
 import run.qontract.test.TestExecutor
 import java.net.URI
 
-data class Feature(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap()) {
-    constructor(contractGherkinDocument: GherkinDocument) : this(lex(contractGherkinDocument))
-    constructor(gherkinData: String) : this(parseGherkinString(gherkinData))
+fun Feature(gherkinData: String): Feature {
+    val gherkinDocument = parseGherkinString(gherkinData)
+    return Feature(gherkinDocument)
+}
+
+fun Feature(contractGherkinDocument: GherkinDocument): Feature {
+    val (name, scenarios) = lex(contractGherkinDocument)
+    return Feature(scenarios = scenarios, name = name)
+}
+
+data class Feature(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap(), val name: String) {
+//    constructor(contractGherkinDocument: GherkinDocument) : this(lex(contractGherkinDocument))
+//    constructor(gherkinData: String) : this(parseGherkinString(gherkinData))
 
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
@@ -318,8 +328,8 @@ internal fun parseGherkinString(gherkinData: String): GherkinDocument {
     return parser.parse(gherkinData).build()
 }
 
-internal fun lex(gherkinDocument: GherkinDocument): List<Scenario> =
-        lex(gherkinDocument.feature.childrenList)
+internal fun lex(gherkinDocument: GherkinDocument): Pair<String, List<Scenario>> =
+        Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.childrenList))
 
 internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>): List<Scenario> =
     lex(featureChildren, lexBackground(featureChildren))

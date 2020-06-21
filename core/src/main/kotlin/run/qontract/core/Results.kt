@@ -21,15 +21,24 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
         results.add(result)
     }
 
-    fun generateErrorHttpResponse() =
-            HttpResponse(400, report(), mutableMapOf("Content-Type" to "text/plain", "X-Qontract-Result" to "failure"))
+    fun generateErrorHttpResponse(): HttpResponse {
+        val report = report("").trim()
 
-    fun report(): String {
+        val defaultHeaders = mapOf("Content-Type" to "text/plain", "X-Qontract-Result" to "failure")
+        val headers = when {
+            report.isEmpty() -> defaultHeaders.plus("X-Qontract-Empty" to "true")
+            else -> defaultHeaders
+        }
+
+        return HttpResponse(400, report(), headers)
+    }
+
+    fun report(defaultMessage: String = "Match not found"): String {
         val filteredResults = results.filterNot { isFluff(it) }
 
         return when {
             filteredResults.isNotEmpty() -> listToReport(filteredResults)
-            else -> "Match not found\n\n${listToReport(results)}".trim()
+            else -> "$defaultMessage\n\n${listToReport(results)}".trim()
         }
     }
 }

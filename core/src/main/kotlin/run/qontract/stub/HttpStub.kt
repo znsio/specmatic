@@ -266,11 +266,19 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<
                             it.stubResponse(httpRequest)
                         }.toList()
 
-                        responses.firstOrNull {
-                            it.headers.getOrDefault("X-Qontract-Result", "none") != "failure"
-                        } ?: HttpResponse(400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue(responses.map {
-                            it.body ?: EmptyString
-                        }.filter { it != EmptyString }.joinToString("\n\n")))
+                        when(val successfulResponse = responses.firstOrNull { it.headers.getOrDefault("X-Qontract-Result", "none") != "failure" }) {
+                            null -> {
+                                val body = when {
+                                    responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> StringValue("Match not found")
+                                    else -> StringValue(responses.map {
+                                        it.body ?: EmptyString
+                                    }.filter { it != EmptyString }.joinToString("\n\n"))
+                                }
+
+                                HttpResponse(400, headers = mapOf("X-Qontract-Result" to "failure"), body = body)
+                            }
+                            else -> successfulResponse
+                        }
                     }
                 }
             }

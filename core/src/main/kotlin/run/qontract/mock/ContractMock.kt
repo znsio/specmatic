@@ -17,6 +17,7 @@ import kotlinx.coroutines.runBlocking
 import run.qontract.core.value.*
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
+import run.qontract.stub.isStubRequest
 import java.io.Closeable
 
 typealias Expectation = Triple<HttpRequestPattern, Resolver, HttpResponse>
@@ -127,6 +128,3 @@ fun writeBadRequest(call: ApplicationCall, errorMessage: String?) {
     call.response.header("X-Qontract-Result", "failure")
     runBlocking { call.respondText(errorMessage ?: "") }
 }
-
-fun isStubRequest(httpRequest: HttpRequest) =
-        httpRequest.path == "/_stub_setup" && httpRequest.method == "POST"

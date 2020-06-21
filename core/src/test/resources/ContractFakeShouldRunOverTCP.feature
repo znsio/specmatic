@@ -11,7 +11,7 @@ Background:
     And match response == {calls_left: 10, messages_left: 20}
 
   Scenario: api call
-    Given path "/_state_setup"
+    Given path "/_qontract/state_setup"
     And request {account_id: 10}
     And method POST
     And status 200

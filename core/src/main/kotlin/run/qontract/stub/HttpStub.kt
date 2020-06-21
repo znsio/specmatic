@@ -18,6 +18,7 @@ import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.asStream
 import io.ktor.util.toMap
 import kotlinx.coroutines.runBlocking
+import run.qontract.LogTail
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
@@ -67,6 +68,7 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
 
                 when {
                     isStubRequest(httpRequest) -> handleStubRequest(call, httpRequest)
+                    isFetchLogRequest(httpRequest) -> handleFetchLogRequest(call)
                     isStateSetupRequest(httpRequest) -> handleServerStateRequest(call, httpRequest)
                     else -> serveStubResponse(call, httpRequest)
                 }
@@ -80,6 +82,11 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
                 writeAndLogResponse(call, response, log)
             }
         }
+    }
+
+    private fun handleFetchLogRequest(call: ApplicationCall) {
+        val response = HttpResponse.OK(StringValue(LogTail.getString()))
+        respondToKtorHttpResponse(call, response)
     }
 
     private fun serveStubResponse(call: ApplicationCall, httpRequest: HttpRequest) {
@@ -148,10 +155,6 @@ class HttpStub(private val behaviours: List<Feature>, _httpStubs: List<HttpStubD
         log("# << Complete At ${Date()}")
 
         call.response.status(HttpStatusCode.OK)
-    }
-
-    private fun isStateSetupRequest(httpRequest: HttpRequest): Boolean {
-        return httpRequest.path == "/_state_setup" && httpRequest.method == "POST"
     }
 
     init {
@@ -320,9 +323,18 @@ data class KafkaStubData(val kafkaMessage: KafkaMessage) : StubData
 
 data class StubDataItems(val http: List<HttpStubData> = emptyList(), val kafka: List<KafkaStubData> = emptyList())
 
-fun writeAndLogResponse(call: ApplicationCall, response: HttpResponse, log: (event: String) -> Unit) {
+internal fun writeAndLogResponse(call: ApplicationCall, response: HttpResponse, log: (event: String) -> Unit) {
     log(response.toLogString("<- "))
     log("<< Response At ${Date()} == ")
     respondToKtorHttpResponse(call, response)
 }
 
+internal fun isStubRequest(httpRequest: HttpRequest) =
+        httpRequest.path == "/_qontract/stub_setup" && httpRequest.method == "POST"
+
+internal fun isFetchLogRequest(httpRequest: HttpRequest): Boolean =
+        httpRequest.path == "/_qontract/logs" && httpRequest.method == "GET"
+
+internal fun isStateSetupRequest(httpRequest: HttpRequest): Boolean {
+    return httpRequest.path == "/_qontract/state_setup" && httpRequest.method == "POST"
+}

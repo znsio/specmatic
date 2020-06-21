@@ -16,7 +16,7 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
     val contractBehaviour = Feature(contractGherkin)
 
     val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->
-        println("Loading data from ${file.name}")
+        consoleLog("Loading data from ${file.name}")
 
         stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))
                 .also {
@@ -40,15 +40,18 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
 
 fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
     return contractPaths.flatMap { contractPath ->
-        println("Loading $contractPath")
+        consoleLog("Loading $contractPath")
         val feature = Feature(readFile(contractPath))
         val implicitDataDir = implicitContractDataDir(contractPath)
 
         val stubData = when {
             implicitDataDir.isDirectory -> {
-                println("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
+                consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
                 val stubDataFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension == "json" } ?: emptyList()
-                stubDataFiles.map { Pair(it.path, stringToMockScenario(StringValue(it.readText())))}
+                printDataFiles(stubDataFiles)
+                stubDataFiles.map {
+                    Pair(it.path, stringToMockScenario(StringValue(it.readText())))
+                }
             }
             else -> emptyList()
         }
@@ -67,12 +70,16 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
     val dataFiles = dataDirFileList.flatMap {
         it.listFiles()?.toList() ?: emptyList<File>()
     }.filter { it.extension == "json" }
-    if (dataFiles.isNotEmpty())
-        println("Reading the stub files below:${System.lineSeparator()}${dataFiles.joinToString(System.lineSeparator())}")
+    printDataFiles(dataFiles)
 
     val mockData = dataFiles.map { Pair(it.path, stringToMockScenario(StringValue(it.readText()))) }
 
     return loadQontractStubs(features, mockData)
+}
+
+private fun printDataFiles(dataFiles: List<File>) {
+    if (dataFiles.isNotEmpty())
+        consoleLog("Reading the stub files below:${System.lineSeparator()}${dataFiles.joinToString(System.lineSeparator())}")
 }
 
 fun loadQontractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
@@ -93,7 +100,7 @@ fun loadQontractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
 
         when (val feature = matchResults.mapNotNull { it.first }.firstOrNull()) {
             null -> {
-                println(matchResults.mapNotNull { it.second }.map { (exception, contractFile) ->
+                consoleLog(matchResults.mapNotNull { it.second }.map { (exception, contractFile) ->
                     "$stubFile didn't match $contractFile${System.lineSeparator()}${exception.message?.prependIndent("  ")}"
                 }.joinToString("${System.lineSeparator()}${System.lineSeparator()}").prependIndent( "  "))
                 null

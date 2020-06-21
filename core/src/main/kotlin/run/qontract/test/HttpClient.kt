@@ -52,7 +52,7 @@ class HttpClient(private val baseURL: String, private val timeout: Int = 60, pri
         requestTimeoutMillis = (timeout * 1000).toLong()
     }
 }) : TestExecutor {
-    private val serverStateURL = "/_state_setup"
+    private val serverStateURL = "/_qontract/state_setup"
 
     @OptIn(KtorExperimentalAPI::class)
     @Throws(IOException::class, URISyntaxException::class)

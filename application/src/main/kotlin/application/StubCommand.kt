@@ -5,7 +5,6 @@ import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.mock.NoMatchingScenario
-import run.qontract.mock.ScenarioStub
 import run.qontract.stub.*
 import java.io.File
 import java.nio.file.FileSystems
@@ -66,11 +65,11 @@ class StubCommand : Callable<Unit> {
 
         while(true) { watchForChanges(pathsToWatch) }
     } catch (e: NoMatchingScenario) {
-        println(e.localizedMessage)
+        consoleLog(e.localizedMessage)
     } catch (e:ContractException) {
-        println(e.report())
+        consoleLog(e.report())
     } catch (e: Throwable) {
-        println("An error occurred: ${e.localizedMessage}")
+        consoleLog("An error occurred: ${e.localizedMessage}")
     }
 
     private fun watchForChanges(contractPaths: List<Path>) {
@@ -86,7 +85,7 @@ class StubCommand : Callable<Unit> {
 
             val (restartNeeded, changedFile) = isRestartNeeded(key)
             if(restartNeeded) {
-                println("""Restarting stub server. Change in ${changedFile}""")
+                consoleLog("""Restarting stub server. Change in ${changedFile}""")
                 restartServer()
             }
         }
@@ -109,10 +108,6 @@ class StubCommand : Callable<Unit> {
             dataDirs.isNotEmpty() -> loadContractStubsFromFiles(contractPaths, dataDirs)
             else -> loadContractStubsFromImplicitPaths(contractPaths)
         }
-//        val stubs = loadContractStubsFromFiles(contractPaths, when {
-//            dataDirs.isNotEmpty() -> dataDirs
-//            else -> implicitContractDataDirs(contractPaths)
-//        })
 
         val behaviours = stubs.map { it.first }
 
@@ -126,7 +121,7 @@ class StubCommand : Callable<Unit> {
                 }
 
                 HttpStub(httpBehaviours, httpExpectations, host, port, ::consoleLog, strictMode).also {
-                    println("Stub server is running on http://$host:$port. Ctrl + C to stop.")
+                    consoleLog("Stub server is running on http://$host:$port. Ctrl + C to stop.")
                 }
             }
             else -> null
@@ -139,12 +134,12 @@ class StubCommand : Callable<Unit> {
 
         if(validationResults.any { it is Result.Failure }) {
             val results = Results(validationResults.toMutableList())
-            println("Can't load Kafka mocks:\n${results.report()}")
+            consoleLog("Can't load Kafka mocks:\n${results.report()}")
         }
         else if(hasKafkaScenarios(behaviours)) {
             if(startKafka) {
                 qontractKafka = QontractKafka(kafkaPort)
-                println("Started local Kafka server: ${qontractKafka?.bootstrapServers}")
+                consoleLog("Started local Kafka server: ${qontractKafka?.bootstrapServers}")
             }
 
             stubKafkaContracts(kafkaExpectations, qontractKafka?.bootstrapServers ?: "PLAINTEXT://$kafkaHost:$kafkaPort", ::createTopics, ::createProducer)
@@ -168,13 +163,15 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun restartServer() {
-        println("Stopping servers...")
+        consoleLog("Stopping servers...")
         try {
             stopServer()
-            println("Stopped.")
-        } catch (e: Throwable) { println("Error stopping server: ${e.localizedMessage}")}
+            consoleLog("Stopped.")
+        } catch (e: Throwable) { consoleLog("Error stopping server: ${e.localizedMessage}")
+        }
 
-        try { startServer() } catch (e: Throwable) { println("Error starting server: ${e.localizedMessage}")}
+        try { startServer() } catch (e: Throwable) { consoleLog("Error starting server: ${e.localizedMessage}")
+        }
     }
 
     private fun stopServer() {
@@ -189,7 +186,7 @@ class StubCommand : Callable<Unit> {
         Runtime.getRuntime().addShutdownHook(object : Thread() {
             override fun run() {
                 try {
-                    println("Shutting down stub servers")
+                    consoleLog("Shutting down stub servers")
                     contractFake?.close()
                     qontractKafka?.close()
                 } catch (e: InterruptedException) {

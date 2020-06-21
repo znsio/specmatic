@@ -65,7 +65,6 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         intercept(ApplicationCallPipeline.Call) {
             try {
                 val httpRequest = ktorHttpRequestToHttpRequest(call)
-
                 when {
                     isStubRequest(httpRequest) -> handleStubRequest(call, httpRequest)
                     isFetchLogRequest(httpRequest) -> handleFetchLogRequest(call)

@@ -5,9 +5,10 @@ import java.util.*
 object LogTail {
     var n: Int = 5000
 
-    private var logs = LinkedList<String>()
+    private var logs = Collections.synchronizedList(LinkedList<String>())
     private var lastLoadSnapshot = emptyList<String>()
 
+    @OptIn(ExperimentalStdlibApi::class)
     fun appendLine(line: String) {
         logs.size
         logs.add(line)

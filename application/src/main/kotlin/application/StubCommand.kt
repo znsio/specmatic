@@ -146,7 +146,7 @@ class StubCommand : Callable<Unit> {
             stubKafkaContracts(kafkaExpectations, qontractKafka?.bootstrapServers ?: "PLAINTEXT://$kafkaHost:$kafkaPort", ::createTopics, ::createProducer)
         }
 
-        LogTail.storeLastLoadSnapshot()
+        LogTail.storeSnapshot()
     }
 
     private fun hasKafkaScenarios(behaviours: List<Feature>): Boolean {

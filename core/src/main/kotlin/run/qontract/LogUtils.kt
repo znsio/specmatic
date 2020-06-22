@@ -6,7 +6,7 @@ object LogTail {
     var n: Int = 5000
 
     private var logs = Collections.synchronizedList(LinkedList<String>())
-    private var lastLoadSnapshot = emptyList<String>()
+    private var snapshot = emptyList<String>()
 
     @OptIn(ExperimentalStdlibApi::class)
     fun appendLine(line: String) {
@@ -18,12 +18,16 @@ object LogTail {
         }
     }
 
-    fun storeLastLoadSnapshot() {
-        lastLoadSnapshot = logs.toList()
+    fun storeSnapshot() {
+        snapshot = logs.toList()
     }
 
     fun getString(): String = logs.joinToString("\n")
-    fun getLoadLogString(): String = lastLoadSnapshot.joinToString("\n")
+    fun getSnapshot(): String = snapshot.joinToString("\n")
+
+    internal fun clear() {
+        logs.clear()
+    }
 }
 
 fun consoleLog(event: String) {

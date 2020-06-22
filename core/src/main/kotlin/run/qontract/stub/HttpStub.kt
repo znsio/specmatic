@@ -39,7 +39,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
     constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(Feature(gherkinData), scenarioStubs, host, port, log)
 
     private var httpStubs = Vector<HttpStubData>(_httpStubs)
-    val endPoint = "http://$host:$port"
+    val endPoint = endPointFromHostAndPort(host, port)
 
     private val server: ApplicationEngine = embeddedServer(Netty, host = host, port = port) {
         install(CORS) {
@@ -86,7 +86,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
     }
 
     private fun handleFetchLoadLogRequest(call: ApplicationCall) {
-        val response = HttpResponse.OK(StringValue(LogTail.getLoadLogString()))
+        val response = HttpResponse.OK(StringValue(LogTail.getSnapshot()))
         respondToKtorHttpResponse(call, response)
     }
 
@@ -362,3 +362,11 @@ internal fun isFetchContractsRequest(httpRequest: HttpRequest): Boolean =
 
 internal fun isFetchLoadLogRequest(httpRequest: HttpRequest): Boolean =
         httpRequest.path == "/_qontract/load_log" && httpRequest.method == "GET"
+
+fun endPointFromHostAndPort(host: String, port: Int?): String {
+    val computedPortString = when(port) {
+        80, null -> ""
+        else -> ":$port"
+    }
+    return "http://$host$computedPortString"
+}

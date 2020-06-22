@@ -77,4 +77,19 @@ Feature: GET API
 
         assertThat(stubResponse.status).isEqualTo(200)
     }
+
+    @Test
+    fun `generates a valid endpoint when a port is not given`() {
+        assertThat(endPointFromHostAndPort("localhost", null)).isEqualTo("http://localhost")
+    }
+
+    @Test
+    fun `generates a valid endpoint when a non 80 port is given`() {
+        assertThat(endPointFromHostAndPort("localhost", 9000)).isEqualTo("http://localhost:9000")
+    }
+
+    @Test
+    fun `generates a valid endpoint when port 80 is given`() {
+        assertThat(endPointFromHostAndPort("localhost", 80)).isEqualTo("http://localhost")
+    }
 }

@@ -29,7 +29,7 @@ internal class LogTailTest {
     }
 
     private fun addLogs(vararg lines: String) {
-        for(line in lines) LogTail.appendLine(line)
+        for(line in lines) LogTail.append(line)
     }
 
     private fun logShouldContain(vararg lines: String) {

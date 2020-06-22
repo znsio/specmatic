@@ -17,7 +17,7 @@ import kotlinx.coroutines.runBlocking
 import run.qontract.core.value.*
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
-import run.qontract.stub.isStubRequest
+import run.qontract.stub.isExpectationCreation
 import java.io.Closeable
 
 typealias Expectation = Triple<HttpRequestPattern, Resolver, HttpResponse>
@@ -30,7 +30,7 @@ class ContractMock(contractGherkin: String, port: Int) : Closeable {
         intercept(ApplicationCallPipeline.Call) {
             val httpRequest = ktorHttpRequestToHttpRequest(call)
 
-            if(isStubRequest(httpRequest))
+            if(isExpectationCreation(httpRequest))
                  registerExpectation(call, httpRequest)
             else
                 respond(call, expectations, httpRequest)

@@ -63,62 +63,67 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         }
 
         intercept(ApplicationCallPipeline.Call) {
+            val logs = mutableListOf<String>()
+
             try {
                 val httpRequest = ktorHttpRequestToHttpRequest(call)
-                when {
-                    isStubRequest(httpRequest) -> handleStubRequest(call, httpRequest)
-                    isFetchLogRequest(httpRequest) -> handleFetchLogRequest(call)
-                    isFetchLoadLogRequest(httpRequest) -> handleFetchLoadLogRequest(call)
-                    isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest(call)
-                    isStateSetupRequest(httpRequest) -> handleServerStateRequest(call, httpRequest)
-                    else -> serveStubResponse(call, httpRequest)
+                logs.add(httpRequestLog(httpRequest))
+
+                val (httpResponse, responseLog) = when {
+                    isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
+                    isFetchLoadLogRequest(httpRequest) -> handleFetchLoadLogRequest()
+                    isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest()
+                    isExpectationCreation(httpRequest) -> handleExpectationCreationRequest(httpRequest)
+                    isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
+                    else -> serveStubResponse(httpRequest)
                 }
+
+                logs.add(responseLog ?: httpResponseLog(httpResponse))
+                respondToKtorHttpResponse(call, httpResponse)
             }
             catch(e: ContractException) {
                 val response = badRequest(e.report())
-                writeAndLogResponse(call, response, log)
+                logs.add(httpResponseLog(response))
+                respondToKtorHttpResponse(call, response)
             }
             catch(e: Throwable) {
                 val response = badRequest(e.message)
-                writeAndLogResponse(call, response, log)
+                logs.add(httpResponseLog(response))
+                respondToKtorHttpResponse(call, response)
             }
+
+            LogTail.append(logs)
         }
     }
 
-    private fun handleFetchLoadLogRequest(call: ApplicationCall) {
-        val response = HttpResponse.OK(StringValue(LogTail.getSnapshot()))
-        respondToKtorHttpResponse(call, response)
-    }
+    private fun handleFetchLoadLogRequest(): Pair<HttpResponse, Nothing?> =
+            Pair(HttpResponse.OK(StringValue(LogTail.getSnapshot())), null)
 
-    private fun handleFetchContractsRequest(call: ApplicationCall) {
-        val response = HttpResponse
-        respondToKtorHttpResponse(call, response.OK(StringValue(features.joinToString("\n") { it.name })))
-    }
+    private fun handleFetchContractsRequest(): Pair<HttpResponse, Nothing?> =
+            Pair(HttpResponse.OK(StringValue(features.joinToString("\n") { it.name })), null)
 
-    private fun handleFetchLogRequest(call: ApplicationCall) {
-        val response = HttpResponse.OK(StringValue(LogTail.getString()))
-        respondToKtorHttpResponse(call, response)
-    }
+    private fun handleFetchLogRequest(): Pair<HttpResponse, Nothing?> =
+            Pair(HttpResponse.OK(StringValue(LogTail.getString())), null)
 
-    private fun serveStubResponse(call: ApplicationCall, httpRequest: HttpRequest) {
-        log(">> Request Start At ${Date()}")
-        log(httpRequest.toLogString("-> "))
-        val response = stubResponse(httpRequest, features, httpStubs, strictMode)
-        writeAndLogResponse(call, response, log)
-    }
+    private fun serveStubResponse(httpRequest: HttpRequest): Pair<HttpResponse, Nothing?> =
+            Pair(stubResponse(httpRequest, features, httpStubs, strictMode), null)
 
-    private fun handleStubRequest(call: ApplicationCall, httpRequest: HttpRequest) {
-        try {
+    private fun httpRequestLog(httpRequest: HttpRequest): String =
+            ">> Request Start At ${Date()}\n${httpRequest.toLogString("-> ")}"
+
+    private fun handleExpectationCreationRequest(httpRequest: HttpRequest): Pair<HttpResponse, Nothing?> {
+        return try {
+
             val mock = stringToMockScenario(httpRequest.body ?: throw ContractException("Expectation payload was empty"))
             createStub(mock)
 
-            call.response.status(HttpStatusCode.OK)
+            Pair(HttpResponse.OK, null)
         }
         catch(e: ContractException) {
-            writeBadRequest(call, e.report())
+            Pair(HttpResponse(status = 400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue(e.report())), null)
         }
         catch (e: Exception) {
-            writeBadRequest(call, e.message)
+            Pair(HttpResponse(status = 400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)), null)
         }
     }
 
@@ -152,20 +157,19 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         server.stop(0, 5000)
     }
 
-    private fun handleServerStateRequest(call: ApplicationCall, httpRequest: HttpRequest) {
+    private fun handleStateSetupRequest(httpRequest: HttpRequest): Pair<HttpResponse, String> {
         val body = httpRequest.body
         val serverState = body?.let { toMap(it) } ?: mutableMapOf()
 
-        log("# >> Request Sent At ${Date()}")
-        log(startLinesWith(valueMapToPlainJsonString(serverState), "# "))
+        val stateRequestLog = "# >> Request Sent At ${Date()}\n${startLinesWith(valueMapToPlainJsonString(serverState), "# ")}"
 
         features.forEach { feature ->
             feature.setServerState(serverState)
         }
 
-        log("# << Complete At ${Date()}")
+        val completeLog = "$stateRequestLog\n# << Complete At ${Date()}"
 
-        call.response.status(HttpStatusCode.OK)
+        return Pair(HttpResponse.OK, completeLog)
     }
 
     init {
@@ -323,13 +327,6 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<Scenari
     }
 }
 
-private fun httpMockToStub(stub: ScenarioStub, scenario: Scenario, httpResponse: HttpResponse, resolver: Resolver): HttpStubData {
-    val requestPattern = stub.request.toPattern()
-    val requestPatternWithHeaderAncestor = requestPattern.copy(headersPattern = requestPattern.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
-
-    return HttpStubData(requestPatternWithHeaderAncestor, httpResponse, resolver)
-}
-
 fun badRequest(errorMessage: String?): HttpResponse {
     return HttpResponse(HttpStatusCode.UnprocessableEntity.value, errorMessage, mapOf("X-Qontract-Result" to "failure"))
 }
@@ -342,26 +339,7 @@ data class KafkaStubData(val kafkaMessage: KafkaMessage) : StubData
 
 data class StubDataItems(val http: List<HttpStubData> = emptyList(), val kafka: List<KafkaStubData> = emptyList())
 
-internal fun writeAndLogResponse(call: ApplicationCall, response: HttpResponse, log: (event: String) -> Unit) {
-    log(response.toLogString("<- "))
-    log("<< Response At ${Date()} == ")
-    respondToKtorHttpResponse(call, response)
-}
-
-internal fun isStubRequest(httpRequest: HttpRequest) =
-        httpRequest.path == "/_qontract/stub_setup" && httpRequest.method == "POST"
-
-internal fun isFetchLogRequest(httpRequest: HttpRequest): Boolean =
-        httpRequest.path == "/_qontract/log" && httpRequest.method == "GET"
-
-internal fun isStateSetupRequest(httpRequest: HttpRequest): Boolean =
-        httpRequest.path == "/_qontract/state_setup" && httpRequest.method == "POST"
-
-internal fun isFetchContractsRequest(httpRequest: HttpRequest): Boolean =
-        httpRequest.path == "/_qontract/contracts" && httpRequest.method == "GET"
-
-internal fun isFetchLoadLogRequest(httpRequest: HttpRequest): Boolean =
-        httpRequest.path == "/_qontract/load_log" && httpRequest.method == "GET"
+private fun httpResponseLog(response: HttpResponse): String = "${response.toLogString("<- ")}\n<< Response At ${Date()} == "
 
 fun endPointFromHostAndPort(host: String, port: Int?): String {
     val computedPortString = when(port) {
@@ -370,3 +348,18 @@ fun endPointFromHostAndPort(host: String, port: Int?): String {
     }
     return "http://$host$computedPortString"
 }
+
+internal fun isFetchLogRequest(httpRequest: HttpRequest): Boolean =
+        httpRequest.path == "/_qontract/log" && httpRequest.method == "GET"
+
+internal fun isFetchContractsRequest(httpRequest: HttpRequest): Boolean =
+        httpRequest.path == "/_qontract/contracts" && httpRequest.method == "GET"
+
+internal fun isFetchLoadLogRequest(httpRequest: HttpRequest): Boolean =
+        httpRequest.path == "/_qontract/load_log" && httpRequest.method == "GET"
+
+internal fun isExpectationCreation(httpRequest: HttpRequest) =
+        httpRequest.path == "/_qontract/expectations" && httpRequest.method == "POST"
+
+internal fun isStateSetupRequest(httpRequest: HttpRequest): Boolean =
+        httpRequest.path == "/_qontract/state" && httpRequest.method == "POST"

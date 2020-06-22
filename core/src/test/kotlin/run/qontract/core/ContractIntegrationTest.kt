@@ -20,7 +20,7 @@ class ContractIntegrationTest {
                 "    And request-body {name: \"jack\", address: \"Mumbai\"}\n" +
                 "    Then status 409\n" +
                 ""
-        wireMockServer.stubFor(WireMock.post("/_qontract/state_setup").withRequestBody(WireMock.equalToJson("{\"user\": \"jack\"}")).willReturn(WireMock.aResponse().withStatus(200)))
+        wireMockServer.stubFor(WireMock.post("/_qontract/state").withRequestBody(WireMock.equalToJson("{\"user\": \"jack\"}")).willReturn(WireMock.aResponse().withStatus(200)))
         wireMockServer.stubFor(WireMock.post("/accounts").withRequestBody(WireMock.equalToJson("{\"name\": \"jack\", \"address\": \"Mumbai\"}")).willReturn(WireMock.aResponse().withStatus(409)))
         val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(HttpClient(wireMockServer.baseUrl()))

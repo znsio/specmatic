@@ -9,7 +9,7 @@ object LogTail {
     private var snapshot = emptyList<String>()
 
     @OptIn(ExperimentalStdlibApi::class)
-    fun appendLine(line: String) {
+    fun append(line: String) {
         logs.size
         logs.add(line)
 
@@ -18,11 +18,16 @@ object LogTail {
         }
     }
 
+    fun append(logs: List<String>) {
+        val joined = logs.joinToString(System.lineSeparator())
+        append(joined)
+    }
+
     fun storeSnapshot() {
         snapshot = logs.toList()
     }
-
     fun getString(): String = logs.joinToString("\n")
+
     fun getSnapshot(): String = snapshot.joinToString("\n")
 
     internal fun clear() {
@@ -31,10 +36,10 @@ object LogTail {
 }
 
 fun consoleLog(event: String) {
-    LogTail.appendLine(event)
+    LogTail.append(event)
     println(event)
 }
 
 val nullLog = { event: String ->
-    LogTail.appendLine(event)
+    LogTail.append(event)
 }

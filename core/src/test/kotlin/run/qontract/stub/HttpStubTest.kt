@@ -57,7 +57,7 @@ Scenario: Get a number
 
         HttpStub(gherkin).use { fake ->
             val mockData = """{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 10}}"""
-            val stubSetupURL = "${fake.endPoint}/_qontract/stub_setup"
+            val stubSetupURL = "${fake.endPoint}/_qontract/expectations"
             val headers = HttpHeaders()
             headers.contentType = MediaType.APPLICATION_JSON
             val stubRequest = RequestEntity(mockData, headers, HttpMethod.POST, URI.create(stubSetupURL))

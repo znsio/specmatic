@@ -35,7 +35,7 @@ fun isBuiltInPattern(pattern: Any): Boolean =
         is String -> when {
             pattern in builtInPatterns -> true
             isPatternToken(pattern) -> when {
-                ":" in pattern || " in " in pattern || isDictionaryPattern(pattern) -> true
+                isLookupRowPattern(pattern) || " in " in pattern || isDictionaryPattern(pattern) -> true
                 else -> false
             }
             else -> false
@@ -71,7 +71,7 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
                         val patterns = pieces.slice(1..2).map { parsedPattern(withPatternDelimiters(it.trim())) }
                         DictionaryPattern(patterns[0], patterns[1])
                     }
-                    patternString.contains(":") -> {
+                    isLookupRowPattern(patternString) -> {
                         val patternParts = withoutPatternDelimiters(patternString).split(":")
 
                         if(patternParts.size != 2)
@@ -150,7 +150,7 @@ fun parseLookupRowPattern(token: String): Pair<String, String> {
 }
 
 fun isLookupRowPattern(token: String): Boolean {
-    val parts = withoutPatternDelimiters(token).split("\\s+".toRegex())
+    val parts = withoutPatternDelimiters(token).split(":".toRegex())
 
     return when {
         parts.size == 2 -> true

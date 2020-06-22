@@ -205,7 +205,7 @@ private fun toFacts(rest: String, fixtures: Map<String, Value>): Map<String, Val
 }
 
 private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, backgroundScenarioInfo: ScenarioInfo): ScenarioInfo {
-    val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList) }.filterNot { it.isEmpty }
+    val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList, it) }.filterNot { it.isEmpty }
 
     val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo) { scenarioInfo, step ->
         when(step.keyword) {
@@ -240,7 +240,14 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             "KAFKA-MESSAGE" -> {
                 scenarioInfo.copy(kafkaMessage = toAsyncMessage(step))
             }
-            else -> throw ContractException("Couldn't recognise the meaning of this command: $step.text")
+            else -> {
+                val location = when {
+                    step.raw.hasLocation() -> " at line ${step.raw.location.line}"
+                    else -> ""
+                }
+
+                throw ContractException("""Invalid syntax$location, (${step.raw.keyword.trim()} ${step.raw.text}): keyword "${step.originalKeyword}" not recognised.""")
+            }
         }
     }
 

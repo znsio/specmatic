@@ -246,7 +246,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
                     else -> ""
                 }
 
-                throw ContractException("""Invalid syntax$location, (${step.raw.keyword.trim()} ${step.raw.text}): keyword "${step.originalKeyword}" not recognised.""")
+                throw ContractException("""Invalid syntax$location: ${step.raw.keyword.trim()} ${step.raw.text} -> keyword "${step.originalKeyword}" not recognised.""")
             }
         }
     }

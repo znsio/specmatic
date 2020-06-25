@@ -124,7 +124,7 @@ HttpRequest: ${httpRequest.toJSON()}
 }
 
 fun writeBadRequest(call: ApplicationCall, errorMessage: String?) {
-    call.response.status(HttpStatusCode.UnprocessableEntity)
+    call.response.status(HttpStatusCode.BadRequest)
     call.response.header("X-Qontract-Result", "failure")
     runBlocking { call.respondText(errorMessage ?: "") }
 }

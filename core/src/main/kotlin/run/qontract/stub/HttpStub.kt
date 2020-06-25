@@ -23,6 +23,7 @@ import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.pattern.withoutOptionality
+import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.toMap
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.EmptyString
@@ -78,21 +79,22 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                     else -> serveStubResponse(httpRequest)
                 }
 
-                logs.add(responseLog ?: httpResponseLog(httpResponse))
                 respondToKtorHttpResponse(call, httpResponse)
+                logs.add(responseLog ?: httpResponseLog(httpResponse))
+                log(logs.joinToString(System.lineSeparator()))
             }
             catch(e: ContractException) {
                 val response = badRequest(e.report())
                 logs.add(httpResponseLog(response))
                 respondToKtorHttpResponse(call, response)
+                log(logs.joinToString(System.lineSeparator()))
             }
             catch(e: Throwable) {
-                val response = badRequest(e.message)
+                val response = badRequest(exceptionCauseMessage(e))
                 logs.add(httpResponseLog(response))
                 respondToKtorHttpResponse(call, response)
+                log(logs.joinToString(System.lineSeparator()))
             }
-
-            LogTail.append(logs)
         }
     }
 
@@ -234,18 +236,12 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     val headerString = httpResponse.headers["Content-Type"] ?: "text/plain"
     val textContent = TextContent(httpResponse.body?.toStringValue() ?: "", ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
 
-    try {
-        val headersControlledByEngine = HttpHeaders.UnsafeHeadersList.map { it.toLowerCase() }
-        for ((name, value) in httpResponse.headers.filterNot { it.key.toLowerCase() in headersControlledByEngine }) {
-            call.response.headers.append(name, value)
-        }
+    val headersControlledByEngine = HttpHeaders.UnsafeHeadersList.map { it.toLowerCase() }
+    for ((name, value) in httpResponse.headers.filterNot { it.key.toLowerCase() in headersControlledByEngine }) {
+        call.response.headers.append(name, value)
+    }
 
-        runBlocking { call.respond(textContent) }
-    }
-    catch(e: Exception)
-    {
-        println(e.toString())
-    }
+    runBlocking { call.respond(textContent) }
 }
 
 fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<HttpStubData>, strictMode: Boolean): HttpResponse {
@@ -328,7 +324,7 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<Scenari
 }
 
 fun badRequest(errorMessage: String?): HttpResponse {
-    return HttpResponse(HttpStatusCode.UnprocessableEntity.value, errorMessage, mapOf("X-Qontract-Result" to "failure"))
+    return HttpResponse(HttpStatusCode.BadRequest.value, errorMessage, mapOf("X-Qontract-Result" to "failure"))
 }
 
 interface StubData

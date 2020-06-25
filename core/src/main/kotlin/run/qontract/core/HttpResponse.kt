@@ -69,11 +69,25 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
 
         fun fromJSON(jsonObject: Map<String, Value>) =
             HttpResponse(
-                Integer.parseInt(jsonObject["status"].toString()),
-                    getHeaders(jsonObject),
+                nativeInteger(jsonObject, "status") ?: throw ContractException("http-response must contain a key named status, whose value is the http status in the response"),
+                    nativeStringStringMap(jsonObject, "headers").toMutableMap(),
                     jsonObject.getOrDefault("body", StringValue()))
     }
 }
+
+fun nativeInteger(json: Map<String, Value>, key: String): Int? {
+    val keyValue = json[key] ?: return null
+
+    val errorMessage = "$key must be an integer"
+    if(keyValue is StringValue)
+        return try { keyValue.string.toInt() } catch(e: Throwable) { throw ContractException(errorMessage) }
+
+    if(keyValue !is NumberValue)
+        throw ContractException("Expected $key to be a string value")
+
+    return try { keyValue.number.toInt() } catch(e: Throwable) { throw ContractException(errorMessage) }
+}
+
 
 fun getHeaders(jsonObject: Map<String, Value>): MutableMap<String, String> =
         (jsonObject.getOrDefault("headers", JSONObjectValue()) as JSONObjectValue).jsonObject.mapValues {

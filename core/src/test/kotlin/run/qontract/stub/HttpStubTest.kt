@@ -139,7 +139,7 @@ And response-body (string)
 
     @Test
     fun `generate a bad request from an error message`() {
-        val expectedResponse = HttpResponse(status = 422, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue("error occurred"))
+        val expectedResponse = HttpResponse(status = 400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue("error occurred"))
         assertThat(badRequest("error occurred")).isEqualTo(expectedResponse)
     }
 

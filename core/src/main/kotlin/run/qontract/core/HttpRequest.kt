@@ -123,24 +123,25 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
     }
 }
 
-fun s(json: Map<String, Value>, key: String): String = (json.getValue(key) as StringValue).string
+fun nativeString(json: Map<String, Value>, key: String): String? {
+    val keyValue = json[key] ?: return null
+
+    if(keyValue !is StringValue)
+        throw ContractException("Expected $key to be a string value")
+
+    return keyValue.string
+}
 
 fun requestFromJSON(json: Map<String, Value>) =
     HttpRequest()
-        .updateMethod(s(json, "method"))
-        .updatePath(if ("path" in json) s(json, "path") else "/")
-        .updateQueryParams(if ("query" in json)
-            (json["query"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() }
-            else emptyMap())
-        .setHeaders(if ("headers" in json) (json["headers"] as JSONObjectValue).jsonObject.mapValues { it.value.toString() } else emptyMap())
+        .updateMethod(nativeString(json, "method") ?: throw ContractException("http-request must contain a key named method whose value is the method in the request"))
+        .updatePath(nativeString(json, "path") ?: "/")
+        .updateQueryParams(nativeStringStringMap(json, "query"))
+        .setHeaders(nativeStringStringMap(json, "headers"))
         .let { httpRequest ->
             when {
                 "form-fields" in json -> {
-                    val formFields = json.getValue("form-fields")
-                    if(formFields !is JSONObjectValue)
-                        throw ContractException("form-fields must be a json object.")
-
-                    httpRequest.copy(formFields = formFields.jsonObject.mapValues { it.value.toStringValue() })
+                    httpRequest.copy(formFields = nativeStringStringMap(json, "form-fields"))
                 }
                 "multipart-formdata" in json -> {
                     val parts = json.getValue("multipart-formdata")
@@ -152,20 +153,37 @@ fun requestFromJSON(json: Map<String, Value>) =
                             throw ContractException("All multipart parts must be json object values.")
 
                         val multiPartSpec = it.jsonObject
-                        val name = multiPartSpec.getValue("name").toStringValue()
+                        val name = nativeString(multiPartSpec, "name") ?: throw ContractException("One of the multipart entries does not have a name key")
 
                         when {
                             multiPartSpec.containsKey("content") -> MultiPartContentValue(name, multiPartSpec.getValue("content"))
-                            else -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringValue(), multiPartSpec["contentType"]?.toStringValue(), multiPartSpec["contentEncoding"]?.toStringValue())
+                            multiPartSpec.containsKey("filename") -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringValue(), multiPartSpec["contentType"]?.toStringValue(), multiPartSpec["contentEncoding"]?.toStringValue())
+                            else -> throw ContractException("Multipart entry $name must have either a content key or a filename key")
                         }
                     }
 
                     httpRequest.copy(multiPartFormData = httpRequest.multiPartFormData.plus(multiPartData))
                 }
-                "body" in json -> httpRequest.updateBody(json["body"] ?: throw ContractException("Either body have a value or the key be absent from http-request"))
+                "body" in json -> {
+                    val body = json["body"]
+
+                    if(body is NullValue)
+                        throw ContractException("Either body should have a value or the key should be absent from http-request")
+
+                    httpRequest.updateBody(json.getValue("body"))
+                }
                 else -> httpRequest
             }
         }
+
+internal fun nativeStringStringMap(json: Map<String, Value>, key: String): Map<String, String> {
+    val queryValue = json[key] ?: return emptyMap()
+
+    if(queryValue !is JSONObjectValue)
+        throw ContractException("Expected $key to be a json object")
+
+    return queryValue.jsonObject.mapValues { it.value.toString() }
+}
 
 internal fun startLinesWith(str: String, startValue: String) =
         str.split("\n").joinToString("\n") { "$startValue$it" }

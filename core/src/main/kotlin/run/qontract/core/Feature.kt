@@ -26,9 +26,6 @@ fun Feature(contractGherkinDocument: GherkinDocument): Feature {
 }
 
 data class Feature(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap(), val name: String) {
-//    constructor(contractGherkinDocument: GherkinDocument) : this(lex(contractGherkinDocument))
-//    constructor(gherkinData: String) : this(parseGherkinString(gherkinData))
-
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
             val resultList = lookupScenario(httpRequest, scenarios)

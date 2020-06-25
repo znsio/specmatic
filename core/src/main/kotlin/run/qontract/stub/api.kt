@@ -47,6 +47,8 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
         val stubData = when {
             implicitDataDir.isDirectory -> {
                 consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
+                logIgnoredFiles(implicitDataDir)
+
                 val stubDataFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension == "json" } ?: emptyList()
                 printDataFiles(stubDataFiles)
                 stubDataFiles.map {
@@ -60,7 +62,21 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
     }
 }
 
+private fun logIgnoredFiles(implicitDataDir: File) {
+    val ignoredFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension != "json" } ?: emptyList()
+    if (ignoredFiles.isNotEmpty()) {
+        consoleLog("Ignoring the following files:".prependIndent("  "))
+        for (file in ignoredFiles) {
+            consoleLog(file.absolutePath.prependIndent("    "))
+        }
+    }
+}
+
 fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
+    val contactPathsString = contractPaths.joinToString(System.lineSeparator())
+    consoleLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString")
+    consoleLog("")
+
     val dataDirFileList = allDirsInTree(dataDirPaths)
 
     val features = contractPaths.map { path ->
@@ -68,6 +84,8 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
     }
 
     val dataFiles = dataDirFileList.flatMap {
+        consoleLog("Loading stub expectations from ${it.path}".prependIndent("  "))
+        logIgnoredFiles(it)
         it.listFiles()?.toList() ?: emptyList<File>()
     }.filter { it.extension == "json" }
     printDataFiles(dataFiles)
@@ -78,8 +96,10 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
 }
 
 private fun printDataFiles(dataFiles: List<File>) {
-    if (dataFiles.isNotEmpty())
-        consoleLog("Reading the stub files below:${System.lineSeparator()}${dataFiles.joinToString(System.lineSeparator())}")
+    if (dataFiles.isNotEmpty()) {
+        val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { it.path.prependIndent("  ") }
+        consoleLog("Reading the following stub files:${System.lineSeparator()}$dataFilesString".prependIndent("  "))
+    }
 }
 
 fun loadQontractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {

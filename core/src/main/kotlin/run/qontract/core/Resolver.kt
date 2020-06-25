@@ -72,9 +72,6 @@ data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boole
     }
 }
 
-fun withNumberTypePattern(resolver: Resolver): Resolver =
-        resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberPattern))
-
 typealias UnexpectedKeyCheck = (Map<String, Any>, Map<String, Any>) -> KeyError?
 
 fun checkOnlyPatternKeys(pattern: Map<String, Any>, actual: Map<String, Any>, lookForUnexpected: UnexpectedKeyCheck = ignoreUnexpectedKeys): KeyError? {

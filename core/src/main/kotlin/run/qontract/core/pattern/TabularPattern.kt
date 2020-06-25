@@ -27,7 +27,7 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
             return missingKeyToResult(missingKey, "key")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
-            when (val result = withNumberTypePattern(resolver).matchesPattern(key, patternValue, sampleValue)) {
+            when (val result = resolver.matchesPattern(key, patternValue, sampleValue)) {
                 is Result.Failure -> return result.breadCrumb(key)
             }
         }
@@ -58,15 +58,12 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
                 if (missingFixedKey != null)
                     return Result.Failure("Key $missingFixedKey was missing", breadCrumb = missingFixedKey)
 
-                val thisResolverWithNumberType = withNumberTypePattern(thisResolver)
-                val otherResolverWithNumberType = withNumberTypePattern(otherResolver)
-
                 val result = pattern.keys.asSequence().map { key ->
                     val bigger = pattern.getValue(key)
                     val smaller = otherPattern.pattern[key] ?: otherPattern.pattern[withoutOptionality(key)]
 
                     val result = if (smaller != null)
-                        bigger.encompasses(resolvedHop(smaller, otherResolverWithNumberType), thisResolverWithNumberType, otherResolverWithNumberType)
+                        bigger.encompasses(resolvedHop(smaller, otherResolver), thisResolver, otherResolver)
                     else Result.Success()
                     Pair(key, result)
                 }.find { it.second is Result.Failure }

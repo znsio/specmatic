@@ -234,12 +234,10 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
                 scenarioInfo.copy(fixtures = scenarioInfo.fixtures.plus(toFixtureInfo(step.rest)))
             "FORM-FIELD" ->
                 scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(formFieldsPattern = plusFormFields(scenarioInfo.httpRequestPattern.formFieldsPattern, step.rest, step.rowsList)))
-            "REQUEST-PART" -> {
+            "REQUEST-PART" ->
                 scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(multiPartFormDataPattern = scenarioInfo.httpRequestPattern.multiPartFormDataPattern.plus(toFormDataPart(step))))
-            }
-            "KAFKA-MESSAGE" -> {
+            "KAFKA-MESSAGE" ->
                 scenarioInfo.copy(kafkaMessage = toAsyncMessage(step))
-            }
             else -> {
                 val location = when {
                     step.raw.hasLocation() -> " at line ${step.raw.location.line}"

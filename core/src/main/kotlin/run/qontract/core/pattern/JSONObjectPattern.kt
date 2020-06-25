@@ -6,8 +6,24 @@ import run.qontract.core.utilities.stringToPatternMap
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
 
-data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap()) : Pattern {
-    constructor(jsonContent: String) : this(stringToPatternMap(jsonContent))
+fun JSONObjectPattern(jsonContent: String): JSONObjectPattern = JSONObjectPattern(stringToPatternMap(jsonContent))
+
+fun JSONObjectPattern(map: Map<String, Pattern>): JSONObjectPattern {
+    val missingKeyStrategy = when ("...") {
+        in map -> ignoreUnexpectedKeys
+        else -> ::validateUnexpectedKeys
+    }
+
+    return JSONObjectPattern(map.minus("..."), missingKeyStrategy)
+}
+
+val ignoreUnexpectedKeys = { _: Map<String, Any>, _: Map<String, Any> -> null }
+
+data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap(), private val unexpectedKeyCheck: UnexpectedKeyCheck = ::validateUnexpectedKeys) : Pattern {
+    override fun equals(other: Any?): Boolean = when(other) {
+        is JSONObjectPattern -> this.pattern == other.pattern
+        else -> false
+    }
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         when (otherPattern) {
@@ -43,7 +59,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
 
-        val missingKey = resolver.findMissingKey(pattern, sampleData.jsonObject)
+        val missingKey = resolver.findMissingKey(pattern, sampleData.jsonObject, unexpectedKeyCheck)
         if(missingKey != null)
             return missingKeyToResult(missingKey, "key")
 
@@ -59,11 +75,15 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
     override fun generate(resolver: Resolver) = JSONObjectValue(generate(pattern, resolver))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> =
-            keyCombinations(pattern, row) { pattern ->
+            keyCombinations(pattern.minus("..."), row) { pattern ->
                 newBasedOn(pattern, row, resolver)
             }.map { JSONObjectPattern(it) }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
+    override fun hashCode(): Int {
+        return pattern.hashCode()
+    }
+
     override val typeName: String = "json object"
 }
 

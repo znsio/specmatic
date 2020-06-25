@@ -19,7 +19,10 @@ internal class JSONObjectPatternTest {
 
     @Test
     fun `Given an optional key, the suffix should remain in place in an object generated using newBasedOn`() {
-        val newPattern = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(Row(), Resolver()).first()
+        val newPatterns = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(Row(), Resolver())
+        val newPattern = newPatterns.first {
+            it != JSONObjectPattern(emptyMap())
+        }
 
         val objectWithId = parsedValue("""{"id": 10}""")
         val emptyObject = parsedValue("""{}""")
@@ -145,11 +148,19 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
-    fun `should ignore extra keys`() {
+    fun `should ignore extra keys given the ellipsis key`() {
+        val value = parsedValue("""{"expected": 10, "unexpected": 20}""")
+        val pattern = parsedPattern("""{"expected": "(number)", "...": ""}""")
+
+        value shouldMatch pattern
+    }
+
+    @Test
+    fun `should not ignore extra keys by default`() {
         val value = parsedValue("""{"expected": 10, "unexpected": 20}""")
         val pattern = parsedPattern("""{"expected": "(number)"}""")
 
-        value shouldMatch pattern
+        value shouldNotMatch pattern
     }
 
     @Test
@@ -197,5 +208,21 @@ internal class JSONObjectPatternTest {
         val bigger = parsedPattern("""{"required": "(number)"}""")
         val smaller = parsedPattern("""{"required": "(number)", "extra": "(number)"}""")
         assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+
+    @Test
+    fun `it should encompass itself when ellipsis is present`() {
+        val bigger = JSONObjectPattern(mapOf("data" to NumberPattern, "..." to StringPattern))
+        assertThat(bigger.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `type with ellipsis is equivalent to a type with the same keys except the ellipsis`() {
+        val theOne = JSONObjectPattern(mapOf("data" to NumberPattern))
+        val theOther = JSONObjectPattern(mapOf("data" to NumberPattern, "..." to StringPattern))
+
+        assertThat(theOne.encompasses(theOther, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(theOther.encompasses(theOne, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

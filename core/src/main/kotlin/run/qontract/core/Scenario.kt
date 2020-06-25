@@ -29,7 +29,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
     fun matchesStub(httpRequest: HttpRequest, serverState: Map<String, Value>): Result {
         val headersResolver = Resolver(serverState, false, patterns)
-        val nonHeadersResolver = headersResolver.copy(findMissingKey = checkAllKeys)
+        val nonHeadersResolver = headersResolver.copy(findMissingKey = ::checkAllKeys)
 
         return matches(httpRequest, serverState, nonHeadersResolver, headersResolver)
     }
@@ -130,7 +130,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
     fun matchesMock(request: HttpRequest, response: HttpResponse): Result {
         return scenarioBreadCrumb(this) {
-            val resolver = Resolver(IgnoreFacts(), true, patterns, findMissingKey = checkAllKeys)
+            val resolver = Resolver(IgnoreFacts(), true, patterns, findMissingKey = ::checkAllKeys)
 
             when (val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }) {
                 is Result.Failure -> requestMatchResult.updateScenario(this)
@@ -146,7 +146,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     }
 
     fun matchesMock(kafkaMessage: KafkaMessage): Result {
-        return kafkaMessagePattern?.matches(kafkaMessage, resolver.copy(findMissingKey = checkAllKeys)) ?: Result.Failure("This scenario does not have a Kafka mock")
+        return kafkaMessagePattern?.matches(kafkaMessage, resolver.copy(findMissingKey = ::checkAllKeys)) ?: Result.Failure("This scenario does not have a Kafka mock")
     }
 
     fun resolverAndResponseFrom(response: HttpResponse?): Pair<Resolver, HttpResponse> =

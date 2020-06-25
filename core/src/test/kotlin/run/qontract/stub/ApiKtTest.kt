@@ -174,7 +174,7 @@ Feature: Math API
     }
 
     @Test
-    fun `stubbing out a contract pattern in json by specifing a sub pattern in stub data`() {
+    fun `stubbing out a contract pattern in json by specifying a sub pattern in stub data`() {
         val behaviour = Feature("""
 Feature: Math API
 
@@ -411,6 +411,51 @@ Feature: Cube API
 
         assertThat(squareStub.second.single().request).isEqualTo(expectedRequest)
         assertThat(squareStub.second.single().response).isEqualTo(expectedResponse)
+    }
+
+    @Test
+    fun `should not be able to load a stub json with unexpected keys in the request`() {
+        val feature = Feature("""
+Feature: Math API
+    Scenario: Square of a number
+        When POST /square
+        And request-body
+        | number | (number) |
+        Then status 200
+        And response-body (number)
+""".trim())
+
+        val (output, stubInfo) = captureStandardOutput { loadQontractStubs(listOf(Pair("math.qontract", feature)), listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("""{"number": 10, "unexpected": "data"}""")), HttpResponse(status = 200, body = "20"))))) }
+        assertThat(stubInfo.single().first).isEqualTo(feature)
+        assertThat(stubInfo.single().second).isEmpty()
+        assertThat(output).isEqualTo("""sample.json didn't match math.qontract
+    In scenario "Square of a number"
+    >> REQUEST.BODY
+  
+    Key unexpected was unexpected""")
+    }
+
+    @Test
+    fun `should not be able to load a stub json with unexpected keys in the response`() {
+        val feature = Feature("""
+Feature: Math API
+    Scenario: Square of a number
+        When POST /square
+        And request-body (number)
+        Then status 200
+        And response-body
+        | number | (number) |
+""".trim())
+
+        val (output, stubInfo) = captureStandardOutput {  loadQontractStubs(listOf(Pair("math.qontract", feature)), listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("""10""")), HttpResponse(status = 200, body = """{"number": 10, "unexpected": "data"}"""))))) }
+        assertThat(stubInfo.single().first).isEqualTo(feature)
+        assertThat(stubInfo.single().second).isEmpty()
+
+        assertThat(output).isEqualTo("""sample.json didn't match math.qontract
+    In scenario "Square of a number"
+    >> RESPONSE.BODY
+  
+    Key unexpected was unexpected""")
     }
 
     @Test

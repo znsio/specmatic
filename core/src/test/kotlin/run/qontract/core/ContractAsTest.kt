@@ -989,6 +989,7 @@ And response-body
         assertThat(results.failureCount).isZero()
         assertThat(results.successCount).isNotZero()
     }
+
     @Test
     fun `should generate data with a pipe when the example contains a pipe`() {
         val gherkin = """
@@ -1018,6 +1019,108 @@ Feature: Contract
 
                 flags.add("ran")
 
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        println(results.report())
+
+        assertThat(results.failureCount).isZero()
+        assertThat(results.successCount).isOne()
+
+        assertThat(flags.toList()).isEqualTo(listOf("ran"))
+    }
+
+    @Test
+    fun `should not match a response with extra keys by default`() {
+        val gherkin = """
+Feature: Contract
+    Scenario: api call
+        Given GET /
+        Then status 200
+        And response-body
+        | data | (string) |
+"""
+
+        val flags = mutableListOf<String>()
+
+        val results = Feature(gherkin).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add("ran")
+                return HttpResponse.OK(StringValue("""{"data": "value", "unexpected": "value"}"""))
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        println(results.report())
+
+        assertThat(results.failureCount).isOne()
+        assertThat(results.successCount).isZero()
+
+        assertThat(flags.toList()).isEqualTo(listOf("ran"))
+    }
+
+    @Test
+    fun `should match a response with extra keys given the existence of the ellipsis key`() {
+        val gherkin = """
+Feature: Contract
+    Scenario: api call
+        Given GET /
+        Then status 200
+        And response-body
+        | data | (string) |
+        | ...  |          |
+"""
+
+        val flags = mutableListOf<String>()
+
+        val results = Feature(gherkin).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add("ran")
+                return HttpResponse.OK(StringValue("""{"data": "value", "unexpected": "value"}"""))
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        println(results.report())
+
+        assertThat(results.failureCount).isZero()
+        assertThat(results.successCount).isOne()
+
+        assertThat(flags.toList()).isEqualTo(listOf("ran"))
+    }
+
+    @Test
+    fun `should not generate a test request with an ellipsis in it`() {
+        val gherkin = """
+Feature: Contract
+    Scenario: api call
+        Given POST /
+        And request-body
+        | data | (string) |
+        | ...  |          |
+        Then status 200
+"""
+
+        val flags = mutableListOf<String>()
+
+        val results = Feature(gherkin).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add("ran")
+
+                val body = request.body as JSONObjectValue
+                assertThat(body.jsonObject).hasSize(1)
+                assertThat(body.jsonObject.getValue("data")).isInstanceOf(StringValue::class.java)
                 return HttpResponse.OK
             }
 

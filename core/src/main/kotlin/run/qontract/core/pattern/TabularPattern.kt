@@ -3,14 +3,26 @@ package run.qontract.core.pattern
 import io.cucumber.messages.Messages
 import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
+import run.qontract.core.utilities.stringToPatternMap
 import run.qontract.core.value.*
 
-data class TabularPattern(override val pattern: Map<String, Pattern>) : Pattern {
+fun TabularPattern(jsonContent: String): TabularPattern = TabularPattern(stringToPatternMap(jsonContent))
+
+fun TabularPattern(map: Map<String, Pattern>): TabularPattern {
+    val missingKeyStrategy = when ("...") {
+        in map -> ignoreUnexpectedKeys
+        else -> ::validateUnexpectedKeys
+    }
+
+    return TabularPattern(map.minus("..."), missingKeyStrategy)
+}
+
+data class TabularPattern(override val pattern: Map<String, Pattern>, private val unexpectedKeyCheck: UnexpectedKeyCheck = ::validateUnexpectedKeys) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
 
-        val missingKey = resolver.findMissingKey(pattern, sampleData.jsonObject)
+        val missingKey = resolver.findMissingKey(pattern, sampleData.jsonObject, unexpectedKeyCheck)
         if(missingKey != null)
             return missingKeyToResult(missingKey, "key")
 

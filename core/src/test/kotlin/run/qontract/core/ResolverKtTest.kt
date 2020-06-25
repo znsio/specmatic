@@ -1,11 +1,11 @@
 package run.qontract.core
 
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.ContractException
+import run.qontract.core.pattern.ignoreUnexpectedKeys
 
-internal class ResolverTest {
+internal class ResolverKtTest {
     @Test
     fun `checkAllKeys should succeed when expected keys are all found`() {
         val expected = mapOf("expected" to "value")
@@ -21,7 +21,7 @@ internal class ResolverTest {
         val actual = mapOf("unexpected" to "value")
         val missing = checkAllKeys(expected, actual)
 
-        assertThat(missing).isEqualTo(Pair("expected", null))
+        assertThat(missing).isEqualTo(MissingKeyError("expected"))
     }
 
     @Test
@@ -30,7 +30,7 @@ internal class ResolverTest {
         val actual = mapOf("expected" to "value", "unexpected" to "value")
         val missing = checkAllKeys(expected, actual)
 
-        assertThat(missing).isEqualTo(Pair(null, "unexpected"))
+        assertThat(missing).isEqualTo(UnexpectedKeyError("unexpected"))
     }
 
     @Test
@@ -61,6 +61,15 @@ internal class ResolverTest {
     }
 
     @Test
+    fun `checkAllKeys should return unexpected keys regardless of what strategy is passed to it`() {
+        val expected = mapOf("expected" to "value")
+        val actual = mapOf("expected" to "value", "unexpected" to "value")
+        val unexpected = checkAllKeys(expected, actual, ignoreUnexpectedKeys)
+
+        assertThat(unexpected).isEqualTo(UnexpectedKeyError("unexpected"))
+    }
+
+    @Test
     fun `checkOnlyPatternKeys should succeed when expected keys are all found`() {
         val expected = mapOf("expected" to "value")
         val actual = mapOf("expected" to "value")
@@ -75,12 +84,12 @@ internal class ResolverTest {
         val actual = mapOf("unexpected" to "value")
         val missing = checkOnlyPatternKeys(expected, actual)
 
-        assertThat(missing).isEqualTo(Pair("expected", null))
+        assertThat(missing).isEqualTo(MissingKeyError("expected"))
     }
 
     @Test
-    fun `checkOnlyPatternKeys should allow unexpected keys`() {
-        val expected = mapOf("expected" to "value")
+    fun `checkOnlyPatternKeys should allow unexpected keys given the ellipsis key`() {
+        val expected = mapOf("expected" to "value", "..." to "")
         val actual = mapOf("expected" to "value", "unexpected" to "value")
         val missing = checkOnlyPatternKeys(expected, actual)
 
@@ -112,6 +121,18 @@ internal class ResolverTest {
         val missing = checkOnlyPatternKeys(expected, actual)
 
         assertThat(missing).isEqualTo(null)
+    }
+
+    @Test
+    fun `checkOnlyPatternKeys should run the unexpected key strategy`() {
+        val expected = mapOf("expected" to "value")
+        val actual = mapOf("expected" to "value", "unexpected" to "value")
+        val unexpected = checkOnlyPatternKeys(expected, actual, ::validateUnexpectedKeys)
+
+        assertThat(unexpected).isEqualTo(UnexpectedKeyError("unexpected"))
+
+        val error = checkOnlyPatternKeys(expected, actual, ignoreUnexpectedKeys)
+        assertThat(error).isNull()
     }
 
     @Test

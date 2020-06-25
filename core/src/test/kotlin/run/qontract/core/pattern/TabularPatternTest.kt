@@ -345,10 +345,25 @@ Given request-body
     }
 
     @Test
-    fun `it should encompass another with an unheard of key`() {
+    fun `it should encompass another with an unexpected key`() {
         val bigger = TabularPattern(mapOf("required" to NumberPattern))
         val smaller = TabularPattern(mapOf("required" to NumberPattern, "extra" to NumberPattern))
         assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `it should encompass itself when ellipsis is present`() {
+        val bigger = TabularPattern(mapOf("data" to NumberPattern, "..." to StringPattern))
+        assertThat(bigger.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `type with ellipsis is equivalent to a type with the same keys except the ellipsis`() {
+        val theOne = TabularPattern(mapOf("data" to NumberPattern))
+        val theOther = TabularPattern(mapOf("data" to NumberPattern, "..." to StringPattern))
+
+        assertThat(theOne.encompasses(theOther, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(theOther.encompasses(theOne, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }
 

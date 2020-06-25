@@ -24,7 +24,7 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
             else -> withoutContentTypeGeneratedByQontract(headers, pattern)
         }
 
-        val missingKey = resolver.findMissingKey(pattern, headersWithRelevantKeys.mapValues { StringValue(it.value) } )
+        val missingKey = resolver.findMissingKey(pattern, headersWithRelevantKeys.mapValues { StringValue(it.value) }, ignoreUnexpectedKeys)
         if(missingKey != null) {
             return MatchFailure(missingKeyToResult(missingKey, "header"))
         }

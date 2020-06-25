@@ -6,9 +6,11 @@ import run.qontract.core.Feature
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.pattern.parsedValue
+import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import run.qontract.mock.ScenarioStub
+import run.qontract.test.HttpClient
 
 internal class HttpStubKtTest {
     @Test
@@ -91,5 +93,49 @@ Feature: GET API
     @Test
     fun `generates a valid endpoint when port 80 is given`() {
         assertThat(endPointFromHostAndPort("localhost", 80)).isEqualTo("http://localhost")
+    }
+
+    @Test
+    fun `should not match extra keys in the request`() {
+        val feature = Feature("""
+Feature: Math API
+
+Scenario: Square of a number
+  When POST /number
+  And request-body
+  | number | (number) |
+  | ...    |          |
+  Then status 200
+""".trim())
+
+        val request = HttpRequest(method = "POST", path = "/number", body = parsedValue("""{"number": 10, "unexpected": "data"}"""))
+        val response = stubResponse(request, listOf(feature), emptyList(), false)
+
+        assertThat(response.body).isEqualTo(StringValue("""In scenario "Square of a number"
+>> REQUEST.BODY
+
+Key unexpected was unexpected"""))
+    }
+
+    @Test
+    fun `should not generate any key from the ellipsis in the response`() {
+        val feature = Feature("""
+Feature: Math API
+
+Scenario: Square of a number
+  When GET /number
+  Then status 200
+  And response-body
+  | number | (number) |
+  | ...    |          |
+""".trim())
+
+        val request = HttpRequest(method = "GET", path = "/number")
+        val response = stubResponse(request, listOf(feature), emptyList(), false)
+
+        assertThat(response.status).isEqualTo(200)
+        val bodyValue = response.body as JSONObjectValue
+        assertThat(bodyValue.jsonObject).hasSize(1)
+        assertThat(bodyValue.jsonObject.getValue("number")).isInstanceOf(NumberValue::class.java)
     }
 }

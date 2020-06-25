@@ -5,7 +5,12 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
 
-data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Any>, actual: Map<String, Any>) -> Pair<String?, String?>? = checkOnlyPatternKeys ) {
+sealed class KeyError
+
+data class MissingKeyError(val name: String) : KeyError()
+data class UnexpectedKeyError(val name: String) : KeyError()
+
+data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Any>, actual: Map<String, Any>, UnexpectedKeyCheck) -> KeyError? = ::checkOnlyPatternKeys ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
 
@@ -70,23 +75,32 @@ data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boole
 fun withNumberTypePattern(resolver: Resolver): Resolver =
         resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberPattern))
 
-val checkOnlyPatternKeys = { pattern: Map<String, Any>, actual: Map<String, Any> ->
-    pattern.keys.find { key -> isMissingKey(actual, key) }?.let { Pair(it, null) }
+typealias UnexpectedKeyCheck = (Map<String, Any>, Map<String, Any>) -> KeyError?
+
+fun checkOnlyPatternKeys(pattern: Map<String, Any>, actual: Map<String, Any>, lookForUnexpected: UnexpectedKeyCheck = ignoreUnexpectedKeys): KeyError? {
+    return pattern.minus("...").keys.find { key ->
+        isMissingKey(actual, key)
+    }?.let {
+        MissingKeyError(it)
+    } ?: lookForUnexpected(pattern, actual)
 }
 
-val checkAllKeys = { pattern: Map<String, Any>, actual: Map<String, Any> ->
-    pattern.keys.find { key -> isMissingKey(actual, key) }?.let { Pair(it, null) } ?: actual.keys.find { key ->
-        val keyWithoutOptionality = withoutOptionality(key)
-        key !in pattern && "$keyWithoutOptionality?" !in pattern
-    }?.let { Pair(null, it) }
+fun validateUnexpectedKeys(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? {
+    val patternKeys = pattern.minus("...").keys.map { withoutOptionality(it) }
+    val actualKeys = actual.keys.map { withoutOptionality(it) }
+
+    return actualKeys.minus(patternKeys).firstOrNull()?.let { UnexpectedKeyError(it) }
 }
 
-fun missingKeyToResult(missingKey: Pair<String?, String?>, keyName: String): Result.Failure {
-    val (expectedMissingInActual, actualMissingInExpected) = missingKey
+fun checkAllKeys(pattern: Map<String, Any>, actual: Map<String, Any>, ignored: UnexpectedKeyCheck = ::validateUnexpectedKeys): KeyError? {
+    return pattern.minus("...").keys.find { key -> isMissingKey(actual, key) }?.let { MissingKeyError(it) } ?: validateUnexpectedKeys(pattern, actual)
+}
 
-    return Result.Failure(when {
-        expectedMissingInActual != null -> "Expected ${keyName.toLowerCase()} $expectedMissingInActual was missing"
-        actualMissingInExpected != null -> "${keyName.toLowerCase().capitalize()} $actualMissingInExpected was unexpected"
-        else -> throw ContractException("Missing key result ($missingKey) is confusing")
-    })
+fun missingKeyToResult(keyError: KeyError, keyLabel: String): Result.Failure {
+    val message = when(keyError) {
+        is MissingKeyError -> "Expected ${keyLabel.toLowerCase()} ${keyError.name} was missing"
+        is UnexpectedKeyError -> "${keyLabel.toLowerCase().capitalize()} ${keyError.name} was unexpected"
+    }
+
+    return Result.Failure(message)
 }

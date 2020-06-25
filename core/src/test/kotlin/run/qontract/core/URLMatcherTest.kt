@@ -169,9 +169,9 @@ internal class URLMatcherTest {
     }
 
     @Test
-    fun `request url query params should match a url with unknown query params`() {
+    fun `request url query params should not match a url with unknown query params`() {
         val matcher = toURLMatcher(URI("/pets?id=(string)"))
-        assertThat(matcher.matches(URI("/pets"), mapOf("name" to "Jack Daniel"))).isInstanceOf(Result.Success::class.java)
+        assertThat(matcher.matches(URI("/pets"), mapOf("name" to "Jack Daniel"))).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test

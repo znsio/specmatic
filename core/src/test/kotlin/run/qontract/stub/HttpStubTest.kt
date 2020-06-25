@@ -156,7 +156,6 @@ Scenario: Square of a number
 """.trim())
 
         HttpStub(listOf(feature, feature)).use { stub ->
-            println(stub.endPoint)
             val client = HttpClient(stub.endPoint)
             val squareResponse = client.execute(HttpRequest(method = "POST", path = "/wrong_path", body = NumberValue(10)))
             assertThat(squareResponse.status).isEqualTo(400)

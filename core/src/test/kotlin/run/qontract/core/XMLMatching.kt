@@ -9,16 +9,35 @@ import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 
 class XMLMatching {
+    private val threeQuotes = "\"\"\""
+
     @Test
     @Throws(Throwable::class)
     fun theContractShouldSupportXMLResponseGeneration() {
-        val contractGherkin = "" +
-                "Feature: Unit test\n\n" +
-                "  Scenario: Unit test\n" +
-                "    When GET /balance?account_id=(number)\n" +
-                "    Then status 200\n" +
-                "    And response-body <account type=\"(string)\"><name>(string)</name><address>(string)</address><age>(number)</age></account>\n" +
-                ""
+        val contractGherkin = """
+Feature: Unit test
+  Scenario: Unit test
+    When GET /balance?account_id=(number)
+    Then status 200
+    And response-body <account type="(string)"><name>(string)</name><address>(string)</address><age>(number)</age></account>
+"""
+
+        val contractGherkinWithDocString = """
+Feature: Unit test
+  Scenario: Unit test
+    When GET /balance?account_id=(number)
+    Then status 200
+    And response-body
+    $threeQuotes
+    <account type="(string)"><name>(string)</name><address>(string)</address><age>(number)</age></account>
+    $threeQuotes
+"""
+
+        testResponseGeneration(contractGherkin)
+        testResponseGeneration(contractGherkinWithDocString)
+    }
+
+    private fun testResponseGeneration(contractGherkin: String) {
         val contractBehaviour = Feature(contractGherkin)
         val request = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account_id", "10")
         val response = contractBehaviour.lookupResponse(request)
@@ -37,13 +56,28 @@ class XMLMatching {
     @Test
     @Throws(Throwable::class)
     fun theContractShouldSupportXMLRequestMatching() {
-        val contractGherkin = "" +
-                "Feature: Unit test\n\n" +
-                "  Scenario: Unit test\n" +
-                "    When POST /balance\n" +
-                "    And request-body <account type=\"(string)\"><name>(string)</name><address>(string)</address><age>(number)</age></account>\n" +
-                "    Then status 200\n" +
-                ""
+        val contractGherkin = """
+Feature: Unit test
+  Scenario: Unit test
+    When POST /balance
+    And request-body <account type="(string)"><name>(string)</name><address>(string)</address><age>(number)</age></account>
+    Then status 200
+"""
+        val contractGherkinWithDocString = """
+Feature: Unit test
+  Scenario: Unit test
+    When POST /balance
+    And request-body
+    $threeQuotes
+    <account type="(string)"><name>(string)</name><address>(string)</address><age>(number)</age></account>
+    $threeQuotes
+    Then status 200
+"""
+        testResponseMatching(contractGherkin)
+        testResponseMatching(contractGherkinWithDocString)
+    }
+
+    private fun testResponseMatching(contractGherkin: String) {
         val contractBehaviour = Feature(contractGherkin)
         val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("<account type=\"user\"><name>John</name><address>Mumbai</address><age>25</age></account>")
         val response = contractBehaviour.lookupResponse(request)

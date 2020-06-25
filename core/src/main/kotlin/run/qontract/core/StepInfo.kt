@@ -9,5 +9,7 @@ data class StepInfo(val text: String, val rowsList: MutableList<Messages.Gherkin
     val keyword = originalKeyword.toUpperCase()
     val rest = if (words.size == 2) words[1] else ""
 
+    val docString: String = if(raw.hasDocString()) raw.docString.content else ""
+
     val isEmpty = line.isEmpty()
 }

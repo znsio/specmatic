@@ -176,13 +176,19 @@ private fun toFixtureInfo(rest: String): Pair<String, Value> {
 
 private fun toFixtureData(rawData: String): Value = parsedJSONStructure(rawData)
 
-private fun toPatternInfo(rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): Pair<String, Pattern> {
-    val tokens = breakIntoParts(rest, 2)
+internal fun stringOrDocString(string: String?, step: StepInfo): String {
+    val trimmed = string?.trim() ?: ""
+    return trimmed.ifEmpty { step.docString }
+}
+private fun toPatternInfo(step: StepInfo, rowsList: List<GherkinDocument.Feature.TableRow>): Pair<String, Pattern> {
+    val tokens = breakIntoParts(step.rest, 2)
 
     val patternName = withPatternDelimiters(tokens[0])
 
-    val pattern = when(val patternDefinition = tokens.getOrElse(1) { "" }.trim()) {
-        "" -> rowsToTabularPattern(rowsList)
+    val patternDefinition = stringOrDocString(tokens.getOrNull(1), step)
+
+    val pattern = when {
+        patternDefinition.isEmpty() -> rowsToTabularPattern(rowsList)
         else -> parsedPattern(patternDefinition)
     }
 
@@ -226,7 +232,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             "FACT" ->
                 scenarioInfo.copy(expectedServerState = scenarioInfo.expectedServerState.plus(toFacts(step.rest, scenarioInfo.fixtures)))
             "TYPE", "PATTERN", "JSON" ->
-                scenarioInfo.copy(patterns = scenarioInfo.patterns.plus(toPatternInfo(step.rest, step.rowsList)))
+                scenarioInfo.copy(patterns = scenarioInfo.patterns.plus(toPatternInfo(step, step.rowsList)))
             "FIXTURE" ->
                 scenarioInfo.copy(fixtures = scenarioInfo.fixtures.plus(toFixtureInfo(step.rest)))
             "FORM-FIELD" ->
@@ -290,12 +296,12 @@ fun toFormDataPart(step: StepInfo): MultiPartFormDataPattern {
 }
 
 fun toPattern(step: StepInfo): Pattern {
-    return when(val trimmedRest = step.rest.trim()) {
+    return when(val stringData = stringOrDocString(step.rest, step)) {
         "" -> {
             if(step.rowsList.isEmpty()) throw ContractException("Not enough information to describe a type in $step")
             rowsToTabularPattern(step.rowsList)
         }
-        else -> parsedPattern(trimmedRest)
+        else -> parsedPattern(stringData)
     }
 }
 

@@ -1,9 +1,11 @@
 package run.qontract.mock
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import run.qontract.core.*
 import run.qontract.core.Result.Success
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.StringValue
@@ -705,8 +707,8 @@ internal class ScenarioStubKtTest {
     }
 
     @Test
-    fun `empty array`() {
-        val mockText = """
+    fun `empty array in request body`() {
+        val stubText = """
 {
   "http-request": {
     "method": "POST",
@@ -721,13 +723,51 @@ internal class ScenarioStubKtTest {
 }
         """.trim()
 
-        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
+        val mock = mockFromJSON(jsonStringToValueMap(stubText))
         validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     When POST /square
     And request-body []
     Then status 200
     And response-body (number)""")
+    }
+
+    @Test
+    fun `null in request body throws an exception`() {
+        val stubText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square",
+    "body": null
+  },
+
+  "http-response": {
+    "status": 200
+  }
+}
+        """.trim()
+
+        assertThatThrownBy { mockFromJSON(jsonStringToValueMap(stubText)) }.isInstanceOf(ContractException::class.java)
+    }
+
+    @Test
+    fun `null in response body throws an exception`() {
+        val stubText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square"
+  },
+
+  "http-response": {
+    "status": 200,
+    "body": null
+  }
+}
+        """.trim()
+
+        assertThatThrownBy { mockFromJSON(jsonStringToValueMap(stubText)) }.isInstanceOf(ContractException::class.java)
     }
 }
 

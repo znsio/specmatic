@@ -168,7 +168,7 @@ fun requestFromJSON(json: Map<String, Value>) =
                     val body = json["body"]
 
                     if(body is NullValue)
-                        throw ContractException("Either body should have a value or the key should be absent from http-request")
+                        throw ContractException("Either body should have a value or the key should be absent from http-response")
 
                     httpRequest.updateBody(json.getValue("body"))
                 }

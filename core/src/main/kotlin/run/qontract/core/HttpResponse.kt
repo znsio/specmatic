@@ -67,11 +67,16 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
             return HttpResponse(status, mutableMapOf("Content-Type" to bodyValue.httpContentType), bodyValue)
         }
 
-        fun fromJSON(jsonObject: Map<String, Value>) =
-            HttpResponse(
-                nativeInteger(jsonObject, "status") ?: throw ContractException("http-response must contain a key named status, whose value is the http status in the response"),
+        fun fromJSON(jsonObject: Map<String, Value>): HttpResponse {
+            val body = jsonObject["body"]
+            if(body is NullValue)
+                throw ContractException("Either body should have a value or the key should be absent from http-request")
+
+            return HttpResponse(
+                    nativeInteger(jsonObject, "status") ?: throw ContractException("http-response must contain a key named status, whose value is the http status in the response"),
                     nativeStringStringMap(jsonObject, "headers").toMutableMap(),
                     jsonObject.getOrDefault("body", StringValue()))
+        }
     }
 }
 

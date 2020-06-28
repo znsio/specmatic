@@ -6,8 +6,7 @@ import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Examples
 import run.qontract.core.pattern.parsedValue
-import run.qontract.core.utilities.exceptionCauseMessage
-import run.qontract.core.utilities.readFile
+import run.qontract.core.utilities.*
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.stub.testKafkaMessages
@@ -17,9 +16,12 @@ import kotlin.system.exitProcess
 val pass = Unit
 
 open class QontractJUnitSupport {
-    @TestFactory()
+    @TestFactory
     fun contractAsTest(): Collection<DynamicTest> {
         val path = System.getProperty("path")
+        val workingDirectory = System.getProperty("workingDirectory")
+        val manifestFile = System.getProperty("manifestFile")
+
         val timeout = System.getProperty("timeout", "60").toInt()
 
         val suggestionsData = System.getProperty("suggestions") ?: ""
@@ -30,26 +32,20 @@ open class QontractJUnitSupport {
             checkBackwardCompatibilityInPath(path)
         }
 
-        val feature = try {
-            Feature(readFile(path))
-        } catch (exception: Throwable) {
-            println(exceptionCauseMessage(exception))
-            throw exception
-        }
-
-        val suggestions = when {
-            suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
-            suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)
-            else -> emptyList()
-        }
-
         val testScenarios = try {
-            feature.generateTestScenarios(suggestions)
+            when {
+                workingDirectory != null && manifestFile != null -> {
+                    val contractFilePaths = contractFilePathsFrom(manifestFile, workingDirectory)
+                    contractFilePaths.flatMap { loadTestScenarios(it, "", "") }
+                }
+                path != null -> loadTestScenarios(path, suggestionsPath, suggestionsData)
+                else -> throw ContractException("Either provide a contract path, or manifest path with working directory")
+            }
         } catch(e: ContractException) {
             println(e.report())
             throw e
         } catch(e: Throwable) {
-            println(e.localizedMessage)
+            println(exceptionCauseMessage(e))
             throw e
         }
 
@@ -95,6 +91,41 @@ open class QontractJUnitSupport {
                 }
             }
         }.toList()
+    }
+
+    private fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<String> {
+        println("Loading manifest file $manifestFile")
+        val sources = loadSourceDataFromManifest(manifestFile)
+
+        val contractsDir = File(workingDirectory).resolve("contracts")
+        if(!contractsDir.exists()) contractsDir.mkdirs()
+
+        val reposBaseDir = File(workingDirectory).resolve("repos")
+        if(!reposBaseDir.exists()) reposBaseDir.mkdirs()
+
+        for (source in sources) {
+            println("Cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
+            val repoDir = clone(reposBaseDir, source.gitRepositoryURL)
+            val contractDir = contractsDir.resolve(repoDir.nameWithoutExtension)
+            if(!contractDir.exists()) contractDir.mkdirs()
+
+            println("Pulling selected contracts from ${repoDir.path} into ${contractDir.path}")
+            source.select(repoDir, contractDir)
+        }
+
+        return contractFiles(contractsDir).map { it.path }
+    }
+
+    private fun loadTestScenarios(path: String, suggestionsPath: String, suggestionsData: String): List<Scenario> {
+        val feature = Feature(readFile(path))
+
+        val suggestions = when {
+            suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
+            suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)
+            else -> emptyList()
+        }
+
+        return feature.generateTestScenarios(suggestions)
     }
 
     private fun suggestionsFromFile(suggestionsPath: String): List<Scenario> {

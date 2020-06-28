@@ -10,13 +10,15 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import run.qontract.core.utilities.exceptionCauseMessage
+import run.qontract.core.utilities.exitWithMessage
+import java.io.File
 import java.util.concurrent.Callable
 
 @Command(name = "test",
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
 class TestCommand : Callable<Unit> {
-    @CommandLine.Parameters(index = "0", description = ["Contract file path"])
+    @CommandLine.Parameters(index = "0", description = ["Contract or manifest file path"])
     lateinit var path: String
 
     @Option(names = ["--host"], description = ["The host to bind to, e.g. localhost or some locally bound IP"], defaultValue = "localhost")
@@ -52,6 +54,9 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--commit"], description = ["Commit kafka messages that have been read"], required=false)
     var commit: Boolean = false
 
+    @Option(names = ["--workingDirectory"], description = ["The working directory in which contacts will be checked out"])
+    var workingDirectory: String? = null
+
     override fun call() = try {
         if(port == 0) {
             port = when {
@@ -62,7 +67,16 @@ class TestCommand : Callable<Unit> {
 
         val protocol = if(useHttps) "https" else "http"
 
-        System.setProperty("path", path)
+        if(workingDirectory != null) {
+            ensureThatManifestAndWorkingDirectoryExist(File(path), File(workingDirectory!!))
+            ensureEmptyOrNotExists(File(workingDirectory!!))
+
+            System.setProperty("manifestFile", path)
+            System.setProperty("workingDirectory", workingDirectory!!)
+        } else {
+            System.setProperty("path", path)
+        }
+
         System.setProperty("host", host)
         System.setProperty("port", port.toString())
         System.setProperty("timeout", timeout.toString())
@@ -92,5 +106,24 @@ class TestCommand : Callable<Unit> {
     }
     catch (e: Throwable) {
         println(exceptionCauseMessage(e))
+    }
+
+    private fun ensureEmptyOrNotExists(workingDirectory: File) {
+        if(workingDirectory.exists() && workingDirectory.listFiles()?.isNotEmpty() == true) {
+            exitWithMessage("The provided working directory ${workingDirectory.path} must be empty or must not exist")
+        }
+    }
+
+    private fun ensureThatManifestAndWorkingDirectoryExist(manifestFile: File, workingDirectory: File) {
+        if(!manifestFile.exists())
+            exitWithMessage("Manifest file ${manifestFile.path} does not exist")
+
+        if(!workingDirectory.exists()) {
+            try {
+                workingDirectory.mkdirs()
+            } catch (e: Throwable) {
+                exitWithMessage(exceptionCauseMessage(e))
+            }
+        }
     }
 }

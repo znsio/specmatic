@@ -13,8 +13,8 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Proxies requests to the specified target and converts the result into contracts and stubs"])
 class ProxyCommand : Callable<Unit> {
-    @Parameters(description = ["Proxy unrecognised commands to this URL"], index = "0")
-    lateinit var proxyTargetURL: String
+    @Parameters(description = ["Base URL of the target to be proxied to"], index = "0")
+    lateinit var targetBaseURL: String
 
     @Parameters(description = ["Store data from the proxy interactions into this dir"], index = "1")
     lateinit var proxyQontractDataDir: String
@@ -28,9 +28,9 @@ class ProxyCommand : Callable<Unit> {
     var proxy: Proxy? = null
 
     override fun call() {
-        validatedProxySettings(proxyTargetURL, proxyQontractDataDir)
+        validatedProxySettings(targetBaseURL, proxyQontractDataDir)
 
-        proxy = Proxy(host, port, proxyTargetURL, proxyQontractDataDir)
+        proxy = Proxy(host, port, targetBaseURL, proxyQontractDataDir)
         addShutdownHook()
         consoleLog("Proxy server is running on http://$host:$port. Ctrl + C to stop.")
         while(true) sleep(10000)

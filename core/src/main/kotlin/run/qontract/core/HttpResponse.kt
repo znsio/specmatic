@@ -22,13 +22,13 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
         return copy(body = content, headers = headers.minus("Content-Type").plus("Content-Type" to content.httpContentType))
     }
 
-    fun toJSON(): MutableMap<String, Value> =
-        mutableMapOf<String, Value>().also { json ->
+    fun toJSON(): JSONObjectValue =
+        JSONObjectValue(mutableMapOf<String, Value>().also { json ->
             json["status"] = NumberValue(status)
             json["body"] = body ?: EmptyString
             if (statusText.isNotEmpty()) json["status-text"] = StringValue(statusText)
             if (headers.isNotEmpty()) json["headers"] = JSONObjectValue(headers.mapValues { StringValue(it.value) })
-        }
+        })
 
     fun toLogString(prefix: String = ""): String {
         val statusLine = "$status $statusText"

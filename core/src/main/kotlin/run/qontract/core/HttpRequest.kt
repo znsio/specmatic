@@ -61,19 +61,45 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
             "?$joinedQueryParams"
         } else ""
 
-    fun toJSON(): Map<String, Value> {
+    fun toJSON(): JSONObjectValue {
         val requestMap = mutableMapOf<String, Value>()
 
         requestMap["path"] = path?.let { StringValue(it) } ?: StringValue("/")
         method?.let { requestMap["method"] = StringValue(it) } ?: throw ContractException("Can't serialise the request without a method.")
-        body?.let { requestMap["body"] = it }
 
         if (queryParams.isNotEmpty()) requestMap["query"] = JSONObjectValue(queryParams.mapValues { StringValue(it.value) })
         if (headers.isNotEmpty()) requestMap["headers"] = JSONObjectValue(headers.mapValues { StringValue(it.value) })
 
-        if(formFields.isNotEmpty()) requestMap["form-fields"] = JSONObjectValue(formFields.mapValues { StringValue(it.value) })
+        when {
+            formFields.isNotEmpty() -> requestMap["form-fields"] = JSONObjectValue(formFields.mapValues { StringValue(it.value) })
+            multiPartFormData.isNotEmpty() -> {
+                val multiPartData = multiPartFormData.map {
+                    JSONObjectValue(when(it) {
+                        is MultiPartContentValue ->
+                            mapOf("name" to StringValue(it.name), "content" to StringValue(it.content.toStringValue()), "contentType" to StringValue(it.content.httpContentType))
+                        is MultiPartFileValue ->
+                            mapOf("name" to StringValue(it.name), "filename" to StringValue("@${it.filename}")).let { map ->
+                                when(it.contentType) {
+                                    null -> map
+                                    else -> map.plus("contentType" to StringValue(it.contentType))
+                                }
+                            }.let { map ->
+                                when (it.contentEncoding) {
+                                    null -> map
+                                    else -> map.plus("contentEncoding" to StringValue(it.contentEncoding))
+                                }
+                            }
+                    })
+                }
 
-        return requestMap
+                requestMap["multipart-formdata"] = JSONArrayValue(multiPartData)
+            }
+            else -> {
+                body?.let { requestMap["body"] = it }
+            }
+        }
+
+        return JSONObjectValue(requestMap)
     }
 
     fun setHeaders(addedHeaders: Map<String, String>): HttpRequest = copy(headers = headers.plus(addedHeaders))

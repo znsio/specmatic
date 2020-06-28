@@ -8,16 +8,16 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
 data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null) {
-    @Throws(MockException::class)
-    fun toJSON(): MutableMap<String, Any> {
-        val mockInteraction = mutableMapOf<String, Any>()
+    fun toJSON(): JSONObjectValue {
+        val mockInteraction = mutableMapOf<String, Value>()
         if(kafkaMessage != null) {
             TODO("Implement serialisation")
         } else {
             mockInteraction[MOCK_HTTP_REQUEST] = request.toJSON()
             mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()
         }
-        return mockInteraction
+
+        return JSONObjectValue(mockInteraction)
     }
 }
 

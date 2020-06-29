@@ -35,6 +35,9 @@ open class QontractJUnitSupport {
         val testScenarios = try {
             when {
                 workingDirectory != null && manifestFile != null -> {
+                    ensureThatManifestAndWorkingDirectoryExist(File(manifestFile), File(workingDirectory))
+                    ensureEmptyOrNotExists(File(workingDirectory))
+
                     val contractFilePaths = contractFilePathsFrom(manifestFile, workingDirectory)
                     contractFilePaths.flatMap { loadTestScenarios(it, "", "") }
                 }
@@ -91,29 +94,6 @@ open class QontractJUnitSupport {
                 }
             }
         }.toList()
-    }
-
-    private fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<String> {
-        println("Loading manifest file $manifestFile")
-        val sources = loadSourceDataFromManifest(manifestFile)
-
-        val contractsDir = File(workingDirectory).resolve("contracts")
-        if(!contractsDir.exists()) contractsDir.mkdirs()
-
-        val reposBaseDir = File(workingDirectory).resolve("repos")
-        if(!reposBaseDir.exists()) reposBaseDir.mkdirs()
-
-        for (source in sources) {
-            println("Cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
-            val repoDir = clone(reposBaseDir, source.gitRepositoryURL)
-            val contractDir = contractsDir.resolve(repoDir.nameWithoutExtension)
-            if(!contractDir.exists()) contractDir.mkdirs()
-
-            println("Pulling selected contracts from ${repoDir.path} into ${contractDir.path}")
-            source.select(repoDir, contractDir)
-        }
-
-        return contractFiles(contractsDir).map { it.path }
     }
 
     private fun loadTestScenarios(path: String, suggestionsPath: String, suggestionsData: String): List<Scenario> {

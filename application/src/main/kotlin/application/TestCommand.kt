@@ -9,6 +9,8 @@ import org.junit.platform.launcher.core.LauncherFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
+import run.qontract.core.utilities.ensureEmptyOrNotExists
+import run.qontract.core.utilities.ensureThatManifestAndWorkingDirectoryExist
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.exitWithMessage
 import java.io.File
@@ -65,7 +67,11 @@ class TestCommand : Callable<Unit> {
             }
         }
 
-        val protocol = if(useHttps) "https" else "http"
+        val protocol = when {
+            port == 443 -> "https"
+            useHttps -> "https"
+            else -> "http"
+        }
 
         if(workingDirectory != null) {
             ensureThatManifestAndWorkingDirectoryExist(File(path), File(workingDirectory!!))
@@ -106,24 +112,5 @@ class TestCommand : Callable<Unit> {
     }
     catch (e: Throwable) {
         println(exceptionCauseMessage(e))
-    }
-
-    private fun ensureEmptyOrNotExists(workingDirectory: File) {
-        if(workingDirectory.exists() && workingDirectory.listFiles()?.isNotEmpty() == true) {
-            exitWithMessage("The provided working directory ${workingDirectory.path} must be empty or must not exist")
-        }
-    }
-
-    private fun ensureThatManifestAndWorkingDirectoryExist(manifestFile: File, workingDirectory: File) {
-        if(!manifestFile.exists())
-            exitWithMessage("Manifest file ${manifestFile.path} does not exist")
-
-        if(!workingDirectory.exists()) {
-            try {
-                workingDirectory.mkdirs()
-            } catch (e: Throwable) {
-                exitWithMessage(exceptionCauseMessage(e))
-            }
-        }
     }
 }

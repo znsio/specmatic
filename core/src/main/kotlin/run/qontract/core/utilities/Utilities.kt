@@ -174,3 +174,45 @@ fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> {
         ContractSource(gitRepo, selector)
     }
 }
+
+fun ensureEmptyOrNotExists(workingDirectory: File) {
+    if(workingDirectory.exists() && workingDirectory.listFiles()?.isNotEmpty() == true) {
+        exitWithMessage("The provided working directory ${workingDirectory.path} must be empty or must not exist")
+    }
+}
+
+fun ensureThatManifestAndWorkingDirectoryExist(manifestFile: File, workingDirectory: File) {
+    if(!manifestFile.exists())
+        exitWithMessage("Manifest file ${manifestFile.path} does not exist")
+
+    if(!workingDirectory.exists()) {
+        try {
+            workingDirectory.mkdirs()
+        } catch (e: Throwable) {
+            exitWithMessage(exceptionCauseMessage(e))
+        }
+    }
+}
+
+fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<String> {
+    println("Loading manifest file $manifestFile")
+    val sources = loadSourceDataFromManifest(manifestFile)
+
+    val contractsDir = File(workingDirectory).resolve("contracts")
+    if(!contractsDir.exists()) contractsDir.mkdirs()
+
+    val reposBaseDir = File(workingDirectory).resolve("repos")
+    if(!reposBaseDir.exists()) reposBaseDir.mkdirs()
+
+    for (source in sources) {
+        println("Cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
+        val repoDir = clone(reposBaseDir, source.gitRepositoryURL)
+        val contractDir = contractsDir.resolve(repoDir.nameWithoutExtension)
+        if(!contractDir.exists()) contractDir.mkdirs()
+
+        println("Pulling selected contracts from ${repoDir.path} into ${contractDir.path}")
+        source.select(repoDir, contractDir)
+    }
+
+    return contractFiles(contractsDir).map { it.path }
+}

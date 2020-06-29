@@ -30,7 +30,12 @@ class BackwardCompatibleCommand : Callable<Unit> {
         }
 
         val countsMessage = "Tests run: ${results.successCount + results.failureCount}, Passed: ${results.successCount}, Failed: ${results.failureCount}\n\n"
-        val resultReport = "${results.report()}\n\n".trim()
+        val resultReport = results.report().trim().let {
+            when {
+                it.isNotEmpty() -> "$it\n\n"
+                else -> it
+            }
+        }
 
         println("$countsMessage$resultReport$resultMessage".trim())
 

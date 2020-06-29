@@ -26,7 +26,7 @@ internal class HttpRequestTest {
     @Test
     fun `when serialised to json, the request should contain form fields`() {
         val json = HttpRequest("POST", "/").copy(formFields = mapOf("Data" to "10")).toJSON()
-        val value = json.getValue("form-fields") as JSONObjectValue
+        val value = json.jsonObject.getValue("form-fields") as JSONObjectValue
         assertThat(value.jsonObject.getValue("Data")).isEqualTo(StringValue("10"))
     }
 

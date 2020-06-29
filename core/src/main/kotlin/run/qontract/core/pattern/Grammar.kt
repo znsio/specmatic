@@ -88,8 +88,8 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
                         if(patternParts.size != 2)
                             throw ContractException("$patternString seems incomplete")
 
-                        if(patternParts.get(1) != "string")
-                            throw ContractException("Only string is supported for declaring a pattern in a pattern")
+                        if(patternParts[1] != "string")
+                            throw ContractException("""Types can only be declared to be "in string". You can't declare a type in "${patternParts[1]}".""")
 
                         PatternInStringPattern(parsedPattern(withPatternDelimiters(patternParts.get(0))))
                     }

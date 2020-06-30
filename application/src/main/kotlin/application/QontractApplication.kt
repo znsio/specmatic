@@ -12,7 +12,7 @@ import java.util.logging.LogManager
 import kotlin.system.exitProcess
 
 @Command(name = "qontract", mixinStandardHelpOptions = true, versionProvider = VersionProvider::class, subcommands = [BackwardCompatibleCommand::class, CompareCommand::class, ImportCommand::class, ManifestCommand::class, SamplesCommand::class, StubCommand::class, TestCommand::class, VersionCommand::class])
-class QontractCommand : Callable<Int> {
+class QontractApplication : Callable<Int> {
     override fun call(): Int {
         return 0
     }
@@ -22,8 +22,8 @@ class QontractCommand : Callable<Int> {
         fun main(args: Array<String>) {
             setupLogging()
             when {
-                args.isEmpty() -> CommandLine(QontractCommand()).usage(System.out)
-                else -> exitProcess(CommandLine(QontractCommand()).execute(*args))
+                args.isEmpty() -> CommandLine(QontractApplication()).usage(System.out)
+                else -> exitProcess(CommandLine(QontractApplication()).execute(*args))
             }
         }
 

@@ -5,10 +5,11 @@ package run.qontract.core.utilities
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.TransportConfigCallback
 import org.eclipse.jgit.transport.SshTransport
-import org.eclipse.jgit.transport.Transport
 import org.eclipse.jgit.transport.sshd.SshdSessionFactory
 import org.w3c.dom.Document
 import org.w3c.dom.Node
+import org.w3c.dom.Node.ELEMENT_NODE
+import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
 import run.qontract.core.nativeString
 import run.qontract.core.pattern.parsedJSONStructure
@@ -16,8 +17,9 @@ import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
-import java.io.*
-import java.net.URI
+import java.io.File
+import java.io.StringReader
+import java.io.StringWriter
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
 import javax.xml.transform.TransformerFactory
@@ -56,9 +58,32 @@ fun readFile(filePath: String): String {
 
 fun parseXML(xmlData: String): Document {
     val builderFactory = DocumentBuilderFactory.newInstance()
+    builderFactory.isIgnoringComments = true
+    builderFactory.isIgnoringElementContentWhitespace = true
+    builderFactory.isValidating = true
     val builder = builderFactory.newDocumentBuilder()
     builder.setErrorHandler(null)
-    return builder.parse(InputSource(StringReader(xmlData)))
+    return removeWhiteSpace(builder.parse(InputSource(StringReader(xmlData))))
+}
+
+fun removeWhiteSpace(document: Document): Document {
+    removeWhiteSpace(document.documentElement)
+    return document
+}
+
+fun removeWhiteSpace(node: Node): Node {
+    if(node.hasChildNodes()) {
+        0.until(node.childNodes.length).map { i ->
+            node.childNodes.item(i)
+        }.forEach {
+            if(it.nodeType == TEXT_NODE && node.nodeType == ELEMENT_NODE && it.textContent.trim().isBlank())
+                node.removeChild(it)
+            else if(it.hasChildNodes())
+                removeWhiteSpace(it)
+        }
+    }
+
+    return node
 }
 
 fun xmlToString(node: Node): String = xmlToString(DOMSource(node))

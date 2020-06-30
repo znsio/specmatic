@@ -1,18 +1,17 @@
 package run.qontract.core.pattern
 
-import org.w3c.dom.Document
 import org.w3c.dom.NamedNodeMap
 import org.w3c.dom.Node
-import org.xml.sax.InputSource
-import run.qontract.core.*
+import run.qontract.core.Resolver
+import run.qontract.core.Result
+import run.qontract.core.mismatchResult
+import run.qontract.core.resultReport
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.utilities.xmlToString
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import run.qontract.core.value.XMLValue
-import java.io.StringReader
 import java.util.*
-import javax.xml.parsers.DocumentBuilderFactory
 
 data class XMLPattern(val node: Node) : Pattern {
     override val pattern = xmlToString(node)

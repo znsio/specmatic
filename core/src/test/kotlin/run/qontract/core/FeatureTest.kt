@@ -849,6 +849,36 @@ And response-body
         }
     }
 
+    private val threeQuotes = "\"\"\""
+
+    @Test
+    fun `basic xml scenario`() {
+        val contractGherkin = """
+Feature: Basic XML API
+
+Scenario: Random number
+When POST /number
+And request-body
+$threeQuotes
+<request>
+<number>(number)</number>
+</request>
+$threeQuotes
+Then status 200
+""".trim()
+
+        val feature = Feature(contractGherkin)
+
+        fun test(request: HttpRequest) {
+            val response = feature.lookupResponse(request)
+            assertThat(response.status).isEqualTo(200).withFailMessage(response.toLogString())
+        }
+
+        test(HttpRequest("POST", path = "/number", body = XMLValue("""<request><number>10</number></request>""")))
+        test(HttpRequest("POST", path = "/number", body = XMLValue("""<request>
+<number>10</number> </request>""")))
+    }
+
     companion object {
         @JvmStatic
         private fun singleFeatureContractSource(): Stream<Arguments> {

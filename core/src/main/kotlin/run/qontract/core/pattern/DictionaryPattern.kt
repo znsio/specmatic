@@ -28,10 +28,10 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
                     else -> value
                 }
                 when (val result = resolver.matchesPattern(null, valuePattern, parsedValue)) {
-                    is Result.Failure -> return result.breadCrumb("\"$key\"=${value.toStringValue()}")
+                    is Result.Failure -> return result.breadCrumb(key)
                 }
             } catch(e: ContractException) {
-                return e.failure().breadCrumb("\"$key\"=${value.toStringValue()}")
+                return e.failure().breadCrumb(key)
             }
         }
 

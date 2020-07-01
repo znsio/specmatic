@@ -214,9 +214,13 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
         when(step.keyword) {
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
-                    scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
-                                            urlMatcher = toURLMatcher(URI.create(step.rest)),
-                                            method = step.keyword.toUpperCase()))
+                    val urlMatcher = try {
+                        toURLMatcher(URI.create(step.rest))
+                    } catch (e: Throwable) {
+                        throw Exception("Could not parse the contract URL \"${step.rest}\" in scenario \"${scenarioInfo.scenarioName}\"", e)
+                    }
+
+                    scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(urlMatcher = urlMatcher, method = step.keyword.toUpperCase()))
                 } ?: throw ContractException("Line ${step.line}: $step.text")
             }
             "REQUEST-HEADER" ->

@@ -2,7 +2,6 @@ package run.qontract.core.utilities
 
 import run.qontract.core.pattern.isPatternToken
 import run.qontract.core.pattern.withoutPatternDelimiters
-import java.io.UnsupportedEncodingException
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.util.stream.Collectors
@@ -13,12 +12,15 @@ object URIUtils {
             return emptyMap()
         }
         val pairs = query.split("&".toRegex()).toTypedArray()
-        val query_pairs = HashMap<String, String>()
+        val queryParams = HashMap<String, String>()
         for (pair in pairs) {
             val idx = pair.indexOf("=")
-            query_pairs[URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8.toString())] = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8.toString())
+            if(idx < 0) {
+                throw Exception("a part of the query string does not seem to be a key-value pair: $pair")
+            }
+            queryParams[URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8.toString())] = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8.toString())
         }
-        return query_pairs
+        return queryParams
     }
 
     fun parsePathParams(rawPath: String): Map<String, String> {

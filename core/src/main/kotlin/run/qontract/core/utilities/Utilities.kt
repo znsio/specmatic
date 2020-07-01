@@ -11,6 +11,7 @@ import org.w3c.dom.Node
 import org.w3c.dom.Node.ELEMENT_NODE
 import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
+import run.qontract.consoleLog
 import run.qontract.core.nativeString
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.value.JSONArrayValue
@@ -245,4 +246,13 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
     }
 
     return contractFiles(contractsDir).map { it.path }
+}
+
+class UncaughtExceptionHandler: Thread.UncaughtExceptionHandler {
+    override fun uncaughtException(t: Thread?, e: Throwable?) {
+        if(e != null)
+            consoleLog(exceptionCauseMessage(e))
+
+        exitProcess(1)
+    }
 }

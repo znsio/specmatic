@@ -4,6 +4,7 @@ import application.test.ManifestCommand
 import application.versioning.commands.VersionCommand
 import picocli.CommandLine
 import picocli.CommandLine.Command
+import run.qontract.core.utilities.UncaughtExceptionHandler
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.*
@@ -21,6 +22,9 @@ class QontractApplication : Callable<Int> {
         @JvmStatic
         fun main(args: Array<String>) {
             setupLogging()
+
+            Thread.setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler())
+
             when {
                 args.isEmpty() -> CommandLine(QontractApplication()).usage(System.out)
                 else -> exitProcess(CommandLine(QontractApplication()).execute(*args))

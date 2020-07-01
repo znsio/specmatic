@@ -5,6 +5,7 @@ import run.qontract.LogTail
 import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
+import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.stub.*
 import java.io.File
@@ -70,7 +71,7 @@ class StubCommand : Callable<Unit> {
     } catch (e:ContractException) {
         consoleLog(e.report())
     } catch (e: Throwable) {
-        consoleLog("An error occurred: ${e.localizedMessage}")
+        consoleLog(exceptionCauseMessage(e))
     }
 
     private fun watchForChanges(contractPaths: List<Path>) {

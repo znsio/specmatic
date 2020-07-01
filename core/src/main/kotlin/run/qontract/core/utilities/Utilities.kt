@@ -72,19 +72,24 @@ fun removeWhiteSpace(document: Document): Document {
 }
 
 fun removeWhiteSpace(node: Node): Node {
-    if(node.hasChildNodes()) {
-        0.until(node.childNodes.length).map { i ->
+    if(node.hasChildNodes() && !containsTextContent(node)) {
+        val childNodes = 0.until(node.childNodes.length).map { i ->
             node.childNodes.item(i)
-        }.forEach {
-            if(it.nodeType == TEXT_NODE && node.nodeType == ELEMENT_NODE && it.textContent.trim().isBlank())
+        }
+
+        childNodes.forEach {
+            if (it.nodeType == TEXT_NODE && node.nodeType == ELEMENT_NODE && it.textContent.trim().isBlank())
                 node.removeChild(it)
-            else if(it.hasChildNodes())
+            else if (it.hasChildNodes())
                 removeWhiteSpace(it)
         }
     }
 
     return node
 }
+
+private fun containsTextContent(node: Node) =
+        node.childNodes.length == 1 && node.firstChild.nodeType == TEXT_NODE && node.nodeType == ELEMENT_NODE
 
 fun xmlToString(node: Node): String = xmlToString(DOMSource(node))
 

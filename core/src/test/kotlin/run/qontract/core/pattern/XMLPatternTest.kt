@@ -130,4 +130,12 @@ internal class XMLPatternTest {
         val pattern2 = XMLPattern("""<number val="20">(number)</number>""")
         assertThat(pattern1.encompasses(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
+
+    @Test
+    fun `should generate a value when the xml contains an empty node`() {
+        val pattern = XMLPattern("<data><empty/><value>10</value></data>")
+        val value = pattern.generate(Resolver())
+
+        assertThat(value.toStringValue()).isEqualTo("<data><empty/><value>10</value></data>")
+    }
 }

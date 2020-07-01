@@ -115,7 +115,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
 
         val bodyValue = try {
             if (isPatternToken(httpRequest.bodyString)) StringValue(httpRequest.bodyString) else body.parse(httpRequest.bodyString, resolver)
-        } catch(e: ContractException) {
+        } catch (e: ContractException) {
             return MatchFailure(e.failure().breadCrumb("BODY"))
         }
 

@@ -2,6 +2,8 @@ package run.qontract.core.pattern
 
 import org.w3c.dom.NamedNodeMap
 import org.w3c.dom.Node
+import org.w3c.dom.Node.ELEMENT_NODE
+import org.w3c.dom.Node.TEXT_NODE
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.mismatchResult
@@ -19,7 +21,7 @@ data class XMLPattern(val node: Node) : Pattern {
     constructor(bodyContent: String): this(parseXML(bodyContent).documentElement)
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if(sampleData !is XMLValue)
+            if(sampleData !is XMLValue)
             return mismatchResult(this, sampleData)
 
         return when (val result = matchesNode(node, sampleData.node, resolver)) {
@@ -133,7 +135,7 @@ data class XMLPattern(val node: Node) : Pattern {
         }
         if (node.hasChildNodes()) {
             updateChildNodes(node, resolver)
-        } else {
+        } else if(node.nodeType == TEXT_NODE) {
             val nodeValue = node.nodeValue
             node.nodeValue = generateValue(node.nodeName, nodeValue, resolver)
         }

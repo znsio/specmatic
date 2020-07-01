@@ -9,8 +9,9 @@ class ContractExecutionListener : TestExecutionListener {
     private var success: Int = 0
     private var failure: Int = 0
 
-    override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
+    private val failedScenarios: MutableList<String> = mutableListOf()
 
+    override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
         if (listOf("QontractJUnitSupport", "contractAsTest()", "JUnit Jupiter").any {
                     testIdentifier!!.displayName.contains(it)
                 }) return
@@ -19,6 +20,9 @@ class ContractExecutionListener : TestExecutionListener {
         testExecutionResult?.status?.name?.equals("SUCCESSFUL").let {
             when (it) {
                 false -> {
+                    if(testIdentifier?.displayName != null)
+                        failedScenarios.add(testIdentifier.displayName)
+
                     failure++
                     val message = testExecutionResult?.throwable?.get()?.message?.replace("\n", "\n\t")?.trimIndent() ?: ""
                     println("Reason: $message\n\n")
@@ -32,7 +36,13 @@ class ContractExecutionListener : TestExecutionListener {
     }
 
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
-        println("Tests run: ${success + failure}, Failures: ${failure}")
+        println("Tests run: ${success + failure}, Failures: $failure")
+
+        if(failedScenarios.isNotEmpty()) {
+            println()
+            println("Failed scenarios:")
+            println(failedScenarios.distinct().joinToString(System.lineSeparator()) { it.prependIndent("  ")})
+        }
     }
 
     fun exitProcess() {

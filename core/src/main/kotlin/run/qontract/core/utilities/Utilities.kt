@@ -130,8 +130,8 @@ private fun getTransportCallingCallback(): TransportConfigCallback {
 }
 
 
-fun pathSelector(jsonObject: Map<String, Value>): SelectorFunction {
-    return when(val sourcePaths = getStringArray(jsonObject, "paths")) {
+fun pathSelector(repoConfig: Map<String, Value>): SelectorFunction {
+    return when(val sourcePaths = getStringArray(repoConfig, "paths")) {
         null -> { sourceDir: File, destinationDir: File ->
             val sourceFiles = contractFiles(sourceDir)
 
@@ -199,10 +199,14 @@ fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> {
         if (repo !is JSONObjectValue) exitWithMessage("Every element of the json array in the manifest must be a json object, but got this: ${repo.toStringValue()}")
 
         val gitRepo = nativeString(repo.jsonObject, "git")
-                ?: exitWithMessage("Each config object must contain a key named git with the value being a git repo containing contracts")
+        val repoName = nativeString(repo.jsonObject, "repoName")
+
+        if(gitRepo == null && repoName == null)
+            exitWithMessage("Each config object must contain either a key named git with the value being a git repo containing contracts, or a key named repoName containing the name of the repo when the contracts exist in a local path")
+
         val selector = pathSelector(repo.jsonObject)
 
-        ContractSource(gitRepo, selector)
+        ContractSource(gitRepo, repoName, selector)
     }
 }
 
@@ -236,13 +240,22 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
     if(!reposBaseDir.exists()) reposBaseDir.mkdirs()
 
     for (source in sources) {
-        println("Cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
-        val repoDir = clone(reposBaseDir, source.gitRepositoryURL)
-        val contractDir = contractsDir.resolve(repoDir.nameWithoutExtension)
-        if(!contractDir.exists()) contractDir.mkdirs()
+        if(source.gitRepositoryURL != null) {
+            println("Cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
+            val repoDir = clone(reposBaseDir, source.gitRepositoryURL)
+            val contractDir = contractsDir.resolve(repoDir.nameWithoutExtension)
+            if (!contractDir.exists()) contractDir.mkdirs()
+            println("Pulling selected contracts from ${repoDir.path} into ${contractDir.path}")
+            source.select(repoDir, contractDir)
+        } else if (source.moduleName != null) {
+            val repoDir = reposBaseDir.resolve(source.moduleName)
+            val contractDir = contractsDir.resolve(source.moduleName)
 
-        println("Pulling selected contracts from ${repoDir.path} into ${contractDir.path}")
-        source.select(repoDir, contractDir)
+            if (!contractDir.exists()) contractDir.mkdirs()
+            println("Pulling selected contracts from ${repoDir.path} into ${contractDir.path}")
+            source.select(repoDir, contractDir)
+        }
+
     }
 
     return contractFiles(contractsDir).map { it.path }

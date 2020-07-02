@@ -36,7 +36,6 @@ open class QontractJUnitSupport {
             when {
                 workingDirectory != null && manifestFile != null -> {
                     ensureThatManifestAndWorkingDirectoryExist(File(manifestFile), File(workingDirectory))
-                    ensureEmptyOrNotExists(File(workingDirectory))
 
                     val contractFilePaths = contractFilePathsFrom(manifestFile, workingDirectory)
                     contractFilePaths.flatMap { loadTestScenarios(it, "", "") }

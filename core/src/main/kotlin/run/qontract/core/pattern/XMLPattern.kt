@@ -75,7 +75,14 @@ data class XMLPattern(val node: Node) : Pattern {
         return when {
             isPatternToken(patternValue) -> try {
                 val resolvedPattern = resolver.getPattern(patternValue)
-                val resolvedValue = resolvedPattern.parse(sampleValue, resolver)
+                val resolvedValue = try {
+                    resolvedPattern.parse(sampleValue, resolver)
+                } catch(e: Throwable) {
+                    when {
+                        isPatternToken(sampleValue) -> StringValue(sampleValue.toString())
+                        else -> throw e
+                    }
+                }
 
                 when (val result = resolver.matchesPattern(key, resolvedPattern, resolvedValue)) {
                     is Result.Failure -> result.reason("Node $key did not match. Expected: $patternValue Actual: $sampleValue")

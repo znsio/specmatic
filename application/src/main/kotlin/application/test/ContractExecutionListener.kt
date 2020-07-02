@@ -9,7 +9,7 @@ class ContractExecutionListener : TestExecutionListener {
     private var success: Int = 0
     private var failure: Int = 0
 
-    private val failedScenarios: MutableList<String> = mutableListOf()
+    private val failedLog: MutableList<String> = mutableListOf()
 
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
         if (listOf("QontractJUnitSupport", "contractAsTest()", "JUnit Jupiter").any {
@@ -20,12 +20,16 @@ class ContractExecutionListener : TestExecutionListener {
         testExecutionResult?.status?.name?.equals("SUCCESSFUL").let {
             when (it) {
                 false -> {
-                    if(testIdentifier?.displayName != null)
-                        failedScenarios.add(testIdentifier.displayName)
-
                     failure++
                     val message = testExecutionResult?.throwable?.get()?.message?.replace("\n", "\n\t")?.trimIndent() ?: ""
-                    println("Reason: $message\n\n")
+                    val reason = "Reason: $message"
+                    println("$reason\n\n")
+
+
+                    val log = """"${testIdentifier?.displayName} ${testExecutionResult?.status}"
+${reason.prependIndent("  ")}"""
+
+                    failedLog.add(log)
                 }
                 else -> {
                     success++
@@ -38,10 +42,10 @@ class ContractExecutionListener : TestExecutionListener {
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
         println("Tests run: ${success + failure}, Failures: $failure")
 
-        if(failedScenarios.isNotEmpty()) {
+        if(failedLog.isNotEmpty()) {
             println()
             println("Failed scenarios:")
-            println(failedScenarios.distinct().joinToString(System.lineSeparator()) { it.prependIndent("  ")})
+            println(failedLog.distinct().joinToString(System.lineSeparator()) { it.prependIndent("  ")})
         }
     }
 

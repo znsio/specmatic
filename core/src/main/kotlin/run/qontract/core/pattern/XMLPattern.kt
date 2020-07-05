@@ -41,7 +41,15 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
             return missingKeyToResult(missingKey, "attribute")
 
         mapZip(pattern.attributes, sampleData.attributes).forEach { (key, patternValue, sampleValue) ->
-            when (val result = resolver.matchesPattern(key, patternValue, try { patternValue.parse(sampleValue.string, resolver) } catch(e: ContractException) { return e.failure() } )) {
+            val resolvedValue: Value = when {
+                sampleValue.isPatternToken() -> sampleValue
+                else -> try {
+                    patternValue.parse(sampleValue.string, resolver)
+                } catch (e: ContractException) {
+                    return e.failure()
+                }
+            }
+            when (val result = resolver.matchesPattern(key, patternValue, resolvedValue)) {
                 is Result.Failure -> return result.breadCrumb(key)
             }
         }
@@ -55,10 +63,15 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
 
                     val nodeValue: XMLNode = sampleData
                     val childNode = when(val childNode = nodeValue.nodes[index]) {
-                        is StringValue -> try { type.parse(childNode.string, resolver) } catch(e: ContractException) { return e.failure() }
+                        is StringValue -> when {
+                            childNode.isPatternToken() -> childNode
+                            else -> try { type.parse(childNode.string, resolver) } catch(e: ContractException) { return e.failure() }
+                        }
                         else -> childNode
                     }
-                    val result = type.matches(childNode, resolver)
+
+                    val factKey = if (childNode is XMLNode) childNode.name else null
+                    val result = resolver.matchesPattern(factKey, type, childNode)
                     if(result is Result.Failure)
                         return result.breadCrumb("${nodeValue.name}@$index")
                 }

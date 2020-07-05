@@ -4,7 +4,7 @@ import org.w3c.dom.Attr
 import org.w3c.dom.Document
 import org.w3c.dom.Node
 import run.qontract.core.pattern.Pattern
-import run.qontract.core.pattern.XMLPattern2
+import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.utilities.xmlToString
 import javax.xml.parsers.DocumentBuilderFactory
@@ -14,14 +14,14 @@ fun XMLNode(document: Document): XMLNode {
     return XMLNode(node) as XMLNode
 }
 
-fun XMLNode(node: Node): IXMLValue {
+fun XMLNode(node: Node): XMLValue {
     return when (node.nodeType) {
         Node.TEXT_NODE -> StringValue(node.textContent)
         else -> XMLNode(node.nodeName, attributes(node), nodes(node))
     }
 }
 
-private fun nodes(node: Node): List<IXMLValue> {
+private fun nodes(node: Node): List<XMLValue> {
     return 0.until(node.childNodes.length).map {
         node.childNodes.item(it)
     }.fold(listOf()) { acc, item ->
@@ -42,7 +42,7 @@ fun XMLNode(xmlData: String): XMLNode {
     return XMLNode(document)
 }
 
-data class XMLNode(val name: String, val attributes: Map<String, StringValue>, val nodes: List<IXMLValue>) : IXMLValue, ListValue {
+data class XMLNode(val name: String, val attributes: Map<String, StringValue>, val nodes: List<XMLValue>) : XMLValue, ListValue {
     override val httpContentType: String = "text/xml"
 
     override val list: List<Value>
@@ -85,12 +85,12 @@ data class XMLNode(val name: String, val attributes: Map<String, StringValue>, v
     }
 
     override fun displayableType(): String = "xml"
-    override fun exactMatchElseType(): XMLPattern2 {
-        return XMLPattern2(this)
+    override fun exactMatchElseType(): XMLPattern {
+        return XMLPattern(this)
     }
 
     override fun type(): Pattern {
-        return XMLPattern2()
+        return XMLPattern()
     }
 
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {

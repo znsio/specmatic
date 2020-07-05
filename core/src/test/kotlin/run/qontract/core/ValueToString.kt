@@ -1,13 +1,13 @@
 package run.qontract.core
 
-import run.qontract.core.value.EmptyString
-import run.qontract.core.value.Value
-import run.qontract.core.value.XMLValue
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.xml.sax.SAXException
 import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.value.EmptyString
+import run.qontract.core.value.Value
+import run.qontract.core.value.XMLNode
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
 
@@ -32,11 +32,11 @@ class ValueToString {
     @Throws(IOException::class, SAXException::class, ParserConfigurationException::class)
     fun xmlStringTest() {
         val xmlData = "<node>1</node>"
-        val body: Value = XMLValue(xmlData)
+        val body: Value = XMLNode(xmlData)
         val xmlData2 = body.toString()
-        val body2 = XMLValue(xmlData2)
-        val root = body2.node
-        Assertions.assertEquals("node", root.nodeName)
-        Assertions.assertEquals("1", root.firstChild.nodeValue)
+        val body2 = XMLNode(xmlData2)
+        val root = body2
+        Assertions.assertEquals("node", root.name)
+        Assertions.assertEquals("1", root.nodes[0].toStringValue())
     }
 }

@@ -49,7 +49,7 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
                         Result.Failure(e.report())
                     }
                 }
-                is XMLPattern2 -> {
+                is XMLPattern -> {
                     try {
                         val results = otherPattern.getEncompassables(otherResolver).asSequence().mapIndexed { index, otherPatternEntry ->
                             Pair(index, pattern.encompasses(resolvedHop(otherPatternEntry, otherResolver), thisResolver, otherResolver))

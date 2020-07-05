@@ -227,7 +227,7 @@ fun guessType(value: Value): Value = when(value) {
             isNumber(value) -> NumberValue(convertToNumber(value.string))
             value.string.toLowerCase() in listOf("true", "false") -> BooleanValue(value.string.toLowerCase().toBoolean())
             value.string.startsWith("{") || value.string.startsWith("[") -> parsedJSONStructure(value.string)
-            value.string.startsWith("<") -> XMLValue(parseXML(value.string))
+            value.string.startsWith("<") -> XMLNode(parseXML(value.string))
             else -> value
         }
     } catch(e: Throwable) {

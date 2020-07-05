@@ -6,7 +6,7 @@ import org.w3c.dom.Document
 import org.w3c.dom.Node
 import run.qontract.core.pattern.*
 
-data class StringValue(val string: String = "") : Value, ScalarValue, IXMLValue {
+data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
     override val httpContentType = "text/plain"
 
     @OptIn(InternalAPI::class)

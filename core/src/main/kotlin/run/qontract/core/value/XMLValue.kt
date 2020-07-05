@@ -1,40 +1,8 @@
 package run.qontract.core.value
 
-import run.qontract.core.utilities.xmlToString
+import org.w3c.dom.Document
 import org.w3c.dom.Node
-import run.qontract.core.pattern.Pattern
-import run.qontract.core.pattern.XMLPattern
-import run.qontract.core.utilities.parseXML
 
-//TODO Rewrite XML handling to eliminate duplication between XML and JSON
-data class XMLValue(val node: Node) : Value {
-    constructor(xml: String): this(parseXML(xml).documentElement)
-
-    override val httpContentType = "application/xml"
-
-    override fun displayableValue(): String = toStringValue()
-    override fun toStringValue() = xmlToString(node)
-    override fun displayableType(): String = "xml"
-    override fun exactMatchElseType(): Pattern = XMLPattern(node)
-    override fun type(): Pattern = XMLPattern("<empty/>")
-    override fun listOf(valueList: List<Value>): Value {
-        TODO("Not yet implemented")
-    }
-
-    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {
-        TODO("Not yet implemented")
-    }
-
-    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {
-        TODO("Not yet implemented")
-    }
-
-    override fun toString() = xmlToString(node)
-    override fun equals(other: Any?) =
-        when (other) {
-            is XMLValue -> node.isEqualNode(other.node)
-            else -> false
-        }
-
-    override fun hashCode(): Int = node.hashCode()
+interface XMLValue: Value {
+    fun build(document: Document): Node
 }

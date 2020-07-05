@@ -427,13 +427,15 @@ Expected number, actual was string: "abc"""")
         val xmlResponseString = "<balance><calls_left>20</calls_left><messages_left>20</messages_left></balance>"
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val root = (request.body as XMLValue).node
-                val nameItem = root.childNodes.item(0)
-                val addressItem = root.childNodes.item(1)
-                assertEquals("name", nameItem.nodeName)
-                assertEquals("address", addressItem.nodeName)
-                assertEquals("John Doe", nameItem.firstChild.nodeValue)
-                assertTrue(StringPattern.matches(StringValue(addressItem.firstChild.nodeValue), Resolver()) is Result.Success)
+                val root = (request.body as XMLNode)
+
+                val nameNode = root.nodes[0] as XMLNode
+                val addressNode = root.nodes[1] as XMLNode
+
+                assertEquals("name", nameNode.name)
+                assertEquals("address", addressNode.name)
+                assertEquals("John Doe", (nameNode.nodes[0] as StringValue).string)
+                assertThat(addressNode.nodes[0] is StringValue)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/xml")

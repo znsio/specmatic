@@ -8,7 +8,7 @@ import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
-object NullPattern : Pattern {
+object NullPattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
         when {
             sampleData is NullValue || sampleData is StringValue && sampleData.string.trim() == "" ->

@@ -8,7 +8,7 @@ import run.qontract.core.value.Value
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-object DateTimePattern : Pattern {
+object DateTimePattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result = when (sampleData) {
         is StringValue -> resultOf {
             parse(sampleData.string, resolver)
@@ -30,9 +30,6 @@ object DateTimePattern : Pattern {
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver)
-
-//        if(otherPattern is DateTimePattern) return Result.Success()
-//        return Result.Failure("Expected datetime, got ${otherPattern.typeName}")
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {

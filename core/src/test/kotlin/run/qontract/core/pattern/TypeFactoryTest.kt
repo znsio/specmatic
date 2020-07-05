@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.XMLNode
 
 class TypeFactoryTest {
     @Test
@@ -24,11 +25,11 @@ class TypeFactoryTest {
     @Test
     fun `should return XML document for XML string`() {
         val pattern = parsedPattern("<hello>world</hello>")
-        assertTrue(pattern is XMLPattern)
+        assertTrue(pattern is XMLPattern2)
         val value = pattern.generate(Resolver())
 
         assertNotNull(value)
 
-        assertTrue(value is XMLValue)
+        assertTrue(value is XMLNode)
     }
 }

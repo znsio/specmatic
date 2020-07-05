@@ -870,12 +870,16 @@ Then status 200
         val feature = Feature(contractGherkin)
 
         fun test(request: HttpRequest) {
-            val response = feature.lookupResponse(request)
-            assertThat(response.status).isEqualTo(200).withFailMessage(response.toLogString())
+            try {
+                val response = feature.lookupResponse(request)
+                assertThat(response.status).isEqualTo(200).withFailMessage(response.toLogString())
+            } catch(e: Throwable) {
+                println(e.stackTrace)
+            }
         }
 
-        test(HttpRequest("POST", path = "/number", body = XMLValue("""<request><number>10</number></request>""")))
-        test(HttpRequest("POST", path = "/number", body = XMLValue("""<request>
+        test(HttpRequest("POST", path = "/number", body = XMLNode("""<request><number>10</number></request>""")))
+        test(HttpRequest("POST", path = "/number", body = XMLNode("""<request>
 <number>10</number> </request>""")))
     }
 

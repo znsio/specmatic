@@ -10,7 +10,7 @@ import run.qontract.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-object StringPattern : Pattern {
+object StringPattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when(sampleData) {
             is StringValue, EmptyString -> Result.Success()

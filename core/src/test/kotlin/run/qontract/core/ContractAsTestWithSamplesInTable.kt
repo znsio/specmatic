@@ -1,5 +1,7 @@
 package run.qontract.core
 
+import org.assertj.core.api.Assertions.assertThat
+import org.checkerframework.common.value.qual.StringVal
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.ContractException
@@ -11,6 +13,7 @@ import run.qontract.test.TestExecutor
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class ContractAsTestWithSamplesInTable {
     @Test
@@ -240,26 +243,31 @@ Feature: Contract for /balance API
         val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val root = (request.body as XMLValue).node
-                val nameItem = root.childNodes.item(0)
-                val cityItem = root.childNodes.item(1)
-                Assertions.assertEquals("name", nameItem.nodeName)
-                Assertions.assertEquals("city", cityItem.nodeName)
-                val name = nameItem.firstChild.nodeValue
-                Assertions.assertTrue(StringPattern.matches(StringValue(name), Resolver()) is Result.Success)
-                Assertions.assertTrue(StringPattern.matches(StringValue(cityItem.firstChild.nodeValue), Resolver()) is Result.Success)
-                Assertions.assertEquals("POST", request.method)
+                val root = (request.body as XMLNode)
+
+                val nameItem = root.nodes[0] as XMLNode
+                val cityItem = root.nodes[1] as XMLNode
+                assertThat(nameItem.name).isEqualTo("name")
+                assertThat(cityItem.name).isEqualTo("city")
+
+                val name = nameItem.nodes[0]
+
+                assertThat(name).isInstanceOf(StringValue::class.java)
+                assertThat(cityItem.nodes[0]).isInstanceOf(StringValue::class.java)
+                assertThat(request.method).isEqualTo("POST")
+
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/xml")
                     }
                 }
-                var xmlResponseString: String? = null
-                if (name == "John Doe") {
-                    xmlResponseString = "<account><account_id>10</account_id></account>"
-                } else if (name == "Jane Doe") {
-                    xmlResponseString = "<account><account_id>20</account_id></account>"
+
+                val xmlResponseString: String = when(name.toStringValue()) {
+                    "John Doe" -> "<account><account_id>10</account_id></account>"
+                    "Jane Doe" -> "<account><account_id>20</account_id></account>"
+                    else -> fail("Expected name to be either \"John Doe\" or \"Jane Doe\", got ${name.toStringValue()}")
                 }
+
                 return HttpResponse(200, xmlResponseString, headers)
             }
 

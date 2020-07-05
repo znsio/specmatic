@@ -8,7 +8,7 @@ import run.qontract.core.value.NumberValue
 import run.qontract.core.value.Value
 import java.util.*
 
-object NumberPattern : Pattern {
+object NumberPattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when(sampleData is NumberValue) {
             true -> Result.Success()

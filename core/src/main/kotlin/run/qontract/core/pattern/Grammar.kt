@@ -122,7 +122,7 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
             it.isEmpty() -> NoContentPattern
             it.startsWith("{") -> JSONObjectPattern(it)
             it.startsWith("[") -> JSONArrayPattern(it)
-            it.startsWith("<") -> XMLPattern(it)
+            it.startsWith("<") -> XMLPattern2(it)
             isPatternToken(it) -> when {
                 isLookupRowPattern(it) -> {
                     val (pattern, lookupKey) = parseLookupRowPattern(it)
@@ -174,7 +174,7 @@ fun parsedValue(content: String?): Value {
             when {
                 it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
                 it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
-                it.startsWith("<") -> XMLValue(it)
+                it.startsWith("<") -> XMLNode(it)
                 else -> StringValue(it)
             }
         } catch(e: Throwable) {

@@ -353,14 +353,14 @@ Given request-body
 
     @Test
     fun `it should encompass itself when ellipsis is present`() {
-        val bigger = TabularPattern(mapOf("data" to NumberPattern, "..." to StringPattern))
+        val bigger = TabularPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern))
         assertThat(bigger.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `type with ellipsis is equivalent to a type with the same keys except the ellipsis`() {
-        val theOne = TabularPattern(mapOf("data" to NumberPattern))
-        val theOther = TabularPattern(mapOf("data" to NumberPattern, "..." to StringPattern))
+        val theOne = TabularPattern(mapOf<String, Pattern>("data" to NumberPattern))
+        val theOther = TabularPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern))
 
         assertThat(theOne.encompasses(theOther, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(theOther.encompasses(theOne, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)

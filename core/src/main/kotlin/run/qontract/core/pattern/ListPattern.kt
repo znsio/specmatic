@@ -49,6 +49,17 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
                         Result.Failure(e.report())
                     }
                 }
+                is XMLPattern2 -> {
+                    try {
+                        val results = otherPattern.getEncompassables(otherResolver).asSequence().mapIndexed { index, otherPatternEntry ->
+                            Pair(index, pattern.encompasses(resolvedHop(otherPatternEntry, otherResolver), thisResolver, otherResolver))
+                        }
+
+                        results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
+                    } catch (e: ContractException) {
+                        Result.Failure(e.report())
+                    }
+                }
                 !is ListPattern -> Result.Failure("Expected array or list type, got ${otherPattern.typeName}")
                 else -> otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
             }

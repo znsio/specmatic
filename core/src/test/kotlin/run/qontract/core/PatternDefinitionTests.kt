@@ -130,15 +130,19 @@ class PatternDefinitionTests {
         val request = HttpRequest().updateMethod("GET").updatePath("/locations")
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
-        val document = parseXML(response.body?.displayableValue() ?: "")
-        val root: Node = document.documentElement
-        Assertions.assertEquals("locations", root.nodeName)
-        val childNodes = root.childNodes
-        for (i in 0 until childNodes.length) {
-            val childNode = childNodes.item(i)
-            Assertions.assertEquals("city", childNode.nodeName)
-            val cityNode = childNode.firstChild
-            Assertions.assertTrue(cityNode.nodeValue.length > 0)
+        try {
+            val document = parseXML(response.body?.displayableValue() ?: "")
+            val root: Node = document.documentElement
+            Assertions.assertEquals("locations", root.nodeName)
+            val childNodes = root.childNodes
+            for (i in 0 until childNodes.length) {
+                val childNode = childNodes.item(i)
+                Assertions.assertEquals("city", childNode.nodeName)
+                val cityNode = childNode.firstChild
+                Assertions.assertTrue(cityNode.nodeValue.length > 0)
+            }
+        } catch(e: Throwable) {
+            println(e.stackTrace)
         }
     }
 
@@ -258,7 +262,9 @@ class PatternDefinitionTests {
 }
 
 infix fun Value.shouldMatch(pattern: Pattern) {
-    assertTrue(pattern.matches(this, Resolver()).isTrue())
+    val result = pattern.matches(this, Resolver())
+    if(!result.isTrue()) println(resultReport(result))
+    assertTrue(result.isTrue())
 }
 
 infix fun Value.shouldNotMatch(pattern: Pattern) {

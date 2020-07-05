@@ -5,6 +5,7 @@ import org.w3c.dom.Document
 import org.w3c.dom.Node
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.XMLPattern2
+import run.qontract.core.utilities.parseXML
 import run.qontract.core.utilities.xmlToString
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -36,7 +37,12 @@ private fun attributes(node: Node): Map<String, StringValue> {
     }
 }
 
-data class XMLNode(val name: String, val attributes: Map<String, StringValue> = emptyMap(), val nodes: List<IXMLValue> = emptyList()) : IXMLValue, ListValue {
+fun XMLNode(xmlData: String): XMLNode {
+    val document = parseXML(xmlData)
+    return XMLNode(document)
+}
+
+data class XMLNode(val name: String, val attributes: Map<String, StringValue>, val nodes: List<IXMLValue>) : IXMLValue, ListValue {
     override val httpContentType: String = "text/xml"
 
     override val list: List<Value>
@@ -98,4 +104,6 @@ data class XMLNode(val name: String, val attributes: Map<String, StringValue> = 
     override fun listOf(valueList: List<Value>): Value {
         return XMLNode("", emptyMap(), valueList.map { it as XMLNode })
     }
+
+    override fun toString(): String = toStringValue()
 }

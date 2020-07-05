@@ -31,6 +31,10 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
         return Pair(typeDeclaration, newExamples)
     }
 
+    override fun listOf(valueList: List<Value>): Value {
+        return JSONArrayValue(valueList)
+    }
+
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
             typeDeclarationWithKey(exampleKey, types, examples)
 

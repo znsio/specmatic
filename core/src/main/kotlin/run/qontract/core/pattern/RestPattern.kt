@@ -2,7 +2,6 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
 import run.qontract.core.Result
-import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.Value
 
 data class RestPattern(override val pattern: Pattern) : Pattern {
@@ -11,7 +10,7 @@ data class RestPattern(override val pattern: Pattern) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
             listPattern.matches(sampleData, resolver)
 
-    override fun generate(resolver: Resolver): JSONArrayValue = listPattern.generate(resolver)
+    override fun generate(resolver: Resolver): Value = listPattern.generate(resolver)
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = pattern.newBasedOn(row, resolver).map { RestPattern(it) }
     override fun parse(value: String, resolver: Resolver): Value = listPattern.parse(value, resolver)
 
@@ -24,6 +23,10 @@ data class RestPattern(override val pattern: Pattern) : Pattern {
                 !is RestPattern -> Result.Failure("Expected rest in string type, got ${otherPattern.typeName}")
                 else -> otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
             }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return pattern.listOf(valueList, resolver)
+    }
 
     override val typeName: String = "the rest are ${pattern.typeName}"
 }

@@ -1,7 +1,7 @@
 package run.qontract.core.pattern
 
 import run.qontract.core.*
-import run.qontract.core.value.JSONArrayValue
+import run.qontract.core.value.ListValue
 import run.qontract.core.value.Value
 
 data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableList {
@@ -13,11 +13,10 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
     override fun isEndless(): Boolean = true
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if(sampleData !is JSONArrayValue)
+        if(sampleData !is ListValue)
             return mismatchResult("JSON array", sampleData)
 
         return sampleData.list.asSequence().map {
-//            pattern.matches(it, resolver)
             resolver.matchesPattern(null, pattern, it)
         }.mapIndexed { index, result -> Pair(index, result) }.find { it.second is Result.Failure }?.let { (index, result) ->
             when(result) {
@@ -27,10 +26,11 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
         } ?: Result.Success()
     }
 
-    override fun generate(resolver: Resolver): JSONArrayValue =
-        JSONArrayValue(0.until(randomNumber(10)).mapIndexed{ index, _ ->
+    override fun generate(resolver: Resolver): Value =
+        pattern.listOf(0.until(randomNumber(10)).mapIndexed{ index, _ ->
             attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolver) }
-        })
+        }, resolver)
+
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolver).map { ListPattern(it) } }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
 
@@ -52,6 +52,8 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
                 !is ListPattern -> Result.Failure("Expected array or list type, got ${otherPattern.typeName}")
                 else -> otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
             }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value = pattern.listOf(valueList, resolver)
 
     override val typeName: String = "list of ${pattern.typeName}"
 }

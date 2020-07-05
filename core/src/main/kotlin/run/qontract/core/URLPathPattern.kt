@@ -3,6 +3,7 @@ package run.qontract.core
 import run.qontract.core.pattern.Keyed
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.Row
+import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.Value
 
@@ -23,6 +24,10 @@ data class URLPathPattern(override val pattern: Pattern, override val key: Strin
             return Result.Failure("Expected url type, got ${otherPattern.typeName}")
 
         return otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
+    }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return JSONArrayValue(valueList)
     }
 
     override val typeName: String = "url path"

@@ -38,6 +38,13 @@ data class AnyPattern(override val pattern: List<Pattern>, val key: String? = nu
         return otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
     }
 
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        if(pattern.isEmpty())
+            throw ContractException("AnyPattern doesn't have any types, so can't infer which type of list to wrap the given value in")
+
+        return pattern.single().listOf(valueList, resolver)
+    }
+
     override val typeName: String
         get() {
             return if(pattern.size == 2 && NullPattern in pattern) {

@@ -5,7 +5,7 @@ import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.withoutPatternDelimiters
 import run.qontract.core.utilities.valueArrayToJsonString
 
-data class JSONArrayValue(val list: List<Value>) : Value {
+data class JSONArrayValue(override val list: List<Value>) : Value, ListValue {
     override val httpContentType: String = "application/json"
 
     override fun displayableValue(): String = toStringValue()
@@ -48,6 +48,10 @@ data class JSONArrayValue(val list: List<Value>) : Value {
 
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
             typeDeclaration(key, types, examples) { value, innerKey, innerTypes, newExamples -> value.typeDeclarationWithKey(innerKey, innerTypes, newExamples) }
+
+    override fun listOf(valueList: List<Value>): Value {
+        TODO("Not yet implemented")
+    }
 
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
             typeDeclaration(exampleKey, types, examples) { value, innerKey, innerTypes, newExamples -> value.typeDeclarationWithoutKey(innerKey, innerTypes, newExamples) }

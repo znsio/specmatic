@@ -16,6 +16,10 @@ data class NumberValue(val number: Number) : Value, ScalarValue {
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
             primitiveTypeDeclarationWithKey(key, types, examples, displayableType(), number.toString())
 
+    override fun listOf(valueList: List<Value>): Value {
+        return JSONArrayValue(valueList)
+    }
+
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
             primitiveTypeDeclarationWithoutKey(exampleKey, types, examples, displayableType(), number.toString())
 

@@ -17,6 +17,10 @@ data class XMLValue(val node: Node) : Value {
     override fun displayableType(): String = "xml"
     override fun exactMatchElseType(): Pattern = XMLPattern(node)
     override fun type(): Pattern = XMLPattern("<empty/>")
+    override fun listOf(valueList: List<Value>): Value {
+        TODO("Not yet implemented")
+    }
+
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {
         TODO("Not yet implemented")
     }

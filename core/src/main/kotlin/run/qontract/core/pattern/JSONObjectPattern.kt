@@ -3,6 +3,7 @@ package run.qontract.core.pattern
 import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.stringToPatternMap
+import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
 
@@ -50,6 +51,10 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
                 return result?.second?.breadCrumb(breadCrumb = result.first) ?: Result.Success()
             }
         }
+    }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return JSONArrayValue(valueList)
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {

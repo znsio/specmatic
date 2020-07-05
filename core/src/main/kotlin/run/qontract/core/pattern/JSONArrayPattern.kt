@@ -5,6 +5,7 @@ import run.qontract.core.Result
 import run.qontract.core.breadCrumb
 import run.qontract.core.utilities.stringTooPatternArray
 import run.qontract.core.value.JSONArrayValue
+import run.qontract.core.value.ListValue
 import run.qontract.core.value.Value
 import java.util.*
 
@@ -56,15 +57,15 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
 
         val resolverWithNumberType = resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberPattern))
 
-        val resolvedPattern = pattern.map {
+        val resolvedTypes = pattern.map {
             when(it) {
                 is DeferredPattern -> it.resolvePattern(resolver)
                 else -> it
             }
         }
 
-        for (index in resolvedPattern.indices) {
-            when(val patternValue = resolvedPattern[index]) {
+        for (index in resolvedTypes.indices) {
+            when(val patternValue = resolvedTypes[index]) {
                 is RestPattern -> {
                     val rest = if(index == sampleData.list.size) emptyList() else sampleData.list.slice(index..sampleData.list.lastIndex)
                     return when (val result = patternValue.matches(JSONArrayValue(rest), resolver)) {
@@ -85,6 +86,10 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
         }
 
         return Result.Success()
+    }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return JSONArrayValue(valueList)
     }
 
     override fun generate(resolver: Resolver): Value {
@@ -142,7 +147,10 @@ fun listCombinations(values: List<List<Pattern>>): List<List<Pattern>> {
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
     jsonPattern.mapIndexed { index, pattern ->
         when (pattern) {
-            is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") { pattern.generate(resolver).list }
+            is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
+                val list = pattern.generate(resolver) as ListValue
+                list.list
+            }
             else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(resolver)) }
         }
     }.flatten()

@@ -37,5 +37,9 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern)
                 else -> otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
             }
 
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return pattern.listOf(valueList, resolver)
+    }
+
     override val typeName: String = "${pattern.typeName} in string"
 }

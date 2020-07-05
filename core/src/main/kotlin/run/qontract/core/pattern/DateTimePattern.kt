@@ -2,6 +2,7 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import java.time.LocalDateTime
@@ -32,6 +33,10 @@ object DateTimePattern : Pattern {
 
 //        if(otherPattern is DateTimePattern) return Result.Success()
 //        return Result.Failure("Expected datetime, got ${otherPattern.typeName}")
+    }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return JSONArrayValue(valueList)
     }
 
     override val typeName: String = "datetime"

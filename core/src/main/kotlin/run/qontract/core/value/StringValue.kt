@@ -2,9 +2,11 @@ package run.qontract.core.value
 
 import io.ktor.http.quote
 import io.ktor.util.InternalAPI
+import org.w3c.dom.Document
+import org.w3c.dom.Node
 import run.qontract.core.pattern.*
 
-data class StringValue(val string: String = "") : Value, ScalarValue {
+data class StringValue(val string: String = "") : Value, ScalarValue, IXMLValue {
     override val httpContentType = "text/plain"
 
     @OptIn(InternalAPI::class)
@@ -16,6 +18,11 @@ data class StringValue(val string: String = "") : Value, ScalarValue {
             isPatternToken() -> DeferredPattern(string)
             else -> ExactValuePattern(this)
         }
+    }
+
+    override fun build(document: Document): Node = document.createTextNode(string)
+    override fun listOf(valueList: List<Value>): Value {
+        return JSONArrayValue(valueList)
     }
 
     override fun type(): Pattern = StringPattern

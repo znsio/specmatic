@@ -5,7 +5,7 @@ import run.qontract.core.Result
 import run.qontract.core.mismatchResult
 import run.qontract.core.resultReport
 import run.qontract.core.value.BooleanValue
-import run.qontract.core.value.StringValue
+import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.Value
 import java.util.*
 
@@ -29,6 +29,10 @@ object BooleanPattern : Pattern {
     }
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver)
+    }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return JSONArrayValue(valueList)
     }
 
     override val typeName: String = "boolean"

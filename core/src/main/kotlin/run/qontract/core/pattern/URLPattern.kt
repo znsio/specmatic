@@ -2,6 +2,7 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import java.net.URI
@@ -33,6 +34,10 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS): Pattern {
             is URLPattern -> Result.Failure("Expected ${scheme.type}, got ${otherPattern.scheme.type}")
             else -> Result.Failure("Expected $typeName, got ${otherPattern.typeName}")
         }
+    }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return JSONArrayValue(valueList)
     }
 
     override val typeName: String = "url"

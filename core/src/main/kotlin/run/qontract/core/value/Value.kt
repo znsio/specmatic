@@ -12,4 +12,5 @@ interface Value {
     fun type(): Pattern
     fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration>
     fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration>
+    fun listOf(valueList: List<Value>): Value
 }

@@ -25,6 +25,10 @@ data class ExactValuePattern(override val pattern: Value) : Pattern {
         return results.find { it is Result.Success } ?: results.firstOrNull() ?: Result.Failure("No matching patterns.")
     }
 
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return pattern.listOf(valueList)
+    }
+
     override fun generate(resolver: Resolver) = pattern
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = pattern.type().parse(value, resolver)

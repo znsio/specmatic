@@ -3,6 +3,7 @@ package run.qontract.core.pattern
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.mismatchResult
+import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
@@ -27,6 +28,10 @@ object NullPattern : Pattern {
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver)
+    }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return JSONArrayValue(valueList)
     }
 
     override val typeName: String = "null"

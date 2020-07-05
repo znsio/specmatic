@@ -3,6 +3,7 @@ package run.qontract.core.pattern
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.mismatchResult
+import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
@@ -68,6 +69,10 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
                     ).asSequence().map { it.invoke() }.firstOrNull { it is Result.Failure } ?: Result.Success()
                 }
             }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return JSONArrayValue(valueList)
+    }
 
     override val typeName: String = "object with key type ${keyPattern.typeName} and value type ${valuePattern.typeName}"
 

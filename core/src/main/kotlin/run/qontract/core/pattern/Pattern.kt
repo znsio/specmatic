@@ -27,6 +27,8 @@ interface Pattern {
         return result.find { it is Result.Failure } ?: Result.Success()
     }
 
+    fun listOf(valueList: List<Value>, resolver: Resolver): Value
+
     val typeName: String
     val pattern: Any
 }

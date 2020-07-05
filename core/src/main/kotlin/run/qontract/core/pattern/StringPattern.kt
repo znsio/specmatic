@@ -4,6 +4,7 @@ import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.mismatchResult
 import run.qontract.core.value.EmptyString
+import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import java.nio.charset.StandardCharsets
@@ -19,6 +20,10 @@ object StringPattern : Pattern {
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver)
+    }
+
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return JSONArrayValue(valueList)
     }
 
     override fun generate(resolver: Resolver): Value = StringValue(randomString())
@@ -37,6 +42,5 @@ fun randomString(length: Int = 5): String {
     for (index in array.indices) {
         array[index] = (random.nextInt(25) + 65).toByte()
     }
-    val randomStringValue = String(array, StandardCharsets.UTF_8)
-    return randomStringValue
+    return String(array, StandardCharsets.UTF_8)
 }

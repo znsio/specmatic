@@ -35,6 +35,10 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
         return Result.Success()
     }
 
+    override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        return JSONArrayValue(valueList)
+    }
+
     override fun generate(resolver: Resolver) =
             JSONObjectValue(pattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
                 attempt(breadCrumb = key) { resolver.generate(key, pattern) }

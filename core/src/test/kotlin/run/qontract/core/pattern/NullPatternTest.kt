@@ -2,9 +2,9 @@ package run.qontract.core.pattern
 
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
-import run.qontract.core.shouldMatch
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.NullValue
+import run.qontract.shouldMatch
 import kotlin.test.assertEquals
 
 internal class NullPatternTest {

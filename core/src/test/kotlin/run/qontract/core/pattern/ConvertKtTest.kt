@@ -1,8 +1,8 @@
 package run.qontract.core.pattern
 
 import org.junit.jupiter.api.Test
-import run.qontract.core.shouldMatch
-import run.qontract.core.shouldNotMatch
+import run.qontract.shouldMatch
+import run.qontract.shouldNotMatch
 
 internal class ConvertKtTest {
     @Test

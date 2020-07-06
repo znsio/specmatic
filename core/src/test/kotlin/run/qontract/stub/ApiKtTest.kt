@@ -221,7 +221,7 @@ Feature: Math API
 """.trim())
 
         val mockRequest1 = HttpRequest("POST", "/square", body = StringValue("(number)"))
-        val mockRequest2 = HttpRequest("POST", "/square", body = StringValue("(null)"))
+        val mockRequest2 = HttpRequest("POST", "/square", body = StringValue("(empty)"))
 
         val mock1 = ScenarioStub(mockRequest1, HttpResponse.OK(1))
         val mock2 = ScenarioStub(mockRequest2, HttpResponse.OK(2))

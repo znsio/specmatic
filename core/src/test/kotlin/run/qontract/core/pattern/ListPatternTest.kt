@@ -5,8 +5,8 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.Result
-import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.NullValue
+import run.qontract.shouldNotMatch
 
 internal class ListPatternTest {
     @Test

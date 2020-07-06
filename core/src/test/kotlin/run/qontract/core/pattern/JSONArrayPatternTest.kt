@@ -2,13 +2,13 @@ package run.qontract.core.pattern
 
 import org.assertj.core.api.Assertions.assertThat
 import run.qontract.core.Resolver
-import run.qontract.core.shouldMatch
 import org.junit.jupiter.api.Test
 import run.qontract.core.Result
-import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
+import run.qontract.shouldMatch
+import run.qontract.shouldNotMatch
 import kotlin.test.assertFalse
 
 internal class JSONArrayPatternTest {

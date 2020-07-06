@@ -1,8 +1,8 @@
 package run.qontract.core.pattern
 
-import run.qontract.core.shouldMatch
 import run.qontract.core.parseGherkinString
 import org.junit.jupiter.api.Test
+import run.qontract.shouldMatch
 
 class StringMatchTest {
     @Test

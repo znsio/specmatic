@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Node
 import run.qontract.core.value.StringValue
+import run.qontract.shouldMatch
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -259,14 +260,4 @@ class PatternDefinitionTests {
 
         parsedValue(jsonString) shouldMatch parsedPattern(jsonPattern, null)
     }
-}
-
-infix fun Value.shouldMatch(pattern: Pattern) {
-    val result = pattern.matches(this, Resolver())
-    if(!result.isTrue()) println(resultReport(result))
-    assertTrue(result.isTrue())
-}
-
-infix fun Value.shouldNotMatch(pattern: Pattern) {
-    assertFalse(pattern.matches(this, Resolver()).isTrue())
 }

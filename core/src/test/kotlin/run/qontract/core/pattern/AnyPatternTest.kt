@@ -5,10 +5,11 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.Result
-import run.qontract.core.shouldMatch
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
+import run.qontract.emptyPattern
+import run.qontract.shouldMatch
 import kotlin.test.assertEquals
 
 internal class AnyPatternTest {
@@ -52,7 +53,7 @@ internal class AnyPatternTest {
     fun `should encompass any of the specified types`() {
         val bigger = parsedPattern("""(string?)""")
         val smallerString = StringPattern
-        val smallerNull = NullPattern
+        val smallerNull = emptyPattern()
 
         assertThat(bigger.encompasses(smallerString, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(bigger.encompasses(smallerNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -88,7 +89,7 @@ internal class AnyPatternTest {
     @Test
     fun `should encompass a matching null type`() {
         val bigger = parsedPattern("""(string*?)""")
-        val smallerNull = NullPattern
+        val smallerNull = emptyPattern()
         assertThat(bigger.encompasses(smallerNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 

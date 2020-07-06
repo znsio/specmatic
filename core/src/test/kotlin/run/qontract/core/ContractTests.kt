@@ -348,7 +348,7 @@ Then status 200
 
                 when (body) {
                     is NumberValue -> "json"
-                    is NullValue -> "null"
+                    EmptyString -> "empty"
                     else -> fail("Expected only json or null, got ${body?.javaClass}")
                 }.let { flags.add(it) }
 
@@ -359,7 +359,7 @@ Then status 200
             }
         })
 
-        assertEquals(mutableSetOf("null", "json"), flags)
+        assertEquals(mutableSetOf("empty", "json"), flags)
         assertFalse(results.hasFailures(), results.report())
     }
 

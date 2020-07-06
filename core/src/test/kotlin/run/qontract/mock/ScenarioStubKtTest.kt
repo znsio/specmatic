@@ -9,6 +9,7 @@ import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.StringValue
+import run.qontract.shouldMatch
 
 internal class ScenarioStubKtTest {
     @Test

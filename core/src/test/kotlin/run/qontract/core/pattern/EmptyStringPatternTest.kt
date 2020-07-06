@@ -1,12 +1,12 @@
 package run.qontract.core.pattern
 
 import org.junit.jupiter.api.Test
-import run.qontract.core.shouldMatch
 import run.qontract.core.value.NullValue
+import run.qontract.shouldMatch
 
-internal class NoContentPatternTest {
+internal class EmptyStringPatternTest {
     @Test
     fun `should match nulls gracefully`() {
-        NullValue shouldMatch NoContentPattern
+        NullValue shouldMatch EmptyStringPattern
     }
 }

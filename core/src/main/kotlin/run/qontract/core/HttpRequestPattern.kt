@@ -6,7 +6,7 @@ import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
 import java.net.URI
 
-data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val urlMatcher: URLMatcher? = null, val method: String? = null, val body: Pattern = NoContentPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap(), val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList()) {
+data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val urlMatcher: URLMatcher? = null, val method: String? = null, val body: Pattern = EmptyStringPattern, val formFieldsPattern: Map<String, Pattern> = emptyMap(), val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList()) {
     fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null): Result {
         val result = incomingHttpRequest to resolver to
                 ::matchUrl then
@@ -176,7 +176,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             requestType = attempt(breadCrumb = "BODY") {
                 requestType.copy(body = when(request.body) {
                     is StringValue -> encompassedType(request.bodyString, null, body, resolver)
-                    else -> request.body?.exactMatchElseType() ?: NoContentPattern
+                    else -> request.body?.exactMatchElseType() ?: EmptyStringPattern
                 })
             }
 

@@ -133,7 +133,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
             headersPattern = HttpHeadersPattern(mapToPattern(headers)),
             urlMatcher = URLMatcher(mapToPattern(queryParams), pathToPattern(pathForPattern), pathForPattern),
             method = this.method,
-            body = this.body?.exactMatchElseType() ?: NoContentPattern,
+            body = this.body?.exactMatchElseType() ?: EmptyStringPattern,
             formFieldsPattern = mapToPattern(formFields),
             multiPartFormDataPattern = multiPartFormData.map { it.inferType() }
         )

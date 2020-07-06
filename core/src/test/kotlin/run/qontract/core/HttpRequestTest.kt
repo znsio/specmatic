@@ -10,6 +10,7 @@ import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import run.qontract.mock.ScenarioStub
+import run.qontract.optionalPattern
 import kotlin.test.assertEquals
 
 internal class HttpRequestTest {
@@ -65,7 +66,7 @@ internal class HttpRequestTest {
         if (body !is JSONObjectPattern) fail("Expected json object pattern")
 
         val dataPattern = body.pattern.getValue("data") as DeferredPattern
-        val nullableStringPattern = AnyPattern(listOf(NullPattern, StringPattern))
+        val nullableStringPattern = optionalPattern(StringPattern)
 
         assertThat(dataPattern.resolvePattern(Resolver())).isEqualTo(nullableStringPattern)
     }
@@ -101,7 +102,7 @@ internal class HttpRequestTest {
         val request = HttpRequest("POST", "/", emptyMap(), parsedValue("(string?)"))
         val requestPattern = request.toPattern()
         val deferredBodyPattern = requestPattern.body as DeferredPattern
-        assertThat(deferredBodyPattern.resolvePattern(Resolver())).isEqualTo(AnyPattern(listOf(NullPattern, StringPattern)))
+        assertThat(deferredBodyPattern.resolvePattern(Resolver())).isEqualTo(optionalPattern(StringPattern))
     }
 
     @Test

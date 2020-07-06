@@ -12,7 +12,9 @@ import org.w3c.dom.Node.ELEMENT_NODE
 import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
 import run.qontract.consoleLog
+import run.qontract.core.Resolver
 import run.qontract.core.nativeString
+import run.qontract.core.pattern.NullPattern
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
@@ -268,4 +270,8 @@ class UncaughtExceptionHandler: Thread.UncaughtExceptionHandler {
 
         exitProcess(1)
     }
+}
+
+internal fun withNullPattern(resolver: Resolver): Resolver {
+    return resolver.copy(newPatterns = resolver.newPatterns.plus("(empty)" to NullPattern))
 }

@@ -24,6 +24,7 @@ internal val builtInPatterns = mapOf(
     "(string)" to StringPattern,
     "(boolean)" to BooleanPattern,
     "(null)" to NullPattern,
+    "(empty)" to EmptyStringPattern,
     "(datetime)" to DateTimePattern,
     "(url)" to URLPattern(URLScheme.EITHER),
     "(url-http)" to URLPattern(URLScheme.HTTP),
@@ -119,7 +120,7 @@ fun stringToPattern(patternValue: String, key: String?): Pattern =
 fun parsedPattern(rawContent: String, key: String? = null): Pattern {
     return rawContent.trim().let {
         when {
-            it.isEmpty() -> NoContentPattern
+            it.isEmpty() -> EmptyStringPattern
             it.startsWith("{") -> JSONObjectPattern(it)
             it.startsWith("[") -> JSONArrayPattern(it)
             it.startsWith("<") -> XMLPattern(it)
@@ -128,7 +129,7 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
                     val (pattern, lookupKey) = parseLookupRowPattern(it)
                     LookupRowPattern(parsedPattern(pattern), lookupKey)
                 }
-                isNullablePattern(it) -> AnyPattern(listOf(NullPattern, parsedPattern(withoutNullToken(it))))
+                isOptionalValuePattern(it) -> AnyPattern(listOf(DeferredPattern("(empty)", key), parsedPattern(withoutNullToken(it))))
                 isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
                 isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutListToken(it)))
                 it == "(number)" -> DeferredPattern(it, null)

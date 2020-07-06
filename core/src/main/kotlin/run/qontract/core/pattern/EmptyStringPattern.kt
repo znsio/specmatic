@@ -5,7 +5,7 @@ import run.qontract.core.Result
 import run.qontract.core.mismatchResult
 import run.qontract.core.value.*
 
-object NoContentPattern : Pattern {
+object EmptyStringPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (sampleData) {
             is StringValue -> when (sampleData.string.isEmpty()) {
@@ -28,7 +28,7 @@ object NoContentPattern : Pattern {
     }
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(otherPattern is NoContentPattern) return Result.Success()
+        if(otherPattern is EmptyStringPattern) return Result.Success()
         return Result.Failure("No data was expected, but got \"${otherPattern.typeName}\" instead")
     }
 

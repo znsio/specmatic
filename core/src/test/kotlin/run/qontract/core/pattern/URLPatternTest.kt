@@ -3,9 +3,9 @@ package run.qontract.core.pattern
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import run.qontract.core.Resolver
-import run.qontract.core.shouldMatch
-import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.StringValue
+import run.qontract.shouldMatch
+import run.qontract.shouldNotMatch
 import java.net.URI
 import kotlin.test.assertEquals
 

@@ -1,10 +1,10 @@
 package run.qontract.core.pattern
 
 import org.junit.jupiter.api.Test
-import run.qontract.core.shouldMatch
-import run.qontract.core.shouldNotMatch
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.NullValue
+import run.qontract.shouldMatch
+import run.qontract.shouldNotMatch
 
 internal class RestPatternTest {
     @Test

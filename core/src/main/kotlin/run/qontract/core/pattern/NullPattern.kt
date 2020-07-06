@@ -40,7 +40,7 @@ object NullPattern : Pattern, ScalarType {
     override fun toString(): String = "(null)"
 }
 
-internal fun isNullablePattern(patternSpec: String): Boolean = withoutPatternDelimiters(patternSpec.trim()).endsWith("?")
+internal fun isOptionalValuePattern(patternSpec: String): Boolean = withoutPatternDelimiters(patternSpec.trim()).endsWith("?")
 internal fun withoutNullToken(patternSpec: String): String {
     return "(" + withoutPatternDelimiters(patternSpec.trim()).trim().removeSuffix("?") + ")"
 }

@@ -2,9 +2,10 @@ package run.qontract.core.pattern
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.shouldMatch
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.NumberValue
+import run.qontract.optionalPattern
+import run.qontract.shouldMatch
 
 internal class ConvertTest {
     @Test
@@ -40,7 +41,7 @@ internal class ConvertTest {
     @Test
     fun `given a number in string question it should generate a nullable number in string`() {
         val pattern = parsedPattern("(number in string?)")
-        val expectedPattern = AnyPattern(listOf(NullPattern, PatternInStringPattern(DeferredPattern("(number)"))))
+        val expectedPattern = optionalPattern(PatternInStringPattern(DeferredPattern("(number)")))
 
         assertThat(pattern).isEqualTo(expectedPattern)
     }

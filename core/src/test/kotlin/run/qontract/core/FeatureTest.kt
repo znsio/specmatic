@@ -9,7 +9,7 @@ import org.junit.jupiter.api.fail
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import run.qontract.core.pattern.NoContentPattern
+import run.qontract.core.pattern.EmptyStringPattern
 import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.value.*
 import java.util.*
@@ -641,14 +641,14 @@ Feature: Contract for /balance API
 
     @Test
     fun `successfully matches valid form fields`() {
-        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, NoContentPattern, mapOf("Data" to NumberPattern))
+        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, EmptyStringPattern, mapOf("Data" to NumberPattern))
         val request = HttpRequest().copy(formFields = mapOf("Data" to "10"))
         assertTrue(requestPattern.matchFormFields(request to Resolver()) is MatchSuccess)
     }
 
     @Test
     fun `returns error for form fields`() {
-        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, NoContentPattern, mapOf("Data" to NumberPattern))
+        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, EmptyStringPattern, mapOf("Data" to NumberPattern))
         val request = HttpRequest().copy(formFields = mapOf("Data" to "hello"))
         assertTrue(requestPattern.matchFormFields(request to Resolver()) is MatchFailure)
     }

@@ -1,16 +1,15 @@
 package run.qontract.core.pattern
 
-import org.junit.jupiter.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
-import run.qontract.core.shouldMatch
-import run.qontract.core.shouldNotMatch
+import run.qontract.core.Result
 import run.qontract.core.value.StringValue
+import run.qontract.shouldMatch
+import run.qontract.shouldNotMatch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import org.assertj.core.api.*
-import org.assertj.core.api.Assertions.*
-import run.qontract.core.Result
 
 internal class DateTimePatternTest {
     @Test

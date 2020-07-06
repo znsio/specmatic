@@ -7,7 +7,7 @@ import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 
-data class KafkaMessagePattern(val topic: String = "", val key: Pattern = NoContentPattern, val value: Pattern = StringPattern) {
+data class KafkaMessagePattern(val topic: String = "", val key: Pattern = EmptyStringPattern, val value: Pattern = StringPattern) {
     fun matches(message: KafkaMessage, resolver: Resolver): Result {
         return attempt("KAFKA-MESSAGE") { _matches(message, resolver).breadCrumb("KAFKA-MESSAGE") }
     }

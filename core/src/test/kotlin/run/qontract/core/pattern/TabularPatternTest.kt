@@ -2,13 +2,13 @@ package run.qontract.core.pattern
 
 import org.assertj.core.api.Assertions.assertThat
 import run.qontract.core.Resolver
-import run.qontract.core.shouldMatch
-import run.qontract.core.shouldNotMatch
 import run.qontract.core.parseGherkinString
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import run.qontract.core.Result
 import run.qontract.core.value.*
+import run.qontract.shouldMatch
+import run.qontract.shouldNotMatch
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail

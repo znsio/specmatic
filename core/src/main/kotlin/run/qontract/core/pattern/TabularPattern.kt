@@ -4,6 +4,7 @@ import io.cucumber.messages.Messages
 import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.stringToPatternMap
+import run.qontract.core.utilities.withNullPattern
 import run.qontract.core.value.*
 
 fun TabularPattern(jsonContent: String): TabularPattern = TabularPattern(stringToPatternMap(jsonContent))
@@ -22,6 +23,7 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
 
+        val resolver = withNullPattern(resolver)
         val missingKey = resolver.findMissingKey(pattern, sampleData.jsonObject, unexpectedKeyCheck)
         if(missingKey != null)
             return missingKeyToResult(missingKey, "key")
@@ -36,21 +38,29 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
+        val resolver = withNullPattern(resolver)
         return JSONArrayValue(valueList)
     }
 
-    override fun generate(resolver: Resolver) =
-            JSONObjectValue(pattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
-                attempt(breadCrumb = key) { resolver.generate(key, pattern) }
-            })
+    override fun generate(resolver: Resolver): JSONObjectValue {
+        val resolver = withNullPattern(resolver)
+        return JSONObjectValue(pattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
+            attempt(breadCrumb = key) { resolver.generate(key, pattern) }
+        })
+    }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
-        keyCombinations(pattern, row) { pattern ->
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        val resolver = withNullPattern(resolver)
+        return keyCombinations(pattern, row) { pattern ->
             newBasedOn(pattern, row, resolver)
         }.map { TabularPattern(it) }
+    }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        val thisResolver = withNullPattern(thisResolver)
+        val otherResolver = withNullPattern(otherResolver)
+
         when (otherPattern) {
             is ExactValuePattern -> return otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
             !is TabularPattern -> return Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")

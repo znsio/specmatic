@@ -138,6 +138,168 @@ And response-body (string)
     }
 
     @Test
+    fun `it should be able to stub out xml`() {
+        val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number)</data>
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
+        val mock = ScenarioStub(request, HttpResponse.OK)
+
+        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
+        }
+
+        assertThat(postResponse.statusCode.value()).isEqualTo(200)
+    }
+
+    @Test
+    fun `it should be able to stub out xml containing an optional number value`() {
+        val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number?)</data>
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
+        val mock = ScenarioStub(request, HttpResponse.OK)
+
+        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
+        }
+
+        assertThat(postResponse.statusCode.value()).isEqualTo(200)
+    }
+
+    @Test
+    fun `it should be able to stub out xml containing an optional number value using a type`() {
+        val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number?)</data>
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>(number)</data>"""))
+        val mock = ScenarioStub(request, HttpResponse.OK)
+
+        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
+        }
+
+        assertThat(postResponse.statusCode.value()).isEqualTo(200)
+    }
+
+    @Test
+    fun `if the xml request value does not match but structure does then it returns a fake response`() {
+        val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number?)</data>
+Then status 200
+And response-body (number)
+        """.trim()
+
+        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
+        val expectedNumber = 100000
+        val mock = ScenarioStub(request, HttpResponse.OK(NumberValue(expectedNumber)))
+
+        HttpStub(gherkin, listOf(mock)).use { fake ->
+            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
+        }.let { postResponse ->
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+            assertThat(postResponse.body?.toString()?.toInt() == expectedNumber)
+        }
+
+        HttpStub(gherkin, listOf(mock)).use { fake ->
+            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>20</data>""")
+        }.let { postResponse ->
+            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+            assertThat(postResponse.body?.toString()?.toInt() != expectedNumber)
+        }
+    }
+
+    @Test
+    fun `it should be able to stub out xml containing an optional number value with an empty string`() {
+        val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number?)</data>
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data></data>"""))
+        val mock = ScenarioStub(request, HttpResponse.OK)
+
+        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data></data>""")
+        }
+
+        assertThat(postResponse.statusCode.value()).isEqualTo(200)
+    }
+
+    @Test
+    fun `it should be able to stub out xml containing an optional number value with an empty node`() {
+        val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data>(number?)</data>
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data></data>"""))
+        val mock = ScenarioStub(request, HttpResponse.OK)
+
+        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data/>""")
+        }
+
+        assertThat(postResponse.statusCode.value()).isEqualTo(200)
+    }
+
+    @Test
+    fun `it should be able to stub out xml with an attribute`() {
+        val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data number="(number)"/>
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="10"/>"""))
+        val mock = ScenarioStub(request, HttpResponse.OK)
+
+        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
+        }
+
+        assertThat(postResponse.statusCode.value()).isEqualTo(200)
+    }
+
+    @Test
+    fun `it should be able to stub out xml with an attribute using a type`() {
+        val gherkin = """Feature: Number
+Scenario: Accept a number
+When POST /number
+And request-body <data number="(number)"/>
+Then status 200
+        """.trim()
+
+        val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data number="(number)"/>"""))
+        val mock = ScenarioStub(request, HttpResponse.OK)
+
+        val postResponse = HttpStub(gherkin, listOf(mock)).use { fake ->
+            RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data number="10"/>""")
+        }
+
+        assertThat(postResponse.statusCode.value()).isEqualTo(200)
+    }
+
+    @Test
     fun `generate a bad request from an error message`() {
         val expectedResponse = HttpResponse(status = 400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue("error occurred"))
         assertThat(badRequest("error occurred")).isEqualTo(expectedResponse)

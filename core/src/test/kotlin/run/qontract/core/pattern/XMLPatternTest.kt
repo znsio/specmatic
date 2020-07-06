@@ -199,13 +199,6 @@ internal class XMLPatternTest {
     }
 
     @Test
-    fun `optional attribute encompasses non optional`() {
-        val bigger = XMLPattern("""<number val?="(number)">(number)</number>""")
-        val smaller = XMLPattern("""<number val="(number)">(number)</number>""")
-        assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
     fun `should generate a value when the xml contains an empty node`() {
         val pattern = XMLPattern("<data><empty/><value>10</value></data>")
         val value = pattern.generate(Resolver())

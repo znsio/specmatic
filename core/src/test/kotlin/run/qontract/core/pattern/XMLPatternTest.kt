@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.value.NullValue
+import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
 import run.qontract.shouldMatch
 import run.qontract.shouldNotMatch
@@ -16,9 +17,12 @@ internal class XMLPatternTest {
         val itemType = parsedPattern("<item>(string)</item>")
 
         val resolver = Resolver(newPatterns = mapOf("(Item)" to itemType))
-        val xmlValue = itemsType.generate(resolver)
+        val xmlValue = itemsType.generate(resolver) as XMLNode
 
-        println(xmlValue)
+        for(node in xmlValue.nodes.map { it as XMLNode }) {
+            assertThat(node.nodes.size == 1)
+            assertThat(node.nodes[0]).isInstanceOf(StringValue::class.java)
+        }
     }
 
     @Test
@@ -29,6 +33,46 @@ internal class XMLPatternTest {
     @Test
     fun `should match a number within a structure`() {
         XMLNode("<outer><inner>1</inner></outer>") shouldMatch XMLPattern("<outer><inner>(number)</inner></outer>")
+    }
+
+    @Test
+    fun `optional node text should match non empty value`() {
+        XMLNode("<data>1</data>") shouldMatch XMLPattern("<data>(number?)</data>")
+    }
+
+    @Test
+    fun `optional node text should match empty value`() {
+        XMLNode("<data></data>") shouldMatch XMLPattern("<data>(number?)</data>")
+    }
+
+    @Test
+    fun `optional node text type should encompass text type`() {
+        val resolver = Resolver()
+
+        val bigger = XMLPattern("<data>(number?)</data>")
+        val smaller = XMLPattern("<data>(number)</data>")
+
+        assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `optional node text type should encompass empty text`() {
+        val resolver = Resolver()
+
+        val bigger = XMLPattern("<data>(number?)</data>")
+        val smaller = XMLPattern("<data></data>")
+
+        assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `optional node text type should encompass empty text node without closing tag`() {
+        val resolver = Resolver()
+
+        val bigger = XMLPattern("<data>(number?)</data>")
+        val smaller = XMLPattern("<data/>")
+
+        assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -106,6 +150,17 @@ internal class XMLPatternTest {
     }
 
     @Test
+    fun `repeating pattern should encompass another with similar elements or empty` () {
+        val bigger = XMLPattern("<answers>(Number*?)</answers>")
+        val smallerList = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
+        val smallerEmpty = XMLPattern("<answers></answers>")
+        val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+
+        assertThat(bigger.encompasses(smallerList, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        assertThat(bigger.encompasses(smallerEmpty, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
     fun `repeating pattern should not encompass another with dissimilar elements` () {
         val answersPattern1 = XMLPattern("<answers>(Number*)</answers>")
         val answersPattern2 = XMLPattern("<answers><number>(string)</number><number>(number)</number></answers>")
@@ -148,5 +203,10 @@ internal class XMLPatternTest {
         val value = pattern.generate(Resolver())
 
         assertThat(value.toStringValue()).isEqualTo("<data><empty/><value>10</value></data>")
+    }
+
+    @Test
+    fun `should pick up node names from examples`() {
+
     }
 }

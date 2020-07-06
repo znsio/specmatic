@@ -60,7 +60,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                 else -> {
                     if(index >= sampleData.nodes.size) {
                         if(!expectingEmpty(sampleData, type, resolver))
-                            return Result.Failure("The value had only ${sampleData.nodes.size} nodes but the contract expected more.")
+                            return Result.Failure("The value had only ${sampleData.nodes.size} nodes but the contract expected more")
                     }
                     else {
                         val nodeValue: XMLNode = sampleData
@@ -159,9 +159,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                     val bigger = pattern.attributes.getValue(key)
                     val smaller = otherResolvedPattern.pattern.attributes[key] ?: otherResolvedPattern.pattern.attributes[withoutOptionality(key)]
 
-                    val result = if (smaller != null)
-                        bigger.encompasses(resolvedHop(smaller, otherResolver), thisResolver, otherResolver)
-                    else Result.Success()
+                    val result = when {
+                        smaller != null -> bigger.encompasses(resolvedHop(smaller, otherResolver), thisResolver, otherResolver)
+                        else -> Result.Success()
+                    }
 
                     Pair(key, result)
                 }.find { it.second is Result.Failure }
@@ -169,10 +170,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                 if(result?.second is Result.Failure)
                     return result.second.breadCrumb(breadCrumb = result.first)
 
-                if(otherResolvedPattern.isEndless()) Result.Failure("Finite list is not a superset of an infinite list.")
+                if(otherResolvedPattern.isEndless()) Result.Failure("Finite list is not a superset of an infinite list")
 
                 val others = otherResolvedPattern.getEncompassables(otherResolver).map { resolvedHop(it, otherResolver) }
-                if (others.size != pattern.nodes.size && !containsList(thisResolver))
+                if (others.size != pattern.nodes.size && (others.isEmpty() && !containsList(thisResolver) && !containsEmpty(thisResolver)))
                     return Result.Failure("The lengths of the two XML types are unequal")
 
                 val these = getEncompassables(thisResolver).map { resolvedHop(it, thisResolver) }
@@ -182,6 +183,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                         val list = pattern.nodes[0]
                         list.encompasses(otherPattern, thisResolver, otherResolver)
                     }
+                    others.size != pattern.nodes.size && others.isEmpty() && containsEmpty(thisResolver) -> Result.Success()
                     else -> {
                         these.zip(others).map { (thisOne, otherOne) ->
                             when {
@@ -197,7 +199,17 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
         }
     }
 
-    private fun containsList(resolver: Resolver) = pattern.nodes.size == 1 && resolvedHop(pattern.nodes[0], resolver) is ListPattern
+    private fun containsList(resolver: Resolver): Boolean {
+        val resolvedType = resolvedHop(pattern.nodes[0], resolver)
+        val patternSet = resolvedType.patternSet(resolver).map { resolvedHop(it, resolver) }
+        return pattern.nodes.size == 1 && (resolvedType is ListPattern || patternSet.any { it is ListPattern })
+    }
+
+    private fun containsEmpty(resolver: Resolver): Boolean {
+        val resolvedType = resolvedHop(pattern.nodes[0], resolver)
+        val patternSet = resolvedType.patternSet(resolver).map { resolvedHop(it, resolver) }
+        return pattern.nodes.size == 1 && patternSet.any { it is EmptyStringPattern }
+    }
 
     override fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> = getEncompassables(resolver)
 

@@ -25,9 +25,4 @@ internal class NullPatternTest {
     fun `should create a new array of patterns containing itself`() {
         assertEquals(listOf(NullPattern), NullPattern.newBasedOn(Row(), Resolver()))
     }
-
-    @Test
-    fun `should match an empty string`() {
-        EmptyString shouldMatch NullPattern
-    }
 }

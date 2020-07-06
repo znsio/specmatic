@@ -10,11 +10,10 @@ import run.qontract.core.value.Value
 
 object NullPattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
-        when {
-            sampleData is NullValue || sampleData is StringValue && sampleData.string.trim() == "" ->
-                Result.Success()
-            else -> mismatchResult("null", sampleData)
-        }
+            when (sampleData) {
+                is NullValue -> Result.Success()
+                else -> mismatchResult("null", sampleData)
+            }
 
     override fun generate(resolver: Resolver): Value = NullValue
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)

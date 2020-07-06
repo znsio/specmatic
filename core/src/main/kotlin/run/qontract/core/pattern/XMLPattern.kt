@@ -98,9 +98,13 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
     override fun generate(resolver: Resolver): XMLNode {
         val name = pattern.name
 
-        val newAttributes = pattern.attributes.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
+        val newAttributes = pattern.attributes.mapKeys { entry ->
+            withoutOptionality(entry.key)
+        }.mapValues { (key, pattern) ->
             attempt(breadCrumb = key) { resolver.generate(key, pattern) }
-        }.mapValues { StringValue(it.value.toStringValue()) }
+        }.mapValues {
+            StringValue(it.value.toStringValue())
+        }
 
         val nodes = pattern.nodes.map { resolvedHop(it, resolver) }.flatMap {
             when(it) {
@@ -121,7 +125,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<XMLPattern> {
         return keyCombinations(pattern.attributes, row) { pattern ->
-            newBasedOn(pattern, row, resolver)
+            newBasedOn(pattern, row, resolver).map {
+                it.mapKeys { entry -> withoutOptionality(entry.key) }
+            }
         }.flatMap { newAttributes ->
             val newNodesList = when {
                 row.containsField(pattern.name)-> {

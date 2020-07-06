@@ -4,18 +4,27 @@ import run.qontract.core.utilities.jsonStringToValueArray
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.*
 
-internal fun withoutOptionality(key: String) = key.removeSuffix("?")
-internal fun isOptional(key: String): Boolean = key.endsWith("?")
+private const val XML_ATTR_OPTIONAL_SUFFIX = ":optional"
+private const val DEFAULT_OPTIONAL_SUFFIX = "?"
+
+internal fun withoutOptionality(key: String): String {
+    return when {
+        key.endsWith(DEFAULT_OPTIONAL_SUFFIX) -> key.removeSuffix(DEFAULT_OPTIONAL_SUFFIX)
+        key.endsWith(XML_ATTR_OPTIONAL_SUFFIX) -> key.removeSuffix(XML_ATTR_OPTIONAL_SUFFIX)
+        else -> key
+    }
+}
+internal fun isOptional(key: String): Boolean = key.endsWith(DEFAULT_OPTIONAL_SUFFIX) || key.endsWith(XML_ATTR_OPTIONAL_SUFFIX)
 
 internal fun isMissingKey(jsonObject: Map<String, Any?>, key: String) =
         when {
-            key.endsWith("?") -> false
-            else -> key !in jsonObject && "$key?" !in jsonObject
+            isOptional(key) -> false
+            else -> key !in jsonObject && "$key?" !in jsonObject && "$key:" !in jsonObject
         }
 
 internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
         when {
-            key.endsWith("?") -> key.removeSuffix("?") in jsonObject
+            isOptional(key) -> withoutOptionality(key) in jsonObject
             else -> key in jsonObject
         }
 
@@ -92,7 +101,7 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
                         if(patternParts[1] != "string")
                             throw ContractException("""Types can only be declared to be "in string", you probably meant (${patternParts[1]} in string)""")
 
-                        PatternInStringPattern(parsedPattern(withPatternDelimiters(patternParts.get(0))))
+                        PatternInStringPattern(parsedPattern(withPatternDelimiters(patternParts[0])))
                     }
                     else -> throw ContractException("Type $patternString does not exist.")
                 }
@@ -153,8 +162,8 @@ fun parseLookupRowPattern(token: String): Pair<String, String> {
 fun isLookupRowPattern(token: String): Boolean {
     val parts = withoutPatternDelimiters(token).split(":".toRegex())
 
-    return when {
-        parts.size == 2 -> true
+    return when (parts.size) {
+        2 -> true
         else -> false
     }
 }

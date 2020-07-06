@@ -9,5 +9,5 @@ fun <Type1, Type2>mapZip(map1: Map<String, Type1>, map2: Map<String, Type2>): Li
     }
 }
 
-internal fun <ValueType> lookupValue(map: Map<String, ValueType>, key: String): ValueType = map.getValue(key.removeSuffix("?"))
+internal fun <ValueType> lookupValue(map: Map<String, ValueType>, key: String): ValueType = map.getValue(withoutOptionality(key))
 

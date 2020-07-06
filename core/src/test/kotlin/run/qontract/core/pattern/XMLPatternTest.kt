@@ -264,8 +264,70 @@ internal class XMLPatternTest {
         val example = Row(listOf("name", "age"), listOf("", ""))
 
         val newTypes = xmlType.newBasedOn(example, Resolver())
+        assertThat(newTypes.size).isOne()
 
         val xmlNode = newTypes[0].generate(Resolver())
         assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="" name=""/>""")
+    }
+
+    @Test
+    fun `optional attribute encompasses non optional`() {
+        val bigger = XMLPattern("""<number val:optional="(number)">(number)</number>""")
+        val smaller = XMLPattern("""<number val="(number)">(number)</number>""")
+        assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `optional attribute should pick up example value`() {
+        val type = XMLPattern("""<number val:optional="(number)"></number>""")
+        val example = Row(listOf("val"), listOf("10"))
+
+        val newTypes = type.newBasedOn(example, Resolver())
+        assertThat(newTypes.size).isOne()
+
+        val xmlNode = newTypes[0].generate(Resolver())
+        assertThat(xmlNode.toStringValue()).isEqualTo("""<number val="10"/>""")
+    }
+
+    @Test
+    fun `optional attribute without examples should generate two tests`() {
+        val type = XMLPattern("""<number val:optional="(number)"></number>""")
+
+        val newTypes = type.newBasedOn(Row(), Resolver())
+        assertThat(newTypes.size).isEqualTo(2)
+
+        val flags = mutableListOf<String>()
+
+        for(newType in newTypes) {
+            when {
+                newType.pattern.attributes.containsKey("val") -> flags.add("with")
+                else -> flags.add("without")
+            }
+        }
+
+        assertThat(flags.size).isEqualTo(2)
+        assertThat(flags).contains("with")
+        assertThat(flags).contains("without")
+    }
+
+    @Test
+    fun `sanity test that double optional gets handled right`() {
+        val type = XMLPattern("""<number val:optional:optional="(number)"></number>""")
+
+        val newTypes = type.newBasedOn(Row(), Resolver())
+        assertThat(newTypes.size).isEqualTo(2)
+
+        val flags = mutableListOf<String>()
+
+        for(newType in newTypes) {
+            when {
+                newType.pattern.attributes.containsKey("val:optional") -> flags.add("with")
+                else -> flags.add("without")
+            }
+        }
+
+        assertThat(flags.size).isEqualTo(2)
+        assertThat(flags).contains("with")
+        assertThat(flags).contains("without")
     }
 }

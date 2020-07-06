@@ -374,7 +374,7 @@ Feature: Math API
   
     Expected number, actual was string: "not a number""""
 
-        assertThat(stdout).isEqualTo(expectedOnStandardOutput)
+        assertThat(stdout).contains(expectedOnStandardOutput)
     }
 
     @Test

@@ -3,6 +3,7 @@ package run.qontract.core.pattern
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.breadCrumb
+import run.qontract.core.value.EmptyString
 import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
@@ -22,7 +23,7 @@ data class KafkaMessagePattern(val topic: String = "", val key: Pattern = EmptyS
                 else -> message.key
             }
 
-            val keyMatch = key.matches(parsedKey ?: NullValue, resolver)
+            val keyMatch = key.matches(parsedKey ?: EmptyString, resolver)
             if (keyMatch !is Result.Success)
                 return keyMatch.breadCrumb("KEY")
 

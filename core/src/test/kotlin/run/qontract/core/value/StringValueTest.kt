@@ -13,7 +13,7 @@ import run.qontract.shouldMatch
 
 internal class StringValueTest {
     @Test
-    fun `should generate null matching pattern from pattern with question suffix`() {
+    fun `should generate pattern matching an empty string from pattern with question suffix`() {
         val pattern = DeferredPattern("(string?)").resolvePattern(Resolver())
 
         val constructedPattern = optionalPattern(StringPattern)
@@ -21,6 +21,6 @@ internal class StringValueTest {
         assertThat(pattern.encompasses(constructedPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
 
         StringValue("data") shouldMatch  pattern
-        NullValue shouldMatch  pattern
+        EmptyString shouldMatch  pattern
     }
 }

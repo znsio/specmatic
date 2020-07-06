@@ -2,6 +2,7 @@ package run.qontract.core.pattern
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.value.EmptyString
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.NumberValue
 import run.qontract.optionalPattern
@@ -9,9 +10,9 @@ import run.qontract.shouldMatch
 
 internal class ConvertTest {
     @Test
-    fun `create a pattern that matches null or any other pattern`() {
+    fun `create a pattern that matches an empty string or any other pattern`() {
         val pattern = parsedPattern("(number?)")
-        val nullValue = NullValue
+        val nullValue = EmptyString
         val numberValue = NumberValue(10)
 
         nullValue shouldMatch pattern
@@ -19,9 +20,9 @@ internal class ConvertTest {
     }
 
     @Test
-    fun `create a pattern that matches null or a list`() {
+    fun `create a pattern that matches an empty string or a list`() {
         val pattern = parsedPattern("(number*?)")
-        val nullValue = NullValue
+        val nullValue = EmptyString
         val numberList = parsedValue("[1, 2, 3]")
 
         nullValue shouldMatch pattern

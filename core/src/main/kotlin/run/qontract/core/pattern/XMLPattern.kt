@@ -58,28 +58,38 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
             when (val type = resolvedHop(pattern.nodes[index], resolver)) {
                 is ListPattern -> return type.matches(this.listOf(sampleData.nodes.subList(index, pattern.nodes.indices.last), resolver), resolver)
                 else -> {
-                    if(index >= sampleData.nodes.size)
-                        return Result.Failure("The value had only ${sampleData.nodes.size} nodes but the contract expected more.")
-
-                    val nodeValue: XMLNode = sampleData
-                    val childNode = when(val childNode = nodeValue.nodes[index]) {
-                        is StringValue -> when {
-                            childNode.isPatternToken() -> childNode
-                            else -> try { type.parse(childNode.string, resolver) } catch(e: ContractException) { return e.failure() }
-                        }
-                        else -> childNode
+                    if(index >= sampleData.nodes.size) {
+                        if(!expectingEmpty(sampleData, type, resolver))
+                            return Result.Failure("The value had only ${sampleData.nodes.size} nodes but the contract expected more.")
                     }
+                    else {
+                        val nodeValue: XMLNode = sampleData
+                        val childNode = when (val childNode = nodeValue.nodes[index]) {
+                            is StringValue -> when {
+                                childNode.isPatternToken() -> childNode
+                                else -> try {
+                                    type.parse(childNode.string, resolver)
+                                } catch (e: ContractException) {
+                                    return e.failure()
+                                }
+                            }
+                            else -> childNode
+                        }
 
-                    val factKey = if (childNode is XMLNode) childNode.name else null
-                    val result = resolver.matchesPattern(factKey, type, childNode)
-                    if(result is Result.Failure)
-                        return result.breadCrumb("${nodeValue.name}@$index")
+                        val factKey = if (childNode is XMLNode) childNode.name else null
+                        val result = resolver.matchesPattern(factKey, type, childNode)
+                        if (result is Result.Failure)
+                            return result.breadCrumb("${nodeValue.name}@$index")
+                    }
                 }
             }
         }
 
         return Result.Success()
     }
+
+    private fun expectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver) =
+            sampleData.nodes.isEmpty() && pattern.nodes.size == 1 && (EmptyStringPattern in type.patternSet(resolver).map { resolvedHop(it, resolver) })
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return XMLNode("", emptyMap(), valueList.map { it as XMLNode })

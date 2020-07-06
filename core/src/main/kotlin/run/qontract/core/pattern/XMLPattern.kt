@@ -46,7 +46,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                 else -> try {
                     patternValue.parse(sampleValue.string, resolver)
                 } catch (e: ContractException) {
-                    return e.failure()
+                    return e.failure().breadCrumb(key)
                 }
             }
             when (val result = resolver.matchesPattern(key, patternValue, resolvedValue)) {
@@ -79,7 +79,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                         val factKey = if (childNode is XMLNode) childNode.name else null
                         val result = resolver.matchesPattern(factKey, type, childNode)
                         if (result is Result.Failure)
-                            return result.breadCrumb("${nodeValue.name}@$index")
+                            return result.breadCrumb("${nodeValue.name}[$index]")
                     }
                 }
             }

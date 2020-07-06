@@ -1,6 +1,7 @@
 package run.qontract.core.pattern
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.Result
@@ -198,6 +199,13 @@ internal class XMLPatternTest {
     }
 
     @Test
+    fun `optional attribute encompasses non optional`() {
+        val bigger = XMLPattern("""<number val?="(number)">(number)</number>""")
+        val smaller = XMLPattern("""<number val="(number)">(number)</number>""")
+        assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
     fun `should generate a value when the xml contains an empty node`() {
         val pattern = XMLPattern("<data><empty/><value>10</value></data>")
         val value = pattern.generate(Resolver())
@@ -207,6 +215,64 @@ internal class XMLPatternTest {
 
     @Test
     fun `should pick up node names from examples`() {
+        val xmlType = XMLPattern("<data><name>(string)</name><age>(number)</age></data>")
+        val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
 
+        val newTypes = xmlType.newBasedOn(example, Resolver())
+
+        val xmlNode = newTypes[0].generate(Resolver())
+        assertThat(xmlNode.toStringValue()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
+    }
+
+    @Test
+    fun `should pick up node names with optional values from examples`() {
+        val xmlType = XMLPattern("<data><name>(string?)</name><age>(number?)</age></data>")
+        val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
+
+        val newTypes = xmlType.newBasedOn(example, Resolver())
+
+        val xmlNode = newTypes[0].generate(Resolver())
+        assertThat(xmlNode.toStringValue()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
+    }
+
+    @Test
+    fun `will not pick up node names with values from invalid examples`() {
+        val xmlType = XMLPattern("<data><name>(string?)</name><age>(number?)</age></data>")
+        val example = Row(listOf("name", "age"), listOf("John Doe", "ABC"))
+
+        assertThatThrownBy { xmlType.newBasedOn(example, Resolver()) }.isInstanceOf(ContractException::class.java)
+    }
+
+    @Test
+    fun `should pick up attribute names from examples`() {
+        val xmlType = XMLPattern("""<data name="(string)" age="(number)"></data>""")
+        val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
+
+        val newTypes = xmlType.newBasedOn(example, Resolver())
+
+        val xmlNode = newTypes[0].generate(Resolver())
+        assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="10" name="John Doe"/>""")
+    }
+
+    @Test
+    fun `should pick up attribute names with optional values from examples`() {
+        val xmlType = XMLPattern("""<data name="(string?)" age="(number?)"></data>""")
+        val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
+
+        val newTypes = xmlType.newBasedOn(example, Resolver())
+
+        val xmlNode = newTypes[0].generate(Resolver())
+        assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="10" name="John Doe"/>""")
+    }
+
+    @Test
+    fun `should pick up attribute names with optional values from empty examples`() {
+        val xmlType = XMLPattern("""<data name="(string?)" age="(number?)"></data>""")
+        val example = Row(listOf("name", "age"), listOf("", ""))
+
+        val newTypes = xmlType.newBasedOn(example, Resolver())
+
+        val xmlNode = newTypes[0].generate(Resolver())
+        assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="" name=""/>""")
     }
 }

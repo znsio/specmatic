@@ -108,7 +108,13 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                 else -> listOf(it.generate(resolver))
             }
 
-        }.map { it as XMLValue }
+        }.map {
+            when(it) {
+                is XMLValue -> it
+                else -> StringValue(it.toStringValue())
+            }
+
+        }
 
         return XMLNode(name, newAttributes, nodes)
     }
@@ -118,8 +124,17 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
             newBasedOn(pattern, row, resolver)
         }.flatMap { newAttributes ->
             val newNodesList = when {
-                pattern.nodes.size == 1 && resolvedHop(pattern.nodes[0], resolver) is ScalarType && row.containsField(pattern.name)-> {
-                    listOf(listOf(ExactValuePattern(pattern.nodes[0].parse(row.getField(pattern.name), resolver))))
+                row.containsField(pattern.name)-> {
+                    if(pattern.nodes.isEmpty())
+                        throw ContractException("Node ${pattern.name} is empty but an example with this name exists")
+
+                    val parsedData = pattern.nodes[0].parse(row.getField(pattern.name), resolver)
+                    val testResult = pattern.nodes[0].matches(parsedData, resolver)
+
+                    if(!testResult.isTrue())
+                        throw ContractException(resultReport(testResult))
+
+                    listOf(listOf(ExactValuePattern(parsedData)))
                 }
                 else -> {
                     listCombinations(pattern.nodes.mapIndexed { index, pattern ->

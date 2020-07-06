@@ -47,7 +47,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
             "${entry.key}=${entry.value}"
         }.let { when {
             it.isEmpty() -> it
-            else -> "?it"
+            else -> "?$it"
         }}
     }
 

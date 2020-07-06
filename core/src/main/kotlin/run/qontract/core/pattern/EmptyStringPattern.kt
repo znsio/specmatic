@@ -8,12 +8,7 @@ import run.qontract.core.value.*
 object EmptyStringPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (sampleData) {
-            is StringValue -> when (sampleData.string.isEmpty()) {
-                true -> Result.Success()
-                else -> mismatchResult("empty string", sampleData)
-            }
             EmptyString, is NullValue -> Result.Success()
-            null -> Result.Success()
             else -> mismatchResult("empty string", sampleData)
         }
     }

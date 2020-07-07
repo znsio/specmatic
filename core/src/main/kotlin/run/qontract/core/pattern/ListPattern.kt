@@ -14,9 +14,13 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is ListValue)
-            return mismatchResult("JSON array", sampleData)
+            return when {
+                resolvedHop(pattern, resolver) is XMLPattern -> mismatchResult("xml nodes", sampleData)
+                else -> mismatchResult("JSON array", sampleData)
+            }
 
         val resolver = withEmptyType(pattern, resolver)
+
         return sampleData.list.asSequence().map {
             resolver.matchesPattern(null, pattern, it)
         }.mapIndexed { index, result -> Pair(index, result) }.find { it.second is Result.Failure }?.let { (index, result) ->

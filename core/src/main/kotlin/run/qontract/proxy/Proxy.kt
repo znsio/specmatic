@@ -5,6 +5,7 @@ import io.ktor.application.call
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.NamedStub
 import run.qontract.core.toGherkinFeature
@@ -15,6 +16,7 @@ import run.qontract.stub.respondToKtorHttpResponse
 import run.qontract.test.HttpClient
 import java.io.Closeable
 import java.io.File
+import java.net.URL
 
 class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: String): Closeable {
     private val stubs = mutableListOf<NamedStub>()
@@ -24,7 +26,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
             val httpRequest = ktorHttpRequestToHttpRequest(call)
 
             try {
-                val client = HttpClient(baseURL)
+                val client = HttpClient(proxyURL(httpRequest, baseURL))
+
                 val httpResponse = client.execute(httpRequest)
 
                 val name = "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams)}"
@@ -36,6 +39,17 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
                 respondToKtorHttpResponse(call, HttpResponse(500, exceptionCauseMessage(e)))
             }
         }
+    }
+
+    private fun proxyURL(httpRequest: HttpRequest, baseURL: String): String {
+        return when {
+            isFullURL(httpRequest.path) -> ""
+            else -> baseURL
+        }
+    }
+
+    private fun isFullURL(path: String?): Boolean {
+        return path != null && try { URL(path); true } catch(e: Throwable) { false }
     }
 
     init {

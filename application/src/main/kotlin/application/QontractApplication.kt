@@ -12,7 +12,7 @@ import java.util.concurrent.Callable
 import java.util.logging.LogManager
 import kotlin.system.exitProcess
 
-@Command(name = "qontract", mixinStandardHelpOptions = true, versionProvider = VersionProvider::class, subcommands = [BackwardCompatibleCommand::class, CompareCommand::class, ImportCommand::class, ManifestCommand::class, SamplesCommand::class, StubCommand::class, TestCommand::class, VersionCommand::class])
+@Command(name = "qontract", mixinStandardHelpOptions = true, versionProvider = VersionProvider::class, subcommands = [BackwardCompatibleCommand::class, CompareCommand::class, ImportCommand::class, ManifestCommand::class, ProxyCommand::class, SamplesCommand::class, StubCommand::class, TestCommand::class, VersionCommand::class])
 class QontractApplication : Callable<Int> {
     override fun call(): Int {
         return 0

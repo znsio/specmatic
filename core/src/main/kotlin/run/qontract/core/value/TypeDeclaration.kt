@@ -52,7 +52,7 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
         println(converged.keys)
     }
 
-    return TabularPattern(converged)
+    return toTabularPattern(converged)
 }
 
 private fun sameBaseType(val1: DeferredPattern, val2: DeferredPattern) =

@@ -105,7 +105,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
             StringValue(it.value.toStringValue())
         }
 
-        val nodes = pattern.nodes.map { resolvedHop(it, resolver) }.mapIndexed { index, it ->
+        val nodes = pattern.nodes.map { resolvedHop(it, resolver) }.map {
             attempt(breadCrumb = name) {
                 when (it) {
                     is ListPattern -> (it.generate(resolver) as XMLNode).nodes
@@ -146,7 +146,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                     }
                 }
                 else -> {
-                    listCombinations(pattern.nodes.mapIndexed { index, pattern ->
+                    listCombinations(pattern.nodes.map { pattern ->
                         attempt(breadCrumb = this.pattern.name) {
                             pattern.newBasedOn(row, resolver)
                         }

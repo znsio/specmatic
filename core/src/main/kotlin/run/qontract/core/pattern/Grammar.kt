@@ -130,7 +130,7 @@ fun parsedPattern(rawContent: String, key: String? = null): Pattern {
     return rawContent.trim().let {
         when {
             it.isEmpty() -> EmptyStringPattern
-            it.startsWith("{") -> JSONObjectPattern(it)
+            it.startsWith("{") -> toJSONObjectPattern(it)
             it.startsWith("[") -> JSONArrayPattern(it)
             it.startsWith("<") -> XMLPattern(it)
             isPatternToken(it) -> when {

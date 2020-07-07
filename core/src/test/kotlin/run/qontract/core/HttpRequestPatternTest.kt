@@ -166,7 +166,7 @@ internal class HttpRequestPatternTest {
 
         assertThat(patterns).hasSize(1)
 
-        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("data", JSONObjectPattern(mapOf("name" to ExactValuePattern(StringValue("John Doe")))))))
+        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("data", toJSONObjectPattern(mapOf("name" to ExactValuePattern(StringValue("John Doe")))))))
         assertThat(patterns.single()).isEqualTo(expectedPattern)
     }
 
@@ -228,7 +228,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("data"), listOf("""{"one": 1}"""))
 
         val type = parsedPattern("""{"data": "(Data)"}""")
-        val newTypes = type.newBasedOn(example, Resolver(newPatterns = mapOf("(Data)" to TabularPattern(mapOf("one" to NumberPattern)))))
+        val newTypes = type.newBasedOn(example, Resolver(newPatterns = mapOf("(Data)" to toTabularPattern(mapOf("one" to NumberPattern)))))
 
         assertThat(newTypes).hasSize(1)
 
@@ -257,7 +257,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("body"), listOf("""{"one": 1}"""))
 
         val requestType = HttpRequestPattern(urlMatcher = toURLMatcher("/"), body = parsedPattern("(body: RequestBody)"))
-        val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to TabularPattern(mapOf("one" to NumberPattern)))))
+        val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to toTabularPattern(mapOf("one" to NumberPattern)))))
 
         assertThat(newRequestTypes).hasSize(1)
 

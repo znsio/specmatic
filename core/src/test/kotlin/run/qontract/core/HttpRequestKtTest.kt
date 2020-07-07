@@ -4,7 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.GherkinSection.When
 import run.qontract.core.pattern.DeferredPattern
-import run.qontract.core.pattern.TabularPattern
+import run.qontract.core.pattern.toTabularPattern
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
@@ -153,9 +153,9 @@ internal class HttpRequestKtTest {
 
         println(types)
         assertThat(types).hasSize(3)
-        assertThat(types.getValue("One")).isEqualTo(TabularPattern(mapOf("key" to DeferredPattern("(string)"))))
-        assertThat(types.getValue("Two")).isEqualTo(TabularPattern(mapOf("key" to DeferredPattern("(key_: string)"))))
-        assertThat(types.getValue("RequestBody")).isEqualTo(TabularPattern(mapOf("one" to DeferredPattern("(One)"), "two" to DeferredPattern("(Two)"))))
+        assertThat(types.getValue("One")).isEqualTo(toTabularPattern(mapOf("key" to DeferredPattern("(string)"))))
+        assertThat(types.getValue("Two")).isEqualTo(toTabularPattern(mapOf("key" to DeferredPattern("(key_: string)"))))
+        assertThat(types.getValue("RequestBody")).isEqualTo(toTabularPattern(mapOf("one" to DeferredPattern("(One)"), "two" to DeferredPattern("(Two)"))))
 
         assertThat(examples.examples).hasSize(2)
         assertThat(examples.examples.getValue("key")).isEqualTo("1")
@@ -189,7 +189,7 @@ internal class HttpRequestKtTest {
         assertThat(clauses).contains(GherkinClause("POST /customer?one=(string)", When))
         assertThat(clauses).contains(GherkinClause("request-body (RequestBody)", When))
 
-        assertThat(types.getValue("RequestBody")).isEqualTo(TabularPattern(mapOf("one" to DeferredPattern("(one_: string)"))))
+        assertThat(types.getValue("RequestBody")).isEqualTo(toTabularPattern(mapOf("one" to DeferredPattern("(one_: string)"))))
 
         assertThat(examples.examples).hasSize(2)
         assertThat(examples.examples.getValue("one")).isEqualTo("one query")

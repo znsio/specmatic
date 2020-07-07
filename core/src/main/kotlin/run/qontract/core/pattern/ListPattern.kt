@@ -19,10 +19,10 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
                 else -> mismatchResult("JSON array", sampleData)
             }
 
-        val resolver = withEmptyType(pattern, resolver)
+        val resolverWithEmptyType = withEmptyType(pattern, resolver)
 
         return sampleData.list.asSequence().map {
-            resolver.matchesPattern(null, pattern, it)
+            resolverWithEmptyType.matchesPattern(null, pattern, it)
         }.mapIndexed { index, result -> Pair(index, result) }.find { it.second is Result.Failure }?.let { (index, result) ->
             when(result) {
                 is Result.Failure -> result.breadCrumb("[$index]")
@@ -32,33 +32,33 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
     }
 
     override fun generate(resolver: Resolver): Value {
-        val resolver = withEmptyType(pattern, resolver)
+        val resolverWithEmptyType = withEmptyType(pattern, resolver)
         return pattern.listOf(0.until(randomNumber(10)).mapIndexed{ index, _ ->
-            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolver) }
-        }, resolver)
+            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolverWithEmptyType) }
+        }, resolverWithEmptyType)
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        val resolver = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolver).map { ListPattern(it) } }
+        val resolverWithEmptyType = withEmptyType(pattern, resolver)
+        return attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolverWithEmptyType).map { ListPattern(it) } }
     }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
 
     override fun patternSet(resolver: Resolver): List<Pattern> {
-        val resolver = withEmptyType(pattern, resolver)
-        return pattern.patternSet(resolver)
+        val resolverWithEmptyType = withEmptyType(pattern, resolver)
+        return pattern.patternSet(resolverWithEmptyType)
     }
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        val thisResolver = withEmptyType(pattern, thisResolver)
-        val otherResolver = withEmptyType(pattern, otherResolver)
+        val thisResolverWithEmptyType = withEmptyType(pattern, thisResolver)
+        val otherResolverWithEmptyType = withEmptyType(pattern, otherResolver)
 
         return when (otherPattern) {
-            is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
+            is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithEmptyType, thisResolverWithEmptyType)
             is JSONArrayPattern -> {
                 try {
-                    val results = otherPattern.getEncompassableList(otherResolver).asSequence().mapIndexed { index, otherPatternEntry ->
-                        Pair(index, pattern.encompasses(otherPatternEntry, thisResolver, otherResolver))
+                    val results = otherPattern.getEncompassableList(otherResolverWithEmptyType).asSequence().mapIndexed { index, otherPatternEntry ->
+                        Pair(index, pattern.encompasses(otherPatternEntry, thisResolverWithEmptyType, otherResolverWithEmptyType))
                     }
 
                     results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
@@ -68,8 +68,8 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
             }
             is XMLPattern -> {
                 try {
-                    val results = otherPattern.getEncompassables(otherResolver).asSequence().mapIndexed { index, otherPatternEntry ->
-                        Pair(index, pattern.encompasses(resolvedHop(otherPatternEntry, otherResolver), thisResolver, otherResolver))
+                    val results = otherPattern.getEncompassables(otherResolverWithEmptyType).asSequence().mapIndexed { index, otherPatternEntry ->
+                        Pair(index, pattern.encompasses(resolvedHop(otherPatternEntry, otherResolverWithEmptyType), thisResolverWithEmptyType, otherResolverWithEmptyType))
                     }
 
                     results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
@@ -78,13 +78,13 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
                 }
             }
             !is ListPattern -> Result.Failure("Expected array or list type, got ${otherPattern.typeName}")
-            else -> otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
+            else -> otherPattern.fitsWithin(patternSet(thisResolverWithEmptyType), otherResolverWithEmptyType, thisResolverWithEmptyType)
         }
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
-        val resolver = withEmptyType(pattern, resolver)
-        return pattern.listOf(valueList, resolver)
+        val resolverWithEmptyType = withEmptyType(pattern, resolver)
+        return pattern.listOf(valueList, resolverWithEmptyType)
     }
 
     override val typeName: String = "list of ${pattern.typeName}"

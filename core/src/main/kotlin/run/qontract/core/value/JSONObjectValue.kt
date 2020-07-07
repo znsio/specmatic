@@ -2,8 +2,9 @@ package run.qontract.core.value
 
 import run.qontract.core.pattern.DeferredPattern
 import run.qontract.core.pattern.JSONObjectPattern
+import run.qontract.core.pattern.toJSONObjectPattern
 import run.qontract.core.pattern.Pattern
-import run.qontract.core.pattern.TabularPattern
+import run.qontract.core.pattern.toTabularPattern
 import run.qontract.core.utilities.valueMapToPrettyJsonString
 
 data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Value {
@@ -12,7 +13,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     override fun displayableValue() = toStringValue()
     override fun toStringValue() = valueMapToPrettyJsonString(jsonObject)
     override fun displayableType(): String = "json object"
-    override fun exactMatchElseType(): Pattern = JSONObjectPattern(jsonObject.mapValues { it.value.exactMatchElseType() })
+    override fun exactMatchElseType(): Pattern = toJSONObjectPattern(jsonObject.mapValues { it.value.exactMatchElseType() })
     override fun type(): Pattern = JSONObjectPattern()
 
     override fun toString() = valueMapToPrettyJsonString(jsonObject)
@@ -20,7 +21,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {
         val (jsonTypeMap, newTypes, newExamples) = dictionaryToDeclarations(jsonObject, types, examples)
 
-        val newType = TabularPattern(jsonTypeMap.mapValues {
+        val newType = toTabularPattern(jsonTypeMap.mapValues {
             DeferredPattern(it.value.pattern)
         })
 

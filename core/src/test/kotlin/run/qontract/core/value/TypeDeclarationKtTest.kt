@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.DeferredPattern
 import run.qontract.core.pattern.TabularPattern
+import run.qontract.core.pattern.toTabularPattern
 import run.qontract.core.pattern.parsedValue
 
 internal class TypeDeclarationKtTest {
@@ -42,8 +43,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `keys with the same type will converge to the same type`() {
-        val type1 = TabularPattern(mapOf("name" to DeferredPattern("(string)")))
-        val type2 = TabularPattern(mapOf("name" to DeferredPattern("(string)")))
+        val type1 = toTabularPattern(mapOf("name" to DeferredPattern("(string)")))
+        val type2 = toTabularPattern(mapOf("name" to DeferredPattern("(string)")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("name")).isEqualTo(DeferredPattern("(string)"))
@@ -51,8 +52,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `keys with different value types will converge to the first one`() {
-        val type1 = TabularPattern(mapOf("name" to DeferredPattern("(string)")))
-        val type2 = TabularPattern(mapOf("name" to DeferredPattern("(number)")))
+        val type1 = toTabularPattern(mapOf("name" to DeferredPattern("(string)")))
+        val type2 = toTabularPattern(mapOf("name" to DeferredPattern("(number)")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("name")).isEqualTo(DeferredPattern("(string)"))
@@ -60,8 +61,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `first null value and second non null value will converge to optional value`() {
-        val type1 = TabularPattern(mapOf("name" to DeferredPattern("(null)")))
-        val type2 = TabularPattern(mapOf("name" to DeferredPattern("(number)")))
+        val type1 = toTabularPattern(mapOf("name" to DeferredPattern("(null)")))
+        val type2 = toTabularPattern(mapOf("name" to DeferredPattern("(number)")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("name")).isEqualTo(DeferredPattern("(number?)"))
@@ -69,8 +70,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `first non null value and second null value will converge to optional value`() {
-        val type1 = TabularPattern(mapOf("name" to DeferredPattern("(number)")))
-        val type2 = TabularPattern(mapOf("name" to DeferredPattern("(null)")))
+        val type1 = toTabularPattern(mapOf("name" to DeferredPattern("(number)")))
+        val type2 = toTabularPattern(mapOf("name" to DeferredPattern("(null)")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("name")).isEqualTo(DeferredPattern("(number?)"))
@@ -78,8 +79,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `two null values converge to null value`() {
-        val type1 = TabularPattern(mapOf("name" to DeferredPattern("(null)")))
-        val type2 = TabularPattern(mapOf("name" to DeferredPattern("(null)")))
+        val type1 = toTabularPattern(mapOf("name" to DeferredPattern("(null)")))
+        val type2 = toTabularPattern(mapOf("name" to DeferredPattern("(null)")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("name")).isEqualTo(DeferredPattern("(null)"))
@@ -87,8 +88,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `with an optional number first and a non optional number second they should converge to optional number`() {
-        val type1 = TabularPattern(mapOf("name" to DeferredPattern("(number?)")))
-        val type2 = TabularPattern(mapOf("name" to DeferredPattern("(number)")))
+        val type1 = toTabularPattern(mapOf("name" to DeferredPattern("(number?)")))
+        val type2 = toTabularPattern(mapOf("name" to DeferredPattern("(number)")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("name")).isEqualTo(DeferredPattern("(number?)"))
@@ -96,8 +97,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `with a non optional number first and an optional number second they should converge to optional number`() {
-        val type1 = TabularPattern(mapOf("name" to DeferredPattern("(number)")))
-        val type2 = TabularPattern(mapOf("name" to DeferredPattern("(number?)")))
+        val type1 = toTabularPattern(mapOf("name" to DeferredPattern("(number)")))
+        val type2 = toTabularPattern(mapOf("name" to DeferredPattern("(number?)")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("name")).isEqualTo(DeferredPattern("(number?)"))
@@ -105,8 +106,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `with an empty array first and a json array second they should converge to a json array`() {
-        val type1 = TabularPattern(mapOf("data" to DeferredPattern("[]")))
-        val type2 = TabularPattern(mapOf("data" to DeferredPattern("(number*)")))
+        val type1 = toTabularPattern(mapOf("data" to DeferredPattern("[]")))
+        val type2 = toTabularPattern(mapOf("data" to DeferredPattern("(number*)")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("data")).isEqualTo(DeferredPattern("(number*)"))
@@ -114,8 +115,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `with a json array first and an empty array second they should converge to a json array`() {
-        val type1 = TabularPattern(mapOf("data" to DeferredPattern("(number*)")))
-        val type2 = TabularPattern(mapOf("data" to DeferredPattern("[]")))
+        val type1 = toTabularPattern(mapOf("data" to DeferredPattern("(number*)")))
+        val type2 = toTabularPattern(mapOf("data" to DeferredPattern("[]")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("data")).isEqualTo(DeferredPattern("(number*)"))
@@ -123,8 +124,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `with an empty array first and a number second they should converge to an empty array`() {
-        val type1 = TabularPattern(mapOf("data" to DeferredPattern("[]")))
-        val type2 = TabularPattern(mapOf("data" to DeferredPattern("(number)")))
+        val type1 = toTabularPattern(mapOf("data" to DeferredPattern("[]")))
+        val type2 = toTabularPattern(mapOf("data" to DeferredPattern("(number)")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("data")).isEqualTo(DeferredPattern("[]"))
@@ -132,8 +133,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `with a number first and an empty array second they should converge to a number`() {
-        val type1 = TabularPattern(mapOf("data" to DeferredPattern("(number)")))
-        val type2 = TabularPattern(mapOf("data" to DeferredPattern("[]")))
+        val type1 = toTabularPattern(mapOf("data" to DeferredPattern("(number)")))
+        val type2 = toTabularPattern(mapOf("data" to DeferredPattern("[]")))
 
         val converged = converge(type1, type2)
         assertThat(converged.pattern.getValue("data")).isEqualTo(DeferredPattern("(number)"))
@@ -141,8 +142,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `missing types in the first type declaration are included in converged`() {
-        val missingIn1Type = TabularPattern(mapOf("name" to DeferredPattern("(null)")))
-        val personType = TabularPattern(mapOf("name" to DeferredPattern("(number)")))
+        val missingIn1Type = toTabularPattern(mapOf("name" to DeferredPattern("(null)")))
+        val personType = toTabularPattern(mapOf("name" to DeferredPattern("(number)")))
 
         val type1 = TypeDeclaration("(Nothing)", mapOf("(Person)" to personType))
         val type2 = TypeDeclaration("(Nothing)", mapOf("(MissingIn1)" to missingIn1Type, "(Person)" to personType))
@@ -157,8 +158,8 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `missing types in the second type declaration are included in converged`() {
-        val missingIn2Type = TabularPattern(mapOf("name" to DeferredPattern("(null)")))
-        val personType = TabularPattern(mapOf("name" to DeferredPattern("(number)")))
+        val missingIn2Type = toTabularPattern(mapOf("name" to DeferredPattern("(null)")))
+        val personType = toTabularPattern(mapOf("name" to DeferredPattern("(number)")))
 
         val type1 = TypeDeclaration("(Nothing)", mapOf("(Person)" to personType, "(MissingIn2)" to missingIn2Type))
         val type2 = TypeDeclaration("(Nothing)", mapOf("(Person)" to personType))
@@ -173,9 +174,9 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `types are converged`() {
-        val personType1 = TabularPattern(mapOf("name" to DeferredPattern("(number)")))
-        val personType2 = TabularPattern(mapOf("name" to DeferredPattern("(null)")))
-        val personTypeConverged = TabularPattern(mapOf("name" to DeferredPattern("(number?)")))
+        val personType1 = toTabularPattern(mapOf("name" to DeferredPattern("(number)")))
+        val personType2 = toTabularPattern(mapOf("name" to DeferredPattern("(null)")))
+        val personTypeConverged = toTabularPattern(mapOf("name" to DeferredPattern("(number?)")))
 
         val type1 = TypeDeclaration("(Nothing)", mapOf("(Person)" to personType1))
         val type2 = TypeDeclaration("(Nothing)", mapOf("(Person)" to personType2))
@@ -187,12 +188,12 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `type keys are converged`() {
-        val personType1 = TabularPattern(mapOf("name" to DeferredPattern("(string)"), "surname" to DeferredPattern("(string)")))
-        val personType2 = TabularPattern(mapOf("name" to DeferredPattern("(string)"), "address" to DeferredPattern("(string)")))
+        val personType1 = toTabularPattern(mapOf("name" to DeferredPattern("(string)"), "surname" to DeferredPattern("(string)")))
+        val personType2 = toTabularPattern(mapOf("name" to DeferredPattern("(string)"), "address" to DeferredPattern("(string)")))
 
         val type1 = TypeDeclaration("(Nothing)", mapOf("(Person)" to personType1))
         val type2 = TypeDeclaration("(Nothing)", mapOf("(Person)" to personType2))
-        val expectedConverged = TypeDeclaration("(Nothing)", mapOf("(Person)" to TabularPattern(mapOf("name" to DeferredPattern("(string)"), "surname?" to DeferredPattern("(string)"), "address?" to DeferredPattern("(string)")))))
+        val expectedConverged = TypeDeclaration("(Nothing)", mapOf("(Person)" to toTabularPattern(mapOf("name" to DeferredPattern("(string)"), "surname?" to DeferredPattern("(string)"), "address?" to DeferredPattern("(string)")))))
 
         val converged = convergeTypeDeclarations(type1, type2)
 

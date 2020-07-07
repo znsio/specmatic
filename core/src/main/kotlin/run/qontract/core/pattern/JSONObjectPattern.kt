@@ -8,9 +8,9 @@ import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
 
-fun JSONObjectPattern(jsonContent: String): JSONObjectPattern = JSONObjectPattern(stringToPatternMap(jsonContent))
+fun toJSONObjectPattern(jsonContent: String): JSONObjectPattern = toJSONObjectPattern(stringToPatternMap(jsonContent))
 
-fun JSONObjectPattern(map: Map<String, Pattern>): JSONObjectPattern {
+fun toJSONObjectPattern(map: Map<String, Pattern>): JSONObjectPattern {
     val missingKeyStrategy = when ("...") {
         in map -> ignoreUnexpectedKeys
         else -> ::validateUnexpectedKeys
@@ -28,11 +28,11 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
     }
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        val thisResolver = withNullPattern(thisResolver)
-        val otherResolver = withNullPattern(otherResolver)
+        val thisResolverWithNullType = withNullPattern(thisResolver)
+        val otherResolverWithNullType = withNullPattern(otherResolver)
 
         when (otherPattern) {
-            is ExactValuePattern -> return otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
+            is ExactValuePattern -> return otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType)
             !is JSONObjectPattern -> return Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
             else -> {
                 val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
@@ -48,7 +48,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
                     Pair(key,
                             if (smaller != null)
-                                bigger.encompasses(resolvedHop(smaller, otherResolver), thisResolver, otherResolver)
+                                bigger.encompasses(resolvedHop(smaller, otherResolverWithNullType), thisResolverWithNullType, otherResolverWithNullType)
                             else Result.Success())
                 }.find { it.second is Result.Failure }
 
@@ -58,21 +58,20 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
-        val resolver = withNullPattern(resolver)
         return JSONArrayValue(valueList)
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        val resolver = withNullPattern(resolver)
+        val resolverWithNullType = withNullPattern(resolver)
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
 
-        val missingKey = resolver.findMissingKey(pattern, sampleData.jsonObject, unexpectedKeyCheck)
+        val missingKey = resolverWithNullType.findMissingKey(pattern, sampleData.jsonObject, unexpectedKeyCheck)
         if(missingKey != null)
             return missingKeyToResult(missingKey, "key")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
-            when (val result = resolver.matchesPattern(key, patternValue, sampleValue)) {
+            when (val result = resolverWithNullType.matchesPattern(key, patternValue, sampleValue)) {
                 is Result.Failure -> return result.breadCrumb(key)
             }
         }
@@ -81,15 +80,15 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
     }
 
     override fun generate(resolver: Resolver): JSONObjectValue {
-        val resolver = withNullPattern(resolver)
-        return JSONObjectValue(generate(pattern, resolver))
+        val resolverWithNullType = withNullPattern(resolver)
+        return JSONObjectValue(generate(pattern, resolverWithNullType))
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> {
-        val resolver = withNullPattern(resolver)
+        val resolverWithNullType = withNullPattern(resolver)
         return keyCombinations(pattern.minus("..."), row) { pattern ->
-            newBasedOn(pattern, row, resolver)
-        }.map { JSONObjectPattern(it) }
+            newBasedOn(pattern, row, resolverWithNullType)
+        }.map { toJSONObjectPattern(it) }
     }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
@@ -99,8 +98,8 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 }
 
 fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String, Value> {
-    val resolver = withNullPattern(resolver)
+    val resolverWithNullType = withNullPattern(resolver)
     return jsonPattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
-        attempt(breadCrumb = key) { resolver.generate(key, pattern) }
+        attempt(breadCrumb = key) { resolverWithNullType.generate(key, pattern) }
     }
 }

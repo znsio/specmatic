@@ -23,7 +23,7 @@ internal class JSONObjectPatternTest {
     fun `Given an optional key, the suffix should remain in place in an object generated using newBasedOn`() {
         val newPatterns = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(Row(), Resolver())
         val newPattern = newPatterns.first {
-            it != JSONObjectPattern(emptyMap())
+            it != toJSONObjectPattern(emptyMap())
         }
 
         val objectWithId = parsedValue("""{"id": 10}""")
@@ -167,7 +167,7 @@ internal class JSONObjectPatternTest {
 
     @Test
     fun `should fail to match nulls gracefully`() {
-        NullValue shouldNotMatch JSONObjectPattern(mapOf("name" to StringPattern))
+        NullValue shouldNotMatch toJSONObjectPattern(mapOf("name" to StringPattern))
     }
 
     @Test
@@ -215,14 +215,14 @@ internal class JSONObjectPatternTest {
 
     @Test
     fun `it should encompass itself when ellipsis is present`() {
-        val bigger = JSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern))
+        val bigger = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern))
         assertThat(bigger.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `type with ellipsis is equivalent to a type with the same keys except the ellipsis`() {
-        val theOne = JSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern))
-        val theOther = JSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern))
+        val theOne = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern))
+        val theOther = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern))
 
         assertThat(theOne.encompasses(theOther, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(theOther.encompasses(theOne, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)

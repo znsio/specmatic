@@ -54,7 +54,7 @@ fun convertToMapPattern(data: Map<String, JsonElement>): Map<String, Pattern> =
 fun toPattern(jsonElement: JsonElement): Pattern {
     return when (jsonElement) {
         is JsonNull -> NullPattern
-        is JsonObject -> JSONObjectPattern(jsonElement.toMap().mapValues { toPattern(it.value) })
+        is JsonObject -> toJSONObjectPattern(jsonElement.toMap().mapValues { toPattern(it.value) })
         is JsonArray -> JSONArrayPattern(jsonElement.toList().map { toPattern(it) })
         is JsonLiteral -> toLiteralPattern(jsonElement)
         else -> throw ContractException("Unknown value type: ${jsonElement.javaClass.name}")

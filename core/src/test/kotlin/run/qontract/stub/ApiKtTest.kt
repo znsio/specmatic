@@ -428,7 +428,7 @@ Feature: Math API
         val (output, stubInfo) = captureStandardOutput { loadQontractStubs(listOf(Pair("math.qontract", feature)), listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("""{"number": 10, "unexpected": "data"}""")), HttpResponse(status = 200, body = "20"))))) }
         assertThat(stubInfo.single().first).isEqualTo(feature)
         assertThat(stubInfo.single().second).isEmpty()
-        assertThat(output).isEqualTo("""sample.json didn't match math.qontract
+        assertThat(output).contains("""sample.json didn't match math.qontract
     In scenario "Square of a number"
     >> REQUEST.BODY
   
@@ -451,7 +451,7 @@ Feature: Math API
         assertThat(stubInfo.single().first).isEqualTo(feature)
         assertThat(stubInfo.single().second).isEmpty()
 
-        assertThat(output).isEqualTo("""sample.json didn't match math.qontract
+        assertThat(output).contains("""sample.json didn't match math.qontract
     In scenario "Square of a number"
     >> RESPONSE.BODY
   

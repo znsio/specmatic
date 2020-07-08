@@ -33,7 +33,6 @@ dependencies {
     implementation "io.ktor:ktor-client-core-jvm:$ktor_version"
     implementation "io.ktor:ktor-client-apache:$ktor_version"
     implementation "io.ktor:ktor-client-features:$ktor_version"
-    implementation "io.ktor:ktor-network-tls:$ktor_version"
 
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0'
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"

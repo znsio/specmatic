@@ -32,7 +32,7 @@ class StubCommand : Callable<Unit> {
     lateinit var host: String
 
     @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = "9000")
-    var port: Int = 9000
+    var port: Int = 0
 
     @Option(names = ["--startKafka"], description = ["Host on which to dump the stubbed kafka message"], defaultValue = "false")
     var startKafka: Boolean = false
@@ -45,6 +45,21 @@ class StubCommand : Callable<Unit> {
 
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
+
+    @Option(names = ["--httpsKeyStore"], description = ["EXPERIMENTAL: Run the proxy on https using a key in this store"])
+    var keyStoreFile = ""
+
+    @Option(names = ["--httpsKeyStoreDir"], description = ["EXPERIMENTAL: Run the proxy on https, create a store named qontract.jks in this directory"])
+    var keyStoreDir = ""
+
+    @Option(names = ["--httpsKeyStorePassword"], description = ["EXPERIMENTAL: Run the proxy on https, password for pre-existing key store"])
+    var keyStorePassword = "forgotten"
+
+    @Option(names = ["--httpsKeyAlias"], description = ["EXPERIMENTAL: Run the proxy on https using a key by this name"])
+    var keyStoreAlias = "qontractproxy"
+
+    @Option(names = ["--httpsPassword"], description = ["EXPERIMENTAL: Key password if any"])
+    var keyPassword = "forgotten"
 
     override fun call() = try {
         startServer()
@@ -122,8 +137,10 @@ class StubCommand : Callable<Unit> {
                     })
                 }
 
-                HttpStub(httpBehaviours, httpExpectations, host, port, ::consoleLog, strictMode).also {
-                    consoleLog("Stub server is running on http://$host:$port. Ctrl + C to stop.")
+                val keyStoreData = getHttpsCert(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
+                HttpStub(httpBehaviours, httpExpectations, host, port, ::consoleLog, strictMode, keyStoreData).also {
+                    val protocol = if(keyStoreData != null) "https" else "http"
+                    consoleLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop.")
                 }
             }
             else -> null

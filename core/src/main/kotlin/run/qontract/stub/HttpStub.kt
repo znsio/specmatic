@@ -11,8 +11,7 @@ import io.ktor.http.content.TextContent
 import io.ktor.http.content.readAllParts
 import io.ktor.request.*
 import io.ktor.response.respond
-import io.ktor.server.engine.ApplicationEngine
-import io.ktor.server.engine.embeddedServer
+import io.ktor.server.engine.*
 import io.ktor.server.netty.Netty
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.asStream
@@ -35,68 +34,83 @@ import run.qontract.nullLog
 import java.io.ByteArrayOutputStream
 import java.util.*
 
-class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false) : ContractStub {
+class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null) : ContractStub {
     constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
     constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(Feature(gherkinData), scenarioStubs, host, port, log)
 
     private var httpStubs = Vector<HttpStubData>(_httpStubs)
     val endPoint = endPointFromHostAndPort(host, port)
 
-    private val server: ApplicationEngine = embeddedServer(Netty, host = host, port = port) {
-        install(CORS) {
-            method(HttpMethod.Options)
-            method(HttpMethod.Get)
-            method(HttpMethod.Post)
-            method(HttpMethod.Put)
-            method(HttpMethod.Delete)
-            method(HttpMethod.Patch)
-            header(HttpHeaders.Authorization)
-            allowCredentials = true
-            allowNonSimpleContentTypes = true
+    private val environment = applicationEngineEnvironment {
+        module {
+            install(CORS) {
+                method(HttpMethod.Options)
+                method(HttpMethod.Get)
+                method(HttpMethod.Post)
+                method(HttpMethod.Put)
+                method(HttpMethod.Delete)
+                method(HttpMethod.Patch)
+                header(HttpHeaders.Authorization)
+                allowCredentials = true
+                allowNonSimpleContentTypes = true
 
-            features.flatMap { feature ->
-                feature.scenarios.flatMap { scenario ->
-                    scenario.httpRequestPattern.headersPattern.pattern.keys.map { withoutOptionality(it) }
+                features.flatMap { feature ->
+                    feature.scenarios.flatMap { scenario ->
+                        scenario.httpRequestPattern.headersPattern.pattern.keys.map { withoutOptionality(it) }
+                    }
+                }.forEach { header(it) }
+
+                anyHost()
+            }
+
+            intercept(ApplicationCallPipeline.Call) {
+                val logs = mutableListOf<String>()
+
+                try {
+                    val httpRequest = ktorHttpRequestToHttpRequest(call)
+                    logs.add(httpRequestLog(httpRequest))
+
+                    val (httpResponse, responseLog) = when {
+                        isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
+                        isFetchLoadLogRequest(httpRequest) -> handleFetchLoadLogRequest()
+                        isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest()
+                        isExpectationCreation(httpRequest) -> handleExpectationCreationRequest(httpRequest)
+                        isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
+                        else -> serveStubResponse(httpRequest)
+                    }
+
+                    respondToKtorHttpResponse(call, httpResponse)
+                    logs.add(responseLog ?: httpResponseLog(httpResponse))
+                    log(logs.joinToString(System.lineSeparator()))
                 }
-            }.forEach { header(it) }
-
-            anyHost()
+                catch(e: ContractException) {
+                    val response = badRequest(e.report())
+                    logs.add(httpResponseLog(response))
+                    respondToKtorHttpResponse(call, response)
+                    log(logs.joinToString(System.lineSeparator()))
+                }
+                catch(e: Throwable) {
+                    val response = badRequest(exceptionCauseMessage(e))
+                    logs.add(httpResponseLog(response))
+                    respondToKtorHttpResponse(call, response)
+                    log(logs.joinToString(System.lineSeparator()))
+                }
+            }
         }
 
-        intercept(ApplicationCallPipeline.Call) {
-            val logs = mutableListOf<String>()
-
-            try {
-                val httpRequest = ktorHttpRequestToHttpRequest(call)
-                logs.add(httpRequestLog(httpRequest))
-
-                val (httpResponse, responseLog) = when {
-                    isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
-                    isFetchLoadLogRequest(httpRequest) -> handleFetchLoadLogRequest()
-                    isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest()
-                    isExpectationCreation(httpRequest) -> handleExpectationCreationRequest(httpRequest)
-                    isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
-                    else -> serveStubResponse(httpRequest)
-                }
-
-                respondToKtorHttpResponse(call, httpResponse)
-                logs.add(responseLog ?: httpResponseLog(httpResponse))
-                log(logs.joinToString(System.lineSeparator()))
+        when {
+            keyStoreData == null -> connector {
+                this.host = host
+                this.port = port
             }
-            catch(e: ContractException) {
-                val response = badRequest(e.report())
-                logs.add(httpResponseLog(response))
-                respondToKtorHttpResponse(call, response)
-                log(logs.joinToString(System.lineSeparator()))
-            }
-            catch(e: Throwable) {
-                val response = badRequest(exceptionCauseMessage(e))
-                logs.add(httpResponseLog(response))
-                respondToKtorHttpResponse(call, response)
-                log(logs.joinToString(System.lineSeparator()))
+            else -> sslConnector(keyStore = keyStoreData.keyStore, keyAlias = keyStoreData.keyAlias, privateKeyPassword = { keyStoreData.keyPassword.toCharArray() }, keyStorePassword = { keyStoreData.keyPassword.toCharArray() }) {
+                this.host = host
+                this.port = port
             }
         }
     }
+
+    private val server: ApplicationEngine = embeddedServer(Netty, environment)
 
     private fun handleFetchLoadLogRequest(): Pair<HttpResponse, Nothing?> =
             Pair(HttpResponse.OK(StringValue(LogTail.getSnapshot())), null)

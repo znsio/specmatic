@@ -10,9 +10,8 @@ import run.qontract.core.value.Value
 
 object NullPattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
-            when {
-                sampleData is NullValue -> Result.Success()
-                sampleData is StringValue && sampleData.string.isEmpty() -> Result.Success()
+            when (sampleData) {
+                is NullValue -> Result.Success()
                 else -> mismatchResult("null", sampleData)
             }
 

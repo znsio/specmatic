@@ -42,7 +42,7 @@ data class ListPattern(override val pattern: Pattern) : Pattern, EncompassableLi
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
         return attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolverWithEmptyType).map { ListPattern(it) } }
     }
-    override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
 
     override fun patternSet(resolver: Resolver): List<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)

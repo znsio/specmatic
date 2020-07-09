@@ -36,7 +36,7 @@ def jgit_version = "5.8.0.202006091008-r"
 def junit_version = "5.4.2"
 
 dependencies {
-    implementation 'info.picocli:picocli:4.0.3'
+    implementation 'info.picocli:picocli:4.4.0'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"

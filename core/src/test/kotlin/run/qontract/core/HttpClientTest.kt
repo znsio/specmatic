@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import run.qontract.core.value.StringValue
 
-class TestHttpClient {
+class HttpClientTest {
     @Test
     @Throws(Throwable::class)
     fun clientShouldGenerateRequestAndParseResponse() {

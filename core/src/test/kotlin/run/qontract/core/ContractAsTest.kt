@@ -1138,6 +1138,40 @@ Feature: Contract
 
         assertThat(flags.toList()).isEqualTo(listOf("ran"))
     }
+
+    @Test
+    fun `should not fail if a WIP scenario fails`() {
+        val gherkin = """
+Feature: Contract
+    Scenario: api call
+        Given GET /
+        Then status 200
+        And response-body (number)
+"""
+
+        val flags = mutableListOf<String>()
+
+        val results = Feature(gherkin).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add("ran")
+
+                return HttpResponse.OK(StringValue("alphanumeric response"))
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        println(results.report())
+
+        assertThat(flags.toList()).isEqualTo(listOf("ran"))
+
+        assertThat(results.failureCount).isOne()
+        assertThat(results.successCount).isZero()
+        assertThat(results.success()).isFalse()
+        assertThat(results.nonStrictSuccess()).isTrue()
+    }
 }
 
 internal fun jsonObject(value: Value?): Map<String, Value> {

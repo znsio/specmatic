@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
-class LexTest {
+class FeatureKtTest {
     @Test
     fun `should lex type identically to pattern`() {
         val contractGherkin = """
@@ -212,6 +212,20 @@ class LexTest {
 
         assertThat(pattern.pattern.getValue("id1")).isEqualTo(LookupRowPattern(NumberPattern, "customerId"))
         assertThat(pattern.pattern.getValue("id2")).isEqualTo(LookupRowPattern(NumberPattern, "orderId"))
+    }
+
+    @Test
+    fun `should parse the WIP tag`() {
+        val feature = Feature("""
+            Feature: Test feature
+            
+            @WIP
+            Scenario: Test scenario
+              When GET /
+              Then status 200
+        """.trimIndent())
+
+        assertThat(feature.scenarios.single().scenarioStatus).isEqualTo(ScenarioStatus.WIPScenario)
     }
 
     private fun deferredToJsonPatternData(pattern: Pattern, resolver: Resolver): Map<String, Pattern> =

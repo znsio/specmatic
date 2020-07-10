@@ -51,48 +51,49 @@ open class QontractJUnitSupport {
             throw e
         }
 
-        return testScenarios.map {
-            DynamicTest.dynamicTest("$it") {
-                val kafkaMessagePattern = it.kafkaMessagePattern
+        return testScenarios.map { testScenario ->
+            DynamicTest.dynamicTest(testScenario.toString()) {
+                val kafkaMessagePattern = testScenario.kafkaMessagePattern
 
-                when {
-                    kafkaMessagePattern != null -> {
-                        if (System.getProperty("kafkaPort") == null) {
-                            println("The contract has a kafka message. Please specify the port of the Kafka instance to connect to.")
-                            exitProcess(1)
-                        }
+                val result = when {
+                    kafkaMessagePattern != null -> runKafkaTest(testScenario)
+                    else -> runHttpTest(timeout, testScenario)
+                }.updateScenario(testScenario)
 
-                        val commit = "true" == System.getProperty("commit")
-
-                        val result = testKafkaMessages(it, getBootstrapKafkaServers(), commit)
-                        ResultAssert.assertThat(result).isSuccess()
-                    }
-                    else -> {
-                        val host = System.getProperty("host")
-                        val port = System.getProperty("port")
-                        val protocol = System.getProperty("protocol") ?: "http"
-
-                        val httpClient = HttpClient("$protocol://$host:$port", timeout = timeout)
-
-                        val request = it.generateHttpRequest()
-
-                        val result: Result = try {
-                            httpClient.setServerState(it.serverState)
-                            val response = httpClient.execute(request)
-                            when(response.headers.getOrDefault("X-Qontract-Result", "success")) {
-                                "failure" -> Result.Failure(response.body?.toStringValue() ?: "").updateScenario(it)
-                                else -> it.matches(response)
-                            }
-                        } catch (exception: Throwable) {
-                            Result.Failure(exceptionCauseMessage(exception))
-                                    .also { failure -> failure.updateScenario(it) }
-                        }
-
-                        ResultAssert.assertThat(result).isSuccess()
-                    }
+                if(result is Result.Failure && !shouldFail(result)) {
+                    println("*** ERROR OCURRED, IGNORING SINCE WORK IN PROGRESS ***")
+                    println(resultReport(result).prependIndent("  "))
                 }
+
+                ResultAssert.assertThat(result).isSuccess()
             }
         }.toList()
+    }
+
+    private fun runKafkaTest(testScenario: Scenario): Result {
+        if (System.getProperty("kafkaPort") == null) {
+            println("The contract has a kafka message. Please specify the port of the Kafka instance to connect to.")
+            exitProcess(1)
+        }
+
+        val commit = "true" == System.getProperty("commit")
+
+        val result = testKafkaMessages(testScenario, getBootstrapKafkaServers(), commit)
+        return result
+    }
+
+    private fun runHttpTest(timeout: Int, testScenario: Scenario): Result {
+        val host = System.getProperty("host")
+        val port = System.getProperty("port")
+        val protocol = System.getProperty("protocol") ?: "http"
+
+        val result: Result = executeTest(protocol, host, port, timeout, testScenario)
+        return result
+    }
+
+    private fun executeTest(protocol: String, host: String?, port: String?, timeout: Int, testScenario: Scenario): Result {
+        val httpClient = HttpClient("$protocol://$host:$port", timeout = timeout)
+        return executeTest(testScenario, httpClient)
     }
 
     private fun loadTestScenarios(path: String, suggestionsPath: String, suggestionsData: String): List<Scenario> {

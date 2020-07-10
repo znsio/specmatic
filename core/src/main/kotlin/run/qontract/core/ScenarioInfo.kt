@@ -13,5 +13,6 @@ data class ScenarioInfo(
         val patterns: Map<String, Pattern> = emptyMap(),
         val fixtures: Map<String, Value> = emptyMap(),
         val examples: List<Examples> = emptyList(),
-        val kafkaMessage: KafkaMessagePattern? = null
+        val kafkaMessage: KafkaMessagePattern? = null,
+        val scenarioStatus: ScenarioStatus = ScenarioStatus.FinalisedScenario
 )

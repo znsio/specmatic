@@ -55,7 +55,6 @@ class HttpClient(private val baseURL: String, private val timeout: Int = 60, pri
     private val serverStateURL = "/_qontract/state"
 
     @OptIn(KtorExperimentalAPI::class)
-    @Throws(IOException::class, URISyntaxException::class)
     override fun execute(request: HttpRequest): HttpResponse {
         val url = URL(request.getURL(baseURL))
 

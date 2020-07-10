@@ -41,6 +41,12 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
             else -> "$defaultMessage\n\n${listToReport(results)}".trim()
         }
     }
+
+    fun nonStrictSuccess(): Boolean {
+        return results.any {
+            it is Result.Failure && shouldFail(it)
+        }
+    }
 }
 
 internal fun isFluff(it: Result?): Boolean {

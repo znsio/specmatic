@@ -4,7 +4,7 @@ import org.assertj.core.api.AbstractAssert
 import run.qontract.core.Result
 import run.qontract.core.resultReport
 
-class ResultAssert(actual: Result) : AbstractAssert<ResultAssert, Result>(actual, ResultAssert::class.java) {
+class ResultAssert(result: Result) : AbstractAssert<ResultAssert, Result>(result, ResultAssert::class.java) {
     companion object {
         fun assertThat(actual: Result): ResultAssert {
             return ResultAssert(actual)
@@ -14,7 +14,8 @@ class ResultAssert(actual: Result) : AbstractAssert<ResultAssert, Result>(actual
     fun isSuccess() {
         isNotNull
 
-        if(actual is Result.Failure)
+        if(actual?.scenario?.scenarioStatus?.failure(actual) == true) {
             failWithMessage(resultReport(actual, "Testing scenario"))
+        }
     }
 }

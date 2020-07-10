@@ -1,5 +1,6 @@
 package run.qontract.core
 
+import run.qontract.core.Result.*
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.Value
 
@@ -42,18 +43,18 @@ sealed class Result {
 
 fun Result.breadCrumb(breadCrumb: String): Result =
     when(this) {
-        is Result.Failure -> this.breadCrumb(breadCrumb)
+        is Failure -> this.breadCrumb(breadCrumb)
         else -> this
     }
 
 data class FailureReport(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList())
 
-fun mismatchResult(expected: String, actual: String): Result.Failure = Result.Failure("Expected $expected, actual was $actual")
-fun mismatchResult(expected: String, actual: Value?): Result.Failure = mismatchResult(expected, valueError(actual) ?: "null")
+fun mismatchResult(expected: String, actual: String): Failure = Failure("Expected $expected, actual was $actual")
+fun mismatchResult(expected: String, actual: Value?): Failure = mismatchResult(expected, valueError(actual) ?: "null")
 fun mismatchResult(expected: Value, actual: Value?): Result = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "nothing")
-fun mismatchResult(expected: Pattern, actual: String): Result.Failure = mismatchResult(expected.typeName, actual)
-fun mismatchResult(pattern: Pattern, sampleData: Value?): Result.Failure = mismatchResult(pattern, sampleData?.toStringValue() ?: "null")
-fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern): Result.Failure {
+fun mismatchResult(expected: Pattern, actual: String): Failure = mismatchResult(expected.typeName, actual)
+fun mismatchResult(pattern: Pattern, sampleData: Value?): Failure = mismatchResult(pattern, sampleData?.toStringValue() ?: "null")
+fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern): Failure {
     return mismatchResult(thisPattern.typeName, otherPattern.typeName)
 }
 
@@ -63,7 +64,7 @@ fun valueError(value: Value?): String? {
 
 fun resultReport(result: Result, scenarioMessage: String? = null): String {
     return when (result) {
-        is Result.Failure -> {
+        is Failure -> {
             val firstLine = when(val scenario = result.scenario) {
                 null -> ""
                 else -> {
@@ -90,4 +91,11 @@ fun resultReport(result: Result, scenarioMessage: String? = null): String {
         }
         else -> ""
     }.trim()
+}
+
+fun shouldFail(result: Result): Boolean {
+    return when(result) {
+        is Success -> false
+        is Failure -> result.scenario?.scenarioStatus?.failure(result) == true
+    }
 }

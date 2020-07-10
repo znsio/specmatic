@@ -4,6 +4,8 @@ import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
 import org.junit.platform.launcher.TestPlan
+import run.qontract.core.shouldFail
+import kotlin.system.exitProcess
 
 class ContractExecutionListener : TestExecutionListener {
     private var success: Int = 0
@@ -21,10 +23,11 @@ class ContractExecutionListener : TestExecutionListener {
             when (it) {
                 false -> {
                     failure++
+
                     val message = testExecutionResult?.throwable?.get()?.message?.replace("\n", "\n\t")?.trimIndent() ?: ""
+
                     val reason = "Reason: $message"
                     println("$reason\n\n")
-
 
                     val log = """"${testIdentifier?.displayName} ${testExecutionResult?.status}"
 ${reason.prependIndent("  ")}"""
@@ -50,9 +53,11 @@ ${reason.prependIndent("  ")}"""
     }
 
     fun exitProcess() {
-        when (failure != 0) {
-            true -> kotlin.system.exitProcess(1)
-            false -> kotlin.system.exitProcess(0)
+        val exitStatus = when (failure != 0) {
+            true -> 1
+            false -> 0
         }
+
+        exitProcess(exitStatus)
     }
 }

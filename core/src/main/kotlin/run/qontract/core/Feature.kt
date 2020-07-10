@@ -207,7 +207,7 @@ private fun toFacts(rest: String, fixtures: Map<String, Value>): Map<String, Val
     }
 }
 
-private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, backgroundScenarioInfo: ScenarioInfo): ScenarioInfo {
+private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, featureTags: List<GherkinDocument.Feature.Tag>, backgroundScenarioInfo: ScenarioInfo): ScenarioInfo {
     val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList, it) }.filterNot { it.isEmpty }
 
     val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo) { scenarioInfo, step ->
@@ -256,7 +256,13 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
         }
     }
 
-    return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)))
+    val tags = featureTags.map { tag -> tag.name }
+    val resultCheck = when {
+        tags.asSequence().map { it.toUpperCase() }.contains("@WIP") -> ScenarioStatus.WIPScenario
+        else -> ScenarioStatus.FinalisedScenario
+    }
+
+    return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)), scenarioStatus = resultCheck)
 }
 
 fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
@@ -347,19 +353,19 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>): L
     lex(featureChildren, lexBackground(featureChildren))
 
 internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, backgroundInfo: ScenarioInfo): List<Scenario> =
-    scenarios(featureChildren).map { feature ->
-        val backgroundInfoCopy = backgroundInfo.copy(scenarioName = feature.scenario.name)
-        lexScenario(feature.scenario.stepsList, feature.scenario.examplesList, backgroundInfoCopy)
+    scenarios(featureChildren).map { featureChild ->
+        val backgroundInfoCopy = backgroundInfo.copy(scenarioName = featureChild.scenario.name)
+        lexScenario(featureChild.scenario.stepsList, featureChild.scenario.examplesList, featureChild.scenario.tagsList, backgroundInfoCopy)
     }.map { scenarioInfo ->
         if(scenarioInfo.scenarioName.isBlank())
             throw ContractException("A scenario name must not be empty. The contract has a scenario without a name.")
 
-        Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, scenarioInfo.expectedServerState, scenarioInfo.examples, scenarioInfo.patterns, scenarioInfo.fixtures, scenarioInfo.kafkaMessage)
+        Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, scenarioInfo.expectedServerState, scenarioInfo.examples, scenarioInfo.patterns, scenarioInfo.fixtures, scenarioInfo.kafkaMessage, scenarioInfo.scenarioStatus)
     }
 
 private fun lexBackground(featureChildren: List<GherkinDocument.Feature.FeatureChild>): ScenarioInfo =
     background(featureChildren)?.let { feature ->
-        lexScenario(feature.background.stepsList, listOf(), ScenarioInfo())
+        lexScenario(feature.background.stepsList, listOf(), emptyList(), ScenarioInfo())
     } ?: ScenarioInfo()
 
 private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
@@ -367,28 +373,6 @@ private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChil
 
 private fun scenarios(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
         featureChildren.filter { it.valueCase.name != "BACKGROUND" }
-
-fun executeTest(scenario: Scenario, testExecutor: TestExecutor): Result {
-    testExecutor.setServerState(scenario.serverState)
-
-    val request = scenario.generateHttpRequest()
-
-    return try {
-        val response = testExecutor.execute(request)
-        when {
-            response.headers.get("X-Qontract-Result") == "failure" -> {
-                Result.Failure(response.body?.displayableValue() ?: "")
-            }
-            else -> scenario.matches(response)
-        }
-    }
-    catch(contractException: ContractException) {
-        contractException.failure().updateScenario(scenario)
-    }
-    catch(throwable: Throwable) {
-        Result.Failure("Error: ${throwable.message}").updateScenario(scenario)
-    }
-}
 
 fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature(stub.name, stubToClauses(stub))
 

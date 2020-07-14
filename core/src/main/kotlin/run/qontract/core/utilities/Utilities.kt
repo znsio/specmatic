@@ -215,9 +215,11 @@ fun ensureEmptyOrNotExists(workingDirectory: File) {
     }
 }
 
-fun ensureThatManifestAndWorkingDirectoryExist(manifestFile: File, workingDirectory: File) {
-    if(!manifestFile.exists())
-        exitWithMessage("Manifest file ${manifestFile.path} does not exist")
+fun ensureExists(manifestFilePath: String, workingDirectoryPath: String) {
+    if(!File(manifestFilePath).exists())
+        exitWithMessage("Manifest file $manifestFilePath does not exist")
+
+    val workingDirectory = File(workingDirectoryPath)
 
     if(!workingDirectory.exists()) {
         try {
@@ -227,6 +229,24 @@ fun ensureThatManifestAndWorkingDirectoryExist(manifestFile: File, workingDirect
         }
     }
 }
+
+fun createIfDoesNotExist(workingDirectoryPath: String) {
+    val workingDirectory = File(workingDirectoryPath)
+
+    if(!workingDirectory.exists()) {
+        try {
+            workingDirectory.mkdirs()
+        } catch (e: Throwable) {
+            exitWithMessage(exceptionCauseMessage(e))
+        }
+    }
+}
+
+fun exitIfDoesNotExist(label: String, filePath: String) {
+    if(!File(filePath).exists())
+        exitWithMessage("${label.capitalize()} $filePath does not exist")
+}
+
 
 fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<String> {
     println("Loading manifest file $manifestFile")

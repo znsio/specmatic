@@ -9,11 +9,9 @@ import org.junit.platform.launcher.core.LauncherFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
-import run.qontract.core.utilities.ensureEmptyOrNotExists
-import run.qontract.core.utilities.ensureThatManifestAndWorkingDirectoryExist
-import run.qontract.core.utilities.exceptionCauseMessage
-import run.qontract.core.utilities.exitWithMessage
-import java.io.File
+import run.qontract.core.utilities.*
+import java.io.PrintWriter
+import java.nio.file.Paths
 import java.util.concurrent.Callable
 
 @Command(name = "test",
@@ -59,6 +57,9 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--workingDirectory"], description = ["The working directory in which contacts will be checked out"])
     var workingDirectory: String? = null
 
+    @Option(names = ["--junit-report-dir"], description = ["Create junit xml reports in this directory"])
+    var junitReportDirName: String? = null
+
     override fun call() = try {
         if(port == 0) {
             port = when {
@@ -74,8 +75,8 @@ class TestCommand : Callable<Unit> {
         }
 
         if(workingDirectory != null) {
-            ensureThatManifestAndWorkingDirectoryExist(File(path), File(workingDirectory!!))
-            ensureEmptyOrNotExists(File(workingDirectory!!))
+            exitIfDoesNotExist("file", path)
+            createIfDoesNotExist(workingDirectory!!)
 
             System.setProperty("manifestFile", path)
             System.setProperty("workingDirectory", workingDirectory!!)
@@ -107,7 +108,14 @@ class TestCommand : Callable<Unit> {
         launcher.discover(request)
         val contractExecutionListener = ContractExecutionListener()
         launcher.registerTestExecutionListeners(contractExecutionListener)
+
+        junitReportDirName?.let { dirName ->
+            val reportListener = org.junit.platform.reporting.legacy.xml.LegacyXmlReportGeneratingListener(Paths.get(dirName), PrintWriter(System.out, true))
+            launcher.registerTestExecutionListeners(reportListener)
+        }
+
         launcher.execute(request)
+
         contractExecutionListener.exitProcess()
     }
     catch (e: Throwable) {

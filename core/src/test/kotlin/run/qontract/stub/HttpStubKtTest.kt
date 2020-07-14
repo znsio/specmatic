@@ -2,6 +2,7 @@ package run.qontract.stub
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.consoleLog
 import run.qontract.core.Feature
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
@@ -137,5 +138,86 @@ Scenario: Square of a number
         val bodyValue = response.body as JSONObjectValue
         assertThat(bodyValue.jsonObject).hasSize(1)
         assertThat(bodyValue.jsonObject.getValue("number")).isInstanceOf(NumberValue::class.java)
+    }
+
+    @Test
+    fun `multithreading test`() {
+        val feature = Feature("""
+Feature: POST API
+  Scenario: Test
+    Given type Number
+      | number | (number) |
+    When POST /
+    And form-field Data (Number)
+    Then status 200
+    And response-body (Number)
+""".trim())
+
+        val range = 0..9
+
+        HttpStub(feature).use { stub ->
+            createStubsUsingMultipleThreads(range, stub)
+
+            range.forEach { stubNumber ->
+                val response = invokeStub(stubNumber, stub)
+                println(response.body?.toStringValue())
+                val json = response.body as JSONObjectValue
+                val numberInResponse = json.jsonObject.getValue("number").toStringValue().toInt()
+
+                assertThat(numberInResponse).isEqualTo(stubNumber)
+            }
+        }
+    }
+
+    private fun createStubsUsingMultipleThreads(range: IntRange, stub: HttpStub) {
+        val threads = range.map { i ->
+            println("STARTING THREAD $i")
+            val thread = Thread(Runnable { createExpectation(i, stub) })
+            thread
+        }
+
+        start(threads)
+        waitFor(threads)
+    }
+
+    private fun waitFor(threads: List<Thread>) {
+        for(thread in threads) {
+            thread.join()
+        }
+    }
+
+    private fun start(threads: List<Thread>) {
+        for(thread in threads) {
+            thread.start()
+        }
+    }
+
+    private fun invokeStub(i: Int, stub: HttpStub): HttpResponse {
+        val request = HttpRequest(method = "POST", path = "/", formFields = mapOf("Data" to """{"number": $i}"""))
+        val client = HttpClient(stub.endPoint)
+        return client.execute(request)
+    }
+
+    private fun createExpectation(i: Int, stub: HttpStub) {
+        val stubInfo = """
+    {
+      "http-request": {
+        "method": "POST",
+        "path": "/",
+        "form-fields": {
+          "Data": "{\"number\": $i}"
+        }
+      },
+      "http-response": {
+        "status": 200,
+        "body": {"number": $i}
+      }
+    }
+    """.trimIndent()
+
+        val client = HttpClient(stub.endPoint, log = ::consoleLog)
+        val request = HttpRequest("POST", path = "/_qontract/expectations", body = parsedValue(stubInfo))
+        val response = client.execute(request)
+        assertThat(response.status).isEqualTo(200)
     }
 }

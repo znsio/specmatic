@@ -19,8 +19,8 @@ open class QontractJUnitSupport {
     @TestFactory
     fun contractAsTest(): Collection<DynamicTest> {
         val path = System.getProperty("path")
-        val workingDirectory = System.getProperty("workingDirectory")
-        val manifestFile = System.getProperty("manifestFile")
+        val givenWorkingDirectory = System.getProperty("workingDirectory")
+        val givenManifestFile = System.getProperty("manifestFile")
 
         val timeout = System.getProperty("timeout", "60").toInt()
 
@@ -34,14 +34,17 @@ open class QontractJUnitSupport {
 
         val testScenarios = try {
             when {
-                workingDirectory != null && manifestFile != null -> {
-                    ensureThatManifestAndWorkingDirectoryExist(File(manifestFile), File(workingDirectory))
+                path != null -> loadTestScenarios(path, suggestionsPath, suggestionsData)
+                else -> {
+                    val manifestFile = valueOrDefault(givenManifestFile, "qontract.manifest", "Neither contract nor manifest were specified")
+                    val workingDirectory = valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified")
+
+                    exitIfDoesNotExist("manifest file", manifestFile)
+                    createIfDoesNotExist(workingDirectory)
 
                     val contractFilePaths = contractFilePathsFrom(manifestFile, workingDirectory)
                     contractFilePaths.flatMap { loadTestScenarios(it, "", "") }
                 }
-                path != null -> loadTestScenarios(path, suggestionsPath, suggestionsData)
-                else -> throw ContractException("Either provide a contract path, or manifest path with working directory")
             }
         } catch(e: ContractException) {
             println(e.report())
@@ -68,6 +71,13 @@ open class QontractJUnitSupport {
                 ResultAssert.assertThat(result).isSuccess()
             }
         }.toList()
+    }
+
+    private fun valueOrDefault(givenManifestFile: String?, default: String, reason: String): String {
+        return when (givenManifestFile) {
+            null -> default.also { println("$reason, defaulting to $it") }
+            else -> givenManifestFile
+        }
     }
 
     private fun runKafkaTest(testScenario: Scenario): Result {

@@ -14,6 +14,7 @@ import org.xml.sax.InputSource
 import run.qontract.consoleLog
 import run.qontract.core.Resolver
 import run.qontract.core.nativeString
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.NullPattern
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.value.JSONArrayValue
@@ -205,7 +206,9 @@ fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> {
 
         val selector = pathSelector(repo.jsonObject)
 
-        ContractSource(gitRepo, repoName, selector)
+        val pathsJSON = repo.jsonObject.getValue("paths") as JSONArrayValue
+
+        ContractSource(gitRepo, repoName, selector, pathsJSON.list.map { it.toStringValue() })
     }
 }
 
@@ -247,37 +250,32 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
         exitWithMessage("${label.capitalize()} $filePath does not exist")
 }
 
+fun contractFilePaths(): List<String> = contractFilePathsFrom("qontract.json", ".qontract")
 
 fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<String> {
     println("Loading manifest file $manifestFile")
     val sources = loadSourceDataFromManifest(manifestFile)
 
-    val contractsDir = File(workingDirectory).resolve("contracts")
-    if(!contractsDir.exists()) contractsDir.mkdirs()
-
     val reposBaseDir = File(workingDirectory).resolve("repos")
     if(!reposBaseDir.exists()) reposBaseDir.mkdirs()
 
-    for (source in sources) {
-        if(source.gitRepositoryURL != null) {
-            println("Cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
-            val repoDir = clone(reposBaseDir, source.gitRepositoryURL)
-            val contractDir = contractsDir.resolve(repoDir.nameWithoutExtension)
-            if (!contractDir.exists()) contractDir.mkdirs()
-            println("Pulling selected contracts from ${repoDir.path} into ${contractDir.path}")
-            source.select(repoDir, contractDir)
-        } else if (source.moduleName != null) {
-            val repoDir = reposBaseDir.resolve(source.moduleName)
-            val contractDir = contractsDir.resolve(source.moduleName)
-
-            if (!contractDir.exists()) contractDir.mkdirs()
-            println("Pulling selected contracts from ${repoDir.path} into ${contractDir.path}")
-            source.select(repoDir, contractDir)
+    return sources.flatMap { source ->
+        val repoDir = when {
+            source.gitRepositoryURL != null -> {
+                println("Cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
+                clone(reposBaseDir, source.gitRepositoryURL)
+            }
+            source.moduleName != null -> reposBaseDir.resolve(source.moduleName)
+            else -> throw ContractException("Can't have git repo and module name both empty")
         }
 
+        source.paths.map {
+            repoDir.resolve(it).path
+        }
+    }.also {
+        println("Contract file paths #######")
+        println(it)
     }
-
-    return contractFiles(contractsDir).map { it.path }
 }
 
 class UncaughtExceptionHandler: Thread.UncaughtExceptionHandler {

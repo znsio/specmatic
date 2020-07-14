@@ -36,7 +36,7 @@ open class QontractJUnitSupport {
             when {
                 path != null -> loadTestScenarios(path, suggestionsPath, suggestionsData)
                 else -> {
-                    val manifestFile = valueOrDefault(givenManifestFile, "qontract.manifest", "Neither contract nor manifest were specified")
+                    val manifestFile = valueOrDefault(givenManifestFile, "qontract.json", "Neither contract nor manifest were specified")
                     val workingDirectory = valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified")
 
                     exitIfDoesNotExist("manifest file", manifestFile)

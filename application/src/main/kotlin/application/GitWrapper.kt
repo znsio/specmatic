@@ -8,6 +8,7 @@ class GitWrapper(private val workingDirectory: String) {
     fun push(): GitWrapper = this.also { executeCommand("git", "push") }
     fun pull(): GitWrapper = this.also { executeCommand("git", "pull") }
     fun resetHard(): GitWrapper = this.also { executeCommand("git",  "reset", "--hard", "HEAD") }
+    fun checkout(branchName: String): GitWrapper = this.also { executeCommand("git", "checkout", branchName) }
 
     private fun executeCommand(vararg command: String) = executeCommandWithWorkingDirectory(workingDirectory, command.toList().toTypedArray())
 }

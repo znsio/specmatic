@@ -38,6 +38,7 @@ class AddCommand: Callable<Unit> {
         val git = GitWrapper(olderContractFile.parent)
 
         try {
+            git.checkout("master")
             git.add()
 
             val pushRequired = try {

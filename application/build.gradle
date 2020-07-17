@@ -33,7 +33,7 @@ repositories {
 
 def ktor_version = "1.3.1"
 def junit_version = "5.6.2"
-def jgit_version = "5.8.0.202006091008-r"
+def jgit_version = "5.8.1.202007141445-r"
 
 dependencies {
     implementation 'info.picocli:picocli:4.4.0'

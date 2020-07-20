@@ -46,7 +46,10 @@ class AddCommand: Callable<Unit> {
         val git = GitWrapper(olderContractFile.parent)
 
         try {
+            println("Updating to latest")
             git.checkout("master")
+            git.merge("origin/master")
+            println("Adding contract")
             git.add()
 
             val pushRequired = try {
@@ -61,14 +64,15 @@ class AddCommand: Callable<Unit> {
 
             when {
                 pushRequired -> {
-                    println("Pushing the updated contract")
+                    println("Publishing the updated contract")
                     git.push()
                 }
-                else -> println("Nothing to commit, old and new are identical, no push required.")
+                else -> println("Nothing to publish, old and new are identical, no push required.")
             }
 
             val manifestFile = File("./qontract.json")
             if(manifestFile.exists()) {
+                println("Checking to see if manifest has CI credentials")
                 val manifestData = try {
                     parsedJSONStructure(manifestFile.readText())
                 } catch(e: Throwable) {
@@ -82,15 +86,17 @@ class AddCommand: Callable<Unit> {
 
                 when {
                     manifestData.jsonObject.containsKey("azure") -> {
+                        println("Manifest has azure credentials, checking if they are already registered")
                         git.pull()
                         val azureInfo = manifestData.getJSONObject("azure")
                         exitIfNoAzureData(azureInfo)
 
-                        val metaDataFile = File("${olderContractFile.nameWithoutExtension}.meta")
+                        val metaDataFile = File("${olderContractFile.parent}/${olderContractFile.nameWithoutExtension}.json")
 
                         val metaData = when {
                             metaDataFile.exists() -> parsedJSONStructure(metaDataFile.readText())
                             else -> {
+                                println("Could not find metadata fie")
                                 JSONObjectValue(mapOf("pipelines" to JSONArrayValue(emptyList())))
                             }
                         }
@@ -109,12 +115,13 @@ class AddCommand: Callable<Unit> {
                             if(it !is JSONObjectValue)
                                 exitWithMessage("All values in the pipelines list must be json objects")
 
-                            it.jsonObject.getValue("organisation") == azureInfo.getValue("organisation") &&
-                            it.jsonObject.getValue("organisation") == azureInfo.getValue("project") &&
-                            it.jsonObject.getValue("organisation") == azureInfo.getValue("definitionId")
+                            it.jsonObject.getValue("organization") == azureInfo.getValue("organization") &&
+                            it.jsonObject.getValue("project") == azureInfo.getValue("project") &&
+                            it.jsonObject.getValue("definitionId") == azureInfo.getValue("definitionId")
                         }) {
                             println("Updating the contract manifest to run this project's CI when ${olderContractFile.name} changes...")
-                            val newMetaData = metaData.jsonObject.plus(azureInfo)
+                            val newPipelines = JSONArrayValue(pipelines.list.plus(JSONObjectValue(azureInfo)))
+                            val newMetaData = metaData.jsonObject.plus("pipelines" to newPipelines)
 
                             metaDataFile.writeText(JSONObjectValue(newMetaData).toStringValue())
 
@@ -126,6 +133,8 @@ class AddCommand: Callable<Unit> {
                     }
                 }
             }
+
+            println("Done")
         } catch(e: UpdateError) {
             git.resetHard().pull()
 

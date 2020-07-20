@@ -193,16 +193,19 @@ fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> {
         exitWithMessage("Error loading manifest file ${manifestFile}: ${exceptionCauseMessage(e)}")
     }
 
-    if (manifestJson !is JSONArrayValue) exitWithMessage("The contents of the manifest must be a json array")
+    if (manifestJson !is JSONObjectValue) exitWithMessage("The contents of the manifest must be a json object")
 
-    return manifestJson.list.map { repo ->
-        if (repo !is JSONObjectValue) exitWithMessage("Every element of the json array in the manifest must be a json object, but got this: ${repo.toStringValue()}")
+    val sources = manifestJson.jsonObject.getOrDefault("sources", null)
+    if(sources !is JSONArrayValue) exitWithMessage("The \"sources\" key must hold a list of sources.")
+
+    return sources.list.map { repo ->
+        if (repo !is JSONObjectValue) exitWithMessage("Every element of the sources json array must be a json object, but got this: ${repo.toStringValue()}")
 
         val gitRepo = nativeString(repo.jsonObject, "git")
         val repoName = nativeString(repo.jsonObject, "repoName")
 
         if(gitRepo == null && repoName == null)
-            exitWithMessage("Each config object must contain either a key named git with the value being a git repo containing contracts, or a key named repoName containing the name of the repo when the contracts exist in a local path")
+            exitWithMessage("Each source config object must contain either a key named git with the value being a git repo containing contracts, or a key named repoName containing the name of the repo when the contracts exist in a local path")
 
         val selector = pathSelector(repo.jsonObject)
 

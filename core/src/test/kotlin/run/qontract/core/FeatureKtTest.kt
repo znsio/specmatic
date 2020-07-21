@@ -225,7 +225,7 @@ class FeatureKtTest {
               Then status 200
         """.trimIndent())
 
-        assertThat(feature.scenarios.single().scenarioStatus).isEqualTo(ScenarioStatus.WIPScenario)
+        assertThat(feature.scenarios.single().ignoreFailure).isTrue()
     }
 
     private fun deferredToJsonPatternData(pattern: Pattern, resolver: Resolver): Map<String, Pattern> =

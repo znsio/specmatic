@@ -42,11 +42,6 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
         }
     }
 
-    fun nonStrictSuccess(): Boolean {
-        return results.any {
-            it is Result.Failure && shouldFail(it)
-        }
-    }
 }
 
 internal fun isFluff(it: Result?): Boolean {

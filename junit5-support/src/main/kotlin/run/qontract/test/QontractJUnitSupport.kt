@@ -1,6 +1,5 @@
 package run.qontract.test
 
-import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
@@ -65,12 +64,13 @@ open class QontractJUnitSupport {
                     else -> runHttpTest(timeout, testScenario)
                 }.updateScenario(testScenario)
 
-                if(result is Result.Failure) {
-                    val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${resultReport(result).prependIndent("  ")}"
-                    throw TestAbortedException(message)
+                when {
+                    shouldBeIgnored(result) -> {
+                        val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${resultReport(result).prependIndent("  ")}"
+                        throw TestAbortedException(message)
+                    }
+                    else -> ResultAssert.assertThat(result).isSuccess()
                 }
-
-                ResultAssert.assertThat(result).isSuccess()
             }
         }.toList()
     }

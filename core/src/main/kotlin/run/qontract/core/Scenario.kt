@@ -1,6 +1,5 @@
 package run.qontract.core
 
-import run.qontract.core.ScenarioStatus.*
 import run.qontract.core.pattern.*
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.mapZip
@@ -11,21 +10,18 @@ import run.qontract.core.value.Value
 import run.qontract.test.TestExecutor
 import java.lang.StringBuilder
 
-enum class ScenarioStatus {
-    WIPScenario {
-        override fun failure(result: Result): Boolean = false
-        override val messageTag: String = "WIP"
-    },
-    FinalisedScenario {
-        override fun failure(result: Result): Boolean = result is Result.Failure
-        override val messageTag: String = "Testing"
-    };
+//enum class ScenarioStatus {
+//    WIPScenario {
+//        override fun test(result: Result): Boolean = false
+//    },
+//    FinalisedScenario {
+//        override fun test(result: Result.Failure): Boolean = result is Result.Failure
+//    };
+//
+//    abstract fun test(result: Result): Boolean
+//}
 
-    abstract fun failure(result: Result): Boolean
-    abstract val messageTag: String
-}
-
-data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: Map<String, Value>, val examples: List<Examples>, val patterns: Map<String, Pattern>, val fixtures: Map<String, Value>, val kafkaMessagePattern: KafkaMessagePattern? = null, val scenarioStatus: ScenarioStatus = FinalisedScenario) {
+data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: Map<String, Value>, val examples: List<Examples>, val patterns: Map<String, Pattern>, val fixtures: Map<String, Value>, val kafkaMessagePattern: KafkaMessagePattern? = null, val ignoreFailure: Boolean = false) {
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
             expectedFacts.keys == actualState.keys &&
                     mapZip(expectedFacts, actualState).all { (key, expectedStateValue, actualStateValue) ->
@@ -122,11 +118,11 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
         return when (kafkaMessagePattern) {
             null -> httpRequestPattern.newBasedOn(row, resolver).map { newHttpRequestPattern ->
-                Scenario(name, newHttpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures, kafkaMessagePattern, scenarioStatus)
+                Scenario(name, newHttpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures, kafkaMessagePattern, ignoreFailure)
             }
             else -> {
                 kafkaMessagePattern.newBasedOn(row, resolver).map { newKafkaMessagePattern ->
-                    Scenario(name, httpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures, newKafkaMessagePattern, scenarioStatus)
+                    Scenario(name, httpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures, newKafkaMessagePattern, ignoreFailure)
                 }
             }
         }
@@ -188,7 +184,7 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     }
 
     fun newBasedOn(scenario: Scenario): Scenario =
-        Scenario(this.name, this.httpRequestPattern, this.httpResponsePattern, this.expectedFacts, scenario.examples, this.patterns, this.fixtures, this.kafkaMessagePattern, this.scenarioStatus)
+        Scenario(this.name, this.httpRequestPattern, this.httpResponsePattern, this.expectedFacts, scenario.examples, this.patterns, this.fixtures, this.kafkaMessagePattern, this.ignoreFailure)
 
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)

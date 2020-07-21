@@ -7,21 +7,6 @@ import run.qontract.test.ResultAssert.Companion.assertThat
 
 internal class ResultAssertTest {
     @Test
-    fun `should allow a failing test on a WIP scenario through`() {
-        val feature = Feature("""
-            Feature: Test feature
-            
-            @WIP
-            Scenario: Test scenario
-              When POST /
-              Then status 200
-        """.trimIndent())
-
-        val failure = run.qontract.core.Result.Failure("For some reason").updateScenario(feature.scenarios.single())
-        assertThat(failure).isSuccess()
-    }
-
-    @Test
     fun `it should not allow a failing test on a finalised scenario through`() {
         val feature = Feature("""
             Feature: Test feature

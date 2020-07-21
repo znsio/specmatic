@@ -14,7 +14,7 @@ class ResultAssert(result: Result) : AbstractAssert<ResultAssert, Result>(result
     fun isSuccess() {
         isNotNull
 
-        if(actual?.scenario?.scenarioStatus?.failure(actual) == true) {
+        if(actual is Result.Failure) {
             failWithMessage(resultReport(actual, "Testing scenario"))
         }
     }

@@ -257,12 +257,12 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
     }
 
     val tags = featureTags.map { tag -> tag.name }
-    val resultCheck = when {
-        tags.asSequence().map { it.toUpperCase() }.contains("@WIP") -> ScenarioStatus.WIPScenario
-        else -> ScenarioStatus.FinalisedScenario
+    val ignoreFailure = when {
+        tags.asSequence().map { it.toUpperCase() }.contains("@WIP") -> true
+        else -> false
     }
 
-    return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)), scenarioStatus = resultCheck)
+    return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)), ignoreFailure = ignoreFailure)
 }
 
 fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
@@ -360,7 +360,7 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, ba
         if(scenarioInfo.scenarioName.isBlank())
             throw ContractException("A scenario name must not be empty. The contract has a scenario without a name.")
 
-        Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, scenarioInfo.expectedServerState, scenarioInfo.examples, scenarioInfo.patterns, scenarioInfo.fixtures, scenarioInfo.kafkaMessage, scenarioInfo.scenarioStatus)
+        Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, scenarioInfo.expectedServerState, scenarioInfo.examples, scenarioInfo.patterns, scenarioInfo.fixtures, scenarioInfo.kafkaMessage, scenarioInfo.ignoreFailure)
     }
 
 private fun lexBackground(featureChildren: List<GherkinDocument.Feature.FeatureChild>): ScenarioInfo =

@@ -93,9 +93,9 @@ fun resultReport(result: Result, scenarioMessage: String? = null): String {
     }.trim()
 }
 
-fun shouldFail(result: Result): Boolean {
+fun shouldBeIgnored(result: Result): Boolean {
     return when(result) {
         is Success -> false
-        is Failure -> result.scenario?.scenarioStatus?.failure(result) == true
+        is Failure -> result.scenario?.ignoreFailure == true
     }
 }

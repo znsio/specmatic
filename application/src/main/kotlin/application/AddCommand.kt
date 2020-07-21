@@ -1,10 +1,8 @@
 package application
 
 import picocli.CommandLine
-import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import run.qontract.core.Feature
-import run.qontract.core.pattern.JSONObjectPattern
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.testBackwardCompatibility2
 import run.qontract.core.utilities.exceptionCauseMessage
@@ -12,7 +10,6 @@ import run.qontract.core.utilities.exitWithMessage
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
-import run.qontract.mock.getJSONObjectValue
 import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
@@ -41,34 +38,18 @@ class AddCommand: Callable<Unit> {
             }
         }
 
-        newerContractFile.copyTo(olderContractFile, overwrite = olderContractFile.exists())
-
         val git = GitWrapper(olderContractFile.parent)
 
         try {
             println("Updating to latest")
-            git.checkout("master")
-            git.merge("origin/master")
+            git.apply {
+                pull()
+                checkout("master")
+                merge("origin/master")
+            }
+
             println("Adding contract")
-            git.add()
-
-            val pushRequired = try {
-                git.commit()
-                true
-            } catch(e: UpdateError) {
-                if(!exceptionMessageContains(e, listOf("nothing to commit")))
-                    throw e
-
-                exceptionMessageContains(e, listOf("branch is ahead of"))
-            }
-
-            when {
-                pushRequired -> {
-                    println("Publishing the updated contract")
-                    git.push()
-                }
-                else -> println("Nothing to publish, old and new are identical, no push required.")
-            }
+            newerContractFile.copyTo(olderContractFile, overwrite = olderContractFile.exists())
 
             val manifestFile = File("./qontract.json")
             if(manifestFile.exists()) {
@@ -84,54 +65,75 @@ class AddCommand: Callable<Unit> {
                     exitWithMessage("Manifest must contain a json object")
                 }
 
+                val azurePipelineKeyInQontractManifest = "azure-pipeline"
                 when {
-                    manifestData.jsonObject.containsKey("azure") -> {
+                    manifestData.jsonObject.containsKey(azurePipelineKeyInQontractManifest) -> {
                         println("Manifest has azure credentials, checking if they are already registered")
-                        git.pull()
-                        val azureInfo = manifestData.getJSONObject("azure")
-                        exitIfNoAzureData(azureInfo)
+                        val azureInfo = manifestData.getJSONObject(azurePipelineKeyInQontractManifest)
+                        if(hasAzureData(azureInfo)) {
+                            val metaDataFile = File("${olderContractFile.parent}/${olderContractFile.nameWithoutExtension}.json")
 
-                        val metaDataFile = File("${olderContractFile.parent}/${olderContractFile.nameWithoutExtension}.json")
+                            val azurePipelinesKeyInContractMetaData = "azure-pipelines"
 
-                        val metaData = when {
-                            metaDataFile.exists() -> parsedJSONStructure(metaDataFile.readText())
-                            else -> {
-                                println("Could not find metadata fie")
-                                JSONObjectValue(mapOf("pipelines" to JSONArrayValue(emptyList())))
+                            val metaData = when {
+                                metaDataFile.exists() -> parsedJSONStructure(metaDataFile.readText())
+                                else -> {
+                                    println("Could not find metadata file")
+                                    JSONObjectValue(mapOf(azurePipelinesKeyInContractMetaData to JSONArrayValue(emptyList())))
+                                }
                             }
-                        }
 
-                        if(metaData !is JSONObjectValue)
-                            exitWithMessage("Contract meta data must contain a json object")
+                            if (metaData !is JSONObjectValue)
+                                exitWithMessage("Contract meta data must contain a json object")
 
-                        if(!metaData.jsonObject.containsKey("pipelines"))
-                            exitWithMessage("Contract meta data must contain the key \"pipelines\"")
+                            if (!metaData.jsonObject.containsKey(azurePipelinesKeyInContractMetaData))
+                                exitWithMessage("Contract meta data must contain the key \"azure-pipelines\"")
 
-                        val pipelines = metaData.jsonObject.getValue("pipelines")
-                        if(pipelines !is JSONArrayValue)
-                            exitWithMessage("\"pipelines\" key must contain a list of pipelines")
+                            val pipelines = metaData.jsonObject.getValue(azurePipelinesKeyInContractMetaData)
+                            if (pipelines !is JSONArrayValue)
+                                exitWithMessage("\"azure-pipelines\" key must contain a list of pipelines")
 
-                        if(pipelines.list.none {
-                            if(it !is JSONObjectValue)
-                                exitWithMessage("All values in the pipelines list must be json objects")
+                            if (pipelines.list.none {
+                                        if (it !is JSONObjectValue)
+                                            exitWithMessage("All values in the pipelines list must be json objects")
 
-                            it.jsonObject.getValue("organization") == azureInfo.getValue("organization") &&
-                            it.jsonObject.getValue("project") == azureInfo.getValue("project") &&
-                            it.jsonObject.getValue("definitionId") == azureInfo.getValue("definitionId")
-                        }) {
-                            println("Updating the contract manifest to run this project's CI when ${olderContractFile.name} changes...")
-                            val newPipelines = JSONArrayValue(pipelines.list.plus(JSONObjectValue(azureInfo)))
-                            val newMetaData = metaData.jsonObject.plus("pipelines" to newPipelines)
+                                        it.jsonObject.getValue("organization") == azureInfo.getValue("organization") &&
+                                                it.jsonObject.getValue("project") == azureInfo.getValue("project") &&
+                                                it.jsonObject.getValue("definitionId") == azureInfo.getValue("definitionId")
+                                    }) {
+                                println("Updating the contract manifest to run this project's CI when ${olderContractFile.name} changes...")
+                                val newPipelines = JSONArrayValue(pipelines.list.plus(JSONObjectValue(azureInfo)))
+                                val newMetaData = metaData.jsonObject.plus(azurePipelinesKeyInContractMetaData to newPipelines)
 
-                            metaDataFile.writeText(JSONObjectValue(newMetaData).toStringValue())
+                                metaDataFile.writeText(JSONObjectValue(newMetaData).toStringValue())
 
-                            git.add()
-                            git.commit()
-
-                            git.push()
+                                git.add()
+                                git.commit()
+                            }
                         }
                     }
                 }
+            }
+
+            println("Adding to the repo")
+            git.add()
+
+            val pushRequired = try {
+                git.commit()
+                true
+            } catch(e: UpdateError) {
+                if(!exceptionMessageContains(e, listOf("nothing to commit")))
+                    throw e
+
+                exceptionMessageContains(e, listOf("branch is ahead of"))
+            }
+
+            when {
+                pushRequired -> {
+                    println("Publishing the updates")
+                    git.push()
+                }
+                else -> println("Nothing to publish, old and new are identical, no push required.")
             }
 
             println("Done")
@@ -143,16 +145,26 @@ class AddCommand: Callable<Unit> {
         }
     }
 
-    private fun exitIfNoAzureData(azureInfo: Map<String, Value>) {
-        if (!azureInfo.containsKey("organization"))
-            exitWithMessage("Azure info must contain the Azure organisation name under the \"organisation\" key")
-        if (!azureInfo.containsKey("project"))
-            exitWithMessage("Azure info must contain the Azure project name under the \"project\" key")
-        if (!azureInfo.containsKey("definitionId"))
-            exitWithMessage("Azure info must contain the Azure definition id under the \"definitionId\" key")
-
-        if (azureInfo.keys.size != 3)
-            exitWithMessage("Azure info must contain nothing but organisation, prjoect and definitionId")
+    private fun hasAzureData(azureInfo: Map<String, Value>): Boolean {
+        return when {
+            !azureInfo.containsKey("organization") -> {
+                println("Azure info must contain the Azure organisation name under the \"organisation\" key")
+                false
+            }
+            !azureInfo.containsKey("project") -> {
+                println("Azure info must contain the Azure project name under the \"project\" key")
+                false
+            }
+            !azureInfo.containsKey("definitionId") -> {
+                println("Azure info must contain the Azure definition id under the \"definitionId\" key")
+                false
+            }
+            azureInfo.keys.size != 3 -> {
+                println("Azure info keys must include nothing but organisation, project and definitionId")
+                false
+            }
+            else -> true
+        }
     }
 }
 

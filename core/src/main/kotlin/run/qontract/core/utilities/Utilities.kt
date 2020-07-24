@@ -2,9 +2,10 @@
 
 package run.qontract.core.utilities
 
+import io.ktor.http.encodeOAuth
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.TransportConfigCallback
-import org.eclipse.jgit.transport.SshTransport
+import org.eclipse.jgit.transport.*
 import org.eclipse.jgit.transport.sshd.SshdSessionFactory
 import org.w3c.dom.Document
 import org.w3c.dom.Node
@@ -30,6 +31,7 @@ import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 import kotlin.system.exitProcess
+
 
 fun exitWithMessage(message: String): Nothing {
     println(message)
@@ -114,17 +116,99 @@ private const val defaultContractFilePath = "$contractDirectory/service.contract
 fun clone(workingDirectory: File, gitRepositoryURI: String): File {
     val repoName = gitRepositoryURI.split("/").last()
     val cloneDirectory = workingDirectory.resolve(repoName)
-    if(!cloneDirectory.exists()) cloneDirectory.mkdirs()
-    val command = Git.cloneRepository().setURI(gitRepositoryURI).setDirectory(cloneDirectory).setTransportConfigCallback(getTransportCallingCallback())
-    command.call()
+//    if(!cloneDirectory.exists()) cloneDirectory.mkdirs()
+    if(cloneDirectory.exists()) cloneDirectory.deleteRecursively()
+    cloneDirectory.mkdirs()
+
+    val cloneCommand = Git.cloneRepository().apply {
+        setTransportConfigCallback(getTransportCallingCallback())
+        setURI(gitRepositoryURI)
+        setDirectory(cloneDirectory)
+    }
+
+    val accessToken = getAccessToken()
+
+    if(accessToken != null) {
+        val credentialsProvider: CredentialsProvider = UsernamePasswordCredentialsProvider(accessToken, "")
+        cloneCommand.setCredentialsProvider(credentialsProvider)
+    } else {
+        val ciBearerToken = getBearerToken()
+
+        if(ciBearerToken != null) {
+            cloneCommand.setTransportConfigCallback(getTransportCallingCallback(ciBearerToken.encodeOAuth()))
+        }
+    }
+
+    cloneCommand.call()
 
     return cloneDirectory
 }
 
-private fun getTransportCallingCallback(): TransportConfigCallback {
+fun getAccessToken(): String? {
+    return getPersonalAccessToken()
+}
+
+fun getBearerToken(): String? {
+    val qontractConfigFile = File("./qontract.json")
+    if(qontractConfigFile.exists()) {
+        val qontractConfig = parsedJSONStructure(qontractConfigFile.readText())
+
+        val qontractBearerTokenEnvironmentVariableName = "bearer-environment-variable"
+        val qontractBearerFileName = "bearer-file"
+        if (qontractConfig is JSONObjectValue) {
+            if(qontractConfig.jsonObject.containsKey(qontractBearerTokenEnvironmentVariableName)) {
+                val bearerName = qontractConfig.getString(qontractBearerTokenEnvironmentVariableName)
+                println("Found bearer name $bearerName")
+
+                if (System.getenv(bearerName) != null) {
+                    println("$bearerName is not empty")
+                    return System.getenv(bearerName)
+                }
+            } else if(qontractConfig.jsonObject.containsKey(qontractBearerFileName)) {
+                val bearerFileName = qontractConfig.getString(qontractBearerFileName)
+                println("Found bearer file name $bearerFileName")
+
+                val bearerFile = File("./$bearerFileName")
+                if(bearerFile.exists()) {
+                    println("Found bearer file")
+                    return bearerFile.readText().trim()
+                }
+            }
+        }
+    } else {
+        println("qontract.json not found")
+        println("Current working directory is ${File(".").absolutePath}")
+    }
+
+    return null
+}
+
+fun getPersonalAccessToken(): String? {
+    val homeDir = File(System.getProperty("user.home"))
+
+    if(homeDir.exists()) {
+        val configFile = homeDir.resolve("qontract.json")
+
+        if(configFile.exists()) {
+            val qontractConfig = parsedJSONStructure(configFile.readText())
+
+            val azureAccessTokenKey = "azure-access-token"
+            if (qontractConfig is JSONObjectValue && qontractConfig.jsonObject.containsKey(azureAccessTokenKey)) {
+                return qontractConfig.getString(azureAccessTokenKey)
+            }
+        }
+    }
+
+    return null
+}
+
+private fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCallback {
     return TransportConfigCallback { transport ->
         if (transport is SshTransport) {
             transport.sshSessionFactory = SshdSessionFactory()
+        } else if(bearerToken != null && transport is TransportHttp) {
+            println("Setting Authorization header")
+            transport.setAdditionalHeaders(mapOf("Authorization" to "Bearer $bearerToken"))
         }
     }
 }
@@ -188,7 +272,9 @@ fun strings(list: List<Value>): List<String> {
 
 fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> {
     val manifestJson = try {
-        parsedJSONStructure(File(manifestFile).readText())
+        val data = File(manifestFile).readText()
+        println("Config: $data")
+        parsedJSONStructure(data)
     } catch (e: Throwable) {
         exitWithMessage("Error loading manifest file ${manifestFile}: ${exceptionCauseMessage(e)}")
     }

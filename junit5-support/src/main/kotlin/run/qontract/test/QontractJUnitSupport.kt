@@ -90,8 +90,7 @@ open class QontractJUnitSupport {
 
         val commit = "true" == System.getProperty("commit")
 
-        val result = testKafkaMessages(testScenario, getBootstrapKafkaServers(), commit)
-        return result
+        return testKafkaMessages(testScenario, getBootstrapKafkaServers(), commit)
     }
 
     private fun runHttpTest(timeout: Int, testScenario: Scenario): Result {
@@ -99,8 +98,7 @@ open class QontractJUnitSupport {
         val port = System.getProperty("port")
         val protocol = System.getProperty("protocol") ?: "http"
 
-        val result: Result = executeTest(protocol, host, port, timeout, testScenario)
-        return result
+        return executeTest(protocol, host, port, timeout, testScenario)
     }
 
     private fun executeTest(protocol: String, host: String?, port: String?, timeout: Int, testScenario: Scenario): Result {

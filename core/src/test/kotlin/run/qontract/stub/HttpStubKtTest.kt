@@ -6,6 +6,7 @@ import run.qontract.consoleLog
 import run.qontract.core.Feature
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
+import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
@@ -138,6 +139,30 @@ Scenario: Square of a number
         val bodyValue = response.body as JSONObjectValue
         assertThat(bodyValue.jsonObject).hasSize(1)
         assertThat(bodyValue.jsonObject.getValue("number")).isInstanceOf(NumberValue::class.java)
+    }
+
+    @Test
+    fun temp() {
+        val feature = Feature("""
+Feature: Math API
+
+Scenario: Square of a number
+  Given json Information
+    | id   | (number) |
+    | data | (More)   |
+  And json More
+    | info | (number) |
+  When POST /number
+  And form-field Data (
+  Then status 200
+  And response-body
+    | number | (number) |
+""".trim())
+
+        val request1 = HttpRequest(method = "GET", path = "/number", formFields = mapOf("Data" to """{"id": 10, "data": {"info": 20} }"""))
+        val request2 = HttpRequest(method = "GET", path = "/number", formFields = mapOf("NotData" to """{"id": 10, "data": {"info": 20} }"""))
+        val response = stubResponse(request2, listOf(feature), listOf(HttpStubData(request1.toPattern(), HttpResponse(status = 200, body = parsedJSONStructure("""{"10": 10}""")), feature.scenarios.single().resolver)), false)
+        assertThat(response.status).isEqualTo(400)
     }
 
     @Test

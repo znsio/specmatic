@@ -2,10 +2,9 @@
 
 package run.qontract.core.utilities
 
-import io.ktor.http.encodeOAuth
-import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.TransportConfigCallback
-import org.eclipse.jgit.transport.*
+import org.eclipse.jgit.transport.SshTransport
+import org.eclipse.jgit.transport.TransportHttp
 import org.eclipse.jgit.transport.sshd.SshdSessionFactory
 import org.w3c.dom.Document
 import org.w3c.dom.Node
@@ -14,6 +13,8 @@ import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
 import run.qontract.consoleLog
 import run.qontract.core.Resolver
+import run.qontract.core.git.GitCommand
+import run.qontract.core.git.clone
 import run.qontract.core.nativeString
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.NullPattern
@@ -113,96 +114,7 @@ private const val currentDirectory = "./"
 private const val contractDirectory = "contract"
 private const val defaultContractFilePath = "$contractDirectory/service.contract"
 
-fun clone(workingDirectory: File, gitRepositoryURI: String): File {
-    val repoName = gitRepositoryURI.split("/").last()
-    val cloneDirectory = workingDirectory.resolve(repoName)
-//    if(!cloneDirectory.exists()) cloneDirectory.mkdirs()
-    if(cloneDirectory.exists()) cloneDirectory.deleteRecursively()
-    cloneDirectory.mkdirs()
-
-    val cloneCommand = Git.cloneRepository().apply {
-        setTransportConfigCallback(getTransportCallingCallback())
-        setURI(gitRepositoryURI)
-        setDirectory(cloneDirectory)
-    }
-
-    val accessToken = getAccessToken()
-
-    if(accessToken != null) {
-        val credentialsProvider: CredentialsProvider = UsernamePasswordCredentialsProvider(accessToken, "")
-        cloneCommand.setCredentialsProvider(credentialsProvider)
-    } else {
-        val ciBearerToken = getBearerToken()
-
-        if(ciBearerToken != null) {
-            cloneCommand.setTransportConfigCallback(getTransportCallingCallback(ciBearerToken.encodeOAuth()))
-        }
-    }
-
-    cloneCommand.call()
-
-    return cloneDirectory
-}
-
-fun getAccessToken(): String? {
-    return getPersonalAccessToken()
-}
-
-fun getBearerToken(): String? {
-    val qontractConfigFile = File("./qontract.json")
-    if(qontractConfigFile.exists()) {
-        val qontractConfig = parsedJSONStructure(qontractConfigFile.readText())
-
-        val qontractBearerTokenEnvironmentVariableName = "bearer-environment-variable"
-        val qontractBearerFileName = "bearer-file"
-        if (qontractConfig is JSONObjectValue) {
-            if(qontractConfig.jsonObject.containsKey(qontractBearerTokenEnvironmentVariableName)) {
-                val bearerName = qontractConfig.getString(qontractBearerTokenEnvironmentVariableName)
-                println("Found bearer name $bearerName")
-
-                if (System.getenv(bearerName) != null) {
-                    println("$bearerName is not empty")
-                    return System.getenv(bearerName)
-                }
-            } else if(qontractConfig.jsonObject.containsKey(qontractBearerFileName)) {
-                val bearerFileName = qontractConfig.getString(qontractBearerFileName)
-                println("Found bearer file name $bearerFileName")
-
-                val bearerFile = File("./$bearerFileName")
-                if(bearerFile.exists()) {
-                    println("Found bearer file")
-                    return bearerFile.readText().trim()
-                }
-            }
-        }
-    } else {
-        println("qontract.json not found")
-        println("Current working directory is ${File(".").absolutePath}")
-    }
-
-    return null
-}
-
-fun getPersonalAccessToken(): String? {
-    val homeDir = File(System.getProperty("user.home"))
-
-    if(homeDir.exists()) {
-        val configFile = homeDir.resolve("qontract.json")
-
-        if(configFile.exists()) {
-            val qontractConfig = parsedJSONStructure(configFile.readText())
-
-            val azureAccessTokenKey = "azure-access-token"
-            if (qontractConfig is JSONObjectValue && qontractConfig.jsonObject.containsKey(azureAccessTokenKey)) {
-                return qontractConfig.getString(azureAccessTokenKey)
-            }
-        }
-    }
-
-    return null
-}
-
-private fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCallback {
+fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCallback {
     return TransportConfigCallback { transport ->
         if (transport is SshTransport) {
             transport.sshSessionFactory = SshdSessionFactory()
@@ -212,7 +124,6 @@ private fun getTransportCallingCallback(bearerToken: String? = null): TransportC
         }
     }
 }
-
 
 fun pathSelector(repoConfig: Map<String, Value>): SelectorFunction {
     return when(val sourcePaths = getStringArray(repoConfig, "paths")) {
@@ -279,25 +190,34 @@ fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> {
         exitWithMessage("Error loading manifest file ${manifestFile}: ${exceptionCauseMessage(e)}")
     }
 
-    if (manifestJson !is JSONObjectValue) exitWithMessage("The contents of the manifest must be a json object")
+    if (manifestJson !is JSONObjectValue)
+        exitWithMessage("The contents of the manifest must be a json object")
 
     val sources = manifestJson.jsonObject.getOrDefault("sources", null)
-    if(sources !is JSONArrayValue) exitWithMessage("The \"sources\" key must hold a list of sources.")
 
-    return sources.list.map { repo ->
-        if (repo !is JSONObjectValue) exitWithMessage("Every element of the sources json array must be a json object, but got this: ${repo.toStringValue()}")
+    if(sources !is JSONArrayValue)
+        exitWithMessage("The \"sources\" key must hold a list of sources.")
 
-        val gitRepo = nativeString(repo.jsonObject, "git")
-        val repoName = nativeString(repo.jsonObject, "repoName")
+    return sources.list.map { source ->
+        if (source !is JSONObjectValue)
+            exitWithMessage("Every element of the sources json array must be a json object, but got this: ${source.toStringValue()}")
 
-        if(gitRepo == null && repoName == null)
-            exitWithMessage("Each source config object must contain either a key named git with the value being a git repo containing contracts, or a key named repoName containing the name of the repo when the contracts exist in a local path")
+        val provider = nativeString(source.jsonObject, "provider")
 
-        val selector = pathSelector(repo.jsonObject)
+        when(provider) {
+            "git" -> {
+                val repositoryURL = nativeString(source.jsonObject, "repository")
 
-        val pathsJSON = repo.jsonObject.getValue("paths") as JSONArrayValue
+                val contractPathsJSON = source.jsonObject.getValue("contracts") as JSONArrayValue
+                val contractPaths = contractPathsJSON.list.map { it.toStringValue() }
 
-        ContractSource(gitRepo, repoName, selector, pathsJSON.list.map { it.toStringValue() })
+                when (repositoryURL) {
+                    null -> GitMonoRepo(contractPaths)
+                    else -> GitRepo(repositoryURL, contractPaths)
+                }
+            }
+            else -> throw ContractException("Provider $provider not recognised in manifest data")
+        }
     }
 }
 
@@ -339,6 +259,7 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
         exitWithMessage("${label.capitalize()} $filePath does not exist")
 }
 
+// Used by QontractJUnitSupport users for loading contracts to stub or mock
 fun contractFilePaths(): List<String> = contractFilePathsFrom("qontract.json", ".qontract")
 
 fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<String> {
@@ -346,19 +267,33 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
     val sources = loadSourceDataFromManifest(manifestFile)
 
     val reposBaseDir = File(workingDirectory).resolve("repos")
-    if(!reposBaseDir.exists()) reposBaseDir.mkdirs()
 
     return sources.flatMap { source ->
-        val repoDir = when {
-            source.gitRepositoryURL != null -> {
-                println("Cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
-                clone(reposBaseDir, source.gitRepositoryURL)
+        val repoDir = when(source) {
+            is GitRepo -> {
+                println("Looking for contracts in local environment")
+                val userHome = File(System.getProperty("user.home"))
+                val defaultQontractWorkingDir = userHome.resolve(".qontract/repos")
+                val defaultRepoDir = defaultQontractWorkingDir.resolve(source.repoName)
+
+                when {
+                    defaultRepoDir.exists() && GitCommand(defaultRepoDir.path).workingDirectoryIsGitRepo() -> {
+                        println("Using local contracts")
+                        defaultRepoDir
+                    }
+                    else -> {
+                        println("Couldn't find local contracts, cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
+                        if(!reposBaseDir.exists())
+                            reposBaseDir.mkdirs()
+
+                        clone(reposBaseDir, source.gitRepositoryURL)
+                    }
+                }
             }
-            source.moduleName != null -> reposBaseDir.resolve(source.moduleName)
-            else -> throw ContractException("Can't have git repo and module name both empty")
+            is GitMonoRepo -> reposBaseDir
         }
 
-        source.paths.map {
+        source.contracts.map {
             repoDir.resolve(it).path
         }
     }.also {

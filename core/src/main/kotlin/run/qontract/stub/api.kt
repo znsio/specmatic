@@ -4,6 +4,7 @@ package run.qontract.stub
 import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
+import run.qontract.core.utilities.contractFilePaths
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.readFile
 import run.qontract.core.value.KafkaMessage
@@ -12,6 +13,7 @@ import run.qontract.mock.*
 import java.io.File
 import java.time.Duration
 
+// Used by stub client code
 fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): HttpStub {
     val contractBehaviour = Feature(contractGherkin)
 
@@ -27,8 +29,19 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
     return HttpStub(contractBehaviour, mocks, host, port, ::consoleLog)
 }
 
+// Used by stub client code
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == QONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
+
+// Used by stub client code
+fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
+    val contractPaths = contractFilePaths()
+    val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
+    val features = contractInfo.map { it.first }
+    val httpExpectations = contractInfoToHttpExpectations(contractInfo)
+
+    return HttpStub(features, httpExpectations, host, port, ::consoleLog)
+}
 
 fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
     val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
@@ -152,6 +165,7 @@ private fun pathToFileListRecursive(dataDirFiles: List<File>): List<File> =
             pathToFileListRecursive(fileList).plus(it)
         }.flatten()
 
+// Used by stub client code
 fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
     val dataDirPaths = implicitContractDataDirs(contractPaths)
     return createStubFromContracts(contractPaths, dataDirPaths, host, port)
@@ -165,6 +179,7 @@ fun implicitContractDataDir(contractPath: String): File {
     return File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
 }
 
+// Used by stub client code
 fun stubKafkaMessage(contractPath: String, message: String, bootstrapServers: String) {
     val kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, jsonStringToValueMap(message)))
     Feature(File(contractPath).readText()).assertMatchesMockKafkaMessage(kafkaMessage)
@@ -173,6 +188,7 @@ fun stubKafkaMessage(contractPath: String, message: String, bootstrapServers: St
     }
 }
 
+// Used by stub client code
 fun testKafkaMessage(contractPath: String, bootstrapServers: String, commit: Boolean) {
     val feature = Feature(File(contractPath).readText())
 

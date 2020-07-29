@@ -20,10 +20,11 @@ private const val azurePipelineKeyInQontractManifest = "azure-pipeline"
 @CommandLine.Command(name = "push", description = ["Check the new contract for backward compatibility with the specified version, then overwrite the old one with it."], mixinStandardHelpOptions = true)
 class PushCommand: Callable<Unit> {
     override fun call() {
-        val workingDirectory = File(".qontract/repos")
+        val userHome = File(System.getProperty("user.home"))
+        val workingDirectory = userHome.resolve(".qontract/repos")
 
-        val sources = loadSourceDataFromManifest("./qontract.json")
         val manifestFile = File("./qontract.json")
+        val sources = loadSourceDataFromManifest(manifestFile.path)
         val manifestData = try {
             parsedJSONStructure(manifestFile.readText())
         } catch (e: Throwable) {
@@ -32,23 +33,20 @@ class PushCommand: Callable<Unit> {
         }
 
         for(source in sources) {
-            val sourceDir = when(source) {
-                is GitRepo -> workingDirectory.resolve(source.gitRepositoryURL.split("/").last())
-                is GitMonoRepo -> File(".")
-            }
-
+            val sourceDir = source.directoryRelativeTo(workingDirectory)
             val sourceGit = GitCommand(sourceDir.path)
 
             try {
-                if (sourceGit.isGitRepository()) {
+                if(sourceGit.workingDirectoryIsGitRepo()) {
                     sourceGit.pull()
 
-                    for (contractPath in source.paths) {
+                    val changedFiles = sourceGit.getChangedFiles().filter { it.endsWith(".qontract") }
+                    for(contractPath in changedFiles) {
                         testBackwardCompatibility(sourceDir, contractPath, sourceGit, source)
-                        subscribeToContract(manifestData, contractPath, sourceGit)
+                        subscribeToContract(manifestData, sourceDir.resolve(contractPath).path, sourceGit)
                     }
 
-                    for(contractPath in source.paths) {
+                    for(contractPath in changedFiles) {
                         sourceGit.add(contractPath)
                     }
 
@@ -78,7 +76,12 @@ class PushCommand: Callable<Unit> {
         val newVersion = sourcePath.readText()
 
         val oldVersion = try {
-            sourceGit.show("HEAD", sourceDir.resolve(contractPath).path)
+            val gitRoot = File(sourceGit.gitRoot()).absoluteFile
+            println("Git root: ${gitRoot.path}")
+            println("Source path: ${sourcePath.absoluteFile.path}")
+            val relativeSourcePath = sourcePath.absoluteFile.relativeTo(gitRoot)
+            println("Relative source path: ${relativeSourcePath.path}")
+            sourceGit.show("HEAD", relativeSourcePath.path)
         } catch (e: Throwable) {
             ""
         }
@@ -110,18 +113,18 @@ class PushCommand: Callable<Unit> {
 
         when {
             pushRequired -> {
-                println("Publishing the updates")
+                println("Pushing changes")
                 sourceGit.push()
             }
-            else -> println("Nothing to publish, old and new are identical, no push required.")
+            else -> println("No changes were made to the repo, so nothing was pushed.")
         }
     }
 
-    private fun registerAzureCredentials(manifestData: JSONObjectValue, path: String, sourceGit: GitCommand) {
+    private fun registerAzureCredentials(manifestData: JSONObjectValue, contractPath: String, sourceGit: GitCommand) {
         println("Manifest has azure credentials, checking if they are already registered")
         val azureInfo = manifestData.getJSONObject(azurePipelineKeyInQontractManifest)
         if (hasAzureData(azureInfo)) {
-            val filePath = File(path)
+            val filePath = File(contractPath)
             val metaDataFile = File("${filePath.parent}/${filePath.nameWithoutExtension}.json")
 
             val azurePipelinesKeyInContractMetaData = "azure-pipelines"
@@ -152,6 +155,7 @@ class PushCommand: Callable<Unit> {
                                 it.jsonObject.getValue("project") == azureInfo.getValue("project") &&
                                 it.jsonObject.getValue("definitionId") == azureInfo.getValue("definitionId")
                     }) {
+
                 println("Updating the contract manifest to run this project's CI when ${filePath.name} changes...")
                 val newPipelines = JSONArrayValue(pipelines.list.plus(JSONObjectValue(azureInfo)))
                 val newMetaData = metaData.jsonObject.plus(azurePipelinesKeyInContractMetaData to newPipelines)

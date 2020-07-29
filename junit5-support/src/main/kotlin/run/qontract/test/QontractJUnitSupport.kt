@@ -33,17 +33,19 @@ open class QontractJUnitSupport {
             checkBackwardCompatibilityInPath(path)
         }
 
+        val workingDirectory = File(valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified"))
+
         val testScenarios = try {
             when {
                 path != null -> loadTestScenarios(path, suggestionsPath, suggestionsData)
                 else -> {
                     val manifestFile = valueOrDefault(givenManifestFile, "qontract.json", "Neither contract nor manifest were specified")
-                    val workingDirectory = valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified")
 
                     exitIfDoesNotExist("manifest file", manifestFile)
-                    createIfDoesNotExist(workingDirectory)
 
-                    val contractFilePaths = contractFilePathsFrom(manifestFile, workingDirectory)
+                    createIfDoesNotExist(workingDirectory.path)
+
+                    val contractFilePaths = contractFilePathsFrom(manifestFile, workingDirectory.path)
                     contractFilePaths.flatMap { loadTestScenarios(it, "", "") }
                 }
             }
@@ -54,6 +56,8 @@ open class QontractJUnitSupport {
             println(exceptionCauseMessage(e))
             throw e
         }
+
+        workingDirectory.deleteRecursively()
 
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.toString()) {

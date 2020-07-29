@@ -13,6 +13,7 @@ import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
 import run.qontract.consoleLog
 import run.qontract.core.Resolver
+import run.qontract.core.git.GitCommand
 import run.qontract.core.git.clone
 import run.qontract.core.nativeString
 import run.qontract.core.pattern.ContractException
@@ -184,9 +185,7 @@ fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> {
     val manifestJson = try {
         val data = File(manifestFile).readText()
         println("Config: $data")
-        parsedJSONStructure(data).also {
-
-        }
+        parsedJSONStructure(data)
     } catch (e: Throwable) {
         exitWithMessage("Error loading manifest file ${manifestFile}: ${exceptionCauseMessage(e)}")
     }
@@ -207,7 +206,7 @@ fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> {
 
         when(provider) {
             "git" -> {
-                val repositoryURL = nativeString(source.jsonObject, "repositoryURL")
+                val repositoryURL = nativeString(source.jsonObject, "repository")
 
                 val contractPathsJSON = source.jsonObject.getValue("contracts") as JSONArrayValue
                 val contractPaths = contractPathsJSON.list.map { it.toStringValue() }
@@ -260,6 +259,7 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
         exitWithMessage("${label.capitalize()} $filePath does not exist")
 }
 
+// Used by QontractJUnitSupport users for loading contracts to stub or mock
 fun contractFilePaths(): List<String> = contractFilePathsFrom("qontract.json", ".qontract")
 
 fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<String> {
@@ -267,18 +267,33 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
     val sources = loadSourceDataFromManifest(manifestFile)
 
     val reposBaseDir = File(workingDirectory).resolve("repos")
-    if(!reposBaseDir.exists()) reposBaseDir.mkdirs()
 
     return sources.flatMap { source ->
         val repoDir = when(source) {
             is GitRepo -> {
-                println("Cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
-                clone(reposBaseDir, source.gitRepositoryURL)
+                println("Looking for contracts in local environment")
+                val userHome = File(System.getProperty("user.home"))
+                val defaultQontractWorkingDir = userHome.resolve(".qontract/repos")
+                val defaultRepoDir = defaultQontractWorkingDir.resolve(source.repoName)
+
+                when {
+                    defaultRepoDir.exists() && GitCommand(defaultRepoDir.path).workingDirectoryIsGitRepo() -> {
+                        println("Using local contracts")
+                        defaultRepoDir
+                    }
+                    else -> {
+                        println("Couldn't find local contracts, cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
+                        if(!reposBaseDir.exists())
+                            reposBaseDir.mkdirs()
+
+                        clone(reposBaseDir, source.gitRepositoryURL)
+                    }
+                }
             }
-            is GitMonoRepo -> reposBaseDir.resolve(".")
+            is GitMonoRepo -> reposBaseDir
         }
 
-        source.paths.map {
+        source.contracts.map {
             repoDir.resolve(it).path
         }
     }.also {

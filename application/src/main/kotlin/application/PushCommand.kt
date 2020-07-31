@@ -5,6 +5,7 @@ import run.qontract.core.Feature
 import run.qontract.core.git.GitCommand
 import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.git.exitErrorMessageContains
+import run.qontract.core.git.loadFromPath
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.testBackwardCompatibility2
 import run.qontract.core.utilities.*
@@ -15,22 +16,16 @@ import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
-private const val azurePipelineKeyInQontractManifest = "azure-pipeline"
+private const val pipelineKeyInQontractManifest = "pipeline"
 
 @CommandLine.Command(name = "push", description = ["Check the new contract for backward compatibility with the specified version, then overwrite the old one with it."], mixinStandardHelpOptions = true)
 class PushCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".qontract/repos")
-
         val manifestFile = File("./qontract.json")
-        val sources = loadSourceDataFromManifest(manifestFile.path)
-        val manifestData = try {
-            parsedJSONStructure(manifestFile.readText())
-        } catch (e: Throwable) {
-            println("Couldn't read manifest file: ${exceptionCauseMessage(e)}")
-            return
-        }
+        val manifestData = loadJSONFromManifest(manifestFile)
+        val sources = loadSourceDataFromManifest(manifestData)
 
         for(source in sources) {
             val sourceDir = source.directoryRelativeTo(workingDirectory)
@@ -61,16 +56,6 @@ class PushCommand: Callable<Unit> {
         }
     }
 
-    private fun subscribeToContract(manifestData: Value, contractPath: String, sourceGit: GitCommand) {
-        println("Checking to see if manifest has CI credentials")
-
-        if (manifestData !is JSONObjectValue)
-            exitWithMessage("Manifest must contain a json object")
-
-        if (manifestData.jsonObject.containsKey(azurePipelineKeyInQontractManifest))
-            registerAzureCredentials(manifestData, contractPath, sourceGit)
-    }
-
     private fun testBackwardCompatibility(sourceDir: File, contractPath: String, sourceGit: GitCommand, source: ContractSource) {
         val sourcePath = sourceDir.resolve(contractPath)
         val newVersion = sourcePath.readText()
@@ -99,93 +84,90 @@ class PushCommand: Callable<Unit> {
             }
         }
     }
+}
 
-    private fun commitAndPush(sourceGit: GitCommand) {
-        val pushRequired = try {
-            sourceGit.commit()
-            true
-        } catch (e: NonZeroExitError) {
-            if (!exitErrorMessageContains(e, listOf("nothing to commit")))
-                throw e
+fun hasAzureData(azureInfo: Map<String, Value>): Boolean {
+    val expectedKeys = listOf("organization", "project", "definitionId", "provider")
+    val missingKey = expectedKeys.find { it !in azureInfo }
 
-            exitErrorMessageContains(e, listOf("branch is ahead of"))
-        }
-
-        when {
-            pushRequired -> {
-                println("Pushing changes")
-                sourceGit.push()
-            }
-            else -> println("No changes were made to the repo, so nothing was pushed.")
+    return when(missingKey) {
+        null -> true
+        else -> {
+            println("Azure info must contain the key \"organisation\"")
+            false
         }
     }
+}
 
-    private fun registerAzureCredentials(manifestData: JSONObjectValue, contractPath: String, sourceGit: GitCommand) {
-        println("Manifest has azure credentials, checking if they are already registered")
-        val azureInfo = manifestData.getJSONObject(azurePipelineKeyInQontractManifest)
-        if (hasAzureData(azureInfo)) {
-            val filePath = File(contractPath)
-            val metaDataFile = File("${filePath.parent}/${filePath.nameWithoutExtension}.json")
+fun subscribeToContract(manifestData: Value, contractPath: String, sourceGit: GitCommand) {
+    println("Checking to see if manifest has CI credentials")
 
-            val azurePipelinesKeyInContractMetaData = "azure-pipelines"
+    if (manifestData !is JSONObjectValue)
+        exitWithMessage("Manifest must contain a json object")
 
-            val metaData = when {
-                metaDataFile.exists() -> parsedJSONStructure(metaDataFile.readText())
-                else -> {
-                    println("Could not find metadata file")
-                    JSONObjectValue(mapOf(azurePipelinesKeyInContractMetaData to JSONArrayValue(emptyList())))
-                }
+    if (manifestData.jsonObject.containsKey(pipelineKeyInQontractManifest))
+        registerPipelineCredentials(manifestData, contractPath, sourceGit)
+}
+
+fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: String, sourceGit: GitCommand) {
+    println("Manifest has pipeline credentials, checking if they are already registered")
+
+    val provider = loadFromPath(manifestData, listOf(pipelineKeyInQontractManifest, "provider"))?.toStringValue()
+    val pipelineInfo = manifestData.getJSONObject(pipelineKeyInQontractManifest)
+
+    if (provider == "azure" && hasAzureData(pipelineInfo)) {
+        val filePath = File(contractPath)
+        val qontractMetaDataFile = File("${filePath.parent}/${filePath.nameWithoutExtension}.json")
+
+        val pipelinesKeyInContractMetaData = "pipelines"
+
+        val qontractMetaData = when {
+            qontractMetaDataFile.exists() -> parsedJSONStructure(qontractMetaDataFile.readText())
+            else -> {
+                println("Could not find metadata file")
+                JSONObjectValue(mapOf(pipelinesKeyInContractMetaData to JSONArrayValue(emptyList())))
             }
+        }
 
-            if (metaData !is JSONObjectValue)
-                exitWithMessage("Contract meta data must contain a json object")
+        if (qontractMetaData !is JSONObjectValue)
+            exitWithMessage("Contract meta data must contain a json object")
 
-            if (!metaData.jsonObject.containsKey(azurePipelinesKeyInContractMetaData))
-                exitWithMessage("Contract meta data must contain the key \"azure-pipelines\"")
+        if (!qontractMetaData.jsonObject.containsKey(pipelinesKeyInContractMetaData))
+            exitWithMessage("Contract meta data must contain the key \"azure-pipelines\"")
 
-            val pipelines = metaData.jsonObject.getValue(azurePipelinesKeyInContractMetaData)
-            if (pipelines !is JSONArrayValue)
-                exitWithMessage("\"azure-pipelines\" key must contain a list of pipelines")
+        val pipelines = qontractMetaData.jsonObject.getValue(pipelinesKeyInContractMetaData)
+        if (pipelines !is JSONArrayValue)
+            exitWithMessage("\"azure-pipelines\" key must contain a list of pipelines")
 
-            if (pipelines.list.none {
-                        if (it !is JSONObjectValue)
-                            exitWithMessage("All values in the pipelines list must be json objects")
+        if(pipelines.list.none { it is JSONObjectValue && it.jsonObject == pipelineInfo }) {
+            println("Updating the contract manifest to run this project's CI when ${filePath.name} changes...")
 
-                        it.jsonObject.getValue("organization") == azureInfo.getValue("organization") &&
-                                it.jsonObject.getValue("project") == azureInfo.getValue("project") &&
-                                it.jsonObject.getValue("definitionId") == azureInfo.getValue("definitionId")
-                    }) {
+            val newPipelines = JSONArrayValue(pipelines.list.plus(JSONObjectValue(pipelineInfo)))
+            val newMetaData = qontractMetaData.jsonObject.plus(pipelinesKeyInContractMetaData to newPipelines)
 
-                println("Updating the contract manifest to run this project's CI when ${filePath.name} changes...")
-                val newPipelines = JSONArrayValue(pipelines.list.plus(JSONObjectValue(azureInfo)))
-                val newMetaData = metaData.jsonObject.plus(azurePipelinesKeyInContractMetaData to newPipelines)
+            qontractMetaDataFile.writeText(JSONObjectValue(newMetaData).toStringValue())
 
-                metaDataFile.writeText(JSONObjectValue(newMetaData).toStringValue())
-
-                sourceGit.add()
-            }
+            sourceGit.add()
         }
     }
+}
 
-    private fun hasAzureData(azureInfo: Map<String, Value>): Boolean {
-        return when {
-            !azureInfo.containsKey("organization") -> {
-                println("Azure info must contain the Azure organisation name under the \"organisation\" key")
-                false
-            }
-            !azureInfo.containsKey("project") -> {
-                println("Azure info must contain the Azure project name under the \"project\" key")
-                false
-            }
-            !azureInfo.containsKey("definitionId") -> {
-                println("Azure info must contain the Azure definition id under the \"definitionId\" key")
-                false
-            }
-            azureInfo.keys.size != 3 -> {
-                println("Azure info keys must include nothing but organisation, project and definitionId")
-                false
-            }
-            else -> true
+fun commitAndPush(sourceGit: GitCommand) {
+    val pushRequired = try {
+        sourceGit.commit()
+        true
+    } catch (e: NonZeroExitError) {
+        if (!exitErrorMessageContains(e, listOf("nothing to commit")))
+            throw e
+
+        exitErrorMessageContains(e, listOf("branch is ahead of"))
+    }
+
+    when {
+        pushRequired -> {
+            println("Pushing changes")
+            sourceGit.push()
         }
+        else -> println("No changes were made to the repo, so nothing was pushed.")
     }
 }

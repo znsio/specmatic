@@ -7,6 +7,7 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.utilities.getTransportCallingCallback
 import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.Value
 import java.io.File
 
 fun clone(workingDirectory: File, gitRepositoryURI: String): File {
@@ -47,7 +48,7 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File, onFailure:
             setDirectory(cloneDirectory)
         }
 
-        val accessToken = getAccessToken()
+        val accessToken = getPersonalAccessToken()
 
         if (accessToken != null) {
             val credentialsProvider: CredentialsProvider = UsernamePasswordCredentialsProvider(accessToken, "")
@@ -66,43 +67,51 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File, onFailure:
     }
 }
 
-fun getAccessToken(): String? {
-    return getPersonalAccessToken()
+fun loadFromPath(json: Value?, path: List<String>): Value? {
+    if (json !is JSONObjectValue)
+        return null
+
+    return when(path.size) {
+        0 -> null
+        1 -> json.jsonObject[path.first()]
+        else -> loadFromPath(json.jsonObject[path.first()], path.drop(1))
+    }
 }
 
 fun getBearerToken(): String? {
     val qontractConfigFile = File("./qontract.json")
-    if(qontractConfigFile.exists()) {
-        val qontractConfig = parsedJSONStructure(qontractConfigFile.readText())
 
-        val qontractBearerTokenEnvironmentVariableName = "bearer-environment-variable"
-        val qontractBearerFileName = "bearer-file"
-        if (qontractConfig is JSONObjectValue) {
-            if(qontractConfig.jsonObject.containsKey(qontractBearerTokenEnvironmentVariableName)) {
-                val bearerName = qontractConfig.getString(qontractBearerTokenEnvironmentVariableName)
-                println("Found bearer name $bearerName")
-
-                if (System.getenv(bearerName) != null) {
-                    println("$bearerName is not empty")
-                    return System.getenv(bearerName)
-                }
-            } else if(qontractConfig.jsonObject.containsKey(qontractBearerFileName)) {
-                val bearerFileName = qontractConfig.getString(qontractBearerFileName)
-                println("Found bearer file name $bearerFileName")
-
-                val bearerFile = File("./$bearerFileName")
-                if(bearerFile.exists()) {
-                    println("Found bearer file")
-                    return bearerFile.readText().trim()
-                }
+    return when {
+        qontractConfigFile.exists() ->
+            readQontractConfig(qontractConfigFile).let { qontractConfig ->
+                readBearerFromEnvVariable(qontractConfig) ?: readBearerFromFile(qontractConfig)
             }
+        else -> null.also {
+            println("qontract.json not found")
+            println("Current working directory is ${File(".").absolutePath}")
         }
-    } else {
-        println("qontract.json not found")
-        println("Current working directory is ${File(".").absolutePath}")
     }
+}
 
-    return null
+private fun readBearerFromEnvVariable(qontractConfig: Value): String? {
+    return loadFromPath(qontractConfig, listOf("auth", "bearer-environment-variable"))?.toStringValue()?.let { bearerName ->
+        println("Found bearer name $bearerName")
+
+        System.getenv(bearerName).also {
+            if(it != null) println("$bearerName is not empty")
+        }
+    }
+}
+
+private fun readBearerFromFile(qontractConfig: Value): String? {
+    return loadFromPath(qontractConfig, listOf("auth", "bearer-file"))?.toStringValue()?.let { bearerFileName ->
+        println("Found bearer file name $bearerFileName")
+
+        File("./$bearerFileName").takeIf { it.exists() }?.let {
+            println("Found bearer file")
+            it.readText().trim()
+        }
+    }
 }
 
 fun getPersonalAccessToken(): String? {
@@ -112,7 +121,7 @@ fun getPersonalAccessToken(): String? {
         val configFile = homeDir.resolve("qontract.json")
 
         if(configFile.exists()) {
-            val qontractConfig = parsedJSONStructure(configFile.readText())
+            val qontractConfig = readQontractConfig(configFile)
 
             val azureAccessTokenKey = "azure-access-token"
             if (qontractConfig is JSONObjectValue && qontractConfig.jsonObject.containsKey(azureAccessTokenKey)) {
@@ -123,3 +132,5 @@ fun getPersonalAccessToken(): String? {
 
     return null
 }
+
+private fun readQontractConfig(qontractConfigFile: File) = parsedJSONStructure(qontractConfigFile.readText())

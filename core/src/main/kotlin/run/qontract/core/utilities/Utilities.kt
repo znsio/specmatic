@@ -181,18 +181,26 @@ fun strings(list: List<Value>): List<String> {
     }
 }
 
-fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> {
+fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> = loadSourceDataFromManifest(File(manifestFile))
+
+fun loadSourceDataFromManifest(manifestFile: File): List<ContractSource> = loadSourceDataFromManifest(loadJSONFromManifest(manifestFile))
+
+fun loadJSONFromManifest(manifestFile: File): JSONObjectValue {
     val manifestJson = try {
-        val data = File(manifestFile).readText()
-        println("Config: $data")
-        parsedJSONStructure(data)
+        parsedJSONStructure(manifestFile.readText())
+
     } catch (e: Throwable) {
-        exitWithMessage("Error loading manifest file ${manifestFile}: ${exceptionCauseMessage(e)}")
+        exitWithMessage("Error reading the manifest: ${exceptionCauseMessage(e)}")
     }
 
     if (manifestJson !is JSONObjectValue)
         exitWithMessage("The contents of the manifest must be a json object")
 
+    return manifestJson
+}
+
+
+fun loadSourceDataFromManifest(manifestJson: JSONObjectValue): List<ContractSource> {
     val sources = manifestJson.jsonObject.getOrDefault("sources", null)
 
     if(sources !is JSONArrayValue)

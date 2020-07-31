@@ -20,10 +20,10 @@ data class GitRepo(val gitRepositoryURL: String, override val contracts: List<St
     }
 
     override fun directoryRelativeTo(workingDirectory: File) =
-            workingDirectory.resolve(this.gitRepositoryURL.split("/").last())
+            workingDirectory.resolve(repoName)
 
     override fun install(workingDirectory: File) {
-        val sourceDir = workingDirectory.resolve(this.gitRepositoryURL.split("/").last())
+        val sourceDir = workingDirectory.resolve(repoName)
         val sourceGit = GitCommand(sourceDir.path)
 
         try {

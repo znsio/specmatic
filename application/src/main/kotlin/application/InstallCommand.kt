@@ -1,3 +1,5 @@
+package application
+
 import picocli.CommandLine
 import run.qontract.core.utilities.loadSourceDataFromManifest
 import java.io.File

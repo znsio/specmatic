@@ -5,26 +5,20 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.utilities.GitRepo
 import run.qontract.core.utilities.getTransportCallingCallback
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
 import java.io.File
 
-fun clone(workingDirectory: File, gitRepositoryURI: String): File {
-    val cloneDirectory = cloneDirectory(workingDirectory, gitRepositoryURI)
+fun clone(workingDirectory: File, gitRepo: GitRepo): File {
+    val cloneDirectory = gitRepo.directoryRelativeTo(workingDirectory)
 
     resetCloneDirectory(cloneDirectory)
-    clone(gitRepositoryURI, cloneDirectory)
+    clone(gitRepo.gitRepositoryURL, cloneDirectory)
 
     return cloneDirectory
 }
-
-private fun cloneDirectory(workingDirectory: File, gitRepositoryURI: String): File {
-    val repoName = lastSegment(gitRepositoryURI)
-    return workingDirectory.resolve(repoName)
-}
-
-private fun lastSegment(gitRepositoryURI: String) = gitRepositoryURI.split("/").last()
 
 private fun clone(gitRepositoryURI: String, cloneDirectory: File) {
     jgitClone(gitRepositoryURI, cloneDirectory) { exception ->

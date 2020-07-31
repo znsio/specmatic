@@ -282,7 +282,7 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
                 println("Looking for contracts in local environment")
                 val userHome = File(System.getProperty("user.home"))
                 val defaultQontractWorkingDir = userHome.resolve(".qontract/repos")
-                val defaultRepoDir = defaultQontractWorkingDir.resolve(source.repoName)
+                val defaultRepoDir = source.directoryRelativeTo(defaultQontractWorkingDir)
 
                 when {
                     defaultRepoDir.exists() && GitCommand(defaultRepoDir.path).workingDirectoryIsGitRepo() -> {
@@ -294,7 +294,7 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
                         if(!reposBaseDir.exists())
                             reposBaseDir.mkdirs()
 
-                        clone(reposBaseDir, source.gitRepositoryURL)
+                        clone(reposBaseDir, source)
                     }
                 }
             }

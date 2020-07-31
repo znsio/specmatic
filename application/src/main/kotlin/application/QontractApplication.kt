@@ -1,6 +1,5 @@
 package application
 
-import InstallCommand
 import application.test.ManifestCommand
 import application.versioning.commands.VersionCommand
 import picocli.CommandLine

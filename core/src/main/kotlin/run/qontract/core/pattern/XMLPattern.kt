@@ -19,7 +19,7 @@ private fun nodeTypes(node: XMLNode): List<Pattern> {
 private fun attributeTypeMap(node: XMLNode): Map<String, Pattern> {
     return node.attributes.mapValues { (key, value) ->
         when {
-            value.isPatternToken() -> DeferredPattern(value.toStringValue(), key)
+            value.isPatternToken() -> DeferredPattern(value.trimmed().toStringValue(), key)
             else -> ExactValuePattern(value)
         }
     }
@@ -42,7 +42,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
 
         mapZip(pattern.attributes, sampleData.attributes).forEach { (key, patternValue, sampleValue) ->
             val resolvedValue: Value = when {
-                sampleValue.isPatternToken() -> sampleValue
+                sampleValue.isPatternToken() -> sampleValue.trimmed()
                 else -> try {
                     patternValue.parse(sampleValue.string, resolver)
                 } catch (e: ContractException) {
@@ -66,7 +66,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                         val nodeValue: XMLNode = sampleData
                         val childNode = when (val childNode = nodeValue.nodes[index]) {
                             is StringValue -> when {
-                                childNode.isPatternToken() -> childNode
+                                childNode.isPatternToken() -> childNode.trimmed()
                                 else -> try {
                                     type.parse(childNode.string, resolver)
                                 } catch (e: ContractException) {

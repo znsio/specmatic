@@ -35,5 +35,6 @@ data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
 
     override fun toString() = string
 
-    fun isPatternToken(): Boolean = isPatternToken(string)
+    fun isPatternToken(): Boolean = isPatternToken(string.trim())
+    fun trimmed(): StringValue = StringValue(string.trim())
 }

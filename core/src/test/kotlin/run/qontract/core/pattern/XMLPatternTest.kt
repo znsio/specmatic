@@ -37,6 +37,18 @@ internal class XMLPatternTest {
     }
 
     @Test
+    fun `should match a type with whitespace`() {
+        val xmlSpecWithWhitespace = """
+<outer>
+    <inner>
+        (number)
+    </inner>
+</outer>
+""".trimMargin()
+        XMLNode("<outer><inner>1</inner></outer>") shouldMatch XMLPattern(xmlSpecWithWhitespace)
+    }
+
+    @Test
     fun `optional node text should match non empty value`() {
         XMLNode("<data>1</data>") shouldMatch XMLPattern("<data>(number?)</data>")
     }

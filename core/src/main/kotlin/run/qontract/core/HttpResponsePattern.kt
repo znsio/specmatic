@@ -9,7 +9,12 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
     fun generateResponse(resolver: Resolver): HttpResponse {
         return attempt(breadCrumb = "RESPONSE") {
             val value = body.generate(resolver)
-            val headers = headersPattern.generate(resolver).plus("Content-Type" to value.httpContentType).plus("X-Qontract-Result" to "success")
+            val headers = headersPattern.generate(resolver).plus("X-Qontract-Result" to "success").let { headers ->
+                when {
+                    !headers.containsKey("Content-Type") -> headers.plus("Content-Type" to value.httpContentType)
+                    else -> headers
+                }
+            }
             HttpResponse(status, headers, value)
         }
     }

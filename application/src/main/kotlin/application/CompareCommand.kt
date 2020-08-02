@@ -69,4 +69,7 @@ fun backwardCompatible(behaviour1: Feature, behaviour2: Feature): Boolean =
         } catch(e: ContractException) {
             println(e.report().prependIndent("| "))
             false
+        } catch(e: Throwable) {
+            println("Another error: " + e.localizedMessage)
+            false
         }

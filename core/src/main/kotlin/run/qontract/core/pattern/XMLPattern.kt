@@ -224,6 +224,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
     }
 
     private fun containsList(resolver: Resolver): Boolean {
+        if(pattern.nodes.isEmpty())
+            return false
         val resolvedType = resolvedHop(pattern.nodes[0], resolver)
         val patternSet = resolvedType.patternSet(resolver).map { resolvedHop(it, resolver) }
         return pattern.nodes.size == 1 && (resolvedType is ListPattern || patternSet.any { it is ListPattern })

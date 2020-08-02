@@ -274,8 +274,6 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
     println("Loading manifest file $manifestFile")
     val sources = loadSourceDataFromManifest(manifestFile)
 
-    val reposBaseDir = File(workingDirectory).resolve("repos")
-
     return sources.flatMap { source ->
         val repoDir = when(source) {
             is GitRepo -> {
@@ -290,6 +288,7 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
                         defaultRepoDir
                     }
                     else -> {
+                        val reposBaseDir = File(workingDirectory).resolve("repos")
                         println("Couldn't find local contracts, cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
                         if(!reposBaseDir.exists())
                             reposBaseDir.mkdirs()
@@ -298,7 +297,7 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
                     }
                 }
             }
-            is GitMonoRepo -> reposBaseDir
+            is GitMonoRepo -> File(".")
         }
 
         source.contracts.map {

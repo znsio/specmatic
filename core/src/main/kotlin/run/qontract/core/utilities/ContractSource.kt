@@ -61,5 +61,5 @@ data class GitMonoRepo(override val contracts: List<String>) : ContractSource() 
         }
     }
 
-    override fun directoryRelativeTo(workingDirectory: File): File = File(".")
+    override fun directoryRelativeTo(workingDirectory: File): File = File("..")
 }

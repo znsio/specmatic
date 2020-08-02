@@ -33,19 +33,21 @@ class PushCommand: Callable<Unit> {
 
             try {
                 if(sourceGit.workingDirectoryIsGitRepo()) {
-                    sourceGit.pull()
+                    if(source is GitRepo)
+                        sourceGit.pull()
 
-                    val changedFiles = sourceGit.getChangedFiles().filter { it.endsWith(".qontract") }
-                    for(contractPath in changedFiles) {
+                    val changedQontractFiles = sourceGit.getChangedFiles().filter { it.endsWith(".qontract") }
+                    for(contractPath in changedQontractFiles) {
                         testBackwardCompatibility(sourceDir, contractPath, sourceGit, source)
                         subscribeToContract(manifestData, sourceDir.resolve(contractPath).path, sourceGit)
                     }
 
-                    for(contractPath in changedFiles) {
+                    for(contractPath in changedQontractFiles) {
                         sourceGit.add(contractPath)
                     }
 
-                    commitAndPush(sourceGit)
+                    if(source is GitRepo)
+                        commitAndPush(sourceGit)
 
                     println("Done")
                 }

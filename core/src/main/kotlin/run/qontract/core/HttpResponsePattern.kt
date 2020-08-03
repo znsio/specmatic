@@ -2,13 +2,15 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
+import run.qontract.stub.softCastResponseToXML
+import run.qontract.stub.softCastValueToXML
 
 data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = EmptyStringPattern) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body?.exactMatchElseType() ?: EmptyStringPattern)
 
     fun generateResponse(resolver: Resolver): HttpResponse {
         return attempt(breadCrumb = "RESPONSE") {
-            val value = body.generate(resolver)
+            val value = softCastValueToXML(body.generate(resolver))
             val headers = headersPattern.generate(resolver).plus("X-Qontract-Result" to "success").let { headers ->
                 when {
                     !headers.containsKey("Content-Type") -> headers.plus("Content-Type" to value.httpContentType)

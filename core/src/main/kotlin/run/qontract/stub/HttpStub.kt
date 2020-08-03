@@ -23,12 +23,10 @@ import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.pattern.withoutOptionality
 import run.qontract.core.utilities.exceptionCauseMessage
+import run.qontract.core.utilities.parseXML
 import run.qontract.core.utilities.toMap
 import run.qontract.core.utilities.valueMapToPlainJsonString
-import run.qontract.core.value.EmptyString
-import run.qontract.core.value.KafkaMessage
-import run.qontract.core.value.StringValue
-import run.qontract.core.value.Value
+import run.qontract.core.value.*
 import run.qontract.mock.*
 import run.qontract.nullLog
 import java.io.ByteArrayOutputStream
@@ -154,7 +152,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
         val results = features.asSequence().map { feature ->
             try {
-                val mockResponse = feature.matchingStub(stub.request, stub.response)
+                val mockResponse = softCastResponseToXML(feature.matchingStub(stub.request, stub.response))
                 Pair(Result.Success(), mockResponse)
             } catch (e: NoMatchingScenario) {
                 Pair(Result.Failure(e.localizedMessage), null)
@@ -295,7 +293,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<
                     }
                 }
             }
-            else -> mock.response
+            else -> softCastResponseToXML(mock).response
         }
     } finally {
         features.forEach { feature ->
@@ -373,3 +371,17 @@ internal fun isExpectationCreation(httpRequest: HttpRequest) =
 
 internal fun isStateSetupRequest(httpRequest: HttpRequest): Boolean =
         httpRequest.path == "/_qontract/state" && httpRequest.method == "POST"
+
+fun softCastResponseToXML(mockResponse: HttpStubData): HttpStubData =
+        mockResponse.copy(response = mockResponse.response.copy(body = mockResponse.response.body?.let { softCastValueToXML(it) }))
+
+fun softCastValueToXML(body: Value): Value {
+    return when(body) {
+        is StringValue -> try {
+            XMLNode(body.string)
+        } catch (e: Throwable) {
+            body
+        }
+        else -> body
+    }
+}

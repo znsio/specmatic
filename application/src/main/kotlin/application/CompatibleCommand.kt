@@ -1,26 +1,43 @@
 package application
 
-import picocli.CommandLine.Command
-import picocli.CommandLine.Parameters
+import picocli.CommandLine
+import picocli.CommandLine.*
 import run.qontract.core.Feature
+import run.qontract.core.git.GitCommand
 import run.qontract.core.testBackwardCompatibility2
+import run.qontract.core.utilities.exitWithMessage
 import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
-@Command(name = "backwardCompatible",
+@Command(name = "compatible",
         mixinStandardHelpOptions = true,
         description = ["Checks if the newer contract is backward compatible with the older one"])
 class BackwardCompatibleCommand : Callable<Unit> {
-    @Parameters(index = "0", description = ["Older contract path"])
-    lateinit var olderContractPath: String
-
-    @Parameters(index = "1", description = ["Newer contract path"])
+    @Parameters(description = ["Newer contract path"])
     lateinit var newerContractPath: String
 
+    @Option(names = ["--older"], description = ["Older contract path"], required = false)
+    var olderContractPath: String? = null
+
     override fun call() {
-        val olderFeature = Feature(File(olderContractPath).readText())
         val newerFeature = Feature(File(newerContractPath).readText())
+
+        val olderFeature = when (olderContractPath) {
+            null -> {
+                if(!fileIsInGitDir(newerContractPath))
+                    exitWithMessage("Older contract file must be provifed, or the file must be in a git directory")
+
+                val gitRoot = File(GitCommand(File(newerContractPath).absoluteFile.parent).gitRoot())
+                println("Git root: ${gitRoot.absolutePath}")
+                val git = GitCommand(gitRoot.absolutePath)
+                println("Contract path: ${File(newerContractPath).absolutePath}")
+                val relativeContractPath = File(newerContractPath).absoluteFile.relativeTo(gitRoot.absoluteFile).path
+                println("Relative to git root: $relativeContractPath")
+                Feature(git.show("HEAD", relativeContractPath))
+            }
+            else -> Feature(File(newerContractPath).readText())
+        }
 
         val results = testBackwardCompatibility2(olderFeature, newerFeature)
 
@@ -40,5 +57,10 @@ class BackwardCompatibleCommand : Callable<Unit> {
         println("$countsMessage$resultReport$resultMessage".trim())
 
         exitProcess(resultExitCode)
+    }
+
+    private fun fileIsInGitDir(newerContractPath: String): Boolean {
+        val parentDir = File(newerContractPath).parentFile.absolutePath
+        return GitCommand(workingDirectory = parentDir).workingDirectoryIsGitRepo()
     }
 }

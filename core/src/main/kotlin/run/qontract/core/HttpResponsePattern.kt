@@ -2,7 +2,6 @@ package run.qontract.core
 
 import run.qontract.core.pattern.*
 import run.qontract.core.value.StringValue
-import run.qontract.stub.softCastResponseToXML
 import run.qontract.stub.softCastValueToXML
 
 data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = EmptyStringPattern) {

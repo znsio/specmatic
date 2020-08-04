@@ -35,6 +35,18 @@ class GitCommand(private val workingDirectory: String = ".", private val prefix:
 
         return result.lines().map { it.trim().split(" ", limit = 2)[1] }
     }
+
+    fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
+        val gitRoot = File(GitCommand(File(newerContractPath).absoluteFile.parent).gitRoot())
+        val git = GitCommand(gitRoot.absolutePath)
+        val relativeContractPath = File(newerContractPath).absoluteFile.relativeTo(gitRoot.absoluteFile).path
+        return Pair(git, relativeContractPath)
+    }
+
+    fun fileIsInGitDir(newerContractPath: String): Boolean {
+        val parentDir = File(newerContractPath).parentFile.absolutePath
+        return GitCommand(workingDirectory = parentDir).workingDirectoryIsGitRepo()
+    }
 }
 
 private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory: String, command: Array<String>): String {

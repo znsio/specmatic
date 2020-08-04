@@ -16,7 +16,7 @@ import kotlin.system.exitProcess
         name = "qontract",
         mixinStandardHelpOptions = true,
         versionProvider = VersionProvider::class,
-        subcommands = [BackwardCompatibleCommand::class, CompareCommand::class, ImportCommand::class, InstallCommand::class, ManifestCommand::class, ProxyCommand::class, PushCommand::class, SamplesCommand::class, StubCommand::class, SubscribeCommand::class, TestCommand::class, VersionCommand::class]
+        subcommands = [CompareCommand::class, CompatibleCommand::class, ImportCommand::class, InstallCommand::class, ManifestCommand::class, ProxyCommand::class, PushCommand::class, SamplesCommand::class, StubCommand::class, SubscribeCommand::class, TestCommand::class, VersionCommand::class]
 )
 class QontractApplication : Callable<Int> {
     override fun call(): Int {

@@ -2,7 +2,7 @@ package application
 
 import picocli.CommandLine
 import run.qontract.core.Feature
-import run.qontract.core.git.GitCommand
+import run.qontract.core.git.SystemGit
 import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.git.exitErrorMessageContains
 import run.qontract.core.git.loadFromPath
@@ -29,7 +29,7 @@ class PushCommand: Callable<Unit> {
 
         for(source in sources) {
             val sourceDir = source.directoryRelativeTo(workingDirectory)
-            val sourceGit = GitCommand(sourceDir.path)
+            val sourceGit = SystemGit(sourceDir.path)
 
             try {
                 if(sourceGit.workingDirectoryIsGitRepo()) {
@@ -58,7 +58,7 @@ class PushCommand: Callable<Unit> {
         }
     }
 
-    private fun testBackwardCompatibility(sourceDir: File, contractPath: String, sourceGit: GitCommand, source: ContractSource) {
+    private fun testBackwardCompatibility(sourceDir: File, contractPath: String, sourceGit: SystemGit, source: ContractSource) {
         val sourcePath = sourceDir.resolve(contractPath)
         val newVersion = sourcePath.readText()
 
@@ -101,7 +101,7 @@ fun hasAzureData(azureInfo: Map<String, Value>): Boolean {
     }
 }
 
-fun subscribeToContract(manifestData: Value, contractPath: String, sourceGit: GitCommand) {
+fun subscribeToContract(manifestData: Value, contractPath: String, sourceGit: SystemGit) {
     println("Checking to see if manifest has CI credentials")
 
     if (manifestData !is JSONObjectValue)
@@ -111,7 +111,7 @@ fun subscribeToContract(manifestData: Value, contractPath: String, sourceGit: Gi
         registerPipelineCredentials(manifestData, contractPath, sourceGit)
 }
 
-fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: String, sourceGit: GitCommand) {
+fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: String, sourceGit: SystemGit) {
     println("Manifest has pipeline credentials, checking if they are already registered")
 
     val provider = loadFromPath(manifestData, listOf(pipelineKeyInQontractManifest, "provider"))?.toStringValue()
@@ -154,7 +154,7 @@ fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: Str
     }
 }
 
-fun commitAndPush(sourceGit: GitCommand) {
+fun commitAndPush(sourceGit: SystemGit) {
     val pushRequired = try {
         sourceGit.commit()
         true

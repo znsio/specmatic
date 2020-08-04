@@ -13,7 +13,7 @@ import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
 import run.qontract.consoleLog
 import run.qontract.core.Resolver
-import run.qontract.core.git.GitCommand
+import run.qontract.core.git.SystemGit
 import run.qontract.core.git.clone
 import run.qontract.core.nativeString
 import run.qontract.core.pattern.ContractException
@@ -283,7 +283,7 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
                 val defaultRepoDir = source.directoryRelativeTo(defaultQontractWorkingDir)
 
                 when {
-                    defaultRepoDir.exists() && GitCommand(defaultRepoDir.path).workingDirectoryIsGitRepo() -> {
+                    defaultRepoDir.exists() && SystemGit(defaultRepoDir.path).workingDirectoryIsGitRepo() -> {
                         println("Using local contracts")
                         defaultRepoDir
                     }

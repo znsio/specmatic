@@ -1,6 +1,6 @@
 package run.qontract.core.utilities
 
-import run.qontract.core.git.GitCommand
+import run.qontract.core.git.SystemGit
 import java.io.File
 
 typealias SelectorFunction = (repoDir: File, destinationDir: File) -> Unit
@@ -24,7 +24,7 @@ data class GitRepo(val gitRepositoryURL: String, override val contracts: List<St
 
     override fun install(workingDirectory: File) {
         val sourceDir = workingDirectory.resolve(repoName)
-        val sourceGit = GitCommand(sourceDir.path)
+        val sourceGit = SystemGit(sourceDir.path)
 
         try {
             println("Checking ${sourceDir.path}")

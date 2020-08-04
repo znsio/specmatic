@@ -1,7 +1,7 @@
 package application
 
 import picocli.CommandLine
-import run.qontract.core.git.GitCommand
+import run.qontract.core.git.SystemGit
 import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.loadJSONFromManifest
@@ -21,7 +21,7 @@ class SubscribeCommand: Callable<Unit> {
 
         for(source in sources) {
             val sourceDir = source.directoryRelativeTo(workingDirectory)
-            val sourceGit = GitCommand(sourceDir.path)
+            val sourceGit = SystemGit(sourceDir.path)
 
             try {
                 if (sourceGit.workingDirectoryIsGitRepo()) {

@@ -4,6 +4,7 @@ import picocli.CommandLine.*
 import run.qontract.core.Feature
 import run.qontract.core.Results
 import run.qontract.core.git.GitCommand
+import run.qontract.core.git.SystemGit
 import run.qontract.core.testBackwardCompatibility2
 import run.qontract.core.utilities.exitWithMessage
 import java.util.concurrent.Callable
@@ -12,7 +13,7 @@ import kotlin.system.exitProcess
 @Command(name = "compatible",
         mixinStandardHelpOptions = true,
         description = ["Checks if the newer contract is backward compatible with the older one"])
-class BackwardCompatibleCommand : Callable<Unit> {
+class CompatibleCommand : Callable<Unit> {
     @Parameters(description = ["Newer contract path"])
     lateinit var newerContractPath: String
 
@@ -20,12 +21,9 @@ class BackwardCompatibleCommand : Callable<Unit> {
     var olderContractPath: String? = null
 
     override fun call() {
-        val results = backwardCompatibilityCommand(newerContractPath, olderContractPath, RealFileReader(), GitCommand())
+        val results = backwardCompatibilityCommand(newerContractPath, olderContractPath, RealFileReader(), SystemGit())
 
-        val (resultExitCode, resultMessage) = when {
-            results.success() -> Pair(0, "The newer is backward compatible with the older.")
-            else -> Pair(1, "The newer is NOT backward compatible with the older.")
-        }
+        val (resultExitCode, resultMessage) = compatibilityMessage(results)
 
         printCompatibityReport(results, resultMessage)
 
@@ -62,5 +60,14 @@ internal fun getOlderFeature(newerContractPath: String, olderContractPath: Strin
             Feature(contractGit.show("HEAD", relativeContractPath))
         }
         else -> Feature(reader.read(newerContractPath))
+    }
+}
+
+data class CompatibilityOutput(val exitCode: Int, val message: String)
+
+internal fun compatibilityMessage(results: Results): CompatibilityOutput {
+    return when {
+        results.success() -> CompatibilityOutput(0, "The newer contract is backward compatible")
+        else -> CompatibilityOutput(1, "The newer contract is NOT backward compatible")
     }
 }

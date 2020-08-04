@@ -23,7 +23,7 @@ fun clone(workingDirectory: File, gitRepo: GitRepo): File {
 private fun clone(gitRepositoryURI: String, cloneDirectory: File) {
     jgitClone(gitRepositoryURI, cloneDirectory) { exception ->
         println("""Falling back to git command after getting error from jgit (${exception.javaClass.name}: ${exception.message})""")
-        GitCommand(cloneDirectory.parent, "-").clone(gitRepositoryURI, cloneDirectory)
+        SystemGit(cloneDirectory.parent, "-").clone(gitRepositoryURI, cloneDirectory)
     }
 }
 

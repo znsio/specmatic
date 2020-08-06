@@ -72,4 +72,8 @@ abstract class FakeGit: GitCommand {
     override fun fileIsInGitDir(newerContractPath: String): Boolean {
         TODO("Not yet implemented")
     }
+
+    override fun inGitRootOf(contractPath: String): GitCommand {
+        TODO("Not yet implemented")
+    }
 }

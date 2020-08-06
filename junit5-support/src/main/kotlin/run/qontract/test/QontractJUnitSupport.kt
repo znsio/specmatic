@@ -34,6 +34,7 @@ open class QontractJUnitSupport {
         }
 
         val workingDirectory = File(valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified"))
+        val workingDirectoryWasCreated = workingDirectory.exists()
 
         val testScenarios = try {
             when {
@@ -55,9 +56,10 @@ open class QontractJUnitSupport {
         } catch(e: Throwable) {
             println(exceptionCauseMessage(e))
             throw e
+        } finally {
+            if(workingDirectoryWasCreated)
+                workingDirectory.deleteRecursively()
         }
-
-        workingDirectory.deleteRecursively()
 
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.toString()) {

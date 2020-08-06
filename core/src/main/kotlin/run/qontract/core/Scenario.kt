@@ -10,17 +10,6 @@ import run.qontract.core.value.Value
 import run.qontract.test.TestExecutor
 import java.lang.StringBuilder
 
-//enum class ScenarioStatus {
-//    WIPScenario {
-//        override fun test(result: Result): Boolean = false
-//    },
-//    FinalisedScenario {
-//        override fun test(result: Result.Failure): Boolean = result is Result.Failure
-//    };
-//
-//    abstract fun test(result: Result): Boolean
-//}
-
 data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: Map<String, Value>, val examples: List<Examples>, val patterns: Map<String, Pattern>, val fixtures: Map<String, Value>, val kafkaMessagePattern: KafkaMessagePattern? = null, val ignoreFailure: Boolean = false) {
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
             expectedFacts.keys == actualState.keys &&

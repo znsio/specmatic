@@ -2,6 +2,7 @@ package run.qontract.core.git
 
 import run.qontract.core.utilities.exceptionCauseMessage
 import java.io.File
+import kotlin.contracts.contract
 
 class SystemGit(private val workingDirectory: String = ".", private val prefix: String = "- ") : GitCommand {
     private fun execute(vararg command: String): String = executeCommandWithWorkingDirectory(prefix, workingDirectory, command.toList().toTypedArray())
@@ -47,6 +48,8 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
         val parentDir = File(newerContractPath).parentFile.absolutePath
         return SystemGit(workingDirectory = parentDir).workingDirectoryIsGitRepo()
     }
+
+    override fun inGitRootOf(contractPath: String): GitCommand = SystemGit(File(contractPath).parentFile.absolutePath)
 }
 
 private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory: String, command: Array<String>): String {

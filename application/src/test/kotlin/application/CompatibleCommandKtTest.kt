@@ -39,14 +39,14 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val results = backwardCompatibilityCommand("/Users/fakeuser/newer.qontract", null, fakeReader, fakeGit)
+        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", null, fakeReader, fakeGit)
         assertThat(results.successCount).isOne()
         assertThat(results.success()).isTrue()
     }
 
     @Test
     fun `backward compatibility command when the file is not in a git repo`() {
-        val results = backwardCompatibilityCommand("/Users/fakeuser/newer.qontract", "/Users/fakeuser/older.qontract", fakeReader, SystemGit())
+        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", "/Users/fakeuser/older.qontract", fakeReader, SystemGit())
         assertThat(results.successCount).isOne()
         assertThat(results.success()).isTrue()
     }

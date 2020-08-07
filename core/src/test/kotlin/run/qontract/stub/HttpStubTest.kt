@@ -44,7 +44,7 @@ Scenario: Square of a number
     }
 
     @Test
-    fun `should accept mocks over http`() {
+    fun `should accept mocks dynamically over http`() {
         val gherkin = """
 Feature: Math API
 
@@ -66,6 +66,36 @@ Scenario: Get a number
             val postResponse = RestTemplate().getForEntity<String>(fake.endPoint + "/number")
             assertThat(postResponse.body).isEqualTo("10")
         }
+    }
+
+    @Test
+    fun `last dynamic mock should override earlier dynamic mocks`() {
+        val gherkin = """
+Feature: Math API
+
+Scenario: Get a number
+  When GET /number
+  Then status 200
+  And response-body (number)
+""".trim()
+
+        HttpStub(gherkin).use { fake ->
+            testMock("""{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 10}}""", "10", fake)
+            testMock("""{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 20}}""", "20", fake)
+        }
+    }
+
+    fun testMock(mockData: String, output: String, fake: HttpStub) {
+        val stubSetupURL = "${fake.endPoint}/_qontract/expectations"
+        val headers = HttpHeaders()
+        headers.contentType = MediaType.APPLICATION_JSON
+
+        val stubRequest = RequestEntity(mockData, headers, HttpMethod.POST, URI.create(stubSetupURL))
+        val stubResponse = RestTemplate().postForEntity<String>(stubSetupURL, stubRequest)
+        assertThat(stubResponse.statusCodeValue).isEqualTo(200)
+
+        val postResponse = RestTemplate().getForEntity<String>(fake.endPoint + "/number")
+        assertThat(postResponse.body).isEqualTo(output)
     }
 
     @Test

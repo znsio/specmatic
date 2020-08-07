@@ -142,7 +142,7 @@ Scenario: Square of a number
     }
 
     @Test
-    fun temp() {
+    fun `invalid stub request`() {
         val feature = Feature("""
 Feature: Math API
 
@@ -159,9 +159,9 @@ Scenario: Square of a number
     | number | (number) |
 """.trim())
 
-        val request1 = HttpRequest(method = "GET", path = "/number", formFields = mapOf("Data" to """{"id": 10, "data": {"info": 20} }"""))
-        val request2 = HttpRequest(method = "GET", path = "/number", formFields = mapOf("NotData" to """{"id": 10, "data": {"info": 20} }"""))
-        val response = stubResponse(request2, listOf(feature), listOf(HttpStubData(request1.toPattern(), HttpResponse(status = 200, body = parsedJSONStructure("""{"10": 10}""")), feature.scenarios.single().resolver)), false)
+        val stubSetupRequest = HttpRequest(method = "GET", path = "/number", formFields = mapOf("Data" to """{"id": 10, "data": {"info": 20} }"""))
+        val actualRequest = HttpRequest(method = "GET", path = "/number", formFields = mapOf("NotData" to """{"id": 10, "data": {"info": 20} }"""))
+        val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(stubSetupRequest.toPattern(), HttpResponse(status = 200, body = parsedJSONStructure("""{"10": 10}""")), feature.scenarios.single().resolver)), false)
         assertThat(response.status).isEqualTo(400)
     }
 

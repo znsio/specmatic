@@ -162,7 +162,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         val result = results.find { it.first is Result.Success }
 
         when (result?.first) {
-            is Result.Success -> httpStubs.addElement(result.second)
+            is Result.Success -> httpStubs.insertElementAt(result.second, 0)
             else -> throw NoMatchingScenario(Results(results.map { it.first }.toMutableList()).report())
         }
     }

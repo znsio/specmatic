@@ -4,7 +4,7 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import run.qontract.core.Feature
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.testBackwardCompatibility2
+import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.utilities.readFile
 import java.util.concurrent.Callable
 
@@ -57,7 +57,7 @@ private fun mutualCompatibility(path1: String, path2: String): Pair<Boolean, Boo
 
 fun backwardCompatible(behaviour1: Feature, behaviour2: Feature): Boolean =
         try {
-            testBackwardCompatibility2(behaviour1, behaviour2).let { results ->
+            testBackwardCompatibility(behaviour1, behaviour2).let { results ->
                 when {
                     results.failureCount > 0 -> {
                         println(results.report().prependIndent("| "))

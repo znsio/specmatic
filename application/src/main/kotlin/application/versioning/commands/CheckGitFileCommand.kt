@@ -8,7 +8,7 @@ import org.eclipse.jgit.treewalk.TreeWalk
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import run.qontract.core.Feature
-import run.qontract.core.testBackwardCompatibility2
+import run.qontract.core.testBackwardCompatibility
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.concurrent.Callable
@@ -25,7 +25,7 @@ class CheckGitFileCommand: Callable<Unit> {
             val (commitId, older) = getOlder(gitFile)
             val newer = Feature(gitFile.readText())
 
-            val results = testBackwardCompatibility2(older, newer)
+            val results = testBackwardCompatibility(older, newer)
 
             if (results.success()) {
                 println("This contract is backward compatible with the previous one in commit $commitId.")

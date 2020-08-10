@@ -7,7 +7,7 @@ import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.git.exitErrorMessageContains
 import run.qontract.core.git.loadFromPath
 import run.qontract.core.pattern.parsedJSONStructure
-import run.qontract.core.testBackwardCompatibility2
+import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.utilities.*
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
@@ -77,7 +77,7 @@ class PushCommand: Callable<Unit> {
             val newVersionFeature = Feature(newVersion)
             val oldVersionFeature = Feature(oldVersion)
 
-            val results = testBackwardCompatibility2(oldVersionFeature, newVersionFeature)
+            val results = testBackwardCompatibility(oldVersionFeature, newVersionFeature)
 
             if (!results.success()) {
                 println(results.report())

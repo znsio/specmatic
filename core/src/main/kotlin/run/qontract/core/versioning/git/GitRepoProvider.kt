@@ -58,7 +58,7 @@ data class GitRepoProvider(val repoName: String) : RepoProvider {
         val older = Feature(contractFileInRepo(identifier).readText())
         val newer = Feature(contractFile.readText())
 
-        return testBackwardCompatibility2(older, newer)
+        return testBackwardCompatibility(older, newer)
     }
 }
 

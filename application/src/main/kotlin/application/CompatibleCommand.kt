@@ -6,7 +6,7 @@ import run.qontract.core.Feature
 import run.qontract.core.Results
 import run.qontract.core.git.GitCommand
 import run.qontract.core.git.SystemGit
-import run.qontract.core.testBackwardCompatibility2
+import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.exitWithMessage
 import java.util.concurrent.Callable
@@ -73,7 +73,7 @@ internal fun backwardCompatibleFile(newerContractPath: String, olderContractPath
     val newerFeature = Feature(reader.read(newerContractPath))
     val olderFeature = getOlderFeature(newerContractPath, olderContractPath, reader, git)
 
-    return testBackwardCompatibility2(olderFeature, newerFeature)
+    return testBackwardCompatibility(olderFeature, newerFeature)
 }
 
 internal fun backwardCompatibleCommit(contractPath: String, git: GitCommand): Results? {
@@ -88,7 +88,7 @@ internal fun backwardCompatibleCommit(contractPath: String, git: GitCommand): Re
         "" -> null
         else -> {
             val olderFeature = Feature(olderGherkin)
-            testBackwardCompatibility2(olderFeature, newerFeature)
+            testBackwardCompatibility(olderFeature, newerFeature)
         }
     }
 }
@@ -106,7 +106,7 @@ internal fun backwardCompatibleCommit(contractPath: String, newerCommit: String,
         "" -> null
         else -> {
             val olderFeature = Feature(olderGherkin)
-            testBackwardCompatibility2(olderFeature, newerFeature)
+            testBackwardCompatibility(olderFeature, newerFeature)
         }
     }
 }

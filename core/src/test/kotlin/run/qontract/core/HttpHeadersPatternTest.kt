@@ -103,7 +103,7 @@ internal class HttpHeadersPatternTest {
             put("X-Unspecified-Header", "Can't accept this header in a mock")
         }
 
-        assertThat(expectedHeaders.matches(actualHeaders, Resolver(findMissingKey = ::checkAllKeys))).isInstanceOf(Result.Failure::class.java)
+        assertThat(expectedHeaders.matches(actualHeaders, Resolver(findMissingKey = checkAllKeys))).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test

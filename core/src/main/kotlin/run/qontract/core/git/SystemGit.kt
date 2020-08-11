@@ -2,7 +2,6 @@ package run.qontract.core.git
 
 import run.qontract.core.utilities.exceptionCauseMessage
 import java.io.File
-import kotlin.contracts.contract
 
 class SystemGit(private val workingDirectory: String = ".", private val prefix: String = "- ") : GitCommand {
     private fun execute(vararg command: String): String = executeCommandWithWorkingDirectory(prefix, workingDirectory, command.toList().toTypedArray())
@@ -59,7 +58,7 @@ private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory:
     val out = process.inputStream.bufferedReader().readText()
     val err = process.errorStream.bufferedReader().readText()
 
-    if(process.exitValue() != 0) throw NonZeroExitError(process.exitValue(), err.ifEmpty { out })
+    if(process.exitValue() != 0) throw NonZeroExitError(err.ifEmpty { out })
 
     return out
 }
@@ -71,4 +70,4 @@ fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>
     }
 }
 
-class NonZeroExitError(exitValue: Int, error: String) : Throwable(error)
+class NonZeroExitError(error: String) : Throwable(error)

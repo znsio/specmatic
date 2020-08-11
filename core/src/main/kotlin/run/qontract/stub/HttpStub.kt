@@ -23,7 +23,6 @@ import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.pattern.withoutOptionality
 import run.qontract.core.utilities.exceptionCauseMessage
-import run.qontract.core.utilities.parseXML
 import run.qontract.core.utilities.toMap
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.*
@@ -257,7 +256,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<
     return try {
         val matchResults = stubs.map {
             val (requestPattern, _, resolver) = it
-            Pair(requestPattern.matches(httpRequest, resolver.copy(findMissingKey = ::checkAllKeys)), it)
+            Pair(requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)), it)
         }
 
         when (val mock = matchResults.find { (result, _) -> result is Result.Success }?.second) {
@@ -302,7 +301,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<
 fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>, stubs: StubDataItems): HttpResponse {
     return try {
         when (val mock = stubs.http.find { (requestPattern, _, resolver) ->
-            requestPattern.matches(httpRequest, resolver.copy(findMissingKey = ::checkAllKeys)) is Result.Success
+            requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)) is Result.Success
         }) {
             null -> {
                 val responses = contractInfo.asSequence().map { (feature, _) ->

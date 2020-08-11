@@ -6,11 +6,14 @@ import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.ignoreUnexpectedKeys
 
 internal class ResolverKtTest {
+    private fun _checkAllKeys(pattern: Map<String, Any>, actual: Map<String, Any>, ignored: UnexpectedKeyCheck = ::validateUnexpectedKeys): KeyError? =
+            checkAllKeys(pattern, actual, ignored)
+
     @Test
     fun `checkAllKeys should succeed when expected keys are all found`() {
         val expected = mapOf("expected" to "value")
         val actual = mapOf("expected" to "value")
-        val missing = checkAllKeys(expected, actual)
+        val missing = _checkAllKeys(expected, actual)
 
         assertThat(missing).isNull()
     }
@@ -19,7 +22,7 @@ internal class ResolverKtTest {
     fun `checkAllKeys should catch missing expected keys`() {
         val expected = mapOf("expected" to "value")
         val actual = mapOf("unexpected" to "value")
-        val missing = checkAllKeys(expected, actual)
+        val missing = _checkAllKeys(expected, actual)
 
         assertThat(missing).isEqualTo(MissingKeyError("expected"))
     }
@@ -28,7 +31,7 @@ internal class ResolverKtTest {
     fun `checkAllKeys should catch unexpected keys`() {
         val expected = mapOf("expected" to "value")
         val actual = mapOf("expected" to "value", "unexpected" to "value")
-        val missing = checkAllKeys(expected, actual)
+        val missing = _checkAllKeys(expected, actual)
 
         assertThat(missing).isEqualTo(UnexpectedKeyError("unexpected"))
     }
@@ -37,7 +40,7 @@ internal class ResolverKtTest {
     fun `checkAllKeys should allow missing optional expected keys`() {
         val expected = mapOf("expected-optional?" to "value")
         val actual = emptyMap<String, String>()
-        val missing = checkAllKeys(expected, actual)
+        val missing = _checkAllKeys(expected, actual)
 
         assertThat(missing).isEqualTo(null)
     }
@@ -46,7 +49,7 @@ internal class ResolverKtTest {
     fun `checkAllKeys should match actual keys with expected optional keys`() {
         val expected = mapOf("expected-optional?" to "value")
         val actual = mapOf("expected-optional" to "value")
-        val missing = checkAllKeys(expected, actual)
+        val missing = _checkAllKeys(expected, actual)
 
         assertThat(missing).isEqualTo(null)
     }
@@ -55,7 +58,7 @@ internal class ResolverKtTest {
     fun `checkAllKeys should match actual optional keys with expected optional keys`() {
         val expected = mapOf("expected-optional?" to "value")
         val actual = mapOf("expected-optional?" to "value")
-        val missing = checkAllKeys(expected, actual)
+        val missing = _checkAllKeys(expected, actual)
 
         assertThat(missing).isEqualTo(null)
     }
@@ -64,7 +67,7 @@ internal class ResolverKtTest {
     fun `checkAllKeys should return unexpected keys regardless of what strategy is passed to it`() {
         val expected = mapOf("expected" to "value")
         val actual = mapOf("expected" to "value", "unexpected" to "value")
-        val unexpected = checkAllKeys(expected, actual, ignoreUnexpectedKeys)
+        val unexpected = _checkAllKeys(expected, actual, ignoreUnexpectedKeys)
 
         assertThat(unexpected).isEqualTo(UnexpectedKeyError("unexpected"))
     }

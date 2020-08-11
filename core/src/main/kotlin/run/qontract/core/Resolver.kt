@@ -89,8 +89,8 @@ fun validateUnexpectedKeys(pattern: Map<String, Any>, actual: Map<String, Any>):
     return actualKeys.minus(patternKeys).firstOrNull()?.let { UnexpectedKeyError(it) }
 }
 
-fun checkAllKeys(pattern: Map<String, Any>, actual: Map<String, Any>, ignored: UnexpectedKeyCheck = ::validateUnexpectedKeys): KeyError? {
-    return pattern.minus("...").keys.find { key -> isMissingKey(actual, key) }?.let { MissingKeyError(it) } ?: validateUnexpectedKeys(pattern, actual)
+internal val checkAllKeys = { pattern: Map<String, Any>, actual: Map<String, Any>, _: Any ->
+    pattern.minus("...").keys.find { key -> isMissingKey(actual, key) }?.let { MissingKeyError(it) } ?: validateUnexpectedKeys(pattern, actual)
 }
 
 fun missingKeyToResult(keyError: KeyError, keyLabel: String): Result.Failure {

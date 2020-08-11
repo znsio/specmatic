@@ -122,9 +122,6 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
     private fun serveStubResponse(httpRequest: HttpRequest): Pair<HttpResponse, Nothing?> =
             Pair(stubResponse(httpRequest, features, httpStubs, strictMode), null)
 
-    private fun httpRequestLog(httpRequest: HttpRequest): String =
-            ">> Request Start At ${Date()}\n${httpRequest.toLogString("-> ")}"
-
     private fun handleExpectationCreationRequest(httpRequest: HttpRequest): Pair<HttpResponse, Nothing?> {
         return try {
 
@@ -347,7 +344,11 @@ data class KafkaStubData(val kafkaMessage: KafkaMessage) : StubData
 
 data class StubDataItems(val http: List<HttpStubData> = emptyList(), val kafka: List<KafkaStubData> = emptyList())
 
-private fun httpResponseLog(response: HttpResponse): String = "${response.toLogString("<- ")}\n<< Response At ${Date()} == "
+internal fun httpResponseLog(response: HttpResponse): String =
+        "${response.toLogString("<- ")}\n<< Response At ${Date()} == "
+
+internal fun httpRequestLog(httpRequest: HttpRequest): String =
+        ">> Request Start At ${Date()}\n${httpRequest.toLogString("-> ")}"
 
 fun endPointFromHostAndPort(host: String, port: Int?): String {
     val computedPortString = when(port) {

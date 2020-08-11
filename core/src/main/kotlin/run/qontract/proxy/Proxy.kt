@@ -7,6 +7,8 @@ import io.ktor.server.netty.Netty
 import run.qontract.core.*
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.mock.ScenarioStub
+import run.qontract.stub.httpRequestLog
+import run.qontract.stub.httpResponseLog
 import run.qontract.stub.ktorHttpRequestToHttpRequest
 import run.qontract.stub.respondToKtorHttpResponse
 import run.qontract.test.HttpClient
@@ -23,7 +25,11 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
                 val httpRequest = ktorHttpRequestToHttpRequest(call)
 
                 when(httpRequest.method?.toUpperCase()) {
-                    "CONNECT" -> respondToKtorHttpResponse(call, HttpResponse(400, "CONNECT is not supported"))
+                    "CONNECT" -> {
+                        val errorResponse = HttpResponse(400, "CONNECT is not supported")
+                        println(listOf(httpRequestLog(httpRequest), httpResponseLog(errorResponse)).joinToString(System.lineSeparator()))
+                        respondToKtorHttpResponse(call, errorResponse)
+                    }
                     else -> try {
                         val client = HttpClient(proxyURL(httpRequest, baseURL))
 
@@ -35,7 +41,9 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
                         respondToKtorHttpResponse(call, httpResponse)
                     } catch(e: Throwable) {
                         println(exceptionCauseMessage(e))
-                        respondToKtorHttpResponse(call, HttpResponse(500, exceptionCauseMessage(e)))
+                        val errorResponse = HttpResponse(500, exceptionCauseMessage(e))
+                        respondToKtorHttpResponse(call, errorResponse)
+                        println(listOf(httpRequestLog(httpRequest), httpResponseLog(errorResponse)).joinToString(System.lineSeparator()))
                     }
                 }
             }

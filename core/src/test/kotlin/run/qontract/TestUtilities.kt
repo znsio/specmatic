@@ -65,8 +65,8 @@ fun stubShouldBreak(stubRequest: HttpRequest, stubResponse: HttpResponse, oldCon
     Assertions.assertThat(responseFromNewContract.status).isEqualTo(400)
 }
 
-fun testStub(oldContract: String, stubRequest: HttpRequest, stubResponse: HttpResponse): HttpResponse {
-    val feature = Feature(oldContract)
+fun testStub(contractGherkin: String, stubRequest: HttpRequest, stubResponse: HttpResponse): HttpResponse {
+    val feature = Feature(contractGherkin)
     val stub = ScenarioStub(stubRequest, stubResponse)
     val matchingStub = feature.matchingStub(stub)
 
@@ -74,3 +74,6 @@ fun testStub(oldContract: String, stubRequest: HttpRequest, stubResponse: HttpRe
         it.copy(headers = it.headers - "X-Qontract-Result")
     }
 }
+
+fun stub(stubRequest: HttpRequest, stubResponse: HttpResponse): TestHttpStubData =
+        TestHttpStubData(stubRequest, stubResponse)

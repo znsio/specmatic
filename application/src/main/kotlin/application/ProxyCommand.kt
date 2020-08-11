@@ -25,21 +25,6 @@ class ProxyCommand : Callable<Unit> {
     @Option(names = ["--port"], description = ["Port for the proxy"], defaultValue = "9000")
     var port: Int = 9000
 
-    @Option(names = ["--httpsKeyStore"], description = ["EXPERIMENTAL: Run the proxy on https using a key in this store"])
-    var keyStoreFile = ""
-
-    @Option(names = ["--httpsKeyStoreDir"], description = ["EXPERIMENTAL: Run the proxy on https, create a store named qontract.jks in this directory"])
-    var keyStoreDir = ""
-
-    @Option(names = ["--httpsKeyStorePassword"], description = ["EXPERIMENTAL: Run the proxy on https, password for pre-existing key store"])
-    var keyStorePassword = "forgotten"
-
-    @Option(names = ["--httpsKeyAlias"], description = ["EXPERIMENTAL: Run the proxy on https using a key by this name"])
-    var keyStoreAlias = "qontractproxy"
-
-    @Option(names = ["--httpsPassword"], description = ["EXPERIMENTAL: Key password if any"])
-    var keyPassword = "forgotten"
-
     @Parameters(description = ["Store data from the proxy interactions into this dir"], index = "0")
     lateinit var proxyQontractDataDir: String
 
@@ -48,11 +33,9 @@ class ProxyCommand : Callable<Unit> {
     override fun call() {
         validatedProxySettings(targetBaseURL, proxyQontractDataDir)
 
-        val keyStoreData = getHttpsCert(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
-        proxy = Proxy(host, port, targetBaseURL, proxyQontractDataDir, keyStoreData)
+        proxy = Proxy(host, port, targetBaseURL, proxyQontractDataDir, null)
         addShutdownHook()
-        val protocol = if(keyStoreData != null) "https" else "http"
-        consoleLog("Proxy server is running on ${protocol}://$host:$port. Ctrl + C to stop.")
+        consoleLog("Proxy server is running on http://$host:$port. Ctrl + C to stop.")
         while(true) sleep(10000)
     }
 

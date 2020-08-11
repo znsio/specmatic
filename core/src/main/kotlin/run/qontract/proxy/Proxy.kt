@@ -38,7 +38,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
                         val name = "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams)}"
                         stubs.add(NamedStub(name, ScenarioStub(httpRequest, httpResponse)))
 
-                        respondToKtorHttpResponse(call, httpResponse)
+                        respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
                     } catch(e: Throwable) {
                         println(exceptionCauseMessage(e))
                         val errorResponse = HttpResponse(500, exceptionCauseMessage(e))
@@ -63,6 +63,16 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
                 this.host = host
                 this.port = port
             }
+        }
+    }
+
+    private fun withoutContentEncodingGzip(httpResponse: HttpResponse): HttpResponse {
+        val contentEncodingKey = httpResponse.headers.keys.find { it.toLowerCase() == "content-encoding" } ?: "Content-Encoding"
+        return when {
+            httpResponse.headers[contentEncodingKey]?.toLowerCase()?.contains("gzip") == true ->
+                httpResponse.copy(headers = httpResponse.headers.minus(contentEncodingKey))
+            else ->
+                httpResponse
         }
     }
 

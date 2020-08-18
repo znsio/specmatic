@@ -4,7 +4,7 @@ package run.qontract.stub
 import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.utilities.contractFilePaths
+import run.qontract.core.utilities.contractStubPaths
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.readFile
 import run.qontract.core.value.KafkaMessage
@@ -35,7 +35,7 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
 
 // Used by stub client code
 fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
-    val contractPaths = contractFilePaths()
+    val contractPaths = contractStubPaths()
     val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)

@@ -27,7 +27,7 @@ class SubscribeCommand: Callable<Unit> {
                 if (sourceGit.workingDirectoryIsGitRepo()) {
                     sourceGit.pull()
 
-                    for(contract in source.contracts) {
+                    for(contract in source.testContracts + source.stubContracts) {
                         val contractPath = sourceDir.resolve(File(contract))
                         subscribeToContract(manifestData, sourceDir.resolve(contractPath).path, sourceGit)
                     }

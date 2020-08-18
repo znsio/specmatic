@@ -46,7 +46,7 @@ open class QontractJUnitSupport {
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    val contractFilePaths = contractFilePathsFrom(manifestFile, workingDirectory.path)
+                    val contractFilePaths = contractTestPathsFrom(manifestFile, workingDirectory.path)
                     contractFilePaths.flatMap { loadTestScenarios(it, "", "") }
                 }
             }

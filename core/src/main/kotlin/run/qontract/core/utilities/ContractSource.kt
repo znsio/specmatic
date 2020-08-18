@@ -6,13 +6,14 @@ import java.io.File
 typealias SelectorFunction = (repoDir: File, destinationDir: File) -> Unit
 
 sealed class ContractSource {
-    abstract val contracts: List<String>
+    abstract val testContracts: List<String>
+    abstract val stubContracts: List<String>
     abstract fun pathDescriptor(path: String): String
     abstract fun install(workingDirectory: File)
     abstract fun directoryRelativeTo(workingDirectory: File): File
 }
 
-data class GitRepo(val gitRepositoryURL: String, override val contracts: List<String>) : ContractSource() {
+data class GitRepo(val gitRepositoryURL: String, override val testContracts: List<String>, override val stubContracts: List<String>) : ContractSource() {
     val repoName = gitRepositoryURL.split("/").last().removeSuffix(".git")
 
     override fun pathDescriptor(path: String): String {
@@ -47,11 +48,14 @@ data class GitRepo(val gitRepositoryURL: String, override val contracts: List<St
     }
 }
 
-data class GitMonoRepo(override val contracts: List<String>) : ContractSource() {
+data class GitMonoRepo(override val testContracts: List<String>, override val stubContracts: List<String>) : ContractSource() {
     override fun pathDescriptor(path: String): String = path
     override fun install(workingDirectory: File) {
         println("Checking list of mono repo paths...")
-        for(path in this.contracts) {
+
+        val contracts = testContracts + stubContracts
+
+        for(path in contracts) {
             val existenceMessage = when {
                 File(path).exists() -> "$path exists"
                 else -> "$path NOT FOUND!"

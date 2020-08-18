@@ -210,26 +210,32 @@ fun loadSourceDataFromManifest(manifestJson: JSONObjectValue): List<ContractSour
         if (source !is JSONObjectValue)
             exitWithMessage("Every element of the sources json array must be a json object, but got this: ${source.toStringValue()}")
 
-        val provider = nativeString(source.jsonObject, "provider")
-
-        when(provider) {
+        when(nativeString(source.jsonObject, "provider")) {
             "git" -> {
                 val repositoryURL = nativeString(source.jsonObject, "repository")
 
-                val contractPathsJSON = source.jsonObject.getValue("contracts") as JSONArrayValue
-                val contractPaths = contractPathsJSON.list.map { it.toStringValue() }
+                val stubPaths = jsonArray(source, "stub")
+                val testPaths = jsonArray(source, "test")
 
                 when (repositoryURL) {
-                    null -> GitMonoRepo(contractPaths)
-                    else -> GitRepo(repositoryURL, contractPaths)
+                    null -> GitMonoRepo(testPaths, stubPaths)
+                    else -> GitRepo(repositoryURL, testPaths, stubPaths)
                 }
             }
-            else -> throw ContractException("Provider $provider not recognised in manifest data")
+            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in manifest data")
         }
     }
 }
 
-fun ensureEmptyOrNotExists(workingDirectory: File) {
+internal fun jsonArray(source: JSONObjectValue, key: String): List<String> {
+    return when(val value = source.jsonObject[key]) {
+        is JSONArrayValue -> value.list.map { it.toStringValue() }
+        null -> emptyList()
+        else -> throw ContractException("Expected $key to be an array")
+    }
+}
+
+internal fun ensureEmptyOrNotExists(workingDirectory: File) {
     if(workingDirectory.exists() && workingDirectory.listFiles()?.isNotEmpty() == true) {
         exitWithMessage("The provided working directory ${workingDirectory.path} must be empty or must not exist")
     }
@@ -268,9 +274,18 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
 }
 
 // Used by QontractJUnitSupport users for loading contracts to stub or mock
-fun contractFilePaths(): List<String> = contractFilePathsFrom("qontract.json", ".qontract")
+fun contractStubPaths(): List<String> =
+        contractFilePathsFrom("qontract.json", ".qontract") { source -> source.stubContracts }
 
-fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<String> {
+fun interface ContractsSelectorPredicate {
+    fun select(source: ContractSource): List<String>
+}
+
+fun contractTestPathsFrom(manifestFile: String, workingDirectory: String): List<String> {
+    return contractFilePathsFrom(manifestFile, workingDirectory) { source -> source.testContracts }
+}
+
+fun contractFilePathsFrom(manifestFile: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<String> {
     println("Loading manifest file $manifestFile")
     val sources = loadSourceDataFromManifest(manifestFile)
 
@@ -300,7 +315,7 @@ fun contractFilePathsFrom(manifestFile: String, workingDirectory: String): List<
             is GitMonoRepo -> File(".")
         }
 
-        source.contracts.map {
+        selector.select(source).map {
             repoDir.resolve(it).path
         }
     }.also {

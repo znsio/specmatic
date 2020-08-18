@@ -6,6 +6,7 @@ import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.exceptionCauseMessage
+import run.qontract.core.utilities.contractStubPaths
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.stub.*
 import java.io.File
@@ -22,8 +23,8 @@ class StubCommand : Callable<Unit> {
     var contractFake: ContractStub? = null
     var qontractKafka: QontractKafka? = null
 
-    @Parameters(arity = "1..*", description = ["Contract file paths"])
-    lateinit var contractPaths: List<String>
+    @Parameters(arity = "0..*", description = ["Contract file paths"])
+    var contractPaths: List<String> = mutableListOf()
 
     @Option(names = ["--data"], description = ["Directory in which contract data may be found"], required = false)
     var dataDirs: List<String> = mutableListOf()
@@ -62,6 +63,8 @@ class StubCommand : Callable<Unit> {
     var keyPassword = "forgotten"
 
     override fun call() = try {
+        loadConfig()
+
         startServer()
         addShutdownHook()
 
@@ -87,6 +90,15 @@ class StubCommand : Callable<Unit> {
         consoleLog(e.report())
     } catch (e: Throwable) {
         consoleLog(exceptionCauseMessage(e))
+    }
+
+    private fun loadConfig() {
+        when(contractPaths.isEmpty()) {
+            true -> {
+                println("No contractPaths specified. Falling back to ./qontract.json")
+                contractPaths = contractStubPaths()
+            }
+        }
     }
 
     private fun watchForChanges(contractPaths: List<Path>) {

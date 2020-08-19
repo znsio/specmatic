@@ -4,7 +4,6 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'signing'
-    id 'jacoco'
 }
 
 apply plugin: "jacoco"
@@ -160,11 +159,10 @@ test {
 
 jacocoTestReport {
     dependsOn test
-    sourceSets sourceSets.main
-    executionData()
     reports {
         xml.enabled true
         html.enabled false
         csv.enabled false
     }
 }
+

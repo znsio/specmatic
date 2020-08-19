@@ -1,13 +1,12 @@
 package application
 
 import picocli.CommandLine
-import run.qontract.core.Constants
 import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.git.SystemGit
 import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.utilities.exceptionCauseMessage
-import run.qontract.core.utilities.loadJSONFromManifest
-import run.qontract.core.utilities.loadSourceDataFromManifest
+import run.qontract.core.utilities.loadConfigJSON
+import run.qontract.core.utilities.loadSources
 import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
@@ -18,8 +17,8 @@ class SubscribeCommand: Callable<Unit> {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".qontract/repos")
         val manifestFile = File(QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
-        val manifestData = loadJSONFromManifest(manifestFile)
-        val sources = loadSourceDataFromManifest(manifestData)
+        val manifestData = loadConfigJSON(manifestFile)
+        val sources = loadSources(manifestData)
 
         for(source in sources) {
             val sourceDir = source.directoryRelativeTo(workingDirectory)

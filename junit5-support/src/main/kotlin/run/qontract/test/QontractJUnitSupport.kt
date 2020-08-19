@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import run.qontract.core.*
+import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_FILE_NAME
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Examples
 import run.qontract.core.pattern.parsedValue
@@ -21,7 +22,7 @@ open class QontractJUnitSupport {
     fun contractAsTest(): Collection<DynamicTest> {
         val path = System.getProperty("path")
         val givenWorkingDirectory = System.getProperty("workingDirectory")
-        val givenManifestFile = System.getProperty("manifestFile")
+        val givenConfigFile = System.getProperty("manifestFile")
 
         val timeout = System.getProperty("timeout", "60").toInt()
 
@@ -40,14 +41,13 @@ open class QontractJUnitSupport {
             when {
                 path != null -> loadTestScenarios(path, suggestionsPath, suggestionsData)
                 else -> {
-                    //TODO: Replace harcoded qontract json with Constant
-                    val manifestFile = valueOrDefault(givenManifestFile, "qontract.json", "Neither contract nor manifest were specified")
+                    val configFile = valueOrDefault(givenConfigFile, QONTRACT_CONFIG_FILE_NAME, "Neither contract nor config were specified")
 
-                    exitIfDoesNotExist("manifest file", manifestFile)
+                    exitIfDoesNotExist("config file", configFile)
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    val contractFilePaths = contractTestPathsFrom(manifestFile, workingDirectory.path)
+                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
                     contractFilePaths.flatMap { loadTestScenarios(it, "", "") }
                 }
             }
@@ -82,10 +82,10 @@ open class QontractJUnitSupport {
         }.toList()
     }
 
-    private fun valueOrDefault(givenManifestFile: String?, default: String, reason: String): String {
-        return when (givenManifestFile) {
+    private fun valueOrDefault(givenConfigFilePath: String?, default: String, reason: String): String {
+        return when (givenConfigFilePath) {
             null -> default.also { println("$reason, defaulting to $it") }
-            else -> givenManifestFile
+            else -> givenConfigFilePath
         }
     }
 

@@ -18,7 +18,7 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
 class TestCommand : Callable<Unit> {
-    @CommandLine.Parameters(index = "0", description = ["Contract or manifest file path"])
+    @CommandLine.Parameters(index = "0", description = ["Contract or config file path"])
     lateinit var path: String
 
     @Option(names = ["--host"], description = ["The host to bind to, e.g. localhost or some locally bound IP"], defaultValue = "localhost")

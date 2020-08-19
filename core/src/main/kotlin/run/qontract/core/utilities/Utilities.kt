@@ -12,7 +12,6 @@ import org.w3c.dom.Node.ELEMENT_NODE
 import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
 import run.qontract.consoleLog
-import run.qontract.core.Constants
 import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.Resolver
 import run.qontract.core.git.SystemGit
@@ -183,27 +182,27 @@ fun strings(list: List<Value>): List<String> {
     }
 }
 
-fun loadSourceDataFromManifest(manifestFile: String): List<ContractSource> = loadSourceDataFromManifest(File(manifestFile))
+fun loadSources(configFilePath: String): List<ContractSource> = loadSources(File(configFilePath))
 
-fun loadSourceDataFromManifest(manifestFile: File): List<ContractSource> = loadSourceDataFromManifest(loadJSONFromManifest(manifestFile))
+fun loadSources(configFile: File): List<ContractSource> = loadSources(loadConfigJSON(configFile))
 
-fun loadJSONFromManifest(manifestFile: File): JSONObjectValue {
-    val manifestJson = try {
-        parsedJSONStructure(manifestFile.readText())
+fun loadConfigJSON(configFile: File): JSONObjectValue {
+    val configJson = try {
+        parsedJSONStructure(configFile.readText())
 
     } catch (e: Throwable) {
-        exitWithMessage("Error reading the manifest: ${exceptionCauseMessage(e)}")
+        exitWithMessage("Error reading the $QONTRACT_CONFIG_IN_CURRENT_DIRECTORY: ${exceptionCauseMessage(e)}")
     }
 
-    if (manifestJson !is JSONObjectValue)
-        exitWithMessage("The contents of the manifest must be a json object")
+    if (configJson !is JSONObjectValue)
+        exitWithMessage("The contents of $QONTRACT_CONFIG_IN_CURRENT_DIRECTORY must be a json object")
 
-    return manifestJson
+    return configJson
 }
 
 
-fun loadSourceDataFromManifest(manifestJson: JSONObjectValue): List<ContractSource> {
-    val sources = manifestJson.jsonObject.getOrDefault("sources", null)
+fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
+    val sources = configJson.jsonObject.getOrDefault("sources", null)
 
     if(sources !is JSONArrayValue)
         exitWithMessage("The \"sources\" key must hold a list of sources.")
@@ -224,7 +223,7 @@ fun loadSourceDataFromManifest(manifestJson: JSONObjectValue): List<ContractSour
                     else -> GitRepo(repositoryURL, testPaths, stubPaths)
                 }
             }
-            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in manifest data")
+            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
         }
     }
 }
@@ -243,9 +242,9 @@ internal fun ensureEmptyOrNotExists(workingDirectory: File) {
     }
 }
 
-fun ensureExists(manifestFilePath: String, workingDirectoryPath: String) {
-    if(!File(manifestFilePath).exists())
-        exitWithMessage("Manifest file $manifestFilePath does not exist")
+fun ensureExists(configFilePath: String, workingDirectoryPath: String) {
+    if(!File(configFilePath).exists())
+        exitWithMessage("$configFilePath does not exist")
 
     val workingDirectory = File(workingDirectoryPath)
 
@@ -283,13 +282,13 @@ fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>
 }
 
-fun contractTestPathsFrom(manifestFile: String, workingDirectory: String): List<String> {
-    return contractFilePathsFrom(manifestFile, workingDirectory) { source -> source.testContracts }
+fun contractTestPathsFrom(configFilePath: String, workingDirectory: String): List<String> {
+    return contractFilePathsFrom(configFilePath, workingDirectory) { source -> source.testContracts }
 }
 
-fun contractFilePathsFrom(manifestFile: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<String> {
-    println("Loading manifest file $manifestFile")
-    val sources = loadSourceDataFromManifest(manifestFile)
+fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<String> {
+    println("Loading config file $configFilePath")
+    val sources = loadSources(configFilePath)
 
     return sources.flatMap { source ->
         val repoDir = when(source) {

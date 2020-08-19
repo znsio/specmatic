@@ -1,7 +1,6 @@
 package application
 
 import picocli.CommandLine
-import run.qontract.core.Constants
 import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.Feature
 import run.qontract.core.git.SystemGit
@@ -18,7 +17,7 @@ import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
-private const val pipelineKeyInQontractManifest = "pipeline"
+private const val pipelineKeyInQontracConfig = "pipeline"
 
 @CommandLine.Command(name = "push", description = ["Check the new contract for backward compatibility with the specified version, then overwrite the old one with it."], mixinStandardHelpOptions = true)
 class PushCommand: Callable<Unit> {
@@ -26,8 +25,8 @@ class PushCommand: Callable<Unit> {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".qontract/repos")
         val manifestFile = File(QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
-        val manifestData = loadJSONFromManifest(manifestFile)
-        val sources = loadSourceDataFromManifest(manifestData)
+        val manifestData = loadConfigJSON(manifestFile)
+        val sources = loadSources(manifestData)
 
         for(source in sources) {
             val sourceDir = source.directoryRelativeTo(workingDirectory)
@@ -109,15 +108,15 @@ fun subscribeToContract(manifestData: Value, contractPath: String, sourceGit: Sy
     if (manifestData !is JSONObjectValue)
         exitWithMessage("Manifest must contain a json object")
 
-    if (manifestData.jsonObject.containsKey(pipelineKeyInQontractManifest))
+    if (manifestData.jsonObject.containsKey(pipelineKeyInQontracConfig))
         registerPipelineCredentials(manifestData, contractPath, sourceGit)
 }
 
 fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: String, sourceGit: SystemGit) {
     println("Manifest has pipeline credentials, checking if they are already registered")
 
-    val provider = loadFromPath(manifestData, listOf(pipelineKeyInQontractManifest, "provider"))?.toStringValue()
-    val pipelineInfo = manifestData.getJSONObject(pipelineKeyInQontractManifest)
+    val provider = loadFromPath(manifestData, listOf(pipelineKeyInQontracConfig, "provider"))?.toStringValue()
+    val pipelineInfo = manifestData.getJSONObject(pipelineKeyInQontracConfig)
 
     if (provider == "azure" && hasAzureData(pipelineInfo)) {
         val filePath = File(contractPath)

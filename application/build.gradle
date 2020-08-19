@@ -7,6 +7,11 @@ plugins {
     id 'signing'
 }
 
+apply plugin: "jacoco"
+jacoco {
+    toolVersion = "0.8.5"
+}
+
 application {
     mainClassName = "application.QontractApplication"
 }
@@ -69,6 +74,16 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.enabled true
+        html.enabled false
+        csv.enabled false
+    }
 }
 
 group = 'run.qontract'

@@ -3,6 +3,8 @@ plugins {
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm' version '1.4.0'
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.4.0'
+    id 'jacoco'
+    id "org.sonarqube" version "3.0"
 }
 
 allprojects {
@@ -27,6 +29,37 @@ subprojects {
     def versionInfo = versionProps['version']
 
     version versionInfo
+
+}
+
+task codeCoverageReport(type: JacocoReport) {
+
+    // Gather execution data from all subprojects
+    executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+
+    // Add all relevant sourcesets from the subprojects
+    subprojects.each {
+        sourceSets it.sourceSets.main
+    }
+
+    reports {
+        xml.enabled true
+        html.enabled true
+        csv.enabled false
+    }
+}
+
+codeCoverageReport.dependsOn {
+    subprojects*.test
+}
+
+sonarqube {
+    properties {
+        property "sonar.projectKey", "qontract_qontract"
+        property "sonar.organization", "qontract"
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.coverage.jacoco.xmlReportPaths", "${rootDir}/build/reports/jacoco/codeCoverageReport/codeCoverageReport.xml"
+    }
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {

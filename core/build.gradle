@@ -7,6 +7,11 @@ plugins {
     id 'jacoco'
 }
 
+apply plugin: "jacoco"
+jacoco {
+    toolVersion = "0.8.5"
+}
+
 repositories {
     mavenLocal()
     maven {
@@ -155,4 +160,11 @@ test {
 
 jacocoTestReport {
     dependsOn test
+    sourceSets sourceSets.main
+    executionData()
+    reports {
+        xml.enabled true
+        html.enabled false
+        csv.enabled false
+    }
 }

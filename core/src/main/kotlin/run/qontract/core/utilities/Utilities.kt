@@ -12,6 +12,8 @@ import org.w3c.dom.Node.ELEMENT_NODE
 import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
 import run.qontract.consoleLog
+import run.qontract.core.Constants
+import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.Resolver
 import run.qontract.core.git.SystemGit
 import run.qontract.core.git.clone
@@ -275,7 +277,7 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
 
 // Used by QontractJUnitSupport users for loading contracts to stub or mock
 fun contractStubPaths(): List<String> =
-        contractFilePathsFrom("qontract.json", ".qontract") { source -> source.stubContracts }
+        contractFilePathsFrom(QONTRACT_CONFIG_IN_CURRENT_DIRECTORY, ".qontract") { source -> source.stubContracts }
 
 fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>

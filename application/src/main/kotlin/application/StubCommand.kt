@@ -4,6 +4,7 @@ import picocli.CommandLine.*
 import run.qontract.LogTail
 import run.qontract.consoleLog
 import run.qontract.core.*
+import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.contractStubPaths
@@ -95,7 +96,7 @@ class StubCommand : Callable<Unit> {
     private fun loadConfig() {
         when(contractPaths.isEmpty()) {
             true -> {
-                println("No contractPaths specified. Falling back to ./qontract.json")
+                println("No contractPaths specified. Falling back to $QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
                 contractPaths = contractStubPaths()
             }
         }

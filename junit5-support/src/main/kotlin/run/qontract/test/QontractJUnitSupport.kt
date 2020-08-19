@@ -40,6 +40,7 @@ open class QontractJUnitSupport {
             when {
                 path != null -> loadTestScenarios(path, suggestionsPath, suggestionsData)
                 else -> {
+                    //TODO: Replace harcoded qontract json with Constant
                     val manifestFile = valueOrDefault(givenManifestFile, "qontract.json", "Neither contract nor manifest were specified")
 
                     exitIfDoesNotExist("manifest file", manifestFile)

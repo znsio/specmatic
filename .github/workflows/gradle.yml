@@ -27,6 +27,8 @@ jobs:
     - name: Run coverage report
       run: ./gradlew codeCoverageReport
     - name: Run sonar scan
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: ./gradlew sonarqube -x test
     - name: Upload artifact
       uses: actions/upload-artifact@v2.1.4

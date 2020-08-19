@@ -3,6 +3,7 @@ plugins {
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm' version '1.4.0'
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.4.0'
+    id "org.sonarqube" version "3.0"
 }
 
 allprojects {
@@ -54,5 +55,13 @@ compileKotlin {
 compileTestKotlin {
     kotlinOptions {
         jvmTarget = "1.8"
+    }
+}
+
+sonarqube {
+    properties {
+        property "sonar.projectKey", "qontract_qontract"
+        property "sonar.organization", "qontract"
+        property "sonar.host.url", "https://sonarcloud.io"
     }
 }

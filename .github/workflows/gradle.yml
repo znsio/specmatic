@@ -24,6 +24,8 @@ jobs:
       run: chmod +x gradlew
     - name: Build with Gradle
       run: ./gradlew build
+    - name: Run Sonar Scan
+      run: ./gradlew sonarqube
     - name: Upload artifact
       uses: actions/upload-artifact@v2.1.4
       with:

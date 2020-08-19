@@ -1,6 +1,5 @@
 package application
 
-import application.test.ManifestCommand
 import application.versioning.commands.VersionCommand
 import picocli.CommandLine
 import picocli.CommandLine.Command
@@ -16,7 +15,7 @@ import kotlin.system.exitProcess
         name = "qontract",
         mixinStandardHelpOptions = true,
         versionProvider = VersionProvider::class,
-        subcommands = [CompareCommand::class, CompatibleCommand::class, ImportCommand::class, InstallCommand::class, ManifestCommand::class, ProxyCommand::class, PushCommand::class, SamplesCommand::class, StubCommand::class, SubscribeCommand::class, TestCommand::class, VersionCommand::class]
+        subcommands = [CompareCommand::class, CompatibleCommand::class, ImportCommand::class, InstallCommand::class, ProxyCommand::class, PushCommand::class, SamplesCommand::class, StubCommand::class, SubscribeCommand::class, TestCommand::class, VersionCommand::class]
 )
 class QontractApplication : Callable<Int> {
     override fun call(): Int {

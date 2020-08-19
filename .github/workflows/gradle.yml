@@ -30,6 +30,7 @@ jobs:
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: ./gradlew sonarqube -x test
+      continue-on-error: true
     - name: Upload artifact
       uses: actions/upload-artifact@v2.1.4
       with:

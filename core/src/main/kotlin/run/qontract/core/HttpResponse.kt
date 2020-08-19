@@ -94,11 +94,6 @@ fun nativeInteger(json: Map<String, Value>, key: String): Int? {
 }
 
 
-fun getHeaders(jsonObject: Map<String, Value>): MutableMap<String, String> =
-        (jsonObject.getOrDefault("headers", JSONObjectValue()) as JSONObjectValue).jsonObject.mapValues {
-            it.value.toString()
-        }.toMutableMap()
-
 val responseHeadersToExcludeFromConversion = listOf("Vary", "X-Qontract-Result")
 
 fun toGherkinClauses(response: HttpResponse, types: Map<String, Pattern> = emptyMap()): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {

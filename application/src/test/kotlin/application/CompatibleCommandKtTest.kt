@@ -15,14 +15,14 @@ internal class CompatibleCommandKtTest {
                         Then status 200
                 """.trimIndent()
 
-    val fakeReader = object : FileReader {
+    private val fakeReader = object : FileReader {
         override fun read(name: String): String {
             return trivialContract
         }
     }
 
     @Test
-    fun `backward compatibility command when the file is in a git repo`() {
+    fun `compatibility test of file against HEAD when change is backward compatible`() {
         val fakeGit = object : FakeGit() {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
 
@@ -39,16 +39,93 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", null, fakeReader, fakeGit)
+        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", fakeReader, fakeGit)
         assertThat(results.successCount).isOne()
         assertThat(results.success()).isTrue()
     }
 
     @Test
-    fun `backward compatibility command when the file is not in a git repo`() {
-        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", "/Users/fakeuser/older.qontract", fakeReader, SystemGit())
-        assertThat(results.successCount).isOne()
-        assertThat(results.success()).isTrue()
+    fun `compatibility test of file against HEAD when change is NOT backward compatible`() {
+        val fakeGit = object : FakeGit() {
+            override fun fileIsInGitDir(newerContractPath: String): Boolean = true
+
+            override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
+                assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.qontract")
+                return Pair(this, "newer.qontract")
+            }
+
+            override fun show(treeish: String, relativePath: String): String {
+                assertThat(treeish).isEqualTo("HEAD")
+                assertThat(relativePath).isEqualTo("newer.qontract")
+
+                return """
+                    Feature: Test
+                      Scenario: Test
+                        When POST /
+                        Then status 200
+                """.trimIndent()
+            }
+        }
+
+        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", fakeReader, fakeGit)
+        assertThat(results.successCount).isZero()
+        assertThat(results.success()).isFalse()
+    }
+
+    @Test
+    fun `compatibility test of two commits of a file`() {
+        val commitsRequested = mutableListOf<String>()
+
+        val fakeGit = object : FakeGit() {
+            override fun fileIsInGitDir(newerContractPath: String): Boolean = true
+
+            override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
+                assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.qontract")
+                return Pair(this, "newer.qontract")
+            }
+
+            override fun show(treeish: String, relativePath: String): String {
+                commitsRequested.add(treeish)
+                assertThat(relativePath).isEqualTo("newer.qontract")
+
+                return trivialContract
+            }
+        }
+
+        val results = backwardCompatibleCommit("/Users/fakeuser/newer.qontract", "HEAD", "HEAD^1", fakeGit)
+
+        assertThat(commitsRequested.toList().sorted()).isEqualTo(listOf("HEAD", "HEAD^1"))
+
+        assertThat(results?.successCount).isOne()
+        assertThat(results?.success()).isTrue()
+    }
+
+    @Test
+    fun `compatibility test of two commits of a file when there is only one commit`() {
+        val commitsRequested = mutableListOf<String>()
+
+        val fakeGit = object : FakeGit() {
+            override fun fileIsInGitDir(newerContractPath: String): Boolean = true
+
+            override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
+                assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.qontract")
+                return Pair(this, "newer.qontract")
+            }
+
+            override fun show(treeish: String, relativePath: String): String {
+                commitsRequested.add(treeish)
+                assertThat(relativePath).isEqualTo("newer.qontract")
+
+                return when(treeish) {
+                    "HEAD" -> trivialContract
+                    else -> throw Exception("Only one commit")
+                }
+            }
+        }
+
+        val results = backwardCompatibleCommit("/Users/fakeuser/newer.qontract", "HEAD", "HEAD^1", fakeGit)
+
+        assertThat(results).isNull()
     }
 
     @Test

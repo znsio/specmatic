@@ -73,7 +73,7 @@ internal fun printCompatibityReport(results: Results, resultMessage: String) {
 
 internal fun backwardCompatibleFile(newerContractPath: String, reader: FileReader, git: GitCommand): Results {
     val newerFeature = Feature(reader.read(newerContractPath))
-    val olderFeature = getOlderFeature(newerContractPath, reader, git)
+    val olderFeature = getOlderFeature(newerContractPath, git)
 
     return testBackwardCompatibility(olderFeature, newerFeature)
 }
@@ -105,7 +105,7 @@ internal fun backwardCompatibleCommit(contractPath: String, newerCommit: String,
     }
 }
 
-internal fun getOlderFeature(newerContractPath: String, reader: FileReader, git: GitCommand): Feature {
+internal fun getOlderFeature(newerContractPath: String, git: GitCommand): Feature {
     if(!git.fileIsInGitDir(newerContractPath))
         exitWithMessage("Older contract file must be provided, or the file must be in a git directory")
 

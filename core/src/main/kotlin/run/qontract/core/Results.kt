@@ -3,7 +3,7 @@ package run.qontract.core
 data class Results(val results: MutableList<Result> = mutableListOf()) {
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
     fun hasSuccess(): Boolean = results.any { it is Result.Success }
-    fun success(): Boolean = hasSuccess() && !hasFailures()
+    fun success(): Boolean = !hasFailures()
 
     fun withoutFluff(): Results = copy(results = results.filterNot { isFluff(it) }.toMutableList())
 

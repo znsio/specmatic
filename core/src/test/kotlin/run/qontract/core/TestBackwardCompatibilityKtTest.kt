@@ -463,4 +463,36 @@ And response-body (number)
         assertEquals(0, results.successCount)
         assertEquals(1, results.failureCount)
     }
+
+    @Test
+    fun `a breaking WIP scenario should not break backward compatibility tests`() {
+        val gherkin1 = """
+Feature: Contract API
+
+@WIP
+Scenario: api call
+When POST /data
+  And request-body (number)
+Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: Contract API
+
+@WIP
+Scenario: api call
+When POST /data
+  And request-body (string)
+Then status 200
+    """.trim()
+
+        val results: Results = testBackwardCompatibility(Feature(gherkin1), Feature(gherkin2))
+
+        if(results.failureCount > 0)
+            println(results.report())
+
+        assertThat(results.successCount).isZero()
+        assertThat(results.failureCount).isZero()
+        assertThat(results.success()).isTrue()
+    }
 }

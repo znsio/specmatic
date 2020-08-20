@@ -202,26 +202,11 @@ fun isNumber(value: StringValue): Boolean {
     }
 }
 
-fun convertToNumber(value: String): Number {
-    value.trim().let {
-        try {
-            return it.toInt()
-        } catch (ignored: Exception) {
-        }
-        try {
-            return it.toLong()
-        } catch (ignored: Exception) {
-        }
-        try {
-            return it.toFloat()
-        } catch (ignored: Exception) {
-        }
-        try {
-            return it.toDouble()
-        } catch (ignored: Exception) {
-        }
-
-        throw ContractException("""Expected number, actual was "$value"""")
-    }
+fun convertToNumber(value: String): Number = value.trim().let {
+    stringToInt(it) ?: stringToLong(it) ?: stringToFloat(it) ?: stringToDouble(it) ?: throw ContractException("""Expected number, actual was "$value"""")
 }
 
+internal fun stringToInt(value: String): Int? = try { value.toInt() } catch(e: Throwable) { null }
+internal fun stringToLong(value: String): Long? = try { value.toLong() } catch(e: Throwable) { null }
+internal fun stringToFloat(value: String): Float? = try { value.toFloat() } catch(e: Throwable) { null }
+internal fun stringToDouble(value: String): Double? = try { value.toDouble() } catch(e: Throwable) { null }

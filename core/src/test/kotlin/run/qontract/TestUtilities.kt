@@ -71,7 +71,7 @@ fun testStub(contractGherkin: String, stubRequest: HttpRequest, stubResponse: Ht
     val matchingStub = feature.matchingStub(stub)
 
     return run.qontract.stub.stubResponse(stubRequest, listOf(feature), listOf(matchingStub), true).let {
-        it.copy(headers = it.headers - "X-Qontract-Result")
+        it.copy(headers = it.headers - QONTRACT_RESULT_HEADER)
     }
 }
 

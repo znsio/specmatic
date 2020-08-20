@@ -14,6 +14,7 @@ import org.springframework.web.client.postForEntity
 import run.qontract.core.Feature
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
+import run.qontract.core.QONTRACT_RESULT_HEADER
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
@@ -368,7 +369,7 @@ Then status 200
 
     @Test
     fun `generate a bad request from an error message`() {
-        val expectedResponse = HttpResponse(status = 400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue("error occurred"))
+        val expectedResponse = HttpResponse(status = 400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue("error occurred"))
         assertThat(badRequest("error occurred")).isEqualTo(expectedResponse)
     }
 

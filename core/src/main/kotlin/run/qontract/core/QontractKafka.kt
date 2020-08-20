@@ -12,6 +12,7 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.testcontainers.containers.KafkaContainer
+import run.qontract.core.utilities.exceptionCauseMessage
 import java.io.Closeable
 import java.util.*
 
@@ -72,9 +73,13 @@ fun createProducer(brokers: String): Producer<String, String> {
 fun createTopics(topics: List<String>, bootstrapServers: String) {
     AdminClient.create(mapOf(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers)).use { adminClient ->
         for (topic in topics) {
-            val createTopicFuture = adminClient.createTopics(listOf(NewTopic(topic, 1, 1)))
-            val topicCreationResult = createTopicFuture.values().get(topic)
-            topicCreationResult?.get()
+            try {
+                val createTopicFuture = adminClient.createTopics(listOf(NewTopic(topic, 1, 1)))
+                val topicCreationResult = createTopicFuture.values()[topic]
+                topicCreationResult?.get()
+            } catch(e: Throwable) {
+                println("Couldn't create topic $topic: ${exceptionCauseMessage(e)}")
+            }
         }
     }
 }

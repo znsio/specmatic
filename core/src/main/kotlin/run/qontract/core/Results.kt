@@ -24,7 +24,7 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
     fun generateErrorHttpResponse(): HttpResponse {
         val report = report("").trim()
 
-        val defaultHeaders = mapOf("Content-Type" to "text/plain", "X-Qontract-Result" to "failure")
+        val defaultHeaders = mapOf("Content-Type" to "text/plain", QONTRACT_RESULT_HEADER to "failure")
         val headers = when {
             report.isEmpty() -> defaultHeaders.plus("X-Qontract-Empty" to "true")
             else -> defaultHeaders

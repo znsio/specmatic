@@ -130,10 +130,10 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             Pair(HttpResponse.OK, null)
         }
         catch(e: ContractException) {
-            Pair(HttpResponse(status = 400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue(e.report())), null)
+            Pair(HttpResponse(status = 400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue(e.report())), null)
         }
         catch (e: Exception) {
-            Pair(HttpResponse(status = 400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)), null)
+            Pair(HttpResponse(status = 400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)), null)
         }
     }
 
@@ -266,14 +266,14 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<
                         val failureResults = matchResults.map { it.first }
 
                         val results = Results(failureResults.toMutableList()).withoutFluff()
-                        HttpResponse(400, headers = mapOf("X-Qontract-Result" to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report()}"))
+                        HttpResponse(400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report()}"))
                     }
                     else -> {
                         val responses = features.asSequence().map {
                             it.stubResponse(httpRequest)
                         }.toList()
 
-                        when(val successfulResponse = responses.firstOrNull { it.headers.getOrDefault("X-Qontract-Result", "none") != "failure" }) {
+                        when(val successfulResponse = responses.firstOrNull { it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure" }) {
                             null -> {
                                 val body = when {
                                     responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> StringValue("Match not found")
@@ -282,7 +282,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<
                                     }.filter { it != EmptyString }.joinToString("\n\n"))
                                 }
 
-                                HttpResponse(400, headers = mapOf("X-Qontract-Result" to "failure"), body = body)
+                                HttpResponse(400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = body)
                             }
                             else -> successfulResponse
                         }
@@ -309,7 +309,7 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List
                 }
 
                 responses.firstOrNull {
-                    it.headers.getOrDefault("X-Qontract-Result", "none") != "failure"
+                    it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure"
                 } ?: HttpResponse(400, responses.map {
                     it.body ?: EmptyString
                 }.filter { it != EmptyString }.joinToString("\n\n"))
@@ -332,7 +332,7 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<Scenari
 }
 
 fun badRequest(errorMessage: String?): HttpResponse {
-    return HttpResponse(HttpStatusCode.BadRequest.value, errorMessage, mapOf("X-Qontract-Result" to "failure"))
+    return HttpResponse(HttpStatusCode.BadRequest.value, errorMessage, mapOf(QONTRACT_RESULT_HEADER to "failure"))
 }
 
 interface StubData

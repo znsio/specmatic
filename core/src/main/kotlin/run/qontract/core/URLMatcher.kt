@@ -6,6 +6,8 @@ import run.qontract.core.utilities.URIUtils
 import run.qontract.core.value.StringValue
 import java.net.URI
 
+const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"
+
 data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
     fun matches(uri: URI, sampleQuery: Map<String, String> = emptyMap(), resolver: Resolver = Resolver()): Result {
 
@@ -15,7 +17,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                 else -> matchesQuery(sampleQuery, resolver).let { queryResult ->
                     when(queryResult) {
                         is Success -> queryResult
-                        else -> queryResult.breadCrumb("QUERY-PARAMS")
+                        else -> queryResult.breadCrumb(QUERY_PARAMS_BREADCRUMB)
                     }
                 }
             }
@@ -101,7 +103,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     fun generateQuery(resolver: Resolver): Map<String, String> {
-        return attempt(breadCrumb = "QUERY-PARAMS") {
+        return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             queryPattern.map { (name, pattern) ->
                 attempt(breadCrumb = name) { name to resolver.generate(name, pattern).toString() }
             }.toMap()
@@ -134,7 +136,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         val newURLPathPatternsList = newPathPartsList.map { list -> list.map { it as URLPathPattern } }
 
-        val newQueryParamsList = attempt(breadCrumb = "QUERY-PARAMS") {
+        val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val optionalQueryParams = queryPattern.mapKeys { "${it.key}?" }
 
             keyCombinations(optionalQueryParams, row) {

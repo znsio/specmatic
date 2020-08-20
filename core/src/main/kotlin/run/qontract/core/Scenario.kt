@@ -217,7 +217,7 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
 
         val response = testExecutor.execute(request)
 
-        when (response.headers.getOrDefault("X-Qontract-Result", "success")) {
+        when (response.headers.getOrDefault(QONTRACT_RESULT_HEADER, "success")) {
             "failure" -> Result.Failure(response.body?.toStringValue() ?: "").updateScenario(testScenario)
             else -> testScenario.matches(response)
         }

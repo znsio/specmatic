@@ -10,7 +10,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
     fun generateResponse(resolver: Resolver): HttpResponse {
         return attempt(breadCrumb = "RESPONSE") {
             val value = softCastValueToXML(body.generate(resolver))
-            val headers = headersPattern.generate(resolver).plus("X-Qontract-Result" to "success").let { headers ->
+            val headers = headersPattern.generate(resolver).plus(QONTRACT_RESULT_HEADER to "success").let { headers ->
                 when {
                     !headers.containsKey("Content-Type") -> headers.plus("Content-Type" to value.httpContentType)
                     else -> headers
@@ -84,7 +84,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
             allPossibleBodies.flatMap { oneBody ->
                 allPossibleHeaders.map { oneHeadersPattern ->
                     val body = oneBody.generate(resolver)
-                    val headers = oneHeadersPattern.generate(resolver).plus("Content-Type" to body.httpContentType).plus("X-Qontract-Result" to "success")
+                    val headers = oneHeadersPattern.generate(resolver).plus("Content-Type" to body.httpContentType).plus(QONTRACT_RESULT_HEADER to "success")
                     HttpResponse(status, headers, body)
                 }
             }

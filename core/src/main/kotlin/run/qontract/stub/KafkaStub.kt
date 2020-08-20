@@ -7,7 +7,7 @@ import run.qontract.core.value.KafkaMessage
 import run.qontract.mock.ScenarioStub
 
 fun stubKafkaContracts(kafkaStubs: List<KafkaStubData>, bootstrapServers: String, createTopics: (List<String>, String) -> Unit, createProducer: (String) -> Producer<String, String>) {
-    try { createTopics(kafkaStubs.map { it.kafkaMessage.topic }, bootstrapServers) } catch(e: Throwable) { }
+    createTopics(kafkaStubs.map { it.kafkaMessage.topic }, bootstrapServers)
 
     createProducer(bootstrapServers).use { producer ->
         for(stub in kafkaStubs) {

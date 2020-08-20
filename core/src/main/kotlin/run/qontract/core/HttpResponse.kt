@@ -8,6 +8,8 @@ import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.*
 
+internal const val QONTRACT_RESULT_HEADER = "X-Qontract-Result"
+
 data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = mapOf("Content-Type" to "text/plain"), val body: Value? = EmptyString) {
     constructor(status: Int = 0, body: String? = "", headers: Map<String, String> = mapOf("Content-Type" to "text/plain")) : this(status, headers, body?.let { parsedValue(it) } ?: EmptyString)
 
@@ -94,7 +96,7 @@ fun nativeInteger(json: Map<String, Value>, key: String): Int? {
 }
 
 
-val responseHeadersToExcludeFromConversion = listOf("Vary", "X-Qontract-Result")
+val responseHeadersToExcludeFromConversion = listOf("Vary", QONTRACT_RESULT_HEADER)
 
 fun toGherkinClauses(response: HttpResponse, types: Map<String, Pattern> = emptyMap()): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
     return try {

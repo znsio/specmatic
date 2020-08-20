@@ -6,6 +6,7 @@ import run.qontract.consoleLog
 import run.qontract.core.Feature
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
+import run.qontract.core.QONTRACT_RESULT_HEADER
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.JSONObjectValue
@@ -34,7 +35,7 @@ Feature: Test
         val stubResponse = stubResponse(HttpRequest(method = "POST", path = "/", body = StringValue("Hello")), listOf(feature), listOf(stubData), true)
 
         assertThat(stubResponse.status).isEqualTo(400)
-        assertThat(stubResponse.headers).containsEntry("X-Qontract-Result", "failure")
+        assertThat(stubResponse.headers).containsEntry(QONTRACT_RESULT_HEADER, "failure")
         assertThat(stubResponse.body?.toStringValue()).isEqualTo("""STRICT MODE ON
 
 >> REQUEST.BODY
@@ -58,7 +59,7 @@ Feature: POST API
         val stubResponse = stubResponse(request, listOf(feature), emptyList(), false)
 
         assertThat(stubResponse.status).isEqualTo(400)
-        assertThat(stubResponse.headers).containsEntry("X-Qontract-Result", "failure")
+        assertThat(stubResponse.headers).containsEntry(QONTRACT_RESULT_HEADER, "failure")
         assertThat(stubResponse.body).isEqualTo(StringValue("""In scenario "Test"
 >> REQUEST.BODY
 

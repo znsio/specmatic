@@ -9,6 +9,7 @@ import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
+import run.qontract.core.value.XMLValue
 import run.qontract.mock.ScenarioStub
 import run.qontract.test.HttpClient
 import java.security.KeyStore
@@ -196,6 +197,40 @@ Feature: POST API
                 assertThat(numberInResponse).isEqualTo(stubNumber)
             }
         }
+    }
+
+    @Test
+    fun `soft casting xml value to xml`() {
+        val value = softCastValueToXML(StringValue("<xml>data</xml"))
+        assertThat(value).isInstanceOf(XMLValue::class.java)
+        assertThat(value.toStringValue()).isEqualTo("<xml>data</xml")
+    }
+
+    @Test
+    fun `soft casting non xml value to xml`() {
+        val value = softCastValueToXML(StringValue("not xml"))
+        assertThat(value).isInstanceOf(StringValue::class.java)
+        assertThat(value.toStringValue()).isEqualTo("not xml")
+    }
+
+    @Test
+    fun `kafka stubs should not be picked up when creating http expectations`() {
+        val feature = Feature("""
+            Feature: Kafka
+              Scenario: Kafka 
+                * kafka-message customer data
+        """.trimIndent())
+        val kafkaStubs = contractInfoToHttpExpectations(listOf(feature to emptyList()))
+        assertThat(kafkaStubs.isEmpty())
+    }
+
+    @Test
+    fun `routing functions`() {
+        assertThat(isFetchLogRequest(HttpRequest("GET", "/_qontract/log"))).isTrue()
+        assertThat(isFetchLoadLogRequest(HttpRequest("GET", "/_qontract/load_log"))).isTrue()
+        assertThat(isFetchContractsRequest(HttpRequest("GET", "/_qontract/contracts"))).isTrue()
+        assertThat(isExpectationCreation(HttpRequest("POST", "/_qontract/expectations"))).isTrue()
+        assertThat(isStateSetupRequest(HttpRequest("POST", "/_qontract/state"))).isTrue()
     }
 
     private fun createStubsUsingMultipleThreads(range: IntRange, stub: HttpStub) {

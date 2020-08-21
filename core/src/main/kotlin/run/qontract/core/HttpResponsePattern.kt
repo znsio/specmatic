@@ -76,20 +76,6 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
     }
 
     fun bodyPattern(newBody: Pattern): HttpResponsePattern = this.copy(body = newBody)
-    fun generateResponses(resolver: Resolver): List<HttpResponse> {
-        return attempt(breadCrumb = "RESPONSE") {
-            val allPossibleBodies = body.newBasedOn(Row(), resolver)
-            val allPossibleHeaders = headersPattern.newBasedOn(Row(), resolver)
-
-            allPossibleBodies.flatMap { oneBody ->
-                allPossibleHeaders.map { oneHeadersPattern ->
-                    val body = oneBody.generate(resolver)
-                    val headers = oneHeadersPattern.generate(resolver).plus("Content-Type" to body.httpContentType).plus(QONTRACT_RESULT_HEADER to "success")
-                    HttpResponse(status, headers, body)
-                }
-            }
-        }
-    }
 
     fun encompasses(other: HttpResponsePattern, olderResolver: Resolver, newerResolver: Resolver): Result {
         val result = listOf(

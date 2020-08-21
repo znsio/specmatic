@@ -23,6 +23,7 @@ import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.pattern.withoutOptionality
 import run.qontract.core.utilities.exceptionCauseMessage
+import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.toMap
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.*
@@ -35,8 +36,8 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
     constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
     constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(Feature(gherkinData), scenarioStubs, host, port, log)
 
-    private var httpStubs = Vector<HttpStubData>(_httpStubs)
-    val endPoint = endPointFromHostAndPort(host, port)
+    private var httpStubs = Vector(_httpStubs)
+    val endPoint = endPointFromHostAndPort(host, port, keyStoreData)
 
     private val environment = applicationEngineEnvironment {
         module {
@@ -143,7 +144,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         createStub(mock)
     }
 
-    private fun createStub(stub: ScenarioStub) {
+    fun createStub(stub: ScenarioStub) {
         if (stub.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
 
         val results = features.asSequence().map { feature ->
@@ -349,12 +350,18 @@ internal fun httpResponseLog(response: HttpResponse): String =
 internal fun httpRequestLog(httpRequest: HttpRequest): String =
         ">> Request Start At ${Date()}\n${httpRequest.toLogString("-> ")}"
 
-fun endPointFromHostAndPort(host: String, port: Int?): String {
+fun endPointFromHostAndPort(host: String, port: Int?, keyStoreData: KeyStoreData?): String {
+    val protocol = when(keyStoreData) {
+        null -> "http"
+        else -> "https"
+    }
+
     val computedPortString = when(port) {
         80, null -> ""
         else -> ":$port"
     }
-    return "http://$host$computedPortString"
+
+    return "$protocol://$host$computedPortString"
 }
 
 internal fun isFetchLogRequest(httpRequest: HttpRequest): Boolean =
@@ -384,4 +391,13 @@ fun softCastValueToXML(body: Value): Value {
         }
         else -> body
     }
+}
+
+fun stringToMockScenario(text: Value): ScenarioStub {
+    val mockSpec =
+            jsonStringToValueMap(text.toStringValue()).also {
+                validateMock(it)
+            }
+
+    return mockFromJSON(mockSpec)
 }

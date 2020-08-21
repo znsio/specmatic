@@ -19,14 +19,14 @@ import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
-import run.qontract.mock.ContractMock
 import run.qontract.mock.ScenarioStub
 import run.qontract.mock.NoMatchingScenario
+import run.qontract.stub.HttpStub
 import java.net.URI
 import java.util.*
 
 
-class ContractMockTests {
+class HttpStubTests {
     private val contractGherkin = """
 Feature: Contract for the balance service
 
@@ -133,11 +133,10 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract mock should fail to match invalid body`() {
-        ContractMock.fromGherkin(queryParamJsonContract).use { mock ->
-            mock.start()
+        HttpStub(queryParamJsonContract).use { stub ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
             val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: 100, smses-left: 200}")
-            Assertions.assertThrows(NoMatchingScenario::class.java) { mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse)) }
+            Assertions.assertThrows(NoMatchingScenario::class.java) { stub.createStub(ScenarioStub(expectedRequest, expectedResponse)) }
         }
     }
 
@@ -204,36 +203,33 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract should mock multi valued arrays in request body`() {
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
 
     @Test
     @Throws(Throwable::class)
     fun `contract should mock multi valued arrays using pattern in request body`() {
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/special_locations")
             val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
 
     @Test
     @Throws(Throwable::class)
     fun `contract should mock multi valued arrays using pattern in response body`() {
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val requestBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody(requestBody)
             val expectedResponse = HttpResponse.OK.let { it.copy(headers = it.headers.plus("Content-Type" to "application/json"))}
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
 
@@ -254,21 +250,19 @@ Scenario: JSON API to get account details with fact check
   | cities_exist | 
   | city_list | 
     """
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
             val expectedResponse = HttpResponse(200, "{\"cities\":[{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}] }")
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
 
     @Throws(Throwable::class)
     private fun validateAndRespond(contractGherkinString: String, httpRequest: HttpRequest, httpResponse: HttpResponse): ResponseEntity<String> {
-        ContractMock.fromGherkin(contractGherkinString).use { mock ->
-            mock.start()
-            mock.createMockScenario(ScenarioStub(httpRequest, httpResponse))
+        HttpStub(contractGherkinString).use { mock ->
+            mock.createStub(ScenarioStub(httpRequest, httpResponse))
             val restTemplate = RestTemplate()
-            return restTemplate.exchange(URI.create(httpRequest.getURL("http://localhost:8080")), HttpMethod.GET, null, String::class.java)
+            return restTemplate.exchange(URI.create(httpRequest.getURL("http://localhost:9000")), HttpMethod.GET, null, String::class.java)
         }
     }
 
@@ -282,11 +276,10 @@ Scenario: JSON API to get account details with fact check
     And response-body (number)
 """.trimIndent()
 
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody("10")
             val expectedResponse = HttpResponse(200, "10")
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
 
@@ -299,11 +292,10 @@ Scenario: JSON API to get account details with fact check
     Then status 200
 """.trimIndent()
 
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NumberValue(10))
             val expectedResponse = HttpResponse.OK
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
 
@@ -316,11 +308,10 @@ Scenario: JSON API to get account details with fact check
     Then status 200
 """.trimIndent()
 
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody(NullValue)
             val expectedResponse = HttpResponse.OK
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
 
@@ -333,11 +324,10 @@ Scenario: JSON API to get account details with fact check
     And response-body (number)
 """.trimIndent()
 
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
             val expectedResponse = HttpResponse(200, "10")
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
 
@@ -350,11 +340,10 @@ Scenario: JSON API to get account details with fact check
     And response-body (number?)
 """.trimIndent()
 
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/number")
             val expectedResponse = HttpResponse(200, "")
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
 
@@ -367,14 +356,13 @@ Scenario: JSON API to get account details with fact check
     Then status 200
 """.trimIndent()
 
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").updateBody(JSONObjectValue(mapOf("one" to NumberValue(1), "two" to NumberValue(2))))
             val expectedResponse = HttpResponse.OK
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
             val restTemplate = RestTemplate()
             try {
-                val response = restTemplate.postForEntity<String>(URI.create("${mock.baseURL}/variables"), """{"one": 1, "two": 2}""")
+                val response = restTemplate.postForEntity<String>(URI.create("${mock.endPoint}/variables"), """{"one": 1, "two": 2}""")
                 assertThat(response.statusCode.value()).isEqualTo(200)
             } catch (e: HttpClientErrorException) {
                 fail("Throw exception: ${e.localizedMessage}")
@@ -391,14 +379,13 @@ Scenario: JSON API to get account details with fact check
     And response-body (dictionary string number)
 """.trimIndent()
 
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/variables")
             val expectedResponse = HttpResponse(200, """{"one": 1, "two": 2}""")
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
             val restTemplate = RestTemplate()
             try {
-                val response = restTemplate.getForEntity<String>(URI.create("${mock.baseURL}/variables"))
+                val response = restTemplate.getForEntity<String>(URI.create("${mock.endPoint}/variables"))
                 assertThat(response.statusCode.value()).isEqualTo(200)
                 val responseBody = parsedJSONStructure(response.body ?: "")
                 if(responseBody !is JSONObjectValue) fail("Expected JSONObjectValue")
@@ -424,14 +411,13 @@ Scenario: JSON API to get account details with fact check
       | number | (number in string) |
 """.trimIndent()
 
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").updateBody("""{"number": "10"}""")
             val expectedResponse = HttpResponse(200, """{"number": "20"}""")
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
             val restTemplate = RestTemplate()
             try {
-                val response = restTemplate.postForEntity<String>(URI.create("${mock.baseURL}/variables"), """{"number": "10"}""")
+                val response = restTemplate.postForEntity<String>(URI.create("${mock.endPoint}/variables"), """{"number": "10"}""")
                 assertThat(response.statusCode.value()).isEqualTo(200)
                 val responseBody = parsedJSONStructure(response.body ?: "")
                 if(responseBody !is JSONObjectValue) fail("Expected json object")
@@ -452,12 +438,11 @@ Scenario: JSON API to get account details with fact check
     Then status 200
 """.trimIndent()
 
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").copy(formFields = mapOf("Data" to "10"))
 
             val expectedResponse = HttpResponse.OK
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
 
             try {
                 val headers = HttpHeaders()
@@ -468,7 +453,7 @@ Scenario: JSON API to get account details with fact check
 
                 val request: HttpEntity<MultiValueMap<String, String>> = HttpEntity(map, headers)
 
-                val response = RestTemplate().postForEntity<String>(URI.create("${mock.baseURL}/variables"), request)
+                val response = RestTemplate().postForEntity<String>(URI.create("${mock.endPoint}/variables"), request)
                 assertThat(response.statusCode.value()).isEqualTo(200)
             } catch (e: HttpClientErrorException) {
                 fail("Threw exception: ${e.localizedMessage}")
@@ -487,12 +472,11 @@ Scenario: JSON API to get account details with fact check
     Then status 200
 """.trimIndent()
 
-        ContractMock.fromGherkin(contractGherkin).use { mock ->
-            mock.start()
+        HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest(method = "POST", path = "/variables", body = parsedValue("""{"name": "John Doe", "age": 10}"""))
 
             val expectedResponse = HttpResponse.OK
-            mock.createMockScenario(ScenarioStub(expectedRequest, expectedResponse))
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
 
             try {
                 val headers = HttpHeaders()
@@ -500,7 +484,7 @@ Scenario: JSON API to get account details with fact check
 
                 val request: HttpEntity<String> = HttpEntity("""{"name": "John Doe", "age": 10}""", headers)
 
-                val response = RestTemplate().postForEntity<String>(URI.create("${mock.baseURL}/variables"), request)
+                val response = RestTemplate().postForEntity<String>(URI.create("${mock.endPoint}/variables"), request)
                 assertThat(response.statusCode.value()).isEqualTo(200)
             } catch (e: HttpClientErrorException) {
                 fail("Threw exception: ${e.localizedMessage}")

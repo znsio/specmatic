@@ -3,10 +3,7 @@ package run.qontract.stub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.consoleLog
-import run.qontract.core.Feature
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
-import run.qontract.core.QONTRACT_RESULT_HEADER
+import run.qontract.core.*
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.JSONObjectValue
@@ -14,6 +11,7 @@ import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import run.qontract.mock.ScenarioStub
 import run.qontract.test.HttpClient
+import java.security.KeyStore
 
 internal class HttpStubKtTest {
     @Test
@@ -85,17 +83,22 @@ Feature: GET API
 
     @Test
     fun `generates a valid endpoint when a port is not given`() {
-        assertThat(endPointFromHostAndPort("localhost", null)).isEqualTo("http://localhost")
+        assertThat(endPointFromHostAndPort("localhost", null, null)).isEqualTo("http://localhost")
     }
 
     @Test
     fun `generates a valid endpoint when a non 80 port is given`() {
-        assertThat(endPointFromHostAndPort("localhost", 9000)).isEqualTo("http://localhost:9000")
+        assertThat(endPointFromHostAndPort("localhost", 9000, null)).isEqualTo("http://localhost:9000")
     }
 
     @Test
     fun `generates a valid endpoint when port 80 is given`() {
-        assertThat(endPointFromHostAndPort("localhost", 80)).isEqualTo("http://localhost")
+        assertThat(endPointFromHostAndPort("localhost", 80, null)).isEqualTo("http://localhost")
+    }
+
+    @Test
+    fun `generates an https endpoint when key store data is provided`() {
+        assertThat(endPointFromHostAndPort("localhost", 80, KeyStoreData(KeyStore.getInstance(KeyStore.getDefaultType()), ""))).isEqualTo("https://localhost")
     }
 
     @Test

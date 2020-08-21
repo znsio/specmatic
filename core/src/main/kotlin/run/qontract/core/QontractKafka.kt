@@ -16,35 +16,61 @@ import run.qontract.core.utilities.exceptionCauseMessage
 import java.io.Closeable
 import java.util.*
 
-class QontractKafka(kafkaPort: Int = 9093) : Closeable {
+typealias CreateProducerPredicate = (brokers: String) -> Producer<String, String>
+
+interface KafkaInstance {
+    val bootstrapServers: String
+    var portBindings: List<String>
+
+    fun close()
+}
+
+class QontractKafkaContainer(port: Int): KafkaInstance {
     private val kafkaContainer = KafkaContainer()
 
-    val bootstrapServers: String
+    init {
+        kafkaContainer.portBindings = listOf("$port:9093")
+        kafkaContainer.start()
+    }
+
+    override val bootstrapServers: String
         get() = kafkaContainer.bootstrapServers
 
+    override var portBindings: List<String>
+        get() = kafkaContainer.portBindings
+        set(value) {
+            kafkaContainer.portBindings = value
+        }
+
+    override fun close() {
+        kafkaContainer.close()
+    }
+}
+
+class QontractKafka(private val kafkaInstance: KafkaInstance, private val createProducerPredicate: CreateProducerPredicate = ::createProducer) : Closeable {
+    constructor(kafkaPort: Int = 9093) : this(QontractKafkaContainer(kafkaPort))
+
+    val bootstrapServers: String
+        get() = kafkaInstance.bootstrapServers
+
     fun send(topic: String, key: String, message: String) {
-        createProducer(kafkaContainer.bootstrapServers).use { producer ->
-            val producerRecord = ProducerRecord<String, String>(topic, key, message)
+        createProducerPredicate(kafkaInstance.bootstrapServers).use { producer ->
+            val producerRecord = ProducerRecord(topic, key, message)
             val future = producer.send(producerRecord)
             future.get()
         }
     }
 
     fun send(topic: String, message: String) {
-        createProducer(kafkaContainer.bootstrapServers).use { producer ->
+        createProducerPredicate(kafkaInstance.bootstrapServers).use { producer ->
             val producerRecord = ProducerRecord<String, String>(topic, message)
             val future = producer.send(producerRecord)
             future.get()
         }
     }
 
-    init {
-        kafkaContainer.portBindings = listOf("$kafkaPort:9093")
-        kafkaContainer.start()
-    }
-
     override fun close() {
-        kafkaContainer.close()
+        kafkaInstance.close()
     }
 }
 

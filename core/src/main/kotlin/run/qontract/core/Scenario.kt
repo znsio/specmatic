@@ -177,17 +177,6 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
-
-    fun generateHttpResponses(actualFacts: Map<String, Value>): List<HttpResponse> {
-        return scenarioBreadCrumb(this) {
-            Resolver(emptyMap(), false, patterns)
-            val resolver = Resolver(actualFacts, false, patterns)
-            val facts = combineFacts(expectedFacts, actualFacts, resolver)
-
-            httpResponsePattern.generateResponses(resolver.copy(factStore = CheckFacts(facts)))
-        }
-    }
-
 }
 
 fun newExpectedServerStateBasedOn(row: Row, expectedServerState: Map<String, Value>, fixtures: Map<String, Value>, resolver: Resolver): Map<String, Value> =

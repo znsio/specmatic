@@ -1,10 +1,9 @@
 package run.qontract.core
 
 import com.intuit.karate.junit5.Karate
-import run.qontract.mock.ContractMock
-import run.qontract.mock.ContractMock.Companion.fromGherkin
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import run.qontract.stub.HttpStub
 
 internal class APITestsUseContractAsMock {
     @Karate.Test
@@ -13,7 +12,8 @@ internal class APITestsUseContractAsMock {
     }
 
     companion object {
-        private var mock: ContractMock? = null
+        private lateinit var stub: HttpStub
+
         @BeforeAll
         @Throws(Throwable::class)
         @JvmStatic
@@ -23,14 +23,13 @@ internal class APITestsUseContractAsMock {
                     "    When GET /balance?account_id=(number)\n" +
                     "    Then status 200\n" +
                     "    And response-body {calls_left: 10, messages_left: 20}"
-            mock = fromGherkin(contractGherkin)
-            mock!!.start()
+            stub = HttpStub(contractGherkin, port = 8080)
         }
 
         @AfterAll
         @JvmStatic
         fun tearDown() {
-            mock!!.close()
+            stub.close()
         }
     }
 }

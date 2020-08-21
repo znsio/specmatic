@@ -59,7 +59,7 @@ sonarqube {
         property "sonar.organization", "qontract"
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.coverage.jacoco.xmlReportPaths", "${rootDir}/build/reports/jacoco/codeCoverageReport/codeCoverageReport.xml"
-        property "sonar.coverage.exclusions", "${rootDir}/application/src/**,${rootDir}/junit5-support/src/**"
+        property "sonar.coverage.exclusions", "**/application/src/**,**/junit5-support/src/**"
     }
 }
 

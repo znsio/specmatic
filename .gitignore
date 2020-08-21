@@ -8,3 +8,4 @@ target/*
 gen/*
 *.class
 **/.zookeeper/*
+core/out

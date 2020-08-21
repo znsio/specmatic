@@ -49,7 +49,7 @@ class SetupFacts {
         contractBehaviour.setServerState(mapOf("account_id" to NumberValue(54321)))
         val response = contractBehaviour.lookupResponse(request)
         assertEquals(200, response.status)
-        val responseJSON = JSONObject(response.body?.displayableValue())
+        val responseJSON = JSONObject(response.body.displayableValue())
         assertEquals(responseJSON.getInt("calls_left"), 10)
         assertEquals(responseJSON.getInt("messages_left"), 20)
     }
@@ -183,7 +183,7 @@ Feature: Contract for /balance API
                         }
 
 
-                        request.body?.let {
+                        request.body.let {
                             if (it is JSONObjectValue) {
                                 it.jsonObject.getValue("name").let { name ->
                                     if (name !is StringValue)
@@ -201,7 +201,7 @@ Feature: Contract for /balance API
                     serverStateForValidation.containsKey("no_user") -> {
                         assertEquals(True, serverStateForValidation["no_user"])
 
-                        request.body?.let {
+                        request.body.let {
                             if (it is JSONObjectValue) {
                                 it.jsonObject.getValue("name").let { name ->
                                     if (name !is StringValue)
@@ -252,7 +252,7 @@ Feature: Contract for /balance API
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        val actual = JSONObject(httpResponse.body?.displayableValue())
+        val actual = JSONObject(httpResponse.body.displayableValue())
         assertThat(actual["calls_left"]).isInstanceOf(Number::class.java)
         assertThat(actual["messages_left"]).isInstanceOf(Number::class.java)
     }
@@ -279,7 +279,7 @@ Feature: Contract for /balance API
         val response = contractBehaviour.lookupResponse(request)
         assertNotNull(response)
         assertEquals(200, response.status)
-        val jsonObject = JSONObject(response.body?.displayableValue())
+        val jsonObject = JSONObject(response.body.displayableValue())
         assertThat(jsonObject["name"]).isInstanceOf(String::class.java)
     }
 
@@ -305,7 +305,7 @@ Feature: Contract for /balance API
         val response = contractBehaviour.lookupResponse(request)
         assertNotNull(response)
         assertEquals(200, response.status)
-        val jsonObject = JSONObject(response.body?.displayableValue())
+        val jsonObject = JSONObject(response.body.displayableValue())
         assertThat(jsonObject["name"]).isInstanceOf(String::class.java)
     }
 
@@ -331,7 +331,7 @@ Feature: Contract for /balance API
         val response = contractBehaviour.lookupResponse(request)
         assertNotNull(response)
         assertEquals(200, response.status)
-        val jsonObject = JSONObject(response.body?.displayableValue())
+        val jsonObject = JSONObject(response.body.displayableValue())
         assertThat(jsonObject["name"]).isInstanceOf(String::class.java)
     }
 }

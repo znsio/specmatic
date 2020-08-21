@@ -107,7 +107,7 @@ class HttpClient(private val baseURL: String, private val timeout: Int = 60, pri
                             }
                         })
                     }
-                    requestWithFileContent.body != null -> {
+                    else -> {
                         this.body = when {
                             requestWithFileContent.headers.containsKey("Content-Type") -> TextContent(requestWithFileContent.bodyString, ContentType.parse(requestWithFileContent.headers["Content-Type"] as String))
                             else -> TextContent(requestWithFileContent.bodyString, ContentType.parse(requestWithFileContent.body.httpContentType))
@@ -185,7 +185,7 @@ private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpReq
     val(body, formFields, multiPartFormData) =
         when(request.content) {
             is FormDataContent -> Triple(EmptyString, qontractRequest.formFields, emptyList())
-            is TextContent -> Triple(qontractRequest.body ?: EmptyString, emptyMap<String, String>(), emptyList<MultiPartFormDataValue>())
+            is TextContent -> Triple(qontractRequest.body, emptyMap(), emptyList())
             is MultiPartFormDataContent -> Triple(EmptyString, emptyMap(), qontractRequest.multiPartFormData)
             is EmptyContent -> Triple(EmptyString, emptyMap(), emptyList())
             else -> throw ContractException("Unknown type of body content sent in the request")

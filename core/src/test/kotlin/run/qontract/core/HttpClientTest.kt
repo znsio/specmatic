@@ -27,7 +27,7 @@ class HttpClientTest {
             val response = client.execute(request)
             Assertions.assertNotNull(response)
             Assertions.assertEquals(200, response.status)
-            val jsonResponseBody = JSONObject(response.body?.toStringValue())
+            val jsonResponseBody = JSONObject(response.body.toStringValue())
             Assertions.assertEquals(10, jsonResponseBody.getInt("location-id"))
         }
     }
@@ -54,7 +54,7 @@ class HttpClientTest {
             val response = client.execute(request)
             Assertions.assertNotNull(response)
             Assertions.assertEquals(200, response.status)
-            val jsonResponseBody = JSONObject(response.body?.toStringValue())
+            val jsonResponseBody = JSONObject(response.body.toStringValue())
             Assertions.assertEquals(10, jsonResponseBody.getInt("location-id"))
         }
     }

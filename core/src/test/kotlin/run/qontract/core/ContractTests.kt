@@ -349,7 +349,7 @@ Then status 200
                 when (body) {
                     is NumberValue -> "json"
                     EmptyString -> "empty"
-                    else -> fail("Expected only json or null, got ${body?.javaClass}")
+                    else -> fail("Expected only json or null, got ${body.javaClass}")
                 }.let { flags.add(it) }
 
                 return HttpResponse(200, "100")

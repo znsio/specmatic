@@ -347,6 +347,6 @@ And response-body (number)
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", body = StringValue("10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertDoesNotThrow { (matchingResponse.response.body?.toStringValue() ?: "not a number").toInt() }
+        assertDoesNotThrow { matchingResponse.response.body.toStringValue().toInt() }
     }
 }

@@ -10,7 +10,7 @@ import run.qontract.core.value.*
 
 internal const val QONTRACT_RESULT_HEADER = "X-Qontract-Result"
 
-data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = mapOf("Content-Type" to "text/plain"), val body: Value? = EmptyString) {
+data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = mapOf("Content-Type" to "text/plain"), val body: Value = EmptyString) {
     constructor(status: Int = 0, body: String? = "", headers: Map<String, String> = mapOf("Content-Type" to "text/plain")) : this(status, headers, body?.let { parsedValue(it) } ?: EmptyString)
 
     private val statusText: String
@@ -27,7 +27,7 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
     fun toJSON(): JSONObjectValue =
         JSONObjectValue(mutableMapOf<String, Value>().also { json ->
             json["status"] = NumberValue(status)
-            json["body"] = body ?: EmptyString
+            json["body"] = body
             if (statusText.isNotEmpty()) json["status-text"] = StringValue(statusText)
             if (headers.isNotEmpty()) json["headers"] = JSONObjectValue(headers.mapValues { StringValue(it.value) })
         })
@@ -38,7 +38,7 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
 
         val firstPart = listOf(statusLine, headerString).joinToString("\n").trim()
 
-        val formattedBody = (body ?: EmptyString).toStringValue()
+        val formattedBody = body.toStringValue()
 
         val responseString = listOf(firstPart, "", formattedBody).joinToString("\n")
         return startLinesWith(responseString, prefix)
@@ -112,7 +112,7 @@ fun toGherkinClauses(response: HttpResponse, types: Map<String, Pattern> = empty
             val (newClauses, newTypes, _) = headersToGherkin(cleanedUpResponse.headers, "response-header", types, ExampleDeclaration(), Then)
             Triple(clauses.plus(newClauses), newTypes, ExampleDeclaration())
         }.let { (clauses, types, examples) ->
-            when (val result = responseBodyToGherkinClauses("ResponseBody", cleanedUpResponse.body?.let { guessType(it) }, types)) {
+            when (val result = responseBodyToGherkinClauses("ResponseBody", guessType(cleanedUpResponse.body), types)) {
                 null -> Triple(clauses, types, examples)
                 else -> {
                     val (newClauses, newTypes, _) = result

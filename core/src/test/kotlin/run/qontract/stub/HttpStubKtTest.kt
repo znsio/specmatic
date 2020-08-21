@@ -35,7 +35,7 @@ Feature: Test
 
         assertThat(stubResponse.status).isEqualTo(400)
         assertThat(stubResponse.headers).containsEntry(QONTRACT_RESULT_HEADER, "failure")
-        assertThat(stubResponse.body?.toStringValue()).isEqualTo("""STRICT MODE ON
+        assertThat(stubResponse.body.toStringValue()).isEqualTo("""STRICT MODE ON
 
 >> REQUEST.BODY
 
@@ -190,7 +190,7 @@ Feature: POST API
 
             range.forEach { stubNumber ->
                 val response = invokeStub(stubNumber, stub)
-                println(response.body?.toStringValue())
+                println(response.body.toStringValue())
                 val json = response.body as JSONObjectValue
                 val numberInResponse = json.jsonObject.getValue("number").toStringValue().toInt()
 

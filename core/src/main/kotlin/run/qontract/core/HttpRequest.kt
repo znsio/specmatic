@@ -13,7 +13,7 @@ import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-data class HttpRequest(val method: String? = null, val path: String? = null, val headers: Map<String, String> = emptyMap(), val body: Value? = EmptyString, val queryParams: Map<String, String> = emptyMap(), val formFields: Map<String, String> = emptyMap(), val multiPartFormData: List<MultiPartFormDataValue> = emptyList()) {
+data class HttpRequest(val method: String? = null, val path: String? = null, val headers: Map<String, String> = emptyMap(), val body: Value = EmptyString, val queryParams: Map<String, String> = emptyMap(), val formFields: Map<String, String> = emptyMap(), val multiPartFormData: List<MultiPartFormDataValue> = emptyList()) {
     fun updateQueryParams(queryParams: Map<String, String>): HttpRequest = copy(queryParams = queryParams.plus(queryParams))
 
     fun updatePath(path: String): HttpRequest {
@@ -95,7 +95,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
                 requestMap["multipart-formdata"] = JSONArrayValue(multiPartData)
             }
             else -> {
-                body?.let { requestMap["body"] = it }
+                requestMap["body"] = body
             }
         }
 
@@ -133,7 +133,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
             headersPattern = HttpHeadersPattern(mapToPattern(headers)),
             urlMatcher = URLMatcher(mapToPattern(queryParams), pathToPattern(pathForPattern), pathForPattern),
             method = this.method,
-            body = this.body?.exactMatchElseType() ?: EmptyStringPattern,
+            body = this.body.exactMatchElseType(),
             formFieldsPattern = mapToPattern(formFields),
             multiPartFormDataPattern = multiPartFormData.map { it.inferType() }
         )

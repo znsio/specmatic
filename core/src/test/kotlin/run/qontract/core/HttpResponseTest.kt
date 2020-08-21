@@ -32,7 +32,7 @@ internal class HttpResponseTest {
             val responseBody = it.body
 
             if(responseBody !is JSONObjectValue)
-                throw AssertionError("Expected responseBody to be a JSON object, but got ${responseBody?.javaClass?.name}")
+                throw AssertionError("Expected responseBody to be a JSON object, but got ${responseBody.javaClass.name}")
 
             assertEquals("John Doe", responseBody.jsonObject.getValue("name").toStringValue())
             assertEquals("application/json", it.headers.getOrDefault("Content-Type", ""))

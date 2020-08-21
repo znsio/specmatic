@@ -124,8 +124,10 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
     private fun handleExpectationCreationRequest(httpRequest: HttpRequest): Pair<HttpResponse, Nothing?> {
         return try {
+            if(httpRequest.body.toStringValue().isEmpty())
+                throw ContractException("Expectation payload was empty")
 
-            val mock = stringToMockScenario(httpRequest.body ?: throw ContractException("Expectation payload was empty"))
+            val mock = stringToMockScenario(httpRequest.body)
             createStub(mock)
 
             Pair(HttpResponse.OK, null)
@@ -170,7 +172,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
     private fun handleStateSetupRequest(httpRequest: HttpRequest): Pair<HttpResponse, String> {
         val body = httpRequest.body
-        val serverState = body?.let { toMap(it) } ?: mutableMapOf()
+        val serverState = toMap(body)
 
         val stateRequestLog = "# >> Request Sent At ${Date()}\n${startLinesWith(valueMapToPlainJsonString(serverState), "# ")}"
 
@@ -242,8 +244,8 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
 internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
 
 internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse) {
-    val headerString = httpResponse.headers["Content-Type"] ?: httpResponse.body?.httpContentType ?: "text/plain"
-    val textContent = TextContent(httpResponse.body?.toStringValue() ?: "", ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
+    val headerString = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
+    val textContent = TextContent(httpResponse.body.toStringValue(), ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
 
     val headersControlledByEngine = HttpHeaders.UnsafeHeadersList.map { it.toLowerCase() }
     for ((name, value) in httpResponse.headers.filterNot { it.key.toLowerCase() in headersControlledByEngine }) {
@@ -279,7 +281,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<
                                 val body = when {
                                     responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> StringValue("Match not found")
                                     else -> StringValue(responses.map {
-                                        it.body ?: EmptyString
+                                        it.body
                                     }.filter { it != EmptyString }.joinToString("\n\n"))
                                 }
 
@@ -312,7 +314,7 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List
                 responses.firstOrNull {
                     it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure"
                 } ?: HttpResponse(400, responses.map {
-                    it.body ?: EmptyString
+                    it.body
                 }.filter { it != EmptyString }.joinToString("\n\n"))
             }
             else -> mock.response
@@ -380,7 +382,7 @@ internal fun isStateSetupRequest(httpRequest: HttpRequest): Boolean =
         httpRequest.path == "/_qontract/state" && httpRequest.method == "POST"
 
 fun softCastResponseToXML(mockResponse: HttpStubData): HttpStubData =
-        mockResponse.copy(response = mockResponse.response.copy(body = mockResponse.response.body?.let { softCastValueToXML(it) }))
+        mockResponse.copy(response = mockResponse.response.copy(body = softCastValueToXML(mockResponse.response.body)))
 
 fun softCastValueToXML(body: Value): Value {
     return when(body) {

@@ -33,7 +33,7 @@ class FeatureKtTest {
         assertEquals(200, response.status)
 
         try {
-            (response.body ?: StringValue("NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa Batman")).displayableValue().toInt()
+            response.body.displayableValue().toInt()
         } catch (e: Exception) { fail("${response.body} is not a number")}
     }
 
@@ -77,12 +77,12 @@ class FeatureKtTest {
         val request = HttpRequest().updateMethod("GET").updatePath("/pets/10")
         val response = contractBehaviour.lookupResponse(request)
 
-        response.body?.let { body ->
+        response.body.let { body ->
             if(body !is JSONObjectValue) fail("Expected JSON object")
 
             assertTrue(body.jsonObject.getValue("id") is NumberValue)
             assertTrue(body.jsonObject.getValue("name") is StringValue)
-        } ?: fail("Response body was null")
+        }
     }
 
     @Test

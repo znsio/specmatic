@@ -180,7 +180,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             requestType = attempt(breadCrumb = "BODY") {
                 requestType.copy(body = when(request.body) {
                     is StringValue -> encompassedType(request.bodyString, null, body, resolver)
-                    else -> request.body?.exactMatchElseType() ?: EmptyStringPattern
+                    else -> request.body.exactMatchElseType()
                 })
             }
 

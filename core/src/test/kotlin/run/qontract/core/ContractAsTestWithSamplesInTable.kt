@@ -183,7 +183,7 @@ Feature: Contract for /balance API
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val requestJSON = request.body!!
+                val requestJSON = request.body
                 assert(requestJSON is JSONObjectValue)
 
                 if (requestJSON is JSONObjectValue) {

@@ -25,7 +25,7 @@ class FeatureTest {
         val contractBehaviour = Feature(gherkinData!!)
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(200)
-        val responseBodyJSON = JSONObject(httpResponse.body?.displayableValue())
+        val responseBodyJSON = JSONObject(httpResponse.body.displayableValue())
         val expectedBodyJSON = JSONObject(expectedBody)
         assertThat(responseBodyJSON.getInt("calls_left")).isEqualTo(expectedBodyJSON.getInt("calls_left"))
         assertThat(responseBodyJSON.getInt("messages_left")).isEqualTo(expectedBodyJSON.getInt("messages_left"))
@@ -45,7 +45,7 @@ class FeatureTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance2").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body?.toStringValue()).isEqualTo("""Match not found""")
+        assertThat(httpResponse.body.toStringValue()).isEqualTo("""Match not found""")
     }
 
     @Test
@@ -63,7 +63,7 @@ class FeatureTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateHeader("y-loginId", "abc123")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body?.toStringValue()).isEqualTo("""In scenario "Get balance info"
+        assertThat(httpResponse.body.toStringValue()).isEqualTo("""In scenario "Get balance info"
 >> REQUEST.HEADERS
 
 Expected header x-loginId was missing""".trimIndent())
@@ -103,7 +103,7 @@ Expected header x-loginId was missing""".trimIndent())
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(200)
-        val responseBodyJSON = JSONObject(httpResponse.body?.displayableValue())
+        val responseBodyJSON = JSONObject(httpResponse.body.displayableValue())
         assertThat(responseBodyJSON.getInt("calls_left")).isEqualTo(10)
         assertThat(responseBodyJSON.getInt("messages_left")).isEqualTo(30)
     }
@@ -136,7 +136,7 @@ Expected header x-loginId was missing""".trimIndent())
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body?.toStringValue()).isEqualTo("""In scenario "Update balance"
+        assertThat(httpResponse.body.toStringValue()).isEqualTo("""In scenario "Update balance"
 >> REQUEST.BODY.calls_made
 
 Expected an array of length 3, actual length 2""")
@@ -156,7 +156,7 @@ Expected an array of length 3, actual length 2""")
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10, \"test\"]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body?.toStringValue()).isEqualTo("""In scenario "Update balance"
+        assertThat(httpResponse.body.toStringValue()).isEqualTo("""In scenario "Update balance"
 >> REQUEST.BODY.calls_made.[2]
 
 Expected number, actual was string: "test"""")
@@ -175,7 +175,7 @@ Expected number, actual was string: "test"""")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        val responseBodyJSON = JSONObject(httpResponse.body?.displayableValue())
+        val responseBodyJSON = JSONObject(httpResponse.body.displayableValue())
         assertEquals(10, responseBodyJSON.getInt("calls_left"))
         assertEquals(30, responseBodyJSON.getInt("messages_left"))
     }
@@ -194,7 +194,7 @@ Expected number, actual was string: "test"""")
         val httpRequest = HttpRequest().updatePath("/balance").updateQueryParam("account-id", "abc").updateMethod("GET")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body?.toStringValue()).isEqualTo("""In scenario "Get account balance"
+        assertThat(httpResponse.body.toStringValue()).isEqualTo("""In scenario "Get account balance"
 >> REQUEST.URL.QUERY-PARAMS.account-id
 
 Expected number, actual was string: "abc"""")
@@ -213,7 +213,7 @@ Expected number, actual was string: "abc"""")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        val responseBody = JSONObject(httpResponse.body?.displayableValue())
+        val responseBody = JSONObject(httpResponse.body.displayableValue())
         assertEquals(10, responseBody.getInt("calls_left"))
         assertEquals(30, responseBody.getInt("messages_left"))
     }
@@ -234,7 +234,7 @@ Feature: Contract for /balance API
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/accounts").updateBody("{name: \"Holmes\", address: \"221 Baker Street\"}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertEquals(200, httpResponse.status)
-        val actual = JSONObject(httpResponse.body?.displayableValue())
+        val actual = JSONObject(httpResponse.body.displayableValue())
         assertNotNull(httpResponse)
         assertTrue(actual["calls_left"] is Int)
         assertTrue(actual["messages_left"] is Int)
@@ -258,7 +258,7 @@ Feature: Contract for /balance API
         val jsonResponse: JSONObject
         httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("id", "100")
         httpResponse = contractBehaviour.lookupResponse(httpRequest)
-        jsonResponse = JSONObject(httpResponse.body?.displayableValue())
+        jsonResponse = JSONObject(httpResponse.body.displayableValue())
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
         assertTrue(jsonResponse["calls_left"] is Int)
@@ -267,7 +267,7 @@ Feature: Contract for /balance API
         httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        assertTrue(httpResponse.body?.toStringValue()?.isEmpty() ?: false)
+        assertTrue(httpResponse.body.toStringValue().isEmpty())
     }
 
     @Test
@@ -297,7 +297,7 @@ Feature: Contract for /balance API
         httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        val responseBody = JSONObject(httpResponse.body?.displayableValue())
+        val responseBody = JSONObject(httpResponse.body.displayableValue())
         val cities = responseBody.getJSONArray("cities")
         for (i in 0 until cities.length()) {
             val city = cities.getJSONObject(i)
@@ -317,7 +317,7 @@ Feature: Contract for /balance API
         val contractBehaviour = Feature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/accounts").updateBody("{name: \"Holmes\", address: \"221 Baker Street\"}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
-        val actual = JSONObject(httpResponse.body?.displayableValue())
+        val actual = JSONObject(httpResponse.body.displayableValue())
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
         assertTrue(actual["calls_left"] is Int)
@@ -352,7 +352,7 @@ Feature: Contract for /balance API
         val test = { httpRequest: HttpRequest ->
             val httpResponse = contractBehaviour.lookupResponse(httpRequest)
             assertEquals(200, httpResponse.status)
-            val actual = JSONObject(httpResponse.body?.displayableValue())
+            val actual = JSONObject(httpResponse.body.displayableValue())
             assertTrue(actual["calls_left"] is Int)
             assertTrue(actual["messages_left"] is Int)
         }
@@ -386,7 +386,7 @@ Feature: Contract for /balance API
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        val actual = JSONObject(httpResponse.body?.displayableValue())
+        val actual = JSONObject(httpResponse.body.displayableValue())
         assertTrue(actual.has("name"))
         assertNotNull(actual.get("name"))
     }
@@ -412,7 +412,7 @@ Feature: Contract for /balance API
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        val actual = JSONObject(httpResponse.body?.displayableValue())
+        val actual = JSONObject(httpResponse.body.displayableValue())
         assertTrue(actual.has("name"))
         assertNotNull(actual.get("name"))
     }
@@ -434,7 +434,7 @@ Feature: Contract for /balance API
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        assertTrue(NumberPattern.matches(httpResponse.body?.let { NumberValue(it.toStringValue().toInt()) } ?: EmptyString, Resolver()) is Result.Success)
+        assertTrue(NumberPattern.matches(NumberValue(httpResponse.body.toStringValue().toInt()), Resolver()) is Result.Success)
     }
 
     @Test

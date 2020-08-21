@@ -1,6 +1,5 @@
 package application
 
-import application.versioning.commands.RepoCommand
 import picocli.CommandLine
 import picocli.CommandLine.*
 import run.qontract.conversions.postmanCollectionToGherkin
@@ -72,7 +71,7 @@ class ImportCommand : Callable<Unit> {
     }
 
     override fun call() {
-        CommandLine(RepoCommand()).usage(System.out)
+        CommandLine(ImportCommand()).usage(System.out)
     }
 }
 

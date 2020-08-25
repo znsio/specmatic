@@ -1,10 +1,12 @@
 package run.qontract.proxy
 
-import io.ktor.application.ApplicationCallPipeline
-import io.ktor.application.call
+import io.ktor.application.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.Netty
-import run.qontract.core.*
+import io.ktor.server.netty.*
+import run.qontract.core.HttpRequest
+import run.qontract.core.HttpResponse
+import run.qontract.core.NamedStub
+import run.qontract.core.toGherkinFeature
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.mock.ScenarioStub
 import run.qontract.stub.httpRequestLog
@@ -13,7 +15,6 @@ import run.qontract.stub.ktorHttpRequestToHttpRequest
 import run.qontract.stub.respondToKtorHttpResponse
 import run.qontract.test.HttpClient
 import java.io.Closeable
-import java.io.File
 import java.net.URL
 
 class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: FileWriter): Closeable {
@@ -116,20 +117,3 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
     }
 }
 
-interface FileWriter {
-    fun createDirectory()
-    fun writeText(path: String, content: String)
-}
-
-class RealFileWriter(private val dataDir: File): FileWriter {
-    constructor(dataDir: String): this(File(dataDir))
-
-    override fun createDirectory() {
-        if (!dataDir.exists()) dataDir.mkdirs()
-    }
-
-    override fun writeText(path: String, content: String) {
-        dataDir.resolve(path).writeText(content)
-    }
-
-}

@@ -16,7 +16,8 @@ import java.io.Closeable
 import java.io.File
 import java.net.URL
 
-class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: String): Closeable {
+class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: FileWriter): Closeable {
+    constructor(host: String, port: Int, baseURL: String, proxyQontractDataDir: String) : this(host, port, baseURL, RealFileWriter(proxyQontractDataDir))
     private val stubs = mutableListOf<NamedStub>()
 
     private val environment = applicationEngineEnvironment {
@@ -99,18 +100,36 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
         if(stubs.isEmpty()) {
             println("No stubs were recorded. No contract will be written.")
         } else {
-            val dataDir = File(proxyQontractDataDir)
-            if (!dataDir.exists()) dataDir.mkdirs()
+            proxyQontractDataDir.createDirectory()
 
-            val contractFile = dataDir.resolve("new_feature.qontract")
-            println("Writing contract to ${contractFile.path}")
-            contractFile.writeText(gherkin)
 
-            stubs.mapIndexed() { index, namedStub ->
-                val stubFile = dataDir.resolve("stub$index.json")
-                println("Writing stub data to ${stubFile.path}")
-                stubFile.writeText(namedStub.stub.toJSON().toStringValue())
+            val featureFileName = "new_feature.qontract"
+            println("Writing contract to $featureFileName")
+            proxyQontractDataDir.writeText(featureFileName, gherkin)
+
+            stubs.mapIndexed { index, namedStub ->
+                val fileName = "stub$index.json"
+                println("Writing stub data to $fileName")
+                proxyQontractDataDir.writeText(fileName, namedStub.stub.toJSON().toStringValue())
             }
         }
     }
+}
+
+interface FileWriter {
+    fun createDirectory()
+    fun writeText(path: String, content: String)
+}
+
+class RealFileWriter(private val dataDir: File): FileWriter {
+    constructor(dataDir: String): this(File(dataDir))
+
+    override fun createDirectory() {
+        if (!dataDir.exists()) dataDir.mkdirs()
+    }
+
+    override fun writeText(path: String, content: String) {
+        dataDir.resolve(path).writeText(content)
+    }
+
 }

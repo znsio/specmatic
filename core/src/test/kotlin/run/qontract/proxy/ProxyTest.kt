@@ -1,7 +1,7 @@
 package run.qontract.proxy
 
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatNoException
+import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestTemplate
@@ -79,7 +79,8 @@ internal class ProxyTest {
         generatedContracts.mkdirs()
 
         val flags = mutableListOf<String>()
-        val receivedContent = mutableListOf<String>()
+        var receivedContract: String? = null
+        var receivedStub: String? = null
         val receivedPaths = mutableListOf<String>()
 
         val fakeFileWriter = object : FileWriter {
@@ -89,7 +90,11 @@ internal class ProxyTest {
 
             override fun writeText(path: String, content: String) {
                 receivedPaths.add(path)
-                receivedContent.add(content)
+
+                if(path.endsWith(".qontract"))
+                    receivedContract = content
+                else
+                    receivedStub = content
             }
         }
 
@@ -106,9 +111,9 @@ internal class ProxyTest {
             }
         }
 
-        assertThat(receivedContent.toList().map { it.trim() }).isEqualTo(listOf(generatedContract, generatedStub))
-
-        assertThat(flags.toList()).isEqualTo(listOf("createDirectory"))
+        assertThat(receivedContract?.trim()).startsWith("Feature:")
+        assertThatCode { Feature(receivedContract ?: "") }.doesNotThrowAnyException()
+        assertThatCode { parsedJSONStructure(receivedStub ?: "") }.doesNotThrowAnyException()
         assertThat(receivedPaths.toList()).isEqualTo(listOf("new_feature.qontract", "stub0.json"))
     }
 
@@ -170,7 +175,8 @@ internal class ProxyTest {
         generatedContracts.mkdirs()
 
         val flags = mutableListOf<String>()
-        val receivedContent = mutableListOf<String>()
+        var receivedContract: String? = null
+        var receivedStub: String? = null
         val receivedPaths = mutableListOf<String>()
 
         val fakeFileWriter = object : FileWriter {
@@ -180,7 +186,11 @@ internal class ProxyTest {
 
             override fun writeText(path: String, content: String) {
                 receivedPaths.add(path)
-                receivedContent.add(content)
+
+                if(path.endsWith(".qontract"))
+                    receivedContract = content
+                else
+                    receivedStub = content
             }
         }
 
@@ -194,9 +204,9 @@ internal class ProxyTest {
             }
         }
 
-        assertThat(receivedContent.toList().map { it.trim() }).isEqualTo(listOf(generatedContract, generatedStub))
-
-        assertThat(flags.toList()).isEqualTo(listOf("createDirectory"))
+        assertThat(receivedContract?.trim()).startsWith("Feature:")
+        assertThatCode { Feature(receivedContract ?: "") }.doesNotThrowAnyException()
+        assertThatCode { parsedJSONStructure(receivedStub ?: "") }.doesNotThrowAnyException()
         assertThat(receivedPaths.toList()).isEqualTo(listOf("new_feature.qontract", "stub0.json"))
     }
 }

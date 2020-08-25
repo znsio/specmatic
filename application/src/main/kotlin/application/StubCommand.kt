@@ -1,5 +1,6 @@
 package application
 
+import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine.*
 import run.qontract.LogTail
 import run.qontract.consoleLog
@@ -23,6 +24,9 @@ import java.util.concurrent.Callable
 class StubCommand : Callable<Unit> {
     var contractFake: ContractStub? = null
     var qontractKafka: QontractKafka? = null
+
+    @Autowired
+    lateinit var qontractConfig: QontractConfig
 
     @Parameters(arity = "0..*", description = ["Contract file paths"])
     var contractPaths: List<String> = mutableListOf()
@@ -97,7 +101,7 @@ class StubCommand : Callable<Unit> {
         when(contractPaths.isEmpty()) {
             true -> {
                 println("No contractPaths specified. Falling back to $QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
-                contractPaths = contractStubPaths()
+                contractPaths = qontractConfig.contractStubPaths()
             }
         }
     }

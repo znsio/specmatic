@@ -172,24 +172,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
             otherResolvedPattern !is XMLPattern -> return mismatchResult(this, otherResolvedPattern).breadCrumb(this.pattern.name)
             pattern.name != otherResolvedPattern.pattern.name -> return Result.Failure("Expected a node named ${pattern.name}, but got ${otherResolvedPattern.pattern.name} instead.").breadCrumb(this.pattern.name)
             else -> {
-                val myRequiredKeys = pattern.attributes.keys.filter { !isOptional(it) }
-                val otherRequiredKeys = otherResolvedPattern.pattern.attributes.keys.filter { !isOptional(it) }
-
-                val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
-                if (missingFixedKey != null)
-                    return Result.Failure("Key $missingFixedKey was missing", breadCrumb = missingFixedKey).breadCrumb(this.pattern.name)
-
-                val result = pattern.attributes.keys.asSequence().map { key ->
-                    val bigger = pattern.attributes.getValue(key)
-                    val smaller = otherResolvedPattern.pattern.attributes[key] ?: otherResolvedPattern.pattern.attributes[withoutOptionality(key)]
-
-                    val result = when {
-                        smaller != null -> bigger.encompasses(resolvedHop(smaller, otherResolver), thisResolver, otherResolver)
-                        else -> Result.Success()
-                    }
-
-                    Pair(key, result)
-                }.find { it.second is Result.Failure }
+                val result = mapEncompassesMap(pattern.attributes, otherResolvedPattern.pattern.attributes, thisResolver, otherResolver)
 
                 if(result?.second is Result.Failure)
                     return result.second.breadCrumb(breadCrumb = result.first).breadCrumb(this.pattern.name)

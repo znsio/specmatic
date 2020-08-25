@@ -31,28 +31,13 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         val thisResolverWithNullType = withNullPattern(thisResolver)
         val otherResolverWithNullType = withNullPattern(otherResolver)
 
-        when (otherPattern) {
-            is ExactValuePattern -> return otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType)
-            !is JSONObjectPattern -> return Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
+        return when (otherPattern) {
+            is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType)
+            !is JSONObjectPattern -> Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
             else -> {
-                val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
-                val otherRequiredKeys = otherPattern.pattern.keys.filter { !isOptional(it) }
+                val result: Pair<String, Result>? = mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType)
 
-                val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
-                if (missingFixedKey != null)
-                    return Result.Failure("Key $missingFixedKey was missing", breadCrumb = missingFixedKey)
-
-                val result = pattern.keys.asSequence().map { key ->
-                    val bigger = pattern.getValue(key)
-                    val smaller = otherPattern.pattern[key] ?: otherPattern.pattern[withoutOptionality(key)]
-
-                    Pair(key,
-                            if (smaller != null)
-                                bigger.encompasses(resolvedHop(smaller, otherResolverWithNullType), thisResolverWithNullType, otherResolverWithNullType)
-                            else Result.Success())
-                }.find { it.second is Result.Failure }
-
-                return result?.second?.breadCrumb(breadCrumb = result.first) ?: Result.Success()
+                result?.second?.breadCrumb(breadCrumb = result.first) ?: Result.Success()
             }
         }
     }
@@ -102,4 +87,24 @@ fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String,
     return jsonPattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) { resolverWithNullType.generate(key, pattern) }
     }
+}
+
+internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<String, Pattern>, thisResolverWithNullType: Resolver, otherResolverWithNullType: Resolver): Pair<String, Result>? {
+    val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
+    val otherRequiredKeys = otherPattern.keys.filter { !isOptional(it) }
+
+    val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
+    if (missingFixedKey != null)
+        return Pair(missingFixedKey, Result.Failure("Key $missingFixedKey was missing"))
+
+    return pattern.keys.asSequence().map { key ->
+        val bigger = pattern.getValue(key)
+        val smaller = otherPattern[key] ?: otherPattern[withoutOptionality(key)]
+
+        val result = when {
+            smaller != null -> bigger.encompasses(resolvedHop(smaller, otherResolverWithNullType), thisResolverWithNullType, otherResolverWithNullType)
+            else -> Result.Success()
+        }
+        Pair(key, result)
+    }.find { it.second is Result.Failure }
 }

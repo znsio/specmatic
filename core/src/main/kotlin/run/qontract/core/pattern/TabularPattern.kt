@@ -58,28 +58,13 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
         val thisResolverWithNullType = withNullPattern(thisResolver)
         val otherResolverWithNullType = withNullPattern(otherResolver)
 
-        when (otherPattern) {
-            is ExactValuePattern -> return otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType)
-            !is TabularPattern -> return Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
+        return when (otherPattern) {
+            is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType)
+            !is TabularPattern -> Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
             else -> {
-                val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
-                val otherRequiredKeys = otherPattern.pattern.keys.filter { !isOptional(it) }
+                val result = mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType)
 
-                val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
-                if (missingFixedKey != null)
-                    return Result.Failure("Key $missingFixedKey was missing", breadCrumb = missingFixedKey)
-
-                val result = pattern.keys.asSequence().map { key ->
-                    val bigger = pattern.getValue(key)
-                    val smaller = otherPattern.pattern[key] ?: otherPattern.pattern[withoutOptionality(key)]
-
-                    val result = if (smaller != null)
-                        bigger.encompasses(resolvedHop(smaller, otherResolverWithNullType), thisResolverWithNullType, otherResolverWithNullType)
-                    else Result.Success()
-                    Pair(key, result)
-                }.find { it.second is Result.Failure }
-
-                return result?.second?.breadCrumb(breadCrumb = result.first) ?: Result.Success()
+                result?.second?.breadCrumb(breadCrumb = result.first) ?: Result.Success()
             }
         }
     }

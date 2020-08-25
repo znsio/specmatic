@@ -123,7 +123,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<XMLPattern> {
-        return keyCombinations(pattern.attributes, row) { pattern ->
+        return forEachKeyCombinationIn(pattern.attributes, row) { pattern ->
             attempt(breadCrumb = this.pattern.name) {
                 newBasedOn(pattern, row, resolver).map {
                     it.mapKeys { entry -> withoutOptionality(entry.key) }

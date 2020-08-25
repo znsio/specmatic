@@ -48,7 +48,7 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
-        return keyCombinations(pattern, row) { pattern ->
+        return forEachKeyCombinationIn(pattern, row) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
         }.map { toTabularPattern(it) }
     }
@@ -149,7 +149,7 @@ fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): Li
             }
 }
 
-fun <ValueType> keyCombinations(patternMap: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
+fun <ValueType> forEachKeyCombinationIn(patternMap: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
     keySets(patternMap.keys.toList(), row).map { keySet ->
         patternMap.filterKeys { key -> key in keySet }
     }.map { newPattern ->

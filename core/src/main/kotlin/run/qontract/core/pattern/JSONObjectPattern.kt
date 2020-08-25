@@ -86,7 +86,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> {
         val resolverWithNullType = withNullPattern(resolver)
-        return keyCombinations(pattern.minus("..."), row) { pattern ->
+        return forEachKeyCombinationIn(pattern.minus("..."), row) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
         }.map { toJSONObjectPattern(it) }
     }

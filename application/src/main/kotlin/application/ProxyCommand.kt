@@ -33,7 +33,7 @@ class ProxyCommand : Callable<Unit> {
     override fun call() {
         validatedProxySettings(targetBaseURL, proxyQontractDataDir)
 
-        proxy = Proxy(host, port, targetBaseURL, proxyQontractDataDir, null)
+        proxy = Proxy(host, port, targetBaseURL, proxyQontractDataDir)
         addShutdownHook()
         consoleLog("Proxy server is running on http://$host:$port. Ctrl + C to stop.")
         while(true) sleep(10000)

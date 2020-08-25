@@ -28,7 +28,7 @@ internal class ProxyTest {
         generatedContracts.mkdirs()
 
         HttpStub(simpleFeature).use {
-            Proxy(host = "localhost", port = 9001, "", generatedContracts.path, null).use { proxy ->
+            Proxy(host = "localhost", port = 9001, "", generatedContracts.path).use { proxy ->
                 val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
                 val requestFactory = SimpleClientHttpRequestFactory()
                 requestFactory.setProxy(restProxy)
@@ -58,7 +58,7 @@ internal class ProxyTest {
         generatedContracts.mkdirs()
 
         HttpStub(simpleFeature).use {
-            Proxy(host = "localhost", port = 9001, "http://localhost:9000", generatedContracts.path, null).use { proxy ->
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", generatedContracts.path).use { proxy ->
                 val client = RestTemplate()
                 val response = client.postForEntity("http://localhost:9001/", "10", String::class.java)
 

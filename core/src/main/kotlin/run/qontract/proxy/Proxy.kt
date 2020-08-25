@@ -16,7 +16,7 @@ import java.io.Closeable
 import java.io.File
 import java.net.URL
 
-class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: String, keyStoreData: KeyStoreData?): Closeable {
+class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: String): Closeable {
     private val stubs = mutableListOf<NamedStub>()
 
     private val environment = applicationEngineEnvironment {
@@ -49,20 +49,9 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
             }
         }
 
-        when (keyStoreData) {
-            null -> connector {
-                this.host = host
-                this.port = port
-            }
-            else -> sslConnector(
-                    keyStore = keyStoreData.keyStore,
-                    keyAlias = keyStoreData.keyAlias,
-                    privateKeyPassword = { keyStoreData.keyPassword.toCharArray() },
-                    keyStorePassword = { keyStoreData.keyPassword.toCharArray() }
-            ) {
-                this.host = host
-                this.port = port
-            }
+        connector {
+            this.host = host
+            this.port = port
         }
     }
 

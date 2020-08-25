@@ -1,10 +1,9 @@
 package run.qontract.core.git
 
-import io.ktor.http.encodeOAuth
+import io.ktor.http.*
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
-import run.qontract.core.Constants
 import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.utilities.GitRepo

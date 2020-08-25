@@ -6,7 +6,7 @@ import java.util.*
 class VersionProvider : CommandLine.IVersionProvider {
     override fun getVersion(): Array<String> {
         val props = Properties()
-        QontractApplication::class.java.classLoader.getResourceAsStream("version.properties").use {
+        QontractCommand::class.java.classLoader.getResourceAsStream("version.properties").use {
             props.load(it)
         }
 

@@ -1,5 +1,6 @@
 package application
 
+import org.springframework.boot.Banner
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import picocli.CommandLine
@@ -21,7 +22,12 @@ open class QontractApplication {
 
             when {
                 args.isEmpty() -> CommandLine(QontractCommand()).usage(System.out)
-                else -> exitProcess(SpringApplication.exit(SpringApplication.run(QontractApplication::class.java, *args)))
+                else ->  {
+                    val app = SpringApplication(QontractApplication::class.java)
+                    app.setBannerMode(Banner.Mode.OFF)
+
+                    exitProcess(SpringApplication.exit(app.run(*args)))
+                }
             }
         }
 

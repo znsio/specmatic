@@ -5,10 +5,11 @@ import picocli.CommandLine.*
 import run.qontract.LogTail
 import run.qontract.consoleLog
 import run.qontract.core.*
+import run.qontract.core.Constants.Companion.DEFAULT_HTTP_STUB_HOST
+import run.qontract.core.Constants.Companion.DEFAULT_HTTP_STUB_PORT
 import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.exceptionCauseMessage
-import run.qontract.core.utilities.contractStubPaths
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.stub.*
 import java.io.File
@@ -34,10 +35,10 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--data"], description = ["Directory in which contract data may be found"], required = false)
     var dataDirs: List<String> = mutableListOf()
 
-    @Option(names = ["--host"], description = ["Host for the http stub"], defaultValue = "localhost")
+    @Option(names = ["--host"], description = ["Host for the http stub"], defaultValue = DEFAULT_HTTP_STUB_HOST)
     lateinit var host: String
 
-    @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = "9000")
+    @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = DEFAULT_HTTP_STUB_PORT)
     var port: Int = 0
 
     @Option(names = ["--startKafka"], description = ["Host on which to dump the stubbed kafka message"], defaultValue = "false")

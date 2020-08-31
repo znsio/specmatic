@@ -93,7 +93,7 @@ internal class QontractKafkaTest {
 
             override var portBindings: List<String>
                 get() = emptyList()
-                set(value) {}
+                set(_) {}
 
             override fun close() {
             }
@@ -131,7 +131,7 @@ internal class QontractKafkaTest {
 
             override var portBindings: List<String>
                 get() = emptyList()
-                set(value) {}
+                set(_) {}
 
             override fun close() {
             }

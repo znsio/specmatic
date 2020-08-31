@@ -125,6 +125,34 @@ Key unexpected was unexpected"""))
     }
 
     @Test
+    fun `stub should not match a request in which all the query params are missing`() {
+        val feature = Feature("""
+Feature: Math API
+
+Scenario: Square of a number
+  When GET /count?status=(string)
+  Then status 200
+  And response-body (string)
+""".trim())
+
+        val stubRequest = HttpRequest(method = "GET", path = "/count", queryParams = mapOf("status" to "available"))
+        val stubResponse = HttpResponse.OK("data")
+        val stubData = HttpStubData(stubRequest.toPattern(), stubResponse, Resolver())
+
+        val request = HttpRequest(method = "GET", path = "/count")
+        val response = stubResponse(request, listOf(feature), listOf(stubData), false)
+        assertThat(response.status).isEqualTo(200)
+
+        val strictResponse = stubResponse(request, listOf(feature), listOf(stubData), true)
+        assertThat(strictResponse.status).isEqualTo(400)
+        assertThat(strictResponse.body.toStringValue().trim()).isEqualTo("""STRICT MODE ON
+
+>> REQUEST.URL.QUERY-PARAMS
+
+Expected query param status was missing""")
+    }
+
+    @Test
     fun `should not generate any key from the ellipsis in the response`() {
         val feature = Feature("""
 Feature: Math API

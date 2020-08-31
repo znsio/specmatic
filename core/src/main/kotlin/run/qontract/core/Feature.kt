@@ -215,7 +215,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
                     val urlMatcher = try {
-                        toURLMatcher(URI.create(step.rest))
+                        toURLMatcherWithOptionalQueryParams(URI.create(step.rest))
                     } catch (e: Throwable) {
                         throw Exception("Could not parse the contract URL \"${step.rest}\" in scenario \"${scenarioInfo.scenarioName}\"", e)
                     }

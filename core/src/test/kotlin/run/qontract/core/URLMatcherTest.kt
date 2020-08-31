@@ -6,10 +6,7 @@ import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.pattern.BooleanPattern
-import run.qontract.core.pattern.DeferredPattern
-import run.qontract.core.pattern.ExactValuePattern
-import run.qontract.core.pattern.Row
+import run.qontract.core.pattern.*
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
@@ -22,7 +19,7 @@ internal class URLMatcherTest {
     @Test
     @Throws(URISyntaxException::class, UnsupportedEncodingException::class)
     fun `should match url with only query parameters`() {
-        val urlPattern = toURLMatcher(URI("/pets?petid=(number)&owner=(string)"))
+        val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets?petid=(number)&owner=(string)"))
         val queryParameters = hashMapOf(
                 "petid" to "123123",
                 "owner" to "hari"
@@ -35,7 +32,7 @@ internal class URLMatcherTest {
     @Test
     @Throws(URISyntaxException::class, UnsupportedEncodingException::class)
     fun `should not match url when number of path parts do not match`() {
-        val urlPattern = toURLMatcher(URI("/pets/123/owners/hari"))
+        val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets/123/owners/hari"))
         urlPattern.matches(URI("/pets/123/owners"), HashMap(), Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
             assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("PATH"), listOf("""Expected /pets/123/owners (having 3 path segments) to match /pets/123/owners/hari (which has 4 path segments).""")))
@@ -45,7 +42,7 @@ internal class URLMatcherTest {
     @Test
     @Throws(URISyntaxException::class, UnsupportedEncodingException::class)
     fun `should not match url when query parameters do not match`() {
-        val urlPattern = toURLMatcher(URI("/pets?petid=(number)"))
+        val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets?petid=(number)"))
         val queryParameters = mapOf("petid" to "text")
 
         urlPattern.matches(URI("/pets"), queryParameters, Resolver()).let {
@@ -57,7 +54,7 @@ internal class URLMatcherTest {
     @Test
     @Throws(URISyntaxException::class, UnsupportedEncodingException::class)
     fun `should match url with only path parameters`() {
-        val urlPattern = toURLMatcher(URI("/pets/(petid:number)/owner/(owner:string)"))
+        val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets/(petid:number)/owner/(owner:string)"))
         urlPattern.matches(URI("/pets/123123/owner/hari")).let {
             assertThat(it is Result.Success).isTrue()
         }
@@ -66,7 +63,7 @@ internal class URLMatcherTest {
     @Test
     @Throws(URISyntaxException::class, UnsupportedEncodingException::class)
     fun `should not match when all parts of the path do not match`() {
-        val urlPattern = toURLMatcher(URI("/pets/(petid:number)"))
+        val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets/(petid:number)"))
         val queryParameters = HashMap<String, String>()
         urlPattern.matches(URI("/owners/123123"), queryParameters, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
@@ -77,7 +74,7 @@ internal class URLMatcherTest {
     @Test
     @Throws(URISyntaxException::class, UnsupportedEncodingException::class)
     fun `should match url with both path and query parameters`() {
-        val urlPattern = toURLMatcher(URI("/pets/(petid:number)?owner=(string)"))
+        val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets/(petid:number)?owner=(string)"))
         val queryParameters = hashMapOf("owner" to "Hari")
         urlPattern.matches(URI("/pets/123123"), queryParameters, Resolver()).let {
             assertThat(it is Result.Success).isTrue()
@@ -86,7 +83,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should generate path when URI contains only query parameters`() {
-        val urlPattern = toURLMatcher(URI("/pets?petid=(number)"))
+        val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets?petid=(number)"))
         urlPattern.generatePath(Resolver()).let {
             assertThat(it).isEqualTo("/pets")
         }
@@ -94,7 +91,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should generate path when url has only path parameters`() {
-        val urlPattern = toURLMatcher(URI("/pets/(petid:number)/owner/(owner:string)"))
+        val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets/(petid:number)/owner/(owner:string)"))
         val resolver = mockk<Resolver>().also {
             every { it.generate("petid", DeferredPattern("(number)", "petid")) } returns NumberValue(123)
             every { it.generate("owner", DeferredPattern("(string)", "owner")) } returns StringValue("hari")
@@ -106,7 +103,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should generate query`() {
-        val urlPattern = toURLMatcher(URI("/pets?petid=(number)&owner=(string)"))
+        val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets?petid=(number)&owner=(string)"))
         val resolver = mockk<Resolver>().also {
             every { it.generate("petid", DeferredPattern("(number)", "petid")) } returns NumberValue(123)
             every { it.generate("owner", DeferredPattern("(string)", "owner")) } returns StringValue("hari")
@@ -118,7 +115,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should pick up facts`() {
-        val urlPattern = toURLMatcher(URI("/pets/(id:number)"))
+        val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets/(id:number)"))
         val resolver = Resolver(mapOf("id" to StringValue("10")))
 
         val newURLPatterns = urlPattern.newBasedOn(Row(), resolver)
@@ -128,7 +125,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should create 2^n matchers on an empty Row`() {
-        val matcher = toURLMatcher(URI("/pets?status=(string)&type=(string)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets?status=(string)&type=(string)"))
         val matchers = matcher.newBasedOn(Row(), Resolver())
 
         assertEquals(4, matchers.size)
@@ -140,7 +137,7 @@ internal class URLMatcherTest {
         val row = Row(listOf("status", "type"), listOf("available", "dog"))
         val resolver = Resolver()
 
-        val matchers = toURLMatcher(URI("/pets?status=(string)&type=(string)")).newBasedOn(row, resolver)
+        val matchers = toURLMatcherWithOptionalQueryParams(URI("/pets?status=(string)&type=(string)")).newBasedOn(row, resolver)
         assertEquals(1, matchers.size)
         val query = matchers.first().generateQuery(Resolver())
         assertEquals("available", query.getValue("status"))
@@ -149,7 +146,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `given a pattern in a query param, it should generate a random value matching that pattern`() {
-        val matcher = toURLMatcher(URI("/pets?id=(string)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets?id=(string)"))
         val query = matcher.generateQuery(Resolver())
 
         assertNotEquals("(string)", query.getValue("id"))
@@ -158,25 +155,25 @@ internal class URLMatcherTest {
 
     @Test
     fun `request url with no query params should match a url pattern with query params`() {
-        val matcher = toURLMatcher(URI("/pets?id=(string)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets?id=(string)"))
         assertThat(matcher.matches(URI("/pets"), emptyMap())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `request url with 1 query param should match a url pattern with superset of 2 params`() {
-        val matcher = toURLMatcher(URI("/pets?id=(string)&name=(string)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets?id=(string)&name=(string)"))
         assertThat(matcher.matches(URI("/pets"), mapOf("name" to "Jack Daniel"))).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `request url query params should not match a url with unknown query params`() {
-        val matcher = toURLMatcher(URI("/pets?id=(string)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets?id=(string)"))
         assertThat(matcher.matches(URI("/pets"), mapOf("name" to "Jack Daniel"))).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
     fun `should match a number in a query only when resolver has mock matching on`() {
-        val matcher = toURLMatcher(URI("/pets?id=(number)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets?id=(number)"))
         assertThat(matcher.matches(URI.create("/pets"), mapOf("id" to "10"), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets"), mapOf("id" to "(number)"), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets"), mapOf("id" to "(number)"), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
@@ -184,7 +181,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should match a boolean in a query only when resolver has mock matching on`() {
-        val matcher = toURLMatcher(URI("/pets?available=(boolean)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets?available=(boolean)"))
         assertThat(matcher.matches(URI.create("/pets"), mapOf("available" to "true"), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets"), mapOf("available" to "(boolean)"), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets"), mapOf("available" to "(boolean)"), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
@@ -192,7 +189,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should match a number in a path only when resolver has mock matching on`() {
-        val matcher = toURLMatcher(URI("/pets/(id:number)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets/(id:number)"))
         assertThat(matcher.matches(URI.create("/pets/10"), emptyMap(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets/(id:number)"), emptyMap(), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets/(id:number)"), emptyMap(), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
@@ -200,7 +197,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should match a boolean in a path only when resolver has mock matching on`() {
-        val matcher = toURLMatcher(URI("/pets/(status:boolean)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets/(status:boolean)"))
         assertThat(matcher.matches(URI.create("/pets/true"), emptyMap(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets/(status:boolean)"), emptyMap(), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
         assertThat(matcher.matches(URI.create("/pets/(status:boolean)"), emptyMap(), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
@@ -208,7 +205,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should generate a path with a concrete value given a path pattern with newBasedOn`() {
-        val matcher = toURLMatcher(URI("/pets/(status:boolean)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets/(status:boolean)"))
         val matchers = matcher.newBasedOn(Row(), Resolver())
         assertThat(matchers).hasSize(1)
         assertThat(matchers.single()).isEqualTo(URLMatcher(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets"))), URLPathPattern(BooleanPattern, "status")), "/pets/(status:boolean)"))
@@ -216,7 +213,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should generate a path with a concrete value given a query param with newBasedOn`() {
-        val matcher = toURLMatcher(URI("/pets?available=(boolean)"))
+        val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets?available=(boolean)"))
         val matchers = matcher.newBasedOn(Row(), Resolver())
         assertThat(matchers).hasSize(2)
 
@@ -225,5 +222,21 @@ internal class URLMatcherTest {
 
         val matcherWithQueryParams = URLMatcher(mapOf("available" to BooleanPattern), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
         assertThat(matchers).contains(matcherWithQueryParams)
+    }
+
+    @Test
+    fun `url matcher with a non optional query param should not match empty query params`() {
+        val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern), pathToPattern("/"), "/")
+
+        val result = matcher.matches(URI("/"), emptyMap(), Resolver())
+        assertThat(result.isTrue()).isFalse()
+    }
+
+    @Test
+    fun `url matcher with 2 non optional query params should not match a url with just one of the specified query params`() {
+        val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern, "string" to StringPattern), pathToPattern("/"), "/")
+
+        val result = matcher.matches(URI("/"), mapOf("name" to "Archie"), Resolver())
+        assertThat(result.isTrue()).isFalse()
     }
 }

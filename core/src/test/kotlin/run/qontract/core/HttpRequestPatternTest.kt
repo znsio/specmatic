@@ -16,7 +16,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should not match when url does not match`() {
         val httpRequestPattern = HttpRequestPattern(
-                urlMatcher = toURLMatcher(URI("/matching_path")))
+                urlMatcher = toURLMatcherWithOptionalQueryParams(URI("/matching_path")))
         val httpRequest = HttpRequest().updateWith(URI("/unmatched_path"))
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Failure::class.java)
@@ -27,7 +27,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should not match when method does not match`() {
         val httpRequestPattern = HttpRequestPattern(
-                urlMatcher = toURLMatcher(URI("/matching_path")),
+                urlMatcher = toURLMatcherWithOptionalQueryParams(URI("/matching_path")),
                 method = "POST")
         val httpRequest = HttpRequest()
             .updateWith(URI("/matching_path"))
@@ -42,7 +42,7 @@ internal class HttpRequestPatternTest {
     fun `should not match when body does not match`() {
         val httpRequestPattern =
                 HttpRequestPattern(
-                        urlMatcher = toURLMatcher(URI("/matching_path")),
+                        urlMatcher = toURLMatcherWithOptionalQueryParams(URI("/matching_path")),
                         method = "POST",
                         body = parsedPattern("""{"name": "Hari"}"""))
         val httpRequest = HttpRequest()
@@ -58,7 +58,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should match when request matches url, method and body`() {
         val httpRequestPattern = HttpRequestPattern(
-                urlMatcher =  toURLMatcher(URI("/matching_path")),
+                urlMatcher =  toURLMatcherWithOptionalQueryParams(URI("/matching_path")),
                 method = "POST",
                 body = parsedPattern("""{"name": "Hari"}"""))
         val httpRequest = HttpRequest()
@@ -74,7 +74,7 @@ internal class HttpRequestPatternTest {
     fun `a clone request pattern request should include the headers specified`() {
         val pattern = HttpRequestPattern(
                 headersPattern = HttpHeadersPattern(mapOf("Test-Header" to stringToPattern("(string)", "Test-Header"))),
-                urlMatcher = toURLMatcher(URI("/")),
+                urlMatcher = toURLMatcherWithOptionalQueryParams(URI("/")),
                 method = "GET"
         )
 
@@ -85,7 +85,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `a request with an optional header should result in 2 options for newBasedOn`() {
         val requests = HttpRequestPattern(method = "GET",
-                urlMatcher = toURLMatcher(URI("/")),
+                urlMatcher = toURLMatcherWithOptionalQueryParams(URI("/")),
                 headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern))).newBasedOn(Row(), Resolver())
 
         assertThat(requests).hasSize(2)
@@ -102,7 +102,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `number bodies should match numerical strings`() {
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = NumberPattern)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = NumberPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("10"))
 
         assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Success::class.java)
@@ -110,7 +110,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `boolean bodies should match boolean strings`() {
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = BooleanPattern)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = BooleanPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("true"))
 
         assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Success::class.java)
@@ -118,7 +118,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `boolean bodies should not match non-boolean strings`() {
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = BooleanPattern)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = BooleanPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("10"))
 
         assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Failure::class.java)
@@ -126,7 +126,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `integer bodies should not match non-integer strings`() {
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), body = NumberPattern)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = NumberPattern)
         val request = HttpRequest("GET", path = "/", body = StringValue("not a number"))
 
         assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Failure::class.java)
@@ -135,7 +135,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `request with multiple parts and no optional values should result in just one test for the whole`() {
         val parts = listOf(MultiPartContentPattern("data1", StringPattern), MultiPartContentPattern("data2", StringPattern))
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = parts)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = parts)
         val patterns = requestPattern.newBasedOn(Row(), Resolver())
 
         assertThat(patterns).hasSize(1)
@@ -147,13 +147,13 @@ internal class HttpRequestPatternTest {
     fun `request with an optional part should result in two requests`() {
         val part = MultiPartContentPattern("data?", StringPattern)
 
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
         val patterns = requestPattern.newBasedOn(Row(), Resolver())
 
         assertThat(patterns).hasSize(2)
 
-        assertThat(patterns).contains(HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = emptyList()))
-        assertThat(patterns).contains(HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part.nonOptional())))
+        assertThat(patterns).contains(HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = emptyList()))
+        assertThat(patterns).contains(HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part.nonOptional())))
     }
 
     @Test
@@ -161,12 +161,12 @@ internal class HttpRequestPatternTest {
         val part = MultiPartContentPattern("data", parsedPattern("""{"name": "(string)"}"""))
         val example = Row(listOf("name"), listOf("John Doe"))
 
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
         val patterns = requestPattern.newBasedOn(example, Resolver())
 
         assertThat(patterns).hasSize(1)
 
-        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("data", toJSONObjectPattern(mapOf("name" to ExactValuePattern(StringValue("John Doe")))))))
+        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("data", toJSONObjectPattern(mapOf("name" to ExactValuePattern(StringValue("John Doe")))))))
         assertThat(patterns.single()).isEqualTo(expectedPattern)
     }
 
@@ -175,12 +175,12 @@ internal class HttpRequestPatternTest {
         val part = MultiPartContentPattern("name", StringPattern)
         val example = Row(listOf("name"), listOf("John Doe"))
 
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
         val patterns = requestPattern.newBasedOn(example, Resolver())
 
         assertThat(patterns).hasSize(1)
 
-        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("name", ExactValuePattern(StringValue("John Doe")))))
+        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("name", ExactValuePattern(StringValue("John Doe")))))
         assertThat(patterns.single()).isEqualTo(expectedPattern)
     }
 
@@ -189,12 +189,12 @@ internal class HttpRequestPatternTest {
         val part = MultiPartContentPattern("name?", StringPattern)
         val example = Row(listOf("name"), listOf("John Doe"))
 
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
         val patterns = requestPattern.newBasedOn(example, Resolver())
 
         assertThat(patterns).hasSize(1)
 
-        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("name", ExactValuePattern(StringValue("John Doe")))))
+        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("name", ExactValuePattern(StringValue("John Doe")))))
         assertThat(patterns.single()).isEqualTo(expectedPattern)
     }
 
@@ -202,7 +202,7 @@ internal class HttpRequestPatternTest {
     fun `request type having an optional part name should match a request in which the part is missing`() {
         val part = MultiPartContentPattern("name?", StringPattern)
 
-        val requestType = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcher("/"), multiPartFormDataPattern = listOf(part))
+        val requestType = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
 
         val request = HttpRequest("GET", "/")
 
@@ -241,7 +241,7 @@ internal class HttpRequestPatternTest {
     fun `should generate a request with an array body if the array is in an example`() {
         val example = Row(listOf("body"), listOf("[1, 2, 3]"))
 
-        val requestType = HttpRequestPattern(urlMatcher = toURLMatcher("/"), body = parsedPattern("(body: RequestBody)"))
+        val requestType = HttpRequestPattern(urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = parsedPattern("(body: RequestBody)"))
         val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to parsedPattern("""(number*)"""))))
 
         assertThat(newRequestTypes).hasSize(1)
@@ -256,7 +256,7 @@ internal class HttpRequestPatternTest {
     fun `should generate a request with an object body if the object is in an example`() {
         val example = Row(listOf("body"), listOf("""{"one": 1}"""))
 
-        val requestType = HttpRequestPattern(urlMatcher = toURLMatcher("/"), body = parsedPattern("(body: RequestBody)"))
+        val requestType = HttpRequestPattern(urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = parsedPattern("(body: RequestBody)"))
         val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to toTabularPattern(mapOf("one" to NumberPattern)))))
 
         assertThat(newRequestTypes).hasSize(1)
@@ -265,5 +265,14 @@ internal class HttpRequestPatternTest {
         val requestBodyType = newRequestType.body as ExactValuePattern
 
         assertThat(requestBodyType).isEqualTo(ExactValuePattern(JSONObjectValue(mapOf("one" to NumberValue(1)))))
+    }
+
+    @Test
+    fun `should generate a stub request pattern from an http request in which the query params are not optional`() {
+        val requestType = HttpRequestPattern(method = "GET", urlMatcher = URLMatcher(mapOf("status" to StringPattern), pathToPattern("/"), "/"))
+        val newRequestType = requestType.generate(HttpRequest("GET", "/", queryParams = mapOf("status" to "available")), Resolver())
+
+        assertThat(newRequestType.urlMatcher?.queryPattern?.keys?.sorted()).isEqualTo(listOf("status"))
+
     }
 }

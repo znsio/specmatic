@@ -51,6 +51,10 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
             val bodyValue = NumberValue(body)
             return HttpResponse(200, mapOf("Content-Type" to bodyValue.httpContentType), bodyValue)
         }
+        fun OK(body: String): HttpResponse {
+            val bodyValue = StringValue(body)
+            return HttpResponse(200, mapOf("Content-Type" to bodyValue.httpContentType), bodyValue)
+        }
         fun OK(body: Value) = HttpResponse(200, mapOf("Content-Type" to body.httpContentType), body)
         val EMPTY = HttpResponse(0, emptyMap())
 

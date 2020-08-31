@@ -1,6 +1,5 @@
 package run.qontract.proxy
 
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.http.client.SimpleClientHttpRequestFactory
@@ -23,56 +22,6 @@ internal class ProxyTest {
 
     @Test
     fun `basic test of the proxy`() {
-        val generatedContract = """
-            Feature: New feature
-  Scenario: POST http://localhost:9000/
-    When POST http://localhost:9000/
-    And request-header Accept (string)
-    And request-header Content-Type (string)
-    And request-header User-Agent (string)
-    And request-header Host (string)
-    And request-header Proxy-Connection (string)
-    And request-header Content-Length (number)
-    And request-body (RequestBody: string)
-    Then status 200
-    And response-header Connection (string)
-    And response-body (number)
-  
-    Examples:
-    | Accept | Content-Type | User-Agent | Host | Proxy-Connection | Content-Length | RequestBody |
-    | text/plain, application/json, application/*+json, */* | text/plain;charset=ISO-8859-1 | Java/1.8.0_241 | localhost:9000 | keep-alive | 2 | 10 |
-        """.trim()
-
-        val generatedStub = """
-            {
-    "http-request": {
-        "path": "http://localhost:9000/",
-        "method": "POST",
-        "headers": {
-            "Accept": "text/plain, application/json, application/*+json, */*",
-            "Content-Type": "text/plain;charset=ISO-8859-1",
-            "User-Agent": "Java/1.8.0_241",
-            "Host": "localhost:9000",
-            "Proxy-Connection": "keep-alive",
-            "Content-Length": "2"
-        },
-        "body": "10"
-    },
-    "http-response": {
-        "status": 200,
-        "body": "100",
-        "status-text": "OK",
-        "headers": {
-            "Vary": "Origin",
-            "X-Qontract-Result": "success",
-            "Content-Length": "3",
-            "Content-Type": "text/plain",
-            "Connection": "keep-alive"
-        }
-    }
-}
-        """.trim()
-
         val generatedContracts = File("./build/generatedContracts")
         if(generatedContracts.exists())
             generatedContracts.deleteRecursively()
@@ -99,7 +48,7 @@ internal class ProxyTest {
         }
 
         HttpStub(simpleFeature).use {
-            Proxy(host = "localhost", port = 9001, "", fakeFileWriter).use { proxy ->
+            Proxy(host = "localhost", port = 9001, "", fakeFileWriter).use {
                 val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
                 val requestFactory = SimpleClientHttpRequestFactory()
                 requestFactory.setProxy(restProxy)
@@ -119,56 +68,6 @@ internal class ProxyTest {
 
     @Test
     fun `basic test of the reverse proxy`() {
-        val generatedContract = """
-            Feature: New feature
-  Scenario: POST /
-    When POST /
-    And request-header Accept (string)
-    And request-header Content-Type (string)
-    And request-header User-Agent (string)
-    And request-header Host (string)
-    And request-header Connection (string)
-    And request-header Content-Length (number)
-    And request-body (RequestBody: string)
-    Then status 200
-    And response-header Connection (string)
-    And response-body (number)
-  
-    Examples:
-    | Accept | Content-Type | User-Agent | Host | Connection | Content-Length | RequestBody |
-    | text/plain, application/json, application/*+json, */* | text/plain;charset=ISO-8859-1 | Java/1.8.0_241 | localhost:9001 | keep-alive | 2 | 10 |
-        """.trim()
-
-        val generatedStub = """
-            {
-    "http-request": {
-        "path": "/",
-        "method": "POST",
-        "headers": {
-            "Accept": "text/plain, application/json, application/*+json, */*",
-            "Content-Type": "text/plain;charset=ISO-8859-1",
-            "User-Agent": "Java/1.8.0_241",
-            "Host": "localhost:9001",
-            "Connection": "keep-alive",
-            "Content-Length": "2"
-        },
-        "body": "10"
-    },
-    "http-response": {
-        "status": 200,
-        "body": "100",
-        "status-text": "OK",
-        "headers": {
-            "Vary": "Origin",
-            "X-Qontract-Result": "success",
-            "Content-Length": "3",
-            "Content-Type": "text/plain",
-            "Connection": "keep-alive"
-        }
-    }
-}
-        """.trim()
-
         val generatedContracts = File("./build/generatedContracts")
         if(generatedContracts.exists())
             generatedContracts.deleteRecursively()
@@ -195,7 +94,7 @@ internal class ProxyTest {
         }
 
         HttpStub(simpleFeature).use {
-            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use { proxy ->
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val client = RestTemplate()
                 val response = client.postForEntity("http://localhost:9001/", "10", String::class.java)
 

@@ -168,7 +168,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
             requestType = attempt(breadCrumb = "URL") {
                 val path = request.path ?: ""
                 val pathTypes = pathToPattern(path)
-                val queryParamTypes = toTypeMap(request.queryParams, urlMatcher.queryPattern, resolver)
+                val queryParamTypes = toTypeMap(request.queryParams, urlMatcher.queryPattern, resolver).mapKeys { it.key.removeSuffix("?") }
 
                 requestType.copy(urlMatcher = URLMatcher(queryParamTypes, pathTypes, path))
             }
@@ -204,7 +204,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
     }
 
     private fun toTypeMap(values: Map<String, String>, types: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {
-        return types.filterKeys { withoutOptionality(it) in values }.mapValues { it ->
+        return types.filterKeys { withoutOptionality(it) in values }.mapValues {
             val key = withoutOptionality(it.key)
             val type = it.value
 

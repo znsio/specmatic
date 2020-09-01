@@ -171,8 +171,8 @@ fun isLookupRowPattern(token: String): Boolean {
 fun parsedJSONStructure(content: String): Value {
     return content.trim().let {
         when {
-            it.startsWith("{") -> try { JSONObjectValue(jsonStringToValueMap(it)) } catch(e: Throwable) { throw ContractException("String started with { but couldn't be parsed as json object") }
-            it.startsWith("[") -> try { JSONArrayValue(jsonStringToValueArray(it)) } catch(e: Throwable) { throw ContractException("String started with [ but couldn't be parsed as json array") }
+            it.startsWith("{") -> try { JSONObjectValue(jsonStringToValueMap(it)) } catch(e: Throwable) { throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}") }
+            it.startsWith("[") -> try { JSONArrayValue(jsonStringToValueArray(it)) } catch(e: Throwable) { throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}") }
             else -> throw ContractException("Expected json, actual $content.")
         }
     }

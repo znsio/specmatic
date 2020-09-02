@@ -275,18 +275,20 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
 }
 
 // Used by QontractJUnitSupport users for loading contracts to stub or mock
-fun contractStubPaths(): List<String> =
+fun contractStubPaths(): List<ContractPathData> =
         contractFilePathsFrom(QONTRACT_CONFIG_IN_CURRENT_DIRECTORY, ".qontract") { source -> source.stubContracts }
 
 fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>
 }
 
-fun contractTestPathsFrom(configFilePath: String, workingDirectory: String): List<String> {
+fun contractTestPathsFrom(configFilePath: String, workingDirectory: String): List<ContractPathData> {
     return contractFilePathsFrom(configFilePath, workingDirectory) { source -> source.testContracts }
 }
 
-fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<String> {
+data class ContractPathData(val baseDir: String, val absolutePath: String)
+
+fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
     println("Loading config file $configFilePath")
     val sources = loadSources(configFilePath)
 
@@ -317,7 +319,7 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
         }
 
         selector.select(source).map {
-            repoDir.resolve(it).path
+            ContractPathData(repoDir.path, repoDir.resolve(it).path)
         }
     }.also {
         println("Contract file paths #######")

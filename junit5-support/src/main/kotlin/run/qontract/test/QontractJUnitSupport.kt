@@ -47,7 +47,7 @@ open class QontractJUnitSupport {
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
+                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path).map { it.absolutePath }
                     contractFilePaths.flatMap { loadTestScenarios(it, "", "") }
                 }
             }

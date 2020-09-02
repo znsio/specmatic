@@ -61,7 +61,6 @@ dependencies {
     implementation 'org.apache.kafka:kafka-clients:2.6.0'
 
     implementation 'org.apache.ant:ant-junit:1.10.8'
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-core:1.0.0-RC'
 
     implementation(project(':core'))
     implementation(project(':junit5-support'))

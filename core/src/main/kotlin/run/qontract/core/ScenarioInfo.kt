@@ -1,5 +1,6 @@
 package run.qontract.core
 
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.KafkaMessagePattern
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.Examples

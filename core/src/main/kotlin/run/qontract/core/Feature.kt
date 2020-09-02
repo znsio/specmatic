@@ -354,12 +354,12 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>): L
 
 internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, backgroundInfo: ScenarioInfo): List<Scenario> =
     scenarios(featureChildren).map { featureChild ->
+        if(featureChild.scenario.name.isBlank())
+            throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
+
         val backgroundInfoCopy = backgroundInfo.copy(scenarioName = featureChild.scenario.name)
         lexScenario(featureChild.scenario.stepsList, featureChild.scenario.examplesList, featureChild.scenario.tagsList, backgroundInfoCopy)
     }.map { scenarioInfo ->
-        if(scenarioInfo.scenarioName.isBlank())
-            throw ContractException("A scenario name must not be empty. The contract has a scenario without a name.")
-
         Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, scenarioInfo.expectedServerState, scenarioInfo.examples, scenarioInfo.patterns, scenarioInfo.fixtures, scenarioInfo.kafkaMessage, scenarioInfo.ignoreFailure)
     }
 

@@ -74,22 +74,10 @@ class StubCommand : Callable<Unit> {
         startServer()
         addShutdownHook()
 
-        val contractPathParentPaths = contractPaths.map {
-            File(it).absoluteFile.parentFile.toPath()
+        val watcher = Watcher(contractPaths)
+        watcher.watchForChanges {
+            restartServer()
         }
-        val contractPathDataDirPaths = contractPaths.flatMap { contractFilePath ->
-            allDirsInTree(implicitContractDataDir(contractFilePath).absolutePath).map { it.toPath() }
-        }
-        val dataDirPaths = dataDirs.flatMap {
-            allDirsInTree(it).map { it.absoluteFile.toPath() }
-        }
-
-        val pathsToWatch = when {
-            dataDirs.isNotEmpty() -> contractPathParentPaths.plus(dataDirPaths)
-            else -> contractPathParentPaths.plus(contractPathDataDirPaths)
-        }
-
-        while(true) { watchForChanges(pathsToWatch) }
     } catch (e: NoMatchingScenario) {
         consoleLog(e.localizedMessage)
     } catch (e:ContractException) {
@@ -105,37 +93,6 @@ class StubCommand : Callable<Unit> {
                 contractPaths = qontractConfig.contractStubPaths()
             }
         }
-    }
-
-    private fun watchForChanges(contractPaths: List<Path>) {
-        val watchService = FileSystems.getDefault().newWatchService()
-
-        contractPaths.forEach { contractPath ->
-            contractPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE)
-        }
-
-        var key: WatchKey
-        while (watchService.take().also { key = it } != null) {
-            key.reset()
-
-            val (restartNeeded, changedFile) = isRestartNeeded(key)
-            if(restartNeeded) {
-                consoleLog("""Restarting stub server. Change in ${changedFile}""")
-                restartServer()
-            }
-        }
-    }
-
-    private fun isRestartNeeded(key: WatchKey): Pair<Boolean, String> {
-        key.pollEvents().forEach { event ->
-            when {
-                event.context().toString().endsWith(".json") || event.context().toString().endsWith(".qontract") -> {
-                    return Pair(true, event.context().toString())
-                }
-            }
-        }
-
-        return Pair(false, "")
     }
 
     private fun startServer() {

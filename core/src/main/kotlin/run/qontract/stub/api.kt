@@ -52,26 +52,34 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
 }
 
 fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
-    return contractPaths.flatMap { contractPath ->
-        consoleLog("Loading $contractPath")
-        val feature = Feature(readFile(contractPath))
-        val implicitDataDir = implicitContractDataDir(contractPath)
+    return contractPaths.map { File(it) }.flatMap { contractPath ->
+        when {
+            contractPath.isFile && contractPath.extension == "qontract" -> {
+                consoleLog("Loading $contractPath")
+                val feature = Feature(contractPath.readText().trim())
+                val implicitDataDir = implicitContractDataDir(contractPath.path)
 
-        val stubData = when {
-            implicitDataDir.isDirectory -> {
-                consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
-                logIgnoredFiles(implicitDataDir)
+                val stubData = when {
+                    implicitDataDir.isDirectory -> {
+                        consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
+                        logIgnoredFiles(implicitDataDir)
 
-                val stubDataFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension == "json" } ?: emptyList()
-                printDataFiles(stubDataFiles)
-                stubDataFiles.map {
-                    Pair(it.path, stringToMockScenario(StringValue(it.readText())))
+                        val stubDataFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension == "json" } ?: emptyList()
+                        printDataFiles(stubDataFiles)
+                        stubDataFiles.map {
+                            Pair(it.path, stringToMockScenario(StringValue(it.readText())))
+                        }
+                    }
+                    else -> emptyList()
                 }
+
+                loadQontractStubs(listOf(Pair(contractPath.path, feature)), stubData)
+            }
+            contractPath.isDirectory -> {
+                loadContractStubsFromImplicitPaths(contractPath.listFiles()?.toList()?.map { it.absolutePath } ?: emptyList())
             }
             else -> emptyList()
         }
-
-        loadQontractStubs(listOf(Pair(contractPath, feature)), stubData)
     }
 }
 

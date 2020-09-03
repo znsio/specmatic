@@ -27,12 +27,12 @@ class BundleCommand : Callable<Unit> {
     lateinit var fileReader: RealFileReader
 
     override fun call() {
-        val zipperEntries = qontractConfig.contractStubPathData().map { pathDataToZipperEntry(it, fileReader) }
+        val zipperEntries = qontractConfig.contractStubPathData().map { pathDataToEntryPath(it, fileReader) }
         zipper.compress(bundlePath, zipperEntries)
     }
 }
 
-fun pathDataToZipperEntry(pathData: ContractPathData, reader: RealFileReader): ZipperEntry {
+fun pathDataToEntryPath(pathData: ContractPathData, reader: RealFileReader): ZipperEntry {
     val base = File(pathData.baseDir)
     val contractFile = File(pathData.absolutePath)
 

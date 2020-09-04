@@ -286,7 +286,7 @@ fun contractTestPathsFrom(configFilePath: String, workingDirectory: String): Lis
     return contractFilePathsFrom(configFilePath, workingDirectory) { source -> source.testContracts }
 }
 
-data class ContractPathData(val baseDir: String, val absolutePath: String)
+data class ContractPathData(val baseDir: String, val path: String)
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
     println("Loading config file $configFilePath")

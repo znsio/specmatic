@@ -12,4 +12,8 @@ class RealFileReader: FileReader {
     fun readBytes(path: String): ByteArray {
         return File(path).readBytes()
     }
+
+    fun files(stubDataDir: String): List<File> {
+        return File(stubDataDir).listFiles()?.toList() ?: emptyList()
+    }
 }

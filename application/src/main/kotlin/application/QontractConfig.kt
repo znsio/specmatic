@@ -8,7 +8,7 @@ import run.qontract.core.utilities.contractFilePathsFrom
 @Component
 class QontractConfig {
     fun contractStubPaths(): List<String> {
-        return contractFilePathsFrom(QONTRACT_CONFIG_IN_CURRENT_DIRECTORY, WORKING_DIRECTORY) { source -> source.stubContracts }.map { it.absolutePath }
+        return contractFilePathsFrom(QONTRACT_CONFIG_IN_CURRENT_DIRECTORY, WORKING_DIRECTORY) { source -> source.stubContracts }.map { it.path }
     }
 
     fun contractStubPathData(): List<ContractPathData> {

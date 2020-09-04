@@ -27,19 +27,42 @@ class BundleCommand : Callable<Unit> {
     lateinit var fileReader: RealFileReader
 
     override fun call() {
-        val zipperEntries = qontractConfig.contractStubPathData().map { pathDataToEntryPath(it, fileReader) }
+        val zipperEntries = qontractConfig.contractStubPathData().flatMap { pathDataToEntryPath(it, fileReader) }
         zipper.compress(bundlePath, zipperEntries)
     }
 }
 
-fun pathDataToEntryPath(pathData: ContractPathData, reader: RealFileReader): ZipperEntry {
+fun pathDataToEntryPath(pathData: ContractPathData, reader: RealFileReader): List<ZipperEntry> {
     val base = File(pathData.baseDir)
-    val contractFile = File(pathData.absolutePath)
+    val contractFile = File(pathData.path)
 
     val relativePath = contractFile.relativeTo(base).path
     val zipEntryName = "${base.name}/$relativePath"
 
-    return ZipperEntry(zipEntryName, reader.readBytes(pathData.absolutePath))
+    val stubDataDir = stubDataDir(File(pathData.path))
+    val stubFiles = stubFilesIn(stubDataDir, reader)
+
+    val stubEntries = stubFiles.map {
+        val relativeEntryPath = File(it).relativeTo(base)
+        ZipperEntry("${base.name}/${relativeEntryPath.path}", reader.readBytes(it))
+    }
+
+    val contractEntry = ZipperEntry(zipEntryName, reader.readBytes(pathData.path))
+
+    return listOf(contractEntry).plus(stubEntries)
+}
+
+fun stubFilesIn(stubDataDir: String, reader: RealFileReader): List<String> =
+        reader.files(stubDataDir).flatMap {
+            when {
+                it.isFile && it.extension.equals("json", ignoreCase = true) -> listOf(it.path)
+                it.isDirectory -> stubFilesIn(File(stubDataDir).resolve(it.name).path, reader)
+                else -> emptyList()
+            }
+        }
+
+fun stubDataDir(path: File): String {
+    return "${path.parent}/${path.nameWithoutExtension}_data"
 }
 
 @Component

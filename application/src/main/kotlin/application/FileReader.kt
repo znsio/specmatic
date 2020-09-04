@@ -1,5 +1,5 @@
 package application
 
 interface FileReader {
-    fun read(name: String): String
+    fun read(path: String): String
 }

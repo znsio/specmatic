@@ -68,13 +68,16 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--httpsPassword"], description = ["EXPERIMENTAL: Key password if any"])
     var keyPassword = "forgotten"
 
+    @Autowired
+    val watchMaker = WatchMaker()
+
     override fun call() = try {
         loadConfig()
 
         startServer()
         addShutdownHook()
 
-        val watcher = Watcher(contractPaths)
+        val watcher = watchMaker.make(contractPaths)
         watcher.watchForChanges {
             restartServer()
         }

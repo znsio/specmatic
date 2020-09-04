@@ -35,7 +35,7 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
 
 // Used by stub client code
 fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
-    val contractPaths = contractStubPaths().map { it.absolutePath }
+    val contractPaths = contractStubPaths().map { it.path }
     val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)

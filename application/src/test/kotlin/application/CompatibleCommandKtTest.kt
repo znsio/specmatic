@@ -16,7 +16,7 @@ internal class CompatibleCommandKtTest {
                 """.trimIndent()
 
     private val fakeReader = object : FileReader {
-        override fun read(name: String): String {
+        override fun read(path: String): String {
             return trivialContract
         }
     }

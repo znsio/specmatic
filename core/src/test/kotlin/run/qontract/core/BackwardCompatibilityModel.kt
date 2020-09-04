@@ -23,7 +23,7 @@ Feature: User API
 """.trimIndent()
 
     @Test
-    fun `add non-optional key in the request body`() {
+    fun `adding non-optional key to the request body is backward incompatible`() {
         val newContract = """
 Feature: User API
   Scenario: Add user
@@ -49,7 +49,7 @@ Feature: User API
     }
 
     @Test
-    fun `add optional key in the request body`() {
+    fun `adding optional key in the request body is backward compatible`() {
         val newContract = """
 Feature: User API
   Scenario: Add user
@@ -74,7 +74,7 @@ Feature: User API
     }
 
     @Test
-    fun `make type optional in request body`() {
+    fun `make type optional in request body is backward compatible`() {
         val newContract = """
 Feature: User API
   Scenario: Add user
@@ -97,7 +97,7 @@ Feature: User API
     }
 
     @Test
-    fun `change number in string to string in request body`() {
+    fun `change number in string to string in request body is backward compatible`() {
         val oldContract = """
 Feature: User API
   Scenario: Add user
@@ -134,7 +134,7 @@ Feature: User API
     }
 
     @Test
-    fun `incompatible change from string to number in string in request body`() {
+    fun `change from string to number in string in request body is backward incompatible`() {
         val oldContract = """
 Feature: User API
   Scenario: Add user
@@ -172,7 +172,7 @@ Feature: User API
 
     @Disabled
     @Test
-    fun `add a key to the response body`() {
+    fun `adding a key to the response body is backward compatible`() {
         val newContract = """
 Feature: User API
   Scenario: Add user
@@ -195,7 +195,7 @@ Feature: User API
     }
 
     @Test
-    fun `add an optional key to the response body`() {
+    fun `adding an optional key to the response body is backward compatible`() {
         val newContract = """
 Feature: User API
   Scenario: Add user

@@ -1,14 +1,11 @@
-package run.qontract.core
+package run.qontract.rules
 
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import run.qontract.backwardCompatibleWith
-import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.notBackwardCompatibleWith
-import run.qontract.stubShouldBreak
-import run.qontract.stubShouldNotBreak
 
-class BackwardCompatibilityModel {
+class JSONBackwardCompatibilityModel {
     val oldContract = """
 Feature: User API
   Scenario: Add user
@@ -40,12 +37,6 @@ Feature: User API
 """.trimIndent()
 
         newContract notBackwardCompatibleWith oldContract
-
-        val stub = TestHttpStubData(
-                stubRequest = HttpRequest("POST", "/user", body = parsedJSONStructure("""{"name": "John Doe"}""")),
-                stubResponse = HttpResponse.OK(parsedJSONStructure("""{"status": "success"}""")))
-        stub.shouldWorkWith(oldContract)
-        stub.shouldBreakWith(newContract)
     }
 
     @Test
@@ -66,11 +57,6 @@ Feature: User API
 """.trimIndent()
 
         newContract backwardCompatibleWith oldContract
-
-        val request = HttpRequest("POST","/user", body = parsedJSONStructure("""{"name": "John Doe"}"""))
-        val response = HttpResponse.OK(parsedJSONStructure("""{"status": "success"}"""))
-
-        stubShouldNotBreak(request, response, oldContract, newContract)
     }
 
     @Test
@@ -90,10 +76,6 @@ Feature: User API
 """.trimIndent()
 
         newContract backwardCompatibleWith oldContract
-
-        val request = HttpRequest("POST","/user", body = parsedJSONStructure("""{"name": "John Doe"}"""))
-        val response = HttpResponse.OK(parsedJSONStructure("""{"status": "success"}"""))
-        stubShouldNotBreak(request, response, oldContract, newContract)
     }
 
     @Test
@@ -127,10 +109,6 @@ Feature: User API
 """.trimIndent()
 
         newContract backwardCompatibleWith oldContract
-
-        val request = HttpRequest("POST","/user", body = parsedJSONStructure("""{"id": "10"}"""))
-        val response = HttpResponse.OK(parsedJSONStructure("""{"status": "success"}"""))
-        stubShouldNotBreak(request, response, oldContract, newContract)
     }
 
     @Test
@@ -164,10 +142,6 @@ Feature: User API
 """.trimIndent()
 
         newContract notBackwardCompatibleWith oldContract
-
-        val request = HttpRequest("POST","/user", body = parsedJSONStructure("""{"id": "abc"}"""))
-        val response = HttpResponse.OK(parsedJSONStructure("""{"status": "success"}"""))
-        stubShouldBreak(request, response, oldContract, newContract)
     }
 
     @Disabled
@@ -188,10 +162,6 @@ Feature: User API
 """.trimIndent()
 
         newContract backwardCompatibleWith oldContract
-
-        val request = HttpRequest("POST","/user", body = parsedJSONStructure("""{"name": "John Doe"}"""))
-        val response = HttpResponse.OK(parsedJSONStructure("""{"status": "success"}"""))
-        stubShouldNotBreak(request, response, oldContract, newContract)
     }
 
     @Test
@@ -211,9 +181,5 @@ Feature: User API
 """.trimIndent()
 
         newContract backwardCompatibleWith oldContract
-
-        val request = HttpRequest("POST","/user", body = parsedJSONStructure("""{"name": "John Doe"}"""))
-        val response = HttpResponse.OK(parsedJSONStructure("""{"status": "success"}"""))
-        stubShouldNotBreak(request, response, oldContract, newContract)
     }
 }

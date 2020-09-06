@@ -6,7 +6,7 @@ import run.qontract.stubShouldBreak
 import run.qontract.stubShouldNotBreak
 import run.qontract.testStub
 
-class TestHttpStubData(private val stubRequest: HttpRequest, private val stubResponse: HttpResponse) {
+class TestHttpStub(private val stubRequest: HttpRequest, private val stubResponse: HttpResponse) {
     fun shouldWorkWith(contractGherkin: String) {
         val response = testStub(contractGherkin, stubRequest, stubResponse)
         Assertions.assertThat(response).isEqualTo(stubResponse)

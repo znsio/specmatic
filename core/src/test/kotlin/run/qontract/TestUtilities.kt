@@ -29,12 +29,16 @@ infix fun String.backwardCompatibleWith(oldContractGherkin: String) {
     val results = testBackwardCompatibility(oldContractGherkin)
     Assertions.assertThat(results.success()).isTrue()
     Assertions.assertThat(results.failureCount).isZero()
+
+    stubsFrom(oldContractGherkin).workWith(this)
 }
 
 infix fun String.notBackwardCompatibleWith(oldContractGherkin: String) {
     val results = testBackwardCompatibility(oldContractGherkin)
     Assertions.assertThat(results.success()).isFalse()
     Assertions.assertThat(results.failureCount).isPositive()
+
+    stubsFrom(oldContractGherkin).breakOn(this)
 }
 
 fun String.testBackwardCompatibility(oldContractGherkin: String): Results {
@@ -75,5 +79,35 @@ fun testStub(contractGherkin: String, stubRequest: HttpRequest, stubResponse: Ht
     }
 }
 
-fun stub(stubRequest: HttpRequest, stubResponse: HttpResponse): TestHttpStubData =
-        TestHttpStubData(stubRequest, stubResponse)
+fun stub(stubRequest: HttpRequest, stubResponse: HttpResponse): TestHttpStub =
+        TestHttpStub(stubRequest, stubResponse)
+
+private fun stubsFrom(oldContract: String): TestHttpStubData {
+    val oldFeature = Feature(oldContract)
+
+    val testScenarios = oldFeature.generateTestScenarios()
+
+    return TestHttpStubData(oldContract, testScenarios.map { scenario ->
+        val request = scenario.generateHttpRequest()
+        val response = scenario.generateHttpResponse(emptyMap())
+
+        TestHttpStub(stubRequest = request, stubResponse = response.copy(headers = response.headers.minus(QONTRACT_RESULT_HEADER)))
+    })
+
+}
+
+private class TestHttpStubData(val oldContract: String, val stubs: List<TestHttpStub>) {
+    fun breakOn(newContract: String) {
+        for(stub in stubs) {
+            stub.shouldWorkWith(oldContract)
+            stub.shouldBreakWith(newContract)
+        }
+    }
+
+    fun workWith(newContract: String) {
+        for(stub in stubs) {
+            stub.shouldWorkWith(oldContract)
+            stub.shouldWorkWith(newContract)
+        }
+    }
+}

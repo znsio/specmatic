@@ -126,53 +126,6 @@ fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCal
     }
 }
 
-fun pathSelector(repoConfig: Map<String, Value>): SelectorFunction {
-    return when(val sourcePaths = getStringArray(repoConfig, "paths")) {
-        null -> { sourceDir: File, destinationDir: File ->
-            val sourceFiles = contractFiles(sourceDir)
-
-            for(sourceFile in sourceFiles) {
-                val relative = sourceFile.relativeTo(sourceDir)
-                val destinationFile = destinationDir.resolve(relative)
-                sourceFile.copyTo(destinationFile)
-            }
-        }
-        else -> { sourceDir: File, destinationDir: File ->
-            for(sourcePath in sourcePaths) {
-                val sourceFile = sourceDir.resolve(sourcePath)
-                val destinationFile = destinationDir.resolve(sourcePath)
-                sourceFile.copyTo(destinationFile)
-            }
-        }
-    }
-}
-
-fun contractFiles(repoDir: File): List<File> {
-    return repoDir.listFiles()?.flatMap { file ->
-        when {
-            file.isDirectory -> contractFiles(file)
-            file.isFile -> {
-                when(file.extension) {
-                    "qontract" -> listOf(file)
-                    else -> emptyList()
-                }
-            }
-            else -> emptyList()
-        }
-    } ?: emptyList()
-}
-
-fun getStringArray(jsonObject: Map<String, Value>, key: String): List<String>? {
-    val data = jsonObject[key]
-
-    return when {
-        data == null -> null
-        data !is JSONArrayValue -> exitWithMessage("paths must be a json array, but in one of the objects it is ${data.toStringValue()}")
-        data.list.isEmpty() -> null
-        else -> strings(data.list)
-    }
-}
-
 fun strings(list: List<Value>): List<String> {
     return list.map {
         when(it) {

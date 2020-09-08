@@ -16,12 +16,20 @@ fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results 
 
             try {
                 val request = olderScenario.generateHttpRequest()
-                val newerScenario = newerBehaviour.lookupScenario(request)
-                val newerResponsePattern = newerScenario.httpResponsePattern
+                val newerScenarios = newerBehaviour.lookupScenario(request)
 
-                val result: Result = olderScenario.httpResponsePattern.encompasses(newerResponsePattern, olderScenario.resolver, newerScenario.resolver)
+                val scenarioResults = newerScenarios.map { newerScenario ->
+                    val newerResponsePattern = newerScenario.httpResponsePattern
+                    olderScenario.httpResponsePattern.encompasses(newerResponsePattern, olderScenario.resolver, newerScenario.resolver).also {
+                        it.scenario = newerScenario
+                    }
+                }
 
-                results.copy(results = results.results.plus(result).toMutableList())
+                if(scenarioResults.any { it is Result.Success }) {
+                    results.copy(results = results.results.plus(Result.Success()).toMutableList())
+                } else {
+                    results.copy(results = results.results.plus(scenarioResults).toMutableList())
+                }
             } catch (contractException: ContractException) {
                 results.copy(results = results.results.plus(contractException.failure()).toMutableList())
             } catch (throwable: Throwable) {

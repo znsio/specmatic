@@ -49,16 +49,16 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
         }
     }
 
-    fun lookupScenario(httpRequest: HttpRequest): Scenario =
+    fun lookupScenario(httpRequest: HttpRequest): List<Scenario> =
         try {
             val resultList = lookupScenario(httpRequest, scenarios)
-            val matchingScenario = matchingScenario(resultList)
+            val matchingScenarios = matchingScenarios(resultList)
 
             val firstRealResult = resultList.filterNot { isFluff(it.second) }.firstOrNull()
             val resultsExist = resultList.firstOrNull() != null
 
             when {
-                matchingScenario != null -> matchingScenario
+                matchingScenarios.isNotEmpty() -> matchingScenarios
                 firstRealResult != null -> throw ContractException(resultReport(firstRealResult.second))
                 resultsExist -> throw ContractException("Match not found")
                 else -> throw ContractException("The contract is empty.")
@@ -66,6 +66,12 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
         } finally {
             serverState = emptyMap()
         }
+
+    private fun matchingScenarios(resultList: Sequence<Pair<Scenario, Result>>): List<Scenario> {
+        return resultList.filter {
+            it.second is Result.Success
+        }.map { it.first }.toList()
+    }
 
     private fun matchingScenario(resultList: Sequence<Pair<Scenario, Result>>): Scenario? {
         return resultList.find {

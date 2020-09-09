@@ -89,7 +89,7 @@ fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String,
     }
 }
 
-internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<String, Pattern>, thisResolverWithNullType: Resolver, otherResolverWithNullType: Resolver): Pair<String, Result>? {
+internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<String, Pattern>, thisResolver: Resolver, otherResolver: Resolver): Pair<String, Result>? {
     val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
     val otherRequiredKeys = otherPattern.keys.filter { !isOptional(it) }
 
@@ -102,7 +102,7 @@ internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<
         val smaller = otherPattern[key] ?: otherPattern[withoutOptionality(key)]
 
         val result = when {
-            smaller != null -> bigger.encompasses(resolvedHop(smaller, otherResolverWithNullType), thisResolverWithNullType, otherResolverWithNullType)
+            smaller != null -> bigger.encompasses(resolvedHop(smaller, otherResolver), thisResolver, otherResolver)
             else -> Result.Success()
         }
         Pair(key, result)

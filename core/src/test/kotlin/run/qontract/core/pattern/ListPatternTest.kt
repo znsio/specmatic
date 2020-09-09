@@ -3,8 +3,10 @@ package run.qontract.core.pattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import run.qontract.core.Feature
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.value.NullValue
 import run.qontract.shouldNotMatch
 
@@ -61,5 +63,25 @@ internal class ListPatternTest {
         val matching = parsedPattern("""["(number)", "(string...)"]""")
 
         assertThat(bigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `list type with recursive type definition should be validated without an infinite loop`() {
+        val gherkin = """
+Feature: Recursive test
+
+  Scenario: Recursive scenario
+    Given type Data
+    | id   | (number) |
+    | data | (Data*)   |
+    When GET /
+    Then status 200
+    And response-body (Data)
+""".trim()
+
+        val feature = Feature(gherkin)
+        val result = testBackwardCompatibility(feature, feature)
+        println(result.report())
+        assertThat(result.success()).isTrue()
     }
 }

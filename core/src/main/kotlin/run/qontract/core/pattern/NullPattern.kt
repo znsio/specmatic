@@ -26,13 +26,16 @@ object NullPattern : Pattern, ScalarType {
             else -> throw ContractException("Failed to parse $value: it is not null.")
         }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        return encompasses(this, otherPattern, thisResolver, otherResolver)
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+        return encompasses(this, otherPattern, thisResolver, otherResolver, typeStack)
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return JSONArrayValue(valueList)
     }
+
+    override val typeAlias: String?
+        get() = null
 
     override val typeName: String = "null"
 

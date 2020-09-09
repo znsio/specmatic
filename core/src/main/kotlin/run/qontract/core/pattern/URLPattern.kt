@@ -7,7 +7,7 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import java.net.URI
 
-data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS): Pattern {
+data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS, override val typeAlias: String? = null): Pattern {
     override val pattern: String = "(url)"
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -28,7 +28,7 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS): Pattern {
 
     override fun parse(value: String, resolver: Resolver): StringValue = StringValue(URI.create(value).toString())
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         return when(otherPattern) {
             this -> Result.Success()
             is URLPattern -> Result.Failure("Expected ${scheme.type}, got ${otherPattern.scheme.type}")

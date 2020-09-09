@@ -10,7 +10,7 @@ import run.qontract.core.value.ListValue
 import run.qontract.core.value.Value
 import java.util.*
 
-data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) : Pattern, EncompassableList {
+data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), override val typeAlias: String? = null) : Pattern, EncompassableList {
     override fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> {
         if(count > 0 && pattern.isEmpty())
             throw ContractException("The lengths of the expected and actual array patterns don't match.")
@@ -49,7 +49,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
         }
     }
 
-    constructor(jsonString: String) : this(stringTooPatternArray(jsonString))
+    constructor(jsonString: String, typeAlias: String?) : this(stringTooPatternArray(jsonString), typeAlias = typeAlias)
 
     @Throws(Exception::class)
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -107,12 +107,12 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
         return newBasedOn(pattern, row, resolverWithNullType).map { JSONArrayPattern(it) }
     }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val thisResolverWithNullType = withNullPattern(thisResolver)
         val otherResolverWithNullType = withNullPattern(otherResolver)
 
         return when {
-            otherPattern is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType)
+            otherPattern is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
             otherPattern !is EncompassableList -> Result.Failure("Expected array or list, got ${otherPattern.typeName}")
             otherPattern.isEndless() && !this.isEndless() -> Result.Failure("Finite list is not a superset of an infinite list.")
             else -> try {
@@ -120,7 +120,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList()) :
                 val encompassables = if (otherEncompassables.size > pattern.size) getEncompassableList(otherEncompassables.size, thisResolverWithNullType) else getEncompassableList(thisResolverWithNullType)
 
                 val results = encompassables.zip(otherEncompassables).mapIndexed { index, (bigger, smaller) ->
-                    Pair(index, bigger.encompasses(smaller, thisResolverWithNullType, otherResolverWithNullType))
+                    Pair(index, biggerEncompassesSmaller(bigger, smaller, thisResolverWithNullType, otherResolverWithNullType, typeStack))
                 }
 
                 results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") }

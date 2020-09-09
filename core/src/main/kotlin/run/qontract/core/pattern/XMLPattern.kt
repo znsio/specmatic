@@ -25,9 +25,9 @@ private fun attributeTypeMap(node: XMLNode): Map<String, Pattern> {
     }
 }
 
-data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Pattern, EncompassableList {
-    constructor(node: XMLNode): this(toTypeData(node))
-    constructor(xmlString: String): this(XMLNode(parseXML(xmlString)))
+data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), override val typeAlias: String? = null) : Pattern, EncompassableList {
+    constructor(node: XMLNode, typeAlias: String? = null): this(toTypeData(node), typeAlias)
+    constructor(xmlString: String, typeAlias: String? = null): this(XMLNode(parseXML(xmlString)), typeAlias)
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is XMLNode)
@@ -164,11 +164,11 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
         return XMLNode(parseXML(value))
     }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val otherResolvedPattern = resolvedHop(otherPattern, otherResolver)
 
         when {
-            otherResolvedPattern is ExactValuePattern -> return otherResolvedPattern.fitsWithin(listOf(this), otherResolver, thisResolver).breadCrumb(this.pattern.name)
+            otherResolvedPattern is ExactValuePattern -> return otherResolvedPattern.fitsWithin(listOf(this), otherResolver, thisResolver, typeStack).breadCrumb(this.pattern.name)
             otherResolvedPattern !is XMLPattern -> return mismatchResult(this, otherResolvedPattern).breadCrumb(this.pattern.name)
             pattern.name != otherResolvedPattern.pattern.name -> return Result.Failure("Expected a node named ${pattern.name}, but got ${otherResolvedPattern.pattern.name} instead.").breadCrumb(this.pattern.name)
             else -> {
@@ -188,7 +188,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                 return when {
                     containsList(thisResolver) -> {
                         val list = pattern.nodes[0]
-                        list.encompasses(otherPattern, thisResolver, otherResolver)
+                        list.encompasses(otherPattern, thisResolver, otherResolver, typeStack)
                     }
                     others.size != pattern.nodes.size && others.isEmpty() && containsEmpty(thisResolver) -> Result.Success()
                     else -> {
@@ -198,7 +198,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData()) : Patte
                                     ExactValuePattern(thisOne.parse(otherOne.pattern.toStringValue(), thisResolver))
                                 }
                                 else -> otherOne
-                            }.let { otherOneAdjustedForExactValue -> thisOne.encompasses(otherOneAdjustedForExactValue, thisResolver, otherResolver) }
+                            }.let { otherOneAdjustedForExactValue -> thisOne.encompasses(otherOneAdjustedForExactValue, thisResolver, otherResolver, typeStack) }
                         }.find { it is Result.Failure } ?: Result.Success()
                     }
                 }.breadCrumb(this.pattern.name)

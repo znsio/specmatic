@@ -1,11 +1,9 @@
 package run.qontract.core.pattern
 
 import org.assertj.core.api.Assertions.assertThat
-import run.qontract.core.Resolver
-import run.qontract.core.parseGherkinString
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import run.qontract.core.Result
+import run.qontract.core.*
 import run.qontract.core.value.*
 import run.qontract.shouldMatch
 import run.qontract.shouldNotMatch
@@ -286,6 +284,25 @@ Given request-body
         val patternWithNullValue = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
         val example = Row(listOf("nothing"), listOf("(null)"))
         assertThrows<ContractException> { patternWithNullValue.newBasedOn(example, Resolver()) }
+    }
+
+    @Test
+    fun `tabular type with recursive type definition should be validated without an infinite loop`() {
+        val gherkin = """
+Feature: Recursive test
+
+  Scenario: Recursive scenario
+    Given type Data
+    | id   | (number) |
+    | data | (Data)   |
+    When GET /
+    Then status 200
+    And response-body (Data)
+""".trim()
+
+        val feature = Feature(gherkin)
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
     }
 
     @Test

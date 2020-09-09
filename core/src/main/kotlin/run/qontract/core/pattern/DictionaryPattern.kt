@@ -8,7 +8,7 @@ import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
-data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern) : Pattern {
+data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern, override val typeAlias: String? = null) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
@@ -58,14 +58,14 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern)
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result =
             when (otherPattern) {
-                is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
+                is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver, typeStack)
                 !is DictionaryPattern -> Result.Failure("Expected dictionary type, got ${otherPattern.typeName}")
                 else -> {
                     listOf(
-                            { this.keyPattern.encompasses(otherPattern, thisResolver, otherResolver) },
-                            { this.valuePattern.encompasses(otherPattern, thisResolver, otherResolver) }
+                            { biggerEncompassesSmaller(this.keyPattern, otherPattern.keyPattern, thisResolver, otherResolver, typeStack) },
+                            { biggerEncompassesSmaller(this.valuePattern, otherPattern.valuePattern, thisResolver, otherResolver, typeStack) }
                     ).asSequence().map { it.invoke() }.firstOrNull { it is Result.Failure } ?: Result.Success()
                 }
             }

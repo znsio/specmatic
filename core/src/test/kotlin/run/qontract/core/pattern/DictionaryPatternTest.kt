@@ -2,7 +2,9 @@ package run.qontract.core.pattern
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.Feature
 import run.qontract.core.Resolver
+import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.shouldMatch
@@ -52,5 +54,48 @@ internal class DictionaryPatternTest {
 
         val exactJson = newJsonTypes.single() as TabularPattern
         assertThat(exactJson).isEqualTo(toTabularPattern(mapOf("data" to ExactValuePattern(JSONObjectValue(mapOf("1" to StringValue("one")))))))
+    }
+
+    @Test
+    fun `dictionary containing recursive type definition should be validated without an infinite loop`() {
+        val gherkin = """
+Feature: Recursive test
+
+  Scenario: Recursive scenario
+    Given type Data (dictionary number Data)
+    When GET /
+    Then status 200
+    And response-body (Data)
+""".trim()
+
+        val feature = Feature(gherkin)
+        val result = testBackwardCompatibility(feature, feature)
+
+        println(result.report())
+
+        assertThat(result.success()).isTrue()
+    }
+
+    @Test
+    fun `dictionary containing recursive type definition with list should be validated without an infinite loop`() {
+        val gherkin = """
+Feature: Recursive test
+
+  Scenario: Recursive scenario
+    Given type Data (dictionary number More)
+    And type More
+    | id   | (number) |
+    | more | (Data*)  |
+    When GET /
+    Then status 200
+    And response-body (Data)
+""".trim()
+
+        val feature = Feature(gherkin)
+        val result = testBackwardCompatibility(feature, feature)
+
+        println(result.report())
+
+        assertThat(result.success()).isTrue()
     }
 }

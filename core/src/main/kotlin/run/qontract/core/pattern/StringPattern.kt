@@ -18,13 +18,16 @@ object StringPattern : Pattern, ScalarType {
         }
     }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        return encompasses(this, otherPattern, thisResolver, otherResolver)
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+        return encompasses(this, otherPattern, thisResolver, otherResolver, typeStack)
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return JSONArrayValue(valueList)
     }
+
+    override val typeAlias: String?
+        get() = null
 
     override fun generate(resolver: Resolver): Value = StringValue(randomString())
 

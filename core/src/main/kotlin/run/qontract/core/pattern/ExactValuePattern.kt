@@ -5,7 +5,7 @@ import run.qontract.core.Result
 import run.qontract.core.mismatchResult
 import run.qontract.core.value.Value
 
-data class ExactValuePattern(override val pattern: Value) : Pattern {
+data class ExactValuePattern(override val pattern: Value, override val typeAlias: String? = null) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (pattern == sampleData) {
             true -> Result.Success()
@@ -13,14 +13,14 @@ data class ExactValuePattern(override val pattern: Value) : Pattern {
         }
     }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         if(otherPattern !is ExactValuePattern || this.pattern != otherPattern.pattern)
             return Result.Failure("Expected ${this.typeName}, got ${otherPattern.typeName}")
 
         return Result.Success()
     }
 
-    override fun fitsWithin(otherPatterns: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun fitsWithin(otherPatterns: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val results = otherPatterns.map { it.matches(pattern, otherResolver) }
         return results.find { it is Result.Success } ?: results.firstOrNull() ?: Result.Failure("No matching patterns.")
     }

@@ -5,7 +5,7 @@ import run.qontract.core.Result
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 
-data class AnyPattern(override val pattern: List<Pattern>, val key: String? = null) : Pattern {
+data class AnyPattern(override val pattern: List<Pattern>, val key: String? = null, override val typeAlias: String? = null) : Pattern {
     override fun equals(other: Any?): Boolean = other is AnyPattern && other.pattern == this.pattern
 
     override fun hashCode(): Int = pattern.hashCode()
@@ -34,8 +34,8 @@ data class AnyPattern(override val pattern: List<Pattern>, val key: String? = nu
     override fun patternSet(resolver: Resolver): List<Pattern> =
             this.pattern.flatMap { it.patternSet(resolver) }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        return otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+        return otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver, typeStack)
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {

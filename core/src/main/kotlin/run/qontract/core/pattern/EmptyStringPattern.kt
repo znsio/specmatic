@@ -22,7 +22,7 @@ object EmptyStringPattern : Pattern {
         }
     }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         if(otherPattern is EmptyStringPattern) return Result.Success()
         return Result.Failure("No data was expected, but got \"${otherPattern.typeName}\" instead")
     }
@@ -30,6 +30,9 @@ object EmptyStringPattern : Pattern {
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return JSONArrayValue(valueList)
     }
+
+    override val typeAlias: String?
+        get() = null
 
     override val typeName: String = "nothing"
 

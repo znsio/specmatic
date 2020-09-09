@@ -4,7 +4,7 @@ import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.value.Value
 
-data class RestPattern(override val pattern: Pattern) : Pattern {
+data class RestPattern(override val pattern: Pattern, override val typeAlias: String? = null) : Pattern {
     private val listPattern = ListPattern(pattern)
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
@@ -17,11 +17,11 @@ data class RestPattern(override val pattern: Pattern) : Pattern {
     override fun patternSet(resolver: Resolver): List<Pattern> =
             pattern.patternSet(resolver).map { RestPattern(it) }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result =
             when (otherPattern) {
-                is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver)
+                is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolver, thisResolver, typeStack)
                 !is RestPattern -> Result.Failure("Expected rest in string type, got ${otherPattern.typeName}")
-                else -> otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
+                else -> otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver, typeStack)
             }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {

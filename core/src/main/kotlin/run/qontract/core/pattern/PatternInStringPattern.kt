@@ -6,7 +6,7 @@ import run.qontract.core.mismatchResult
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
-data class PatternInStringPattern(override val pattern: Pattern = StringPattern): Pattern {
+data class PatternInStringPattern(override val pattern: Pattern = StringPattern, override val typeAlias: String? = null): Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is StringValue)
             return mismatchResult(pattern, sampleData)
@@ -30,11 +30,11 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern)
     override fun patternSet(resolver: Resolver): List<Pattern> =
             pattern.patternSet(resolver)
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result =
             when (otherPattern) {
                 is ExactValuePattern -> matches(otherPattern.pattern, thisResolver)
                 !is PatternInStringPattern -> Result.Failure("Expected type in string type, got ${otherPattern.typeName}")
-                else -> otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
+                else -> otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver, typeStack)
             }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {

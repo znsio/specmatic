@@ -4,9 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.Result
-import run.qontract.core.pattern.AnyPattern
 import run.qontract.core.pattern.DeferredPattern
-import run.qontract.core.pattern.NullPattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.optionalPattern
 import run.qontract.shouldMatch

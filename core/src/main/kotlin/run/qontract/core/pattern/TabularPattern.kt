@@ -7,18 +7,18 @@ import run.qontract.core.utilities.stringToPatternMap
 import run.qontract.core.utilities.withNullPattern
 import run.qontract.core.value.*
 
-fun toTabularPattern(jsonContent: String): TabularPattern = toTabularPattern(stringToPatternMap(jsonContent))
+fun toTabularPattern(jsonContent: String, typeAlias: String? = null): TabularPattern = toTabularPattern(stringToPatternMap(jsonContent), typeAlias)
 
-fun toTabularPattern(map: Map<String, Pattern>): TabularPattern {
+fun toTabularPattern(map: Map<String, Pattern>, typeAlias: String? = null): TabularPattern {
     val missingKeyStrategy = when ("...") {
         in map -> ignoreUnexpectedKeys
         else -> ::validateUnexpectedKeys
     }
 
-    return TabularPattern(map.minus("..."), missingKeyStrategy)
+    return TabularPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
-data class TabularPattern(override val pattern: Map<String, Pattern>, private val unexpectedKeyCheck: UnexpectedKeyCheck = ::validateUnexpectedKeys) : Pattern {
+data class TabularPattern(override val pattern: Map<String, Pattern>, private val unexpectedKeyCheck: UnexpectedKeyCheck = ::validateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
@@ -54,15 +54,15 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
     }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val thisResolverWithNullType = withNullPattern(thisResolver)
         val otherResolverWithNullType = withNullPattern(otherResolver)
 
         return when (otherPattern) {
-            is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType)
+            is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
             !is TabularPattern -> Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
             else -> {
-                val result = mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType)
+                val result = mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
 
                 result?.second?.breadCrumb(breadCrumb = result.first) ?: Result.Success()
             }
@@ -157,10 +157,10 @@ internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {
     }
 }
 
-fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>) =
+fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>, typeAlias: String? = null) =
         toTabularPattern(rows.map { it.cellsList }.map { (key, value) ->
             key.value to toJSONPattern(value.value)
-        }.toMap())
+        }.toMap(), typeAlias)
 
 fun toJSONPattern(value: String): Pattern {
     return value.trim().let {

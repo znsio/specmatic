@@ -3,7 +3,9 @@ package run.qontract.core.pattern
 import org.assertj.core.api.Assertions.assertThat
 import run.qontract.core.Resolver
 import org.junit.jupiter.api.Test
+import run.qontract.core.Feature
 import run.qontract.core.Result
+import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
@@ -106,5 +108,63 @@ internal class JSONArrayPatternTest {
         val matching = parsedPattern("""["(number)", "(string...)"]""")
 
         assertThat(bigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `json array type with recursive type definition should be validated without an infinite loop`() {
+        val gherkin = """
+Feature: Recursive test
+
+  Scenario: Recursive scenario
+    Given type Data ["(number)", "(Data)"]
+    When GET /
+    Then status 200
+    And response-body (Data)
+""".trim()
+
+        val feature = Feature(gherkin)
+        val result = testBackwardCompatibility(feature, feature)
+        println(result.report())
+        assertThat(result.success()).isTrue()
+    }
+
+    @Test
+    fun `json array of objects with recursive type definition should be validated without an infinite loop`() {
+        val gherkin = """
+Feature: Recursive test
+
+  Scenario: Recursive scenario
+    Given type Data ["(number)", "(MoreData)"]
+    And type MoreData
+    | data | (Data) |
+    When GET /
+    Then status 200
+    And response-body (Data)
+""".trim()
+
+        val feature = Feature(gherkin)
+        val result = testBackwardCompatibility(feature, feature)
+        println(result.report())
+        assertThat(result.success()).isTrue()
+    }
+
+    @Test
+    fun `json array of object containing list with recursive type definition should be validated without an infinite loop`() {
+        val gherkin = """
+Feature: Recursive test
+
+  Scenario: Recursive scenario
+    Given type Data ["(number)", "(MoreData)"]
+    And type MoreData
+    | data | (Data*) |
+    When GET /
+    Then status 200
+    And response-body (Data)
+""".trim()
+
+        val feature = Feature(gherkin)
+        val result = testBackwardCompatibility(feature, feature)
+        println(result.report())
+        assertThat(result.success()).isTrue()
     }
 }

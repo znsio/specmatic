@@ -22,13 +22,15 @@ object NumberPattern : Pattern, ScalarType {
         return NumberValue(convertToNumber(value))
     }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        return encompasses(this, otherPattern, thisResolver, otherResolver)
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+        return encompasses(this, otherPattern, thisResolver, otherResolver, typeStack)
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return JSONArrayValue(valueList)
     }
+
+    override val typeAlias: String? = null
 
     override val typeName: String = "number"
 
@@ -36,9 +38,9 @@ object NumberPattern : Pattern, ScalarType {
     override fun toString(): String = pattern.toString()
 }
 
-fun encompasses(thisPattern: Pattern, otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+fun encompasses(thisPattern: Pattern, otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result =
         when {
             otherPattern::class == thisPattern::class -> Result.Success()
-            otherPattern is ExactValuePattern -> otherPattern.fitsWithin(thisPattern.patternSet(thisResolver), otherResolver, thisResolver)
+            otherPattern is ExactValuePattern -> otherPattern.fitsWithin(thisPattern.patternSet(thisResolver), otherResolver, thisResolver, typeStack)
             else -> mismatchResult(thisPattern, otherPattern)
         }

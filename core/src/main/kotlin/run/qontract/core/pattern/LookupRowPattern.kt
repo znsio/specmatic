@@ -26,13 +26,15 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
 
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        return pattern.encompasses(resolvedHop(otherPattern, otherResolver), thisResolver, otherResolver)
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+        return pattern.encompasses(resolvedHop(otherPattern, otherResolver), thisResolver, otherResolver, typeStack)
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return pattern.listOf(valueList, resolver)
     }
+
+    override val typeAlias: String? = pattern.typeAlias
 
     override fun patternSet(resolver: Resolver): List<Pattern> = pattern.patternSet(resolver)
 

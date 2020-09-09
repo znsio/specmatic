@@ -12,13 +12,13 @@ interface Pattern {
 
     fun patternSet(resolver: Resolver): List<Pattern> = listOf(this)
 
-    fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result
-    fun fitsWithin(otherPatterns: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver): Result {
+    fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack = emptySet()): Result
+    fun fitsWithin(otherPatterns: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val myPatternSet = patternSet(thisResolver)
 
         val result = myPatternSet.map { my ->
             val encompassResult = otherPatterns.asSequence().map { other ->
-                other.encompasses(my, thisResolver, otherResolver)
+                biggerEncompassesSmaller(other, my, thisResolver, otherResolver, typeStack)
             }
 
             encompassResult.find { it is Result.Success } ?: encompassResult.first()
@@ -29,6 +29,7 @@ interface Pattern {
 
     fun listOf(valueList: List<Value>, resolver: Resolver): Value
 
+    val typeAlias: String?
     val typeName: String
     val pattern: Any
 }

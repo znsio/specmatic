@@ -5,7 +5,6 @@ import run.qontract.core.Result
 import run.qontract.core.breadCrumb
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.KafkaMessage
-import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 
 const val KAFKA_MESSAGE_BREADCRUMB = "KAFKA-MESSAGE"

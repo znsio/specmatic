@@ -32,6 +32,8 @@ fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results 
                 }
             } catch (contractException: ContractException) {
                 results.copy(results = results.results.plus(contractException.failure()).toMutableList())
+            } catch (stackOverFlowException: StackOverflowError) {
+                results.copy(results = results.results.plus(Result.Failure("Exception: Stack overflow error, most likely caused by a recursive definition. Please report this with a sample contract as a bug!")).toMutableList())
             } catch (throwable: Throwable) {
                 results.copy(results = results.results.plus(Result.Failure("Exception: ${throwable.localizedMessage}")).toMutableList())
             }

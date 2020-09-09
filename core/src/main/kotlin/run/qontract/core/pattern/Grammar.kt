@@ -126,21 +126,21 @@ fun stringToPattern(patternValue: String, key: String?): Pattern =
             else -> ExactValuePattern(StringValue(patternValue))
         }
 
-fun parsedPattern(rawContent: String, key: String? = null): Pattern {
+fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = null): Pattern {
     return rawContent.trim().let {
         when {
             it.isEmpty() -> EmptyStringPattern
-            it.startsWith("{") -> toJSONObjectPattern(it)
-            it.startsWith("[") -> JSONArrayPattern(it)
-            it.startsWith("<") -> XMLPattern(it)
+            it.startsWith("{") -> toJSONObjectPattern(it, typeAlias = typeAlias)
+            it.startsWith("[") -> JSONArrayPattern(it, typeAlias = typeAlias)
+            it.startsWith("<") -> XMLPattern(it, typeAlias = typeAlias)
             isPatternToken(it) -> when {
                 isLookupRowPattern(it) -> {
                     val (pattern, lookupKey) = parseLookupRowPattern(it)
-                    LookupRowPattern(parsedPattern(pattern), lookupKey)
+                    LookupRowPattern(parsedPattern(pattern, typeAlias = typeAlias), lookupKey)
                 }
-                isOptionalValuePattern(it) -> AnyPattern(listOf(DeferredPattern("(empty)", key), parsedPattern(withoutNullToken(it))))
-                isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it)))
-                isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutListToken(it)))
+                isOptionalValuePattern(it) -> AnyPattern(listOf(DeferredPattern("(empty)", key), parsedPattern(withoutNullToken(it), typeAlias = typeAlias)))
+                isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it), typeAlias = typeAlias))
+                isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutListToken(it), typeAlias = typeAlias))
                 it == "(number)" -> DeferredPattern(it, null)
                 isBuiltInPattern(it) -> getBuiltInPattern(it)
                 else -> DeferredPattern(it, key)

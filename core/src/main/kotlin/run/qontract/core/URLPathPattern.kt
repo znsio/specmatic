@@ -1,13 +1,11 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.Keyed
-import run.qontract.core.pattern.Pattern
-import run.qontract.core.pattern.Row
+import run.qontract.core.pattern.*
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.Value
 
-data class URLPathPattern(override val pattern: Pattern, override val key: String? = null) : Pattern, Keyed {
+data class URLPathPattern(override val pattern: Pattern, override val key: String? = null, override val typeAlias: String? = null) : Pattern, Keyed {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
             resolver.matchesPattern(key, pattern, sampleData ?: NullValue)
 
@@ -19,11 +17,11 @@ data class URLPathPattern(override val pattern: Pattern, override val key: Strin
 
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         if(otherPattern !is URLPathPattern)
             return Result.Failure("Expected url type, got ${otherPattern.typeName}")
 
-        return otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver)
+        return otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver, typeStack)
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {

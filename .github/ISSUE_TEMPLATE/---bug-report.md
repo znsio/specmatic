@@ -23,8 +23,9 @@ If applicable, add screenshots to help explain your problem.
 
 **System Information:**
  - OS & version: [e.g. iOS 14]
- - Browser & version [e.g. chrome, safari]
- - Qontract version [e.g. 0.17.0]
+ - Browser & version: [e.g. chrome, safari]
+ - Qontract version: [e.g. 0.17.0]
+ - JDK version: [e.g. 14]
 
 **Additional context**
 Add any other context about the problem here.

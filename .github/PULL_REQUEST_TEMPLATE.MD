@@ -34,4 +34,7 @@ merge of your pull request!
 - [ ] Documentation added to the README.md
 - [ ] Tests
 
+**Issue ID**:
+#123
+
 <!-- feel free to add additional comments -->

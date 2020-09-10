@@ -7,14 +7,13 @@ assignees: ''
 
 ---
 
-**Describe the bug**
+**Description**
 A clear and concise description of what the bug is.
 
 **Steps to reproduce**
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+1. Create a file ...
+2. Run this command: ...
+3. Make an http request looking like this: ...
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.

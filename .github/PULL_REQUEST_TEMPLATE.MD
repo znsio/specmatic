@@ -31,10 +31,12 @@ merge of your pull request!
 
 <!-- to check an item, place an "x" in the box like so: "- [x] Documentation" -->
 
-- [ ] Documentation added to the README.md
+- [ ] Documentation added to the README.md OR link to PR on https://github.com/qontract/qontract-documentation
 - [ ] Tests
+- [ ] Sonar Quality Gate
 
+<!-- Kindly link the issue that this PR will be addressing -->
 **Issue ID**:
-#123
+Closes: #123
 
 <!-- feel free to add additional comments -->

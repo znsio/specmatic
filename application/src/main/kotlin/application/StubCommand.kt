@@ -7,16 +7,11 @@ import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.Constants.Companion.DEFAULT_HTTP_STUB_HOST
 import run.qontract.core.Constants.Companion.DEFAULT_HTTP_STUB_PORT
-import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.stub.*
-import java.io.File
-import java.nio.file.FileSystems
-import java.nio.file.Path
-import java.nio.file.StandardWatchEventKinds
-import java.nio.file.WatchKey
 import java.util.concurrent.Callable
 
 @Command(name = "stub",
@@ -92,7 +87,7 @@ class StubCommand : Callable<Unit> {
     private fun loadConfig() {
         when(contractPaths.isEmpty()) {
             true -> {
-                println("No contractPaths specified. Falling back to $QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
+                println("No contractPaths specified. Falling back to $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
                 contractPaths = qontractConfig.contractStubPaths()
             }
         }

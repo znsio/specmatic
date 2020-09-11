@@ -12,6 +12,12 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import run.qontract.core.Constants
 import run.qontract.core.utilities.*
+import run.qontract.test.QontractJUnitSupport.Companion.CONTRACT_PATHS
+import run.qontract.test.QontractJUnitSupport.Companion.HOST
+import run.qontract.test.QontractJUnitSupport.Companion.INLINE_SUGGESTIONS
+import run.qontract.test.QontractJUnitSupport.Companion.PORT
+import run.qontract.test.QontractJUnitSupport.Companion.SUGGESTIONS_PATH
+import run.qontract.test.QontractJUnitSupport.Companion.TIMEOUT
 import java.io.PrintWriter
 import java.nio.file.Paths
 import java.util.concurrent.Callable
@@ -40,9 +46,6 @@ class TestCommand : Callable<Unit> {
 
     @Option(names = ["--https"], description = ["Use https instead of the default http"], required = false)
     var useHttps: Boolean = false
-
-    @Option(names = ["--checkBackwardCompatibility", "--check", "-c"], description = ["Identify versions of the contract prior to the one specified, and verify backward compatibility from the earliest to the latest"])
-    var checkBackwardCompatibility: Boolean = false
 
     @Option(names = ["--timeout"], description = ["Specify a timeout for the test requests"], required = false, defaultValue = "60")
     var timeout: Int = 60
@@ -81,14 +84,13 @@ class TestCommand : Callable<Unit> {
             else -> "http"
         }
 
-        System.setProperty("contractPaths", contractPaths.joinToString(","))
+        System.setProperty(CONTRACT_PATHS, contractPaths.joinToString(","))
 
-        System.setProperty("host", host)
-        System.setProperty("port", port.toString())
-        System.setProperty("timeout", timeout.toString())
-        System.setProperty("suggestionsPath", suggestionsPath)
-        System.setProperty("suggestions", suggestions)
-        System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
+        System.setProperty(HOST, host)
+        System.setProperty(PORT, port.toString())
+        System.setProperty(TIMEOUT, timeout.toString())
+        System.setProperty(SUGGESTIONS_PATH, suggestionsPath)
+        System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty("protocol", protocol)
 
         System.setProperty("kafkaBootstrapServers", kafkaBootstrapServers)
@@ -124,7 +126,7 @@ class TestCommand : Callable<Unit> {
     private fun loadConfig() {
         when(contractPaths.isEmpty()) {
             true -> {
-                println("No contractPaths specified. Falling back to ${Constants.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY}")
+                println("No contractPaths specified. Falling back to ${Constants.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY}")
                 contractPaths = qontractConfig.contractTestPaths()
             }
         }

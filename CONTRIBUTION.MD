@@ -31,6 +31,10 @@ Please make sure to run the tests before you commit your changes by using the co
 
 `gradle clean test`
 
+Generate Fat Jar
+
+`gradle clean build shadowJar`
+
 ## Help needed
 
 Please checkout the [the open issues][issues]

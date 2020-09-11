@@ -4,7 +4,7 @@ import io.ktor.http.*
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
-import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.utilities.GitRepo
 import run.qontract.core.utilities.getTransportCallingCallback
@@ -74,7 +74,7 @@ fun loadFromPath(json: Value?, path: List<String>): Value? {
 }
 
 fun getBearerToken(): String? {
-    val qontractConfigFile = File(QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
+    val qontractConfigFile = File(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
 
     return when {
         qontractConfigFile.exists() ->
@@ -82,7 +82,7 @@ fun getBearerToken(): String? {
                 readBearerFromEnvVariable(qontractConfig) ?: readBearerFromFile(qontractConfig)
             }
         else -> null.also {
-            println("$QONTRACT_CONFIG_IN_CURRENT_DIRECTORY not found")
+            println("$DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY not found")
             println("Current working directory is ${File(".").absolutePath}")
         }
     }

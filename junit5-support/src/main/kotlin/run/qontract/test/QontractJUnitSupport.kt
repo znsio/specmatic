@@ -4,7 +4,7 @@ import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import run.qontract.core.*
-import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_FILE_NAME
+import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_FILE_NAME
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Examples
 import run.qontract.core.pattern.parsedValue
@@ -18,16 +18,28 @@ import kotlin.system.exitProcess
 val pass = Unit
 
 open class QontractJUnitSupport {
+    companion object {
+        const val CONTRACT_PATHS = "contractPaths"
+        const val WORKING_DIRECTORY = "workingDirectory"
+        const val CONFIG_FILE_NAME = "manifestFile"
+        const val TIMEOUT = "timeout"
+        private const val DEFAULT_TIMEOUT = "60"
+        const val INLINE_SUGGESTIONS = "suggestions"
+        const val SUGGESTIONS_PATH = "suggestionsPath"
+        const val HOST = "host"
+        const val PORT = "port"
+    }
+    
     @TestFactory
     fun contractAsTest(): Collection<DynamicTest> {
-        val contractPaths = System.getProperty("contractPaths")
-        val givenWorkingDirectory = System.getProperty("workingDirectory")
-        val givenConfigFile = System.getProperty("manifestFile")
+        val contractPaths = System.getProperty(CONTRACT_PATHS)
+        val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
+        val givenConfigFile = System.getProperty(CONFIG_FILE_NAME)
 
-        val timeout = System.getProperty("timeout", "60").toInt()
+        val timeout = System.getProperty(TIMEOUT, DEFAULT_TIMEOUT).toInt()
 
-        val suggestionsData = System.getProperty("suggestions") ?: ""
-        val suggestionsPath = System.getProperty("suggestionsPath") ?: ""
+        val suggestionsData = System.getProperty(INLINE_SUGGESTIONS) ?: ""
+        val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""
 
         val workingDirectory = File(valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified"))
         val workingDirectoryWasCreated = workingDirectory.exists()
@@ -38,7 +50,7 @@ open class QontractJUnitSupport {
                     contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData) }
                 }
                 else -> {
-                    val configFile = valueOrDefault(givenConfigFile, QONTRACT_CONFIG_FILE_NAME, "Neither contract nor config were specified")
+                    val configFile = valueOrDefault(givenConfigFile, DEFAULT_QONTRACT_CONFIG_FILE_NAME, "Neither contract nor config were specified")
 
                     exitIfDoesNotExist("config file", configFile)
 
@@ -98,8 +110,8 @@ open class QontractJUnitSupport {
     }
 
     private fun runHttpTest(timeout: Int, testScenario: Scenario): Result {
-        val host = System.getProperty("host")
-        val port = System.getProperty("port")
+        val host = System.getProperty(HOST)
+        val port = System.getProperty(PORT)
         val protocol = System.getProperty("protocol") ?: "http"
 
         return executeTest(protocol, host, port, timeout, testScenario)

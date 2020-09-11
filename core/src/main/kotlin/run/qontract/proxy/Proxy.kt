@@ -15,11 +15,20 @@ import run.qontract.stub.ktorHttpRequestToHttpRequest
 import run.qontract.stub.respondToKtorHttpResponse
 import run.qontract.test.HttpClient
 import java.io.Closeable
+import java.net.URI
 import java.net.URL
 
 class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: FileWriter): Closeable {
     constructor(host: String, port: Int, baseURL: String, proxyQontractDataDir: String) : this(host, port, baseURL, RealFileWriter(proxyQontractDataDir))
+
     private val stubs = mutableListOf<NamedStub>()
+
+    private val targetHost = baseURL.let {
+        when {
+            it.isBlank() -> null
+            else -> URI(baseURL).host
+        }
+    }
 
     private val environment = applicationEngineEnvironment {
         module {
@@ -35,7 +44,11 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
                     else -> try {
                         val client = HttpClient(proxyURL(httpRequest, baseURL))
 
-                        val httpResponse = client.execute(httpRequest)
+                        val requestToSend = targetHost?.let {
+                            httpRequest.withHost(targetHost)
+                        } ?: httpRequest
+
+                        val httpResponse = client.execute(requestToSend)
 
                         val name = "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams)}"
                         stubs.add(NamedStub(name, ScenarioStub(httpRequest, httpResponse)))

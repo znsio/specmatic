@@ -3,6 +3,7 @@ package application
 import run.qontract.test.QontractJUnitSupport
 import application.test.ContractExecutionListener
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
+import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.junit.platform.launcher.core.LauncherFactory
@@ -28,6 +29,9 @@ import java.util.concurrent.Callable
 class TestCommand : Callable<Unit> {
     @Autowired
     lateinit var qontractConfig: QontractConfig
+
+    @Autowired
+    lateinit var junitLauncher: Launcher
 
     @CommandLine.Parameters(arity = "0..*", description = ["Contract file paths"])
     var contractPaths: List<String> = mutableListOf()
@@ -62,10 +66,7 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--commit"], description = ["Commit kafka messages that have been read"], required=false)
     var commit: Boolean = false
 
-    @Option(names = ["--workingDirectory"], description = ["The working directory in which contracts will be checked out"])
-    var workingDirectory: String? = null
-
-    @Option(names = ["--junit-report-dir"], description = ["Create junit xml reports in this directory"])
+    @Option(names = ["--junitReportDir"], description = ["Create junit xml reports in this directory"])
     var junitReportDirName: String? = null
 
     override fun call() = try {
@@ -101,21 +102,19 @@ class TestCommand : Callable<Unit> {
         if(kafkaPort != 0)
             System.setProperty("kafkaPort", kafkaPort.toString())
 
-        val launcher = LauncherFactory.create()
         val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
                 .selectors(selectClass(QontractJUnitSupport::class.java))
-                .configurationParameter("key", "value")
                 .build()
-        launcher.discover(request)
+        junitLauncher.discover(request)
         val contractExecutionListener = ContractExecutionListener()
-        launcher.registerTestExecutionListeners(contractExecutionListener)
+        junitLauncher.registerTestExecutionListeners(contractExecutionListener)
 
         junitReportDirName?.let { dirName ->
             val reportListener = org.junit.platform.reporting.legacy.xml.LegacyXmlReportGeneratingListener(Paths.get(dirName), PrintWriter(System.out, true))
-            launcher.registerTestExecutionListeners(reportListener)
+            junitLauncher.registerTestExecutionListeners(reportListener)
         }
 
-        launcher.execute(request)
+        junitLauncher.execute(request)
 
         contractExecutionListener.exitProcess()
     }

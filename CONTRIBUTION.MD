@@ -5,10 +5,11 @@ Thanks for being willing to contribute!
 ## Project setup
 
 1.  Fork and clone the repo
-2.  Install Ruby > 2.7 - Preferrably with rbenv
-3.  Run bundle to install dependencies
-4.  Run bundle exec jekyll serve to start server on localhost:4000
-3.  Create a branch for your PR with `git checkout -b your-branch-name`
+2.  Install JDK > 11
+3.  Install Kotlin > 1.4.0
+4.  We have a wrapped Gradle, so you will just need to run `gradlew`
+5.  Run `./gradlew clean build` project root folder to install dependencies
+6.  Create a branch for your PR with `git checkout -b your-branch-name`
 
 > Tip: Keep your `master` branch pointing at the original repository and make
 > pull requests from branches on your fork. To do this, run:
@@ -29,11 +30,11 @@ Thanks for being willing to contribute!
 
 Please make sure to run the tests before you commit your changes by using the command
 
-`gradle clean test`
+`./gradlew clean test`
 
-Generate Fat Jar
+Generate Fat Jar. The `qontract.jar` should be available in `<projectRoot>/application/build/libs`
 
-`gradle clean build shadowJar`
+`./gradlew clean build shadowJar`
 
 ## Help needed
 

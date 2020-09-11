@@ -29,11 +29,7 @@ Thanks for being willing to contribute!
 
 Please make sure to run the tests before you commit your changes by using the command
 
-`npm test`
-
-Build the dist files using
-
-`npm run build`
+`gradle clean test`
 
 ## Help needed
 

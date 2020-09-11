@@ -30,11 +30,13 @@ Thanks for being willing to contribute!
 
 Please make sure to run the tests before you commit your changes by using the command
 
-`./gradlew clean test`
+```./gradlew clean test```
 
 Generate Fat Jar. The `qontract.jar` should be available in `<projectRoot>/application/build/libs`
 
-`./gradlew clean build shadowJar`
+```./gradlew clean build shadowJar```
+
+Run the `qontract.jar` to verify any commands as part of your changes.
 
 ## Help needed
 

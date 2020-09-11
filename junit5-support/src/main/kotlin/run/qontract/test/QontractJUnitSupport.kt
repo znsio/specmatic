@@ -20,7 +20,7 @@ val pass = Unit
 open class QontractJUnitSupport {
     @TestFactory
     fun contractAsTest(): Collection<DynamicTest> {
-        val path = System.getProperty("path")
+        val contractPaths = System.getProperty("contractPaths")
         val givenWorkingDirectory = System.getProperty("workingDirectory")
         val givenConfigFile = System.getProperty("manifestFile")
 
@@ -28,18 +28,15 @@ open class QontractJUnitSupport {
 
         val suggestionsData = System.getProperty("suggestions") ?: ""
         val suggestionsPath = System.getProperty("suggestionsPath") ?: ""
-        val checkBackwardCompatibility = (System.getProperty("checkBackwardCompatibility") ?: "false").toBoolean()
-
-        if(checkBackwardCompatibility) {
-            checkBackwardCompatibilityInPath(path)
-        }
 
         val workingDirectory = File(valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified"))
         val workingDirectoryWasCreated = workingDirectory.exists()
 
         val testScenarios = try {
             when {
-                path != null -> loadTestScenarios(path, suggestionsPath, suggestionsData)
+                contractPaths != null -> {
+                    contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData) }
+                }
                 else -> {
                     val configFile = valueOrDefault(givenConfigFile, QONTRACT_CONFIG_FILE_NAME, "Neither contract nor config were specified")
 
@@ -175,28 +172,4 @@ open class QontractJUnitSupport {
         }
     }
 
-    private fun checkBackwardCompatibilityInPath(path: String) {
-        val contractFile = File(path).absoluteFile
-        val (majorVersion, minorVersion) = try {
-            if (!path.endsWith(".$QONTRACT_EXTENSION"))
-                throw ContractException("The path $path does not end with .qontract. Please make sure that the name is of the format <majorVesion>.<minorVersion if any>.qontract, for versioning to work properly.")
-
-            val versionTokens = contractFile.nameWithoutExtension.split(".").map { it.toInt() }
-            when (versionTokens.size) {
-                1 -> Pair(versionTokens[0], 0)
-                2 -> Pair(versionTokens[0], versionTokens[1])
-                else -> throw ContractException("The name ($contractFile.name) does not seem to be a version number, so can't check for backward compatibility with prior versions.")
-            }
-        } catch (e: NumberFormatException) {
-            throw ContractException("The name ($contractFile.name) does not seem to be a version number, so can't check for backward compatibility with prior versions.")
-        }
-
-        when (val result = testBackwardCompatibilityInDirectory(contractFile.parentFile, majorVersion, minorVersion)) {
-            is TestResults ->
-                if (result.list.any { !it.results.success() })
-                    throw ContractException("Version incompatibility detected in the chain. Please verify that all contracts with this version are backward compatible.")
-            is JustOne -> pass
-            is NoContractsFound -> throw ContractException("Something is wrong, no contracts were found.")
-        }
-    }
 }

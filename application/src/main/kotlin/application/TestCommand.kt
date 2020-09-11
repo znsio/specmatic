@@ -6,9 +6,11 @@ import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.junit.platform.launcher.core.LauncherFactory
+import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
+import run.qontract.core.Constants
 import run.qontract.core.utilities.*
 import java.io.PrintWriter
 import java.nio.file.Paths
@@ -18,8 +20,11 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
 class TestCommand : Callable<Unit> {
-    @CommandLine.Parameters(index = "0", description = ["Contract or config file path"])
-    lateinit var path: String
+    @Autowired
+    lateinit var qontractConfig: QontractConfig
+
+    @CommandLine.Parameters(arity = "0..*", description = ["Contract file paths"])
+    var contractPaths: List<String> = mutableListOf()
 
     @Option(names = ["--host"], description = ["The host to bind to, e.g. localhost or some locally bound IP"], defaultValue = "localhost")
     lateinit var host: String
@@ -54,13 +59,15 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--commit"], description = ["Commit kafka messages that have been read"], required=false)
     var commit: Boolean = false
 
-    @Option(names = ["--workingDirectory"], description = ["The working directory in which contacts will be checked out"])
+    @Option(names = ["--workingDirectory"], description = ["The working directory in which contracts will be checked out"])
     var workingDirectory: String? = null
 
     @Option(names = ["--junit-report-dir"], description = ["Create junit xml reports in this directory"])
     var junitReportDirName: String? = null
 
     override fun call() = try {
+        loadConfig()
+
         if(port == 0) {
             port = when {
                 useHttps -> 443
@@ -74,15 +81,7 @@ class TestCommand : Callable<Unit> {
             else -> "http"
         }
 
-        if(workingDirectory != null) {
-            exitIfDoesNotExist("file", path)
-            createIfDoesNotExist(workingDirectory!!)
-
-            System.setProperty("manifestFile", path)
-            System.setProperty("workingDirectory", workingDirectory!!)
-        } else {
-            System.setProperty("path", path)
-        }
+        System.setProperty("contractPaths", contractPaths.joinToString(","))
 
         System.setProperty("host", host)
         System.setProperty("port", port.toString())
@@ -120,5 +119,14 @@ class TestCommand : Callable<Unit> {
     }
     catch (e: Throwable) {
         println(exceptionCauseMessage(e))
+    }
+
+    private fun loadConfig() {
+        when(contractPaths.isEmpty()) {
+            true -> {
+                println("No contractPaths specified. Falling back to ${Constants.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY}")
+                contractPaths = qontractConfig.contractTestPaths()
+            }
+        }
     }
 }

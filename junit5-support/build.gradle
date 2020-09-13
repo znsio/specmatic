@@ -22,10 +22,9 @@ def junit_version = "5.6.2"
 dependencies {
     implementation project(':core')
     implementation "org.junit.jupiter:junit-jupiter-engine:${junit_version}"
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation 'org.jetbrains.kotlin:kotlin-maven-serialization'
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-core:1.0.0-RC'
     implementation 'org.assertj:assertj-core:3.17.2'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.6.2'
 

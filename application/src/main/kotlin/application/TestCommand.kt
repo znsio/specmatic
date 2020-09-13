@@ -6,7 +6,6 @@ import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
-import org.junit.platform.launcher.core.LauncherFactory
 import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine
 import picocli.CommandLine.Command
@@ -34,7 +33,7 @@ class TestCommand : Callable<Unit> {
     lateinit var junitLauncher: Launcher
 
     @CommandLine.Parameters(arity = "0..*", description = ["Contract file paths"])
-    var contractPaths: List<String> = mutableListOf()
+    var contractPaths: List<String> = emptyList()
 
     @Option(names = ["--host"], description = ["The host to bind to, e.g. localhost or some locally bound IP"], defaultValue = "localhost")
     lateinit var host: String
@@ -70,7 +69,7 @@ class TestCommand : Callable<Unit> {
     var junitReportDirName: String? = null
 
     override fun call() = try {
-        loadConfig()
+        contractPaths = loadContractPaths()
 
         if(port == 0) {
             port = when {
@@ -122,12 +121,13 @@ class TestCommand : Callable<Unit> {
         println(exceptionCauseMessage(e))
     }
 
-    private fun loadConfig() {
-        when(contractPaths.isEmpty()) {
-            true -> {
+    private fun loadContractPaths(): List<String> {
+        return when {
+            contractPaths.isEmpty() -> {
                 println("No contractPaths specified. Falling back to ${Constants.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY}")
-                contractPaths = qontractConfig.contractTestPaths()
+                qontractConfig.contractTestPaths()
             }
+            else -> contractPaths
         }
     }
 }

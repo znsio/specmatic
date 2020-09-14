@@ -16,4 +16,8 @@ class RealFileReader: FileReader {
     fun files(stubDataDir: String): List<File> {
         return File(stubDataDir).listFiles()?.toList() ?: emptyList()
     }
+
+    fun isFile(fileName: String): Boolean = File(fileName).isFile
+
+    fun extensionIsNot(fileName: String, extension: String): Boolean = File(fileName).extension != extension
 }

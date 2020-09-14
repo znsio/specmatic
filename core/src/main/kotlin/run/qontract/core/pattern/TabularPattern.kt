@@ -127,7 +127,7 @@ fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): Li
 
     return (patternCollection[key] ?: throw ContractException("key $key should not be empty in $patternCollection"))
             .flatMap { pattern ->
-                val subLists = patternList<ValueType>(patternCollection - key)
+                val subLists = patternList(patternCollection - key)
                 subLists.map { generatedPatternMap ->
                     generatedPatternMap.plus(Pair(key, pattern))
                 }

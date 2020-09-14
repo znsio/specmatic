@@ -12,7 +12,7 @@ import org.w3c.dom.Node.ELEMENT_NODE
 import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
 import run.qontract.consoleLog
-import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.Resolver
 import run.qontract.core.git.SystemGit
 import run.qontract.core.git.clone
@@ -144,11 +144,11 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
         parsedJSONStructure(configFile.readText())
 
     } catch (e: Throwable) {
-        exitWithMessage("Error reading the $QONTRACT_CONFIG_IN_CURRENT_DIRECTORY: ${exceptionCauseMessage(e)}")
+        exitWithMessage("Error reading the $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY: ${exceptionCauseMessage(e)}")
     }
 
     if (configJson !is JSONObjectValue)
-        exitWithMessage("The contents of $QONTRACT_CONFIG_IN_CURRENT_DIRECTORY must be a json object")
+        exitWithMessage("The contents of $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY must be a json object")
 
     return configJson
 }
@@ -176,7 +176,7 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
                     else -> GitRepo(repositoryURL, testPaths, stubPaths)
                 }
             }
-            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
+            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
         }
     }
 }
@@ -229,7 +229,7 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
 
 // Used by QontractJUnitSupport users for loading contracts to stub or mock
 fun contractStubPaths(): List<ContractPathData> =
-        contractFilePathsFrom(QONTRACT_CONFIG_IN_CURRENT_DIRECTORY, ".qontract") { source -> source.stubContracts }
+        contractFilePathsFrom(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY, ".qontract") { source -> source.stubContracts }
 
 fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>

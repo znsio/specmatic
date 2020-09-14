@@ -23,7 +23,8 @@ class ContractExecutionListener : TestExecutionListener {
                 false -> {
                     failure++
 
-                    val message = testExecutionResult?.throwable?.get()?.message?.replace("\n", "\n\t")?.trimIndent() ?: ""
+                    val message = testExecutionResult?.throwable?.get()?.message?.replace("\n", "\n\t")?.trimIndent()
+                            ?: ""
 
                     val reason = "Reason: $message"
                     println("$reason\n\n")
@@ -44,10 +45,10 @@ ${reason.prependIndent("  ")}"""
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
         println("Tests run: ${success + failure}, Failures: $failure")
 
-        if(failedLog.isNotEmpty()) {
+        if (failedLog.isNotEmpty()) {
             println()
             println("Failed scenarios:")
-            println(failedLog.distinct().joinToString(System.lineSeparator()) { it.prependIndent("  ")})
+            println(failedLog.distinct().joinToString(System.lineSeparator()) { it.prependIndent("  ") })
         }
     }
 

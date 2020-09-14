@@ -3,13 +3,21 @@ package application
 import run.qontract.test.QontractJUnitSupport
 import application.test.ContractExecutionListener
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
+import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
-import org.junit.platform.launcher.core.LauncherFactory
+import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
+import run.qontract.core.Constants
 import run.qontract.core.utilities.*
+import run.qontract.test.QontractJUnitSupport.Companion.CONTRACT_PATHS
+import run.qontract.test.QontractJUnitSupport.Companion.HOST
+import run.qontract.test.QontractJUnitSupport.Companion.INLINE_SUGGESTIONS
+import run.qontract.test.QontractJUnitSupport.Companion.PORT
+import run.qontract.test.QontractJUnitSupport.Companion.SUGGESTIONS_PATH
+import run.qontract.test.QontractJUnitSupport.Companion.TIMEOUT
 import java.io.PrintWriter
 import java.nio.file.Paths
 import java.util.concurrent.Callable
@@ -18,8 +26,14 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
 class TestCommand : Callable<Unit> {
-    @CommandLine.Parameters(index = "0", description = ["Contract or config file path"])
-    lateinit var path: String
+    @Autowired
+    lateinit var qontractConfig: QontractConfig
+
+    @Autowired
+    lateinit var junitLauncher: Launcher
+
+    @CommandLine.Parameters(arity = "0..*", description = ["Contract file paths"])
+    var contractPaths: List<String> = emptyList()
 
     @Option(names = ["--host"], description = ["The host to bind to, e.g. localhost or some locally bound IP"], defaultValue = "localhost")
     lateinit var host: String
@@ -36,9 +50,6 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--https"], description = ["Use https instead of the default http"], required = false)
     var useHttps: Boolean = false
 
-    @Option(names = ["--checkBackwardCompatibility", "--check", "-c"], description = ["Identify versions of the contract prior to the one specified, and verify backward compatibility from the earliest to the latest"])
-    var checkBackwardCompatibility: Boolean = false
-
     @Option(names = ["--timeout"], description = ["Specify a timeout for the test requests"], required = false, defaultValue = "60")
     var timeout: Int = 60
 
@@ -54,13 +65,12 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--commit"], description = ["Commit kafka messages that have been read"], required=false)
     var commit: Boolean = false
 
-    @Option(names = ["--workingDirectory"], description = ["The working directory in which contacts will be checked out"])
-    var workingDirectory: String? = null
-
-    @Option(names = ["--junit-report-dir"], description = ["Create junit xml reports in this directory"])
+    @Option(names = ["--junitReportDir"], description = ["Create junit xml reports in this directory"])
     var junitReportDirName: String? = null
 
     override fun call() = try {
+        contractPaths = loadContractPaths()
+
         if(port == 0) {
             port = when {
                 useHttps -> 443
@@ -74,22 +84,13 @@ class TestCommand : Callable<Unit> {
             else -> "http"
         }
 
-        if(workingDirectory != null) {
-            exitIfDoesNotExist("file", path)
-            createIfDoesNotExist(workingDirectory!!)
+        System.setProperty(CONTRACT_PATHS, contractPaths.joinToString(","))
 
-            System.setProperty("manifestFile", path)
-            System.setProperty("workingDirectory", workingDirectory!!)
-        } else {
-            System.setProperty("path", path)
-        }
-
-        System.setProperty("host", host)
-        System.setProperty("port", port.toString())
-        System.setProperty("timeout", timeout.toString())
-        System.setProperty("suggestionsPath", suggestionsPath)
-        System.setProperty("suggestions", suggestions)
-        System.setProperty("checkBackwardCompatibility", checkBackwardCompatibility.toString())
+        System.setProperty(HOST, host)
+        System.setProperty(PORT, port.toString())
+        System.setProperty(TIMEOUT, timeout.toString())
+        System.setProperty(SUGGESTIONS_PATH, suggestionsPath)
+        System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty("protocol", protocol)
 
         System.setProperty("kafkaBootstrapServers", kafkaBootstrapServers)
@@ -100,25 +101,33 @@ class TestCommand : Callable<Unit> {
         if(kafkaPort != 0)
             System.setProperty("kafkaPort", kafkaPort.toString())
 
-        val launcher = LauncherFactory.create()
         val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
                 .selectors(selectClass(QontractJUnitSupport::class.java))
-                .configurationParameter("key", "value")
                 .build()
-        launcher.discover(request)
+        junitLauncher.discover(request)
         val contractExecutionListener = ContractExecutionListener()
-        launcher.registerTestExecutionListeners(contractExecutionListener)
+        junitLauncher.registerTestExecutionListeners(contractExecutionListener)
 
         junitReportDirName?.let { dirName ->
             val reportListener = org.junit.platform.reporting.legacy.xml.LegacyXmlReportGeneratingListener(Paths.get(dirName), PrintWriter(System.out, true))
-            launcher.registerTestExecutionListeners(reportListener)
+            junitLauncher.registerTestExecutionListeners(reportListener)
         }
 
-        launcher.execute(request)
+        junitLauncher.execute(request)
 
         contractExecutionListener.exitProcess()
     }
     catch (e: Throwable) {
         println(exceptionCauseMessage(e))
+    }
+
+    private fun loadContractPaths(): List<String> {
+        return when {
+            contractPaths.isEmpty() -> {
+                println("No contractPaths specified. Falling back to ${Constants.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY}")
+                qontractConfig.contractTestPaths()
+            }
+            else -> contractPaths
+        }
     }
 }

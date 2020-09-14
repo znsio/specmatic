@@ -1,7 +1,7 @@
 package application
 
 import picocli.CommandLine
-import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.utilities.loadSources
 import java.io.File
 import java.util.concurrent.Callable
@@ -12,7 +12,7 @@ class InstallCommand: Callable<Unit> {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".qontract/repos")
 
-        val sources = loadSources(QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
+        val sources = loadSources(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
 
         for(source in sources) {
             println("Installing $source")

@@ -4,7 +4,7 @@ import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import run.qontract.core.*
-import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_FILE_NAME
+import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_FILE_NAME
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Examples
 import run.qontract.core.pattern.parsedValue
@@ -18,30 +18,39 @@ import kotlin.system.exitProcess
 val pass = Unit
 
 open class QontractJUnitSupport {
+    companion object {
+        const val CONTRACT_PATHS = "contractPaths"
+        const val WORKING_DIRECTORY = "workingDirectory"
+        const val CONFIG_FILE_NAME = "manifestFile"
+        const val TIMEOUT = "timeout"
+        private const val DEFAULT_TIMEOUT = "60"
+        const val INLINE_SUGGESTIONS = "suggestions"
+        const val SUGGESTIONS_PATH = "suggestionsPath"
+        const val HOST = "host"
+        const val PORT = "port"
+    }
+    
     @TestFactory
     fun contractAsTest(): Collection<DynamicTest> {
-        val path = System.getProperty("path")
-        val givenWorkingDirectory = System.getProperty("workingDirectory")
-        val givenConfigFile = System.getProperty("manifestFile")
+        val contractPaths = System.getProperty(CONTRACT_PATHS)
+        val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
+        val givenConfigFile = System.getProperty(CONFIG_FILE_NAME)
 
-        val timeout = System.getProperty("timeout", "60").toInt()
+        val timeout = System.getProperty(TIMEOUT, DEFAULT_TIMEOUT).toInt()
 
-        val suggestionsData = System.getProperty("suggestions") ?: ""
-        val suggestionsPath = System.getProperty("suggestionsPath") ?: ""
-        val checkBackwardCompatibility = (System.getProperty("checkBackwardCompatibility") ?: "false").toBoolean()
-
-        if(checkBackwardCompatibility) {
-            checkBackwardCompatibilityInPath(path)
-        }
+        val suggestionsData = System.getProperty(INLINE_SUGGESTIONS) ?: ""
+        val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""
 
         val workingDirectory = File(valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified"))
         val workingDirectoryWasCreated = workingDirectory.exists()
 
         val testScenarios = try {
             when {
-                path != null -> loadTestScenarios(path, suggestionsPath, suggestionsData)
+                contractPaths != null -> {
+                    contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData) }
+                }
                 else -> {
-                    val configFile = valueOrDefault(givenConfigFile, QONTRACT_CONFIG_FILE_NAME, "Neither contract nor config were specified")
+                    val configFile = valueOrDefault(givenConfigFile, DEFAULT_QONTRACT_CONFIG_FILE_NAME, "Neither contract nor config were specified")
 
                     exitIfDoesNotExist("config file", configFile)
 
@@ -101,8 +110,8 @@ open class QontractJUnitSupport {
     }
 
     private fun runHttpTest(timeout: Int, testScenario: Scenario): Result {
-        val host = System.getProperty("host")
-        val port = System.getProperty("port")
+        val host = System.getProperty(HOST)
+        val port = System.getProperty(PORT)
         val protocol = System.getProperty("protocol") ?: "http"
 
         return executeTest(protocol, host, port, timeout, testScenario)
@@ -175,28 +184,4 @@ open class QontractJUnitSupport {
         }
     }
 
-    private fun checkBackwardCompatibilityInPath(path: String) {
-        val contractFile = File(path).absoluteFile
-        val (majorVersion, minorVersion) = try {
-            if (!path.endsWith(".$QONTRACT_EXTENSION"))
-                throw ContractException("The path $path does not end with .qontract. Please make sure that the name is of the format <majorVesion>.<minorVersion if any>.qontract, for versioning to work properly.")
-
-            val versionTokens = contractFile.nameWithoutExtension.split(".").map { it.toInt() }
-            when (versionTokens.size) {
-                1 -> Pair(versionTokens[0], 0)
-                2 -> Pair(versionTokens[0], versionTokens[1])
-                else -> throw ContractException("The name ($contractFile.name) does not seem to be a version number, so can't check for backward compatibility with prior versions.")
-            }
-        } catch (e: NumberFormatException) {
-            throw ContractException("The name ($contractFile.name) does not seem to be a version number, so can't check for backward compatibility with prior versions.")
-        }
-
-        when (val result = testBackwardCompatibilityInDirectory(contractFile.parentFile, majorVersion, minorVersion)) {
-            is TestResults ->
-                if (result.list.any { !it.results.success() })
-                    throw ContractException("Version incompatibility detected in the chain. Please verify that all contracts with this version are backward compatible.")
-            is JustOne -> pass
-            is NoContractsFound -> throw ContractException("Something is wrong, no contracts were found.")
-        }
-    }
 }

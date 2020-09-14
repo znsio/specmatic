@@ -1,7 +1,7 @@
 package application
 
 import picocli.CommandLine
-import run.qontract.core.Constants.Companion.QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.git.SystemGit
 import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.utilities.exceptionCauseMessage
@@ -16,7 +16,7 @@ class SubscribeCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".qontract/repos")
-        val manifestFile = File(QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
+        val manifestFile = File(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
         val manifestData = loadConfigJSON(manifestFile)
         val sources = loadSources(manifestData)
 

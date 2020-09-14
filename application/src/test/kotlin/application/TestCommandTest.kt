@@ -8,12 +8,20 @@ import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
+import run.qontract.test.QontractJUnitSupport
 import run.qontract.test.QontractJUnitSupport.Companion.CONTRACT_PATHS
+import run.qontract.test.QontractJUnitSupport.Companion.HOST
+import run.qontract.test.QontractJUnitSupport.Companion.PORT
+import run.qontract.test.QontractJUnitSupport.Companion.TIMEOUT
+import java.util.stream.Stream
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = arrayOf(QontractApplication::class, TestCommand::class))
 internal class TestCommandTest {
@@ -80,4 +88,29 @@ internal class TestCommandTest {
         verify { junitLauncher.registerTestExecutionListeners(any<org.junit.platform.reporting.legacy.xml.LegacyXmlReportGeneratingListener>()) }
         verify(exactly = 1) { junitLauncher.execute(any<LauncherDiscoveryRequest>()) }
     }
+
+    @ParameterizedTest
+    @MethodSource("commandLineArguments")
+    fun `applies command line arguments`(
+            optionName: String,
+            optionValue: String,
+            systemPropertyName: String,
+            systemPropertyValue: String
+    ) {
+        every { qontractConfig.contractTestPaths() }.returns(contractsToBeRunAsTests)
+
+        CommandLine(testCommand, factory).execute(optionName, optionValue)
+
+        assertThat(System.getProperty(systemPropertyName)).isEqualTo(systemPropertyValue)
+    }
+
+    private companion object {
+        @JvmStatic
+        fun commandLineArguments(): Stream<Arguments> = Stream.of(
+                Arguments.of("--port", "9999", PORT, "9999"),
+                Arguments.of("--host", "10.10.10.10", HOST, "10.10.10.10"),
+                Arguments.of("--timeout", "33", TIMEOUT, "33")
+        )
+    }
+
 }

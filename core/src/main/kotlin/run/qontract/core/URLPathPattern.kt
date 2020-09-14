@@ -3,6 +3,7 @@ package run.qontract.core
 import run.qontract.core.pattern.*
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.NullValue
+import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
 data class URLPathPattern(override val pattern: Pattern, override val key: String? = null, override val typeAlias: String? = null) : Pattern, Keyed {
@@ -26,6 +27,17 @@ data class URLPathPattern(override val pattern: Pattern, override val key: Strin
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return JSONArrayValue(valueList)
+    }
+
+    fun tryParse(token: String, resolver: Resolver): Value {
+        return try {
+            this.pattern.parse(token, resolver)
+        } catch (e: Throwable) {
+            if (isPatternToken(token) && token.contains(":"))
+                StringValue(withPatternDelimiters(withoutPatternDelimiters(token).split(":".toRegex(), 2)[1]))
+            else
+                StringValue(token)
+        }
     }
 
     override val typeName: String = "url path"

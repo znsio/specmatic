@@ -133,6 +133,12 @@ internal class HttpRequestTest {
         assertThat(feature.scenarios.single().examples.single()).isEqualTo(examples)
     }
 
+    @Test
+    fun `should replace the Host header value with the specified host name` () {
+        val request = HttpRequest("POST", path = "/", headers = mapOf("Host" to "example.com")).withHost("newhost.com")
+        assertThat(request.headers["Host"]).isEqualTo("newhost.com")
+    }
+
     private fun exampleOf(columnName: String, value: String): Examples {
         val examples = Examples(listOf(columnName))
         examples.addRow(listOf(value))

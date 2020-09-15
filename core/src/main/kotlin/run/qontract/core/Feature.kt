@@ -54,13 +54,13 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
             val resultList = lookupScenario(httpRequest, scenarios)
             val matchingScenarios = matchingScenarios(resultList)
 
-            val firstRealResult = resultList.filterNot { isFluff(it.second) }.firstOrNull()
+            val firstRealResult = resultList.filterNot { isURLPathMismatch(it.second) }.firstOrNull()
             val resultsExist = resultList.firstOrNull() != null
 
             when {
                 matchingScenarios.isNotEmpty() -> matchingScenarios
                 firstRealResult != null -> throw ContractException(resultReport(firstRealResult.second))
-                resultsExist -> throw ContractException(MATCH_NOT_FOUND)
+                resultsExist -> throw ContractException(PATH_NOT_RECOGNIZED_ERROR)
                 else -> throw ContractException("The contract is empty.")
             }
         } finally {

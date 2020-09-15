@@ -389,7 +389,7 @@ Scenario: Square of a number
             val client = HttpClient(stub.endPoint)
             val squareResponse = client.execute(HttpRequest(method = "POST", path = "/wrong_path", body = NumberValue(10)))
             assertThat(squareResponse.status).isEqualTo(400)
-            assertThat(squareResponse.body.toStringValue()).isEqualTo("Match not found")
+            assertThat(squareResponse.body.toStringValue()).isEqualTo("URL path not recognised")
         }
     }
 }

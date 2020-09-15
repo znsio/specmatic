@@ -18,7 +18,7 @@ sealed class Result {
         override fun isTrue() = true
     }
 
-    data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "", val fluff: Boolean = false) : Result() {
+    data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
         fun reason(errorMessage: String) = Failure(errorMessage, this)
         fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
 
@@ -37,6 +37,11 @@ sealed class Result {
 
         override fun isTrue() = false
     }
+}
+
+enum class FailureReason {
+    PartNameMisMatch,
+    URLPathMisMatch
 }
 
 fun Result.breadCrumb(breadCrumb: String): Result =

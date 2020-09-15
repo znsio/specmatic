@@ -284,7 +284,7 @@ private fun httpResponse(features: List<Feature>, httpRequest: HttpRequest): Htt
     return when (val successfulResponse = responses.firstOrNull { it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure" }) {
         null -> {
             val body = when {
-                responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> StringValue(MATCH_NOT_FOUND)
+                responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> StringValue(PATH_NOT_RECOGNIZED_ERROR)
                 else -> StringValue(responses.map {
                     it.body
                 }.filter { it != EmptyString }.joinToString("\n\n"))

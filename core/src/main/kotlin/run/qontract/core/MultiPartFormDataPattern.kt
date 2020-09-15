@@ -26,7 +26,7 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
         return when {
-            name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}", fluff = true)
+            name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}", failureReason = FailureReason.PartNameMisMatch)
             value !is MultiPartContentValue -> Failure("The contract expected content, but got a file.")
             value.content is StringValue -> {
                 try {
@@ -56,7 +56,7 @@ data class MultiPartFilePattern(override val name: String, val filename: String,
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
         return when {
-            name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}.", fluff = true)
+            name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}.", failureReason = FailureReason.PartNameMisMatch)
             value !is MultiPartFileValue -> Failure("The contract expected a file, but got content instead.")
             contentType != null && value.contentType != contentType -> Failure("The contract expected ${contentType.let { "content type $contentType" }}, but got ${value.contentType?.let { "content type $value.contentType" } ?: "no content type."}.")
             contentEncoding != null && value.contentEncoding != contentEncoding -> {

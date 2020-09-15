@@ -45,7 +45,7 @@ class FeatureTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance2").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringValue()).isEqualTo("""Match not found""")
+        assertThat(httpResponse.body.toStringValue()).isEqualTo("URL path not recognised")
     }
 
     @Test

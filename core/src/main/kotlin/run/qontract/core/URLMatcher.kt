@@ -26,7 +26,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     private fun matchesPath(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
         return when(val pathResult = matchesPath(URI(httpRequest.path!!), resolver)) {
-            is Failure -> MatchFailure(pathResult.copy(fluff = true))
+            is Failure -> MatchFailure(pathResult.copy(failureReason = FailureReason.URLPathMisMatch))
             else -> MatchSuccess(parameters)
         }
     }

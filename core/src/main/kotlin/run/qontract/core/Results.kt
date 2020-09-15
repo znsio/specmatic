@@ -1,12 +1,12 @@
 package run.qontract.core
 
-const val MATCH_NOT_FOUND = "Match not found"
+const val PATH_NOT_RECOGNIZED_ERROR = "URL path not recognised"
 
 data class Results(val results: MutableList<Result> = mutableListOf()) {
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
     fun success(): Boolean = !hasFailures()
 
-    fun withoutFluff(): Results = copy(results = results.filterNot { isFluff(it) }.toMutableList())
+    fun withoutFluff(): Results = copy(results = results.filterNot { isURLPathMismatch(it) }.toMutableList())
 
     fun toResultIfAny(): Result {
         return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { resultReport(it) })
@@ -34,8 +34,8 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
         return HttpResponse(400, report(), headers)
     }
 
-    fun report(defaultMessage: String = MATCH_NOT_FOUND): String {
-        val filteredResults = results.filterNot { isFluff(it) }
+    fun report(defaultMessage: String = PATH_NOT_RECOGNIZED_ERROR): String {
+        val filteredResults = results.filterNot { isURLPathMismatch(it) }
 
         return when {
             filteredResults.isNotEmpty() -> listToReport(filteredResults)
@@ -45,9 +45,9 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
 
 }
 
-internal fun isFluff(it: Result?): Boolean {
+internal fun isURLPathMismatch(it: Result?): Boolean {
     return when(it) {
-        is Result.Failure -> it.fluff || isFluff(it.cause)
+        is Result.Failure -> it.failureReason == FailureReason.URLPathMisMatch || isURLPathMismatch(it.cause)
         else -> false
     }
 }

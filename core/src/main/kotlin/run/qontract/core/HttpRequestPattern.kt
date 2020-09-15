@@ -41,7 +41,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
                 type.matches(value, resolver)
             }
 
-            val result = results.find { it is Success } ?: results.find { it is Failure && !it.fluff }?.breadCrumb(type.name)
+            val result = results.find { it is Success } ?: results.find { it is Failure && it.failureReason != FailureReason.PartNameMisMatch }?.breadCrumb(type.name)
             result ?: when {
                     isOptional(type.name) -> Success()
                     else -> Failure("The part named ${type.name} was not found.").breadCrumb(type.name)

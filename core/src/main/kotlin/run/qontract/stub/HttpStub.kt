@@ -1,18 +1,13 @@
 package run.qontract.stub
 
-import io.ktor.application.ApplicationCall
-import io.ktor.application.ApplicationCallPipeline
-import io.ktor.application.call
-import io.ktor.application.install
-import io.ktor.features.CORS
+import io.ktor.application.*
+import io.ktor.features.*
 import io.ktor.http.*
-import io.ktor.http.content.PartData
-import io.ktor.http.content.TextContent
-import io.ktor.http.content.readAllParts
+import io.ktor.http.content.*
 import io.ktor.request.*
-import io.ktor.response.respond
+import io.ktor.response.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.Netty
+import io.ktor.server.netty.*
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.asStream
 import io.ktor.util.toMap
@@ -27,10 +22,16 @@ import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.toMap
 import run.qontract.core.utilities.valueMapToPlainJsonString
 import run.qontract.core.value.*
-import run.qontract.mock.*
+import run.qontract.mock.NoMatchingScenario
+import run.qontract.mock.ScenarioStub
+import run.qontract.mock.mockFromJSON
+import run.qontract.mock.validateMock
 import run.qontract.nullLog
 import java.io.ByteArrayOutputStream
 import java.util.*
+import kotlin.text.isEmpty
+import kotlin.text.toCharArray
+import kotlin.text.toLowerCase
 
 class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null) : ContractStub {
     constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
@@ -262,43 +263,44 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<
             Pair(requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)), it)
         }
 
-        when (val mock = matchResults.find { (result, _) -> result is Result.Success }?.second) {
-            null -> {
-                when(strictMode) {
-                    true -> {
-                        val failureResults = matchResults.map { it.first }
+        val mock = matchResults.find { (result, _) -> result is Result.Success }?.second
 
-                        val results = Results(failureResults.toMutableList()).withoutFluff()
-                        HttpResponse(400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report()}"))
-                    }
-                    else -> {
-                        val responses = features.asSequence().map {
-                            it.stubResponse(httpRequest)
-                        }.toList()
-
-                        when(val successfulResponse = responses.firstOrNull { it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure" }) {
-                            null -> {
-                                val body = when {
-                                    responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> StringValue("Match not found")
-                                    else -> StringValue(responses.map {
-                                        it.body
-                                    }.filter { it != EmptyString }.joinToString("\n\n"))
-                                }
-
-                                HttpResponse(400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = body)
-                            }
-                            else -> successfulResponse
-                        }
-                    }
-                }
-            }
-            else -> softCastResponseToXML(mock).response
+        mock?.softCastResponseToXML()?.response ?: when(strictMode) {
+            true -> httpResponse(matchResults)
+            else -> httpResponse(features, httpRequest)
         }
     } finally {
         features.forEach { feature ->
             feature.clearServerState()
         }
     }
+}
+
+private fun httpResponse(features: List<Feature>, httpRequest: HttpRequest): HttpResponse {
+    val responses = features.asSequence().map {
+        it.stubResponse(httpRequest)
+    }.toList()
+
+    return when (val successfulResponse = responses.firstOrNull { it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure" }) {
+        null -> {
+            val body = when {
+                responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> StringValue(MATCH_NOT_FOUND)
+                else -> StringValue(responses.map {
+                    it.body
+                }.filter { it != EmptyString }.joinToString("\n\n"))
+            }
+
+            HttpResponse(400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = body)
+        }
+        else -> successfulResponse
+    }
+}
+
+private fun httpResponse(matchResults: List<Pair<Result, HttpStubData>>): HttpResponse {
+    val failureResults = matchResults.map { it.first }
+
+    val results = Results(failureResults.toMutableList()).withoutFluff()
+    return HttpResponse(400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report()}"))
 }
 
 fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>, stubs: StubDataItems): HttpResponse {
@@ -337,14 +339,6 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<Scenari
 fun badRequest(errorMessage: String?): HttpResponse {
     return HttpResponse(HttpStatusCode.BadRequest.value, errorMessage, mapOf(QONTRACT_RESULT_HEADER to "failure"))
 }
-
-interface StubData
-
-data class HttpStubData(val requestType: HttpRequestPattern, val response: HttpResponse, val resolver: Resolver) : StubData
-
-data class KafkaStubData(val kafkaMessage: KafkaMessage) : StubData
-
-data class StubDataItems(val http: List<HttpStubData> = emptyList(), val kafka: List<KafkaStubData> = emptyList())
 
 internal fun httpResponseLog(response: HttpResponse): String =
         "${response.toLogString("<- ")}\n<< Response At ${Date()} == "

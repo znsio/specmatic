@@ -60,7 +60,7 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
             when {
                 matchingScenarios.isNotEmpty() -> matchingScenarios
                 firstRealResult != null -> throw ContractException(resultReport(firstRealResult.second))
-                resultsExist -> throw ContractException("Match not found")
+                resultsExist -> throw ContractException(MATCH_NOT_FOUND)
                 else -> throw ContractException("The contract is empty.")
             }
         } finally {

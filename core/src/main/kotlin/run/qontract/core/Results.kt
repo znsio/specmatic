@@ -1,8 +1,9 @@
 package run.qontract.core
 
+const val MATCH_NOT_FOUND = "Match not found"
+
 data class Results(val results: MutableList<Result> = mutableListOf()) {
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
-    fun hasSuccess(): Boolean = results.any { it is Result.Success }
     fun success(): Boolean = !hasFailures()
 
     fun withoutFluff(): Results = copy(results = results.filterNot { isFluff(it) }.toMutableList())
@@ -33,7 +34,7 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
         return HttpResponse(400, report(), headers)
     }
 
-    fun report(defaultMessage: String = "Match not found"): String {
+    fun report(defaultMessage: String = MATCH_NOT_FOUND): String {
         val filteredResults = results.filterNot { isFluff(it) }
 
         return when {

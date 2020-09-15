@@ -5,7 +5,6 @@ import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.Value
 
 sealed class Result {
-
     var scenario: Scenario? = null
 
     fun updateScenario(scenario: Scenario): Result {
@@ -16,7 +15,6 @@ sealed class Result {
     abstract fun isTrue(): Boolean
 
     class Success : Result() {
-
         override fun isTrue() = true
     }
 

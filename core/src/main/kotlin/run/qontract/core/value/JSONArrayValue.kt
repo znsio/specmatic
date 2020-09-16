@@ -1,5 +1,6 @@
 package run.qontract.core.value
 
+import run.qontract.core.ExampleDeclarations
 import run.qontract.core.pattern.JSONArrayPattern
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.withoutPatternDelimiters
@@ -14,15 +15,15 @@ data class JSONArrayValue(override val list: List<Value>) : Value, ListValue {
     override fun exactMatchElseType(): Pattern = JSONArrayPattern(list.map { it.exactMatchElseType() })
     override fun type(): Pattern = JSONArrayPattern()
 
-    private fun typeDeclaration(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration, typeDeclarationCall: (Value, String, Map<String, Pattern>, ExampleDeclaration) -> Pair<TypeDeclaration, ExampleDeclaration>): Pair<TypeDeclaration, ExampleDeclaration> = when {
-        list.isEmpty() -> Pair(TypeDeclaration("[]", types), examples)
+    private fun typeDeclaration(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations, typeDeclarationsStoreCall: (Value, String, Map<String, Pattern>, ExampleDeclarations) -> Pair<TypeDeclaration, ExampleDeclarations>): Pair<TypeDeclaration, ExampleDeclarations> = when {
+        list.isEmpty() -> Pair(TypeDeclaration("[]", types), exampleDeclarations)
         else -> {
             val declarations = list.map {
-                val (typeDeclaration, newExamples) = typeDeclarationCall(it, key, types, examples)
+                val (typeDeclaration, newExamples) = typeDeclarationsStoreCall(it, key, types, exampleDeclarations)
                 Pair(TypeDeclaration("(${withoutPatternDelimiters(typeDeclaration.typeValue)}*)", typeDeclaration.types), newExamples)
             }.let { declarations ->
                 when {
-                    list.first() is ScalarValue -> declarations.map { Pair(removeKey(it.first), examples) }
+                    list.first() is ScalarValue -> declarations.map { Pair(removeKey(it.first), exampleDeclarations) }
                     else -> declarations
                 }
             }
@@ -46,15 +47,15 @@ data class JSONArrayValue(override val list: List<Value>) : Value, ListValue {
         return declaration.copy(typeValue = newTypeValue)
     }
 
-    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            typeDeclaration(key, types, examples) { value, innerKey, innerTypes, newExamples -> value.typeDeclarationWithKey(innerKey, innerTypes, newExamples) }
+    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
+            typeDeclaration(key, types, exampleDeclarations) { value, innerKey, innerTypes, newExamples -> value.typeDeclarationWithKey(innerKey, innerTypes, newExamples) }
 
     override fun listOf(valueList: List<Value>): Value {
         TODO("Not yet implemented")
     }
 
-    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            typeDeclaration(exampleKey, types, examples) { value, innerKey, innerTypes, newExamples -> value.typeDeclarationWithoutKey(innerKey, innerTypes, newExamples) }
+    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
+            typeDeclaration(exampleKey, types, exampleDeclarations) { value, innerKey, innerTypes, newExamples -> value.typeDeclarationWithoutKey(innerKey, innerTypes, newExamples) }
 
     override fun toString() = valueArrayToJsonString(list)
 }

@@ -10,8 +10,8 @@ data class KafkaMessage(val topic: String = "", val key: StringValue? = null, va
 }
 
 fun toGherkinClauses(kafkaMessage: KafkaMessage): List<GherkinClause> {
-    val keyTypeDeclaration = kafkaMessage.key?.typeDeclarationWithKey("KeyType", emptyMap(), ExampleDeclaration())
-    val valueTypeDeclaration = kafkaMessage.value.typeDeclarationWithKey("ValueType", keyTypeDeclaration?.first?.types ?: emptyMap(), keyTypeDeclaration?.second ?: ExampleDeclaration())
+    val keyTypeDeclaration = kafkaMessage.key?.typeDeclarationWithKey("KeyType", emptyMap(), UseExampleDeclarations())
+    val valueTypeDeclaration = kafkaMessage.value.typeDeclarationWithKey("ValueType", keyTypeDeclaration?.first?.types ?: emptyMap(), keyTypeDeclaration?.second ?: UseExampleDeclarations())
 
     val newTypes = valueTypeDeclaration.first.types.plus(keyTypeDeclaration?.first?.types ?: emptyMap())
     val gherkinTypeDeclarations = run.qontract.core.toGherkinClauses(newTypes)

@@ -1,5 +1,6 @@
 package run.qontract.core.value
 
+import run.qontract.core.ExampleDeclarations
 import run.qontract.core.pattern.Pattern
 
 interface Value {
@@ -10,7 +11,7 @@ interface Value {
     fun displayableType(): String
     fun exactMatchElseType(): Pattern
     fun type(): Pattern
-    fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration>
-    fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration>
+    fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations>
+    fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations>
     fun listOf(valueList: List<Value>): Value
 }

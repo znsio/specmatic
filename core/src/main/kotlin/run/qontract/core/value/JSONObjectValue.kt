@@ -1,5 +1,6 @@
 package run.qontract.core.value
 
+import run.qontract.core.ExampleDeclarations
 import run.qontract.core.pattern.DeferredPattern
 import run.qontract.core.pattern.JSONObjectPattern
 import run.qontract.core.pattern.toJSONObjectPattern
@@ -18,14 +19,14 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 
     override fun toString() = valueMapToPrettyJsonString(jsonObject)
 
-    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {
-        val (jsonTypeMap, newTypes, newExamples) = dictionaryToDeclarations(jsonObject, types, examples)
+    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> {
+        val (jsonTypeMap, newTypes, newExamples) = dictionaryToDeclarations(jsonObject, types, exampleDeclarations)
 
         val newType = toTabularPattern(jsonTypeMap.mapValues {
             DeferredPattern(it.value.pattern)
         })
 
-        val newTypeName = examples.getNewName(key.capitalize(), newTypes.keys)
+        val newTypeName = exampleDeclarations.getNewName(key.capitalize(), newTypes.keys)
 
         val typeDeclaration = TypeDeclaration("($newTypeName)", newTypes.plus(newTypeName to newType))
 
@@ -36,8 +37,8 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
         return JSONArrayValue(valueList)
     }
 
-    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            typeDeclarationWithKey(exampleKey, types, examples)
+    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
+            typeDeclarationWithKey(exampleKey, types, exampleDeclarations)
 
     fun getString(key: String): String {
         return (jsonObject.getValue(key) as StringValue).string
@@ -64,10 +65,10 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     }
 }
 
-internal fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map<String, Pattern>, examples: ExampleDeclaration): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclaration> {
+internal fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclarations> {
     return jsonObject
             .entries
-            .fold(Triple(emptyMap(), types, examples)) { acc, entry ->
+            .fold(Triple(emptyMap(), types, exampleDeclarations)) { acc, entry ->
                 val (jsonTypeMap, accTypes, accExamples) = acc
                 val (key, value) = entry
 

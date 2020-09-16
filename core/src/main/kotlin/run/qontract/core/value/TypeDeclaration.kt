@@ -1,5 +1,6 @@
 package run.qontract.core.value
 
+import run.qontract.core.ExampleDeclarations
 import run.qontract.core.pattern.*
 
 data class TypeDeclaration(val typeValue: String, val types: Map<String, Pattern> = emptyMap())
@@ -87,26 +88,26 @@ fun isEmptyArrayAndRepeatingType(type1: String, type2: String): Boolean {
     return (isRepeatingPattern(cleanup(type1)) && type2 == "[]") || (type1 == "[]" && isRepeatingPattern(cleanup(type2)))
 }
 
-fun primitiveTypeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
+fun primitiveTypeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclarations> {
     val (newTypeName, exampleKey) = when (key) {
-        !in examples.examples -> Pair(displayableType, key)
+        !in exampleDeclarations.examples -> Pair(displayableType, key)
         else -> {
-            val exampleKey = examples.getNewName(key, examples.examples.keys)
+            val exampleKey = exampleDeclarations.getNewName(key, exampleDeclarations.examples.keys)
             Pair("$exampleKey: ${withoutPatternDelimiters(displayableType)}", exampleKey)
         }
     }
 
-    return Pair(TypeDeclaration("(${newTypeName})", types), examples.plus(exampleKey to stringValue))
+    return Pair(TypeDeclaration("(${newTypeName})", types), exampleDeclarations.plus(exampleKey to stringValue))
 }
 
-fun primitiveTypeDeclarationWithoutKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclaration> {
+fun primitiveTypeDeclarationWithoutKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations, displayableType: String, stringValue: String): Pair<TypeDeclaration, ExampleDeclarations> {
     val (newTypeName, exampleKey) = when (key) {
-        !in examples.examples -> Pair("$key: $displayableType", key)
+        !in exampleDeclarations.examples -> Pair("$key: $displayableType", key)
         else -> {
-            val exampleKey = examples.getNewName(key, examples.examples.keys)
+            val exampleKey = exampleDeclarations.getNewName(key, exampleDeclarations.examples.keys)
             Pair("$exampleKey: ${withoutPatternDelimiters(displayableType)}", exampleKey)
         }
     }
 
-    return Pair(TypeDeclaration("(${newTypeName})", types), examples.plus(exampleKey to stringValue))
+    return Pair(TypeDeclaration("(${newTypeName})", types), exampleDeclarations.plus(exampleKey to stringValue))
 }

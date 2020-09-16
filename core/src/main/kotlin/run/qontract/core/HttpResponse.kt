@@ -1,6 +1,6 @@
 package run.qontract.core
 
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
 import run.qontract.conversions.guessType
 import run.qontract.core.GherkinSection.Then
 import run.qontract.core.pattern.ContractException
@@ -102,30 +102,30 @@ fun nativeInteger(json: Map<String, Value>, key: String): Int? {
 
 val responseHeadersToExcludeFromConversion = listOf("Vary", QONTRACT_RESULT_HEADER)
 
-fun toGherkinClauses(response: HttpResponse, types: Map<String, Pattern> = emptyMap()): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclaration> {
+fun toGherkinClauses(response: HttpResponse, types: Map<String, Pattern> = emptyMap()): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
     return try {
         val cleanedUpResponse = dropContentAndCORSResponseHeaders(response)
 
-        return Triple(emptyList<GherkinClause>(), types, ExampleDeclaration()).let { (clauses, types, examples) ->
+        return Triple(emptyList<GherkinClause>(), types, DiscardExampleDeclarations()).let { (clauses, types, examples) ->
             val status = when {
                 cleanedUpResponse.status > 0 -> cleanedUpResponse.status
                 else -> throw ContractException("Can't generate a contract without a response status")
             }
             Triple(clauses.plus(GherkinClause("status $status", Then)), types, examples)
         }.let { (clauses, types, _) ->
-            val (newClauses, newTypes, _) = headersToGherkin(cleanedUpResponse.headers, "response-header", types, ExampleDeclaration(), Then)
-            Triple(clauses.plus(newClauses), newTypes, ExampleDeclaration())
+            val (newClauses, newTypes, _) = headersToGherkin(cleanedUpResponse.headers, "response-header", types, DiscardExampleDeclarations(), Then)
+            Triple(clauses.plus(newClauses), newTypes, DiscardExampleDeclarations())
         }.let { (clauses, types, examples) ->
             when (val result = responseBodyToGherkinClauses("ResponseBody", guessType(cleanedUpResponse.body), types)) {
                 null -> Triple(clauses, types, examples)
                 else -> {
                     val (newClauses, newTypes, _) = result
-                    Triple(clauses.plus(newClauses), newTypes, ExampleDeclaration())
+                    Triple(clauses.plus(newClauses), newTypes, DiscardExampleDeclarations())
                 }
             }
         }
     } catch(e: NotImplementedError) {
-        Triple(emptyList(), types, ExampleDeclaration())
+        Triple(emptyList(), types, DiscardExampleDeclarations())
     }
 }
 

@@ -1,9 +1,10 @@
 package run.qontract.core.value
 
+import run.qontract.core.ExampleDeclarations
 import run.qontract.core.pattern.isPatternToken
 
-data class ExampleDeclaration constructor(val examples: Map<String, String> = emptyMap(), val messages: List<String> = emptyList()) {
-    fun plus(more: ExampleDeclaration): ExampleDeclaration {
+data class UseExampleDeclarations(override val examples: Map<String, String> = emptyMap(), override val messages: List<String> = emptyList()) : ExampleDeclarations {
+    override fun plus(more: ExampleDeclarations): ExampleDeclarations {
         val duplicateMessage = messageWhenDuplicateKeysExist(more, examples)
         for(message in duplicateMessage)
             println(duplicateMessage)
@@ -11,23 +12,19 @@ data class ExampleDeclaration constructor(val examples: Map<String, String> = em
         return this.copy(examples = examples.plus(more.examples.filterNot { isPatternToken(it.value) }), messages = messages.plus(more.messages).plus(duplicateMessage))
     }
 
-    fun plus(more: Pair<String, String>): ExampleDeclaration = when {
+    override fun plus(more: Pair<String, String>): ExampleDeclarations = when {
         !isPatternToken(more.second) || more.second == "(null)"-> this.copy(examples = examples.plus(more))
         else -> this
     }
 
-    fun getNewName(typeName: String, keys: Collection<String>): String =
+    override fun getNewName(typeName: String, keys: Collection<String>): String =
             generateSequence(typeName) { "${it}_" }.first { it !in keys }
 }
 
-fun toExampleDeclaration(examples: Map<String, String>): ExampleDeclaration {
-    return ExampleDeclaration(examples.filterNot { isPatternToken(it.value) })
-}
-
-internal fun messageWhenDuplicateKeysExist(newExamples: ExampleDeclaration, examples: Map<String, String>): List<String> {
-    val duplicateKeys = newExamples.examples.keys.filter { it in examples }.filter { key ->
+internal fun messageWhenDuplicateKeysExist(newExampleDeclarations: ExampleDeclarations, examples: Map<String, String>): List<String> {
+    val duplicateKeys = newExampleDeclarations.examples.keys.filter { it in examples }.filter { key ->
         val oldValue = examples.getValue(key)
-        val newValue = newExamples.examples.getValue(key)
+        val newValue = newExampleDeclarations.examples.getValue(key)
 
         oldValue != newValue
     }

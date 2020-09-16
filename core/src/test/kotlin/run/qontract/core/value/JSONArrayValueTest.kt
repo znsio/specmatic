@@ -8,7 +8,7 @@ internal class JSONArrayValueTest {
     @Test
     fun `when there are multiple values, take only the examples of the first one`() {
         val array = parsedValue("""["one", "two", "three"]""")
-        val (typeDeclaration, exampleDeclaration) = array.typeDeclarationWithKey("array", emptyMap(), ExampleDeclaration())
+        val (typeDeclaration, exampleDeclaration) = array.typeDeclarationWithKey("array", emptyMap(), UseExampleDeclarations())
 
         assertThat(typeDeclaration.types).isEmpty()
         assertThat(exampleDeclaration.examples.isEmpty())
@@ -17,7 +17,7 @@ internal class JSONArrayValueTest {
     @Test
     fun `empty array test`() {
         val array = parsedValue("""[]""")
-        val (typeDeclaration, exampleDeclaration) = array.typeDeclarationWithKey("array", emptyMap(), ExampleDeclaration())
+        val (typeDeclaration, exampleDeclaration) = array.typeDeclarationWithKey("array", emptyMap(), UseExampleDeclarations())
 
         assertThat(typeDeclaration.types).isEmpty()
         assertThat(exampleDeclaration.examples.isEmpty())

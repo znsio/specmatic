@@ -4,6 +4,7 @@ import io.ktor.http.quote
 import io.ktor.util.InternalAPI
 import org.w3c.dom.Document
 import org.w3c.dom.Node
+import run.qontract.core.ExampleDeclarations
 import run.qontract.core.pattern.*
 
 data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
@@ -27,11 +28,11 @@ data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
 
     override fun type(): Pattern = StringPattern
 
-    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            primitiveTypeDeclarationWithKey(key, types, examples, displayableType(), string)
+    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
+            primitiveTypeDeclarationWithKey(key, types, exampleDeclarations, displayableType(), string)
 
-    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> =
-            primitiveTypeDeclarationWithoutKey(exampleKey, types, examples, displayableType(), string)
+    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
+            primitiveTypeDeclarationWithoutKey(exampleKey, types, exampleDeclarations, displayableType(), string)
 
     override fun toString() = string
 

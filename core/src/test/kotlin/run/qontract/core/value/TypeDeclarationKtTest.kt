@@ -13,8 +13,8 @@ internal class TypeDeclarationKtTest {
         val emptyList = parsedValue("""{"list": []}""")
         val oneElementList = parsedValue("""{"list": [1]}""")
 
-        val (emptyDeclaration, _) = emptyList.typeDeclarationWithKey("List", emptyMap(), ExampleDeclaration())
-        val (oneElementDeclaration, _) = oneElementList.typeDeclarationWithKey("List", emptyMap(), ExampleDeclaration())
+        val (emptyDeclaration, _) = emptyList.typeDeclarationWithKey("List", emptyMap(), UseExampleDeclarations())
+        val (oneElementDeclaration, _) = oneElementList.typeDeclarationWithKey("List", emptyMap(), UseExampleDeclarations())
 
         val convergedOneWay = convergeTypeDeclarations(emptyDeclaration, oneElementDeclaration)
         val convergedTheOtherWay = convergeTypeDeclarations(oneElementDeclaration, emptyDeclaration)
@@ -25,20 +25,20 @@ internal class TypeDeclarationKtTest {
 
     @Test
     fun `primitive with key should create a new variable if it already exists for an example`() {
-        val declaration = primitiveTypeDeclarationWithKey("name", emptyMap(), ExampleDeclaration(mapOf("name" to "John Doe")), "string", "Jane Doe")
-        assertThat(declaration).isEqualTo(Pair(TypeDeclaration("(name_: string)"), ExampleDeclaration(mapOf("name" to "John Doe", "name_" to "Jane Doe"))))
+        val declaration = primitiveTypeDeclarationWithKey("name", emptyMap(), UseExampleDeclarations(mapOf("name" to "John Doe")), "string", "Jane Doe")
+        assertThat(declaration).isEqualTo(Pair(TypeDeclaration("(name_: string)"), UseExampleDeclarations(mapOf("name" to "John Doe", "name_" to "Jane Doe"))))
     }
 
     @Test
     fun `primitive with key should not create a new variable if an example does not exist with that name`() {
-        val declaration = primitiveTypeDeclarationWithKey("name", emptyMap(), ExampleDeclaration(emptyMap()), "string", "Jane Doe")
-        assertThat(declaration).isEqualTo(Pair(TypeDeclaration("(string)"), ExampleDeclaration(mapOf("name" to "Jane Doe"))))
+        val declaration = primitiveTypeDeclarationWithKey("name", emptyMap(), UseExampleDeclarations(emptyMap()), "string", "Jane Doe")
+        assertThat(declaration).isEqualTo(Pair(TypeDeclaration("(string)"), UseExampleDeclarations(mapOf("name" to "Jane Doe"))))
     }
 
     @Test
     fun `primitive without key should create a new variable even if an example does not exist with that name`() {
-        val declaration = primitiveTypeDeclarationWithoutKey("name", emptyMap(), ExampleDeclaration(emptyMap()), "string", "Jane Doe")
-        assertThat(declaration).isEqualTo(Pair(TypeDeclaration("(name: string)"), ExampleDeclaration(mapOf("name" to "Jane Doe"))))
+        val declaration = primitiveTypeDeclarationWithoutKey("name", emptyMap(), UseExampleDeclarations(emptyMap()), "string", "Jane Doe")
+        assertThat(declaration).isEqualTo(Pair(TypeDeclaration("(name: string)"), UseExampleDeclarations(mapOf("name" to "Jane Doe"))))
     }
 
     @Test

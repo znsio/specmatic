@@ -249,7 +249,7 @@ internal class HttpRequestKtTest {
     }
 }
 
-fun printToConsole(clauses: List<GherkinClause>, examples: ExampleDeclaration) {
+fun printToConsole(clauses: List<GherkinClause>, exampleDeclarations: ExampleDeclarations) {
     for(clause in clauses) println(clause)
-    for(example in examples.examples) println(example)
+    for(example in exampleDeclarations.examples) println(example)
 }

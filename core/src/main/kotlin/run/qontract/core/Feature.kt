@@ -9,6 +9,7 @@ import run.qontract.core.pattern.*
 import run.qontract.core.pattern.Examples.Companion.examplesFrom
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.*
+import run.qontract.core.value.UseExampleDeclarations
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.ScenarioStub
 import run.qontract.stub.HttpStubData
@@ -382,7 +383,7 @@ private fun scenarios(featureChildren: List<GherkinDocument.Feature.FeatureChild
 
 fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature(stub.name, stubToClauses(stub))
 
-private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, ExampleDeclaration> {
+private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, ExampleDeclarations> {
     return when (namedStub.stub.kafkaMessage) {
         null -> {
             val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
@@ -395,7 +396,7 @@ private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, Examp
             val typeClauses = toGherkinClauses(allTypes)
             Pair(typeClauses.plus(requestClauses).plus(responseClauses), examples)
         }
-        else -> Pair(toGherkinClauses(namedStub.stub.kafkaMessage), ExampleDeclaration())
+        else -> Pair(toGherkinClauses(namedStub.stub.kafkaMessage), UseExampleDeclarations())
     }
 }
 
@@ -406,4 +407,3 @@ fun toGherkinFeature(name: String, stubs: List<NamedStub>): String {
 
     return withFeatureClause(name, scenarioStrings.joinToString("\n\n"))
 }
-

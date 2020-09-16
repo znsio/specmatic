@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.GherkinSection.Given
 import run.qontract.core.pattern.DeferredPattern
 import run.qontract.core.pattern.toTabularPattern
-import run.qontract.core.value.ExampleDeclaration
+import run.qontract.core.value.UseExampleDeclarations
 
 internal class GherkinClauseKtTest {
     @Test
@@ -24,7 +24,7 @@ internal class GherkinClauseKtTest {
 
     @Test
     fun `pipes in examples keys and values are escaped`() {
-        val examples = ExampleDeclaration(mapOf("key|" to "value|"))
+        val examples = UseExampleDeclarations(mapOf("key|" to "value|"))
         val examplesString = toExampleGherkinString(examples)
         assertThat(examplesString).isEqualTo("Examples:\n| key\\| |\n| value\\| |")
     }

@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import run.qontract.core.GherkinSection.Then
+import run.qontract.core.pattern.parsedJSONStructure
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONObjectValue
@@ -82,5 +83,16 @@ internal class HttpResponseTest {
 
         assertThat(clauses.first[1].section).isEqualTo(Then)
         assertThat(clauses.first[1].content).isEqualTo("response-body (number)")
+    }
+
+    @Test
+    fun `gherkin clauses should contain no underscores when there are duplicate keys`() {
+        val (clauses, _, examples) = toGherkinClauses(HttpResponse(200, body = parsedJSONStructure("""[{"data": 1}, {"data": 2}]""")))
+
+        assertThat(examples).isInstanceOf(DiscardExampleDeclarations::class.java)
+
+        for(clause in clauses) {
+            assertThat(clause.content).doesNotContain("_")
+        }
     }
 }

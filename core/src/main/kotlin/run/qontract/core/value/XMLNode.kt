@@ -3,6 +3,7 @@ package run.qontract.core.value
 import org.w3c.dom.Attr
 import org.w3c.dom.Document
 import org.w3c.dom.Node
+import run.qontract.core.ExampleDeclarations
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.utilities.parseXML
@@ -93,11 +94,11 @@ data class XMLNode(val name: String, val attributes: Map<String, StringValue>, v
         return XMLPattern()
     }
 
-    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {
+    override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> {
         TODO("Not yet implemented")
     }
 
-    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, examples: ExampleDeclaration): Pair<TypeDeclaration, ExampleDeclaration> {
+    override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> {
         TODO("Not yet implemented")
     }
 

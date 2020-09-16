@@ -56,7 +56,7 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         }
     }
 
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result =
             when (otherPattern) {

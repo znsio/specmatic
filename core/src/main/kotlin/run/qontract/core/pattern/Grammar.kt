@@ -168,7 +168,7 @@ fun isLookupRowPattern(token: String): Boolean {
     }
 }
 
-fun parsedJSONStructure(content: String): Value {
+fun parsedJSON(content: String): Value {
     return content.trim().let {
         when {
             it.startsWith("{") -> try { JSONObjectValue(jsonStringToValueMap(it)) } catch(e: Throwable) { throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}") }

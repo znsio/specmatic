@@ -7,7 +7,7 @@ import run.qontract.core.git.SystemGit
 import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.git.exitErrorMessageContains
 import run.qontract.core.git.loadFromPath
-import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.utilities.*
 import run.qontract.core.value.JSONArrayValue
@@ -125,7 +125,7 @@ fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: Str
         val pipelinesKeyInContractMetaData = "pipelines"
 
         val qontractMetaData = when {
-            qontractMetaDataFile.exists() -> parsedJSONStructure(qontractMetaDataFile.readText())
+            qontractMetaDataFile.exists() -> parsedJSON(qontractMetaDataFile.readText())
             else -> {
                 println("Could not find metadata file")
                 JSONObjectValue(mapOf(pipelinesKeyInContractMetaData to JSONArrayValue(emptyList())))

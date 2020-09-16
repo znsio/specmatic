@@ -12,7 +12,7 @@ import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
 import org.w3c.dom.Node
 import run.qontract.core.pattern.NumberPattern
-import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.JSONObjectValue
@@ -387,7 +387,7 @@ Scenario: JSON API to get account details with fact check
             try {
                 val response = restTemplate.getForEntity<String>(URI.create("${mock.endPoint}/variables"))
                 assertThat(response.statusCode.value()).isEqualTo(200)
-                val responseBody = parsedJSONStructure(response.body ?: "")
+                val responseBody = parsedJSON(response.body ?: "")
                 if(responseBody !is JSONObjectValue) fail("Expected JSONObjectValue")
 
                 assertThat(responseBody.jsonObject.getValue("one")).isEqualTo(NumberValue(1))
@@ -419,7 +419,7 @@ Scenario: JSON API to get account details with fact check
             try {
                 val response = restTemplate.postForEntity<String>(URI.create("${mock.endPoint}/variables"), """{"number": "10"}""")
                 assertThat(response.statusCode.value()).isEqualTo(200)
-                val responseBody = parsedJSONStructure(response.body ?: "")
+                val responseBody = parsedJSON(response.body ?: "")
                 if(responseBody !is JSONObjectValue) fail("Expected json object")
 
                 assertThat(responseBody.jsonObject.getValue("number")).isEqualTo(StringValue("20"))

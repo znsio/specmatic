@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestTemplate
 import run.qontract.core.Feature
-import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedJSON
 import run.qontract.stub.HttpStub
 import java.io.File
 import java.net.InetSocketAddress
@@ -62,7 +62,7 @@ internal class ProxyTest {
 
         assertThat(receivedContract?.trim()).startsWith("Feature:")
         assertThatCode { Feature(receivedContract ?: "") }.doesNotThrowAnyException()
-        assertThatCode { parsedJSONStructure(receivedStub ?: "") }.doesNotThrowAnyException()
+        assertThatCode { parsedJSON(receivedStub ?: "") }.doesNotThrowAnyException()
         assertThat(receivedPaths.toList()).isEqualTo(listOf("new_feature.qontract", "stub0.json"))
     }
 
@@ -105,7 +105,7 @@ internal class ProxyTest {
 
         assertThat(receivedContract?.trim()).startsWith("Feature:")
         assertThatCode { Feature(receivedContract ?: "") }.doesNotThrowAnyException()
-        assertThatCode { parsedJSONStructure(receivedStub ?: "") }.doesNotThrowAnyException()
+        assertThatCode { parsedJSON(receivedStub ?: "") }.doesNotThrowAnyException()
         assertThat(receivedPaths.toList()).isEqualTo(listOf("new_feature.qontract", "stub0.json"))
     }
 }

@@ -4,7 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.consoleLog
 import run.qontract.core.*
-import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
@@ -194,7 +194,7 @@ Scenario: Square of a number
 
         val stubSetupRequest = HttpRequest(method = "GET", path = "/number", formFields = mapOf("Data" to """{"id": 10, "data": {"info": 20} }"""))
         val actualRequest = HttpRequest(method = "GET", path = "/number", formFields = mapOf("NotData" to """{"id": 10, "data": {"info": 20} }"""))
-        val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(stubSetupRequest.toPattern(), HttpResponse(status = 200, body = parsedJSONStructure("""{"10": 10}""")), feature.scenarios.single().resolver)), false)
+        val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(stubSetupRequest.toPattern(), HttpResponse(status = 200, body = parsedJSON("""{"10": 10}""")), feature.scenarios.single().resolver)), false)
         assertThat(response.status).isEqualTo(400)
     }
 
@@ -264,7 +264,7 @@ Feature: POST API
     private fun createStubsUsingMultipleThreads(range: IntRange, stub: HttpStub) {
         val threads = range.map { i ->
             println("STARTING THREAD $i")
-            val thread = Thread(Runnable { createExpectation(i, stub) })
+            val thread = Thread { createExpectation(i, stub) }
             thread
         }
 

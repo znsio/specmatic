@@ -5,7 +5,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import run.qontract.conversions.*
-import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
@@ -286,7 +286,7 @@ class PostmanKtTests {
 
     @Test
     fun `should convert response info to an http response`() {
-        val response = postmanItemResponse(parsedJSONStructure("""				{
+        val response = postmanItemResponse(parsedJSON("""				{
 					"name": "Square Of A Number 2",
 					"status": "OK",
 					"code": 200,
@@ -309,7 +309,7 @@ class PostmanKtTests {
 
     @Test
     fun `postman response conversion to qontract`() {
-        val namedStubs = namedStubsFromPostmanResponses((parsedJSONStructure("""[
+        val namedStubs = namedStubsFromPostmanResponses((parsedJSON("""[
 				{
 					"name": "Square Of A Number 2",
 					"originalRequest": {
@@ -378,7 +378,7 @@ class PostmanKtTests {
 
     @Test
     fun `postman request with body to HttpRequest object with body`() {
-        val (baseURL, request) = postmanItemRequest(parsedJSONStructure("""{
+        val (baseURL, request) = postmanItemRequest(parsedJSON("""{
 						"method": "POST",
 						"header": [],
 						"body": {
@@ -413,7 +413,7 @@ class PostmanKtTests {
 
     @Test
     fun `postman request with headers to HttpRequest object with body`() {
-        val (baseURL, request) = postmanItemRequest(parsedJSONStructure("""{
+        val (baseURL, request) = postmanItemRequest(parsedJSON("""{
 						"method": "GET",
 						"header": [
                             {
@@ -444,7 +444,7 @@ class PostmanKtTests {
 
     @Test
     fun `postman request with form fields to HttpRequest object with form fields`() {
-        val (baseURL, request) = postmanItemRequest(parsedJSONStructure("""{
+        val (baseURL, request) = postmanItemRequest(parsedJSON("""{
 				"method": "POST",
 				"header": [],
 				"body": {
@@ -480,7 +480,7 @@ class PostmanKtTests {
 
     @Test
     fun `postman request with form data to HttpRequest object with form data content`() {
-        val (baseURL, request) = postmanItemRequest(parsedJSONStructure("""{
+        val (baseURL, request) = postmanItemRequest(parsedJSON("""{
 				"method": "POST",
 				"header": [],
 				"body": {

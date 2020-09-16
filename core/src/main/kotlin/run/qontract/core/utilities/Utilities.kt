@@ -19,7 +19,7 @@ import run.qontract.core.git.clone
 import run.qontract.core.nativeString
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.NullPattern
-import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
@@ -141,7 +141,7 @@ fun loadSources(configFile: File): List<ContractSource> = loadSources(loadConfig
 
 fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
-        parsedJSONStructure(configFile.readText())
+        parsedJSON(configFile.readText())
 
     } catch (e: Throwable) {
         exitWithMessage("Error reading the $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY: ${exceptionCauseMessage(e)}")

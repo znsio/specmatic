@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.GherkinSection.When
 import run.qontract.core.pattern.DeferredPattern
 import run.qontract.core.pattern.toTabularPattern
-import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.*
@@ -232,7 +232,7 @@ internal class HttpRequestKtTest {
 
     @Test
     fun `when generating the request from JSON contentType of multipart form data should be optional`() {
-        val requestStubData = parsedJSONStructure("""
+        val requestStubData = parsedJSON("""
         {
             "method": "POST",
             "path": "/",

@@ -4,7 +4,7 @@ import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.xml.sax.SAXException
-import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
 import run.qontract.core.value.XMLNode
@@ -22,7 +22,7 @@ class ValueToString {
     fun jsonStringTest() {
         val jsonString = """{"a": 1, "b": 2}"""
         val jsonObject = JSONObject(jsonString)
-        val body: Value = parsedJSONStructure(jsonString)
+        val body: Value = parsedJSON(jsonString)
         val jsonObject2 = JSONObject(body.toString())
         Assertions.assertEquals(jsonObject.getInt("a"), jsonObject2.getInt("a"))
         Assertions.assertEquals(jsonObject.getInt("b"), jsonObject2.getInt("b"))

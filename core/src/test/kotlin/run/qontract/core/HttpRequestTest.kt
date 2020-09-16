@@ -54,7 +54,7 @@ internal class HttpRequestTest {
             }
         """.trimIndent()
 
-        assertThatThrownBy { val json = parsedJSONStructure(stub) as JSONObjectValue
+        assertThatThrownBy { val json = parsedJSON(stub) as JSONObjectValue
             requestFromJSON(json.jsonObject) }.isInstanceOf(ContractException::class.java)
     }
 

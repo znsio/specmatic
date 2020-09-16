@@ -76,7 +76,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         }.map { toJSONObjectPattern(it) }
     }
 
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSONStructure(value)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
     override fun hashCode(): Int = pattern.hashCode()
 
     override val typeName: String = "json object"

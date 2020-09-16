@@ -5,7 +5,7 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
-import run.qontract.core.pattern.parsedJSONStructure
+import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.utilities.GitRepo
 import run.qontract.core.utilities.getTransportCallingCallback
 import run.qontract.core.value.JSONObjectValue
@@ -129,4 +129,4 @@ fun getPersonalAccessToken(): String? {
     return null
 }
 
-private fun readQontractConfig(qontractConfigFile: File) = parsedJSONStructure(qontractConfigFile.readText())
+private fun readQontractConfig(qontractConfigFile: File) = parsedJSON(qontractConfigFile.readText())

@@ -181,7 +181,7 @@ private fun toFixtureInfo(rest: String): Pair<String, Value> {
     return Pair(fixtureTokens[0], toFixtureData(fixtureTokens[1]))
 }
 
-private fun toFixtureData(rawData: String): Value = parsedJSONStructure(rawData)
+private fun toFixtureData(rawData: String): Value = parsedJSON(rawData)
 
 internal fun stringOrDocString(string: String?, step: StepInfo): String {
     val trimmed = string?.trim() ?: ""

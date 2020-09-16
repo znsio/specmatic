@@ -28,7 +28,7 @@ fun requestBodyToGherkinClauses(body: Value?, types: Map<String, Pattern>, examp
         return Triple(emptyList(), types, exampleDeclaration)
 
     val declarations = body?.typeDeclarationWithoutKey("RequestBody", types, exampleDeclaration)?.let { (typeDeclaration, exampleDeclaration) ->
-        val typeValue = getNewName(typeDeclaration.typeValue, typeDeclaration.types.keys)
+        val typeValue = exampleDeclaration.getNewName(typeDeclaration.typeValue, typeDeclaration.types.keys)
 
         val bodyClause = GherkinClause("request-body $typeValue", When)
 

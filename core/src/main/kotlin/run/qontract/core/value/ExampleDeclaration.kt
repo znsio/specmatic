@@ -15,6 +15,9 @@ data class ExampleDeclaration constructor(val examples: Map<String, String> = em
         !isPatternToken(more.second) || more.second == "(null)"-> this.copy(examples = examples.plus(more))
         else -> this
     }
+
+    fun getNewName(typeName: String, keys: Collection<String>): String =
+            generateSequence(typeName) { "${it}_" }.first { it !in keys }
 }
 
 fun toExampleDeclaration(examples: Map<String, String>): ExampleDeclaration {

@@ -25,7 +25,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
             DeferredPattern(it.value.pattern)
         })
 
-        val newTypeName = getNewName(key.capitalize(), newTypes.keys)
+        val newTypeName = examples.getNewName(key.capitalize(), newTypes.keys)
 
         val typeDeclaration = TypeDeclaration("($newTypeName)", newTypes.plus(newTypeName to newType))
 
@@ -62,10 +62,6 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     fun getJSONArray(key: String): List<Value> {
         return (jsonObject.getValue(key) as JSONArrayValue).list
     }
-}
-
-internal fun getNewName(typeName: String, keys: Collection<String>): String {
-    return generateSequence(typeName) { "${it}_" }.first { it !in keys }
 }
 
 internal fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map<String, Pattern>, examples: ExampleDeclaration): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclaration> {

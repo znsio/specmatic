@@ -6,13 +6,13 @@ import org.junit.jupiter.api.Test
 internal class JSONObjectValueKtTest {
     @Test
     fun `when name exists it should generate a new name`() {
-        val newName = getNewName("name", listOf("name"))
+        val newName = ExampleDeclaration().getNewName("name", listOf("name"))
         assertThat(newName).isEqualTo("name_")
     }
 
     @Test
     fun `when name does not exist it should return the same name`() {
-        val newName = getNewName("name", emptyList())
+        val newName = ExampleDeclaration().getNewName("name", emptyList())
         assertThat(newName).isEqualTo("name")
     }
 }

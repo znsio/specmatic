@@ -10,6 +10,7 @@ import run.qontract.core.Constants.Companion.DEFAULT_HTTP_STUB_PORT
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.exceptionCauseMessage
+import run.qontract.core.utilities.exitWithMessage
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.stub.*
 import java.util.concurrent.Callable
@@ -66,9 +67,12 @@ class StubCommand : Callable<Unit> {
     @Autowired
     val watchMaker = WatchMaker()
 
+    @Autowired
+    val fileReader = RealFileReader()
+
     override fun call() = try {
         loadConfig()
-
+        validateQontractFileExtensions(contractPaths, fileReader)
         startServer()
         addShutdownHook()
 
@@ -190,5 +194,14 @@ class StubCommand : Callable<Unit> {
                 }
             }
         })
+    }
+}
+
+internal fun validateQontractFileExtensions(contractPaths: List<String>, fileReader: RealFileReader) {
+    contractPaths.filter { fileReader.isFile(it) && fileReader.extensionIsNot(it, QONTRACT_EXTENSION) }.let {
+        if (it.isNotEmpty()) {
+            val files = it.joinToString("\n")
+            exitWithMessage("The following files do not end with $QONTRACT_EXTENSION and cannot be used:\n$files")
+        }
     }
 }

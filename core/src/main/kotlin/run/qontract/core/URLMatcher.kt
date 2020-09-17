@@ -164,23 +164,6 @@ internal fun toURLMatcherWithOptionalQueryParams(urlPattern: URI): URLMatcher {
     return URLMatcher(queryPattern = queryPattern, path = path, pathPattern = pathPattern)
 }
 
-internal fun toURLMatcher(urlPattern: URI): URLMatcher {
-    val path = urlPattern.path
-
-    val pathPattern = pathToPattern(urlPattern.rawPath)
-
-    val queryPattern = URIUtils.parseQuery(urlPattern.query).mapKeys {
-        "${it.key}?"
-    }.mapValues {
-        if (isPatternToken(it.value))
-            DeferredPattern(it.value, it.key)
-        else
-            ExactValuePattern(StringValue(it.value))
-    }
-
-    return URLMatcher(queryPattern = queryPattern, path = path, pathPattern = pathPattern)
-}
-
 internal fun pathToPattern(rawPath: String): List<URLPathPattern> =
         rawPath.trim('/').split("/").filter { it.isNotEmpty() }.map { part ->
             when {

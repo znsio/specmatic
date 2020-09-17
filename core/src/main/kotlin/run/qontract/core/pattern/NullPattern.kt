@@ -8,6 +8,8 @@ import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
+const val NULL_TYPE = "(null))"
+
 object NullPattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
             when {
@@ -21,7 +23,7 @@ object NullPattern : Pattern, ScalarType {
 
     override fun parse(value: String, resolver: Resolver): Value =
         when(value.trim()) {
-            "(null)" -> NullValue
+            NULL_TYPE -> NullValue
             "" -> NullValue
             else -> throw ContractException("Failed to parse $value: it is not null.")
         }
@@ -39,8 +41,8 @@ object NullPattern : Pattern, ScalarType {
 
     override val typeName: String = "null"
 
-    override val pattern: Any = "(null)"
-    override fun toString(): String = "(null)"
+    override val pattern: Any = NULL_TYPE
+    override fun toString(): String = NULL_TYPE
 }
 
 internal fun isOptionalValuePattern(patternSpec: String): Boolean = withoutPatternDelimiters(patternSpec.trim()).endsWith("?")

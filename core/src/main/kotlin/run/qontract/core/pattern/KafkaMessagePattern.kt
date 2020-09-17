@@ -40,7 +40,7 @@ data class KafkaMessagePattern(val topic: String = "", val key: Pattern = EmptyS
     }
 
     fun encompasses(other: KafkaMessagePattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        return attempt("KAFKA-MESSAGE") { _encompasses(other, thisResolver, otherResolver).breadCrumb("KAFKA-MESSAGE") }
+        return attempt(KAFKA_MESSAGE_BREADCRUMB) { _encompasses(other, thisResolver, otherResolver).breadCrumb(KAFKA_MESSAGE_BREADCRUMB) }
     }
 
     fun _encompasses(other: KafkaMessagePattern, thisResolver: Resolver, otherResolver: Resolver): Result {

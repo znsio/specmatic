@@ -10,8 +10,8 @@ import run.qontract.core.value.*
 
 internal const val QONTRACT_RESULT_HEADER = "X-Qontract-Result"
 
-data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = mapOf("Content-Type" to "text/plain"), val body: Value = EmptyString) {
-    constructor(status: Int = 0, body: String? = "", headers: Map<String, String> = mapOf("Content-Type" to "text/plain")) : this(status, headers, body?.let { parsedValue(it) } ?: EmptyString)
+data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = mapOf(CONTENT_TYPE to "text/plain"), val body: Value = EmptyString) {
+    constructor(status: Int = 0, body: String? = "", headers: Map<String, String> = mapOf(CONTENT_TYPE to "text/plain")) : this(status, headers, body?.let { parsedValue(it) } ?: EmptyString)
 
     private val statusText: String
         get() =
@@ -21,7 +21,7 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
             }
 
     fun updateBodyWith(content: Value): HttpResponse {
-        return copy(body = content, headers = headers.minus("Content-Type").plus("Content-Type" to content.httpContentType))
+        return copy(body = content, headers = headers.minus(CONTENT_TYPE).plus(CONTENT_TYPE to content.httpContentType))
     }
 
     fun toJSON(): JSONObjectValue =
@@ -49,28 +49,28 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
         val OK = HttpResponse(200, emptyMap())
         fun OK(body: Number): HttpResponse {
             val bodyValue = NumberValue(body)
-            return HttpResponse(200, mapOf("Content-Type" to bodyValue.httpContentType), bodyValue)
+            return HttpResponse(200, mapOf(CONTENT_TYPE to bodyValue.httpContentType), bodyValue)
         }
         fun OK(body: String): HttpResponse {
             val bodyValue = StringValue(body)
-            return HttpResponse(200, mapOf("Content-Type" to bodyValue.httpContentType), bodyValue)
+            return HttpResponse(200, mapOf(CONTENT_TYPE to bodyValue.httpContentType), bodyValue)
         }
-        fun OK(body: Value) = HttpResponse(200, mapOf("Content-Type" to body.httpContentType), body)
+        fun OK(body: Value) = HttpResponse(200, mapOf(CONTENT_TYPE to body.httpContentType), body)
         val EMPTY = HttpResponse(0, emptyMap())
 
         fun jsonResponse(jsonData: String?): HttpResponse {
-            return HttpResponse(200, jsonData, mapOf("Content-Type" to "application/json"))
+            return HttpResponse(200, jsonData, mapOf(CONTENT_TYPE to "application/json"))
         }
 
         fun xmlResponse(xmlData: String?): HttpResponse {
-            return HttpResponse(200, xmlData, mapOf("Content-Type" to "application/xml"))
+            return HttpResponse(200, xmlData, mapOf(CONTENT_TYPE to "application/xml"))
         }
 
         fun from(status: Int, body: String?) = bodyToHttpResponse(body, status)
 
         private fun bodyToHttpResponse(body: String?, status: Int): HttpResponse {
             val bodyValue = parsedValue(body)
-            return HttpResponse(status, mutableMapOf("Content-Type" to bodyValue.httpContentType), bodyValue)
+            return HttpResponse(status, mutableMapOf(CONTENT_TYPE to bodyValue.httpContentType), bodyValue)
         }
 
         fun fromJSON(jsonObject: Map<String, Value>): HttpResponse {

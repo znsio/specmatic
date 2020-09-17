@@ -14,6 +14,9 @@ import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
+const val FORM_FIELDS_JSON_KEY = "form-fields"
+const val MULTIPART_FORMDATA_JSON_KEY = "multipart-formdata"
+
 data class HttpRequest(val method: String? = null, val path: String? = null, val headers: Map<String, String> = emptyMap(), val body: Value = EmptyString, val queryParams: Map<String, String> = emptyMap(), val formFields: Map<String, String> = emptyMap(), val multiPartFormData: List<MultiPartFormDataValue> = emptyList()) {
     fun updateQueryParams(queryParams: Map<String, String>): HttpRequest = copy(queryParams = queryParams.plus(queryParams))
 
@@ -70,36 +73,13 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         requestMap["path"] = path?.let { StringValue(it) } ?: StringValue("/")
         method?.let { requestMap["method"] = StringValue(it) } ?: throw ContractException("Can't serialise the request without a method.")
 
-        if (queryParams.isNotEmpty()) requestMap["query"] = JSONObjectValue(queryParams.mapValues { StringValue(it.value) })
-        if (headers.isNotEmpty()) requestMap["headers"] = JSONObjectValue(headers.mapValues { StringValue(it.value) })
+        setIfNotEmpty(requestMap, "query", queryParams)
+        setIfNotEmpty(requestMap, "headers", headers)
 
         when {
-            formFields.isNotEmpty() -> requestMap["form-fields"] = JSONObjectValue(formFields.mapValues { StringValue(it.value) })
-            multiPartFormData.isNotEmpty() -> {
-                val multiPartData = multiPartFormData.map {
-                    JSONObjectValue(when(it) {
-                        is MultiPartContentValue ->
-                            mapOf("name" to StringValue(it.name), "content" to StringValue(it.content.toStringValue()), "contentType" to StringValue(it.content.httpContentType))
-                        is MultiPartFileValue ->
-                            mapOf("name" to StringValue(it.name), "filename" to StringValue("@${it.filename}")).let { map ->
-                                when(it.contentType) {
-                                    null -> map
-                                    else -> map.plus("contentType" to StringValue(it.contentType))
-                                }
-                            }.let { map ->
-                                when (it.contentEncoding) {
-                                    null -> map
-                                    else -> map.plus("contentEncoding" to StringValue(it.contentEncoding))
-                                }
-                            }
-                    })
-                }
-
-                requestMap["multipart-formdata"] = JSONArrayValue(multiPartData)
-            }
-            else -> {
-                requestMap["body"] = body
-            }
+            formFields.isNotEmpty() -> requestMap[FORM_FIELDS_JSON_KEY] = JSONObjectValue(formFields.mapValues { StringValue(it.value) })
+            multiPartFormData.isNotEmpty() -> requestMap[MULTIPART_FORMDATA_JSON_KEY] = JSONArrayValue(multiPartFormData.map { it.toJSONObject() })
+            else -> requestMap["body"] = body
         }
 
         return JSONObjectValue(requestMap)
@@ -152,6 +132,11 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
     }
 }
 
+private fun setIfNotEmpty(dest: MutableMap<String, Value>, key: String, data: Map<String, String>) {
+    if(data.isNotEmpty())
+        dest[key] = JSONObjectValue(data.mapValues { StringValue(it.value) })
+}
+
 fun nativeString(json: Map<String, Value>, key: String): String? {
     val keyValue = json[key] ?: return null
 
@@ -169,41 +154,57 @@ fun requestFromJSON(json: Map<String, Value>) =
         .setHeaders(nativeStringStringMap(json, "headers"))
         .let { httpRequest ->
             when {
-                "form-fields" in json -> {
-                    httpRequest.copy(formFields = nativeStringStringMap(json, "form-fields"))
-                }
-                "multipart-formdata" in json -> {
-                    val parts = json.getValue("multipart-formdata")
-                    if(parts !is JSONArrayValue)
-                        throw ContractException("multipart-formdata must be a json array.")
+                FORM_FIELDS_JSON_KEY in json -> httpRequest.copy(formFields = nativeStringStringMap(json, FORM_FIELDS_JSON_KEY))
+                MULTIPART_FORMDATA_JSON_KEY in json -> {
+                    val parts = arrayValue(json.getValue(MULTIPART_FORMDATA_JSON_KEY), "$MULTIPART_FORMDATA_JSON_KEY must be a json array.")
 
                     val multiPartData: List<MultiPartFormDataValue> = parts.list.map {
-                        if(it !is JSONObjectValue)
-                            throw ContractException("All multipart parts must be json object values.")
+                        val part = objectValue(it, "All multipart parts must be json object values.")
 
-                        val multiPartSpec = it.jsonObject
+                        val multiPartSpec = part.jsonObject
                         val name = nativeString(multiPartSpec, "name") ?: throw ContractException("One of the multipart entries does not have a name key")
 
-                        when {
-                            multiPartSpec.containsKey("content") -> MultiPartContentValue(name, multiPartSpec.getValue("content"))
-                            multiPartSpec.containsKey("filename") -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringValue(), multiPartSpec["contentType"]?.toStringValue(), multiPartSpec["contentEncoding"]?.toStringValue())
-                            else -> throw ContractException("Multipart entry $name must have either a content key or a filename key")
-                        }
+                        parsePartType(multiPartSpec, name)
                     }
 
                     httpRequest.copy(multiPartFormData = httpRequest.multiPartFormData.plus(multiPartData))
                 }
                 "body" in json -> {
-                    val body = json["body"]
-
-                    if(body is NullValue)
-                        throw ContractException("Either body should have a value or the key should be absent from http-response")
-
-                    httpRequest.updateBody(json.getValue("body"))
+                    val body = notNull(json.getOrDefault("body", NullValue), "Either body should have a value or the key should be absent from http-response")
+                    httpRequest.updateBody(body)
                 }
                 else -> httpRequest
             }
         }
+
+private fun parsePartType(multiPartSpec: Map<String, Value>, name: String): MultiPartFormDataValue {
+    return when {
+        multiPartSpec.containsKey("content") -> MultiPartContentValue(name, multiPartSpec.getValue("content"))
+        multiPartSpec.containsKey("filename") -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringValue(), multiPartSpec["contentType"]?.toStringValue(), multiPartSpec["contentEncoding"]?.toStringValue())
+        else -> throw ContractException("Multipart entry $name must have either a content key or a filename key")
+    }
+}
+
+fun objectValue(value: Value, errorMessage: String): JSONObjectValue {
+    if(value !is JSONObjectValue)
+        throw ContractException(errorMessage)
+
+    return value
+}
+
+fun arrayValue(value: Value, errorMessage: String): JSONArrayValue {
+    if(value !is JSONArrayValue)
+        throw ContractException(errorMessage)
+
+    return value
+}
+
+fun notNull(value: Value, errorMessage: String): Value {
+    if(value is NullValue)
+        throw ContractException(errorMessage)
+
+    return value
+}
 
 internal fun nativeStringStringMap(json: Map<String, Value>, key: String): Map<String, String> {
     val queryValue = json[key] ?: return emptyMap()

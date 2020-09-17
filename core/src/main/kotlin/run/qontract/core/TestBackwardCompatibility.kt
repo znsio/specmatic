@@ -25,11 +25,8 @@ fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results 
                     }
                 }
 
-                if(scenarioResults.any { it is Result.Success }) {
-                    results.copy(results = results.results.plus(Result.Success()).toMutableList())
-                } else {
-                    results.copy(results = results.results.plus(scenarioResults).toMutableList())
-                }
+                val resultsToAdd = scenarioResults.find { it is Result.Success }?.let { listOf(it) } ?: scenarioResults
+                results.copy(results = results.results.plus(resultsToAdd).toMutableList())
             } catch (contractException: ContractException) {
                 results.copy(results = results.results.plus(contractException.failure()).toMutableList())
             } catch (stackOverFlowException: StackOverflowError) {

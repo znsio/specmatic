@@ -1,8 +1,8 @@
 package application
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.io.TempDir
 import run.qontract.core.QONTRACT_EXTENSION
 import java.io.File
@@ -18,7 +18,7 @@ internal class RealFileReaderTest {
 
         val reader = RealFileReader()
 
-        assertTrue(reader.isFile(qontractFilePath))
+        assertThat(reader.isFile(qontractFilePath)).isTrue
     }
 
     @Test
@@ -28,7 +28,7 @@ internal class RealFileReaderTest {
 
         val reader = RealFileReader()
 
-        assertFalse(reader.isFile(qontractFilePath))
+        assertThat(reader.isFile(qontractFilePath)).isFalse
     }
 
     @Test
@@ -38,7 +38,7 @@ internal class RealFileReaderTest {
 
         val reader = RealFileReader()
 
-        assertFalse(reader.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION))
+        assertThat(reader.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION)).isFalse
     }
 
     @Test
@@ -48,6 +48,6 @@ internal class RealFileReaderTest {
 
         val reader = RealFileReader()
 
-        assertTrue(reader.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION))
+        assertThat(reader.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION)).isTrue
     }
 }

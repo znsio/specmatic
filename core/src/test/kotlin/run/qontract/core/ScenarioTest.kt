@@ -22,9 +22,7 @@ internal class ScenarioTest {
 
     @Test
     fun `should generate two test scenarios when there are two rows in examples`() {
-        val patterns = Examples()
-        patterns.rows.add(0, Row())
-        patterns.rows.add(1, Row())
+        val patterns = Examples(emptyList(), listOf(Row(), Row()))
         val scenario = Scenario("test", HttpRequestPattern(), HttpResponsePattern(), HashMap(), listOf(patterns), HashMap(), HashMap(), KafkaMessagePattern())
         scenario.generateTestScenarios().let {
             assertThat(it.size).isEqualTo(2)
@@ -55,8 +53,7 @@ internal class ScenarioTest {
     @Test
     fun `given a pattern in an example in a scenario generated based on a row, facts declare without a value should pick up the pattern`() {
         val row = Row(listOf("id"), listOf("(string)"))
-        val example = Examples(mutableListOf("id"))
-        example.addRows(listOf(row))
+        val example = Examples(listOf("id"), listOf(row))
 
         val state = HashMap(mapOf<String, Value>("id" to True))
         val scenario = Scenario("Test", HttpRequestPattern(urlMatcher = URLMatcher(emptyMap(), emptyList(), path="/")), HttpResponsePattern(status=200), state, listOf(example), HashMap(), HashMap(), KafkaMessagePattern())
@@ -70,10 +67,6 @@ internal class ScenarioTest {
 
     @Test
     fun `scenario will match a kafka mock message`() {
-        val row = Row(listOf("id"), listOf("(string)"))
-        val example = Examples(mutableListOf("id"))
-        example.addRows(listOf(row))
-
         val kafkaMessagePattern = KafkaMessagePattern("customers", StringPattern, StringPattern)
         val scenario = Scenario("Test", HttpRequestPattern(), HttpResponsePattern(), emptyMap(), emptyList(), emptyMap(), emptyMap(), kafkaMessagePattern)
 

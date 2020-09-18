@@ -70,10 +70,9 @@ class HttpClient(private val baseURL: String, private val timeout: Int = 60, pri
 
                 requestWithFileContent.headers
                         .map {Triple(it.key.trim(), it.key.trim().toLowerCase(), it.value.trim())}
-                        .forEach { (key, loweredKey, value) ->
-                            if(loweredKey !in listOfExcludedHeaders) {
-                                this.headers[key] = value
-                            }
+                        .filter { (_, loweredKey, _) -> loweredKey !in listOfExcludedHeaders }
+                        .forEach { (key, _, value) ->
+                            this.headers[key] = value
                 }
 
                 when {
@@ -84,26 +83,7 @@ class HttpClient(private val baseURL: String, private val timeout: Int = 60, pri
                     requestWithFileContent.multiPartFormData.isNotEmpty() -> {
                         this.body = MultiPartFormDataContent(formData {
                             requestWithFileContent.multiPartFormData.forEach { value ->
-                                when(value) {
-                                    is MultiPartContentValue -> {
-                                        append(value.name, value.content.toStringValue(), Headers.build {
-                                            append(HttpHeaders.ContentType, ContentType.parse(value.content.httpContentType))
-                                            append("Content-Disposition", "form-data; name=${value.name}")
-                                        })
-                                    }
-                                    is MultiPartFileValue -> {
-                                        appendInput(value.name, Headers.build {
-                                            if(value.contentType != null)
-                                                append(HttpHeaders.ContentType, ContentType.parse(value.contentType))
-                                            value.contentEncoding?.let {
-                                                append(HttpHeaders.ContentEncoding, value.contentEncoding)
-                                            }
-                                            append("Content-Disposition", "form-data; name=${value.name}; filename=${value.filename.removePrefix("@")}")
-                                        }) {
-                                            (value.content ?: "").byteInputStream().asInput()
-                                        }
-                                    }
-                                }
+                                value.addTo(this)
                             }
                         })
                     }

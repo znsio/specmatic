@@ -4,41 +4,19 @@ import io.cucumber.messages.Messages
 import io.cucumber.messages.Messages.GherkinDocument.Feature.Scenario.Examples
 import java.util.*
 
-data class Examples(val columnNames: List<String> = mutableListOf(), val rows: MutableList<Row> = mutableListOf()) {
+data class Examples(val columnNames: List<String> = emptyList(), val rows: List<Row> = listOf()) {
     val isEmpty: Boolean
         get() = rows.isEmpty()
 
-    fun addRow(values: List<String>) {
-        rows.add(Row(columnNames, values))
-    }
-
-    fun addRows(rows: List<Row>) {
-        this.rows.addAll(rows)
-    }
-
-    fun getRow(index: Int): Row {
-        return rows[index]
-    }
-
     companion object {
-        fun fromPSV(background: String): run.qontract.core.pattern.Examples {
-            val rawLines = background.trim().split("\n".toRegex()).toMutableList()
-            val columnNames = getValues(rawLines.first())
-            val table = Examples(columnNames)
-
-            for (line in rawLines.drop(1).map { it.trim() }) {
-                if (line.isNotEmpty()) table.addRow(getValues(line))
-            }
-
-            return table
-        }
-
         fun examplesFrom(examplesList: List<Examples>): List<run.qontract.core.pattern.Examples> = examplesList.map { examplesFrom(it) }
 
-        fun examplesFrom(examples: Examples) =
-            Examples(getColumnNames(examples)).apply {
-                addRows(examples.tableBodyList.map { Row(this.columnNames, getValues(it))})
-            }
+        fun examplesFrom(examples: Examples): run.qontract.core.pattern.Examples {
+            val columns = getColumnNames(examples)
+            val rows = examples.tableBodyList.map { Row(columns, getValues(it)) }
+
+            return Examples(columns, rows)
+        }
 
         private fun getColumnNames(examples: Examples) = getValues(examples.tableHeader)
 

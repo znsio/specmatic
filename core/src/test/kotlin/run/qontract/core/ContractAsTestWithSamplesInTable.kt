@@ -1,11 +1,9 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
-import org.checkerframework.common.value.qual.StringVal
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.pattern.Examples.Companion.fromPSV
 import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.pattern.StringPattern
 import run.qontract.core.value.*
@@ -16,16 +14,6 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class ContractAsTestWithSamplesInTable {
-    @Test
-    fun tabularDataParsing() {
-        val background = "" +
-                "    | account-id | calls-left | messages-left | \n" +
-                "    | 10 | 20 | 30 | " +
-                ""
-        val table = fromPSV(background)
-        Assertions.assertEquals("10", table.getRow(0).getField("account-id"))
-    }
-
     @Test
     @Throws(Throwable::class)
     fun GETAndResponseBodyGeneratedThroughDataTableWithPathParams() {

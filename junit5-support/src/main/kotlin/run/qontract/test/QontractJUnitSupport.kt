@@ -12,6 +12,7 @@ import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.*
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.Value
 import run.qontract.stub.testKafkaMessages
 import java.io.File
 import kotlin.system.exitProcess
@@ -146,25 +147,19 @@ open class QontractJUnitSupport {
             throw ContractException("Suggestions must be a json value with scenario name as the key, and json array with 1 or more json objects containing suggestions")
 
         return suggestionsValue.jsonObject.mapValues { (_, exampleData) ->
-            if (exampleData !is JSONArrayValue)
-                throw ContractException("The value of a scenario must be a list of examples")
+            when {
+                exampleData !is JSONArrayValue -> throw ContractException("The value of a scenario must be a list of examples")
+                exampleData.list.isEmpty() -> Examples()
+                else -> {
+                    val columns = columnsFromExamples(exampleData)
 
-            if (exampleData.list.isEmpty())
-                Examples()
-            else {
-                val firstRow = exampleData.list.get(0)
-                if (firstRow !is JSONObjectValue)
-                    throw ContractException("Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
+                    val rows = exampleData.list.map { row ->
+                        asJSONObjectValue(row, "Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
+                    }.map { row ->
+                        Row(columns, columns.map { row.getValue(it).toStringValue() })
+                    }.toMutableList()
 
-                val columns = firstRow.jsonObject.keys.toList()
-
-                Examples(columns.toMutableList()).apply {
-                    for (row in exampleData.list) {
-                        if(row !is JSONObjectValue)
-                            throw ContractException("Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
-                        val rowValues = columns.map { row.jsonObject.getValue(it).toStringValue() }
-                        this.addRow(rowValues)
-                    }
+                    Examples(columns, rows)
                 }
             }
         }.entries.map { (name, examples) ->
@@ -183,5 +178,19 @@ open class QontractJUnitSupport {
             }
         }
     }
+}
 
+private fun columnsFromExamples(exampleData: JSONArrayValue): List<String> {
+    val firstRow = exampleData.list[0]
+    if (firstRow !is JSONObjectValue)
+        throw ContractException("Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
+
+    return firstRow.jsonObject.keys.toList()
+}
+
+private fun asJSONObjectValue(value: Value, errorMessage: String): Map<String, Value> {
+    if(value !is JSONObjectValue)
+        throw ContractException(errorMessage)
+
+    return value.jsonObject
 }

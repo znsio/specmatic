@@ -140,8 +140,7 @@ internal class HttpRequestTest {
     }
 
     private fun exampleOf(columnName: String, value: String): Examples {
-        val examples = Examples(listOf(columnName))
-        examples.addRow(listOf(value))
-        return examples
+        val columns = listOf(columnName)
+        return Examples(columns, listOf(Row(columns, listOf(value))))
     }
 }

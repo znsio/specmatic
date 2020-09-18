@@ -1,13 +1,18 @@
 package run.qontract.core
 
+import io.ktor.client.request.forms.*
+import io.ktor.http.*
+import io.ktor.utils.io.streams.*
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
+import kotlin.TODO
 
 sealed class MultiPartFormDataValue(open val name: String) {
     abstract fun inferType(): MultiPartFormDataPattern
     abstract fun toDisplayableValue(): String
     abstract fun toJSONObject(): JSONObjectValue
+    abstract fun addTo(formBuilder: FormBuilder)
 }
 
 data class MultiPartContentValue(override val name: String, val content: Value, val boundary: String = "#####") : MultiPartFormDataValue(name) {
@@ -25,6 +30,13 @@ $content
 
     override fun toJSONObject(): JSONObjectValue =
             JSONObjectValue(mapOf("name" to StringValue(name), "content" to StringValue(content.toStringValue()), "contentType" to StringValue(content.httpContentType)))
+
+    override fun addTo(formBuilder: FormBuilder) {
+        formBuilder.append(name, content.toStringValue(), Headers.build {
+            append(HttpHeaders.ContentType, ContentType.parse(content.httpContentType))
+            append("Content-Disposition", "form-data; name=${name}")
+        })
+    }
 }
 
 data class MultiPartFileValue(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null, val content: String? = null, val boundary: String = "#####") : MultiPartFormDataValue(name) {
@@ -63,4 +75,17 @@ $headerString
                     else -> map.plus("contentEncoding" to StringValue(contentEncoding))
                 }
             })
+
+    override fun addTo(formBuilder: FormBuilder) {
+        formBuilder.appendInput(name, Headers.build {
+            if(contentType != null)
+                append(HttpHeaders.ContentType, ContentType.parse(contentType))
+            contentEncoding?.let {
+                append(HttpHeaders.ContentEncoding, contentEncoding)
+            }
+            append("Content-Disposition", "form-data; name=${name}; filename=${filename.removePrefix("@")}")
+        }) {
+            (content ?: "").byteInputStream().asInput()
+        }
+    }
 }

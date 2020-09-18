@@ -55,18 +55,12 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                     }
                 }
             } catch (e: ContractException) {
-                e.failure().breadCrumb("PATH ($uri)").let {
-                    when (urlPathPattern.key) {
-                        null -> it
-                        else -> it.breadCrumb(urlPathPattern.key)
-                    }
+                e.failure().breadCrumb("PATH ($uri)").let { failure ->
+                    urlPathPattern.key?.let { failure.breadCrumb(urlPathPattern.key) } ?: failure
                 }
             } catch (e: Throwable) {
-                Failure(e.localizedMessage).breadCrumb("PATH ($uri)").let {
-                    when (urlPathPattern.key) {
-                        null -> it
-                        else -> it.breadCrumb(urlPathPattern.key)
-                    }
+                Failure(e.localizedMessage).breadCrumb("PATH ($uri)").let { failure ->
+                    urlPathPattern.key?.let { failure.breadCrumb(urlPathPattern.key) } ?: failure
                 }
             }
         }

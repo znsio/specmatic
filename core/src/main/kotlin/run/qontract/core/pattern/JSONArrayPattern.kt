@@ -5,6 +5,7 @@ import run.qontract.core.Result
 import run.qontract.core.breadCrumb
 import run.qontract.core.utilities.stringTooPatternArray
 import run.qontract.core.utilities.withNullPattern
+import run.qontract.core.utilities.withNumberType
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.ListValue
 import run.qontract.core.value.Value
@@ -56,41 +57,32 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         if(sampleData !is JSONArrayValue)
             return Result.Failure("Value is not a JSON array")
 
-        val resolverWithNullType = withNullPattern(resolver)
         if(sampleData.list.isEmpty())
             return Result.Success()
 
-        val resolverWithNumberType = resolverWithNullType.copy(newPatterns = resolverWithNullType.newPatterns.plus("(number)" to NumberPattern))
+        val resolverWithNumberType = withNumberType(withNullPattern(resolver))
 
-        val resolvedTypes = pattern.map {
-            when(it) {
-                is DeferredPattern -> it.resolvePattern(resolverWithNullType)
-                else -> it
-            }
-        }
+        val resolvedTypes = pattern.map { resolvedHop(it, resolverWithNumberType) }
 
-        for (index in resolvedTypes.indices) {
-            when(val patternValue = resolvedTypes[index]) {
-                is RestPattern -> {
-                    val rest = if(index == sampleData.list.size) emptyList() else sampleData.list.slice(index..sampleData.list.lastIndex)
-                    return when (val result = patternValue.matches(JSONArrayValue(rest), resolverWithNullType)) {
-                        is Result.Failure -> result.breadCrumb("[$index...${sampleData.list.lastIndex}]")
-                        else -> result
+        return resolvedTypes.mapIndexed { index, patternValue ->
+            when {
+                patternValue is RestPattern -> {
+                    val rest = when (index) {
+                        sampleData.list.size -> emptyList()
+                        else -> sampleData.list.slice(index..sampleData.list.lastIndex)
                     }
+                    patternValue.matches(JSONArrayValue(rest), resolverWithNumberType).breadCrumb("[$index...${sampleData.list.lastIndex}]")
                 }
+                index == sampleData.list.size ->
+                    Result.Failure("Expected an array of length ${pattern.size}, actual length ${sampleData.list.size}")
                 else -> {
-                    if(index == sampleData.list.size)
-                        return Result.Failure("Expected an array of length ${pattern.size}, actual length ${sampleData.list.size}")
-
                     val sampleValue = sampleData.list[index]
-                    when (val result = patternValue.matches(sampleValue, resolverWithNumberType)) {
-                        is Result.Failure -> return result.breadCrumb("""[$index]""")
-                    }
+                    patternValue.matches(sampleValue, resolverWithNumberType).breadCrumb("""[$index]""")
                 }
             }
-        }
-
-        return Result.Success()
+        }.find {
+            it is Result.Failure
+        } ?: Result.Success()
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {

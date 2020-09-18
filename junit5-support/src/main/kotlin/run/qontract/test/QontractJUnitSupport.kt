@@ -7,6 +7,7 @@ import run.qontract.core.*
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_FILE_NAME
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Examples
+import run.qontract.core.pattern.Row
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.utilities.*
 import run.qontract.core.value.JSONArrayValue
@@ -159,9 +160,8 @@ open class QontractJUnitSupport {
 
                 Examples(columns.toMutableList()).apply {
                     for (row in exampleData.list) {
-                        if (row !is JSONObjectValue)
+                        if(row !is JSONObjectValue)
                             throw ContractException("Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
-
                         val rowValues = columns.map { row.jsonObject.getValue(it).toStringValue() }
                         this.addRow(rowValues)
                     }

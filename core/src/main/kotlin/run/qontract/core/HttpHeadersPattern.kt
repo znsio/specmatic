@@ -35,10 +35,9 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
 
             when {
                 sampleValue != null -> try {
-                    when (val result = resolver.matchesPattern(keyWithoutOptionality, pattern, attempt(breadCrumb = keyWithoutOptionality) { try { pattern.parse(sampleValue, resolver) } catch(e: Throwable) { StringValue(sampleValue)} })) {
-                        is Result.Failure -> {
-                            return MatchFailure(result.breadCrumb(keyWithoutOptionality))
-                        }
+                    val result = resolver.matchesPattern(keyWithoutOptionality, pattern, attempt(breadCrumb = keyWithoutOptionality) { parseOrString(pattern, sampleValue, resolver) } )
+                    if (result is Result.Failure) {
+                        return MatchFailure(result.breadCrumb(keyWithoutOptionality))
                     }
                 } catch(e: ContractException) {
                     return MatchFailure(e.failure())
@@ -108,3 +107,10 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
         return result?.second?.breadCrumb(result.first) ?: Result.Success()
     }
 }
+
+private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resolver) =
+        try {
+            pattern.parse(sampleValue, resolver)
+        } catch (e: Throwable) {
+            StringValue(sampleValue)
+        }

@@ -19,6 +19,7 @@ import run.qontract.core.git.clone
 import run.qontract.core.nativeString
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.NullPattern
+import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
@@ -292,3 +293,6 @@ class UncaughtExceptionHandler: Thread.UncaughtExceptionHandler {
 internal fun withNullPattern(resolver: Resolver): Resolver {
     return resolver.copy(newPatterns = resolver.newPatterns.plus("(empty)" to NullPattern))
 }
+
+internal fun withNumberType(resolverWithNullType: Resolver) =
+        resolverWithNullType.copy(newPatterns = resolverWithNullType.newPatterns.plus("(number)" to NumberPattern))

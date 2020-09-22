@@ -74,18 +74,13 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
             isPatternToken(patternString) -> builtInPatterns.getOrElse(patternString) {
                 when {
                     isDictionaryPattern(patternString) ->  {
-                        val pieces = withoutPatternDelimiters(patternString).split("\\s+".toRegex())
-                        if(pieces.size != 3)
-                            throw ContractException("Dictionary type must have 3 parts: type name, key and value")
+                        val pieces = breakIntoParts(withoutPatternDelimiters(patternString), "\\s+".toRegex(), 3, "Dictionary type must have 3 parts: type name, key and value")
 
                         val patterns = pieces.slice(1..2).map { parsedPattern(withPatternDelimiters(it.trim())) }
                         DictionaryPattern(patterns[0], patterns[1])
                     }
                     isLookupRowPattern(patternString) -> {
-                        val patternParts = withoutPatternDelimiters(patternString).split(":")
-
-                        if(patternParts.size != 2)
-                            throw ContractException("Type with key must have the key before the colon and the type specification after it. Got $patternString")
+                        val patternParts = breakIntoParts(withoutPatternDelimiters(patternString), ":", 2, "Type with key must have the key before the colon and the type specification after it. Got $patternString")
 
                         val (key, patternSpec) = patternParts
                         val pattern = parsedPattern(withPatternDelimiters(patternSpec))
@@ -93,10 +88,7 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
                         LookupRowPattern(pattern, key)
                     }
                     patternString.contains(" in ") -> {
-                        val patternParts = withoutPatternDelimiters(patternString).split(" in ").map { it.trim().toLowerCase() }
-
-                        if(patternParts.size != 2)
-                            throw ContractException("$patternString seems incomplete")
+                        val patternParts = breakIntoParts(withoutPatternDelimiters(patternString), " in ", 2, "$patternString seems incomplete").map { it.trim().toLowerCase() }
 
                         if(patternParts[1] != "string")
                             throw ContractException("""Types can only be declared to be "in string", you probably meant (${patternParts[1]} in string)""")
@@ -108,6 +100,20 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
             }
             else -> throw ContractException("Type $patternString is not a type specifier.")
         }
+
+fun breakIntoParts(text: String, delimiter: Regex, count: Int, errorMessage: String): List<String> {
+    val pieces = text.split(delimiter)
+    if(pieces.size != count)
+        throw ContractException(errorMessage)
+    return pieces
+}
+
+fun breakIntoParts(text: String, delimiter: String, count: Int, errorMessage: String): List<String> {
+    val pieces = text.split(delimiter)
+    if(pieces.size != count)
+        throw ContractException(errorMessage)
+    return pieces
+}
 
 fun withoutPatternDelimiters(patternValue: String) = patternValue.removeSurrounding("(", ")")
 fun withPatternDelimiters(name: String): String = "($name)"

@@ -4,6 +4,7 @@ import picocli.CommandLine
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.git.SystemGit
 import run.qontract.core.git.NonZeroExitError
+import run.qontract.core.utilities.commitAndPush
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.loadConfigJSON
 import run.qontract.core.utilities.loadSources

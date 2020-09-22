@@ -173,7 +173,7 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
 }
 
 private fun toFixtureInfo(rest: String): Pair<String, Value> {
-    val fixtureTokens = breakIntoParts(rest.trim(), 2)
+    val fixtureTokens = breakIntoPartsMaxLength(rest.trim(), 2)
 
     if(fixtureTokens.size != 2)
         throw ContractException("Couldn't parse fixture data: $rest")
@@ -188,7 +188,7 @@ internal fun stringOrDocString(string: String?, step: StepInfo): String {
     return trimmed.ifEmpty { step.docString }
 }
 private fun toPatternInfo(step: StepInfo, rowsList: List<GherkinDocument.Feature.TableRow>): Pair<String, Pattern> {
-    val tokens = breakIntoParts(step.rest, 2)
+    val tokens = breakIntoPartsMaxLength(step.rest, 2)
 
     val patternName = withPatternDelimiters(tokens[0])
 
@@ -206,7 +206,7 @@ private fun toFacts(rest: String, fixtures: Map<String, Value>): Map<String, Val
     return try {
         jsonStringToValueMap(rest)
     } catch (notValidJSON: Exception) {
-        val factTokens = breakIntoParts(rest, 2)
+        val factTokens = breakIntoPartsMaxLength(rest, 2)
         val name = factTokens[0]
         val data = factTokens.getOrNull(1)?.let { StringValue(it) } ?: fixtures.getOrDefault(name, True)
 
@@ -273,7 +273,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
 }
 
 fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
-    val parts = breakIntoParts(step.rest, 3)
+    val parts = breakIntoPartsMaxLength(step.rest, 3)
 
     return when (parts.size) {
         2 -> {
@@ -289,7 +289,7 @@ fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
 }
 
 fun toFormDataPart(step: StepInfo): MultiPartFormDataPattern {
-    val parts = breakIntoParts(step.rest, 4)
+    val parts = breakIntoPartsMaxLength(step.rest, 4)
 
     if(parts.size < 2)
         throw ContractException("There must be at least 2 words after request-part in $step.line")
@@ -329,10 +329,10 @@ fun plusFormFields(formFields: Map<String, Pattern>, rest: String, rowsList: Lis
     }.map { (key, value) -> key to parsedPattern(value) }.toMap())
 
 private fun toQueryParams(rest: String) = rest.split("&")
-        .map { breakIntoParts(it, 2) }
+        .map { breakIntoPartsMaxLength(it, 2) }
 
 fun plusHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHeadersPattern {
-    val parts = breakIntoParts(rest, 2)
+    val parts = breakIntoPartsMaxLength(rest, 2)
 
     return when (parts.size) {
         2 -> headersPattern.copy(pattern = headersPattern.pattern.plus(toPatternPair(parts[0], parts[1])))
@@ -343,7 +343,7 @@ fun plusHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHea
 
 fun toPatternPair(key: String, value: String): Pair<String, Pattern> = key to parsedPattern(value)
 
-private fun breakIntoParts(whole: String, partCount: Int) = whole.split("\\s+".toRegex(), partCount)
+fun breakIntoPartsMaxLength(whole: String, partCount: Int) = whole.split("\\s+".toRegex(), partCount)
 
 private val HTTP_METHODS = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
 

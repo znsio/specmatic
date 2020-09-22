@@ -67,15 +67,12 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
             when {
                 key in expected && key in actual -> {
-                    if(expectedValue == actualValue)
-                        combinedServerState[key] = actualValue
-                    else if(expectedValue is StringValue && expectedValue.isPatternToken()) {
-                        val expectedPattern = resolver.getPattern(expectedValue.string)
-                        try {
-                            if(resolver.matchesPattern(key, expectedPattern, expectedPattern.parse(actualValue.toString(), resolver)).isTrue())
+                    when {
+                        expectedValue == actualValue -> combinedServerState[key] = actualValue
+                        expectedValue is StringValue && expectedValue.isPatternToken() -> {
+                            ifMatches(key, expectedValue, actualValue, resolver) {
                                 combinedServerState[key] = actualValue
-                        } catch(e: Throwable) {
-                            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key, actual value is $actualValue")
+                            }
                         }
                     }
                 }
@@ -85,6 +82,17 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
         }
 
         return combinedServerState
+    }
+
+    private fun ifMatches(key: String, expectedValue: StringValue, actualValue: Value, resolver: Resolver, code: () -> Unit) {
+        val expectedPattern = resolver.getPattern(expectedValue.string)
+
+        try {
+            if(resolver.matchesPattern(key, expectedPattern, expectedPattern.parse(actualValue.toString(), resolver)).isTrue())
+                code()
+        } catch(e: Throwable) {
+            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key, actual value is $actualValue")
+        }
     }
 
     fun generateHttpRequest(): HttpRequest =

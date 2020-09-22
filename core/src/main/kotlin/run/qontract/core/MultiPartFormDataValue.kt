@@ -8,6 +8,8 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import kotlin.TODO
 
+const val CONTENT_DISPOSITION = "Content-Disposition"
+
 sealed class MultiPartFormDataValue(open val name: String) {
     abstract fun inferType(): MultiPartFormDataPattern
     abstract fun toDisplayableValue(): String
@@ -22,7 +24,7 @@ data class MultiPartContentValue(override val name: String, val content: Value, 
 
     override fun toDisplayableValue(): String = """
 --$boundary
-Content-Disposition: form-data; name="$name"
+$CONTENT_DISPOSITION: form-data; name="$name"
 Content-Type: ${content.httpContentType}
 
 $content
@@ -34,7 +36,7 @@ $content
     override fun addTo(formBuilder: FormBuilder) {
         formBuilder.append(name, content.toStringValue(), Headers.build {
             append(HttpHeaders.ContentType, ContentType.parse(content.httpContentType))
-            append("Content-Disposition", "form-data; name=${name}")
+            append(CONTENT_DISPOSITION, "form-data; name=${name}")
         })
     }
 }
@@ -46,7 +48,7 @@ data class MultiPartFileValue(override val name: String, val filename: String, v
 
     override fun toDisplayableValue(): String {
         val headers = mapOf (
-                "Content-Disposition" to """form-data; name="$name"; filename="$filename"""",
+                CONTENT_DISPOSITION to """form-data; name="$name"; filename="$filename"""",
                 "Content-Type" to (contentType ?: ""),
                 "Content-Encoding" to (contentEncoding ?: "")
         ).filter { it.value.isNotBlank() }
@@ -83,7 +85,7 @@ $headerString
             contentEncoding?.let {
                 append(HttpHeaders.ContentEncoding, contentEncoding)
             }
-            append("Content-Disposition", "form-data; name=${name}; filename=${filename.removePrefix("@")}")
+            append(CONTENT_DISPOSITION, "form-data; name=${name}; filename=${filename.removePrefix("@")}")
         }) {
             (content ?: "").byteInputStream().asInput()
         }

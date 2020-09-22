@@ -34,8 +34,7 @@ class PushCommand: Callable<Unit> {
 
             try {
                 if(sourceGit.workingDirectoryIsGitRepo()) {
-                    if(source is GitRepo)
-                        sourceGit.pull()
+                    source.getLatest(sourceGit)
 
                     val changedQontractFiles = sourceGit.getChangedFiles().filter { it.endsWith(".qontract") }
                     for(contractPath in changedQontractFiles) {
@@ -47,8 +46,7 @@ class PushCommand: Callable<Unit> {
                         sourceGit.add(contractPath)
                     }
 
-                    if(source is GitRepo)
-                        commitAndPush(sourceGit)
+                    source.pushUpdates(sourceGit)
 
                     println("Done")
                 }
@@ -152,25 +150,5 @@ fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: Str
 
             sourceGit.add()
         }
-    }
-}
-
-fun commitAndPush(sourceGit: SystemGit) {
-    val pushRequired = try {
-        sourceGit.commit()
-        true
-    } catch (e: NonZeroExitError) {
-        if (!exitErrorMessageContains(e, listOf("nothing to commit")))
-            throw e
-
-        exitErrorMessageContains(e, listOf("branch is ahead of"))
-    }
-
-    when {
-        pushRequired -> {
-            println("Pushing changes")
-            sourceGit.push()
-        }
-        else -> println("No changes were made to the repo, so nothing was pushed.")
     }
 }

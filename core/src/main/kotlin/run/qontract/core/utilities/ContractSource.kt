@@ -78,8 +78,12 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
     }
 
     override fun directoryRelativeTo(workingDirectory: File): File = File("..")
-    override fun getLatest(sourceGit: SystemGit) { }
-    override fun pushUpdates(sourceGit: SystemGit) { }
+    override fun getLatest(sourceGit: SystemGit) {
+        // In mono repos, we can't pull latest arbitratily
+    }
+    override fun pushUpdates(sourceGit: SystemGit) {
+        // In mono repos, we can't push arbitratily
+    }
 }
 
 fun commitAndPush(sourceGit: SystemGit) {

@@ -1,11 +1,8 @@
 package application
 
-import org.junit.platform.launcher.Launcher
-import org.junit.platform.launcher.core.LauncherFactory
 import org.springframework.boot.Banner
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
-import org.springframework.context.annotation.Bean
 import picocli.CommandLine
 import run.qontract.core.utilities.UncaughtExceptionHandler
 import java.io.ByteArrayInputStream

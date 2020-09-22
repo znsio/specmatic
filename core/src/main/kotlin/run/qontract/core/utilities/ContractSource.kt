@@ -5,8 +5,6 @@ import run.qontract.core.git.SystemGit
 import run.qontract.core.git.exitErrorMessageContains
 import java.io.File
 
-typealias SelectorFunction = (repoDir: File, destinationDir: File) -> Unit
-
 sealed class ContractSource {
     abstract val testContracts: List<String>
     abstract val stubContracts: List<String>
@@ -79,10 +77,10 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
 
     override fun directoryRelativeTo(workingDirectory: File): File = File("..")
     override fun getLatest(sourceGit: SystemGit) {
-        // In mono repos, we can't pull latest arbitratily
+        // In mono repos, we can't pull latest arbitrarily
     }
     override fun pushUpdates(sourceGit: SystemGit) {
-        // In mono repos, we can't push arbitratily
+        // In mono repos, we can't push arbitrarily
     }
 }
 

@@ -6,7 +6,7 @@ import run.qontract.core.utilities.readFile
 import run.qontract.stub.HttpStub
 import run.qontract.test.HttpClient
 
-data class Contract(val contractGherkin: String, val majorVersion: Int = 0, val minorVersion: Int = 0) {
+data class Contract(val contractGherkin: String) {
     fun startFake(port: Int) = HttpStub(contractGherkin, emptyList(), "localhost", port)
 
     fun test(endPoint: String) {
@@ -35,17 +35,8 @@ ${kafkaMessagePattern.generate(scenario.resolver).toDisplayableString()}""".trim
             }
         }
     }
+}
 
-    companion object {
-        @JvmStatic
-        fun fromGherkin(contractGherkin: String, majorVersion: Int, minorVersion: Int): Contract {
-            return Contract(contractGherkin, majorVersion, minorVersion)
-        }
-
-        @JvmStatic
-        fun behaviourFromFile(contractFilePath: String) = Feature(readFile(contractFilePath))
-
-        @JvmStatic
-        fun behaviourFromServiceContractFile() = behaviourFromFile(contractFilePath)
-    }
+fun fromGherkin(contractGherkin: String): Contract {
+    return Contract(contractGherkin)
 }

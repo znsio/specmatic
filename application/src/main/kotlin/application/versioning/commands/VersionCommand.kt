@@ -1,6 +1,5 @@
 package application.versioning.commands
 
-import application.PushCommand
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import java.util.concurrent.Callable

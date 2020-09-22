@@ -1,9 +1,8 @@
 package run.qontract.core
 
-import run.qontract.core.pattern.ContractException
+import run.qontract.core.pattern.Examples
 import run.qontract.core.pattern.KafkaMessagePattern
 import run.qontract.core.pattern.Pattern
-import run.qontract.core.pattern.Examples
 import run.qontract.core.value.Value
 
 data class ScenarioInfo(

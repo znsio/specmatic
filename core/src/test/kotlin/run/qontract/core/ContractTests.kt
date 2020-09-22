@@ -3,7 +3,6 @@ package run.qontract.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
-import run.qontract.core.Contract.Companion.fromGherkin
 import run.qontract.core.pattern.NumberPattern
 import run.qontract.core.value.*
 import run.qontract.test.TestExecutor
@@ -13,28 +12,28 @@ class ContractTests {
     @Test
     @Throws(Throwable::class)
     fun shouldBeAbleToGetFakeFromContract() {
-        val contract = fromGherkin(contractGherkin, 1, 0)
+        val contract = fromGherkin(contractGherkin)
         contract.startFake(8080).close()
     }
 
     @Test
     @Throws(Throwable::class)
     fun shouldBeAbleToRunTestFromContract() {
-        val contract = fromGherkin(contractGherkin, 1, 0)
+        val contract = fromGherkin(contractGherkin)
         contract.startFake(8080).use { fake -> contract.test(fake.endPoint) }
     }
 
     @Test
     @Throws(Throwable::class)
     fun shouldBeAbleToTestFakeObject() {
-        val contract = fromGherkin(contractGherkin, 1, 0)
+        val contract = fromGherkin(contractGherkin)
         contract.startFake(8080).use { fake -> contract.test(fake) }
     }
 
     @Test
     @Throws(Throwable::class)
     fun shouldBeAbleToTestFakeObjectWithPath() {
-        val contract = fromGherkin(pathParameterContractGherkin, 1, 0)
+        val contract = fromGherkin(pathParameterContractGherkin)
         contract.startFake(8080).use { fake -> contract.test(fake) }
     }
 

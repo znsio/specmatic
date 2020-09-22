@@ -24,7 +24,7 @@ dependencies {
     implementation "org.junit.jupiter:junit-jupiter-engine:${junit_version}"
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation 'org.jetbrains.kotlin:kotlin-maven-serialization'
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-core:1.0.0-RC'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.0.0-RC2'
     implementation 'org.assertj:assertj-core:3.17.2'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
 

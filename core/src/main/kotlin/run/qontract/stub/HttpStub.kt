@@ -208,6 +208,7 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
 @OptIn(KtorExperimentalAPI::class)
 private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<String, String>, List<MultiPartFormDataValue>> {
     return when {
+        call.request.httpMethod == HttpMethod.Get -> Triple(EmptyString, emptyMap(), emptyList())
         call.request.contentType().match(ContentType.Application.FormUrlEncoded) -> Triple(EmptyString, call.receiveParameters().toMap().mapValues { (_, values) -> values.first() }, emptyList())
         call.request.isMultipart() -> {
             val multiPartData = call.receiveMultipart()

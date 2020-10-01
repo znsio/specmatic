@@ -61,11 +61,7 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
         return when (otherPattern) {
             is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
             !is TabularPattern -> Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
-            else -> {
-                val result = mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
-
-                result?.second?.breadCrumb(breadCrumb = result.first) ?: Result.Success()
-            }
+            else -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
         }
     }
 

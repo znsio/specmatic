@@ -14,11 +14,16 @@ sealed class Result {
 
     abstract fun isTrue(): Boolean
 
+    abstract fun ifSuccess(function: () -> Result): Result
+
     class Success : Result() {
         override fun isTrue() = true
+        override fun ifSuccess(function: () -> Result) = function()
     }
 
     data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
+        override fun ifSuccess(function: () -> Result) = this
+
         fun reason(errorMessage: String) = Failure(errorMessage, this)
         fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
 
@@ -37,6 +42,7 @@ sealed class Result {
 
         override fun isTrue() = false
     }
+
 }
 
 enum class FailureReason {

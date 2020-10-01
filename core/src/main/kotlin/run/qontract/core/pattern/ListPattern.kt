@@ -85,6 +85,27 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         }
     }
 
+    override fun encompasses(others: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, lengthError: String, typeStack: TypeStack): ConsumeResult {
+        val thisResolverWithEmptyType = withEmptyType(pattern, thisResolver)
+        val otherResolverWithEmptyType = withEmptyType(pattern, otherResolver)
+
+        val results = others.asSequence().mapIndexed { index, otherPattern ->
+            when (otherPattern) {
+                is ExactValuePattern ->
+                    otherPattern.fitsWithin(listOf(this.pattern), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
+                is ListPattern ->
+                    otherPattern.fitsWithin(patternSet(thisResolverWithEmptyType), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
+                is EncompassableList ->
+                    biggerEncompassesSmaller(pattern, resolvedHop(otherPattern, otherResolverWithEmptyType), thisResolverWithEmptyType, otherResolverWithEmptyType, typeStack)
+                else -> Result.Failure("Expected array or list type, got ${otherPattern.typeName}")
+            }.breadCrumb("[$index]")
+        }
+
+        val result = results.find { it is Result.Failure } ?: Result.Success()
+
+        return ConsumeResult(result, emptyList())
+    }
+
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
         return pattern.listOf(valueList, resolverWithEmptyType)

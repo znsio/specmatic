@@ -34,11 +34,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         return when (otherPattern) {
             is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
             !is JSONObjectPattern -> Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
-            else -> {
-                val result: Pair<String, Result>? = mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType)
-
-                result?.second?.breadCrumb(breadCrumb = result.first) ?: Result.Success()
-            }
+            else -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType)
         }
     }
 
@@ -89,22 +85,21 @@ fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String,
     }
 }
 
-internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<String, Pattern>, thisResolverWithNullType: Resolver, otherResolverWithNullType: Resolver, typeStack: TypeStack = emptySet()): Pair<String, Result>? {
+internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<String, Pattern>, thisResolverWithNullType: Resolver, otherResolverWithNullType: Resolver, typeStack: TypeStack = emptySet()): Result {
     val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
     val otherRequiredKeys = otherPattern.keys.filter { !isOptional(it) }
 
     val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
     if (missingFixedKey != null)
-        return Pair(missingFixedKey, Result.Failure("Key $missingFixedKey was missing"))
+        return Result.Failure("Key $missingFixedKey was missing").breadCrumb(missingFixedKey)
 
     return pattern.keys.asSequence().map { key ->
         val bigger = pattern.getValue(key)
         val smaller = otherPattern[key] ?: otherPattern[withoutOptionality(key)]
 
-        val result = when {
-            smaller != null -> biggerEncompassesSmaller(bigger, smaller, thisResolverWithNullType, otherResolverWithNullType, typeStack)
+        when {
+            smaller != null -> biggerEncompassesSmaller(bigger, smaller, thisResolverWithNullType, otherResolverWithNullType, typeStack).breadCrumb(key)
             else -> Result.Success()
         }
-        Pair(key, result)
-    }.find { it.second is Result.Failure }
+    }.find { it is Result.Failure } ?: Result.Success()
 }

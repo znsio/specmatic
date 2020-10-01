@@ -3,10 +3,10 @@ package run.qontract.core.pattern
 import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.parseXML
-import run.qontract.core.value.XMLValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import run.qontract.core.value.XMLNode
+import run.qontract.core.value.XMLValue
 
 fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, attributeTypeMap(node), nodeTypes(node))
 
@@ -24,7 +24,6 @@ private fun attributeTypeMap(node: XMLNode): Map<String, Pattern> {
         }
     }
 }
-
 data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), override val typeAlias: String? = null) : Pattern, EncompassableList {
     constructor(node: XMLNode, typeAlias: String? = null): this(toTypeData(node), typeAlias)
     constructor(xmlString: String, typeAlias: String? = null): this(XMLNode(parseXML(xmlString)), typeAlias)
@@ -167,58 +166,38 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val otherResolvedPattern = resolvedHop(otherPattern, otherResolver)
 
-        when {
-            otherResolvedPattern is ExactValuePattern -> return otherResolvedPattern.fitsWithin(listOf(this), otherResolver, thisResolver, typeStack).breadCrumb(this.pattern.name)
-            otherResolvedPattern !is XMLPattern -> return mismatchResult(this, otherResolvedPattern).breadCrumb(this.pattern.name)
-            pattern.name != otherResolvedPattern.pattern.name -> return Result.Failure("Expected a node named ${pattern.name}, but got ${otherResolvedPattern.pattern.name} instead.").breadCrumb(this.pattern.name)
-            else -> {
-                val result = mapEncompassesMap(pattern.attributes, otherResolvedPattern.pattern.attributes, thisResolver, otherResolver)
+        return when (otherResolvedPattern) {
+            is ExactValuePattern -> otherResolvedPattern.fitsWithin(listOf(this), otherResolver, thisResolver, typeStack)
+            !is XMLPattern -> mismatchResult(this, otherResolvedPattern)
+            else -> nodeNamesShouldBeEqual(otherResolvedPattern).ifSuccess {
+                mapEncompassesMap(pattern.attributes, otherResolvedPattern.pattern.attributes, thisResolver, otherResolver)
+            }.ifSuccess {
+                otherShouldNotBeEndless(otherResolvedPattern, )
+            }.ifSuccess {
+                val others = otherResolvedPattern.getEncompassables(otherResolver)
+                val these = getEncompassables(thisResolver)
 
-                if(result?.second is Result.Failure)
-                    return result.second.breadCrumb(breadCrumb = result.first).breadCrumb(this.pattern.name)
-
-                if(otherResolvedPattern.isEndless()) Result.Failure("Finite list is not a superset of an infinite list").breadCrumb(this.pattern.name)
-
-                val others = otherResolvedPattern.getEncompassables(otherResolver).map { resolvedHop(it, otherResolver) }
-                if (others.size != pattern.nodes.size && (others.isEmpty() && !containsList(thisResolver) && !containsEmpty(thisResolver)))
-                    return Result.Failure("The lengths of the two XML types are unequal").breadCrumb(this.pattern.name)
-
-                val these = getEncompassables(thisResolver).map { resolvedHop(it, thisResolver) }
-
-                return when {
-                    containsList(thisResolver) -> {
-                        val list = pattern.nodes[0]
-                        list.encompasses(otherPattern, thisResolver, otherResolver, typeStack)
-                    }
-                    others.size != pattern.nodes.size && others.isEmpty() && containsEmpty(thisResolver) -> Result.Success()
-                    else -> {
-                        these.zip(others).map { (thisOne, otherOne) ->
-                            when {
-                                otherOne is ExactValuePattern && otherOne.pattern is StringValue -> {
-                                    ExactValuePattern(thisOne.parse(otherOne.pattern.toStringValue(), thisResolver))
-                                }
-                                else -> otherOne
-                            }.let { otherOneAdjustedForExactValue -> thisOne.encompasses(otherOneAdjustedForExactValue, thisResolver, otherResolver, typeStack) }
-                        }.find { it is Result.Failure } ?: Result.Success()
-                    }
-                }.breadCrumb(this.pattern.name)
+                these.asSequence().runningFold(ConsumeResult(others)) { acc, thisOne ->
+                    thisOne.encompasses(adaptEmpty(acc), thisResolver, otherResolver, "The lengths of the two XML types are unequal", typeStack)
+                }.find { it.result is Result.Failure }?.result ?: Result.Success()
             }
-        }
+        }.breadCrumb(this.pattern.name)
     }
 
-    private fun containsList(resolver: Resolver): Boolean {
-        if(pattern.nodes.isEmpty())
-            return false
-        val resolvedType = resolvedHop(pattern.nodes[0], resolver)
-        val patternSet = resolvedType.patternSet(resolver).map { resolvedHop(it, resolver) }
-        return pattern.nodes.size == 1 && (resolvedType is ListPattern || patternSet.any { it is ListPattern })
+    private fun nodeNamesShouldBeEqual(otherResolvedPattern: XMLPattern) = when {
+        pattern.name != otherResolvedPattern.pattern.name ->
+            Result.Failure("Expected a node named ${pattern.name}, but got ${otherResolvedPattern.pattern.name} instead.")
+        else -> Result.Success()
     }
 
-    private fun containsEmpty(resolver: Resolver): Boolean {
-        val resolvedType = resolvedHop(pattern.nodes[0], resolver)
-        val patternSet = resolvedType.patternSet(resolver).map { resolvedHop(it, resolver) }
-        return pattern.nodes.size == 1 && patternSet.any { it is EmptyStringPattern }
-    }
+    private fun otherShouldNotBeEndless(otherResolvedPattern: XMLPattern): Result =
+            when {
+                otherResolvedPattern.isEndless() -> Result.Failure("Finite list is not a superset of an infinite list")
+                else -> Result.Success()
+            }
+
+    private fun adaptEmpty(acc: ConsumeResult) =
+            acc.remainder.ifEmpty { listOf(EmptyStringPattern) }
 
     override fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> = getEncompassables(resolver)
 
@@ -228,3 +207,5 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
 
     override val typeName: String = "xml"
 }
+
+

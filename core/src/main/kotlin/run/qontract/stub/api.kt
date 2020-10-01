@@ -33,6 +33,15 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == QONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
+fun createStub(host: String = "localhost", port: Int = 9000): HttpStub {
+    val contractPaths = contractStubPaths().map { it.path }
+    val stubs = loadContractStubsFromImplicitPaths(contractPaths)
+    val features = stubs.map { it.first }
+    val expectations = contractInfoToHttpExpectations(stubs)
+
+    return HttpStub(features, expectations, host, port)
+}
+
 // Used by stub client code
 fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
     val contractPaths = contractStubPaths().map { it.path }

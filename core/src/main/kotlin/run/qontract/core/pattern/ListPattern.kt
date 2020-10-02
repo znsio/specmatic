@@ -54,7 +54,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
         return when (otherPattern) {
             is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
-            is ListPattern -> otherPattern.fitsWithin(patternSet(thisResolverWithEmptyType), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
+            is ListPattern -> biggerEncompassesSmaller(pattern, otherPattern.pattern, thisResolverWithEmptyType, otherResolverWithEmptyType, typeStack)
             is EncompassableList -> {
                 val results = otherPattern.getEncompassableList().getEncompassables(otherResolverWithEmptyType).asSequence().mapIndexed { index, otherPatternEntry ->
                     Pair(index, biggerEncompassesSmaller(pattern, otherPatternEntry, thisResolverWithEmptyType, otherResolverWithEmptyType, typeStack))

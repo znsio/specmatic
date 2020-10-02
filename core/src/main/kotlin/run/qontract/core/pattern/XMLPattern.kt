@@ -200,6 +200,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
             acc.remainder.ifEmpty { listOf(EmptyStringPattern) }
 
     override fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> = getEncompassables(resolver)
+    override fun getEncompassableList(): MemberList = MemberList(pattern.nodes, null)
 
     fun getEncompassables(resolver: Resolver): List<Pattern> = pattern.nodes.map { resolvedHop(it, resolver) }
 

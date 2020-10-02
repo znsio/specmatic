@@ -13,6 +13,8 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         return 0.until(count).map { resolvedPattern }
     }
 
+    override fun getEncompassableList(): MemberList = MemberList(emptyList(), pattern)
+
     override fun isEndless(): Boolean = true
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -58,6 +60,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
         return when (otherPattern) {
             is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
+            is ListPattern -> otherPattern.fitsWithin(patternSet(thisResolverWithEmptyType), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
             is JSONArrayPattern -> {
                 try {
                     val results = otherPattern.getEncompassableList(otherResolverWithEmptyType).asSequence().mapIndexed { index, otherPatternEntry ->

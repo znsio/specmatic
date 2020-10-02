@@ -33,6 +33,21 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         return getEncompassableList(resolverWithNullType)
     }
 
+    override fun getEncompassableList(): MemberList {
+        if(pattern.isEmpty())
+            return MemberList(emptyList(), null)
+
+        if(pattern.indexOfFirst { it is RestPattern } < pattern.lastIndex)
+            throw ContractException("A rest operator ... can only be used in the last entry of an array.")
+
+        return pattern.last().let { last ->
+            when (last) {
+                is RestPattern -> MemberList(pattern.dropLast(1), last)
+                else -> MemberList(pattern, null)
+            }
+        }
+    }
+
     override fun isEndless(): Boolean = pattern.isNotEmpty() && pattern.last() is RestPattern
 
     fun getEncompassableList(resolver: Resolver): List<Pattern> {

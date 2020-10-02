@@ -8,14 +8,8 @@ import run.qontract.core.value.ListValue
 import run.qontract.core.value.Value
 
 data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null) : Pattern, EncompassableList {
-    override fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> {
-        val resolvedPattern = resolvedHop(pattern, resolver)
-        return 0.until(count).map { resolvedPattern }
-    }
 
     override fun getEncompassableList(): MemberList = MemberList(emptyList(), pattern)
-
-    override fun isEndless(): Boolean = true
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is ListValue)

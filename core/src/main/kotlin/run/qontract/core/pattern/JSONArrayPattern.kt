@@ -12,26 +12,6 @@ import run.qontract.core.value.Value
 import java.util.*
 
 data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), override val typeAlias: String? = null) : Pattern, EncompassableList {
-    override fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> {
-        if(count > 0 && pattern.isEmpty())
-            throw ContractException("The lengths of the expected and actual array patterns don't match.")
-
-        val resolverWithNullType = withNullPattern(resolver)
-        if(count > pattern.size && pattern.last() !is RestPattern)
-            throw ContractException("The lengths of the expected and actual array patterns don't match.")
-
-        if(count > pattern.size) {
-            if(pattern.indexOfFirst { it is RestPattern } < pattern.lastIndex)
-                throw ContractException("A rest operator ... can only be used in the last entry of an array.")
-
-            val missingEntryCount = count - pattern.size
-            val missingEntries = 0.until(missingEntryCount).map { pattern.last() }
-            val paddedPattern = pattern.plus(missingEntries)
-            return getEncompassableList(paddedPattern, resolverWithNullType)
-        }
-
-        return getEncompassableList(resolverWithNullType)
-    }
 
     override fun getEncompassableList(): MemberList {
         if(pattern.isEmpty())
@@ -47,8 +27,6 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
             }
         }
     }
-
-    override fun isEndless(): Boolean = pattern.isNotEmpty() && pattern.last() is RestPattern
 
     fun getEncompassableList(resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
@@ -121,21 +99,28 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         return when {
             otherPattern is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
             otherPattern !is EncompassableList -> Result.Failure("Expected array or list, got ${otherPattern.typeName}")
-            otherPattern.isEndless() && !this.isEndless() -> Result.Failure("Finite list is not a superset of an infinite list.")
             else -> try {
-                val otherEncompassables = otherPattern.getEncompassableList().getEncompassableList(pattern.size, otherResolverWithNullType)
-                val encompassables = if (otherEncompassables.size > pattern.size)
-                    getEncompassableList().getEncompassableList(otherEncompassables.size, thisResolverWithNullType)
+                val otherMembers = otherPattern.getEncompassableList()
+                val theseMembers = this.getEncompassableList()
+
+                if(otherMembers.isEndless() && !theseMembers.isEndless())
+                    Result.Failure("Finite list is not a superset of an infinite list.")
+                else {
+
+                    val otherEncompassables = otherPattern.getEncompassableList().getEncompassableList(pattern.size, otherResolverWithNullType)
+                    val encompassables = if (otherEncompassables.size > pattern.size)
+                        getEncompassableList().getEncompassableList(otherEncompassables.size, thisResolverWithNullType)
 //                    getEncompassableList(otherEncompassables.size, thisResolverWithNullType)
-                else
-                    getEncompassableList().getEncompassables(thisResolverWithNullType)
+                    else
+                        getEncompassableList().getEncompassables(thisResolverWithNullType)
 
-                val results = encompassables.zip(otherEncompassables).mapIndexed { index, (bigger, smaller) ->
-                    Pair(index, biggerEncompassesSmaller(bigger, smaller, thisResolverWithNullType, otherResolverWithNullType, typeStack))
+                    val results = encompassables.zip(otherEncompassables).mapIndexed { index, (bigger, smaller) ->
+                        Pair(index, biggerEncompassesSmaller(bigger, smaller, thisResolverWithNullType, otherResolverWithNullType, typeStack))
+                    }
+
+                    results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") }
+                            ?: Result.Success()
                 }
-
-                results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") }
-                        ?: Result.Success()
             } catch (e: ContractException) {
                 Result.Failure(e.report())
             }

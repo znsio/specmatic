@@ -199,12 +199,11 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
     private fun adaptEmpty(acc: ConsumeResult) =
             acc.remainder.ifEmpty { listOf(EmptyStringPattern) }
 
-    override fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> = getEncompassables(resolver)
     override fun getEncompassableList(): MemberList = MemberList(pattern.nodes, null)
 
     fun getEncompassables(resolver: Resolver): List<Pattern> = pattern.nodes.map { resolvedHop(it, resolver) }
 
-    override fun isEndless(): Boolean = false
+    fun isEndless(): Boolean = false
 
     override val typeName: String = "xml"
 }

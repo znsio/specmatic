@@ -61,27 +61,12 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         return when (otherPattern) {
             is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
             is ListPattern -> otherPattern.fitsWithin(patternSet(thisResolverWithEmptyType), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
-            is JSONArrayPattern -> {
-                try {
-                    val results = otherPattern.getEncompassableList(otherResolverWithEmptyType).asSequence().mapIndexed { index, otherPatternEntry ->
-                        Pair(index, biggerEncompassesSmaller(pattern, otherPatternEntry, thisResolverWithEmptyType, otherResolverWithEmptyType, typeStack))
-                    }
-
-                    results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
-                } catch (e: ContractException) {
-                    Result.Failure(e.report())
+            is EncompassableList -> {
+                val results = otherPattern.getEncompassableList().getEncompassables(otherResolverWithEmptyType).asSequence().mapIndexed { index, otherPatternEntry ->
+                    Pair(index, biggerEncompassesSmaller(pattern, otherPatternEntry, thisResolverWithEmptyType, otherResolverWithEmptyType, typeStack))
                 }
-            }
-            is XMLPattern -> {
-                try {
-                    val results = otherPattern.getEncompassables(otherResolverWithEmptyType).asSequence().mapIndexed { index, otherPatternEntry ->
-                        Pair(index, biggerEncompassesSmaller(pattern, resolvedHop(otherPatternEntry, otherResolverWithEmptyType), thisResolverWithEmptyType, otherResolverWithEmptyType, typeStack))
-                    }
 
-                    results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
-                } catch (e: ContractException) {
-                    Result.Failure(e.report())
-                }
+                results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
             }
             !is ListPattern -> Result.Failure("Expected array or list type, got ${otherPattern.typeName}")
             else -> otherPattern.fitsWithin(patternSet(thisResolverWithEmptyType), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)

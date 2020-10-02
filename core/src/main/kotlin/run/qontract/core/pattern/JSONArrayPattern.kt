@@ -37,12 +37,12 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         if(pattern.isEmpty())
             return MemberList(emptyList(), null)
 
-        if(pattern.indexOfFirst { it is RestPattern } < pattern.lastIndex)
+        if(pattern.indexOfFirst { it is RestPattern }.let { it >= 0 && it < pattern.lastIndex})
             throw ContractException("A rest operator ... can only be used in the last entry of an array.")
 
         return pattern.last().let { last ->
             when (last) {
-                is RestPattern -> MemberList(pattern.dropLast(1), last)
+                is RestPattern -> MemberList(pattern.dropLast(1), last.pattern)
                 else -> MemberList(pattern, null)
             }
         }
@@ -123,8 +123,12 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
             otherPattern !is EncompassableList -> Result.Failure("Expected array or list, got ${otherPattern.typeName}")
             otherPattern.isEndless() && !this.isEndless() -> Result.Failure("Finite list is not a superset of an infinite list.")
             else -> try {
-                val otherEncompassables = otherPattern.getEncompassableList(pattern.size, otherResolverWithNullType)
-                val encompassables = if (otherEncompassables.size > pattern.size) getEncompassableList(otherEncompassables.size, thisResolverWithNullType) else getEncompassableList(thisResolverWithNullType)
+                val otherEncompassables = otherPattern.getEncompassableList().getEncompassableList(pattern.size, otherResolverWithNullType)
+                val encompassables = if (otherEncompassables.size > pattern.size)
+                    getEncompassableList().getEncompassableList(otherEncompassables.size, thisResolverWithNullType)
+//                    getEncompassableList(otherEncompassables.size, thisResolverWithNullType)
+                else
+                    getEncompassableList().getEncompassables(thisResolverWithNullType)
 
                 val results = encompassables.zip(otherEncompassables).mapIndexed { index, (bigger, smaller) ->
                     Pair(index, biggerEncompassesSmaller(bigger, smaller, thisResolverWithNullType, otherResolverWithNullType, typeStack))

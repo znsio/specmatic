@@ -3,23 +3,28 @@ package run.qontract.core.pattern
 import run.qontract.core.Resolver
 import run.qontract.core.utilities.withNullPattern
 
-data class MemberList(private val pattern: List<Pattern>, private val rest: Pattern?) {
+data class MemberList(private val finiteList: List<Pattern>, private val rest: Pattern?) {
     fun getEncompassableList(count: Int, resolver: Resolver): List<Pattern> {
-        if(count > 0 && pattern.isEmpty() && rest == null)
+        if(count > 0 && finiteList.isEmpty() && rest == null)
             throw ContractException("The lengths of the expected and actual array patterns don't match.")
 
-        if(count > pattern.size && rest == null)
-            throw ContractException("The lengths of the expected and actual array patterns don't match.")
+        return when {
+            count > finiteList.size -> {
+                when(rest) {
+                    null -> throw ContractException("The lengths of the expected and actual array patterns don't match.")
+                    else -> {
+                        val missingEntryCount = count - finiteList.size
+                        val missingEntries = 0.until(missingEntryCount).map { rest }
+                        val paddedPattern = finiteList.plus(missingEntries)
 
-        if(count > pattern.size) {
-            val missingEntryCount = count - pattern.size
-            val missingEntries = 0.until(missingEntryCount).map { pattern.last() }
-            val paddedPattern = pattern.plus(missingEntries)
-
-            return getEncompassableList(paddedPattern, resolver)
+                        getEncompassableList(paddedPattern, resolver)
+                    }
+                }
+            }
+            else -> {
+                getEncompassableList(finiteList, resolver)
+            }
         }
-
-        return getEncompassableList(pattern, resolver)
     }
 
     private fun getEncompassableList(pattern: List<Pattern>, resolver: Resolver): List<Pattern> {
@@ -31,10 +36,11 @@ data class MemberList(private val pattern: List<Pattern>, private val rest: Patt
             }
         }
     }
-    fun getEncompassables(): List<Pattern> {
-        return rest?.let {
-            pattern.plus(it)
-        } ?: pattern
+
+    fun getEncompassables(resolver: Resolver): List<Pattern> {
+        return (rest?.let {
+            finiteList.plus(it)
+        } ?: finiteList).map { resolvedHop(it, resolver) }
     }
 
     fun isEndless(): Boolean = rest != null

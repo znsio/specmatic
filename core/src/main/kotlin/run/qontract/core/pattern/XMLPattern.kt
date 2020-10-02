@@ -172,14 +172,17 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
             else -> nodeNamesShouldBeEqual(otherResolvedPattern).ifSuccess {
                 mapEncompassesMap(pattern.attributes, otherResolvedPattern.pattern.attributes, thisResolver, otherResolver)
             }.ifSuccess {
-                otherShouldNotBeEndless(otherResolvedPattern, )
-            }.ifSuccess {
-                val others = otherResolvedPattern.getEncompassables(otherResolver)
-                val these = getEncompassables(thisResolver)
+                val theseMembers = this.getEncompassableList()
+                val otherMembers = otherResolvedPattern.getEncompassableList()
 
-                these.asSequence().runningFold(ConsumeResult(others)) { acc, thisOne ->
-                    thisOne.encompasses(adaptEmpty(acc), thisResolver, otherResolver, "The lengths of the two XML types are unequal", typeStack)
-                }.find { it.result is Result.Failure }?.result ?: Result.Success()
+                otherShouldNotBeEndless(otherMembers).ifSuccess {
+                    val others = otherMembers.getEncompassables(otherResolver)
+                    val these = theseMembers.getEncompassables(thisResolver)
+
+                    these.asSequence().runningFold(ConsumeResult(others)) { acc, thisOne ->
+                        thisOne.encompasses(adaptEmpty(acc), thisResolver, otherResolver, "The lengths of the two XML types are unequal", typeStack)
+                    }.find { it.result is Result.Failure }?.result ?: Result.Success()
+                }
             }
         }.breadCrumb(this.pattern.name)
     }
@@ -190,9 +193,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
         else -> Result.Success()
     }
 
-    private fun otherShouldNotBeEndless(otherResolvedPattern: XMLPattern): Result =
+    private fun otherShouldNotBeEndless(otherMemberList: MemberList): Result =
             when {
-                otherResolvedPattern.isEndless() -> Result.Failure("Finite list is not a superset of an infinite list")
+                otherMemberList.isEndless() -> Result.Failure("Finite list is not a superset of an infinite list")
                 else -> Result.Success()
             }
 
@@ -200,10 +203,6 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
             acc.remainder.ifEmpty { listOf(EmptyStringPattern) }
 
     override fun getEncompassableList(): MemberList = MemberList(pattern.nodes, null)
-
-    fun getEncompassables(resolver: Resolver): List<Pattern> = pattern.nodes.map { resolvedHop(it, resolver) }
-
-    fun isEndless(): Boolean = false
 
     override val typeName: String = "xml"
 }

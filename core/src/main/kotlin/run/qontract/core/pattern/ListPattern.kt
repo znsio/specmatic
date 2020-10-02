@@ -62,8 +62,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
                 results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") } ?: Result.Success()
             }
-            !is ListPattern -> Result.Failure("Expected array or list type, got ${otherPattern.typeName}")
-            else -> otherPattern.fitsWithin(patternSet(thisResolverWithEmptyType), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
+            else -> Result.Failure("Expected array or list type, got ${otherPattern.typeName}")
         }
     }
 

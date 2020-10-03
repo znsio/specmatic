@@ -11,37 +11,22 @@ import run.qontract.core.value.ListValue
 import run.qontract.core.value.Value
 import java.util.*
 
-data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), override val typeAlias: String? = null) : Pattern, EncompassableList {
+data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), override val typeAlias: String? = null) : Pattern, SequenceType {
+    override val memberList: MemberList
+        get() {
+            if (pattern.isEmpty())
+                return MemberList(emptyList(), null)
 
-    override fun getEncompassableList(): MemberList {
-        if(pattern.isEmpty())
-            return MemberList(emptyList(), null)
+            if (pattern.indexOfFirst { it is RestPattern }.let { it >= 0 && it < pattern.lastIndex })
+                throw ContractException("A rest operator ... can only be used in the last entry of an array.")
 
-        if(pattern.indexOfFirst { it is RestPattern }.let { it >= 0 && it < pattern.lastIndex})
-            throw ContractException("A rest operator ... can only be used in the last entry of an array.")
-
-        return pattern.last().let { last ->
-            when (last) {
-                is RestPattern -> MemberList(pattern.dropLast(1), last.pattern)
-                else -> MemberList(pattern, null)
+            return pattern.last().let { last ->
+                when (last) {
+                    is RestPattern -> MemberList(pattern.dropLast(1), last.pattern)
+                    else -> MemberList(pattern, null)
+                }
             }
         }
-    }
-
-    fun getEncompassableList(resolver: Resolver): List<Pattern> {
-        val resolverWithNullType = withNullPattern(resolver)
-        return getEncompassableList(pattern, resolverWithNullType)
-    }
-
-    private fun getEncompassableList(pattern: List<Pattern>, resolver: Resolver): List<Pattern> {
-        val resolverWithNullType = withNullPattern(resolver)
-        return pattern.map { patternEntry ->
-            when (patternEntry) {
-                !is RestPattern -> resolvedHop(patternEntry, resolverWithNullType)
-                else -> resolvedHop(patternEntry.pattern, resolverWithNullType)
-            }
-        }
-    }
 
     constructor(jsonString: String, typeAlias: String?) : this(stringTooPatternArray(jsonString), typeAlias = typeAlias)
 
@@ -98,23 +83,26 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
 
         return when (otherPattern) {
             is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
-            is EncompassableList -> try {
-                val otherMembers = otherPattern.getEncompassableList()
-                val theseMembers = this.getEncompassableList()
+            is SequenceType -> try {
+                val otherMembers = otherPattern.memberList
+                val theseMembers = this.memberList
 
                 validateInfiniteLength(otherMembers, theseMembers).ifSuccess {
-                    val otherEncompassables = otherPattern.getEncompassableList().getEncompassableList(pattern.size, otherResolverWithNullType)
+                    val otherEncompassables = otherMembers.getEncompassableList(pattern.size, otherResolverWithNullType)
                     val encompassables = when {
-                        otherEncompassables.size > pattern.size -> getEncompassableList().getEncompassableList(otherEncompassables.size, thisResolverWithNullType)
-                        else -> getEncompassableList().getEncompassables(thisResolverWithNullType)
+                        otherEncompassables.size > pattern.size -> theseMembers.getEncompassableList(otherEncompassables.size, thisResolverWithNullType)
+                        else -> memberList.getEncompassables(thisResolverWithNullType)
                     }
 
                     val results = encompassables.zip(otherEncompassables).mapIndexed { index, (bigger, smaller) ->
-                        Pair(index, biggerEncompassesSmaller(bigger, smaller, thisResolverWithNullType, otherResolverWithNullType, typeStack))
+                        ResultWithIndex(index, biggerEncompassesSmaller(bigger, smaller, thisResolverWithNullType, otherResolverWithNullType, typeStack))
                     }
 
-                    results.find { it.second is Result.Failure }?.let { result -> result.second.breadCrumb("[${result.first}]") }
-                            ?: Result.Success()
+                    results.find {
+                        it.result is Result.Failure
+                    }?.let {
+                        result -> result.result.breadCrumb("[${result.index}]")
+                    } ?: Result.Success()
                 }
             } catch (e: ContractException) {
                 Result.Failure(e.report())
@@ -130,6 +118,8 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
 
     override val typeName: String = "json array"
 }
+
+data class ResultWithIndex(val index: Int, val result: Result)
 
 fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
     val values = jsonPattern.mapIndexed { index, pattern ->

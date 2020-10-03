@@ -7,9 +7,10 @@ import run.qontract.core.mismatchResult
 import run.qontract.core.value.ListValue
 import run.qontract.core.value.Value
 
-data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null) : Pattern, EncompassableList {
+data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null) : Pattern, SequenceType {
 
-    override fun getEncompassableList(): MemberList = MemberList(emptyList(), pattern)
+    override val memberList: MemberList
+        get() = MemberList(emptyList(), pattern)
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is ListValue)
@@ -55,8 +56,8 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         return when (otherPattern) {
             is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
             is ListPattern -> biggerEncompassesSmaller(pattern, otherPattern.pattern, thisResolverWithEmptyType, otherResolverWithEmptyType, typeStack)
-            is EncompassableList -> {
-                val results = otherPattern.getEncompassableList().getEncompassables(otherResolverWithEmptyType).asSequence().mapIndexed { index, otherPatternEntry ->
+            is SequenceType -> {
+                val results = otherPattern.memberList.getEncompassables(otherResolverWithEmptyType).asSequence().mapIndexed { index, otherPatternEntry ->
                     Pair(index, biggerEncompassesSmaller(pattern, otherPatternEntry, thisResolverWithEmptyType, otherResolverWithEmptyType, typeStack))
                 }
 
@@ -74,9 +75,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
             when (otherPattern) {
                 is ExactValuePattern ->
                     otherPattern.fitsWithin(listOf(this.pattern), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
-                is ListPattern ->
-                    otherPattern.fitsWithin(patternSet(thisResolverWithEmptyType), otherResolverWithEmptyType, thisResolverWithEmptyType, typeStack)
-                is EncompassableList ->
+                is SequenceType ->
                     biggerEncompassesSmaller(pattern, resolvedHop(otherPattern, otherResolverWithEmptyType), thisResolverWithEmptyType, otherResolverWithEmptyType, typeStack)
                 else -> Result.Failure("Expected array or list type, got ${otherPattern.typeName}")
             }.breadCrumb("[$index]")

@@ -29,12 +29,7 @@ data class MemberList(private val finiteList: List<Pattern>, private val rest: P
 
     private fun getEncompassableList(pattern: List<Pattern>, resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
-        return pattern.map { patternEntry ->
-            when (patternEntry) {
-                !is RestPattern -> resolvedHop(patternEntry, resolverWithNullType)
-                else -> resolvedHop(patternEntry.pattern, resolverWithNullType)
-            }
-        }
+        return pattern.map { resolvedHop(it, resolverWithNullType) }
     }
 
     fun getEncompassables(resolver: Resolver): List<Pattern> {

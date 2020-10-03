@@ -24,7 +24,7 @@ private fun attributeTypeMap(node: XMLNode): Map<String, Pattern> {
         }
     }
 }
-data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), override val typeAlias: String? = null) : Pattern, EncompassableList {
+data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), override val typeAlias: String? = null) : Pattern, SequenceType {
     constructor(node: XMLNode, typeAlias: String? = null): this(toTypeData(node), typeAlias)
     constructor(xmlString: String, typeAlias: String? = null): this(XMLNode(parseXML(xmlString)), typeAlias)
 
@@ -172,8 +172,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
             else -> nodeNamesShouldBeEqual(otherResolvedPattern).ifSuccess {
                 mapEncompassesMap(pattern.attributes, otherResolvedPattern.pattern.attributes, thisResolver, otherResolver)
             }.ifSuccess {
-                val theseMembers = this.getEncompassableList()
-                val otherMembers = otherResolvedPattern.getEncompassableList()
+                val theseMembers = this.memberList
+                val otherMembers = otherResolvedPattern.memberList
 
                 otherShouldNotBeEndless(otherMembers).ifSuccess {
                     val others = otherMembers.getEncompassables(otherResolver)
@@ -202,7 +202,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
     private fun adaptEmpty(acc: ConsumeResult) =
             acc.remainder.ifEmpty { listOf(EmptyStringPattern) }
 
-    override fun getEncompassableList(): MemberList = MemberList(pattern.nodes, null)
+    override val memberList: MemberList
+        get() = MemberList(pattern.nodes, null)
 
     override val typeName: String = "xml"
 }

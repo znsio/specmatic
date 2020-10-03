@@ -119,8 +119,6 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
     override val typeName: String = "json array"
 }
 
-data class ResultWithIndex(val index: Int, val result: Result)
-
 fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
     val values = jsonPattern.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {

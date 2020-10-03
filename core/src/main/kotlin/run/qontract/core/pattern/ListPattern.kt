@@ -23,11 +23,12 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
         return sampleData.list.asSequence().map {
             resolverWithEmptyType.matchesPattern(null, pattern, it)
-        }.mapIndexed { index, result -> Pair(index, result) }.find { it.second is Result.Failure }?.let { (index, result) ->
-            when(result) {
-                is Result.Failure -> result.breadCrumb("[$index]")
-                else -> Result.Success()
-            }
+        }.mapIndexed { index, result ->
+            ResultWithIndex(index, result)
+        }.find {
+            it.result is Result.Failure
+        }?.let {
+            it.result.breadCrumb("[$it.index]")
         } ?: Result.Success()
     }
 

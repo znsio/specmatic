@@ -29,9 +29,9 @@ interface Pattern {
     fun fitsWithin(otherPatterns: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val myPatternSet = patternSet(thisResolver)
 
-        val result = myPatternSet.map { my ->
-            val encompassResult = otherPatterns.asSequence().map { other ->
-                biggerEncompassesSmaller(other, my, thisResolver, otherResolver, typeStack)
+        val result = myPatternSet.map { myPattern ->
+            val encompassResult = otherPatterns.asSequence().map { otherPattern ->
+                biggerEncompassesSmaller(otherPattern, myPattern, thisResolver, otherResolver, typeStack)
             }
 
             encompassResult.find { it is Result.Success } ?: encompassResult.first()

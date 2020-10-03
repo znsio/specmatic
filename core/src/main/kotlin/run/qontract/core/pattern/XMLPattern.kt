@@ -171,8 +171,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
 
         return when (otherResolvedPattern) {
             is ExactValuePattern -> otherResolvedPattern.fitsWithin(listOf(this), otherResolver, thisResolver, typeStack)
-            !is XMLPattern -> mismatchResult(this, otherResolvedPattern)
-            else -> nodeNamesShouldBeEqual(otherResolvedPattern).ifSuccess {
+            is XMLPattern -> nodeNamesShouldBeEqual(otherResolvedPattern).ifSuccess {
                 mapEncompassesMap(pattern.attributes, otherResolvedPattern.pattern.attributes, thisResolver, otherResolver)
             }.ifSuccess {
                 val theseMembers = this.memberList
@@ -187,6 +186,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
                     }.find { it.result is Result.Failure }?.result ?: Result.Success()
                 }
             }
+            else -> mismatchResult(this, otherResolvedPattern)
         }.breadCrumb(this.pattern.name)
     }
 

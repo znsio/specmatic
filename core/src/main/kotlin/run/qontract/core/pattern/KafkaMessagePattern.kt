@@ -10,48 +10,57 @@ import run.qontract.core.value.StringValue
 const val KAFKA_MESSAGE_BREADCRUMB = "KAFKA-MESSAGE"
 
 data class KafkaMessagePattern(val topic: String = "", val key: Pattern = EmptyStringPattern, val value: Pattern = StringPattern) {
-    fun matches(message: KafkaMessage, resolver: Resolver): Result {
-        return attempt(KAFKA_MESSAGE_BREADCRUMB) { _matches(message, resolver).breadCrumb(KAFKA_MESSAGE_BREADCRUMB) }
-    }
-
-    fun _matches(message: KafkaMessage, resolver: Resolver): Result {
-        if(message.topic != topic)
-            return Result.Failure("Expected topic $topic, got $message.topic").breadCrumb("TOPIC")
-
+    fun matches(message: KafkaMessage, resolver: Resolver): Result = attempt(KAFKA_MESSAGE_BREADCRUMB) {
         try {
-            val parsedKey = when (message.key) {
-                is StringValue -> try { key.parse(message.key.string, resolver) } catch(e: ContractException) { return e.failure().breadCrumb("KEY") }
-                else -> message.key
+            matchTopics(message).ifSuccess {
+                matchKey(message, resolver)
+            }.ifSuccess {
+                matchValue(message, resolver)
             }
+        } catch (e: ContractException) {
+            e.failure()
+        }.breadCrumb(KAFKA_MESSAGE_BREADCRUMB)
+    }
 
-            val keyMatch = key.matches(parsedKey ?: EmptyString, resolver)
-            if (keyMatch !is Result.Success)
-                return keyMatch.breadCrumb("KEY")
-
-            val parsedValue = when (message.value) {
-                is StringValue -> try { value.parse(message.value.string, resolver) } catch(e: ContractException) { return e.failure().breadCrumb("VALUE")}
-                else -> message.value
-            }
-
-            return value.matches(parsedValue, resolver).breadCrumb("VALUE")
-        } catch(e: ContractException) {
-            return e.failure()
+    private fun matchValue(message: KafkaMessage, resolver: Resolver): Result = try {
+        val parsedValue = when (message.value) {
+            is StringValue -> value.parse(message.value.string, resolver)
+            else -> message.value
         }
+
+        value.matches(parsedValue, resolver)
+    } catch (e: ContractException) {
+        e.failure()
+    }.breadCrumb("VALUE")
+
+    private fun matchKey(message: KafkaMessage, resolver: Resolver): Result = try {
+        val parsedKey = when (message.key) {
+            is StringValue -> key.parse(message.key.string, resolver)
+            else -> message.key
+        }
+
+        key.matches(parsedKey ?: EmptyString, resolver)
+    } catch (e: ContractException) {
+        e.failure()
+    }.breadCrumb("KEY")
+
+    private fun matchTopics(message: KafkaMessage): Result = when (message.topic) {
+        topic -> Result.Success()
+        else -> Result.Failure("Expected topic $topic, got $message.topic").breadCrumb("TOPIC")
     }
 
-    fun encompasses(other: KafkaMessagePattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        return attempt(KAFKA_MESSAGE_BREADCRUMB) { _encompasses(other, thisResolver, otherResolver).breadCrumb(KAFKA_MESSAGE_BREADCRUMB) }
-    }
+    fun encompasses(other: KafkaMessagePattern, thisResolver: Resolver, otherResolver: Resolver): Result =
+            attempt(KAFKA_MESSAGE_BREADCRUMB) {
+                topicsShouldMatch(other).ifSuccess {
+                    key.encompasses(other.key, otherResolver, thisResolver).breadCrumb("KEY")
+                }.ifSuccess {
+                    value.encompasses(other.value, thisResolver, otherResolver).breadCrumb("VALUE")
+                }.breadCrumb(KAFKA_MESSAGE_BREADCRUMB)
+            }
 
-    fun _encompasses(other: KafkaMessagePattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(topic != other.topic)
-            return Result.Failure("Expected topic $topic, got ${other.topic}").breadCrumb("TOPIC")
-
-        val keyResult = key.encompasses(other.key, otherResolver, thisResolver)
-        if(keyResult is Result.Failure)
-            return keyResult.breadCrumb("KEY")
-
-        return value.encompasses(other.value, thisResolver, otherResolver).breadCrumb("VALUE")
+    private fun topicsShouldMatch(other: KafkaMessagePattern): Result = when (topic) {
+        other.topic -> Result.Success()
+        else -> Result.Failure("Expected topic $topic, got ${other.topic}").breadCrumb("TOPIC")
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<KafkaMessagePattern> {

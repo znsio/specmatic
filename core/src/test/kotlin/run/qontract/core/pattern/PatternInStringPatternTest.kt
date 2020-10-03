@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.resultReport
 import run.qontract.core.value.StringValue
 import run.qontract.shouldMatch
 
@@ -79,5 +80,17 @@ internal class PatternInStringPatternTest {
         val numberInString = parsedPattern("""(number in string)""")
         val booleanInString = parsedPattern("""(boolean in string)""")
         assertThat(numberInString.encompasses(booleanInString, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should encompass value matching the given type`() {
+        val numberInStringType = parsedPattern("""(number in string)""")
+        val numberInStringValue = ExactValuePattern(StringValue("""10"""))
+        assertEncompasses(numberInStringType, Resolver(), numberInStringValue, Resolver())
+    }
+
+    private fun assertEncompasses(bigger: Pattern, biggerResolver: Resolver, smaller: ExactValuePattern, smallerResolver: Resolver) {
+        val result = bigger.encompasses(smaller, biggerResolver, smallerResolver)
+        if(result is Result.Failure) fail(resultReport(result))
     }
 }

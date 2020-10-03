@@ -24,6 +24,7 @@ private fun attributeTypeMap(node: XMLNode): Map<String, Pattern> {
         }
     }
 }
+
 data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), override val typeAlias: String? = null) : Pattern, SequenceType {
     constructor(node: XMLNode, typeAlias: String? = null): this(toTypeData(node), typeAlias)
     constructor(xmlString: String, typeAlias: String? = null): this(XMLNode(parseXML(xmlString)), typeAlias)
@@ -39,52 +40,54 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
         if(missingKey != null)
             return missingKeyToResult(missingKey, "attribute").breadCrumb(pattern.name)
 
-        mapZip(pattern.attributes, sampleData.attributes).forEach { (key, patternValue, sampleValue) ->
-            val resolvedValue: Value = when {
-                sampleValue.isPatternToken() -> sampleValue.trimmed()
-                else -> try {
-                    patternValue.parse(sampleValue.string, resolver)
-                } catch (e: ContractException) {
-                    return e.failure().breadCrumb(key).breadCrumb(pattern.name)
+        return matchAttributes(pattern, sampleData, resolver).ifSuccess {
+            pattern.nodes.asSequence().mapIndexed { index, patternItem ->
+                val type = resolvedHop(patternItem, resolver)
+                when {
+                    type is ListPattern -> type.matches(this.listOf(sampleData.nodes.subList(index, pattern.nodes.indices.last), resolver), resolver)
+                    index >= sampleData.nodes.size -> errorUnlessExpectingEmpty(sampleData, type, resolver)
+                    else -> matchNodeContent(sampleData, index, type, resolver)
                 }
-            }
-            when (val result = resolver.matchesPattern(key, patternValue, resolvedValue)) {
-                is Result.Failure -> return result.breadCrumb(key).breadCrumb(pattern.name)
-            }
+            }.find { it is Result.Failure }?.breadCrumb(this.pattern.name) ?: Result.Success()
         }
-
-        for(index in pattern.nodes.indices) {
-            when (val type = resolvedHop(pattern.nodes[index], resolver)) {
-                is ListPattern -> return type.matches(this.listOf(sampleData.nodes.subList(index, pattern.nodes.indices.last), resolver), resolver).breadCrumb(this.pattern.name)
-                else -> {
-                    if(index >= sampleData.nodes.size) {
-                        if(!expectingEmpty(sampleData, type, resolver))
-                            return Result.Failure("The value had only ${sampleData.nodes.size} nodes but the contract expected more").breadCrumb(this.pattern.name)
-                    }
-                    else {
-                        val nodeValue: XMLNode = sampleData
-                        val childNode = when (val childNode = nodeValue.nodes[index]) {
-                            is StringValue -> when {
-                                childNode.isPatternToken() -> childNode.trimmed()
-                                else -> try {
-                                    type.parse(childNode.string, resolver)
-                                } catch (e: ContractException) {
-                                    return e.failure().breadCrumb(this.pattern.name)
-                                }
-                            }
-                            else -> childNode
-                        }
-
-                        val factKey = if (childNode is XMLNode) childNode.name else null
-                        val result = resolver.matchesPattern(factKey, type, childNode)
-                        if (result is Result.Failure) return result.breadCrumb(this.pattern.name)
-                    }
-                }
-            }
-        }
-
-        return Result.Success()
     }
+
+    private fun matchNodeContent(sampleData: XMLNode, index: Int, type: Pattern, resolver: Resolver): Result {
+        return try {
+            val childNode = when (val childNode = sampleData.nodes[index]) {
+                is StringValue -> when {
+                    childNode.isPatternToken() -> childNode.trimmed()
+                    else -> type.parse(childNode.string, resolver)
+                }
+                else -> childNode
+            }
+
+            val factKey = if (childNode is XMLNode) childNode.name else null
+            resolver.matchesPattern(factKey, type, childNode)
+        } catch (e: ContractException) {
+            e.failure()
+        }
+    }
+
+    private fun errorUnlessExpectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver): Result {
+        return when {
+            !expectingEmpty(sampleData, type, resolver) -> Result.Failure("The value had only ${sampleData.nodes.size} nodes but the contract expected more")
+            else -> Result.Success()
+        }
+    }
+
+    private fun matchAttributes(pattern: XMLTypeData, sampleData: XMLNode, resolver: Resolver): Result =
+            mapZip(pattern.attributes, sampleData.attributes).asSequence().map { (key, patternValue, sampleValue) ->
+                try {
+                    val resolvedValue: Value = when {
+                        sampleValue.isPatternToken() -> sampleValue.trimmed()
+                        else -> patternValue.parse(sampleValue.string, resolver)
+                    }
+                    resolver.matchesPattern(key, patternValue, resolvedValue)
+                } catch (e: ContractException) {
+                    e.failure()
+                }.breadCrumb(key).breadCrumb(pattern.name)
+            }.find { it is Result.Failure } ?: Result.Success()
 
     private fun expectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver) =
             sampleData.nodes.isEmpty() && pattern.nodes.size == 1 && (EmptyStringPattern in type.patternSet(resolver).map { resolvedHop(it, resolver) })

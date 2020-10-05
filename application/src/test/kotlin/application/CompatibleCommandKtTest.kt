@@ -45,9 +45,9 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", fileOperations, fakeGit)
-        assertThat(results.successCount).isOne()
-        assertThat(results.success()).isTrue()
+        val outcome = backwardCompatibleFile("/Users/fakeuser/newer.qontract", fileOperations, fakeGit)
+        assertThat(outcome.result?.successCount).isOne()
+        assertThat(outcome.result?.success()).isTrue()
     }
 
     @Test
@@ -73,9 +73,9 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", fileOperations, fakeGit)
-        assertThat(results.successCount).isZero()
-        assertThat(results.success()).isFalse()
+        val outcome = backwardCompatibleFile("/Users/fakeuser/newer.qontract", fileOperations, fakeGit)
+        assertThat(outcome.result?.successCount).isZero()
+        assertThat(outcome.result?.success()).isFalse()
     }
 
     @Test
@@ -98,12 +98,12 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val results = backwardCompatibleCommit("/Users/fakeuser/newer.qontract", "HEAD", "HEAD^1", fakeGit)
+        val outcome = backwardCompatibleCommit("/Users/fakeuser/newer.qontract", "HEAD", "HEAD^1", fakeGit)
 
         assertThat(commitsRequested.toList().sorted()).isEqualTo(listOf("HEAD", "HEAD^1"))
 
-        assertThat(results?.successCount).isOne()
-        assertThat(results?.success()).isTrue()
+        assertThat(outcome.result?.successCount).isOne()
+        assertThat(outcome.result?.success()).isTrue()
     }
 
     @Test
@@ -129,22 +129,25 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val results = backwardCompatibleCommit("/Users/fakeuser/newer.qontract", "HEAD", "HEAD^1", fakeGit)
+        val outcome = backwardCompatibleCommit("/Users/fakeuser/newer.qontract", "HEAD", "HEAD^1", fakeGit)
 
-        assertThat(results).isNull()
+        assertThat(outcome.errorMessage).isEqualTo("Could not load HEAD^1:/Users/fakeuser/newer.qontract")
+        assertThat(outcome.result).isNull()
     }
 
     @Test
     fun `compatibleMessage when newer is backward compatible`() {
-        val (exitCode, message) = compatibilityMessage(Results(mutableListOf(Result.Success())))
+        val (exitCode, message) = compatibilityMessage(OutCome(Results(mutableListOf(Result.Success()))))
         assertThat(exitCode).isZero()
         assertThat(message).isEqualTo("The newer contract is backward compatible")
     }
 
     @Test
     fun `compatibleMessage when newer is not backward compatible`() {
-        val (exitCode, message) = compatibilityMessage(Results(mutableListOf(Result.Failure())))
+        val (exitCode, message) = compatibilityMessage(OutCome(Results(mutableListOf(Result.Failure()))))
         assertThat(exitCode).isOne()
-        assertThat(message).isEqualTo("The newer contract is NOT backward compatible")
+        assertThat(message).isEqualTo("""Tests run: 1, Passed: 0, Failed: 1
+
+The newer contract is NOT backward compatible""")
     }
 }

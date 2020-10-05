@@ -42,6 +42,7 @@ internal class BundleCommandTest {
         every { file.isFile } returns(true)
         every { file.name } returns("stub.json")
         every { file.path } returns stubFilePath
+        every { fileOperations.isJSONFile(file) } returns(true)
         every { fileOperations.readBytes(stubFilePath) }.returns(bytes)
 
         every { fileOperations.files("/Users/jane_doe/.qontract/repos/git-repo/com/example/api_1_data") }.returns(files)

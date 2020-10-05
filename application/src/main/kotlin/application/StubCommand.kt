@@ -68,7 +68,7 @@ class StubCommand : Callable<Unit> {
     val watchMaker = WatchMaker()
 
     @Autowired
-    val fileReader = RealFileReader()
+    val fileReader = FileOperations()
 
     override fun call() = try {
         loadConfig()
@@ -197,8 +197,8 @@ class StubCommand : Callable<Unit> {
     }
 }
 
-internal fun validateQontractFileExtensions(contractPaths: List<String>, fileReader: RealFileReader) {
-    contractPaths.filter { fileReader.isFile(it) && fileReader.extensionIsNot(it, QONTRACT_EXTENSION) }.let {
+internal fun validateQontractFileExtensions(contractPaths: List<String>, fileOperations: FileOperations) {
+    contractPaths.filter { fileOperations.isFile(it) && fileOperations.extensionIsNot(it, QONTRACT_EXTENSION) }.let {
         if (it.isNotEmpty()) {
             val files = it.joinToString("\n")
             exitWithMessage("The following files do not end with $QONTRACT_EXTENSION and cannot be used:\n$files")

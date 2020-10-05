@@ -8,7 +8,7 @@ import run.qontract.core.QONTRACT_EXTENSION
 import java.io.File
 import java.nio.file.Path
 
-internal class RealFileReaderTest {
+internal class FileOperationsTest {
 
     @Test
     fun `given an existing file, it is found to be a valid file`(@TempDir tempDir: Path) {
@@ -16,7 +16,7 @@ internal class RealFileReaderTest {
         val qontractFilePath = existentFile.toAbsolutePath().toString()
         File(qontractFilePath).writeText("some content")
 
-        val reader = RealFileReader()
+        val reader = FileOperations()
 
         assertThat(reader.isFile(qontractFilePath)).isTrue
     }
@@ -26,7 +26,7 @@ internal class RealFileReaderTest {
         val nonExistentFile = tempDir.resolve("contract.qontract")
         val qontractFilePath = nonExistentFile.toAbsolutePath().toString()
 
-        val reader = RealFileReader()
+        val reader = FileOperations()
 
         assertThat(reader.isFile(qontractFilePath)).isFalse
     }
@@ -36,7 +36,7 @@ internal class RealFileReaderTest {
         val validExtensionContract = tempDir.resolve("contract.qontract")
         val qontractFilePath = validExtensionContract.toAbsolutePath().toString()
 
-        val reader = RealFileReader()
+        val reader = FileOperations()
 
         assertThat(reader.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION)).isFalse
     }
@@ -46,7 +46,7 @@ internal class RealFileReaderTest {
         val validExtensionContract = tempDir.resolve("contract.txt")
         val qontractFilePath = validExtensionContract.toAbsolutePath().toString()
 
-        val reader = RealFileReader()
+        val reader = FileOperations()
 
         assertThat(reader.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION)).isTrue
     }

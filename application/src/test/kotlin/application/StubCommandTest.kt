@@ -23,7 +23,7 @@ internal class StubCommandTest {
     lateinit var qontractConfig: QontractConfig
 
     @MockkBean
-    lateinit var reader: RealFileReader
+    lateinit var fileOperations: FileOperations
 
     @Autowired
     lateinit var factory: IFactory
@@ -46,8 +46,8 @@ internal class StubCommandTest {
     fun `when contract files are not given it should load from qontract config`() {
         every { watchMaker.make(listOf("/config/path/to/contract.qontract")) }.returns(watcher)
         every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.qontract"))
-        every { reader.isFile("/config/path/to/contract.qontract") }.returns(true)
-        every { reader.extensionIsNot("/config/path/to/contract.qontract", QONTRACT_EXTENSION) }.returns(false)
+        every { fileOperations.isFile("/config/path/to/contract.qontract") }.returns(true)
+        every { fileOperations.extensionIsNot("/config/path/to/contract.qontract", QONTRACT_EXTENSION) }.returns(false)
 
         CommandLine(stubCommand, factory).execute()
 
@@ -59,8 +59,8 @@ internal class StubCommandTest {
     fun `when contract files are given it should not load from qontract config`() {
         every { watchMaker.make(listOf("/parameter/path/to/contract.qontract")) }.returns(watcher)
         every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.qontract"))
-        every { reader.isFile("/parameter/path/to/contract.qontract") }.returns(true)
-        every { reader.extensionIsNot("/parameter/path/to/contract.qontract", QONTRACT_EXTENSION) }.returns(false)
+        every { fileOperations.isFile("/parameter/path/to/contract.qontract") }.returns(true)
+        every { fileOperations.extensionIsNot("/parameter/path/to/contract.qontract", QONTRACT_EXTENSION) }.returns(false)
 
         CommandLine(stubCommand, factory).execute("/parameter/path/to/contract.qontract")
 
@@ -79,8 +79,8 @@ internal class StubCommandTest {
 
         every { watchMaker.make(listOf(qontractFilePath)) }.returns(watcher)
         every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.qontract"))
-        every { reader.isFile(qontractFilePath) }.returns(true)
-        every { reader.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION) }.returns(false)
+        every { fileOperations.isFile(qontractFilePath) }.returns(true)
+        every { fileOperations.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION) }.returns(false)
 
         val execute = CommandLine(stubCommand, factory).execute(qontractFilePath)
 
@@ -99,8 +99,8 @@ internal class StubCommandTest {
 
         every { watchMaker.make(listOf(qontractFilePath)) }.returns(watcher)
         every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.qontract"))
-        every { reader.isFile(qontractFilePath) }.returns(true)
-        every { reader.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION) }.returns(true)
+        every { fileOperations.isFile(qontractFilePath) }.returns(true)
+        every { fileOperations.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION) }.returns(true)
 
         CommandLine(stubCommand, factory).execute(qontractFilePath)
     }

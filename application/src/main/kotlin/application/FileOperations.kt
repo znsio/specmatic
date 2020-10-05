@@ -4,8 +4,8 @@ import org.springframework.stereotype.Component
 import java.io.File
 
 @Component
-class RealFileReader: FileReader {
-    override fun read(path: String): String {
+class FileOperations {
+    fun read(path: String): String {
         return File(path).readText()
     }
 

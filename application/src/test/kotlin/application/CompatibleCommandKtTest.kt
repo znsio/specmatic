@@ -1,12 +1,16 @@
 package application
 
+import com.ninjasquad.springmockk.MockkBean
+import io.mockk.every
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.boot.test.context.SpringBootTest
 import run.qontract.core.Result
 import run.qontract.core.Results
 import run.qontract.core.git.GitCommand
-import run.qontract.core.git.SystemGit
 
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [QontractApplication::class, CompatibleCommand::class])
 internal class CompatibleCommandKtTest {
     val trivialContract = """
                     Feature: Test
@@ -15,10 +19,12 @@ internal class CompatibleCommandKtTest {
                         Then status 200
                 """.trimIndent()
 
-    private val fakeReader = object : FileReader {
-        override fun read(path: String): String {
-            return trivialContract
-        }
+    @MockkBean
+    lateinit var fileOperations: FileOperations
+
+    @BeforeEach
+    fun testSetup() {
+        every { fileOperations.read("/Users/fakeuser/newer.qontract") }.returns(trivialContract)
     }
 
     @Test
@@ -39,7 +45,7 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", fakeReader, fakeGit)
+        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", fileOperations, fakeGit)
         assertThat(results.successCount).isOne()
         assertThat(results.success()).isTrue()
     }
@@ -67,7 +73,7 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", fakeReader, fakeGit)
+        val results = backwardCompatibleFile("/Users/fakeuser/newer.qontract", fileOperations, fakeGit)
         assertThat(results.successCount).isZero()
         assertThat(results.success()).isFalse()
     }

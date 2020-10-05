@@ -24,15 +24,15 @@ class BundleCommand : Callable<Unit> {
     lateinit var zipper: Zipper
 
     @Autowired
-    lateinit var fileReader: RealFileReader
+    lateinit var fileOperations: FileOperations
 
     override fun call() {
-        val zipperEntries = qontractConfig.contractStubPathData().flatMap { pathDataToEntryPath(it, fileReader) }
+        val zipperEntries = qontractConfig.contractStubPathData().flatMap { pathDataToEntryPath(it, fileOperations) }
         zipper.compress(bundlePath, zipperEntries)
     }
 }
 
-fun pathDataToEntryPath(pathData: ContractPathData, reader: RealFileReader): List<ZipperEntry> {
+fun pathDataToEntryPath(pathData: ContractPathData, fileOperations: FileOperations): List<ZipperEntry> {
     val base = File(pathData.baseDir)
     val contractFile = File(pathData.path)
 
@@ -40,23 +40,23 @@ fun pathDataToEntryPath(pathData: ContractPathData, reader: RealFileReader): Lis
     val zipEntryName = "${base.name}/$relativePath"
 
     val stubDataDir = stubDataDir(File(pathData.path))
-    val stubFiles = stubFilesIn(stubDataDir, reader)
+    val stubFiles = stubFilesIn(stubDataDir, fileOperations)
 
     val stubEntries = stubFiles.map {
         val relativeEntryPath = File(it).relativeTo(base)
-        ZipperEntry("${base.name}/${relativeEntryPath.path}", reader.readBytes(it))
+        ZipperEntry("${base.name}/${relativeEntryPath.path}", fileOperations.readBytes(it))
     }
 
-    val contractEntry = ZipperEntry(zipEntryName, reader.readBytes(pathData.path))
+    val contractEntry = ZipperEntry(zipEntryName, fileOperations.readBytes(pathData.path))
 
     return listOf(contractEntry).plus(stubEntries)
 }
 
-fun stubFilesIn(stubDataDir: String, reader: RealFileReader): List<String> =
-        reader.files(stubDataDir).flatMap {
+fun stubFilesIn(stubDataDir: String, fileOperations: FileOperations): List<String> =
+        fileOperations.files(stubDataDir).flatMap {
             when {
                 it.isFile && it.extension.equals("json", ignoreCase = true) -> listOf(it.path)
-                it.isDirectory -> stubFilesIn(File(stubDataDir).resolve(it.name).path, reader)
+                it.isDirectory -> stubFilesIn(File(stubDataDir).resolve(it.name).path, fileOperations)
                 else -> emptyList()
             }
         }

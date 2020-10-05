@@ -18,7 +18,7 @@ import kotlin.system.exitProcess
 class GitCompatibleCommand : Callable<Unit> {
     @Command(name = "file", description = ["Compare file in working tree against HEAD"])
     fun file(@Parameters(paramLabel = "contractPath") contractPath: String) {
-        val results = backwardCompatibleFile(contractPath, RealFileReader(), SystemGit())
+        val results = backwardCompatibleFile(contractPath, FileOperations(), SystemGit())
 
         val (resultExitCode, resultMessage) = compatibilityMessage(results)
 
@@ -71,8 +71,8 @@ internal fun printCompatibityReport(results: Results, resultMessage: String) {
     println("$countsMessage$resultReport$resultMessage".trim())
 }
 
-internal fun backwardCompatibleFile(newerContractPath: String, reader: FileReader, git: GitCommand): Results {
-    val newerFeature = Feature(reader.read(newerContractPath))
+internal fun backwardCompatibleFile(newerContractPath: String, fileOperations: FileOperations, git: GitCommand): Results {
+    val newerFeature = Feature(fileOperations.read(newerContractPath))
     val olderFeature = getOlderFeature(newerContractPath, git)
 
     return testBackwardCompatibility(olderFeature, newerFeature)

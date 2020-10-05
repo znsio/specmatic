@@ -55,7 +55,7 @@ fun pathDataToEntryPath(pathData: ContractPathData, fileOperations: FileOperatio
 fun stubFilesIn(stubDataDir: String, fileOperations: FileOperations): List<String> =
         fileOperations.files(stubDataDir).flatMap {
             when {
-                it.isFile && it.extension.equals("json", ignoreCase = true) -> listOf(it.path)
+                fileOperations.isJSONFile(it) -> listOf(it.path)
                 it.isDirectory -> stubFilesIn(File(stubDataDir).resolve(it.name).path, fileOperations)
                 else -> emptyList()
             }

@@ -104,31 +104,34 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
 
     fun matchingStub(request: HttpRequest, response: HttpResponse): HttpStubData {
         try {
-            val results = Results()
-
-            for (scenario in scenarios) {
+            val results = scenarios.map { scenario ->
                 try {
-                    when(val mockMatches = scenario.matchesMock(request, response)) {
-                        is Result.Success -> return scenario.resolverAndResponseFrom(response).let { (resolver, response) ->
+                    when(val matchResult = scenario.matchesMock(request, response)) {
+                        is Result.Success -> Pair(scenario.resolverAndResponseFrom(response).let { (resolver, response) ->
                             val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
                             val requestTypeWithAncestors =
                                     newRequestType.copy(headersPattern = newRequestType.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
                             HttpStubData(response = response, resolver = resolver, requestType = requestTypeWithAncestors)
-                        }
+                        }, Result.Success())
                         is Result.Failure -> {
-                            results.add(mockMatches.updateScenario(scenario))
+                            Pair(null, matchResult.updateScenario(scenario))
                         }
                     }
                 } catch (contractException: ContractException) {
-                    results.add(contractException.failure())
+                    Pair(null, contractException.failure())
                 }
             }
 
-            throw NoMatchingScenario(results.withoutFluff().report())
+            return results.find {
+                it.first != null
+            }?.let { it.first as HttpStubData } ?: throw NoMatchingScenario(failureResults(results).withoutFluff().report())
         } finally {
             serverState = emptyMap()
         }
     }
+
+    fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
+            Results(results.map { it.second }.filter { it is Result.Failure }.toMutableList())
 
     fun generateTestScenarios(suggestions: List<Scenario>): List<Scenario> =
         scenarios.map { it.newBasedOn(suggestions) }.flatMap { it.generateTestScenarios() }

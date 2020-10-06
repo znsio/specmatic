@@ -3,6 +3,8 @@ package application
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
+import io.mockk.justRun
+import io.mockk.runs
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -13,7 +15,10 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import picocli.CommandLine
 import picocli.CommandLine.IFactory
+import run.qontract.core.Feature
 import run.qontract.core.QONTRACT_EXTENSION
+import run.qontract.mock.ScenarioStub
+import run.qontract.stub.HttpStubData
 import java.io.File
 import java.nio.file.Path
 
@@ -28,14 +33,23 @@ internal class StubCommandTest {
     @Autowired
     lateinit var factory: IFactory
 
-    @Autowired
-    lateinit var stubCommand: StubCommand
-
     @MockkBean
     lateinit var watchMaker: WatchMaker
 
     @MockkBean(relaxUnitFun = true)
     lateinit var watcher: Watcher
+
+    @MockkBean
+    lateinit var httpStubEngine: HTTPStubEngine
+
+    @MockkBean
+    lateinit var kafkaStubEngine: KafkaStubEngine
+
+    @MockkBean
+    lateinit var stubLoaderEngine: StubLoaderEngine
+
+    @Autowired
+    lateinit var stubCommand: StubCommand
 
     @BeforeEach
     fun `clean up stub command`() {
@@ -66,6 +80,44 @@ internal class StubCommandTest {
 
         verify(exactly = 0) { qontractConfig.contractStubPaths() }
         verify(exactly = 1) { watchMaker.make(listOf("/parameter/path/to/contract.qontract")) }
+    }
+
+    @Test
+    fun `should attempt to start HTTP and Kafka stubs`() {
+        val contractPath = "/path/to/contract.qontract"
+        val contract = """
+            Feature: Math API
+              Scenario: Random API
+                When GET /
+                Then status 200
+                And response-body (number)
+        """.trimIndent()
+        val feature = Feature(contract)
+
+        every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
+
+        val stubInfo = listOf(Pair(feature, emptyList<ScenarioStub>()))
+        every { stubLoaderEngine.loadStubs(listOf(contractPath), emptyList()) }.returns(stubInfo)
+
+        val host = "0.0.0.0"
+        val port = 9000
+        val certInfo = CertInfo()
+        val strictMode = false
+        val kafkaHost = "localhost"
+        val kafkaPort = 9093
+
+        every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode) }.returns(null)
+        every { kafkaStubEngine.runKafkaStub(stubInfo, kafkaHost, kafkaPort, false) }.returns(null)
+
+        every { qontractConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
+        every { fileOperations.isFile(contractPath) }.returns(true)
+        every { fileOperations.extensionIsNot(contractPath, QONTRACT_EXTENSION) }.returns(false)
+
+        val exitStatus = CommandLine(stubCommand, factory).execute(contractPath)
+        assertThat(exitStatus).isZero()
+
+        verify(exactly = 1) { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode) }
+        verify(exactly = 1) { kafkaStubEngine.runKafkaStub(stubInfo, kafkaHost, kafkaPort, false) }
     }
 
     @Test

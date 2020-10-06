@@ -1,6 +1,8 @@
 package application
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationContext
+import org.springframework.stereotype.Component
 import picocli.CommandLine.*
 import run.qontract.LogTail
 import run.qontract.consoleLog
@@ -12,15 +14,30 @@ import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.exitWithMessage
 import run.qontract.mock.NoMatchingScenario
+import run.qontract.mock.ScenarioStub
 import run.qontract.stub.*
 import java.util.concurrent.Callable
+
+data class CertInfo(val keyStoreFile: String = "", val keyStoreDir: String = "", val keyStorePassword: String = "forgotten", val keyStoreAlias: String = "qontractproxy", val keyPassword: String = "forgotten")
 
 @Command(name = "stub",
         mixinStandardHelpOptions = true,
         description = ["Start a stub server with contract"])
 class StubCommand : Callable<Unit> {
-    var contractFake: ContractStub? = null
+    var stubServer: ContractStub? = null
     var qontractKafka: QontractKafka? = null
+
+    @Autowired
+    private lateinit var httpStubEngine: HTTPStubEngine
+
+    @Autowired
+    private lateinit var kafkaStubEngine: KafkaStubEngine
+
+    @Autowired
+    private lateinit var stubLoaderEngine: StubLoaderEngine
+
+    @Autowired
+    private lateinit var context: ApplicationContext
 
     @Autowired
     lateinit var qontractConfig: QontractConfig
@@ -68,11 +85,11 @@ class StubCommand : Callable<Unit> {
     val watchMaker = WatchMaker()
 
     @Autowired
-    val fileReader = FileOperations()
+    val fileOperations = FileOperations()
 
     override fun call() = try {
-        loadConfig()
-        validateQontractFileExtensions(contractPaths, fileReader)
+        contractPaths = loadConfig()
+        validateQontractFileExtensions(contractPaths, fileOperations)
         startServer()
         addShutdownHook()
 
@@ -88,76 +105,20 @@ class StubCommand : Callable<Unit> {
         consoleLog(exceptionCauseMessage(e))
     }
 
-    private fun loadConfig() {
-        when(contractPaths.isEmpty()) {
-            true -> {
-                println("No contractPaths specified. Falling back to $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
-                contractPaths = qontractConfig.contractStubPaths()
-            }
-        }
+    private fun loadConfig() = contractPaths.ifEmpty {
+        println("No contractPaths specified. Falling back to $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
+        qontractConfig.contractStubPaths()
     }
 
     private fun startServer() {
-        val stubs = when {
-            dataDirs.isNotEmpty() -> loadContractStubsFromFiles(contractPaths, dataDirs)
-            else -> loadContractStubsFromImplicitPaths(contractPaths)
-        }
+        val stubData = stubLoaderEngine.loadStubs(contractPaths, dataDirs)
 
-        val behaviours = stubs.map { it.first }
+        val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
-        contractFake = when {
-            hasHttpScenarios(behaviours) -> {
-                val httpExpectations = contractInfoToHttpExpectations(stubs)
-                val httpBehaviours = behaviours.map {
-                    it.copy(scenarios = it.scenarios.filter { scenario ->
-                        scenario.kafkaMessagePattern == null
-                    })
-                }
-
-                val keyStoreData = getHttpsCert(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
-                HttpStub(httpBehaviours, httpExpectations, host, port, ::consoleLog, strictMode, keyStoreData).also {
-                    val protocol = if(keyStoreData != null) "https" else "http"
-                    consoleLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop.")
-                }
-            }
-            else -> null
-        }
-
-        val kafkaExpectations = contractInfoToKafkaExpectations(stubs)
-        val validationResults = kafkaExpectations.map { stubData ->
-            behaviours.asSequence().map { it.matchesMockKafkaMessage(stubData.kafkaMessage) }.find { it is Result.Failure } ?: Result.Success()
-        }
-
-        if(validationResults.any { it is Result.Failure }) {
-            val results = Results(validationResults.toMutableList())
-            consoleLog("Can't load Kafka mocks:\n${results.report()}")
-        }
-        else if(hasKafkaScenarios(behaviours)) {
-            if(startKafka) {
-                qontractKafka = QontractKafka(kafkaPort)
-                consoleLog("Started local Kafka server: ${qontractKafka?.bootstrapServers}")
-            }
-
-            stubKafkaContracts(kafkaExpectations, qontractKafka?.bootstrapServers ?: "PLAINTEXT://$kafkaHost:$kafkaPort", ::createTopics, ::createProducer)
-        }
+        stubServer = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode)
+        qontractKafka = kafkaStubEngine.runKafkaStub(stubData, kafkaHost, kafkaPort, startKafka)
 
         LogTail.storeSnapshot()
-    }
-
-    private fun hasKafkaScenarios(behaviours: List<Feature>): Boolean {
-        return behaviours.any {
-            it.scenarios.any { scenario ->
-                scenario.kafkaMessagePattern != null
-            }
-        }
-    }
-
-    private fun hasHttpScenarios(behaviours: List<Feature>): Boolean {
-        return behaviours.any {
-            it.scenarios.any { scenario ->
-                scenario.kafkaMessagePattern == null
-            }
-        }
     }
 
     private fun restartServer() {
@@ -175,8 +136,8 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun stopServer() {
-        contractFake?.close()
-        contractFake = null
+        stubServer?.close()
+        stubServer = null
 
         qontractKafka?.close()
         qontractKafka = null
@@ -187,7 +148,7 @@ class StubCommand : Callable<Unit> {
             override fun run() {
                 try {
                     consoleLog("Shutting down stub servers")
-                    contractFake?.close()
+                    stubServer?.close()
                     qontractKafka?.close()
                 } catch (e: InterruptedException) {
                     currentThread().interrupt()
@@ -202,6 +163,98 @@ internal fun validateQontractFileExtensions(contractPaths: List<String>, fileOpe
         if (it.isNotEmpty()) {
             val files = it.joinToString("\n")
             exitWithMessage("The following files do not end with $QONTRACT_EXTENSION and cannot be used:\n$files")
+        }
+    }
+}
+
+@Component
+class StubLoaderEngine {
+    fun loadStubs(contractPaths: List<String>, dataDirs: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
+        return when {
+            dataDirs.isNotEmpty() -> loadContractStubsFromFiles(contractPaths, dataDirs)
+            else -> loadContractStubsFromImplicitPaths(contractPaths)
+        }
+    }
+}
+
+@Component
+class KafkaStubEngine {
+    fun runKafkaStub(stubs: List<Pair<Feature, List<ScenarioStub>>>, kafkaHost: String, kafkaPort: Int, startKafka: Boolean): QontractKafka? {
+        val features = stubs.map { it.first }
+
+        val kafkaExpectations = contractInfoToKafkaExpectations(stubs)
+        val validationResults = kafkaExpectations.map { stubData ->
+            features.asSequence().map {
+                it.matchesMockKafkaMessage(stubData.kafkaMessage)
+            }.find {
+                it is Result.Failure
+            } ?: Result.Success()
+        }
+
+        return when {
+            validationResults.any { it is Result.Failure } -> {
+                val results = Results(validationResults.toMutableList())
+                consoleLog("Can't load Kafka mocks:\n${results.report()}")
+                null
+            }
+            hasKafkaScenarios(features) -> {
+                val qontractKafka = when {
+                    startKafka -> QontractKafka(kafkaPort).also {
+                        consoleLog("Started local Kafka server: ${it.bootstrapServers}")
+                    }
+                    else -> null
+                }
+
+                stubKafkaContracts(kafkaExpectations, qontractKafka?.bootstrapServers
+                        ?: "PLAINTEXT://$kafkaHost:$kafkaPort", ::createTopics, ::createProducer)
+
+                qontractKafka
+            }
+            else -> null
+        }
+    }
+}
+
+@Component
+class HTTPStubEngine {
+    fun runHTTPStub(stubs: List<Pair<Feature, List<ScenarioStub>>>, host: String, port: Int, certInfo: CertInfo, strictMode: Boolean): HttpStub? {
+        val features = stubs.map { it.first }
+
+        return when {
+            hasHttpScenarios(features) -> {
+                val httpExpectations = contractInfoToHttpExpectations(stubs)
+
+                val httpFeatures = features.map {
+                    val httpScenarios = it.scenarios.filter { scenario ->
+                        scenario.kafkaMessagePattern == null
+                    }
+
+                    it.copy(scenarios = httpScenarios)
+                }
+
+                val keyStoreData = getHttpsCert(certInfo.keyStoreFile, certInfo.keyStoreDir, certInfo.keyStorePassword, certInfo.keyStoreAlias, certInfo.keyPassword)
+                HttpStub(httpFeatures, httpExpectations, host, port, ::consoleLog, strictMode, keyStoreData).also {
+                    val protocol = if (keyStoreData != null) "https" else "http"
+                    consoleLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop.")
+                }
+            }
+            else -> null
+        }
+    }
+}
+
+internal fun hasHttpScenarios(behaviours: List<Feature>): Boolean {
+    return behaviours.any {
+        it.scenarios.any { scenario ->
+            scenario.kafkaMessagePattern == null
+        }
+    }
+}
+
+internal fun hasKafkaScenarios(behaviours: List<Feature>): Boolean {
+    return behaviours.any {
+        it.scenarios.any { scenario ->
+            scenario.kafkaMessagePattern != null
         }
     }
 }

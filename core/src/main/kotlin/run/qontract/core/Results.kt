@@ -2,7 +2,7 @@ package run.qontract.core
 
 const val PATH_NOT_RECOGNIZED_ERROR = "URL path not recognised"
 
-data class Results(val results: MutableList<Result> = mutableListOf()) {
+data class Results(val results: List<Result> = emptyList()) {
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
     fun success(): Boolean = !hasFailures()
 
@@ -17,10 +17,6 @@ data class Results(val results: MutableList<Result> = mutableListOf()) {
 
     val successCount
         get(): Int = results.count { it is Result.Success }
-
-    fun add(result: Result) {
-        results.add(result)
-    }
 
     fun generateErrorHttpResponse(): HttpResponse {
         val report = report("").trim()

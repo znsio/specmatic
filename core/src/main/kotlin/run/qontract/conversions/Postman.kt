@@ -16,13 +16,6 @@ fun hostAndPort(uriString: String): BaseURLInfo {
     return BaseURLInfo(uri.host, uri.port, uri.scheme, uriString.removeSuffix("/"))
 }
 
-data class BaseURLInfo(val host: String, val port: Int, val scheme: String, val originalBaseURL: String)
-
-fun toFragment(baseURLInfo: BaseURLInfo): String {
-    val port: String = if(baseURLInfo.port > 0) ":${baseURLInfo.port}" else ""
-    return "${baseURLInfo.host}$port"
-}
-
 data class ImportedPostmanContracts(val name: String, val gherkin: String, val baseURLInfo: BaseURLInfo, val stubs: List<NamedStub>)
 
 fun postmanCollectionToGherkin(postmanContent: String): List<ImportedPostmanContracts> {
@@ -159,7 +152,7 @@ fun postmanItemResponse(responseItem: JSONObjectValue): HttpResponse {
 
 fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpRequest> {
     val method = request.getString("method")
-    val url = toURL(request.jsonObject.getValue("url"))
+    val url = urlFromPostmanValue(request.jsonObject.getValue("url"))
 
     val baseURL = "${url.protocol}://${url.authority}"
     val query: Map<String, String> = url.query?.split("&")?.map { it.split("=").let { parts -> Pair(parts[0], parts[1]) } }?.fold(emptyMap()) { acc, entry -> acc.plus(entry) }
@@ -207,7 +200,7 @@ fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpRequest> {
     return Pair(baseURL, httpRequest)
 }
 
-private fun toURL(urlValue: Value): URL {
+internal fun urlFromPostmanValue(urlValue: Value): URL {
     return when(urlValue) {
         is JSONObjectValue -> urlValue.jsonObject.getValue("raw")
         else -> urlValue

@@ -1,18 +1,265 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import run.qontract.conversions.*
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedJSON
-import run.qontract.core.value.EmptyString
-import run.qontract.core.value.JSONArrayValue
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.NumberValue
+import run.qontract.core.pattern.parsedValue
+import run.qontract.core.value.*
 import run.qontract.stub.HttpStub
 
 class PostmanKtTests {
+    @Test
+    fun `should be able to guess a boolean value`() {
+        assertThat(guessType(StringValue("true"))).isEqualTo(BooleanValue(true))
+        assertThat(guessType(StringValue("false"))).isEqualTo(BooleanValue(false))
+    }
+
+    @Test
+    fun `should be able to guess a number value`() {
+        assertThat(guessType(StringValue("10"))).isEqualTo(NumberValue(10))
+    }
+
+    @Test
+    fun `should be able to guess a JSON value`() {
+        val json = """{"one": 1}"""
+        assertThat(guessType(StringValue(json))).isEqualTo(parsedJSON(json))
+    }
+
+    @Test
+    fun `should be able to guess a XML value`() {
+        val xml = """<data/>"""
+        assertThat(guessType(StringValue(xml))).isEqualTo(parsedValue(xml))
+    }
+
+    @Test
+    fun `should be able to extract a URL out of a Postman json object`() {
+        val url = urlFromPostmanValue(parsedValue("""{"raw": "https://localhost/path"}"""))
+        assertThat(url.toString()).isEqualTo("https://localhost/path")
+    }
+
+    @Test
+    fun `should be able to extract a URL out of a Postman string`() {
+        val url = urlFromPostmanValue(StringValue("https://localhost/path"))
+        assertThat(url.toString()).isEqualTo("https://localhost/path")
+    }
+
+    @Test
+    fun `should be able to get a URL out of a Postman url missing the protocol`() {
+        val url = urlFromPostmanValue(StringValue("localhost/path"))
+        assertThat(url.toString()).isEqualTo("http://localhost/path")
+    }
+
+    @Test
+    fun `should convert a Postman request with query parameters`() {
+        val postmanJSON = """{
+                "method": "POST",
+                "header": [
+                ],
+                "url": {
+                    "raw": "https://localhost?one=1"
+                }
+            }""".trimIndent()
+
+        val request = postmanItemRequest(parsedJSON(postmanJSON) as JSONObjectValue)
+
+        assertThat(request.first).isEqualTo("https://localhost")
+        assertThat(request.second.queryParams).isEqualTo(mapOf("one" to "1"))
+    }
+
+    @Test
+    fun `should convert a Postman request with a path`() {
+        val postmanJSON = """{
+                "method": "POST",
+                "header": [
+                ],
+                "url": {
+                    "raw": "https://localhost/path"
+                }
+            }""".trimIndent()
+
+        val request = postmanItemRequest(parsedJSON(postmanJSON) as JSONObjectValue)
+
+        assertThat(request.first).isEqualTo("https://localhost")
+        assertThat(request.second.path).isEqualTo("/path")
+    }
+
+    @Test
+    fun `should convert a Postman request with headers`() {
+        val postmanJSON = """{
+                "method": "POST",
+                "header": [
+                    {"key": "X-Header", "value": "10"}
+                ],
+                "url": {
+                    "raw": "https://localhost"
+                }
+            }""".trimIndent()
+
+        val request = postmanItemRequest(parsedJSON(postmanJSON) as JSONObjectValue)
+
+        assertThat(request.first).isEqualTo("https://localhost")
+        assertThat(request.second.headers).isEqualTo(mapOf("X-Header" to "10"))
+    }
+
+    @Test
+    fun `should convert a Postman request with request body`() {
+        val postmanJSON = """{
+                "method": "POST",
+                "header": [
+                ],
+                "url": {
+                    "raw": "https://localhost"
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "data"
+                }
+            }""".trimIndent()
+
+        val request = postmanItemRequest(parsedJSON(postmanJSON) as JSONObjectValue)
+
+        assertThat(request.first).isEqualTo("https://localhost")
+        assertThat(request.second.bodyString).isEqualTo("data")
+    }
+
+    @Test
+    fun `should convert a Postman request with form fields`() {
+        val postmanJSON = """{
+                "method": "POST",
+                "header": [
+                ],
+                "url": {
+                    "raw": "https://localhost"
+                },
+                "body": {
+                    "mode": "urlencoded",
+                    "urlencoded": [
+                        {"key": "name", "value": "Jane Doe"}
+                    ]
+                }
+            }""".trimIndent()
+
+        val request = postmanItemRequest(parsedJSON(postmanJSON) as JSONObjectValue)
+
+        assertThat(request.first).isEqualTo("https://localhost")
+        assertThat(request.second.formFields).isEqualTo(mapOf("name" to "Jane Doe"))
+    }
+
+    @Test
+    fun `should convert a Postman request with multiple parts`() {
+        val postmanJSON = """{
+                "method": "POST",
+                "header": [
+                ],
+                "url": {
+                    "raw": "https://localhost"
+                },
+                "body": {
+                    "mode": "formdata",
+                    "formdata": [
+                        {"key": "name", "value": "Jane Doe"}
+                    ]
+                }
+            }""".trimIndent()
+
+        val request = postmanItemRequest(parsedJSON(postmanJSON) as JSONObjectValue)
+
+        assertThat(request.first).isEqualTo("https://localhost")
+        assertThat(request.second.multiPartFormData).isEqualTo(listOf(MultiPartContentValue("name", StringValue("Jane Doe"))))
+    }
+
+    @Test
+    fun `should convert a Postman request containing a file`() {
+        val postmanJSON = """{
+                "method": "POST",
+                "header": [
+                ],
+                "url": {
+                    "raw": "https://localhost"
+                },
+                "body": {
+                    "mode": "file",
+                }
+            }""".trimIndent()
+
+        assertThatThrownBy { postmanItemRequest(parsedJSON(postmanJSON) as JSONObjectValue) }.isInstanceOf(ContractException::class.java)
+    }
+
+    @Test
+    fun `should convert a Postman response with a header`() {
+        val postmanJSON = """{
+                "code": 200,
+                "header": [
+                    {"key": "X-Data", "value": "10"}
+                ]
+            }""".trimIndent()
+
+        val response = postmanItemResponse(parsedJSON(postmanJSON) as JSONObjectValue)
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.headers).isEqualTo(mapOf("X-Data" to "10"))
+    }
+
+    @Test
+    fun `should convert a Postman response with no headers and a body`() {
+        val postmanJSON = """{
+                "code": 200,
+                "header": [
+                ],
+                "body": "{\"one\": 1}"
+            }""".trimIndent()
+
+        val response = postmanItemResponse(parsedJSON(postmanJSON) as JSONObjectValue)
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.headers).isEqualTo(mapOf<String, String>())
+        assertThat(response.body).isEqualTo(parsedJSON("""{"one": 1}"""))
+    }
+
+    @Test
+    fun `should generated named stubs from Postman examples`() {
+        val postmanRequestJSON = """{
+                "method": "POST",
+                "header": [
+                    {"key": "X-Header", "value": "10"}
+                ],
+                "url": {
+                    "raw": "https://localhost"
+                }
+            }""".trimIndent()
+
+        val postmanExampleJSON = """{
+                "name": "Original name",
+                "originalRequest": $postmanRequestJSON,
+                "code": 200,
+                "header": [
+                ]
+        }"""
+
+        val namedStubs = namedStubsFromPostmanResponses(listOf(parsedJSON(postmanExampleJSON)))
+        val stub = namedStubs.single()
+        assertThat(stub.first.host).isEqualTo("localhost")
+        assertThat(stub.first.scheme).isEqualTo("https")
+        assertThat(stub.first.port).isEqualTo(-1)
+        assertThat(stub.first.originalBaseURL).isEqualTo("https://localhost")
+
+        assertThat(stub.second.name).isEqualTo("Original name")
+
+        val request = stub.second.stub
+        assertThat(request.kafkaMessage).isNull()
+        assertThat(request.request.method).isEqualTo("POST")
+        assertThat(request.request.headers).isEqualTo(mapOf("X-Header" to "10"))
+        assertThat(request.request.path).isEqualTo("")
+
+        val response = stub.second.stub.response
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isEqualTo(EmptyString)
+        assertThat(response.headers).isEqualTo(emptyMap<String, String>())
+    }
+
     @Test
     fun `Postman to Qontract with raw format request body`() {
         val postmanContent = """{

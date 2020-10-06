@@ -58,7 +58,6 @@ internal class StubCommandTest {
 
     @Test
     fun `when contract files are not given it should load from qontract config`() {
-        every { watchMaker.make(listOf("/config/path/to/contract.qontract")) }.returns(watcher)
         every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.qontract"))
         every { fileOperations.isFile("/config/path/to/contract.qontract") }.returns(true)
         every { fileOperations.extensionIsNot("/config/path/to/contract.qontract", QONTRACT_EXTENSION) }.returns(false)
@@ -66,12 +65,10 @@ internal class StubCommandTest {
         CommandLine(stubCommand, factory).execute()
 
         verify(exactly = 1) { qontractConfig.contractStubPaths() }
-        verify(exactly = 1) { watchMaker.make(listOf("/config/path/to/contract.qontract")) }
     }
 
     @Test
     fun `when contract files are given it should not load from qontract config`() {
-        every { watchMaker.make(listOf("/parameter/path/to/contract.qontract")) }.returns(watcher)
         every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.qontract"))
         every { fileOperations.isFile("/parameter/path/to/contract.qontract") }.returns(true)
         every { fileOperations.extensionIsNot("/parameter/path/to/contract.qontract", QONTRACT_EXTENSION) }.returns(false)
@@ -79,7 +76,6 @@ internal class StubCommandTest {
         CommandLine(stubCommand, factory).execute("/parameter/path/to/contract.qontract")
 
         verify(exactly = 0) { qontractConfig.contractStubPaths() }
-        verify(exactly = 1) { watchMaker.make(listOf("/parameter/path/to/contract.qontract")) }
     }
 
     @Test

@@ -22,9 +22,20 @@ internal class CompatibleCommandKtTest {
     @MockkBean
     lateinit var fileOperations: FileOperations
 
+    @MockkBean
+    lateinit var gitCommand: GitCommand
+
     @BeforeEach
     fun testSetup() {
         every { fileOperations.read("/Users/fakeuser/newer.qontract") }.returns(trivialContract)
+    }
+
+    @Test
+    fun `error when contract file path is not in git repo`() {
+        every { gitCommand.fileIsInGitDir(any()) }.returns(false)
+        val outcome = getOlderFeature("/not/in/git.qontract", gitCommand)
+        assertThat(outcome.result).isNull()
+        assertThat(outcome.errorMessage).isEqualTo("Older contract file must be provided, or the file must be in a git directory")
     }
 
     @Test
@@ -137,17 +148,38 @@ internal class CompatibleCommandKtTest {
 
     @Test
     fun `compatibleMessage when newer is backward compatible`() {
-        val (exitCode, message) = compatibilityMessage(OutCome(Results(mutableListOf(Result.Success()))))
+        val (exitCode, message) = compatibilityMessage(Outcome(Results(mutableListOf(Result.Success()))))
         assertThat(exitCode).isZero()
         assertThat(message).isEqualTo("The newer contract is backward compatible")
     }
 
     @Test
     fun `compatibleMessage when newer is not backward compatible`() {
-        val (exitCode, message) = compatibilityMessage(OutCome(Results(mutableListOf(Result.Failure()))))
+        val (exitCode, message) = compatibilityMessage(Outcome(Results(mutableListOf(Result.Failure()))))
         assertThat(exitCode).isOne()
         assertThat(message).isEqualTo("""Tests run: 1, Passed: 0, Failed: 1
 
 The newer contract is NOT backward compatible""")
+    }
+
+    @Test
+    fun `compatibleMessage when an error hindered the outcome`() {
+        val (exitCode, message) = compatibilityMessage(Outcome(null, "ERROR"))
+        assertThat(exitCode).isOne()
+        assertThat(message).isEqualTo("""ERROR""")
+    }
+
+    @Test
+    fun `compatibleMessage when an error hindered the outcome but we are passing anyway`() {
+        val (exitCode, message) = compatibilityMessage(Outcome(Results(mutableListOf(Result.Success()))))
+        assertThat(exitCode).isZero()
+        assertThat(message).isEqualTo("The newer contract is backward compatible")
+    }
+
+    @Test
+    fun `compatibleMessage when an error hindered the outcome but we are passing anyway with a specific error message`() {
+        val (exitCode, message) = compatibilityMessage(Outcome(Results(mutableListOf(Result.Success())), "REASON"))
+        assertThat(exitCode).isZero()
+        assertThat(message).isEqualTo("REASON")
     }
 }

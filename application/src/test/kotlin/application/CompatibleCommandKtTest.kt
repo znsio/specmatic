@@ -142,7 +142,9 @@ internal class CompatibleCommandKtTest {
 
         val outcome = backwardCompatibleCommit("/Users/fakeuser/newer.qontract", "HEAD", "HEAD^1", fakeGit)
 
-        assertThat(outcome.errorMessage).isEqualTo("Could not load HEAD^1:/Users/fakeuser/newer.qontract")
+        assertThat(outcome.errorMessage).isEqualTo("""Could not load HEAD^1:/Users/fakeuser/newer.qontract because of error:
+Error: Only one commit
+        """.trimMargin())
         assertThat(outcome.result).isNull()
     }
 

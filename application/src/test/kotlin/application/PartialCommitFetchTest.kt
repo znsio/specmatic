@@ -3,7 +3,6 @@ package application
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import run.qontract.core.git.GitCommand
 
@@ -19,8 +18,8 @@ internal class PartialCommitFetchTest {
         val gitRoot = mockk<GitCommand>()
         every { gitRoot.show(commitHash, relativeContractPath) }.returns(content)
 
-        val partial = PartialCommitFetch(gitRoot, relativeContractPath, contractPath)
-        val outcome = partial.apply(commitHash)
+        val partial = getFileContentAtSpecifiedCommit(gitRoot)(relativeContractPath)(contractPath)
+        val outcome = partial(commitHash)
 
         assertThat(outcome.errorMessage).isEmpty()
         assertThat(outcome.result).isEqualTo("data")
@@ -36,10 +35,11 @@ internal class PartialCommitFetchTest {
         val gitRoot = mockk<GitCommand>()
         every { gitRoot.show(commitHash, relativeContractPath) } answers { throw Exception("Error") }
 
-        val partial = PartialCommitFetch(gitRoot, relativeContractPath, contractPath)
-        val outcome = partial.apply(commitHash)
+        val partial = getFileContentAtSpecifiedCommit(gitRoot)(relativeContractPath)(contractPath)
+        val outcome = partial(commitHash)
 
-        assertThat(outcome.errorMessage).isEqualTo("Could not load 12345:$contractPath")
+        assertThat(outcome.errorMessage).isEqualTo("""Could not load 12345:$contractPath because of error:
+Error: Error""")
         assertThat(outcome.result).isNull()
     }
 }

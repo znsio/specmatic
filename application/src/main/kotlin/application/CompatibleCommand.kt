@@ -101,13 +101,21 @@ internal fun backwardCompatibleFile(newerContractPath: String, fileOperations: F
 internal fun backwardCompatibleCommit(contractPath: String, newerCommit: String, olderCommit: String, git: GitCommand): Outcome<Results> {
     val (gitRoot, relativeContractPath) = git.relativeGitPath(contractPath)
 
-    val partial = PartialCommitFetch(gitRoot, relativeContractPath, contractPath)
+    val partial = getFileContentAtSpecifiedCommit(gitRoot)(relativeContractPath)(contractPath)
 
-    return partial.apply(newerCommit).onSuccess { newerGherkin ->
-        partial.apply(olderCommit).onSuccess { olderGherkin ->
+    return partial(newerCommit).onSuccess { newerGherkin ->
+        partial(olderCommit).onSuccess { olderGherkin ->
             Outcome(testBackwardCompatibility(Feature(olderGherkin), Feature(newerGherkin)))
         }
     }
+
+//    val partial = PartialCommitFetch(gitRoot, relativeContractPath, contractPath)
+
+//    return partial.apply(newerCommit).onSuccess { newerGherkin ->
+//        partial.apply(olderCommit).onSuccess { olderGherkin ->
+//            Outcome(testBackwardCompatibility(Feature(olderGherkin), Feature(newerGherkin)))
+//        }
+//    }
 }
 
 internal fun getOlderFeature(newerContractPath: String, git: GitCommand): Outcome<Feature> {

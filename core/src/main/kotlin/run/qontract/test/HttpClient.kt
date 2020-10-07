@@ -184,9 +184,7 @@ private suspend fun ktorResponseToHttpResponse(ktorResponse: io.ktor.client.stat
             try {
                 decodeData(ktorResponse.readBytes(), encoding, ktorResponse.charset())
             } catch (e: ClientRequestException) {
-                e.response?.let { response ->
-                    decodeData(response.readBytes(), encoding, ktorResponse.charset())
-                } ?: ""
+                decodeData(e.response.readBytes(), encoding, ktorResponse.charset())
             },
             ktorResponse.headers.toMap().mapValues { it.value.first() }.toMutableMap())
 }

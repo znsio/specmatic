@@ -5,6 +5,7 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'maven-publish'
     id 'signing'
+    id 'org.unbroken-dome.test-sets' version '3.0.1'
 }
 
 apply plugin: "jacoco"
@@ -117,4 +118,8 @@ javadoc {
     if (JavaVersion.current().isJava9Compatible()) {
         options.addBooleanOption('html5', true)
     }
+}
+
+testSets {
+    acceptanceTest
 }

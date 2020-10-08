@@ -24,8 +24,8 @@ data class CertInfo(val keyStoreFile: String = "", val keyStoreDir: String = "",
         mixinStandardHelpOptions = true,
         description = ["Start a stub server with contract"])
 class StubCommand : Callable<Unit> {
-    var stubServer: ContractStub? = null
-    var qontractKafka: QontractKafka? = null
+    var httpStub: ContractStub? = null
+    var kafkaStub: QontractKafka? = null
 
     @Autowired
     private lateinit var httpStubEngine: HTTPStubEngine
@@ -58,10 +58,10 @@ class StubCommand : Callable<Unit> {
     var startKafka: Boolean = false
 
     @Option(names = ["--kafkaHost"], description = ["Host on which to dump the stubbed kafka message"], defaultValue = "localhost", required = false)
-    var kafkaHost: String = "127.0.0.1"
+    lateinit var kafkaHost: String
 
     @Option(names = ["--kafkaPort"], description = ["Port for the Kafka stub"], defaultValue = "9093", required = false)
-    var kafkaPort: Int = 9093
+    lateinit var kafkaPort: String
 
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
@@ -87,22 +87,27 @@ class StubCommand : Callable<Unit> {
     @Autowired
     val fileOperations = FileOperations()
 
-    override fun call() = try {
-        contractPaths = loadConfig()
-        validateQontractFileExtensions(contractPaths, fileOperations)
-        startServer()
-        addShutdownHook()
+    override fun call() {
+        try {
+            contractPaths = loadConfig()
+            validateQontractFileExtensions(contractPaths, fileOperations)
+            startServer()
 
-        val watcher = watchMaker.make(contractPaths)
-        watcher.watchForChanges {
-            restartServer()
+            if(httpStub != null || kafkaStub != null) {
+                addShutdownHook()
+
+                val watcher = watchMaker.make(contractPaths)
+                watcher.watchForChanges {
+                    restartServer()
+                }
+            }
+        } catch (e: NoMatchingScenario) {
+            consoleLog(e.localizedMessage)
+        } catch (e:ContractException) {
+            consoleLog(e.report())
+        } catch (e: Throwable) {
+            consoleLog(exceptionCauseMessage(e))
         }
-    } catch (e: NoMatchingScenario) {
-        consoleLog(e.localizedMessage)
-    } catch (e:ContractException) {
-        consoleLog(e.report())
-    } catch (e: Throwable) {
-        consoleLog(exceptionCauseMessage(e))
     }
 
     private fun loadConfig() = contractPaths.ifEmpty {
@@ -115,8 +120,8 @@ class StubCommand : Callable<Unit> {
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
-        stubServer = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode)
-        qontractKafka = kafkaStubEngine.runKafkaStub(stubData, kafkaHost, kafkaPort, startKafka)
+        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode)
+        kafkaStub = kafkaStubEngine.runKafkaStub(stubData, kafkaHost, kafkaPort.toInt(), startKafka)
 
         LogTail.storeSnapshot()
     }
@@ -136,11 +141,11 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun stopServer() {
-        stubServer?.close()
-        stubServer = null
+        httpStub?.close()
+        httpStub = null
 
-        qontractKafka?.close()
-        qontractKafka = null
+        kafkaStub?.close()
+        kafkaStub = null
     }
 
     private fun addShutdownHook() {
@@ -148,8 +153,8 @@ class StubCommand : Callable<Unit> {
             override fun run() {
                 try {
                     consoleLog("Shutting down stub servers")
-                    stubServer?.close()
-                    qontractKafka?.close()
+                    httpStub?.close()
+                    kafkaStub?.close()
                 } catch (e: InterruptedException) {
                     currentThread().interrupt()
                 }
@@ -199,8 +204,11 @@ class KafkaStubEngine {
             }
             hasKafkaScenarios(features) -> {
                 val qontractKafka = when {
-                    startKafka -> QontractKafka(kafkaPort).also {
-                        consoleLog("Started local Kafka server: ${it.bootstrapServers}")
+                    startKafka -> {
+                        println("Starting local Kafka server...")
+                        QontractKafka(kafkaPort).also {
+                            consoleLog("Started local Kafka server: ${it.bootstrapServers}")
+                        }
                     }
                     else -> null
                 }

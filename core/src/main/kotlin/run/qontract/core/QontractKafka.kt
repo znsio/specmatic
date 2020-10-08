@@ -100,7 +100,7 @@ fun createTopics(topics: List<String>, bootstrapServers: String) {
     AdminClient.create(mapOf(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers)).use { adminClient ->
         for (topic in topics) {
             try {
-                val createTopicFuture = adminClient.createTopics(listOf(NewTopic(topic, 1, 1)))
+                    val createTopicFuture = adminClient.createTopics(listOf(NewTopic(topic, 1, 1)))
                 val topicCreationResult = createTopicFuture.values()[topic]
                 topicCreationResult?.get()
             } catch(e: Throwable) {

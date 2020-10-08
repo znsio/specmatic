@@ -27,7 +27,7 @@ fun producerRecord(kafkaMessage: KafkaMessage): ProducerRecord<String, String> {
 
 fun contractInfoToKafkaExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<KafkaStubData> {
     return contractInfo.flatMap { (_, mocks) ->
-        mocks.mapNotNull { it.kafkaMessage }.fold(emptyList<KafkaStubData>()) { innerStubs, kafkaMessage ->
+        mocks.mapNotNull { it.kafkaMessage }.fold(emptyList()) { innerStubs, kafkaMessage ->
             innerStubs.plus(KafkaStubData(kafkaMessage))
         }
     }

@@ -6,10 +6,7 @@ import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.pattern.parsedValue
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.NumberValue
-import run.qontract.core.value.StringValue
-import run.qontract.core.value.XMLValue
+import run.qontract.core.value.*
 import run.qontract.mock.ScenarioStub
 import run.qontract.test.HttpClient
 import java.security.KeyStore
@@ -196,6 +193,22 @@ Scenario: Square of a number
         val actualRequest = HttpRequest(method = "GET", path = "/number", formFields = mapOf("NotData" to """{"id": 10, "data": {"info": 20} }"""))
         val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(stubSetupRequest.toPattern(), HttpResponse(status = 200, body = parsedJSON("""{"10": 10}""")), feature.scenarios.single().resolver)), false)
         assertThat(response.status).isEqualTo(400)
+    }
+
+    @Test
+    fun `stub should validate expectations and serve generated xml when the namespace prefix changes`() {
+        val feature = Feature("""
+Feature: XML namespace prefix
+  Scenario: Request has namespace prefixes
+    When POST /
+    And request-body <ns1:customer xmlns:ns1="http://example.com/customer"><name>(string)</name></ns1:customer>
+    Then status 200
+        """.trimIndent())
+
+        val stubSetupRequest = HttpRequest().updateMethod("POST").updatePath("/")
+        val actualRequest = HttpRequest(method = "POST", path = "/", body = XMLNode("""<ns2:customer xmlns:ns2="http://example.com/customer"><name>John Doe</name></ns2:customer>"""))
+        val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(stubSetupRequest.toPattern(), HttpResponse.OK, feature.scenarios.single().resolver)), false)
+        assertThat(response.status).isEqualTo(200)
     }
 
     @Test

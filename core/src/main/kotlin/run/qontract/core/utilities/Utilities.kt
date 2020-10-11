@@ -67,6 +67,7 @@ fun readFile(filePath: String): String {
 
 fun parseXML(xmlData: String): Document {
     val builderFactory = DocumentBuilderFactory.newInstance()
+    builderFactory.isNamespaceAware = true
     val builder = builderFactory.newDocumentBuilder()
     builder.setErrorHandler(null)
     return removeWhiteSpace(builder.parse(InputSource(StringReader(xmlData))))

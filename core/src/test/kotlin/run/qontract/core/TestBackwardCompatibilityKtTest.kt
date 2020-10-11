@@ -495,4 +495,34 @@ Then status 200
         assertThat(results.failureCount).isZero()
         assertThat(results.success()).isTrue()
     }
+
+    @Test
+    fun `two xml contracts should be backward compatibility when the only thing changing is namespace prefixes`() {
+        val gherkin1 = """
+Feature: Contract API
+
+Scenario: api call
+When POST /data
+  And request-body <ns1:customer xmlns:ns1="http://example.com/customer"><name>(string)</name></ns1:customer>
+Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: Contract API
+
+Scenario: api call
+When POST /data
+  And request-body <ns2:customer xmlns:ns2="http://example.com/customer"><name>(string)</name></ns2:customer>
+Then status 200
+    """.trim()
+
+        val results: Results = testBackwardCompatibility(Feature(gherkin1), Feature(gherkin2))
+
+        if(results.failureCount > 0)
+            println(results.report())
+
+        assertThat(results.successCount).isOne()
+        assertThat(results.failureCount).isZero()
+        assertThat(results.success()).isTrue()
+    }
 }

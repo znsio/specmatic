@@ -27,6 +27,22 @@ internal class XMLPatternTest {
     }
 
     @Test
+    fun `generate a value with namespace intact`() {
+        val itemsType = parsedPattern("<ns1:items xmlns:ns1=\"http://example.com/items\">(string)</ns1:items>")
+
+        val xmlValue = itemsType.generate(Resolver()) as XMLNode
+
+        assertThat(xmlValue.name).isEqualTo("items")
+        assertThat(xmlValue.realName).isEqualTo("ns1:items")
+
+        assertThat(xmlValue.attributes.size).isOne()
+        assertThat(xmlValue.attributes.get("xmlns:ns1")).isEqualTo(StringValue("http://example.com/items"))
+
+        assertThat(xmlValue.nodes.size).isOne()
+        assertThat(xmlValue.nodes.first()).isInstanceOf(StringValue::class.java)
+    }
+
+    @Test
     fun `should fail to match nulls gracefully`() {
         NullValue shouldNotMatch XMLPattern("<data></data>")
     }

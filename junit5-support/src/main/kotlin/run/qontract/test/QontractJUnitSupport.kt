@@ -17,8 +17,6 @@ import run.qontract.stub.testKafkaMessages
 import java.io.File
 import kotlin.system.exitProcess
 
-val pass = Unit
-
 open class QontractJUnitSupport {
     companion object {
         const val CONTRACT_PATHS = "contractPaths"

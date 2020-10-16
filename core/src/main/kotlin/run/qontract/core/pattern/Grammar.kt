@@ -5,7 +5,7 @@ import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.*
 
 const val XML_ATTR_OPTIONAL_SUFFIX = ".opt"
-private const val DEFAULT_OPTIONAL_SUFFIX = "?"
+const val DEFAULT_OPTIONAL_SUFFIX = "?"
 
 internal fun withoutOptionality(key: String): String {
     return when {

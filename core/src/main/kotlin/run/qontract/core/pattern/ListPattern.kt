@@ -28,7 +28,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         }.find {
             it.result is Result.Failure
         }?.let {
-            it.result.breadCrumb("[$it.index]")
+            it.result.breadCrumb("[${it.index}]")
         } ?: Result.Success()
     }
 

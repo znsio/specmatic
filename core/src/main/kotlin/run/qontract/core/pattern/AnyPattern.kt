@@ -14,8 +14,18 @@ data class AnyPattern(override val pattern: List<Pattern>, val key: String? = nu
         pattern.asSequence().map {
             resolver.matchesPattern(key, it, sampleData ?: EmptyString)
         }.let { results ->
-            results.find { it is Result.Success } ?: failedToFindAny(typeName, results.map { it as Result.Failure }.toList(), sampleData)
+            results.find { it is Result.Success } ?: failedToFindAny(typeName, getResult(results.map { it as Result.Failure }.toList()))
         }
+
+    private fun getResult(failures: List<Result.Failure>): List<Result.Failure> = when {
+        isNullablePattern() -> {
+            val index = pattern.indexOfFirst { it.typeAlias != "(empty)" }
+            listOf(failures[index])
+        }
+        else -> failures
+    }
+
+    private fun isNullablePattern() = pattern.size == 2 && pattern.any { it.typeAlias == "(empty)" }
 
     override fun generate(resolver: Resolver): Value =
             when(key) {
@@ -47,8 +57,8 @@ data class AnyPattern(override val pattern: List<Pattern>, val key: String? = nu
 
     override val typeName: String
         get() {
-            return if(pattern.size == 2 && NullPattern in pattern) {
-                val concreteTypeName = withoutPatternDelimiters(pattern.filterNot { it is NullPattern }.first().typeName)
+            return if(pattern.size == 2 && isNullablePattern()) {
+                val concreteTypeName = withoutPatternDelimiters(pattern.filterNot { it is NullPattern || it.typeAlias == "(empty)" }.first().typeName)
                 "($concreteTypeName?)"
             }
             else
@@ -56,9 +66,12 @@ data class AnyPattern(override val pattern: List<Pattern>, val key: String? = nu
         }
 }
 
-private fun failedToFindAny(description: String, results: List<Result.Failure>, sampleData: Value?): Result.Failure {
-    val report = results.joinToString("\n") { it.message }
-
-    return Result.Failure("""${sampleData?.displayableValue()} failed to match $description
-$report""".trim())
-}
+private fun failedToFindAny(description: String, results: List<Result.Failure>): Result.Failure =
+        when(results.size) {
+            1 -> results[0]
+            else -> {
+                val report = results.joinToString("\n") { it.message }
+                Result.Failure("""Expected $description, 
+    $report""".trim())
+            }
+        }

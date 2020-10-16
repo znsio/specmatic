@@ -15,6 +15,7 @@ import run.qontract.core.Feature
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.QONTRACT_RESULT_HEADER
+import run.qontract.core.pattern.XML_ATTR_OPTIONAL_SUFFIX
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
@@ -334,7 +335,7 @@ Then status 200
         val gherkin = """Feature: Number
 Scenario: Accept a number
 When POST /number
-And request-body <data number:optional="(number)"/>
+And request-body <data number$XML_ATTR_OPTIONAL_SUFFIX="(number)"/>
 Then status 200
         """.trim()
 
@@ -353,7 +354,7 @@ Then status 200
         val gherkin = """Feature: Number
 Scenario: Accept a number
 When POST /number
-And request-body <data number:optional="(number)"/>
+And request-body <data number$XML_ATTR_OPTIONAL_SUFFIX="(number)"/>
 Then status 200
         """.trim()
 

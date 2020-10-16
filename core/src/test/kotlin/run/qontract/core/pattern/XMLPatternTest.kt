@@ -27,6 +27,22 @@ internal class XMLPatternTest {
     }
 
     @Test
+    fun `generate a value with namespace intact`() {
+        val itemsType = parsedPattern("<ns1:items xmlns:ns1=\"http://example.com/items\">(string)</ns1:items>")
+
+        val xmlValue = itemsType.generate(Resolver()) as XMLNode
+
+        assertThat(xmlValue.name).isEqualTo("items")
+        assertThat(xmlValue.realName).isEqualTo("ns1:items")
+
+        assertThat(xmlValue.attributes.size).isOne()
+        assertThat(xmlValue.attributes.get("xmlns:ns1")).isEqualTo(StringValue("http://example.com/items"))
+
+        assertThat(xmlValue.nodes.size).isOne()
+        assertThat(xmlValue.nodes.first()).isInstanceOf(StringValue::class.java)
+    }
+
+    @Test
     fun `should fail to match nulls gracefully`() {
         NullValue shouldNotMatch XMLPattern("<data></data>")
     }
@@ -284,14 +300,14 @@ internal class XMLPatternTest {
 
     @Test
     fun `optional attribute encompasses non optional`() {
-        val bigger = XMLPattern("""<number val:optional="(number)">(number)</number>""")
+        val bigger = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)">(number)</number>""")
         val smaller = XMLPattern("""<number val="(number)">(number)</number>""")
         assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `optional attribute should pick up example value`() {
-        val type = XMLPattern("""<number val:optional="(number)"></number>""")
+        val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
         val example = Row(listOf("val"), listOf("10"))
 
         val newTypes = type.newBasedOn(example, Resolver())
@@ -303,7 +319,7 @@ internal class XMLPatternTest {
 
     @Test
     fun `optional attribute without examples should generate two tests`() {
-        val type = XMLPattern("""<number val:optional="(number)"></number>""")
+        val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
 
         val newTypes = type.newBasedOn(Row(), Resolver())
         assertThat(newTypes.size).isEqualTo(2)
@@ -324,7 +340,7 @@ internal class XMLPatternTest {
 
     @Test
     fun `sanity test that double optional gets handled right`() {
-        val type = XMLPattern("""<number val:optional:optional="(number)"></number>""")
+        val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
 
         val newTypes = type.newBasedOn(Row(), Resolver())
         assertThat(newTypes.size).isEqualTo(2)
@@ -333,7 +349,7 @@ internal class XMLPatternTest {
 
         for(newType in newTypes) {
             when {
-                newType.pattern.attributes.containsKey("val:optional") -> flags.add("with")
+                newType.pattern.attributes.containsKey("val$XML_ATTR_OPTIONAL_SUFFIX") -> flags.add("with")
                 else -> flags.add("without")
             }
         }

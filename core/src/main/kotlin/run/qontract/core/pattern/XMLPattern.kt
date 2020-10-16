@@ -8,7 +8,7 @@ import run.qontract.core.value.Value
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.XMLValue
 
-fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, attributeTypeMap(node), nodeTypes(node))
+fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, node.realName, attributeTypeMap(node), nodeTypes(node))
 
 private fun nodeTypes(node: XMLNode): List<Pattern> {
     return node.nodes.map {
@@ -25,7 +25,7 @@ private fun attributeTypeMap(node: XMLNode): Map<String, Pattern> {
     }
 }
 
-data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), override val typeAlias: String? = null) : Pattern, SequenceType {
+data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName = ""), override val typeAlias: String? = null) : Pattern, SequenceType {
     constructor(node: XMLNode, typeAlias: String? = null): this(toTypeData(node), typeAlias)
     constructor(xmlString: String, typeAlias: String? = null): this(XMLNode(parseXML(xmlString)), typeAlias)
 
@@ -36,7 +36,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
         if(sampleData.name != pattern.name)
             return mismatchResult(pattern.name, sampleData.name).breadCrumb(pattern.name)
 
-        val missingKey = resolver.findMissingKey(pattern.attributes, sampleData.attributes, ::validateUnexpectedKeys)
+        val missingKey = resolver.findMissingKey(ignoreXMLNamespaces(pattern.attributes), ignoreXMLNamespaces(sampleData.attributes), ::validateUnexpectedKeys)
         if(missingKey != null)
             return missingKeyToResult(missingKey, "attribute").breadCrumb(pattern.name)
 
@@ -77,7 +77,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
     }
 
     private fun matchAttributes(pattern: XMLTypeData, sampleData: XMLNode, resolver: Resolver): Result =
-            mapZip(pattern.attributes, sampleData.attributes).asSequence().map { (key, patternValue, sampleValue) ->
+            mapZip(ignoreXMLNamespaces(pattern.attributes), ignoreXMLNamespaces(sampleData.attributes)).asSequence().map { (key, patternValue, sampleValue) ->
                 try {
                     val resolvedValue: Value = when {
                         sampleValue.isPatternToken() -> sampleValue.trimmed()
@@ -89,11 +89,14 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
                 }.breadCrumb(key).breadCrumb(pattern.name)
             }.find { it is Result.Failure } ?: Result.Success()
 
+    private fun <ValueType> ignoreXMLNamespaces(attributes: Map<String, ValueType>): Map<String, ValueType> =
+            attributes.filterNot { it.key.toLowerCase().startsWith("xmlns:") }
+
     private fun expectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver) =
             sampleData.nodes.isEmpty() && pattern.nodes.size == 1 && (EmptyStringPattern in type.patternSet(resolver).map { resolvedHop(it, resolver) })
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
-        return XMLNode("", emptyMap(), valueList.map { it as XMLNode })
+        return XMLNode("", "", emptyMap(), valueList.map { it as XMLNode })
     }
 
     override fun generate(resolver: Resolver): XMLNode {
@@ -121,7 +124,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
             }
         }
 
-        return XMLNode(name, newAttributes, nodes)
+        return XMLNode(name, pattern.realName, newAttributes, nodes)
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<XMLPattern> {
@@ -157,7 +160,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(), overrid
             }
 
             newNodesList.map { newNodes ->
-                XMLPattern(XMLTypeData(pattern.name, newAttributes, newNodes))
+                XMLPattern(XMLTypeData(pattern.name, pattern.realName, newAttributes, newNodes))
             }
         }
     }

@@ -18,7 +18,7 @@ fun XMLNode(document: Document): XMLNode {
 fun XMLNode(node: Node): XMLValue {
     return when (node.nodeType) {
         Node.TEXT_NODE -> StringValue(node.textContent)
-        else -> XMLNode(node.nodeName, attributes(node), nodes(node))
+        else -> XMLNode(node.localName ?: node.nodeName, node.nodeName, attributes(node), nodes(node))
     }
 }
 
@@ -43,7 +43,7 @@ fun XMLNode(xmlData: String): XMLNode {
     return XMLNode(document)
 }
 
-data class XMLNode(val name: String, val attributes: Map<String, StringValue>, val nodes: List<XMLValue>) : XMLValue, ListValue {
+data class XMLNode(val name: String, val realName: String, val attributes: Map<String, StringValue>, val nodes: List<XMLValue>) : XMLValue, ListValue {
     override val httpContentType: String = "text/xml"
 
     override val list: List<Value>
@@ -51,6 +51,7 @@ data class XMLNode(val name: String, val attributes: Map<String, StringValue>, v
 
     private fun build(): Document {
         val factory = DocumentBuilderFactory.newInstance()
+        factory.isNamespaceAware = true
         val builder = factory.newDocumentBuilder()
 
         val document = builder.newDocument()
@@ -62,7 +63,7 @@ data class XMLNode(val name: String, val attributes: Map<String, StringValue>, v
     }
 
     override fun build(document: Document): Node {
-        val newElement = document.createElement(name)
+        val newElement = document.createElement(realName)
 
         for(entry in attributes) {
             newElement.setAttribute(entry.key, entry.value.toStringValue())
@@ -103,7 +104,7 @@ data class XMLNode(val name: String, val attributes: Map<String, StringValue>, v
     }
 
     override fun listOf(valueList: List<Value>): Value {
-        return XMLNode("", emptyMap(), valueList.map { it as XMLNode })
+        return XMLNode("", "", emptyMap(), valueList.map { it as XMLNode })
     }
 
     override fun toString(): String = toStringValue()

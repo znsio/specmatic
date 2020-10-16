@@ -95,8 +95,8 @@ internal val checkAllKeys = { pattern: Map<String, Any>, actual: Map<String, Any
 
 fun missingKeyToResult(keyError: KeyError, keyLabel: String): Result.Failure {
     val message = when(keyError) {
-        is MissingKeyError -> "Expected ${keyLabel.toLowerCase()} ${keyError.name} was missing"
-        is UnexpectedKeyError -> "${keyLabel.toLowerCase().capitalize()} ${keyError.name} was unexpected"
+        is MissingKeyError -> "Expected ${keyLabel.toLowerCase()} named \"${keyError.name}\" was missing"
+        is UnexpectedKeyError -> "${keyLabel.toLowerCase().capitalize()} named \"${keyError.name}\" was unexpected"
     }
 
     return Result.Failure(message)

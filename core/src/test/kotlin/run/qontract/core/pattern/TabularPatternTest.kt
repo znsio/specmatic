@@ -287,6 +287,31 @@ Given request-body
     }
 
     @Test
+    fun `error message when a json object does not match nullable primitive such as string in the contract`() {
+        val feature = Feature("""
+Feature: test feature
+  Scenario: api call
+    Given type Request
+    | name | (string?) |
+    When POST /
+    And request-body (Request)
+    Then status 200
+""".trim())
+
+        val request = HttpRequest("POST", "/", body = parsedValue("""{"name": {"firstname": "Jane", "lastname": "Doe"}}"""))
+
+        val resolver = feature.scenarios.single().resolver
+        val result = feature.scenarios.single().httpRequestPattern.matches(request, resolver)
+
+        assertThat(resultReport(result)).isEqualTo(""">> REQUEST.BODY.name
+
+Expected string, actual was json object: {
+    "firstname": "Jane",
+    "lastname": "Doe"
+}""")
+    }
+
+    @Test
     fun `tabular type with recursive type definition should be validated without an infinite loop`() {
         val gherkin = """
 Feature: Recursive test

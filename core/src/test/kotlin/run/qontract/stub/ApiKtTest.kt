@@ -432,7 +432,7 @@ Feature: Math API
     In scenario "Square of a number"
     >> REQUEST.BODY
   
-    Key unexpected was unexpected""")
+    Key named "unexpected" was unexpected""")
     }
 
     @Test
@@ -455,7 +455,7 @@ Feature: Math API
     In scenario "Square of a number"
     >> RESPONSE.BODY
   
-    Key unexpected was unexpected""")
+    Key named "unexpected" was unexpected""")
     }
 
     @Test

@@ -66,7 +66,7 @@ class FeatureTest {
         assertThat(httpResponse.body.toStringValue()).isEqualTo("""In scenario "Get balance info"
 >> REQUEST.HEADERS
 
-Expected header x-loginId was missing""".trimIndent())
+Expected header named "x-loginId" was missing""".trimIndent())
     }
 
     @Test

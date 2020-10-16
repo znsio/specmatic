@@ -19,13 +19,15 @@ data class AnyPattern(override val pattern: List<Pattern>, val key: String? = nu
 
     private fun getResult(failures: List<Result.Failure>): List<Result.Failure> = when {
         isNullablePattern() -> {
-            val index = pattern.indexOfFirst { it.typeAlias != "(empty)" }
+            val index = pattern.indexOfFirst { !isEmpty(it) }
             listOf(failures[index])
         }
         else -> failures
     }
 
-    private fun isNullablePattern() = pattern.size == 2 && pattern.any { it.typeAlias == "(empty)" }
+    private fun isNullablePattern() = pattern.size == 2 && pattern.any { isEmpty(it) }
+
+    private fun isEmpty(it: Pattern) = it.typeAlias == "(empty)" || it is NullPattern
 
     override fun generate(resolver: Resolver): Value =
             when(key) {

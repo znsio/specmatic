@@ -45,7 +45,7 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
                     return MatchFailure(Result.Failure(e.localizedMessage, breadCrumb = keyWithoutOptionality))
                 }
                 !key.endsWith("?") ->
-                    return MatchFailure(Result.Failure(message = """Header $key was missing""", breadCrumb = key))
+                    return MatchFailure(missingKeyToResult(MissingKeyError(key), "header").breadCrumb(key))
             }
         }
 
@@ -104,7 +104,7 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
     private fun checkMissingHeaders(myRequiredKeys: List<String>, otherRequiredKeys: List<String>): Result =
             when(val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }) {
                 null -> Result.Success()
-                else -> Result.Failure("Header $missingFixedKey was missing", breadCrumb = missingFixedKey)
+                else -> missingKeyToResult(MissingKeyError(missingFixedKey), "header").breadCrumb(missingFixedKey)
             }
 }
 

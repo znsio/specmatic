@@ -91,7 +91,7 @@ internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<
 
     val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
     if (missingFixedKey != null)
-        return Result.Failure("Key $missingFixedKey was missing").breadCrumb(missingFixedKey)
+        return missingKeyToResult(MissingKeyError(missingFixedKey), "key").breadCrumb(missingFixedKey)
 
     return pattern.keys.asSequence().map { key ->
         val bigger = pattern.getValue(key)

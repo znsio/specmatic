@@ -55,7 +55,7 @@ internal class HttpHeadersPatternTest {
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
             assertThat((it as Result.Failure).report())
-                    .isEqualTo(FailureReport(listOf("HEADERS"), listOf("Expected header key was missing")))
+                    .isEqualTo(FailureReport(listOf("HEADERS"), listOf("Expected header named \"key\" was missing")))
         }
     }
 

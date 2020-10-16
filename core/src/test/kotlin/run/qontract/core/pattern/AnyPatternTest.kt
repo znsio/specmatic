@@ -3,8 +3,11 @@ package run.qontract.core.pattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import run.qontract.core.HttpRequest
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.resultReport
+import run.qontract.core.utilities.withNullPattern
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
@@ -21,6 +24,38 @@ internal class AnyPatternTest {
 
         string shouldMatch pattern
         number shouldMatch pattern
+    }
+
+    @Test
+    fun `error message when a json object does not match nullable primitive such as string in the contract`() {
+        val pattern1 = AnyPattern(listOf(NullPattern, StringPattern))
+        val pattern2 = AnyPattern(listOf(DeferredPattern("(empty)"), StringPattern))
+
+        val value = parsedValue("""{"firstname": "Jane", "lastname": "Doe"}""")
+
+        val resolver = withNullPattern(Resolver())
+
+        val result1 = pattern1.matches(value, resolver)
+        val result2 = pattern2.matches(value, resolver)
+
+        assertThat(resultReport(result2)).isEqualTo("""Expected string, actual was json object: {
+    "firstname": "Jane",
+    "lastname": "Doe"
+}""")
+
+        assertThat(resultReport(result1)).isEqualTo("""Expected string, actual was json object: {
+    "firstname": "Jane",
+    "lastname": "Doe"
+}""")
+    }
+
+    @Test
+    fun `typename of a nullable type`() {
+        val pattern1 = AnyPattern(listOf(NullPattern, StringPattern))
+        val pattern2 = AnyPattern(listOf(DeferredPattern("(empty)"), StringPattern))
+
+        assertThat(pattern1.typeName).isEqualTo("(string?)")
+        assertThat(pattern2.typeName).isEqualTo("(string?)")
     }
 
     @Test

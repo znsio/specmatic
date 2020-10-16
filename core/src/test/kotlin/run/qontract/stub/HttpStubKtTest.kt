@@ -59,7 +59,7 @@ Feature: POST API
         assertThat(stubResponse.body).isEqualTo(StringValue("""In scenario "Test"
 >> REQUEST.BODY
 
-Key undeclared was unexpected"""))
+Key named "undeclared" was unexpected"""))
     }
 
     @Test
@@ -118,7 +118,7 @@ Scenario: Square of a number
         assertThat(response.body).isEqualTo(StringValue("""In scenario "Square of a number"
 >> REQUEST.BODY
 
-Key unexpected was unexpected"""))
+Key named "unexpected" was unexpected"""))
     }
 
     @Test
@@ -146,7 +146,7 @@ Scenario: Square of a number
 
 >> REQUEST.URL.QUERY-PARAMS
 
-Expected query param status was missing""")
+Expected query param named "status" was missing""")
     }
 
     @Test

@@ -46,7 +46,6 @@ dependencies {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
     implementation 'info.picocli:picocli:4.5.2'
-    implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-network-tls:$ktor_version"
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"

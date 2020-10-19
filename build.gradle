@@ -77,8 +77,7 @@ tasks.withType(JavaCompile) {
 repositories {
     mavenCentral()
 }
-dependencies {
-}
+
 compileKotlin {
     kotlinOptions {
         jvmTarget = "1.8"
@@ -90,4 +89,3 @@ compileTestKotlin {
         jvmTarget = "1.8"
     }
 }
-

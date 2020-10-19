@@ -28,18 +28,16 @@ def jgit_version = "5.9.0.202009080501-r"
 
 def junit_version = "5.7.0"
 def testcontainers_version = "1.15.0-rc2"
-//def testcontainers_version = "1.14.3"
 
 dependencies {
     implementation 'io.cucumber:gherkin:15.0.2'
-    implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation "io.ktor:ktor-server-netty:$ktor_version"
     implementation "io.ktor:ktor-server-core:$ktor_version"
     implementation "io.ktor:ktor-client-core-jvm:$ktor_version"
     implementation "io.ktor:ktor-client-apache:$ktor_version"
     implementation "io.ktor:ktor-client-features:$ktor_version"
 
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.0.0'
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.0.0"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 

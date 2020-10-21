@@ -1,10 +1,10 @@
 package run.qontract.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
@@ -357,5 +357,13 @@ internal class XMLPatternTest {
         assertThat(flags.size).isEqualTo(2)
         assertThat(flags).contains("with")
         assertThat(flags).contains("without")
+    }
+
+    @Test
+    fun `unbound namespace should be parsed`() {
+        val xml = """<ns1:name>(string)</ns1:name>"""
+        val type = parsedPattern(xml)
+
+        assertThat(type.matches(parsedValue(xml), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

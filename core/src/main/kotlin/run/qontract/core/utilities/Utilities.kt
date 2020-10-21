@@ -28,6 +28,7 @@ import run.qontract.core.value.Value
 import java.io.File
 import java.io.StringReader
 import java.io.StringWriter
+import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
 import javax.xml.transform.TransformerFactory
@@ -66,11 +67,16 @@ fun readFile(filePath: String): String {
 }
 
 fun parseXML(xmlData: String): Document {
+    val builder = newBuilder()
+    return removeWhiteSpace(builder.parse(InputSource(StringReader(xmlData))))
+}
+
+internal fun newBuilder(): DocumentBuilder {
     val builderFactory = DocumentBuilderFactory.newInstance()
-    builderFactory.isNamespaceAware = true
+//    builderFactory.isNamespaceAware = true
     val builder = builderFactory.newDocumentBuilder()
     builder.setErrorHandler(null)
-    return removeWhiteSpace(builder.parse(InputSource(StringReader(xmlData))))
+    return builder
 }
 
 fun removeWhiteSpace(document: Document): Document {

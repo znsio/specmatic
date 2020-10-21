@@ -6,6 +6,7 @@ import org.w3c.dom.Node
 import run.qontract.core.ExampleDeclarations
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.XMLPattern
+import run.qontract.core.utilities.newBuilder
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.utilities.xmlToString
 import javax.xml.parsers.DocumentBuilderFactory
@@ -18,9 +19,12 @@ fun XMLNode(document: Document): XMLNode {
 fun XMLNode(node: Node): XMLValue {
     return when (node.nodeType) {
         Node.TEXT_NODE -> StringValue(node.textContent)
-        else -> XMLNode(node.localName ?: node.nodeName, node.nodeName, attributes(node), nodes(node))
+        else -> XMLNode(node.nodeName, attributes(node), nodes(node))
     }
 }
+
+private fun xmlNameWithoutNamespace(name: String): String =
+        name.substringAfter(':')
 
 private fun nodes(node: Node): List<XMLValue> {
     return 0.until(node.childNodes.length).map {
@@ -44,17 +48,15 @@ fun XMLNode(xmlData: String): XMLNode {
 }
 
 data class XMLNode(val name: String, val realName: String, val attributes: Map<String, StringValue>, val nodes: List<XMLValue>) : XMLValue, ListValue {
+    constructor(realName: String, attributes: Map<String, StringValue>, nodes: List<XMLValue>) : this(xmlNameWithoutNamespace(realName), realName, attributes, nodes)
+
     override val httpContentType: String = "text/xml"
 
     override val list: List<Value>
         get() = nodes
 
     private fun build(): Document {
-        val factory = DocumentBuilderFactory.newInstance()
-        factory.isNamespaceAware = true
-        val builder = factory.newDocumentBuilder()
-
-        val document = builder.newDocument()
+        val document = newBuilder().newDocument()
 
         val node = build(document)
         document.appendChild(node)

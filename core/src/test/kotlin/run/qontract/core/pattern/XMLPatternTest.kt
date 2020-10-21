@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.Result
+import run.qontract.core.resultReport
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
@@ -365,5 +366,15 @@ internal class XMLPatternTest {
         val type = parsedPattern(xml)
 
         assertThat(type.matches(parsedValue(xml), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `node with string should match empty node`() {
+        val type = parsedPattern("""<name>(string)</name>""")
+        val value = parsedValue("""<name/>""")
+
+        val result = type.matches(value, Resolver())
+        println(resultReport(result))
+        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 }

@@ -92,8 +92,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     private fun <ValueType> ignoreXMLNamespaces(attributes: Map<String, ValueType>): Map<String, ValueType> =
             attributes.filterNot { it.key.toLowerCase().startsWith("xmlns:") }
 
-    private fun expectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver) =
-            sampleData.nodes.isEmpty() && pattern.nodes.size == 1 && (EmptyStringPattern in type.patternSet(resolver).map { resolvedHop(it, resolver) })
+    private fun expectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver): Boolean {
+        val resolvedPatternSet = type.patternSet(resolver).map { resolvedHop(it, resolver) }
+        return sampleData.nodes.isEmpty() && pattern.nodes.size == 1 && (EmptyStringPattern in resolvedPatternSet || StringPattern in resolvedPatternSet)
+    }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return XMLNode("", "", emptyMap(), valueList.map { it as XMLNode })

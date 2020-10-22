@@ -70,20 +70,20 @@ class HttpClient(private val baseURL: String, private val timeout: Int = 60, pri
                             this.headers[key] = value
                 }
 
-                when {
+                this.body = when {
                     requestWithFileContent.formFields.isNotEmpty() -> {
                         val parameters = requestWithFileContent.formFields.mapValues { listOf(it.value) }.toList()
-                        this.body = FormDataContent(parametersOf(*parameters.toTypedArray()))
+                        FormDataContent(parametersOf(*parameters.toTypedArray()))
                     }
                     requestWithFileContent.multiPartFormData.isNotEmpty() -> {
-                        this.body = MultiPartFormDataContent(formData {
+                        MultiPartFormDataContent(formData {
                             requestWithFileContent.multiPartFormData.forEach { value ->
                                 value.addTo(this)
                             }
                         })
                     }
                     else -> {
-                        this.body = when {
+                        when {
                             requestWithFileContent.headers.containsKey("Content-Type") -> TextContent(requestWithFileContent.bodyString, ContentType.parse(requestWithFileContent.headers["Content-Type"] as String))
                             else -> TextContent(requestWithFileContent.bodyString, ContentType.parse(requestWithFileContent.body.httpContentType))
                         }

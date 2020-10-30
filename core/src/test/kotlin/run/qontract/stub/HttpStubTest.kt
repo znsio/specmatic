@@ -1,6 +1,7 @@
 package run.qontract.stub
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import org.springframework.http.HttpHeaders
@@ -22,7 +23,7 @@ import run.qontract.core.value.StringValue
 import run.qontract.mock.ScenarioStub
 import run.qontract.test.HttpClient
 import java.net.URI
-import kotlin.test.expect
+import java.util.*
 import kotlin.time.DurationUnit
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
@@ -206,6 +207,77 @@ And response-body (string)
                 }
 
                 assertThat(duration.toLong(DurationUnit.MILLISECONDS)).isGreaterThanOrEqualTo(1000L)
+            }
+        } catch(e: HttpClientErrorException) {
+            fail("Threw an exception: ${e.message}")
+        }
+    }
+
+    @ExperimentalTime
+    @RepeatedTest(2)
+    fun `the delay in one expectation should not block other expectations responses`() {
+        val gherkin = """Feature: Data API
+Scenario: Return data
+When GET /data/(id:number)
+Then status 200
+And response-body (string)
+        """.trim()
+
+        try {
+            val delayInSeconds = 3
+            val delayInMilliseconds = delayInSeconds * 1000
+
+            HttpStub(gherkin).use { fake ->
+                val expectation = """ {
+"http-request": {
+    "method": "GET",
+    "path": "/data/1"
+}, 
+"http-response": {
+    "status": 200,
+    "body": "123"
+},
+"delay": "$delayInSeconds seconds"
+}""".trimIndent()
+
+                val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_qontract/expectations", expectation)
+                assertThat(stubResponse.statusCode.value()).isEqualTo(200)
+
+                data class TimedResponse(val id: Int, val duration: Long, val body: String)
+
+                val responses = Vector<TimedResponse>()
+
+                val threads = (1..10).map {
+                    Thread {
+                        var response: String
+
+                        val duration = measureTime {
+                            val postResponse = RestTemplate().getForEntity<String>(URI.create(fake.endPoint + "/data/${it}"))
+                            assertThat(postResponse.statusCode.value()).isEqualTo(200)
+                            response = postResponse.body ?: ""
+                        }
+
+                        val durationAsLong = duration.toLong(DurationUnit.MILLISECONDS)
+                        responses.add(TimedResponse(it, durationAsLong, response))
+                    }
+                }
+
+                threads.forEach { it.start() }
+                threads.forEach { it.join() }
+
+                responses.forEach {
+                    println(it)
+                }
+
+                assertThat(responses.size).isEqualTo(10)
+
+                val delayedResponses = responses.filter { it.duration >= delayInMilliseconds }
+                assertThat(delayedResponses.size).isOne
+
+                delayedResponses.single().let { response ->
+                    assertThat(response.id).isEqualTo(1)
+                    assertThat(response.body).isEqualTo("123")
+                }
             }
         } catch(e: HttpClientErrorException) {
             fail("Threw an exception: ${e.message}")

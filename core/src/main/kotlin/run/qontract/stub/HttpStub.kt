@@ -115,7 +115,9 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         }
     }
 
-    private val server: ApplicationEngine = embeddedServer(Netty, environment)
+    private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
+        this.callGroupSize = 20
+    })
 
     private fun handleFetchLoadLogRequest(): HttpStubResponse =
             HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getSnapshot())), "")

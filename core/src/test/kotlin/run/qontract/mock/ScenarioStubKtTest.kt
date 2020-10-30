@@ -784,7 +784,7 @@ internal class ScenarioStubKtTest {
     "status": 200
   },
   
-  "delay in seconds": 10
+  "$DELAY_IN_SECONDS": 10
 }
         """.trim()
 

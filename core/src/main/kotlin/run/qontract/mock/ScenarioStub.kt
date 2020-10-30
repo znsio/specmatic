@@ -21,6 +21,8 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
 const val MOCK_KAFKA_MESSAGE = "kafka-message"
 const val MOCK_HTTP_REQUEST = "http-request"
 const val MOCK_HTTP_RESPONSE = "http-response"
+const val DELAY_IN_SECONDS = "delay-in-seconds"
+
 val MOCK_HTTP_REQUEST_ALL_KEYS = listOf("mock-http-request", MOCK_HTTP_REQUEST)
 val MOCK_HTTP_RESPONSE_ALL_KEYS = listOf("mock-http-response", MOCK_HTTP_RESPONSE)
 
@@ -38,7 +40,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
             val mockRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
             val mockResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
 
-            val delayInSeconds = getIntOrNull("delay in seconds", mockSpec)
+            val delayInSeconds = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
 
             ScenarioStub(request = mockRequest, response = mockResponse, delayInSeconds = delayInSeconds)
         }

@@ -20,6 +20,7 @@ import run.qontract.core.pattern.XML_ATTR_OPTIONAL_SUFFIX
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
+import run.qontract.mock.DELAY_IN_SECONDS
 import run.qontract.mock.ScenarioStub
 import run.qontract.test.HttpClient
 import java.net.URI
@@ -194,7 +195,7 @@ And response-body (string)
     "status": 200,
     "body": "123"
 },
-"delay in seconds": 1
+"$DELAY_IN_SECONDS": 1
 }""".trimIndent()
 
                 val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_qontract/expectations", expectation)
@@ -237,7 +238,7 @@ And response-body (string)
     "status": 200,
     "body": "123"
 },
-"delay in seconds": $delayInSeconds
+"$DELAY_IN_SECONDS": $delayInSeconds
 }""".trimIndent()
 
                 val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_qontract/expectations", expectation)

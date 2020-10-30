@@ -770,6 +770,46 @@ internal class ScenarioStubKtTest {
 
         assertThatThrownBy { mockFromJSON(jsonStringToValueMap(stubText)) }.isInstanceOf(ContractException::class.java)
     }
+
+    @Test
+    fun `load delay from stub info`() {
+        val stubText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square"
+  },
+
+  "http-response": {
+    "status": 200
+  },
+  
+  "delay": "10 seconds"
+}
+        """.trim()
+
+        val scenarioStub = mockFromJSON(jsonStringToValueMap(stubText))
+        assertThat(scenarioStub.delay).isEqualTo("10 seconds")
+    }
+
+    @Test
+    fun `stub with no delay should result in empty delay value in loaded stub`() {
+        val stubText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square"
+  },
+
+  "http-response": {
+    "status": 200
+  }
+}
+        """.trim()
+
+        val scenarioStub = mockFromJSON(jsonStringToValueMap(stubText))
+        assertThat(scenarioStub.delay).isNull()
+    }
 }
 
 fun validateStubAndQontract(request: HttpRequest, response: HttpResponse, expectedGherkin: String? = null) {

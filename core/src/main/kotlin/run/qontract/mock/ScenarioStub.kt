@@ -7,7 +7,7 @@ import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
-data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null) {
+data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null, val delay: String? = null) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
         if(kafkaMessage != null) {
@@ -40,8 +40,14 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
         else -> {
             val mockRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
             val mockResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
+            val delay = mockSpec["delay"]?.toStringValue()?.trim()?.toLowerCase()
 
-            ScenarioStub(request = mockRequest, response = mockResponse)
+            delay?.let {
+                if(! it.endsWith(" seconds"))
+                    throw ContractException("The delay value must always be a string of the format \"N seconds\", e.g. \"10 seconds\"")
+            }
+
+            ScenarioStub(request = mockRequest, response = mockResponse, delay = delay)
         }
     }
 }

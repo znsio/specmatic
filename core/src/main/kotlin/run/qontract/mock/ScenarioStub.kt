@@ -8,6 +8,18 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 
 data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null, val delay: String? = null) {
+    val delayInSeconds: Long?
+        get() = delay?.let {
+            return when(val substring = it.trim().substringBefore(' ')) {
+                "" -> null
+                else -> try {
+                    substring.toLong()
+                } catch(e: Throwable) {
+                    null
+                }
+            }
+        }
+
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
         if(kafkaMessage != null) {

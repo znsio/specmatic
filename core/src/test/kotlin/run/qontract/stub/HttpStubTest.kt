@@ -22,6 +22,10 @@ import run.qontract.core.value.StringValue
 import run.qontract.mock.ScenarioStub
 import run.qontract.test.HttpClient
 import java.net.URI
+import kotlin.test.expect
+import kotlin.time.DurationUnit
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTime
 
 internal class HttpStubTest {
     @Test
@@ -166,6 +170,46 @@ And response-body (string)
         }
 
         fail("Should have thrown an exception")
+    }
+
+    @ExperimentalTime
+    @Test
+    fun `it should accept a stub with a delay and introduce the delay before returning the stubbed response`() {
+        val gherkin = """Feature: Data API
+Scenario: Return data
+When GET /data
+Then status 200
+And response-body (string)
+        """.trim()
+
+        try {
+            HttpStub(gherkin).use { fake ->
+                val expectation = """ {
+"http-request": {
+    "method": "GET",
+    "path": "/data"
+}, 
+"http-response": {
+    "status": 200,
+    "body": "123"
+},
+"delay": "1 seconds"
+}""".trimIndent()
+
+                val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_qontract/expectations", expectation)
+                assertThat(stubResponse.statusCode.value()).isEqualTo(200)
+
+                val duration = measureTime {
+                    val postResponse = RestTemplate().getForEntity<String>(URI.create(fake.endPoint + "/data"))
+                    assertThat(postResponse.statusCode.value()).isEqualTo(200)
+                    assertThat(postResponse.body).isEqualTo("123")
+                }
+
+                assertThat(duration.toLong(DurationUnit.MILLISECONDS)).isGreaterThanOrEqualTo(1000L)
+            }
+        } catch(e: HttpClientErrorException) {
+            fail("Threw an exception: ${e.message}")
+        }
     }
 
     @Test

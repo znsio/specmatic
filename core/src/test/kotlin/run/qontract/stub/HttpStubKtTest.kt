@@ -30,13 +30,17 @@ Feature: Test
         val stubData = feature.matchingStub(scenarioStub)
         val stubResponse = stubResponse(HttpRequest(method = "POST", path = "/", body = StringValue("Hello")), listOf(feature), listOf(stubData), true)
 
-        assertThat(stubResponse.status).isEqualTo(400)
-        assertThat(stubResponse.headers).containsEntry(QONTRACT_RESULT_HEADER, "failure")
-        assertThat(stubResponse.body.toStringValue()).isEqualTo("""STRICT MODE ON
+        assertResponseFailure(stubResponse, """STRICT MODE ON
 
 >> REQUEST.BODY
 
 Expected number, actual was "Hello"""")
+    }
+
+    private fun assertResponseFailure(stubResponse: HttpStubResponse, errorMessage: String) {
+        assertThat(stubResponse.response.status).isEqualTo(400)
+        assertThat(stubResponse.response.headers).containsEntry(QONTRACT_RESULT_HEADER, "failure")
+        assertThat(stubResponse.response.body.toStringValue()).isEqualTo(errorMessage)
     }
 
     @Test
@@ -54,12 +58,10 @@ Feature: POST API
 
         val stubResponse = stubResponse(request, listOf(feature), emptyList(), false)
 
-        assertThat(stubResponse.status).isEqualTo(400)
-        assertThat(stubResponse.headers).containsEntry(QONTRACT_RESULT_HEADER, "failure")
-        assertThat(stubResponse.body).isEqualTo(StringValue("""In scenario "Test"
+        assertResponseFailure(stubResponse, """In scenario "Test"
 >> REQUEST.BODY
 
-Key named "undeclared" was unexpected"""))
+Key named "undeclared" was unexpected""")
     }
 
     @Test
@@ -76,7 +78,7 @@ Feature: GET API
 
         val stubResponse = stubResponse(request, listOf(feature), emptyList(), false)
 
-        assertThat(stubResponse.status).isEqualTo(200)
+        assertThat(stubResponse.response.status).isEqualTo(200)
     }
 
     @Test
@@ -115,10 +117,10 @@ Scenario: Square of a number
         val request = HttpRequest(method = "POST", path = "/number", body = parsedValue("""{"number": 10, "unexpected": "data"}"""))
         val response = stubResponse(request, listOf(feature), emptyList(), false)
 
-        assertThat(response.body).isEqualTo(StringValue("""In scenario "Square of a number"
+        assertResponseFailure(response,"""In scenario "Square of a number"
 >> REQUEST.BODY
 
-Key named "unexpected" was unexpected"""))
+Key named "unexpected" was unexpected""")
     }
 
     @Test
@@ -138,11 +140,10 @@ Scenario: Square of a number
 
         val request = HttpRequest(method = "GET", path = "/count")
         val response = stubResponse(request, listOf(feature), listOf(stubData), false)
-        assertThat(response.status).isEqualTo(200)
+        assertThat(response.response.status).isEqualTo(200)
 
         val strictResponse = stubResponse(request, listOf(feature), listOf(stubData), true)
-        assertThat(strictResponse.status).isEqualTo(400)
-        assertThat(strictResponse.body.toStringValue().trim()).isEqualTo("""STRICT MODE ON
+        assertResponseFailure(strictResponse, """STRICT MODE ON
 
 >> REQUEST.URL.QUERY-PARAMS
 
@@ -165,8 +166,8 @@ Scenario: Square of a number
         val request = HttpRequest(method = "GET", path = "/number")
         val response = stubResponse(request, listOf(feature), emptyList(), false)
 
-        assertThat(response.status).isEqualTo(200)
-        val bodyValue = response.body as JSONObjectValue
+        assertThat(response.response.status).isEqualTo(200)
+        val bodyValue = response.response.body as JSONObjectValue
         assertThat(bodyValue.jsonObject).hasSize(1)
         assertThat(bodyValue.jsonObject.getValue("number")).isInstanceOf(NumberValue::class.java)
     }
@@ -192,7 +193,7 @@ Scenario: Square of a number
         val stubSetupRequest = HttpRequest(method = "GET", path = "/number", formFields = mapOf("Data" to """{"id": 10, "data": {"info": 20} }"""))
         val actualRequest = HttpRequest(method = "GET", path = "/number", formFields = mapOf("NotData" to """{"id": 10, "data": {"info": 20} }"""))
         val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(stubSetupRequest.toPattern(), HttpResponse(status = 200, body = parsedJSON("""{"10": 10}""")), feature.scenarios.single().resolver)), false)
-        assertThat(response.status).isEqualTo(400)
+        assertThat(response.response.status).isEqualTo(400)
     }
 
     @Test
@@ -208,7 +209,7 @@ Feature: XML namespace prefix
         val stubSetupRequest = HttpRequest().updateMethod("POST").updatePath("/")
         val actualRequest = HttpRequest(method = "POST", path = "/", body = XMLNode("""<ns2:customer xmlns:ns2="http://example.com/customer"><name>John Doe</name></ns2:customer>"""))
         val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(stubSetupRequest.toPattern(), HttpResponse.OK, feature.scenarios.single().resolver)), false)
-        assertThat(response.status).isEqualTo(200)
+        assertThat(response.response.status).isEqualTo(200)
     }
 
     @Test

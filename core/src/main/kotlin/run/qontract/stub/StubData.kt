@@ -7,7 +7,7 @@ import run.qontract.core.value.KafkaMessage
 
 interface StubData
 
-data class HttpStubData(val requestType: HttpRequestPattern, val response: HttpResponse, val resolver: Resolver) : StubData {
+data class HttpStubData(val requestType: HttpRequestPattern, val response: HttpResponse, val resolver: Resolver, val delay: Long? = null) : StubData {
     fun softCastResponseToXML(): HttpStubData =
             this.copy(response = response.copy(body = softCastValueToXML(response.body)))
 }

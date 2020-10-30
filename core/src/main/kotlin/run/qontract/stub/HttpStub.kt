@@ -11,6 +11,7 @@ import io.ktor.server.netty.*
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.asStream
 import io.ktor.util.toMap
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import run.qontract.LogTail
 import run.qontract.core.*
@@ -32,6 +33,11 @@ import java.util.*
 import kotlin.text.isEmpty
 import kotlin.text.toCharArray
 import kotlin.text.toLowerCase
+
+data class HttpStubResponse(val response: HttpResponse, val responseLog: String, val delayInSeconds: Long? = null) {
+    constructor(httpResponse: HttpResponse): this (httpResponse, httpResponseLog(httpResponse))
+    constructor(httpResponse: HttpResponse, delay: Long?): this(httpResponse, httpResponseLog(httpResponse), delay)
+}
 
 class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null) : ContractStub {
     constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
@@ -69,7 +75,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
                     logs.add(httpRequestLog(httpRequest))
 
-                    val (httpResponse, responseLog) = when {
+                    val httpStubResponse: HttpStubResponse = when {
                         isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
                         isFetchLoadLogRequest(httpRequest) -> handleFetchLoadLogRequest()
                         isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest()
@@ -78,8 +84,8 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                         else -> serveStubResponse(httpRequest)
                     }
 
-                    respondToKtorHttpResponse(call, httpResponse)
-                    logs.add(responseLog ?: httpResponseLog(httpResponse))
+                    respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
+                    logs.add(httpStubResponse.responseLog)
                     log(logs.joinToString(System.lineSeparator()))
                 }
                 catch(e: ContractException) {
@@ -97,8 +103,8 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             }
         }
 
-        when {
-            keyStoreData == null -> connector {
+        when (keyStoreData) {
+            null -> connector {
                 this.host = host
                 this.port = port
             }
@@ -111,19 +117,19 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
     private val server: ApplicationEngine = embeddedServer(Netty, environment)
 
-    private fun handleFetchLoadLogRequest(): Pair<HttpResponse, Nothing?> =
-            Pair(HttpResponse.OK(StringValue(LogTail.getSnapshot())), null)
+    private fun handleFetchLoadLogRequest(): HttpStubResponse =
+            HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getSnapshot())), "")
 
-    private fun handleFetchContractsRequest(): Pair<HttpResponse, Nothing?> =
-            Pair(HttpResponse.OK(StringValue(features.joinToString("\n") { it.name })), null)
+    private fun handleFetchContractsRequest(): HttpStubResponse =
+            HttpStubResponse(HttpResponse.OK(StringValue(features.joinToString("\n") { it.name })))
 
-    private fun handleFetchLogRequest(): Pair<HttpResponse, Nothing?> =
-            Pair(HttpResponse.OK(StringValue(LogTail.getString())), null)
+    private fun handleFetchLogRequest(): HttpStubResponse =
+            HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getString())), "")
 
-    private fun serveStubResponse(httpRequest: HttpRequest): Pair<HttpResponse, Nothing?> =
-            Pair(stubResponse(httpRequest, features, httpStubs, strictMode), null)
+    private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse =
+            stubResponse(httpRequest, features, httpStubs, strictMode)
 
-    private fun handleExpectationCreationRequest(httpRequest: HttpRequest): Pair<HttpResponse, Nothing?> {
+    private fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {
             if(httpRequest.body.toStringValue().isEmpty())
                 throw ContractException("Expectation payload was empty")
@@ -131,13 +137,13 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             val mock = stringToMockScenario(httpRequest.body)
             createStub(mock)
 
-            Pair(HttpResponse.OK, null)
+            HttpStubResponse(HttpResponse.OK)
         }
         catch(e: ContractException) {
-            Pair(HttpResponse(status = 400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue(e.report())), null)
+            HttpStubResponse(HttpResponse(status = 400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue(e.report())))
         }
         catch (e: Exception) {
-            Pair(HttpResponse(status = 400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)), null)
+            HttpStubResponse(HttpResponse(status = 400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)))
         }
     }
 
@@ -162,7 +168,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         val result = results.find { it.first is Result.Success }
 
         when (result?.first) {
-            is Result.Success -> httpStubs.insertElementAt(result.second, 0)
+            is Result.Success -> httpStubs.insertElementAt(result.second?.copy(delay = stub.delayInSeconds), 0)
             else -> throw NoMatchingScenario(Results(results.map { it.first }.toMutableList()).report())
         }
     }
@@ -171,7 +177,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         server.stop(0, 5000)
     }
 
-    private fun handleStateSetupRequest(httpRequest: HttpRequest): Pair<HttpResponse, String> {
+    private fun handleStateSetupRequest(httpRequest: HttpRequest): HttpStubResponse {
         val body = httpRequest.body
         val serverState = toMap(body)
 
@@ -183,7 +189,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
         val completeLog = "$stateRequestLog\n# << Complete At ${Date()}"
 
-        return Pair(HttpResponse.OK, completeLog)
+        return HttpStubResponse(HttpResponse.OK, completeLog)
     }
 
     init {
@@ -245,7 +251,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
 
 internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
 
-internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse) {
+internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Long? = null) {
     val headerString = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
     val textContent = TextContent(httpResponse.body.toStringValue(), ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
 
@@ -254,10 +260,16 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
         call.response.headers.append(name, value)
     }
 
-    runBlocking { call.respond(textContent) }
+    runBlocking {
+        if(delayInSeconds != null) {
+            delay(delayInSeconds * 1000)
+        }
+
+        call.respond(textContent)
+    }
 }
 
-fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<HttpStubData>, strictMode: Boolean): HttpResponse {
+fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<HttpStubData>, strictMode: Boolean): HttpStubResponse {
     return try {
         val matchResults = stubs.map {
             val (requestPattern, _, resolver) = it
@@ -266,9 +278,11 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<
 
         val mock = matchResults.find { (result, _) -> result is Result.Success }?.second
 
-        mock?.softCastResponseToXML()?.response ?: when(strictMode) {
-            true -> httpResponse(matchResults)
-            else -> httpResponse(features, httpRequest)
+        mock?.let {
+            HttpStubResponse(it.softCastResponseToXML().response, it.delay)
+        } ?: when(strictMode) {
+            true -> HttpStubResponse(httpResponse(matchResults))
+            else -> HttpStubResponse(httpResponse(features, httpRequest))
         }
     } finally {
         features.forEach { feature ->

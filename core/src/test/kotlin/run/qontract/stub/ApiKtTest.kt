@@ -500,13 +500,13 @@ fun <ReturnType> captureStandardOutput(fn: () -> ReturnType): Pair<String, Retur
 }
 
 fun contractInfoToExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): StubDataItems {
-    return contractInfo.fold(StubDataItems()) { stubsAcc, (behaviour, mocks) ->
+    return contractInfo.fold(StubDataItems()) { stubsAcc, (feature, mocks) ->
         val newStubs = mocks.fold(StubDataItems()) { stubs, mock ->
             val kafkaMessage = mock.kafkaMessage
             if(kafkaMessage != null) {
                 StubDataItems(stubs.http, stubs.kafka.plus(KafkaStubData(kafkaMessage)))
             } else {
-                val stubData = behaviour.matchingStub(mock)
+                val stubData = feature.matchingStub(mock)
                 StubDataItems(stubs.http.plus(stubData), stubs.kafka)
             }
         }

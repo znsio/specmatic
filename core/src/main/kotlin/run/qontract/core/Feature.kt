@@ -156,7 +156,7 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
     }
 
     fun matchingStub(scenarioStub: ScenarioStub): HttpStubData =
-            matchingStub(scenarioStub.request, scenarioStub.response)
+            matchingStub(scenarioStub.request, scenarioStub.response).copy(delay = scenarioStub.delayInSeconds)
 
     fun clearServerState() {
         serverState = emptyMap()

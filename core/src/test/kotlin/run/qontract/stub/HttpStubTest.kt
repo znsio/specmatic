@@ -194,7 +194,7 @@ And response-body (string)
     "status": 200,
     "body": "123"
 },
-"delay": "1 seconds"
+"delay in seconds": 1
 }""".trimIndent()
 
                 val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_qontract/expectations", expectation)
@@ -237,7 +237,7 @@ And response-body (string)
     "status": 200,
     "body": "123"
 },
-"delay": "$delayInSeconds seconds"
+"delay in seconds": $delayInSeconds
 }""".trimIndent()
 
                 val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_qontract/expectations", expectation)

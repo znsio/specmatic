@@ -2,24 +2,9 @@ package run.qontract.mock
 
 import run.qontract.core.*
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.value.KafkaMessage
-import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.StringValue
-import run.qontract.core.value.Value
+import run.qontract.core.value.*
 
-data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null, val delay: String? = null) {
-    val delayInSeconds: Long?
-        get() = delay?.let {
-            return when(val substring = it.trim().substringBefore(' ')) {
-                "" -> null
-                else -> try {
-                    substring.toLong()
-                } catch(e: Throwable) {
-                    null
-                }
-            }
-        }
-
+data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null, val delayInSeconds: Int? = null) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
         if(kafkaMessage != null) {
@@ -52,14 +37,10 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
         else -> {
             val mockRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
             val mockResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
-            val delay = mockSpec["delay"]?.toStringValue()?.trim()?.toLowerCase()
 
-            delay?.let {
-                if(! it.endsWith(" seconds"))
-                    throw ContractException("The delay value must always be a string of the format \"N seconds\", e.g. \"10 seconds\"")
-            }
+            val delayInSeconds = getIntOrNull("delay in seconds", mockSpec)
 
-            ScenarioStub(request = mockRequest, response = mockResponse, delay = delay)
+            ScenarioStub(request = mockRequest, response = mockResponse, delayInSeconds = delayInSeconds)
         }
     }
 }
@@ -91,4 +72,13 @@ fun getJSONObjectValue(key: String, mapData: Map<String, Value>): Map<String, Va
     val data = mapData.getValue(key)
     if(data !is JSONObjectValue) throw ContractException("$key should be a json object")
     return data.jsonObject
+}
+
+fun getIntOrNull(key: String, mapData: Map<String, Value>): Int? {
+    val data = mapData[key]
+
+    return data?.let {
+        if(data !is NumberValue) throw ContractException("$key should be a number")
+        return data.number.toInt()
+    }
 }

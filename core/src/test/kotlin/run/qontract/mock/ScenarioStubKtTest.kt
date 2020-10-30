@@ -784,12 +784,12 @@ internal class ScenarioStubKtTest {
     "status": 200
   },
   
-  "delay": "10 seconds"
+  "delay in seconds": 10
 }
         """.trim()
 
         val scenarioStub = mockFromJSON(jsonStringToValueMap(stubText))
-        assertThat(scenarioStub.delay).isEqualTo("10 seconds")
+        assertThat(scenarioStub.delayInSeconds).isEqualTo(10)
     }
 
     @Test
@@ -808,7 +808,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val scenarioStub = mockFromJSON(jsonStringToValueMap(stubText))
-        assertThat(scenarioStub.delay).isNull()
+        assertThat(scenarioStub.delayInSeconds).isNull()
     }
 }
 

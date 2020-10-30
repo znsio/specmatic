@@ -34,9 +34,9 @@ import kotlin.text.isEmpty
 import kotlin.text.toCharArray
 import kotlin.text.toLowerCase
 
-data class HttpStubResponse(val response: HttpResponse, val responseLog: String, val delayInSeconds: Long? = null) {
+data class HttpStubResponse(val response: HttpResponse, val responseLog: String, val delayInSeconds: Int? = null) {
     constructor(httpResponse: HttpResponse): this (httpResponse, httpResponseLog(httpResponse))
-    constructor(httpResponse: HttpResponse, delay: Long?): this(httpResponse, httpResponseLog(httpResponse), delay)
+    constructor(httpResponse: HttpResponse, delay: Int?): this(httpResponse, httpResponseLog(httpResponse), delay)
 }
 
 class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null) : ContractStub {
@@ -170,7 +170,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         val result = results.find { it.first is Result.Success }
 
         when (result?.first) {
-            is Result.Success -> httpStubs.insertElementAt(result.second?.copy(delay = stub.delayInSeconds), 0)
+            is Result.Success -> httpStubs.insertElementAt(result.second?.copy(delayInSeconds = stub.delayInSeconds), 0)
             else -> throw NoMatchingScenario(Results(results.map { it.first }.toMutableList()).report())
         }
     }
@@ -253,7 +253,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
 
 internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
 
-internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Long? = null) {
+internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Int? = null) {
     val headerString = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
     val textContent = TextContent(httpResponse.body.toStringValue(), ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
 
@@ -264,7 +264,7 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
 
     runBlocking {
         if(delayInSeconds != null) {
-            delay(delayInSeconds * 1000)
+            delay(delayInSeconds * 1000L)
         }
 
         call.respond(textContent)
@@ -281,7 +281,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<
         val mock = matchResults.find { (result, _) -> result is Result.Success }?.second
 
         mock?.let {
-            HttpStubResponse(it.softCastResponseToXML().response, it.delay)
+            HttpStubResponse(it.softCastResponseToXML().response, it.delayInSeconds)
         } ?: when(strictMode) {
             true -> HttpStubResponse(httpResponse(matchResults))
             else -> HttpStubResponse(httpResponse(features, httpRequest))

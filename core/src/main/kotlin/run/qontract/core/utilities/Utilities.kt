@@ -150,13 +150,12 @@ fun loadSources(configFile: File): List<ContractSource> = loadSources(loadConfig
 fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
         parsedJSON(configFile.readText())
-
     } catch (e: Throwable) {
-        exitWithMessage("Error reading the $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY: ${exceptionCauseMessage(e)}")
+        throw ContractException("Error reading the $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY: ${exceptionCauseMessage(e)}")
     }
 
     if (configJson !is JSONObjectValue)
-        exitWithMessage("The contents of $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY must be a json object")
+        throw ContractException("The contents of $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY must be a json object")
 
     return configJson
 }
@@ -166,11 +165,11 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
     val sources = configJson.jsonObject.getOrDefault("sources", null)
 
     if(sources !is JSONArrayValue)
-        exitWithMessage("The \"sources\" key must hold a list of sources.")
+        throw ContractException("The \"sources\" key must hold a list of sources.")
 
     return sources.list.map { source ->
         if (source !is JSONObjectValue)
-            exitWithMessage("Every element of the sources json array must be a json object, but got this: ${source.toStringValue()}")
+            throw ContractException("Every element of the sources json array must be a json object, but got this: ${source.toStringValue()}")
 
         when(nativeString(source.jsonObject, "provider")) {
             "git" -> {

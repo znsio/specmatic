@@ -6,7 +6,9 @@ import run.qontract.core.Feature
 import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.git.SystemGit
 import run.qontract.core.git.loadFromPath
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedJSON
+import run.qontract.core.resultReport
 import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.utilities.*
 import run.qontract.core.value.JSONArrayValue
@@ -24,24 +26,24 @@ class PushCommand: Callable<Unit> {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".qontract/repos")
         val manifestFile = File(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
-        val manifestData = loadConfigJSON(manifestFile)
-        val sources = loadSources(manifestData)
+        val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
+        val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
 
-        for(source in sources) {
+        for (source in sources) {
             val sourceDir = source.directoryRelativeTo(workingDirectory)
             val sourceGit = SystemGit(sourceDir.path)
 
             try {
-                if(sourceGit.workingDirectoryIsGitRepo()) {
+                if (sourceGit.workingDirectoryIsGitRepo()) {
                     source.getLatest(sourceGit)
 
                     val changedQontractFiles = sourceGit.getChangedFiles().filter { it.endsWith(".qontract") }
-                    for(contractPath in changedQontractFiles) {
+                    for (contractPath in changedQontractFiles) {
                         testBackwardCompatibility(sourceDir, contractPath, sourceGit, source)
                         subscribeToContract(manifestData, sourceDir.resolve(contractPath).path, sourceGit)
                     }
 
-                    for(contractPath in changedQontractFiles) {
+                    for (contractPath in changedQontractFiles) {
                         sourceGit.add(contractPath)
                     }
 

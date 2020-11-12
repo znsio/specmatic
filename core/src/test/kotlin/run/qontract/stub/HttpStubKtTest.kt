@@ -2,14 +2,17 @@ package run.qontract.stub
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import run.qontract.consoleLog
 import run.qontract.core.*
 import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.pattern.parsedValue
+import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.value.*
 import run.qontract.mock.ScenarioStub
 import run.qontract.test.HttpClient
 import java.security.KeyStore
+import java.util.*
 
 internal class HttpStubKtTest {
     @Test
@@ -227,17 +230,68 @@ Feature: POST API
 
         val range = 0..9
 
+        val errors: Vector<String> = Vector()
+
         HttpStub(feature).use { stub ->
-            createStubsUsingMultipleThreads(range, stub)
+            val threads = range.map { stubNumber ->
+                println("CREATING THREAD $stubNumber")
+                Thread {
+                    println("STARTED THREAD $stubNumber")
+                    val base = stubNumber * 10
+                    try {
+                        testExpectationSetAndQuery(base + 0, stub)?.let {
+                            errors.add(it)
+                        }
 
-            range.forEach { stubNumber ->
-                val response = invokeStub(stubNumber, stub)
-                println(response.body.toStringValue())
-                val json = response.body as JSONObjectValue
-                val numberInResponse = json.jsonObject.getValue("number").toStringValue().toInt()
+                        testExpectationSetAndQuery(base + 1, stub)?.let {
+                            errors.add(it)
+                        }
 
-                assertThat(numberInResponse).isEqualTo(stubNumber)
+                        testExpectationSetAndQuery(base + 2, stub)?.let {
+                            errors.add(it)
+                        }
+                    } catch(e: Throwable) {
+                        val exceptionMessage = exceptionCauseMessage(e)
+                        errors.add(exceptionMessage)
+                    }
+                    println("ENDING THREAD $stubNumber")
+                }
             }
+
+            start(threads)
+            waitFor(threads)
+        }
+
+        if(errors.isNotEmpty()) {
+            val errorMessages = errors.joinToString("\n\n")
+            fail("Got errors\n$errorMessages")
+        }
+    }
+
+    private fun testExpectationSetAndQuery(stubNumber: Int, stub: HttpStub): String? {
+        val error = createExpectation(stubNumber, stub)
+        if(error != null)
+            return "Creating expectation $stubNumber:\n $error"
+
+        val response = invokeStub(stubNumber, stub)
+        println(response.body.toStringValue())
+
+        val json = try {
+            response.body as JSONObjectValue
+        } catch(e: Throwable) {
+            return "Got the following bad response:\n${response.toLogString()}"
+        }
+
+        val numberInResponse = try {
+
+            json.jsonObject.getValue("number").toStringValue().toInt()
+        } catch(e: Throwable) {
+            return exceptionCauseMessage(e)
+        }
+
+        return when(numberInResponse) {
+            stubNumber -> null
+            else -> "Expected response to contain $stubNumber, but instead got $numberInResponse"
         }
     }
 
@@ -278,25 +332,16 @@ Feature: POST API
     private fun createStubsUsingMultipleThreads(range: IntRange, stub: HttpStub) {
         val threads = range.map { i ->
             println("STARTING THREAD $i")
-            val thread = Thread { createExpectation(i, stub) }
-            thread
+            Thread { createExpectation(i, stub) }
         }
 
         start(threads)
         waitFor(threads)
     }
 
-    private fun waitFor(threads: List<Thread>) {
-        for(thread in threads) {
-            thread.join()
-        }
-    }
+    private fun waitFor(threads: List<Thread>) = threads.forEach { it.join() }
 
-    private fun start(threads: List<Thread>) {
-        for(thread in threads) {
-            thread.start()
-        }
-    }
+    private fun start(threads: List<Thread>) = threads.forEach { it.start() }
 
     private fun invokeStub(i: Int, stub: HttpStub): HttpResponse {
         val request = HttpRequest(method = "POST", path = "/", formFields = mapOf("Data" to """{"number": $i}"""))
@@ -304,19 +349,19 @@ Feature: POST API
         return client.execute(request)
     }
 
-    private fun createExpectation(i: Int, stub: HttpStub) {
+    private fun createExpectation(stubNumber: Int, stub: HttpStub): String? {
         val stubInfo = """
     {
       "http-request": {
         "method": "POST",
         "path": "/",
         "form-fields": {
-          "Data": "{\"number\": $i}"
+          "Data": "{\"number\": $stubNumber}"
         }
       },
       "http-response": {
         "status": 200,
-        "body": {"number": $i}
+        "body": {"number": $stubNumber}
       }
     }
     """.trimIndent()
@@ -324,6 +369,12 @@ Feature: POST API
         val client = HttpClient(stub.endPoint, log = ::consoleLog)
         val request = HttpRequest("POST", path = "/_qontract/expectations", body = parsedValue(stubInfo))
         val response = client.execute(request)
-        assertThat(response.status).isEqualTo(200)
+
+        return when(response.status) {
+            200 -> null
+            else -> {
+                "Response for stub number $stubNumber:\n${response.toLogString()}"
+            }
+        }
     }
 }

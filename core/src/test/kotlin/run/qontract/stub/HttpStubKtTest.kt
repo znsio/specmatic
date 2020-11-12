@@ -228,38 +228,14 @@ Feature: POST API
     And response-body (Number)
 """.trim())
 
-        val range = 0..9
-
         val errors: Vector<String> = Vector()
 
         HttpStub(feature).use { stub ->
-            val threads = range.map { stubNumber ->
-                println("CREATING THREAD $stubNumber")
-                Thread {
-                    println("STARTED THREAD $stubNumber")
-                    val base = stubNumber * 10
-                    try {
-                        testExpectationSetAndQuery(base + 0, stub)?.let {
-                            errors.add(it)
-                        }
-
-                        testExpectationSetAndQuery(base + 1, stub)?.let {
-                            errors.add(it)
-                        }
-
-                        testExpectationSetAndQuery(base + 2, stub)?.let {
-                            errors.add(it)
-                        }
-                    } catch(e: Throwable) {
-                        val exceptionMessage = exceptionCauseMessage(e)
-                        errors.add(exceptionMessage)
-                    }
-                    println("ENDING THREAD $stubNumber")
+            usingMultipleThreads(10) { stubNumber ->
+                `set an expectation and exercise it`(stubNumber, stub)?.let {
+                    errors.add(it)
                 }
             }
-
-            start(threads)
-            waitFor(threads)
         }
 
         if(errors.isNotEmpty()) {
@@ -268,30 +244,50 @@ Feature: POST API
         }
     }
 
-    private fun testExpectationSetAndQuery(stubNumber: Int, stub: HttpStub): String? {
-        val error = createExpectation(stubNumber, stub)
-        if(error != null)
-            return "Creating expectation $stubNumber:\n $error"
+    private fun usingMultipleThreads(threadCount: Int, fn: (Int) -> Unit) {
+        val range = 0 until threadCount
+        val threads = range.map { stubNumber ->
+            Thread {
+                val base = stubNumber * 10
 
-        val response = invokeStub(stubNumber, stub)
-        println(response.body.toStringValue())
-
-        val json = try {
-            response.body as JSONObjectValue
-        } catch(e: Throwable) {
-            return "Got the following bad response:\n${response.toLogString()}"
+                (0..2).forEach { increment ->
+                    fn(base + increment)
+                }
+            }
         }
 
-        val numberInResponse = try {
+        start(threads)
+        waitFor(threads)
+    }
 
-            json.jsonObject.getValue("number").toStringValue().toInt()
-        } catch(e: Throwable) {
-            return exceptionCauseMessage(e)
-        }
+    private fun `set an expectation and exercise it`(stubNumber: Int, stub: HttpStub): String? {
+        return try {
+            val error = createExpectation(stubNumber, stub)
+            if (error != null)
+                return "Creating expectation $stubNumber:\n $error"
 
-        return when(numberInResponse) {
-            stubNumber -> null
-            else -> "Expected response to contain $stubNumber, but instead got $numberInResponse"
+            val response = invokeStub(stubNumber, stub)
+            println(response.body.toStringValue())
+
+            val json = try {
+                response.body as JSONObjectValue
+            } catch (e: Throwable) {
+                return "Got the following bad response:\n${response.toLogString()}"
+            }
+
+            val numberInResponse = try {
+
+                json.jsonObject.getValue("number").toStringValue().toInt()
+            } catch (e: Throwable) {
+                return exceptionCauseMessage(e)
+            }
+
+            when (numberInResponse) {
+                stubNumber -> null
+                else -> "Expected response to contain $stubNumber, but instead got $numberInResponse"
+            }
+        } catch (e: Throwable) {
+            exceptionCauseMessage(e)
         }
     }
 

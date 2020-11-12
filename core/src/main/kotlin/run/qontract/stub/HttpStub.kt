@@ -39,11 +39,28 @@ data class HttpStubResponse(val response: HttpResponse, val responseLog: String,
     constructor(httpResponse: HttpResponse, delay: Int?): this(httpResponse, httpResponseLog(httpResponse), delay)
 }
 
+class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
+    @Synchronized
+    fun <ReturnType> listOfStubs(fn: (List<HttpStubData>) -> ReturnType): ReturnType {
+        return fn(httpStubs.toList())
+    }
+
+    @Synchronized
+    fun addToStub(result: Pair<Result, HttpStubData?>, stub: ScenarioStub) {
+        result.second.let {
+            when (it) {
+                null -> Unit
+                else -> httpStubs.add(0, it.copy(delayInSeconds = stub.delayInSeconds))
+            }
+        }
+    }
+}
+
 class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null) : ContractStub {
     constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
     constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(Feature(gherkinData), scenarioStubs, host, port, log)
 
-    private var httpStubs = Vector(_httpStubs)
+    private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.toMutableList())
     val endPoint = endPointFromHostAndPort(host, port, keyStoreData)
 
     private val environment = applicationEngineEnvironment {
@@ -129,7 +146,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getString())), "")
 
     private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse =
-            stubResponse(httpRequest, features, httpStubs, strictMode)
+            stubResponse(httpRequest, features, threadSafeHttpStubs, strictMode)
 
     private fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {
@@ -170,10 +187,15 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         val result = results.find { it.first is Result.Success }
 
         when (result?.first) {
-            is Result.Success -> httpStubs.insertElementAt(result.second?.copy(delayInSeconds = stub.delayInSeconds), 0)
+            is Result.Success -> threadSafeHttpStubs.addToStub(result, stub)
             else -> throw NoMatchingScenario(Results(results.map { it.first }.toMutableList()).report())
         }
     }
+
+//    @Synchronized
+//    private fun addToStub(result: Pair<Result, HttpStubData?>, stub: ScenarioStub) {
+//        threadSafeHttpStubs.insertElementAt(result.second?.copy(delayInSeconds = stub.delayInSeconds), 0)
+//    }
 
     override fun close() {
         server.stop(0, 5000)
@@ -271,11 +293,16 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     }
 }
 
-fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, stubs: List<HttpStubData>, strictMode: Boolean): HttpStubResponse {
+fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeStubs: List<HttpStubData>, strictMode: Boolean): HttpStubResponse {
+    return stubResponse(httpRequest, features, ThreadSafeListOfStubs(threadSafeStubs.toMutableList()), strictMode)
+}
+fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeStubs: ThreadSafeListOfStubs, strictMode: Boolean): HttpStubResponse {
     return try {
-        val matchResults = stubs.map {
-            val (requestPattern, _, resolver) = it
-            Pair(requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)), it)
+        val matchResults = threadSafeStubs.listOfStubs { stubs ->
+            stubs.map {
+                val (requestPattern, _, resolver) = it
+                Pair(requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)), it)
+            }
         }
 
         val mock = matchResults.find { (result, _) -> result is Result.Success }?.second

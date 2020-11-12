@@ -8,6 +8,7 @@ import run.qontract.core.pattern.Pattern
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.value.Value
 import run.qontract.mock.ScenarioStub
+import run.qontract.stub.ThreadSafeListOfStubs
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 

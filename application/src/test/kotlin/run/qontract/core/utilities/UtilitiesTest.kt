@@ -11,8 +11,6 @@ import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.XMLNode
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.Paths
 
 internal class UtilitiesTest {
     @Test

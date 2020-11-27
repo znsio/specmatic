@@ -39,17 +39,16 @@ data class GitRepo(val gitRepositoryURL: String, override val testContracts: Lis
 
         try {
             println("Checking ${sourceDir.path}")
-            if(!sourceDir.exists())
+            if (!sourceDir.exists())
                 sourceDir.mkdirs()
 
-            if(!sourceGit.workingDirectoryIsGitRepo()) {
+            if (!sourceGit.workingDirectoryIsGitRepo()) {
                 println("Found it, not a git dir, recreating...")
                 sourceDir.deleteRecursively()
                 sourceDir.mkdirs()
                 println("Cloning ${this.gitRepositoryURL} into ${sourceDir.absolutePath}")
                 sourceGit.clone(this.gitRepositoryURL, sourceDir.absoluteFile)
-            }
-            else {
+            } else {
                 println("Git repo already exists at ${sourceDir.path}, so ignoring it and moving on")
             }
         } catch (e: Throwable) {
@@ -58,14 +57,14 @@ data class GitRepo(val gitRepositoryURL: String, override val testContracts: Lis
     }
 }
 
-data class GitMonoRepo(override val testContracts: List<String>, override val stubContracts: List<String>) : ContractSource() {
+data class GitMonoRepo(override val testContracts: List<String>, override var stubContracts: List<String>) : ContractSource() {
     override fun pathDescriptor(path: String): String = path
     override fun install(workingDirectory: File) {
         println("Checking list of mono repo paths...")
 
         val contracts = testContracts + stubContracts
 
-        for(path in contracts) {
+        for (path in contracts) {
             val existenceMessage = when {
                 File(path).exists() -> "$path exists"
                 else -> "$path NOT FOUND!"
@@ -75,10 +74,13 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
         }
     }
 
-    override fun directoryRelativeTo(workingDirectory: File): File = File("..")
+    override fun directoryRelativeTo(workingDirectory: File) =
+            workingDirectory.resolve(SystemGit().repoName())
+
     override fun getLatest(sourceGit: SystemGit) {
         // In mono repos, we can't pull latest arbitrarily
     }
+
     override fun pushUpdates(sourceGit: SystemGit) {
         // In mono repos, we can't push arbitrarily
     }

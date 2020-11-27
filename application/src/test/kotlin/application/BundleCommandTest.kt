@@ -128,4 +128,23 @@ internal class BundleCommandTest {
         verify(exactly = 1) { file.isDirectory }
         verify(exactly = 1) { fileOperations.files(stubDataDir) }
     }
+
+    @Test
+    fun `bundle command should pick git repo and mono repo sources path`() {
+        val contractPaths = listOf(
+                ContractPathData("cloneDir", "cloneDir/a/1.qontract"),
+                ContractPathData("cloneDir", "cloneDir/b/1.qontract"),
+                ContractPathData(".", "./c/1.qontract"),
+        )
+        every { qontractConfig.contractStubPathData() }.returns(contractPaths)
+
+        mockkStatic("application.BundleCommand_Jvm")
+        every { pathDataToEntryPath(any(), any()) }.returns(emptyList())
+
+        CommandLine(bundleCommand, factory).execute()
+
+        verify(exactly = 1) {pathDataToEntryPath(ContractPathData("cloneDir", "cloneDir/a/1.qontract"), fileOperations)}
+        verify(exactly = 1) {pathDataToEntryPath(ContractPathData("cloneDir", "cloneDir/b/1.qontract"), fileOperations)}
+        verify(exactly = 1) {pathDataToEntryPath(ContractPathData(".", "./c/1.qontract"), fileOperations)}
+    }
 }

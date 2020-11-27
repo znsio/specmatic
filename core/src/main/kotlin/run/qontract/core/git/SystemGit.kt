@@ -11,9 +11,9 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
     override fun commit(): SystemGit = this.also { execute("git", "commit", "-m", "Updated contract") }
     override fun push(): SystemGit = this.also { execute("git", "push") }
     override fun pull(): SystemGit = this.also { execute("git", "pull") }
-    override fun resetHard(): SystemGit = this.also { execute("git",  "reset", "--hard", "HEAD") }
-    override fun resetMixed(): SystemGit = this.also { execute("git",  "reset", "--mixed", "HEAD") }
-    override fun mergeAbort(): SystemGit = this.also { execute("git",  "merge", "--aborg") }
+    override fun resetHard(): SystemGit = this.also { execute("git", "reset", "--hard", "HEAD") }
+    override fun resetMixed(): SystemGit = this.also { execute("git", "reset", "--mixed", "HEAD") }
+    override fun mergeAbort(): SystemGit = this.also { execute("git", "merge", "--aborg") }
     override fun checkout(branchName: String): SystemGit = this.also { execute("git", "checkout", branchName) }
     override fun merge(branchName: String): SystemGit = this.also { execute("git", "merge", branchName) }
     override fun clone(gitRepositoryURI: String, cloneDirectory: File): SystemGit = this.also { execute("git", "clone", gitRepositoryURI, cloneDirectory.absolutePath) }
@@ -21,7 +21,7 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
     override fun show(treeish: String, relativePath: String): String = execute("git", "show", "${treeish}:${relativePath}")
     override fun workingDirectoryIsGitRepo(): Boolean = try {
         execute("git", "rev-parse", "--is-inside-work-tree").trim() == "true"
-    } catch(e: Throwable) {
+    } catch (e: Throwable) {
         false.also {
             println("This must not be a git dir, got error ${e.javaClass.name}: ${exceptionCauseMessage(e)}")
         }
@@ -30,7 +30,7 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
     override fun getChangedFiles(): List<String> {
         val result = execute("git", "status", "--porcelain=1").trim()
 
-        if(result.isEmpty())
+        if (result.isEmpty())
             return emptyList()
 
         return result.lines().map { it.trim().split(" ", limit = 2)[1] }
@@ -49,6 +49,11 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
     }
 
     override fun inGitRootOf(contractPath: String): GitCommand = SystemGit(File(contractPath).parentFile.absolutePath)
+
+    override fun repoName(): String {
+        val result = execute("git", "config", "--get", "remote.origin.url").trim()
+        return result.substring(result.lastIndexOf('/') + 1)
+    }
 }
 
 private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory: String, command: Array<String>): String {
@@ -58,13 +63,13 @@ private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory:
     val out = process.inputStream.bufferedReader().readText()
     val err = process.errorStream.bufferedReader().readText()
 
-    if(process.exitValue() != 0) throw NonZeroExitError(err.ifEmpty { out })
+    if (process.exitValue() != 0) throw NonZeroExitError(err.ifEmpty { out })
 
     return out
 }
 
 fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>): Boolean {
-    return when(val message = exception.localizedMessage ?: exception.message) {
+    return when (val message = exception.localizedMessage ?: exception.message) {
         null -> false
         else -> snippets.all { snippet -> snippet in message }
     }

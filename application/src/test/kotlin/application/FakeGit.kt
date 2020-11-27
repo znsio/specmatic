@@ -76,4 +76,8 @@ abstract class FakeGit: GitCommand {
     override fun inGitRootOf(contractPath: String): GitCommand {
         TODO("Not yet implemented")
     }
+
+    override fun repoName(): String {
+        TODO("Not yet implemented")
+    }
 }

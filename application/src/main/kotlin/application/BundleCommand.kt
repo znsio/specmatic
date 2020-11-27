@@ -1,3 +1,5 @@
+@file:JvmName("BundleCommand_Jvm")
+
 package application
 
 import org.springframework.beans.factory.annotation.Autowired
@@ -70,7 +72,7 @@ class Zipper {
     fun compress(zipFilePath: String, zipperEntries: List<ZipperEntry>) {
         FileOutputStream(zipFilePath).use { zipFile ->
             ZipOutputStream(zipFile).use { zipOut ->
-                for(zipperEntry in zipperEntries) {
+                for (zipperEntry in zipperEntries) {
                     val entry = ZipEntry(zipperEntry.path)
                     zipOut.putNextEntry(entry)
                     zipOut.write(zipperEntry.bytes)

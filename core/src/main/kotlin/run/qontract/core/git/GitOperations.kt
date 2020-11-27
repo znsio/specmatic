@@ -1,3 +1,5 @@
+@file:JvmName("GitOperations")
+
 package run.qontract.core.git
 
 import io.ktor.http.*

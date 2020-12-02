@@ -16,7 +16,7 @@ repositories {
     }
 }
 
-def ktor_version = "1.4.2"
+def ktor_version = "1.4.3"
 def junit_version = "5.7.0"
 
 dependencies {

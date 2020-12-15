@@ -297,15 +297,15 @@ fun getHttpResponse(httpRequest: HttpRequest, features: List<Feature>, threadSaf
     return try {
         val (matchResults, stubResponse) = stubbedResponse(threadSafeStubs, httpRequest)
 
-        val response = stubResponse ?: if (strictMode)
-            HttpStubResponse(http400Response(matchResults))
-        else
-            HttpStubResponse(fakeHttpResponse(features, httpRequest))
-
-        if(response.response.headers["X-Qontract-Empty"] == "true" && httpClientFactory != null && passThroughTargetBase.isNotBlank())
-            passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory)
-        else
-            response
+        stubResponse
+            ?: if(httpClientFactory != null && passThroughTargetBase.isNotBlank()) {
+                passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory)
+            } else {
+                if (strictMode)
+                    HttpStubResponse(http400Response(matchResults))
+                else
+                    HttpStubResponse(fakeHttpResponse(features, httpRequest))
+            }
     } finally {
         features.forEach { feature ->
             feature.clearServerState()

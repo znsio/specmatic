@@ -14,10 +14,7 @@ import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
-import run.qontract.core.Feature
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
-import run.qontract.core.QONTRACT_RESULT_HEADER
+import run.qontract.core.*
 import run.qontract.core.pattern.XML_ATTR_OPTIONAL_SUFFIX
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.NumberValue
@@ -514,12 +511,13 @@ Scenario: Square of a number
     }
 
     @Test
-    fun `it should proxy all unknown urls to the specified end point`() {
+    fun `it should proxy all unstubbed requests to the specified end point`() {
         val feature = Feature("""
 Feature: Math API
 
 Scenario: Square of a number
-  When GET /
+  When POST /
+  And request-body (number)
   Then status 200
   And response-body (string)
 """.trim())
@@ -532,7 +530,7 @@ Scenario: Square of a number
 
         HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
             val client = HttpClient(stub.endPoint)
-            val response = client.execute(HttpRequest(method = "GET", path = "/unexpected"))
+            val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body.toStringValue()).isEqualTo("it worked")
@@ -540,7 +538,7 @@ Scenario: Square of a number
     }
 
     @Test
-    fun `it should not proxy failures where the url is recognized`() {
+    fun `it should not proxy stubbed requests`() {
         val feature = Feature("""
 Feature: Math API
 
@@ -558,10 +556,12 @@ Scenario: Square of a number
         every { httpClientFactory.client(any()) } returns(httpClient)
 
         HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
+            stub.createStub(ScenarioStub(HttpRequest("POST", "/", body = NumberValue(10)), HttpResponse.OK("success")))
             val client = HttpClient(stub.endPoint)
-            val response = client.execute(HttpRequest(method = "POST", path = "/", body = StringValue("not a number")))
+            val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
-            assertThat(response.status).isEqualTo(400)
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toStringValue()).isEqualTo("success")
         }
     }
 }

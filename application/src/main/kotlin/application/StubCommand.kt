@@ -66,7 +66,7 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
 
-    @Option(names = ["--passThroughTargetBase"], description = ["All requests that did not match anything will be forwarded to this service"])
+    @Option(names = ["--passThroughTargetBase"], description = ["All requests that did not match a url in any contract will be forwarded to this service"])
     var passThroughTargetBase: String = ""
 
     @Option(names = ["--httpsKeyStore"], description = ["EXPERIMENTAL: Run the proxy on https using a key in this store"])

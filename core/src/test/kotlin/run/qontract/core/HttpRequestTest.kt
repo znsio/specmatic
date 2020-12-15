@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.ValueSource
 import run.qontract.core.pattern.*
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONObjectValue
@@ -11,6 +15,7 @@ import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import run.qontract.mock.ScenarioStub
 import run.qontract.optionalPattern
+import java.util.stream.Stream
 import kotlin.test.assertEquals
 
 internal class HttpRequestTest {
@@ -142,5 +147,29 @@ internal class HttpRequestTest {
     private fun exampleOf(columnName: String, value: String): Examples {
         val columns = listOf(columnName)
         return Examples(columns, listOf(Row(columns, listOf(value))))
+    }
+
+    companion object {
+        @JvmStatic
+        fun urlFragments(): Stream<Arguments> =
+            listOf(
+                Arguments.of("http://localhost/", "/test"),
+                Arguments.of("http://localhost", "test"),
+                Arguments.of("http://localhost/", "test"),
+                Arguments.of("http://localhost", "/test"),
+                Arguments.of("", "http://localhost/test"),
+                Arguments.of(null, "http://localhost/test"),
+            ).stream()
+    }
+
+    @ParameterizedTest
+    @MethodSource("urlFragments")
+    fun `it should handle an extra slash between base and path gracefully`(baseUrl: String?, path: String) {
+        println("baseUrl: $baseUrl")
+        println("path: $path")
+
+        val url = HttpRequest("GET", path).getURL(baseUrl)
+
+        assertThat(url).isEqualTo("http://localhost/test")
     }
 }

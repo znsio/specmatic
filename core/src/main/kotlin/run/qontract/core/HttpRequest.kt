@@ -57,15 +57,29 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
     val bodyString: String
         get() = body.toString()
 
-    fun getURL(baseURL: String?): String =
-        "$baseURL$path" + if (queryParams.isNotEmpty()) {
+    fun getURL(baseURL: String?): String {
+        val cleanBase = baseURL?.let {
+            if(it.isNotBlank() && !it.endsWith("/"))
+                "$it/"
+            else
+                it
+        } ?: ""
+        val cleanPath = path?.let {
+            if(it.isNotBlank() && it.startsWith("/") && cleanBase?.isNotBlank() == true)
+                it.removePrefix("/")
+            else
+                it
+        } ?: ""
+
+        return "$cleanBase$cleanPath" + if (queryParams.isNotEmpty()) {
             val joinedQueryParams =
-                    queryParams.toList()
-                            .joinToString("&") {
-                                "${it.first}=${URLEncoder.encode(it.second, StandardCharsets.UTF_8.toString())}"
-                            }
+                queryParams.toList()
+                    .joinToString("&") {
+                        "${it.first}=${URLEncoder.encode(it.second, StandardCharsets.UTF_8.toString())}"
+                    }
             "?$joinedQueryParams"
         } else ""
+    }
 
     fun toJSON(): JSONObjectValue {
         val requestMap = mutableMapOf<String, Value>()

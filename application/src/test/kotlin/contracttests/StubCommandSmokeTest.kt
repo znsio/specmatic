@@ -5,6 +5,7 @@ import application.QontractApplication
 import application.QontractCommand
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.io.TempDir
@@ -34,7 +35,7 @@ class StubCommandSmokeTest {
                 And response-body (number)
         """.trimIndent()
 
-    @Test
+    @Test @Disabled
     fun `simple http stub`(@TempDir tempDir: File) {
         val contractFile = tempDir.resolve("random.qontract")
         contractFile.writeText(contract)

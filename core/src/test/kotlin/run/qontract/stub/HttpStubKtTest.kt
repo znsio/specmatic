@@ -13,6 +13,7 @@ import run.qontract.mock.ScenarioStub
 import run.qontract.test.HttpClient
 import java.security.KeyStore
 import java.util.*
+import run.qontract.stubResponse
 
 internal class HttpStubKtTest {
     @Test

@@ -1,5 +1,7 @@
 package run.qontract.stub
 
+import io.mockk.every
+import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
@@ -508,6 +510,58 @@ Scenario: Square of a number
             val squareResponse = client.execute(HttpRequest(method = "POST", path = "/wrong_path", body = NumberValue(10)))
             assertThat(squareResponse.status).isEqualTo(400)
             assertThat(squareResponse.body.toStringValue()).isEqualTo("URL path not recognised")
+        }
+    }
+
+    @Test
+    fun `it should proxy all unknown urls to the specified end point`() {
+        val feature = Feature("""
+Feature: Math API
+
+Scenario: Square of a number
+  When GET /
+  Then status 200
+  And response-body (string)
+""".trim())
+
+        val httpClient = mockk<HttpClient>()
+        every { httpClient.execute(any()) } returns(HttpResponse.OK("it worked"))
+
+        val httpClientFactory = mockk<HttpClientFactory>()
+        every { httpClientFactory.client(any()) } returns(httpClient)
+
+        HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
+            val client = HttpClient(stub.endPoint)
+            val response = client.execute(HttpRequest(method = "GET", path = "/unexpected"))
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toStringValue()).isEqualTo("it worked")
+        }
+    }
+
+    @Test
+    fun `it should not proxy failures where the url is recognized`() {
+        val feature = Feature("""
+Feature: Math API
+
+Scenario: Square of a number
+  When POST /
+  And request-body (number)
+  Then status 200
+  And response-body (string)
+""".trim())
+
+        val httpClient = mockk<HttpClient>()
+        every { httpClient.execute(any()) } returns(HttpResponse.OK("should not get here"))
+
+        val httpClientFactory = mockk<HttpClientFactory>()
+        every { httpClientFactory.client(any()) } returns(httpClient)
+
+        HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
+            val client = HttpClient(stub.endPoint)
+            val response = client.execute(HttpRequest(method = "POST", path = "/", body = StringValue("not a number")))
+
+            assertThat(response.status).isEqualTo(400)
         }
     }
 }

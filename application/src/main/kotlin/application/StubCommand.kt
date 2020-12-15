@@ -28,13 +28,13 @@ class StubCommand : Callable<Unit> {
     var kafkaStub: QontractKafka? = null
 
     @Autowired
-    private lateinit var httpStubEngine: HTTPStubEngine
+    private var httpStubEngine: HTTPStubEngine = HTTPStubEngine()
 
     @Autowired
-    private lateinit var kafkaStubEngine: KafkaStubEngine
+    private var kafkaStubEngine: KafkaStubEngine = KafkaStubEngine()
 
     @Autowired
-    private lateinit var stubLoaderEngine: StubLoaderEngine
+    private var stubLoaderEngine: StubLoaderEngine = StubLoaderEngine()
 
     @Autowired
     private lateinit var context: ApplicationContext
@@ -66,6 +66,9 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
 
+    @Option(names = ["--passThroughTargetBase"], description = ["All requests that did not match anything will be forwarded to this service"])
+    var passThroughTargetBase: String = ""
+
     @Option(names = ["--httpsKeyStore"], description = ["EXPERIMENTAL: Run the proxy on https using a key in this store"])
     var keyStoreFile = ""
 
@@ -86,6 +89,9 @@ class StubCommand : Callable<Unit> {
 
     @Autowired
     val fileOperations = FileOperations()
+
+    @Autowired
+    val httpClientFactory = HttpClientFactory()
 
     override fun call() {
         try {
@@ -120,7 +126,7 @@ class StubCommand : Callable<Unit> {
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
-        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode)
+        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, httpClientFactory)
         kafkaStub = kafkaStubEngine.runKafkaStub(stubData, kafkaHost, kafkaPort.toInt(), startKafka)
 
         LogTail.storeSnapshot()
@@ -225,7 +231,7 @@ class KafkaStubEngine {
 
 @Component
 class HTTPStubEngine {
-    fun runHTTPStub(stubs: List<Pair<Feature, List<ScenarioStub>>>, host: String, port: Int, certInfo: CertInfo, strictMode: Boolean): HttpStub? {
+    fun runHTTPStub(stubs: List<Pair<Feature, List<ScenarioStub>>>, host: String, port: Int, certInfo: CertInfo, strictMode: Boolean, passThroughTargetBase: String = "", httpClientFactory: HttpClientFactory): HttpStub? {
         val features = stubs.map { it.first }
 
         return when {
@@ -241,7 +247,7 @@ class HTTPStubEngine {
                 }
 
                 val keyStoreData = getHttpsCert(certInfo.keyStoreFile, certInfo.keyStoreDir, certInfo.keyStorePassword, certInfo.keyStoreAlias, certInfo.keyPassword)
-                HttpStub(httpFeatures, httpExpectations, host, port, ::consoleLog, strictMode, keyStoreData).also {
+                HttpStub(httpFeatures, httpExpectations, host, port, ::consoleLog, strictMode, keyStoreData, passThroughTargetBase = passThroughTargetBase, httpClientFactory = httpClientFactory).also {
                     val protocol = if (keyStoreData != null) "https" else "http"
                     consoleLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop.")
                 }

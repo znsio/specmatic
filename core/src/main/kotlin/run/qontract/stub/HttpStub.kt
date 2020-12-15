@@ -56,7 +56,7 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
     }
 }
 
-class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null) : ContractStub {
+class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory()) : ContractStub {
     constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
     constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(Feature(gherkinData), scenarioStubs, host, port, log)
 
@@ -146,7 +146,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getString())), "")
 
     private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse =
-            stubResponse(httpRequest, features, threadSafeHttpStubs, strictMode)
+            getHttpResponse(httpRequest, features, threadSafeHttpStubs, strictMode, passThroughTargetBase, httpClientFactory)
 
     private fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {
@@ -293,26 +293,19 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     }
 }
 
-fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeStubs: List<HttpStubData>, strictMode: Boolean): HttpStubResponse {
-    return stubResponse(httpRequest, features, ThreadSafeListOfStubs(threadSafeStubs.toMutableList()), strictMode)
-}
-fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeStubs: ThreadSafeListOfStubs, strictMode: Boolean): HttpStubResponse {
+fun getHttpResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeStubs: ThreadSafeListOfStubs, strictMode: Boolean, passThroughTargetBase: String = "", httpClientFactory: HttpClientFactory? = null): HttpStubResponse {
     return try {
-        val matchResults = threadSafeStubs.listOfStubs { stubs ->
-            stubs.map {
-                val (requestPattern, _, resolver) = it
-                Pair(requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)), it)
-            }
-        }
+        val (matchResults, stubResponse) = stubbedResponse(threadSafeStubs, httpRequest)
 
-        val mock = matchResults.find { (result, _) -> result is Result.Success }?.second
+        val response = stubResponse ?: if (strictMode)
+            HttpStubResponse(http400Response(matchResults))
+        else
+            HttpStubResponse(fakeHttpResponse(features, httpRequest))
 
-        mock?.let {
-            HttpStubResponse(it.softCastResponseToXML().response, it.delayInSeconds)
-        } ?: when(strictMode) {
-            true -> HttpStubResponse(httpResponse(matchResults))
-            else -> HttpStubResponse(httpResponse(features, httpRequest))
-        }
+        if(response.response.headers["X-Qontract-Empty"] == "true" && httpClientFactory != null && passThroughTargetBase.isNotBlank())
+            passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory)
+        else
+            response
     } finally {
         features.forEach { feature ->
             feature.clearServerState()
@@ -320,27 +313,53 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeSt
     }
 }
 
-private fun httpResponse(features: List<Feature>, httpRequest: HttpRequest): HttpResponse {
+fun passThroughResponse(httpRequest: HttpRequest, passThroughUrl: String, httpClientFactory: HttpClientFactory): HttpStubResponse {
+    val response = httpClientFactory.client(passThroughUrl).execute(httpRequest)
+    return HttpStubResponse(response)
+}
+
+private fun stubbedResponse(
+    threadSafeStubs: ThreadSafeListOfStubs,
+    httpRequest: HttpRequest
+): Pair<List<Pair<Result, HttpStubData>>, HttpStubResponse?> {
+    val matchResults = threadSafeStubs.listOfStubs { stubs ->
+        stubs.map {
+            val (requestPattern, _, resolver) = it
+            Pair(requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)), it)
+        }
+    }
+
+    val mock = matchResults.find { (result, _) -> result is Result.Success }?.second
+
+    val stubResponse = mock?.let {
+        HttpStubResponse(it.softCastResponseToXML().response, it.delayInSeconds)
+    }
+    return Pair(matchResults, stubResponse)
+}
+
+private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): HttpResponse {
     val responses = features.asSequence().map {
         it.stubResponse(httpRequest)
     }.toList()
 
     return when (val successfulResponse = responses.firstOrNull { it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure" }) {
         null -> {
-            val body = when {
-                responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> StringValue(PATH_NOT_RECOGNIZED_ERROR)
-                else -> StringValue(responses.map {
+            val (headers, body) = when {
+                responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> {
+                    Pair(mapOf("X-Qontract-Empty" to "true"), StringValue(PATH_NOT_RECOGNIZED_ERROR))
+                }
+                else -> Pair(emptyMap(), StringValue(responses.map {
                     it.body
-                }.filter { it != EmptyString }.joinToString("\n\n"))
+                }.filter { it != EmptyString }.joinToString("\n\n")))
             }
 
-            HttpResponse(400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = body)
+            HttpResponse(400, headers = headers.plus(mapOf(QONTRACT_RESULT_HEADER to "failure")), body = body)
         }
         else -> successfulResponse
     }
 }
 
-private fun httpResponse(matchResults: List<Pair<Result, HttpStubData>>): HttpResponse {
+private fun http400Response(matchResults: List<Pair<Result, HttpStubData>>): HttpResponse {
     val failureResults = matchResults.map { it.first }
 
     val results = Results(failureResults.toMutableList()).withoutFluff()

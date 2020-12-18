@@ -6,7 +6,7 @@ import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.*
 import run.qontract.mock.ScenarioStub
-import run.qontract.nullLog
+import run.qontract.dontPrintToConsole
 import run.qontract.test.HttpClient
 import java.net.URI
 import java.net.URL
@@ -101,7 +101,7 @@ private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<
         val (baseURL, httpRequest) = postmanItemRequest(request)
 
         println("  Using base url $baseURL")
-        val response = HttpClient(baseURL, log = nullLog).execute(httpRequest)
+        val response = HttpClient(baseURL, log = dontPrintToConsole).execute(httpRequest)
 
         listOf(Pair(hostAndPort(baseURL), NamedStub(scenarioName, ScenarioStub(httpRequest, response))))
     } catch (e: Throwable) {

@@ -27,6 +27,7 @@ import run.qontract.stub.toParams
 import java.io.File
 import java.net.URL
 import java.util.*
+import java.util.zip.GZIPInputStream
 
 class HttpClient(private val baseURL: String, private val timeout: Int = 60, private val log: (event: String) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(io.ktor.client.engine.apache.Apache) {
     expectSuccess = false
@@ -177,25 +178,33 @@ private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpReq
             multiPartFormData = multiPartFormData)
 }
 
-private suspend fun ktorResponseToHttpResponse(ktorResponse: io.ktor.client.statement.HttpResponse): HttpResponse {
-    val encoding = ktorResponse.headers.get("Content-Encoding")
-
-    return HttpResponse(ktorResponse.status.value,
-            try {
-                decodeData(ktorResponse.readBytes(), encoding, ktorResponse.charset())
-            } catch (e: ClientRequestException) {
-                decodeData(e.response.readBytes(), encoding, ktorResponse.charset())
-            },
-            ktorResponse.headers.toMap().mapValues { it.value.first() }.toMutableMap())
+suspend fun ktorResponseToHttpResponse(ktorResponse: io.ktor.client.statement.HttpResponse): HttpResponse {
+    val (headers, body) = decodeBody(ktorResponse)
+    return HttpResponse(ktorResponse.status.value, body, headers)
 }
 
-private fun decodeData(bytes: ByteArray, encoding: String?, receivedCharset: Charset?): String {
-    val charset = Charset.forName(receivedCharset?.name() ?: "UTF-8")
+suspend fun decodeBody(ktorResponse: io.ktor.client.statement.HttpResponse): Pair<Map<String, String>, String> {
+    val encoding = ktorResponse.headers["Content-Encoding"]
+    val headers = ktorResponse.headers.toMap().mapValues { it.value.first() }
 
-    return when(encoding) {
-        "gzip" -> java.util.zip.GZIPInputStream(bytes.inputStream()).bufferedReader(charset).use {
-            it.readText()
-        }
-        else -> String(bytes)
+    return try {
+        decodeBody(ktorResponse.readBytes(), encoding, ktorResponse.charset(), headers)
+    } catch (e: ClientRequestException) {
+        decodeBody(e.response.readBytes(), encoding, ktorResponse.charset(), headers)
     }
+}
+
+fun decodeBody(bytes: ByteArray, encoding: String?, receivedCharset: Charset?, headers: Map<String, String>): Pair<Map<String, String>, String> =
+    when(encoding) {
+        "gzip" -> {
+            Pair(
+                headers.minus("Content-Encoding"),
+                unzip(bytes, receivedCharset))
+        }
+        else -> Pair(headers, String(bytes))
+    }
+
+fun unzip(bytes: ByteArray, receivedCharset: Charset?): String {
+    val charset = Charset.forName(receivedCharset?.name() ?: "UTF-8")
+    return GZIPInputStream(bytes.inputStream()).bufferedReader(charset).use { it.readText() }
 }

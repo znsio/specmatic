@@ -27,7 +27,7 @@ import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.ScenarioStub
 import run.qontract.mock.mockFromJSON
 import run.qontract.mock.validateMock
-import run.qontract.nullLog
+import run.qontract.dontPrintToConsole
 import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.text.isEmpty
@@ -56,9 +56,9 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
     }
 }
 
-class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = nullLog, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory()) : ContractStub {
-    constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
-    constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = nullLog) : this(Feature(gherkinData), scenarioStubs, host, port, log)
+class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = dontPrintToConsole, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory()) : ContractStub {
+    constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = dontPrintToConsole) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
+    constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = dontPrintToConsole) : this(Feature(gherkinData), scenarioStubs, host, port, log)
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.toMutableList())
     val endPoint = endPointFromHostAndPort(host, port, keyStoreData)
@@ -192,11 +192,6 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         }
     }
 
-//    @Synchronized
-//    private fun addToStub(result: Pair<Result, HttpStubData?>, stub: ScenarioStub) {
-//        threadSafeHttpStubs.insertElementAt(result.second?.copy(delayInSeconds = stub.delayInSeconds), 0)
-//    }
-
     override fun close() {
         server.stop(0, 5000)
     }
@@ -313,9 +308,11 @@ fun getHttpResponse(httpRequest: HttpRequest, features: List<Feature>, threadSaf
     }
 }
 
+const val QONTRACT_SOURCE_HEADER = "X-Qontract-Source"
+
 fun passThroughResponse(httpRequest: HttpRequest, passThroughUrl: String, httpClientFactory: HttpClientFactory): HttpStubResponse {
     val response = httpClientFactory.client(passThroughUrl).execute(httpRequest)
-    return HttpStubResponse(response)
+    return HttpStubResponse(response.copy(headers = response.headers.plus(QONTRACT_SOURCE_HEADER to "proxy")))
 }
 
 private fun stubbedResponse(
@@ -332,8 +329,10 @@ private fun stubbedResponse(
     val mock = matchResults.find { (result, _) -> result is Result.Success }?.second
 
     val stubResponse = mock?.let {
-        HttpStubResponse(it.softCastResponseToXML().response, it.delayInSeconds)
+        val softCastResponse = it.softCastResponseToXML().response
+        HttpStubResponse(softCastResponse, it.delayInSeconds)
     }
+
     return Pair(matchResults, stubResponse)
 }
 
@@ -342,7 +341,7 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
         it.stubResponse(httpRequest)
     }.toList()
 
-    return when (val successfulResponse = responses.firstOrNull { it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure" }) {
+    return when (val fakeResponse = responses.firstOrNull { it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure" }) {
         null -> {
             val (headers, body) = when {
                 responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> {
@@ -355,7 +354,7 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
 
             HttpResponse(400, headers = headers.plus(mapOf(QONTRACT_RESULT_HEADER to "failure")), body = body)
         }
-        else -> successfulResponse
+        else -> fakeResponse
     }
 }
 

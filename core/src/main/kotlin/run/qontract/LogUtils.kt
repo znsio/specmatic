@@ -40,6 +40,8 @@ fun consoleLog(event: String) {
     println(event)
 }
 
-val nullLog = { event: String ->
+val dontPrintToConsole = { event: String ->
     LogTail.append(event)
 }
+
+val ignoreLog = { _: String -> }

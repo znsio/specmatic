@@ -534,6 +534,33 @@ Scenario: Square of a number
 
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body.toStringValue()).isEqualTo("it worked")
+            assertThat(response.headers[QONTRACT_SOURCE_HEADER]).isEqualTo("proxy")
+        }
+    }
+
+    @Test
+    fun `a proxied response should contain the header X-Qontract-Source`() {
+        val feature = Feature("""
+Feature: Math API
+
+Scenario: Square of a number
+  When POST /
+  And request-body (number)
+  Then status 200
+  And response-body (string)
+""".trim())
+
+        val httpClient = mockk<HttpClient>()
+        every { httpClient.execute(any()) } returns(HttpResponse.OK("it worked"))
+
+        val httpClientFactory = mockk<HttpClientFactory>()
+        every { httpClientFactory.client(any()) } returns(httpClient)
+
+        HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
+            val client = HttpClient(stub.endPoint)
+            val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
+
+            assertThat(response.headers[QONTRACT_SOURCE_HEADER]).isEqualTo("proxy")
         }
     }
 

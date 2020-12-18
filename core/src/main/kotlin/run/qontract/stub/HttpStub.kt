@@ -86,11 +86,12 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             }
 
             intercept(ApplicationCallPipeline.Call) {
-                val logs = mutableListOf<String>()
+                val logs = mutableMapOf<String, Value>()
 
                 try {
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
-                    logs.add(httpRequestLog(httpRequest))
+                    logs["requestTime"] = StringValue(Date().toString())
+                    logs["http-request"] = httpRequest.toJSON()
 
                     val httpStubResponse: HttpStubResponse = when {
                         isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
@@ -102,21 +103,22 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                     }
 
                     respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
-                    logs.add(httpStubResponse.responseLog)
-                    log(logs.joinToString(System.lineSeparator()))
+                    logs["http-response"] = httpStubResponse.response.toJSON()
                 }
                 catch(e: ContractException) {
                     val response = badRequest(e.report())
-                    logs.add(httpResponseLog(response))
+                    logs["http-response"] = response.toJSON()
                     respondToKtorHttpResponse(call, response)
-                    log(logs.joinToString(System.lineSeparator()))
                 }
                 catch(e: Throwable) {
                     val response = badRequest(exceptionCauseMessage(e))
-                    logs.add(httpResponseLog(response))
+                    logs["http-response"] = response.toJSON()
                     respondToKtorHttpResponse(call, response)
-                    log(logs.joinToString(System.lineSeparator()))
                 }
+
+                logs["responseTime"] = StringValue(Date().toString())
+
+                log(JSONObjectValue(logs.toMap()).displayableValue() + ",")
             }
         }
 

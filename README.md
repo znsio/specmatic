@@ -42,5 +42,5 @@ Systems interact with each other through several means. Qontract hopes to addres
 * Support for **SOAP/XML**, **Kafka**, **callbacks** and more
 * Already have a lot of APIs? Don't worry, we can take your **Postman Collection** and easily generate contracts from it
 
-[Get started now](https://qontract.run/documentation/getting_started.html)
+[Get started now](https://qontract.run/getting_started.html)
 ---

@@ -37,7 +37,7 @@ repositories {
     }
 }
 
-def ktor_version = "1.4.3"
+def ktor_version = "1.5.0"
 def junit_version = "5.7.0"
 def jgit_version = "5.9.0.202009080501-r"
 
@@ -57,7 +57,7 @@ dependencies {
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
     implementation 'org.slf4j:slf4j-nop:1.7.30'
-    implementation 'org.apache.kafka:kafka-clients:2.6.0'
+    implementation 'org.apache.kafka:kafka-clients:2.7.0'
 
     implementation 'org.apache.ant:ant-junit:1.10.9'
 
@@ -68,7 +68,7 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation('org.springframework.boot:spring-boot-starter-test:2.4.0') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:2.4.1') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }

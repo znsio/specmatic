@@ -22,12 +22,12 @@ repositories {
     }
 }
 
-def ktor_version = "1.4.3"
+def ktor_version = "1.5.0"
 def karate_version = "0.9.6"
 def jgit_version = "5.9.0.202009080501-r"
 
 def junit_version = "5.7.0"
-def testcontainers_version = "1.15.0"
+def testcontainers_version = "1.15.1"
 
 dependencies {
     implementation 'io.cucumber:gherkin:15.0.2'
@@ -44,7 +44,7 @@ dependencies {
     implementation "org.testcontainers:testcontainers:$testcontainers_version"
     implementation "org.testcontainers:kafka:$testcontainers_version"
 
-    implementation 'org.apache.kafka:kafka-clients:2.6.0'
+    implementation 'org.apache.kafka:kafka-clients:2.7.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.0'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"

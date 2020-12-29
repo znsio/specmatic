@@ -72,7 +72,7 @@ dependencies {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }
-    testImplementation 'io.mockk:mockk:1.10.3-jdk8'
+    testImplementation 'io.mockk:mockk:1.10.4'
     testImplementation('com.ninja-squad:springmockk:3.0.0') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }

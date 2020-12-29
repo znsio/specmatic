@@ -55,8 +55,8 @@ codeCoverageReport.dependsOn {
 
 sonarqube {
     properties {
-        property "sonar.projectKey", "qontract_qontract"
-        property "sonar.organization", "qontract"
+        property "sonar.projectKey", "znsio_qontract"
+        property "sonar.organization", "znsio"
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.coverage.jacoco.xmlReportPaths", "${rootDir}/build/reports/jacoco/codeCoverageReport/codeCoverageReport.xml"
         property "sonar.coverage.exclusions", "**/application/src/**,**/junit5-support/src/**"

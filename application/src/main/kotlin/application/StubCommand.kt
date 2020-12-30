@@ -69,19 +69,19 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--passThroughTargetBase"], description = ["All requests that did not match a url in any contract will be forwarded to this service"])
     var passThroughTargetBase: String = ""
 
-    @Option(names = ["--httpsKeyStore"], description = ["EXPERIMENTAL: Run the proxy on https using a key in this store"])
+    @Option(names = ["--httpsKeyStore"], description = ["Run the proxy on https using a key in this store"])
     var keyStoreFile = ""
 
-    @Option(names = ["--httpsKeyStoreDir"], description = ["EXPERIMENTAL: Run the proxy on https, create a store named qontract.jks in this directory"])
+    @Option(names = ["--httpsKeyStoreDir"], description = ["Run the proxy on https, create a store named qontract.jks in this directory"])
     var keyStoreDir = ""
 
-    @Option(names = ["--httpsKeyStorePassword"], description = ["EXPERIMENTAL: Run the proxy on https, password for pre-existing key store"])
+    @Option(names = ["--httpsKeyStorePassword"], description = ["Run the proxy on https, password for pre-existing key store"])
     var keyStorePassword = "forgotten"
 
-    @Option(names = ["--httpsKeyAlias"], description = ["EXPERIMENTAL: Run the proxy on https using a key by this name"])
+    @Option(names = ["--httpsKeyAlias"], description = ["Run the proxy on https using a key by this name"])
     var keyStoreAlias = "qontractproxy"
 
-    @Option(names = ["--httpsPassword"], description = ["EXPERIMENTAL: Key password if any"])
+    @Option(names = ["--httpsPassword"], description = ["Key password if any"])
     var keyPassword = "forgotten"
 
     @Autowired

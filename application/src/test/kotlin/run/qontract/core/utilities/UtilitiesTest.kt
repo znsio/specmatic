@@ -53,7 +53,7 @@ internal class UtilitiesTest {
         every { loadSources(".") }.returns(sources)
 
         mockkConstructor(SystemGit::class)
-        every { anyConstructed<SystemGit>().repoName() }.returns("monorepo")
+        every { anyConstructed<SystemGit>().gitRoot() }.returns("/path/to/monorepo")
 
         every { anyConstructed<SystemGit>().relativeGitPath("../a/1.qontract") }.returns(Pair(SystemGit(), "a/1.qontract"))
         every { anyConstructed<SystemGit>().relativeGitPath("../b/1.qontract") }.returns(Pair(SystemGit(), "b/1.qontract"))

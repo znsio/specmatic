@@ -77,7 +77,4 @@ abstract class FakeGit: GitCommand {
         TODO("Not yet implemented")
     }
 
-    override fun repoName(): String {
-        TODO("Not yet implemented")
-    }
 }

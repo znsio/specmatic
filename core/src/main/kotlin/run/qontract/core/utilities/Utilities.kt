@@ -15,7 +15,6 @@ import run.qontract.consoleLog
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.Resolver
 import run.qontract.core.git.SystemGit
-import run.qontract.core.git.clone
 import run.qontract.core.nativeString
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.NullPattern
@@ -35,7 +34,6 @@ import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 import kotlin.system.exitProcess
-
 
 fun exitWithMessage(message: String): Nothing {
     println(message)
@@ -246,6 +244,11 @@ fun contractTestPathsFrom(configFilePath: String, workingDirectory: String): Lis
     return contractFilePathsFrom(configFilePath, workingDirectory) { source -> source.testContracts }
 }
 
+fun gitRootDir(): String {
+    val gitRoot = SystemGit().gitRoot()
+    return gitRoot.substring(gitRoot.lastIndexOf('/') + 1)
+}
+
 data class ContractPathData(val baseDir: String, val path: String)
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
@@ -253,46 +256,11 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
     val sources = loadSources(configFilePath)
 
     return sources.flatMap { source ->
-        println("Looking for contracts in local environment")
-        val userHome = File(System.getProperty("user.home"))
-        val defaultQontractWorkingDir = userHome.resolve(".qontract/repos")
-        val defaultRepoDir = source.directoryRelativeTo(defaultQontractWorkingDir)
+        val reposBaseDir = File(workingDirectory).resolve("repos")
+        if (!reposBaseDir.exists())
+            reposBaseDir.mkdirs()
 
-        val repoDir = when {
-            defaultRepoDir.exists() && SystemGit(defaultRepoDir.path).workingDirectoryIsGitRepo() -> {
-                println("Using local contracts")
-                defaultRepoDir
-            }
-            else -> {
-                val reposBaseDir = File(workingDirectory).resolve("repos")
-                if(!reposBaseDir.exists())
-                    reposBaseDir.mkdirs()
-
-                when(source) {
-                    is GitRepo -> {
-                        println("Couldn't find local contracts, cloning ${source.gitRepositoryURL} into ${reposBaseDir.path}")
-                        clone(reposBaseDir, source)
-                    }
-                    is GitMonoRepo -> {
-                        val baseDir = reposBaseDir.resolve(SystemGit().repoName())
-                        if (!baseDir.exists())
-                            baseDir.mkdirs()
-
-                        source.stubContracts = source.stubContracts.map {
-                            val relPath = SystemGit().relativeGitPath(it).second
-                            File(it).parentFile.copyRecursively(baseDir.resolve(relPath).parentFile, true)
-                            relPath
-                        }
-
-                        baseDir
-                    }
-                }
-            }
-        }
-
-        selector.select(source).map {
-            ContractPathData(repoDir.path, repoDir.resolve(it).path)
-        }
+        source.loadContracts(reposBaseDir, selector)
     }.also {
         println("Contract file paths #######")
         println(it)

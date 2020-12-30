@@ -1,5 +1,7 @@
 package run.qontract.stub
 
+import io.mockk.every
+import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
@@ -12,10 +14,7 @@ import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
-import run.qontract.core.Feature
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
-import run.qontract.core.QONTRACT_RESULT_HEADER
+import run.qontract.core.*
 import run.qontract.core.pattern.XML_ATTR_OPTIONAL_SUFFIX
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.NumberValue
@@ -508,6 +507,88 @@ Scenario: Square of a number
             val squareResponse = client.execute(HttpRequest(method = "POST", path = "/wrong_path", body = NumberValue(10)))
             assertThat(squareResponse.status).isEqualTo(400)
             assertThat(squareResponse.body.toStringValue()).isEqualTo("URL path not recognised")
+        }
+    }
+
+    @Test
+    fun `it should proxy all unstubbed requests to the specified end point`() {
+        val feature = Feature("""
+Feature: Math API
+
+Scenario: Square of a number
+  When POST /
+  And request-body (number)
+  Then status 200
+  And response-body (string)
+""".trim())
+
+        val httpClient = mockk<HttpClient>()
+        every { httpClient.execute(any()) } returns(HttpResponse.OK("it worked"))
+
+        val httpClientFactory = mockk<HttpClientFactory>()
+        every { httpClientFactory.client(any()) } returns(httpClient)
+
+        HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
+            val client = HttpClient(stub.endPoint)
+            val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toStringValue()).isEqualTo("it worked")
+            assertThat(response.headers[QONTRACT_SOURCE_HEADER]).isEqualTo("proxy")
+        }
+    }
+
+    @Test
+    fun `a proxied response should contain the header X-Qontract-Source`() {
+        val feature = Feature("""
+Feature: Math API
+
+Scenario: Square of a number
+  When POST /
+  And request-body (number)
+  Then status 200
+  And response-body (string)
+""".trim())
+
+        val httpClient = mockk<HttpClient>()
+        every { httpClient.execute(any()) } returns(HttpResponse.OK("it worked"))
+
+        val httpClientFactory = mockk<HttpClientFactory>()
+        every { httpClientFactory.client(any()) } returns(httpClient)
+
+        HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
+            val client = HttpClient(stub.endPoint)
+            val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
+
+            assertThat(response.headers[QONTRACT_SOURCE_HEADER]).isEqualTo("proxy")
+        }
+    }
+
+    @Test
+    fun `it should not proxy stubbed requests`() {
+        val feature = Feature("""
+Feature: Math API
+
+Scenario: Square of a number
+  When POST /
+  And request-body (number)
+  Then status 200
+  And response-body (string)
+""".trim())
+
+        val httpClient = mockk<HttpClient>()
+        every { httpClient.execute(any()) } returns(HttpResponse.OK("should not get here"))
+
+        val httpClientFactory = mockk<HttpClientFactory>()
+        every { httpClientFactory.client(any()) } returns(httpClient)
+
+        HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
+            stub.createStub(ScenarioStub(HttpRequest("POST", "/", body = NumberValue(10)), HttpResponse.OK("success")))
+            val client = HttpClient(stub.endPoint)
+            val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toStringValue()).isEqualTo("success")
         }
     }
 }

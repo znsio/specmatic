@@ -8,6 +8,8 @@ import run.qontract.core.pattern.Pattern
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.value.Value
 import run.qontract.mock.ScenarioStub
+import run.qontract.stub.HttpStubData
+import run.qontract.stub.HttpStubResponse
 import run.qontract.stub.ThreadSafeListOfStubs
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -70,12 +72,21 @@ fun stubShouldBreak(stubRequest: HttpRequest, stubResponse: HttpResponse, oldCon
     Assertions.assertThat(responseFromNewContract.status).isEqualTo(400)
 }
 
+fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeStubs: List<HttpStubData>, strictMode: Boolean): HttpStubResponse {
+    return run.qontract.stub.getHttpResponse(
+        httpRequest,
+        features,
+        ThreadSafeListOfStubs(threadSafeStubs.toMutableList()),
+        strictMode
+    )
+}
+
 fun testStub(contractGherkin: String, stubRequest: HttpRequest, stubResponse: HttpResponse): HttpResponse {
     val feature = Feature(contractGherkin)
     val stub = ScenarioStub(stubRequest, stubResponse)
     val matchingStub = feature.matchingStub(stub)
 
-    return run.qontract.stub.stubResponse(stubRequest, listOf(feature), listOf(matchingStub), true).let {
+    return stubResponse(stubRequest, listOf(feature), listOf(matchingStub), true).let {
         it.response.copy(headers = it.response.headers - QONTRACT_RESULT_HEADER)
     }
 }

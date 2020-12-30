@@ -18,11 +18,15 @@ import picocli.CommandLine.IFactory
 import run.qontract.core.Feature
 import run.qontract.core.QONTRACT_EXTENSION
 import run.qontract.mock.ScenarioStub
+import run.qontract.stub.HttpClientFactory
 import run.qontract.stub.HttpStubData
 import java.io.File
 import java.nio.file.Path
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.createFile
+import kotlin.io.path.writeText
 
-@SpringBootTest(webEnvironment = NONE, classes = arrayOf(QontractApplication::class, StubCommand::class))
+@SpringBootTest(webEnvironment = NONE, classes = [QontractApplication::class, StubCommand::class, HttpClientFactory::class])
 internal class StubCommandTest {
     @MockkBean
     lateinit var qontractConfig: QontractConfig
@@ -102,7 +106,7 @@ internal class StubCommandTest {
         val kafkaHost = "localhost"
         val kafkaPort = 9093
 
-        every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode) }.returns(null)
+        every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any()) }.returns(null)
         every { kafkaStubEngine.runKafkaStub(stubInfo, kafkaHost, kafkaPort, false) }.returns(null)
 
         every { qontractConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
@@ -112,7 +116,7 @@ internal class StubCommandTest {
         val exitStatus = CommandLine(stubCommand, factory).execute(contractPath)
         assertThat(exitStatus).isZero()
 
-        verify(exactly = 1) { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode) }
+        verify(exactly = 1) { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any()) }
         verify(exactly = 1) { kafkaStubEngine.runKafkaStub(stubInfo, kafkaHost, kafkaPort, false) }
     }
 
@@ -151,5 +155,40 @@ internal class StubCommandTest {
         every { fileOperations.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION) }.returns(true)
 
         CommandLine(stubCommand, factory).execute(qontractFilePath)
+    }
+
+    @Test
+    fun `should run the stub with the specified pass-through url target`() {
+        val contractPath = "/path/to/contract.qontract"
+        val contract = """
+            Feature: Simple API
+              Scenario: GET request
+                When GET /
+                Then status 200
+        """.trimIndent()
+
+        val feature = Feature(contract)
+
+        every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
+
+        val stubInfo = listOf(Pair(feature, emptyList<ScenarioStub>()))
+        every { stubLoaderEngine.loadStubs(listOf(contractPath), emptyList()) }.returns(stubInfo)
+
+        val host = "0.0.0.0"
+        val port = 9000
+        val certInfo = CertInfo()
+        val strictMode = false
+        val passThroughTargetBase = "http://passthroughTargetBase"
+
+        every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, passThroughTargetBase, any()) }.returns(null)
+
+        every { qontractConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
+        every { fileOperations.isFile(contractPath) }.returns(true)
+        every { fileOperations.extensionIsNot(contractPath, QONTRACT_EXTENSION) }.returns(false)
+
+        val exitStatus = CommandLine(stubCommand, factory).execute("--passThroughTargetBase=$passThroughTargetBase", contractPath)
+        assertThat(exitStatus).isZero()
+
+        verify(exactly = 1) { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any()) }
     }
 }

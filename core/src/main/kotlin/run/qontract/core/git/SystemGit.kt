@@ -49,11 +49,6 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
     }
 
     override fun inGitRootOf(contractPath: String): GitCommand = SystemGit(File(contractPath).parentFile.absolutePath)
-
-    override fun repoName(): String {
-        val result = execute("git", "config", "--get", "remote.origin.url").trim()
-        return result.substring(result.lastIndexOf('/') + 1)
-    }
 }
 
 private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory: String, command: Array<String>): String {

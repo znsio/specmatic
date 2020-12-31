@@ -119,8 +119,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
         } else {
             proxyQontractDataDir.createDirectory()
 
-
-            val featureFileName = "new_feature.qontract"
+            val featureFileName = "proxy_generated.qontract"
             println("Writing contract to $featureFileName")
             proxyQontractDataDir.writeText(featureFileName, gherkin)
 

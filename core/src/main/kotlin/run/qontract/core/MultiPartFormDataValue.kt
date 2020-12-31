@@ -3,6 +3,7 @@ package run.qontract.core
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.utils.io.streams.*
+import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
@@ -14,6 +15,11 @@ sealed class MultiPartFormDataValue(open val name: String) {
     abstract fun toDisplayableValue(): String
     abstract fun toJSONObject(): JSONObjectValue
     abstract fun addTo(formBuilder: FormBuilder)
+    abstract fun toClauseData(
+        clauses: List<GherkinClause>,
+        newTypes: Map<String, Pattern>,
+        examples: ExampleDeclarations
+    ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations>
 }
 
 data class MultiPartContentValue(override val name: String, val content: Value, val boundary: String = "#####") : MultiPartFormDataValue(name) {
@@ -37,6 +43,20 @@ $content
             append(HttpHeaders.ContentType, ContentType.parse(content.httpContentType))
             append(CONTENT_DISPOSITION, "form-data; name=${name}")
         })
+    }
+
+    override fun toClauseData(
+        clauses: List<GherkinClause>,
+        newTypes: Map<String, Pattern>,
+        examples: ExampleDeclarations
+    ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+        val (typeDeclaration, newExamples) = this.content.typeDeclarationWithKey(this.name, newTypes, examples)
+
+        val newGherkinClause = GherkinClause(
+            "request-part ${this.name} ${typeDeclaration.typeValue}",
+            GherkinSection.When
+        )
+        return Triple(clauses.plus(newGherkinClause), typeDeclaration.types, examples.plus(newExamples))
     }
 }
 
@@ -88,5 +108,23 @@ $headerString
         }) {
             (content ?: "").byteInputStream().asInput()
         }
+    }
+
+    override fun toClauseData(
+        clauses: List<GherkinClause>,
+        newTypes: Map<String, Pattern>,
+        examples: ExampleDeclarations
+    ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+        val contentType = this.contentType
+        val contentEncoding = contentType?.let { this.contentEncoding }
+
+        return Triple(
+            clauses.plus(
+                GherkinClause(
+                    "request-part ${this.name} ${this.filename} $contentType $contentEncoding".trim(),
+                    GherkinSection.When
+                )
+            ), newTypes, examples
+        )
     }
 }

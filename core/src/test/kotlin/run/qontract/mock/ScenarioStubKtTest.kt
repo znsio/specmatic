@@ -125,7 +125,7 @@ internal class ScenarioStubKtTest {
         assertThat(mock.request.multiPartFormData.first().name).isEqualTo("employees")
 
         val part = mock.request.multiPartFormData.first() as MultiPartFileValue
-        assertThat(part.filename).isEqualTo("@employees.csv")
+        assertThat(part.filename).isEqualTo("employees.csv")
         assertThat(part.contentType).isEqualTo("text/csv")
         assertThat(part.contentEncoding).isEqualTo("gzip")
     }
@@ -204,7 +204,7 @@ internal class ScenarioStubKtTest {
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
         val pattern = mock.request.toPattern()
         assertThat(pattern.multiPartFormDataPattern).hasSize(1)
-        assertThat(pattern.multiPartFormDataPattern.single().matches(MultiPartFileValue("employees", "@employees.csv", "text/csv", "gzip"), Resolver())).isInstanceOf(Success::class.java)
+        assertThat(pattern.multiPartFormDataPattern.single().matches(MultiPartFileValue("employees", "employees.csv", "text/csv", "gzip"), Resolver())).isInstanceOf(Success::class.java)
     }
 
     @Test
@@ -301,7 +301,7 @@ internal class ScenarioStubKtTest {
 
     @Test
     fun `request-response with multipart form data file to gherkin string`() {
-        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartFileValue("customer_csv", "@customer.csv", "text/csv", "identity")))
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartFileValue("customer_csv", "customer.csv", "text/csv", "identity")))
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
         validateStubAndQontract(request, response, """Feature: New Feature

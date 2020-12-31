@@ -304,7 +304,9 @@ fun toFormDataPart(step: StepInfo): MultiPartFormDataPattern {
             val contentType = parts.getOrNull(2)
             val contentEncoding = parts.getOrNull(3)
 
-            MultiPartFilePattern(name, content, contentType, contentEncoding)
+            val filename = content.removePrefix("@")
+
+            MultiPartFilePattern(name, parsedPattern(filename), contentType, contentEncoding)
         }
         isPatternToken(content) -> {
             MultiPartContentPattern(name, parsedPattern(content))

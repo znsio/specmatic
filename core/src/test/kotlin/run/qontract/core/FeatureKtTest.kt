@@ -107,7 +107,7 @@ class FeatureKtTest {
 
     @Test
     fun `should parse multipart file spec`() {
-        val behaviour = Feature("""
+        val feature = Feature("""
             Feature: Customer Data API
             
             Scenario: Upload customer information
@@ -116,9 +116,9 @@ class FeatureKtTest {
               Then status 200
         """.trimIndent())
 
-        val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
+        val pattern = feature.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
-        assertThat(pattern.filename).isEqualTo("@customer_info.csv")
+        assertThat(pattern.filename).isEqualTo(ExactValuePattern(StringValue("customer_info.csv")))
         assertThat(pattern.contentType).isEqualTo("text/csv")
         assertThat(pattern.contentEncoding).isEqualTo("gzip")
     }
@@ -136,7 +136,7 @@ class FeatureKtTest {
 
         val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
-        assertThat(pattern.filename).isEqualTo("@customer_info.csv")
+        assertThat(pattern.filename).isEqualTo(ExactValuePattern(StringValue("customer_info.csv")))
         assertThat(pattern.contentType).isEqualTo("text/csv")
         assertThat(pattern.contentEncoding).isEqualTo(null)
     }
@@ -154,7 +154,7 @@ class FeatureKtTest {
 
         val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
-        assertThat(pattern.filename).isEqualTo("@customer_info.csv")
+        assertThat(pattern.filename).isEqualTo(ExactValuePattern(StringValue("customer_info.csv")))
         assertThat(pattern.contentType).isEqualTo(null)
         assertThat(pattern.contentEncoding).isEqualTo(null)
     }

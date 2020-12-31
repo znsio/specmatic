@@ -245,7 +245,7 @@ internal class HttpRequestKtTest {
         val request = requestFromJSON(requestStubData.jsonObject)
         assertThat(request.multiPartFormData.single().name).isEqualTo("name")
         val filePart = request.multiPartFormData.single() as MultiPartFileValue
-        assertThat(filePart.filename).isEqualTo("@test.csv")
+        assertThat(filePart.filename).isEqualTo("test.csv")
     }
 }
 

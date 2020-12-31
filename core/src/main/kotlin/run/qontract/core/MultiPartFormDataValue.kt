@@ -4,6 +4,8 @@ import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.utils.io.streams.*
 import run.qontract.core.pattern.Pattern
+import run.qontract.core.pattern.isPatternToken
+import run.qontract.core.pattern.parsedPattern
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
@@ -62,7 +64,7 @@ $content
 
 data class MultiPartFileValue(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null, val content: String? = null, val boundary: String = "#####") : MultiPartFormDataValue(name) {
     override fun inferType(): MultiPartFormDataPattern {
-        return MultiPartFilePattern(name, filename, contentType, contentEncoding)
+        return MultiPartFilePattern(name, parsedPattern(filename.removePrefix("@")), contentType, contentEncoding)
     }
 
     override fun toDisplayableValue(): String {
@@ -121,7 +123,7 @@ $headerString
         return Triple(
             clauses.plus(
                 GherkinClause(
-                    "request-part ${this.name} ${this.filename} $contentType $contentEncoding".trim(),
+                    "request-part ${this.name} @${this.filename} $contentType $contentEncoding".trim(),
                     GherkinSection.When
                 )
             ), newTypes, examples

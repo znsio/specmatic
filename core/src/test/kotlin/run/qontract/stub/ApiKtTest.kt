@@ -297,7 +297,7 @@ Feature: Math API
         And response-body (number)
 """.trim())
 
-        val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "@number.txt", "text/plain", null)))
+        val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "number.txt", "text/plain", null)))
         val mock = ScenarioStub(request, HttpResponse.OK(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
@@ -319,7 +319,7 @@ Feature: Math API
         And response-body (number)
 """.trim())
 
-        val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "@number.txt", "text/plain", null)))
+        val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "number.txt", "text/plain", null)))
 
         val response = stubResponse(request, listOf(Pair(feature, emptyList())))
 

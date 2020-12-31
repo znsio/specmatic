@@ -655,7 +655,7 @@ Then status 200
 
                 val part = request.multiPartFormData.single() as MultiPartFileValue
                 assertThat(part.name).isEqualTo("number")
-                assertThat(part.filename).isEqualTo("@number.txt")
+                assertThat(part.filename).isEqualTo("number.txt")
                 assertThat(part.contentType).isEqualTo("text/plain")
 
                 return HttpResponse.OK
@@ -670,7 +670,7 @@ Then status 200
     }
 
     @Test
-    fun `should generate a test with a multipart file part with no content ypte` () {
+    fun `should generate a test with a multipart file part with no content type` () {
         val gherkin = """
 Feature: Dumb API
 
@@ -689,7 +689,7 @@ Then status 200
 
                 val part = request.multiPartFormData.single() as MultiPartFileValue
                 assertThat(part.name).isEqualTo("number")
-                assertThat(part.filename).isEqualTo("@number.txt")
+                assertThat(part.filename).isEqualTo("number.txt")
 
                 return HttpResponse.OK
             }

@@ -83,6 +83,33 @@ ${scenarioData.prependIndent("  ")}
 
 fun toGherkinFeature(scenarioName: String, clauses: Pair<List<GherkinClause>, ExampleDeclarations>): String = withFeatureClause("New Feature", toGherkinScenario(scenarioName, clauses))
 
+fun toGherkinScenario2(scenarioName: String, clauses: List<GherkinClause>, examplesList: List<ExampleDeclarations>): String {
+    val groupedClauses = clauses.groupBy { it.section }
+
+    val prefixesInOrder = listOf(Given, When, Then, `*`)
+
+    val statements = prefixesInOrder.flatMap { section ->
+        val sectionClauses = groupedClauses[section] ?: emptyList()
+        val prefixes = listOf(section.prefix).plus(1.until(sectionClauses.size).map { "And" })
+        sectionClauses.zip(prefixes).map { (clause, prefix) -> GherkinStatement(clause.content, prefix) }
+    }
+
+    val statementString = statements.joinToString("\n") { it.toGherkinString() }
+
+    val scenarioGherkin = when {
+        hasAtLeastOneExample(examplesList) -> {
+            val examplesString = toExampleGherkinString(examplesList)
+            "$statementString\n\n$examplesString"
+        }
+        else -> statementString
+    }
+
+    return withScenarioClause(scenarioName, scenarioGherkin).trim()
+}
+
+private fun hasAtLeastOneExample(examplesList: List<ExampleDeclarations>) =
+    examplesList.isNotEmpty() && examplesList.first().examples.isNotEmpty()
+
 fun toGherkinScenario(scenarioName: String, declarations: Pair<List<GherkinClause>, ExampleDeclarations>): String {
     val (clauses, exampleDeclaration) = declarations
     val groupedClauses = clauses.groupBy { it.section }
@@ -114,4 +141,17 @@ internal fun toExampleGherkinString(exampleDeclarationsStore: ExampleDeclaration
     val firstRow = """| ${entries.joinToString(" | ") { it.value.replace("|", "\\|") }} |"""
 
     return "Examples:\n$heading\n$firstRow"
+}
+
+internal fun toExampleGherkinString(examplesList: List<ExampleDeclarations>): String {
+    val keys = examplesList.first().examples.entries.toList().map { it.key }
+
+    val heading = """| ${keys.joinToString(" | ") { it.replace("|", "\\|") }} |"""
+
+    val rows = examplesList.joinToString("\n") { example ->
+        val values = keys.map { key -> example.examples.getValue(key) }
+        """| ${values.joinToString(" | ") { it.replace("|", "\\|") }} |"""
+    }
+
+    return "Examples:\n$heading\n$rows"
 }

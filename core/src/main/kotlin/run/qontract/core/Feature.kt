@@ -405,10 +405,20 @@ private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, Examp
     }
 }
 
-fun toGherkinFeature(name: String, stubs: List<NamedStub>): String {
-    val scenarioStrings = stubs.map { stub ->
-        toGherkinScenario(stub.name, stubToClauses(stub)).trim()
+fun toGherkinFeature(featureName: String, stubs: List<NamedStub>): String {
+    val groupedStubs = stubs.map { stub ->
+        val (clauses, examples) = stubToClauses(stub)
+        Pair(Pair(stub.name, clauses), listOf(examples))
+    }.fold(emptyMap<Pair<String, List<GherkinClause>>, List<ExampleDeclarations>>(),
+        { acc, item ->
+            acc.plus(item.first to acc.getOrDefault(item.first, emptyList()).plus(item.second))
+        })
+
+    val scenarioStrings = groupedStubs.map { (nameAndClauses, examplesList) ->
+        val (name, clauses) = nameAndClauses
+
+        toGherkinScenario2(name, clauses, examplesList)
     }
 
-    return withFeatureClause(name, scenarioStrings.joinToString("\n\n"))
+    return withFeatureClause(featureName, scenarioStrings.joinToString("\n\n"))
 }

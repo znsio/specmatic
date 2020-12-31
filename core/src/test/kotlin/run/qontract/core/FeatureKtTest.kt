@@ -6,6 +6,7 @@ import run.qontract.core.pattern.*
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
+import run.qontract.mock.ScenarioStub
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -226,6 +227,26 @@ class FeatureKtTest {
         """.trimIndent())
 
         assertThat(feature.scenarios.single().ignoreFailure).isTrue()
+    }
+
+    @Test
+    fun `a single scenario with 2 examples should be generated out of 2 stubs with the same structure`() {
+        val stub1 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", queryParams = mapOf("hello" to "world")), HttpResponse.OK))
+        val stub2 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", queryParams = mapOf("hello" to "hello")), HttpResponse.OK))
+
+        val generatedGherkin = toGherkinFeature("new feature", listOf(stub1, stub2)).trim()
+
+        val expectedGherkin = """Feature: new feature
+  Scenario: stub
+    When GET /?hello=(string)
+    Then status 200
+  
+    Examples:
+    | hello |
+    | world |
+    | hello |""".trim()
+
+        assertThat(generatedGherkin).isEqualTo(expectedGherkin)
     }
 
     private fun deferredToJsonPatternData(pattern: Pattern, resolver: Resolver): Map<String, Pattern> =

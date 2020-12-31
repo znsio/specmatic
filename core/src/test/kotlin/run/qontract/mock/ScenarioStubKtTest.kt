@@ -311,7 +311,11 @@ internal class ScenarioStubKtTest {
     When POST /customer
     And request-part customer_csv @customer.csv text/csv identity
     Then status 200
-    And response-body (ResponseBody)""")
+    And response-body (ResponseBody)
+  
+    Examples:
+    | customer_csv_filename |
+    | customer.csv |""")
     }
 
     @Test
@@ -344,7 +348,11 @@ internal class ScenarioStubKtTest {
     When POST /square
     And request-part employees @employees.csv text/csv gzip
     Then status 200
-    And response-body (number)""")
+    And response-body (number)
+  
+    Examples:
+    | employees_filename |
+    | employees.csv |""")
     }
 
     @Test

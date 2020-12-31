@@ -112,13 +112,12 @@ $headerString
         }
     }
 
-    override fun toClauseData(
-        clauses: List<GherkinClause>,
-        newTypes: Map<String, Pattern>,
-        examples: ExampleDeclarations
-    ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+    override fun toClauseData(clauses: List<GherkinClause>, newTypes: Map<String, Pattern>, examples: ExampleDeclarations ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
         val contentType = this.contentType
         val contentEncoding = contentType?.let { this.contentEncoding }
+
+        val filenameExampleName = examples.getNewName("${name}_filename", newTypes.keys)
+        val newExamples = examples.plus(filenameExampleName to filename)
 
         return Triple(
             clauses.plus(
@@ -126,7 +125,7 @@ $headerString
                     "request-part ${this.name} @${this.filename} $contentType $contentEncoding".trim(),
                     GherkinSection.When
                 )
-            ), newTypes, examples
+            ), newTypes, newExamples
         )
     }
 }

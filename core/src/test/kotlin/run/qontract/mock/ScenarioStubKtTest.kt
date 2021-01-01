@@ -309,7 +309,7 @@ internal class ScenarioStubKtTest {
     Given type ResponseBody
       | id | (number) |
     When POST /customer
-    And request-part customer_csv @customer.csv text/csv identity
+    And request-part customer_csv @(string) text/csv identity
     Then status 200
     And response-body (ResponseBody)
   
@@ -346,7 +346,7 @@ internal class ScenarioStubKtTest {
         validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     When POST /square
-    And request-part employees @employees.csv text/csv gzip
+    And request-part employees @(string) text/csv gzip
     Then status 200
     And response-body (number)
   

@@ -735,6 +735,42 @@ Examples:
         assertThat(flags.toSet()).isEqualTo(setOf("executed"))
         assertTrue(results.success(), results.report())
     }
+
+    @Test
+    fun `a multipart file type should pick up it's value from a row and execute tests` () {
+        val gherkin = """
+Feature: Has multipart
+
+Scenario: multipart
+When POST /data
+And request-part employees @(string)
+Then status 200
+
+Examples:
+| employees_filename |
+| employees.csv |
+""".trim()
+
+        val contract = Feature(gherkin)
+        val flags = mutableSetOf<String>()
+
+        val results = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add("executed")
+                val filePart = request.multiPartFormData.first() as MultiPartFileValue
+                assertThat(filePart.name).isEqualTo("employees")
+                assertThat(filePart.filename).isEqualTo("employees.csv")
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(flags.toSet()).isEqualTo(setOf("executed"))
+        assertTrue(results.success(), results.report())
+    }
 }
 
 fun flagsContain(haystack: List<String>, needles: List<String>) {

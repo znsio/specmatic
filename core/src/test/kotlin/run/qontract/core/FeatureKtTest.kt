@@ -249,6 +249,27 @@ class FeatureKtTest {
         assertThat(generatedGherkin).isEqualTo(expectedGherkin)
     }
 
+    @Test
+    fun `a single scenario with 2 examples of a multipart file should be generated out of 2 stubs with the same structure`() {
+        val stub1 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees1.csv", content="1,2,3"))), HttpResponse.OK))
+        val stub2 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees2.csv", content="1,2,3"))), HttpResponse.OK))
+
+        val generatedGherkin = toGherkinFeature("new feature", listOf(stub1, stub2)).trim()
+
+        val expectedGherkin = """Feature: new feature
+  Scenario: stub
+    When GET /
+    And request-part employees @(string)
+    Then status 200
+  
+    Examples:
+    | employees_filename |
+    | employees1.csv |
+    | employees2.csv |""".trim()
+
+        assertThat(generatedGherkin).isEqualTo(expectedGherkin)
+    }
+
     private fun deferredToJsonPatternData(pattern: Pattern, resolver: Resolver): Map<String, Pattern> =
             ((pattern as DeferredPattern).resolvePattern(resolver) as TabularPattern).pattern
 

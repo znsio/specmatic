@@ -50,7 +50,11 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
 }
 
 data class MultiPartFilePattern(override val name: String, val filename: Pattern, val contentType: String? = null, val contentEncoding: String? = null) : MultiPartFormDataPattern(name) {
-    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?> = listOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?> {
+        val rowKey = "${name}_filename"
+        return listOf(this.copy(filename = if(row.containsField(rowKey)) ExactValuePattern(StringValue(row.getField(rowKey))) else filename))
+    }
+
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
             MultiPartFileValue(name, filename.generate(resolver).toStringValue(), contentType, contentEncoding)
 

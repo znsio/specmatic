@@ -3,6 +3,7 @@ package run.qontract.core
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.utils.io.streams.*
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.isPatternToken
 import run.qontract.core.pattern.parsedPattern
@@ -64,8 +65,10 @@ $content
 
 data class MultiPartFileValue(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null, val content: String? = null, val boundary: String = "#####") : MultiPartFormDataValue(name) {
     override fun inferType(): MultiPartFormDataPattern {
-        return MultiPartFilePattern(name, parsedPattern(filename.removePrefix("@")), contentType, contentEncoding)
+        return MultiPartFilePattern(name, filenameToType(), contentType, contentEncoding)
     }
+
+    private fun filenameToType() = parsedPattern(filename.removePrefix("@"))
 
     override fun toDisplayableValue(): String {
         val headers = mapOf (
@@ -113,16 +116,24 @@ $headerString
     }
 
     override fun toClauseData(clauses: List<GherkinClause>, newTypes: Map<String, Pattern>, examples: ExampleDeclarations ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-        val contentType = this.contentType
-        val contentEncoding = contentType?.let { this.contentEncoding }
+        val contentEncoding = this.contentType?.let { this.contentEncoding } ?: ""
+        val contentType = this.contentType ?: ""
 
-        val filenameExampleName = examples.getNewName("${name}_filename", newTypes.keys)
-        val newExamples = examples.plus(filenameExampleName to filename)
+        val (newFilename, newExamples) = when {
+            !isPatternToken(filename) -> {
+                val filenameExampleName = examples.getNewName("${name}_filename", newTypes.keys)
+                val newExamples = examples.plus(filenameExampleName to filename)
+
+                Pair("(string)", newExamples)
+            }
+            isPatternToken(filename) && filename.trim() != "(string)" -> throw ContractException("Only (string) is supported as a type", name)
+            else -> Pair(filename, examples)
+        }
 
         return Triple(
             clauses.plus(
                 GherkinClause(
-                    "request-part ${this.name} @${this.filename} $contentType $contentEncoding".trim(),
+                    "request-part ${this.name} @$newFilename $contentType $contentEncoding".trim(),
                     GherkinSection.When
                 )
             ), newTypes, newExamples

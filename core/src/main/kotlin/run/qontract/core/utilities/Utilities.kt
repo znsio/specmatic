@@ -255,12 +255,8 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
     println("Loading config file $configFilePath")
     val sources = loadSources(configFilePath)
 
-    return sources.flatMap { source ->
-        val reposBaseDir = File(workingDirectory).resolve("repos")
-        if (!reposBaseDir.exists())
-            reposBaseDir.mkdirs()
-
-        source.loadContracts(reposBaseDir, selector)
+    return sources.flatMap {
+        it.loadContracts(selector, workingDirectory)
     }.also {
         println("Contract file paths #######")
         println(it)

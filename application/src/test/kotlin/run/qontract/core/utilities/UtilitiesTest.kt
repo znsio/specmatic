@@ -47,17 +47,13 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources with mono repo`() {
-        val sources = listOf(GitMonoRepo(listOf(), listOf("../a/1.qontract", "../b/1.qontract", "../c/1.qontract")))
+        val sources = listOf(GitMonoRepo(listOf(), listOf("a/1.qontract", "b/1.qontract", "c/1.qontract")))
 
         mockkStatic("run.qontract.core.utilities.Utilities")
         every { loadSources(".") }.returns(sources)
 
         mockkConstructor(SystemGit::class)
         every { anyConstructed<SystemGit>().gitRoot() }.returns("/path/to/monorepo")
-
-        every { anyConstructed<SystemGit>().relativeGitPath("../a/1.qontract") }.returns(Pair(SystemGit(), "a/1.qontract"))
-        every { anyConstructed<SystemGit>().relativeGitPath("../b/1.qontract") }.returns(Pair(SystemGit(), "b/1.qontract"))
-        every { anyConstructed<SystemGit>().relativeGitPath("../c/1.qontract") }.returns(Pair(SystemGit(), "c/1.qontract"))
 
         sources[0].stubContracts.forEach {
             File(it).parentFile.mkdirs()
@@ -66,14 +62,14 @@ internal class UtilitiesTest {
 
         val contractPaths = contractFilePathsFrom(".", ".qontract") { source -> source.stubContracts }
         val expectedContractPaths = listOf(
-                ContractPathData(".qontract/repos/monorepo", ".qontract/repos/monorepo/a/1.qontract"),
-                ContractPathData(".qontract/repos/monorepo", ".qontract/repos/monorepo/b/1.qontract"),
-                ContractPathData(".qontract/repos/monorepo", ".qontract/repos/monorepo/c/1.qontract"),
+                ContractPathData("/path/to/monorepo", "/path/to/monorepo/a/1.qontract"),
+                ContractPathData("/path/to/monorepo", "/path/to/monorepo/b/1.qontract"),
+                ContractPathData("/path/to/monorepo", "/path/to/monorepo/c/1.qontract"),
         )
 
         assertThat(contractPaths == expectedContractPaths).isTrue
 
-        listOf("../a", "../b", "../c").forEach { File(it).deleteRecursively() }
+        listOf("a", "b", "c").forEach { File(it).deleteRecursively() }
         File(".qontract").deleteRecursively()
     }
 

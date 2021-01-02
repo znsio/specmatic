@@ -14,10 +14,14 @@ sealed class ContractSource {
     abstract fun directoryRelativeTo(workingDirectory: File): File
     abstract fun getLatest(sourceGit: SystemGit)
     abstract fun pushUpdates(sourceGit: SystemGit)
-    abstract fun loadContracts(reposBaseDir: File, selector: ContractsSelectorPredicate): List<ContractPathData>
+    abstract fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String): List<ContractPathData>
 }
 
-data class GitRepo(val gitRepositoryURL: String, override val testContracts: List<String>, override val stubContracts: List<String>) : ContractSource() {
+data class GitRepo(
+    val gitRepositoryURL: String,
+    override val testContracts: List<String>,
+    override val stubContracts: List<String>
+) : ContractSource() {
     val repoName = gitRepositoryURL.split("/").last().removeSuffix(".git")
 
     override fun pathDescriptor(path: String): String {
@@ -25,7 +29,7 @@ data class GitRepo(val gitRepositoryURL: String, override val testContracts: Lis
     }
 
     override fun directoryRelativeTo(workingDirectory: File) =
-            workingDirectory.resolve(repoName)
+        workingDirectory.resolve(repoName)
 
     override fun getLatest(sourceGit: SystemGit) {
         sourceGit.pull()
@@ -35,7 +39,7 @@ data class GitRepo(val gitRepositoryURL: String, override val testContracts: Lis
         commitAndPush(sourceGit)
     }
 
-    override fun loadContracts(reposBaseDir: File, selector: ContractsSelectorPredicate): List<ContractPathData> {
+    override fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String): List<ContractPathData> {
         println("Looking for contracts in local environment")
         val userHome = File(System.getProperty("user.home"))
         val defaultQontractWorkingDir = userHome.resolve(".qontract/repos")
@@ -47,7 +51,10 @@ data class GitRepo(val gitRepositoryURL: String, override val testContracts: Lis
                 defaultRepoDir
             }
             else -> {
+                val reposBaseDir = File(workingDirectory).resolve("repos")
                 println("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
+                if (!reposBaseDir.exists())
+                    reposBaseDir.mkdirs()
                 clone(reposBaseDir, this)
             }
         }
@@ -108,15 +115,11 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
         // In mono repos, we can't push arbitrarily
     }
 
-    override fun loadContracts(reposBaseDir: File, selector: ContractsSelectorPredicate): List<ContractPathData> {
-        val baseDir = reposBaseDir.resolve(gitRootDir())
-        if (!baseDir.exists())
-            baseDir.mkdirs()
+    override fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String): List<ContractPathData> {
+        val baseDir = File(SystemGit().gitRoot())
 
         return stubContracts.map {
-            val relPath = SystemGit().relativeGitPath(it).second
-            File(it).parentFile.copyRecursively(baseDir.resolve(relPath).parentFile, true)
-            ContractPathData(baseDir.path, baseDir.resolve(relPath).path)
+            ContractPathData(baseDir.path, baseDir.resolve(it).path)
         }
     }
 }

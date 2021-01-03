@@ -81,8 +81,6 @@ ${scenarioData.prependIndent("  ")}
 """
 }
 
-fun toGherkinFeature(scenarioName: String, clauses: Pair<List<GherkinClause>, ExampleDeclarations>): String = withFeatureClause("New Feature", toGherkinScenario(scenarioName, clauses))
-
 fun toGherkinScenario2(scenarioName: String, clauses: List<GherkinClause>, examplesList: List<ExampleDeclarations>): String {
     val groupedClauses = clauses.groupBy { it.section }
 
@@ -150,7 +148,9 @@ internal fun toExampleGherkinString(examplesList: List<ExampleDeclarations>): St
 
     val rows = examplesList.joinToString("\n") { example ->
         val values = keys.map { key -> example.examples.getValue(key) }
-        """| ${values.joinToString(" | ") { it.replace("|", "\\|") }} |"""
+        val comment = example.comment?.let { " ${example.comment} |" } ?: ""
+
+        """| ${values.joinToString(" | ") { it.replace("|", "\\|") }} |$comment"""
     }
 
     return "Examples:\n$heading\n$rows"

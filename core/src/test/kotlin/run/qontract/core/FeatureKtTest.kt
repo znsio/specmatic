@@ -270,6 +270,26 @@ class FeatureKtTest {
         assertThat(generatedGherkin).isEqualTo(expectedGherkin)
     }
 
+    @Test
+    fun `an example should have the response Date headers value at the end as a comment`() {
+        val stub = NamedStub("stub", ScenarioStub(HttpRequest("POST", "/", body = StringValue("hello world")), HttpResponse.OK.copy(headers = mapOf("Date" to "Tuesday 1st Jan 2020"))))
+
+        val generatedGherkin = toGherkinFeature("new feature", listOf(stub)).trim()
+
+        val expectedGherkin = """Feature: new feature
+  Scenario: stub
+    When POST /
+    And request-body (RequestBody: string)
+    Then status 200
+    And response-header Date (string)
+  
+    Examples:
+    | RequestBody |
+    | hello world | Tuesday 1st Jan 2020 |""".trim()
+
+        assertThat(generatedGherkin).isEqualTo(expectedGherkin)
+    }
+
     private fun deferredToJsonPatternData(pattern: Pattern, resolver: Resolver): Map<String, Pattern> =
             ((pattern as DeferredPattern).resolvePattern(resolver) as TabularPattern).pattern
 

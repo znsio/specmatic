@@ -386,7 +386,7 @@ private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChil
 private fun scenarios(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
         featureChildren.filter { it.valueCase.name != "BACKGROUND" }
 
-fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature(stub.name, stubToClauses(stub))
+fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature("New Feature", listOf(stub))
 
 private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, ExampleDeclarations> {
     return when (namedStub.stub.kafkaMessage) {
@@ -405,13 +405,17 @@ private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, Examp
     }
 }
 
+data class GherkinScenario(val scenarioName: String, val clauses: List<GherkinClause>)
+
 fun toGherkinFeature(featureName: String, stubs: List<NamedStub>): String {
     val groupedStubs = stubs.map { stub ->
         val (clauses, examples) = stubToClauses(stub)
-        Pair(Pair(stub.name, clauses), listOf(examples))
-    }.fold(emptyMap<Pair<String, List<GherkinClause>>, List<ExampleDeclarations>>(),
-        { acc, item ->
-            acc.plus(item.first to acc.getOrDefault(item.first, emptyList()).plus(item.second))
+        val commentedExamples = addCommentsToExamples(examples, stub)
+
+        Pair(GherkinScenario(stub.name, clauses), listOf(commentedExamples))
+    }.fold(emptyMap<GherkinScenario, List<ExampleDeclarations>>(),
+        { groups, (scenario, examples) ->
+            groups.plus(scenario to groups.getOrDefault(scenario, emptyList()).plus(examples))
         })
 
     val scenarioStrings = groupedStubs.map { (nameAndClauses, examplesList) ->
@@ -421,4 +425,9 @@ fun toGherkinFeature(featureName: String, stubs: List<NamedStub>): String {
     }
 
     return withFeatureClause(featureName, scenarioStrings.joinToString("\n\n"))
+}
+
+private fun addCommentsToExamples(examples: ExampleDeclarations, stub: NamedStub): ExampleDeclarations {
+    val date = stub.stub.response.headers["Date"]
+    return examples.withComment(date)
 }

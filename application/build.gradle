@@ -42,7 +42,7 @@ def junit_version = "5.7.0"
 def jgit_version = "5.10.0.202012080955-r"
 
 dependencies {
-    implementation('info.picocli:picocli-spring-boot-starter:4.5.2') {
+    implementation('info.picocli:picocli-spring-boot-starter:4.6.1') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
     implementation 'info.picocli:picocli:4.5.2'

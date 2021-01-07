@@ -421,7 +421,7 @@ fun toGherkinFeature(featureName: String, stubs: List<NamedStub>): String {
     val scenarioStrings = groupedStubs.map { (nameAndClauses, examplesList) ->
         val (name, clauses) = nameAndClauses
 
-        toGherkinScenario2(name, clauses, examplesList)
+        toGherkinScenario(name, clauses, examplesList)
     }
 
     return withFeatureClause(featureName, scenarioStrings.joinToString("\n\n"))

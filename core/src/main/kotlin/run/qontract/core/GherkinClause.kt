@@ -10,7 +10,7 @@ import run.qontract.core.value.*
 data class GherkinClause(val content: String, val section: GherkinSection)
 
 enum class GherkinSection(val prefix: String) {
-    Given("Given"), When("When"), Then("Then"), `*`("*")
+    Given("Given"), When("When"), Then("Then"), Star("*")
 }
 
 fun responseBodyToGherkinClauses(typeName: String, body: Value?, types: Map<String, Pattern>): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations>? {
@@ -81,10 +81,10 @@ ${scenarioData.prependIndent("  ")}
 """
 }
 
-fun toGherkinScenario2(scenarioName: String, clauses: List<GherkinClause>, examplesList: List<ExampleDeclarations>): String {
+fun toGherkinScenario(scenarioName: String, clauses: List<GherkinClause>, examplesList: List<ExampleDeclarations>): String {
     val groupedClauses = clauses.groupBy { it.section }
 
-    val prefixesInOrder = listOf(Given, When, Then, `*`)
+    val prefixesInOrder = listOf(Given, When, Then, Star)
 
     val statements = prefixesInOrder.flatMap { section ->
         val sectionClauses = groupedClauses[section] ?: emptyList()
@@ -112,7 +112,7 @@ fun toGherkinScenario(scenarioName: String, declarations: Pair<List<GherkinClaus
     val (clauses, exampleDeclaration) = declarations
     val groupedClauses = clauses.groupBy { it.section }
 
-    val prefixesInOrder = listOf(Given, When, Then, `*`)
+    val prefixesInOrder = listOf(Given, When, Then, Star)
 
     val statements = prefixesInOrder.flatMap { section ->
         val sectionClauses = groupedClauses[section] ?: emptyList()

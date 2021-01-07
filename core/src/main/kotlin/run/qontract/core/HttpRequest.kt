@@ -65,7 +65,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
                 it
         } ?: ""
         val cleanPath = path?.let {
-            if(it.isNotBlank() && it.startsWith("/") && cleanBase?.isNotBlank() == true)
+            if(it.isNotBlank() && it.startsWith("/") && cleanBase.isNotBlank())
                 it.removePrefix("/")
             else
                 it

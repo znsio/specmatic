@@ -40,7 +40,7 @@ class StubCommand : Callable<Unit> {
     private lateinit var context: ApplicationContext
 
     @Autowired
-    lateinit var qontractConfig: QontractConfig
+    var qontractConfig: QontractConfig = QontractConfig()
 
     @Parameters(arity = "0..*", description = ["Contract file paths"])
     var contractPaths: List<String> = mutableListOf()

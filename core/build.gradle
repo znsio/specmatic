@@ -59,7 +59,7 @@ dependencies {
     testImplementation "com.intuit.karate:karate-junit5:$karate_version"
     testImplementation 'org.springframework:spring-web:5.3.3'
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
-    testImplementation 'io.mockk:mockk:1.10.4'
+    testImplementation 'io.mockk:mockk:1.10.5'
     testImplementation 'org.assertj:assertj-core:3.18.1'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
 }

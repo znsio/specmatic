@@ -47,7 +47,13 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
         }
     }
 
-    val converged = common.plus(missingIn1).plus(missingIn2)
+    val converged = common.plus(missingIn1).plus(missingIn2).mapKeys {
+        val optionalKey = "${withoutOptionality(it.key)}?"
+        if(optionalKey in json1 || optionalKey in json2)
+            optionalKey
+        else
+            it.key
+    }
 
     if(converged.any { it.key.contains("??") }) {
         println(converged.keys)

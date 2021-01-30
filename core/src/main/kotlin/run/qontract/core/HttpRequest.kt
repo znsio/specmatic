@@ -65,7 +65,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
                 it
         } ?: ""
         val cleanPath = path?.let {
-            if(it.isNotBlank() && it.startsWith("/") && cleanBase?.isNotBlank() == true)
+            if(it.isNotBlank() && it.startsWith("/") && cleanBase.isNotBlank())
                 it.removePrefix("/")
             else
                 it
@@ -194,7 +194,7 @@ fun requestFromJSON(json: Map<String, Value>) =
 private fun parsePartType(multiPartSpec: Map<String, Value>, name: String): MultiPartFormDataValue {
     return when {
         multiPartSpec.containsKey("content") -> MultiPartContentValue(name, multiPartSpec.getValue("content"))
-        multiPartSpec.containsKey("filename") -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringValue(), multiPartSpec["contentType"]?.toStringValue(), multiPartSpec["contentEncoding"]?.toStringValue())
+        multiPartSpec.containsKey("filename") -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringValue().removePrefix("@"), multiPartSpec["contentType"]?.toStringValue(), multiPartSpec["contentEncoding"]?.toStringValue())
         else -> throw ContractException("Multipart entry $name must have either a content key or a filename key")
     }
 }
@@ -258,6 +258,12 @@ fun bodyToGherkin(request: HttpRequest, types: Map<String, Pattern>, exampleDecl
     }
 }
 
+fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+    return multiPartFormData.fold(Triple(emptyList(), types, exampleDeclarations)) { (clauses, newTypes, examples), part ->
+        part.toClauseData(clauses, newTypes, examples)
+    }
+}
+
 fun firstLineToGherkin(request: HttpRequest, types: Map<String, Pattern>, exampleDeclarationsStore: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
     val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
 
@@ -279,27 +285,6 @@ fun firstLineToGherkin(request: HttpRequest, types: Map<String, Pattern>, exampl
     val requestLineGherkin = GherkinClause("$method $path", When)
 
     return Triple(listOf(requestLineGherkin), newTypes, newExamples)
-}
-
-fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-    return multiPartFormData.fold(Triple(emptyList(), types, exampleDeclarations)) { acc, part ->
-        val (clauses, newTypes, examples) = acc
-
-        when(part) {
-            is MultiPartContentValue -> {
-                val (typeDeclaration, newExamples) = part.content.typeDeclarationWithKey(part.name, newTypes, examples)
-
-                val newGherkinClause = GherkinClause("request-part ${part.name} ${typeDeclaration.typeValue}", When)
-                Triple(clauses.plus(newGherkinClause), typeDeclaration.types, examples.plus(newExamples))
-            }
-            is MultiPartFileValue -> {
-                val contentType = part.contentType
-                val contentEncoding = contentType?.let { part.contentEncoding }
-
-                Triple(clauses.plus(GherkinClause("request-part ${part.name} ${part.filename} $contentType $contentEncoding".trim(), When)), newTypes, examples)
-            }
-        }
-    }
 }
 
 fun formFieldsToGherkin(formFields: Map<String, String>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {

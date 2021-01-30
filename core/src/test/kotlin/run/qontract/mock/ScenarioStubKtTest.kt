@@ -125,7 +125,7 @@ internal class ScenarioStubKtTest {
         assertThat(mock.request.multiPartFormData.first().name).isEqualTo("employees")
 
         val part = mock.request.multiPartFormData.first() as MultiPartFileValue
-        assertThat(part.filename).isEqualTo("@employees.csv")
+        assertThat(part.filename).isEqualTo("employees.csv")
         assertThat(part.contentType).isEqualTo("text/csv")
         assertThat(part.contentEncoding).isEqualTo("gzip")
     }
@@ -204,7 +204,7 @@ internal class ScenarioStubKtTest {
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
         val pattern = mock.request.toPattern()
         assertThat(pattern.multiPartFormDataPattern).hasSize(1)
-        assertThat(pattern.multiPartFormDataPattern.single().matches(MultiPartFileValue("employees", "@employees.csv", "text/csv", "gzip"), Resolver())).isInstanceOf(Success::class.java)
+        assertThat(pattern.multiPartFormDataPattern.single().matches(MultiPartFileValue("employees", "employees.csv", "text/csv", "gzip"), Resolver())).isInstanceOf(Success::class.java)
     }
 
     @Test
@@ -301,7 +301,7 @@ internal class ScenarioStubKtTest {
 
     @Test
     fun `request-response with multipart form data file to gherkin string`() {
-        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartFileValue("customer_csv", "@customer.csv", "text/csv", "identity")))
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartFileValue("customer_csv", "customer.csv", "text/csv", "identity")))
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
         validateStubAndQontract(request, response, """Feature: New Feature
@@ -309,9 +309,13 @@ internal class ScenarioStubKtTest {
     Given type ResponseBody
       | id | (number) |
     When POST /customer
-    And request-part customer_csv @customer.csv text/csv identity
+    And request-part customer_csv @(string) text/csv identity
     Then status 200
-    And response-body (ResponseBody)""")
+    And response-body (ResponseBody)
+  
+    Examples:
+    | customer_csv_filename |
+    | customer.csv |""")
     }
 
     @Test
@@ -342,9 +346,13 @@ internal class ScenarioStubKtTest {
         validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     When POST /square
-    And request-part employees @employees.csv text/csv gzip
+    And request-part employees @(string) text/csv gzip
     Then status 200
-    And response-body (number)""")
+    And response-body (number)
+  
+    Examples:
+    | employees_filename |
+    | employees.csv |""")
     }
 
     @Test

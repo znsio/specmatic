@@ -3,7 +3,7 @@ package run.qontract.core.value
 import run.qontract.core.ExampleDeclarations
 import run.qontract.core.pattern.isPatternToken
 
-data class UseExampleDeclarations(override val examples: Map<String, String> = emptyMap(), override val messages: List<String> = emptyList()) : ExampleDeclarations {
+data class UseExampleDeclarations(override val examples: Map<String, String> = emptyMap(), override val messages: List<String> = emptyList(), override val comment: String? = null) : ExampleDeclarations {
     override fun plus(more: ExampleDeclarations): ExampleDeclarations {
         val duplicateMessage = messageWhenDuplicateKeysExist(more, examples)
         for(message in duplicateMessage)
@@ -19,6 +19,10 @@ data class UseExampleDeclarations(override val examples: Map<String, String> = e
 
     override fun getNewName(typeName: String, keys: Collection<String>): String =
             generateSequence(typeName) { "${it}_" }.first { it !in keys }
+
+    override fun withComment(comment: String?): ExampleDeclarations {
+        return this.copy(comment = comment)
+    }
 }
 
 internal fun messageWhenDuplicateKeysExist(newExampleDeclarations: ExampleDeclarations, examples: Map<String, String>): List<String> {

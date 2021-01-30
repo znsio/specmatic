@@ -49,15 +49,20 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
     }
 }
 
-data class MultiPartFilePattern(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null) : MultiPartFormDataPattern(name) {
-    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?> = listOf(this)
+data class MultiPartFilePattern(override val name: String, val filename: Pattern, val contentType: String? = null, val contentEncoding: String? = null) : MultiPartFormDataPattern(name) {
+    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?> {
+        val rowKey = "${name}_filename"
+        return listOf(this.copy(filename = if(row.containsField(rowKey)) ExactValuePattern(StringValue(row.getField(rowKey))) else filename))
+    }
+
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
-            MultiPartFileValue(name, filename, contentType, contentEncoding)
+            MultiPartFileValue(name, filename.generate(resolver).toStringValue(), contentType, contentEncoding)
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
         return when {
-            name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}.", failureReason = FailureReason.PartNameMisMatch)
             value !is MultiPartFileValue -> Failure("The contract expected a file, but got content instead.")
+            name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}.", failureReason = FailureReason.PartNameMisMatch)
+            !filename.matches(StringValue(value.filename), resolver).isTrue() -> Failure("In the part named $name, the contract expected the filename to be ${filename.typeName}, but got ${value.filename}.", failureReason = FailureReason.PartNameMisMatch, cause = filename.matches(StringValue(value.filename), resolver) as Failure)
             contentType != null && value.contentType != contentType -> Failure("The contract expected ${contentType.let { "content type $contentType" }}, but got ${value.contentType?.let { "content type $value.contentType" } ?: "no content type."}.")
             contentEncoding != null && value.contentEncoding != contentEncoding -> {
                 val contentEncodingMessage = contentEncoding.let { "content encoding $contentEncoding" }

@@ -3,6 +3,10 @@ package run.qontract.core
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.utils.io.streams.*
+import run.qontract.core.pattern.ContractException
+import run.qontract.core.pattern.Pattern
+import run.qontract.core.pattern.isPatternToken
+import run.qontract.core.pattern.parsedPattern
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
@@ -14,6 +18,11 @@ sealed class MultiPartFormDataValue(open val name: String) {
     abstract fun toDisplayableValue(): String
     abstract fun toJSONObject(): JSONObjectValue
     abstract fun addTo(formBuilder: FormBuilder)
+    abstract fun toClauseData(
+        clauses: List<GherkinClause>,
+        newTypes: Map<String, Pattern>,
+        examples: ExampleDeclarations
+    ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations>
 }
 
 data class MultiPartContentValue(override val name: String, val content: Value, val boundary: String = "#####") : MultiPartFormDataValue(name) {
@@ -38,12 +47,28 @@ $content
             append(CONTENT_DISPOSITION, "form-data; name=${name}")
         })
     }
+
+    override fun toClauseData(
+        clauses: List<GherkinClause>,
+        newTypes: Map<String, Pattern>,
+        examples: ExampleDeclarations
+    ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+        val (typeDeclaration, newExamples) = this.content.typeDeclarationWithKey(this.name, newTypes, examples)
+
+        val newGherkinClause = GherkinClause(
+            "request-part ${this.name} ${typeDeclaration.typeValue}",
+            GherkinSection.When
+        )
+        return Triple(clauses.plus(newGherkinClause), typeDeclaration.types, examples.plus(newExamples))
+    }
 }
 
 data class MultiPartFileValue(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null, val content: String? = null, val boundary: String = "#####") : MultiPartFormDataValue(name) {
     override fun inferType(): MultiPartFormDataPattern {
-        return MultiPartFilePattern(name, filename, contentType, contentEncoding)
+        return MultiPartFilePattern(name, filenameToType(), contentType, contentEncoding)
     }
+
+    private fun filenameToType() = parsedPattern(filename.removePrefix("@"))
 
     override fun toDisplayableValue(): String {
         val headers = mapOf (
@@ -88,5 +113,30 @@ $headerString
         }) {
             (content ?: "").byteInputStream().asInput()
         }
+    }
+
+    override fun toClauseData(clauses: List<GherkinClause>, newTypes: Map<String, Pattern>, examples: ExampleDeclarations ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+        val contentEncoding = this.contentType?.let { this.contentEncoding } ?: ""
+        val contentType = this.contentType ?: ""
+
+        val (newFilename, newExamples) = when {
+            !isPatternToken(filename) -> {
+                val filenameExampleName = examples.getNewName("${name}_filename", newTypes.keys)
+                val newExamples = examples.plus(filenameExampleName to filename)
+
+                Pair("(string)", newExamples)
+            }
+            isPatternToken(filename) && filename.trim() != "(string)" -> throw ContractException("Only (string) is supported as a type", name)
+            else -> Pair(filename, examples)
+        }
+
+        return Triple(
+            clauses.plus(
+                GherkinClause(
+                    "request-part ${this.name} @$newFilename $contentType $contentEncoding".trim(),
+                    GherkinSection.When
+                )
+            ), newTypes, newExamples
+        )
     }
 }

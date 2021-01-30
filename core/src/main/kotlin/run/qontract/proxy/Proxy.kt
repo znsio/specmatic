@@ -3,10 +3,7 @@ package run.qontract.proxy
 import io.ktor.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
-import run.qontract.core.NamedStub
-import run.qontract.core.toGherkinFeature
+import run.qontract.core.*
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.mock.ScenarioStub
 import run.qontract.stub.httpRequestLog
@@ -18,8 +15,8 @@ import java.io.Closeable
 import java.net.URI
 import java.net.URL
 
-class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: FileWriter): Closeable {
-    constructor(host: String, port: Int, baseURL: String, proxyQontractDataDir: String) : this(host, port, baseURL, RealFileWriter(proxyQontractDataDir))
+class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: FileWriter, keyStoreData: KeyStoreData? = null): Closeable {
+    constructor(host: String, port: Int, baseURL: String, proxyQontractDataDir: String, keyStoreData: KeyStoreData? = null) : this(host, port, baseURL, RealFileWriter(proxyQontractDataDir), keyStoreData)
 
     private val stubs = mutableListOf<NamedStub>()
 
@@ -64,9 +61,15 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
             }
         }
 
-        connector {
-            this.host = host
-            this.port = port
+        when (keyStoreData) {
+            null -> connector {
+                this.host = host
+                this.port = port
+            }
+            else -> sslConnector(keyStore = keyStoreData.keyStore, keyAlias = keyStoreData.keyAlias, privateKeyPassword = { keyStoreData.keyPassword.toCharArray() }, keyStorePassword = { keyStoreData.keyPassword.toCharArray() }) {
+                this.host = host
+                this.port = port
+            }
         }
     }
 
@@ -116,8 +119,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
         } else {
             proxyQontractDataDir.createDirectory()
 
-
-            val featureFileName = "new_feature.qontract"
+            val featureFileName = "proxy_generated.qontract"
             println("Writing contract to $featureFileName")
             proxyQontractDataDir.writeText(featureFileName, gherkin)
 

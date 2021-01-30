@@ -63,7 +63,7 @@ internal class ProxyTest {
         assertThat(receivedContract?.trim()).startsWith("Feature:")
         assertThatCode { Feature(receivedContract ?: "") }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(receivedPaths.toList()).isEqualTo(listOf("new_feature.qontract", "stub0.json"))
+        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.qontract", "stub0.json"))
     }
 
     @Test
@@ -106,6 +106,6 @@ internal class ProxyTest {
         assertThat(receivedContract?.trim()).startsWith("Feature:")
         assertThatCode { Feature(receivedContract ?: "") }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(receivedPaths.toList()).isEqualTo(listOf("new_feature.qontract", "stub0.json"))
+        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.qontract", "stub0.json"))
     }
 }

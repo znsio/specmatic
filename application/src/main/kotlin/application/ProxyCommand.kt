@@ -4,6 +4,7 @@ import io.ktor.network.tls.certificates.generateCertificate
 import picocli.CommandLine.*
 import run.qontract.consoleLog
 import run.qontract.core.KeyStoreData
+import run.qontract.core.pattern.key
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.exitWithMessage
 import run.qontract.proxy.Proxy
@@ -28,14 +29,35 @@ class ProxyCommand : Callable<Unit> {
     @Parameters(description = ["Store data from the proxy interactions into this dir"], index = "0")
     lateinit var proxyQontractDataDir: String
 
+    @Option(names = ["--httpsKeyStore"], description = ["Run the proxy on https using a key in this store"])
+    var keyStoreFile = ""
+
+    @Option(names = ["--httpsKeyStoreDir"], description = ["Run the proxy on https, create a store named qontract.jks in this directory"])
+    var keyStoreDir = ""
+
+    @Option(names = ["--httpsKeyStorePassword"], description = ["Run the proxy on https, password for pre-existing key store"])
+    var keyStorePassword = "forgotten"
+
+    @Option(names = ["--httpsKeyAlias"], description = ["Run the proxy on https using a key by this name"])
+    var keyStoreAlias = "qontractproxy"
+
+    @Option(names = ["--httpsPassword"], description = ["Key password if any"])
+    var keyPassword = "forgotten"
+
     var proxy: Proxy? = null
 
     override fun call() {
         validatedProxySettings(targetBaseURL, proxyQontractDataDir)
 
-        proxy = Proxy(host, port, targetBaseURL, proxyQontractDataDir)
+        val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
+        val keyStoreData = getHttpsCert(certInfo.keyStoreFile, certInfo.keyStoreDir, certInfo.keyStorePassword, certInfo.keyStoreAlias, certInfo.keyPassword)
+
+        proxy = Proxy(host, port, targetBaseURL, proxyQontractDataDir, keyStoreData)
         addShutdownHook()
-        consoleLog("Proxy server is running on http://$host:$port. Ctrl + C to stop.")
+
+        val protocol = keyStoreData?.let { "https" } ?: "http"
+
+        consoleLog("Proxy server is running on $protocol://$host:$port. Ctrl + C to stop.")
         while(true) sleep(10000)
     }
 

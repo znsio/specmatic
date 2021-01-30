@@ -304,7 +304,9 @@ fun toFormDataPart(step: StepInfo): MultiPartFormDataPattern {
             val contentType = parts.getOrNull(2)
             val contentEncoding = parts.getOrNull(3)
 
-            MultiPartFilePattern(name, content, contentType, contentEncoding)
+            val filename = content.removePrefix("@")
+
+            MultiPartFilePattern(name, parsedPattern(filename), contentType, contentEncoding)
         }
         isPatternToken(content) -> {
             MultiPartContentPattern(name, parsedPattern(content))
@@ -384,7 +386,7 @@ private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChil
 private fun scenarios(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
         featureChildren.filter { it.valueCase.name != "BACKGROUND" }
 
-fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature(stub.name, stubToClauses(stub))
+fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature("New Feature", listOf(stub))
 
 private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, ExampleDeclarations> {
     return when (namedStub.stub.kafkaMessage) {
@@ -403,10 +405,29 @@ private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, Examp
     }
 }
 
-fun toGherkinFeature(name: String, stubs: List<NamedStub>): String {
-    val scenarioStrings = stubs.map { stub ->
-        toGherkinScenario(stub.name, stubToClauses(stub)).trim()
+data class GherkinScenario(val scenarioName: String, val clauses: List<GherkinClause>)
+
+fun toGherkinFeature(featureName: String, stubs: List<NamedStub>): String {
+    val groupedStubs = stubs.map { stub ->
+        val (clauses, examples) = stubToClauses(stub)
+        val commentedExamples = addCommentsToExamples(examples, stub)
+
+        Pair(GherkinScenario(stub.name, clauses), listOf(commentedExamples))
+    }.fold(emptyMap<GherkinScenario, List<ExampleDeclarations>>(),
+        { groups, (scenario, examples) ->
+            groups.plus(scenario to groups.getOrDefault(scenario, emptyList()).plus(examples))
+        })
+
+    val scenarioStrings = groupedStubs.map { (nameAndClauses, examplesList) ->
+        val (name, clauses) = nameAndClauses
+
+        toGherkinScenario(name, clauses, examplesList)
     }
 
-    return withFeatureClause(name, scenarioStrings.joinToString("\n\n"))
+    return withFeatureClause(featureName, scenarioStrings.joinToString("\n\n"))
+}
+
+private fun addCommentsToExamples(examples: ExampleDeclarations, stub: NamedStub): ExampleDeclarations {
+    val date = stub.stub.response.headers["Date"]
+    return examples.withComment(date)
 }

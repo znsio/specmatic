@@ -655,7 +655,7 @@ Then status 200
 
                 val part = request.multiPartFormData.single() as MultiPartFileValue
                 assertThat(part.name).isEqualTo("number")
-                assertThat(part.filename).isEqualTo("@number.txt")
+                assertThat(part.filename).isEqualTo("number.txt")
                 assertThat(part.contentType).isEqualTo("text/plain")
 
                 return HttpResponse.OK
@@ -670,7 +670,7 @@ Then status 200
     }
 
     @Test
-    fun `should generate a test with a multipart file part with no content ypte` () {
+    fun `should generate a test with a multipart file part with no content type` () {
         val gherkin = """
 Feature: Dumb API
 
@@ -689,7 +689,7 @@ Then status 200
 
                 val part = request.multiPartFormData.single() as MultiPartFileValue
                 assertThat(part.name).isEqualTo("number")
-                assertThat(part.filename).isEqualTo("@number.txt")
+                assertThat(part.filename).isEqualTo("number.txt")
 
                 return HttpResponse.OK
             }
@@ -724,6 +724,42 @@ Examples:
             override fun execute(request: HttpRequest): HttpResponse {
                 flags.add("executed")
                 assertThat(request.bodyString).isEqualTo("10")
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(flags.toSet()).isEqualTo(setOf("executed"))
+        assertTrue(results.success(), results.report())
+    }
+
+    @Test
+    fun `a multipart file type should pick up it's value from a row and execute tests` () {
+        val gherkin = """
+Feature: Has multipart
+
+Scenario: multipart
+When POST /data
+And request-part employees @(string)
+Then status 200
+
+Examples:
+| employees_filename |
+| employees.csv |
+""".trim()
+
+        val contract = Feature(gherkin)
+        val flags = mutableSetOf<String>()
+
+        val results = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                flags.add("executed")
+                val filePart = request.multiPartFormData.first() as MultiPartFileValue
+                assertThat(filePart.name).isEqualTo("employees")
+                assertThat(filePart.filename).isEqualTo("employees.csv")
 
                 return HttpResponse.OK
             }

@@ -6,6 +6,7 @@ import run.qontract.core.pattern.*
 import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
+import run.qontract.mock.ScenarioStub
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -107,7 +108,7 @@ class FeatureKtTest {
 
     @Test
     fun `should parse multipart file spec`() {
-        val behaviour = Feature("""
+        val feature = Feature("""
             Feature: Customer Data API
             
             Scenario: Upload customer information
@@ -116,9 +117,9 @@ class FeatureKtTest {
               Then status 200
         """.trimIndent())
 
-        val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
+        val pattern = feature.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
-        assertThat(pattern.filename).isEqualTo("@customer_info.csv")
+        assertThat(pattern.filename).isEqualTo(ExactValuePattern(StringValue("customer_info.csv")))
         assertThat(pattern.contentType).isEqualTo("text/csv")
         assertThat(pattern.contentEncoding).isEqualTo("gzip")
     }
@@ -136,7 +137,7 @@ class FeatureKtTest {
 
         val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
-        assertThat(pattern.filename).isEqualTo("@customer_info.csv")
+        assertThat(pattern.filename).isEqualTo(ExactValuePattern(StringValue("customer_info.csv")))
         assertThat(pattern.contentType).isEqualTo("text/csv")
         assertThat(pattern.contentEncoding).isEqualTo(null)
     }
@@ -154,7 +155,7 @@ class FeatureKtTest {
 
         val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
-        assertThat(pattern.filename).isEqualTo("@customer_info.csv")
+        assertThat(pattern.filename).isEqualTo(ExactValuePattern(StringValue("customer_info.csv")))
         assertThat(pattern.contentType).isEqualTo(null)
         assertThat(pattern.contentEncoding).isEqualTo(null)
     }
@@ -226,6 +227,67 @@ class FeatureKtTest {
         """.trimIndent())
 
         assertThat(feature.scenarios.single().ignoreFailure).isTrue()
+    }
+
+    @Test
+    fun `a single scenario with 2 examples should be generated out of 2 stubs with the same structure`() {
+        val stub1 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", queryParams = mapOf("hello" to "world")), HttpResponse.OK))
+        val stub2 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", queryParams = mapOf("hello" to "hello")), HttpResponse.OK))
+
+        val generatedGherkin = toGherkinFeature("new feature", listOf(stub1, stub2)).trim()
+
+        val expectedGherkin = """Feature: new feature
+  Scenario: stub
+    When GET /?hello=(string)
+    Then status 200
+  
+    Examples:
+    | hello |
+    | world |
+    | hello |""".trim()
+
+        assertThat(generatedGherkin).isEqualTo(expectedGherkin)
+    }
+
+    @Test
+    fun `a single scenario with 2 examples of a multipart file should be generated out of 2 stubs with the same structure`() {
+        val stub1 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees1.csv", content="1,2,3"))), HttpResponse.OK))
+        val stub2 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees2.csv", content="1,2,3"))), HttpResponse.OK))
+
+        val generatedGherkin = toGherkinFeature("new feature", listOf(stub1, stub2)).trim()
+
+        val expectedGherkin = """Feature: new feature
+  Scenario: stub
+    When GET /
+    And request-part employees @(string)
+    Then status 200
+  
+    Examples:
+    | employees_filename |
+    | employees1.csv |
+    | employees2.csv |""".trim()
+
+        assertThat(generatedGherkin).isEqualTo(expectedGherkin)
+    }
+
+    @Test
+    fun `an example should have the response Date headers value at the end as a comment`() {
+        val stub = NamedStub("stub", ScenarioStub(HttpRequest("POST", "/", body = StringValue("hello world")), HttpResponse.OK.copy(headers = mapOf("Date" to "Tuesday 1st Jan 2020"))))
+
+        val generatedGherkin = toGherkinFeature("new feature", listOf(stub)).trim()
+
+        val expectedGherkin = """Feature: new feature
+  Scenario: stub
+    When POST /
+    And request-body (RequestBody: string)
+    Then status 200
+    And response-header Date (string)
+  
+    Examples:
+    | RequestBody |
+    | hello world | Tuesday 1st Jan 2020 |""".trim()
+
+        assertThat(generatedGherkin).isEqualTo(expectedGherkin)
     }
 
     private fun deferredToJsonPatternData(pattern: Pattern, resolver: Resolver): Map<String, Pattern> =

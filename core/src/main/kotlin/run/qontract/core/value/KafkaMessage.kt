@@ -17,7 +17,7 @@ fun toGherkinClauses(kafkaMessage: KafkaMessage): List<GherkinClause> {
     val gherkinTypeDeclarations = run.qontract.core.toGherkinClauses(newTypes)
 
     val gherkinContent = listOfNotNull("kafka-message ${kafkaMessage.topic}", keyTypeDeclaration?.first?.typeValue, valueTypeDeclaration.first.typeValue).joinToString(" ")
-    val gherkinSection = if(gherkinTypeDeclarations.isEmpty()) `*` else Then
+    val gherkinSection = if(gherkinTypeDeclarations.isEmpty()) Star else Then
     val messageClause = GherkinClause(gherkinContent, gherkinSection)
     return listOf(messageClause).plus(gherkinTypeDeclarations)
 }

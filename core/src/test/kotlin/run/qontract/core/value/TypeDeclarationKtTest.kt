@@ -199,4 +199,21 @@ internal class TypeDeclarationKtTest {
 
         assertThat(converged).isEqualTo(expectedConverged)
     }
+
+    @Test
+    fun `an optional key when present but not optional in the converged type is converged to be optional`() {
+        val personType1 = toTabularPattern(mapOf("name" to DeferredPattern("(string)"), "surname" to DeferredPattern("(string)")))
+        val personType2 = toTabularPattern(mapOf("name" to DeferredPattern("(string)"), "surname?" to DeferredPattern("(string)")))
+
+        val type1 = TypeDeclaration("(Nothing)", mapOf("(Person)" to personType1))
+        val type2 = TypeDeclaration("(Nothing)", mapOf("(Person)" to personType2))
+
+        val expectedConverged = TypeDeclaration(
+            "(Nothing)",
+            mapOf("(Person)" to toTabularPattern(mapOf("name" to DeferredPattern("(string)"), "surname?" to DeferredPattern("(string)")))))
+
+        val converged = convergeTypeDeclarations(type1, type2)
+
+        assertThat(converged).isEqualTo(expectedConverged)
+    }
 }

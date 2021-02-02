@@ -119,7 +119,7 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
         val monoRepoBaseDir = File(SystemGit().gitRoot())
         val configFileLocation = File(configFilePath).parentFile
 
-        return stubContracts.map {
+        return selector.select(this).map {
             ContractPathData(monoRepoBaseDir.canonicalPath, configFileLocation.resolve(it).canonicalPath)
         }
     }

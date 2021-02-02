@@ -55,20 +55,24 @@ internal class UtilitiesTest {
             File(it).createNewFile()
         }
 
-        File(configFilePath).printWriter().use { it.println("{\"sources\":[{\"provider\":\"git\",\"stub\":[\"..\\/a\\/1.qontract\",\"..\\/b\\/1.qontract\",\"..\\/c\\/1.qontract\"]}]}") }
+        File(configFilePath).printWriter().use { it.println("{\"sources\":[{\"provider\":\"git\",\"stub\":[\"..\\/a\\/1.qontract\",\"..\\/b\\/1.qontract\"],\"test\":[\"..\\/c\\/1.qontract\"]}]}") }
 
         mockkConstructor(SystemGit::class)
         every { anyConstructed<SystemGit>().gitRoot() }.returns("/path/to/monorepo")
 
         val currentPath = File(".").canonicalPath
-        val contractPaths = contractFilePathsFrom(configFilePath, ".qontract") { source -> source.stubContracts }
-        val expectedContractPaths = listOf(
-                ContractPathData("/path/to/monorepo", "$currentPath/monorepo/a/1.qontract"),
-                ContractPathData("/path/to/monorepo", "$currentPath/monorepo/b/1.qontract"),
-                ContractPathData("/path/to/monorepo", "$currentPath/monorepo/c/1.qontract"),
+        val testPaths = contractFilePathsFrom(configFilePath, ".qontract") { source -> source.testContracts }
+        val stubPaths = contractFilePathsFrom(configFilePath, ".qontract") { source -> source.stubContracts }
+        val expectedStubPaths = listOf(
+            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/a/1.qontract"),
+            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/b/1.qontract")
+        )
+        val expectedTestPaths = listOf(
+            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/c/1.qontract"),
         )
 
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        assertThat(stubPaths == expectedStubPaths).isTrue
+        assertThat(testPaths == expectedTestPaths).isTrue
 
         File("monorepo").deleteRecursively()
     }
@@ -96,11 +100,29 @@ internal class UtilitiesTest {
     }
 
     @Test
-    fun `load sources with mono repo`() {
+    fun `load sources with mono repo for stub-only qontract`() {
         val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.qontract\",\"b/1.qontract\",\"c/1.qontract\"]}]}"
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(GitMonoRepo(listOf(), listOf("a/1.qontract", "b/1.qontract", "c/1.qontract")))
+        assertThat(sources == expectedSources).isTrue
+    }
+
+    @Test
+    fun `load sources with mono repo for test-only qontract`() {
+        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.qontract\",\"b/1.qontract\",\"c/1.qontract\"]}]}"
+        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+        val sources = loadSources(configJson)
+        val expectedSources = listOf(GitMonoRepo(listOf("a/1.qontract", "b/1.qontract", "c/1.qontract"), listOf()))
+        assertThat(sources == expectedSources).isTrue
+    }
+
+    @Test
+    fun `load sources with mono repo for tests and stubs in qontract`() {
+        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.qontract\",\"b/1.qontract\"],\"stub\": [\"c/1.qontract\"]}]}"
+        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+        val sources = loadSources(configJson)
+        val expectedSources = listOf(GitMonoRepo(listOf("a/1.qontract", "b/1.qontract"), listOf("c/1.qontract")))
         assertThat(sources == expectedSources).isTrue
     }
 

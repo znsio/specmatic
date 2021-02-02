@@ -256,7 +256,7 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
     val sources = loadSources(configFilePath)
 
     return sources.flatMap {
-        it.loadContracts(selector, workingDirectory)
+        it.loadContracts(selector, workingDirectory, configFilePath)
     }.also {
         println("Contract file paths #######")
         println(it)

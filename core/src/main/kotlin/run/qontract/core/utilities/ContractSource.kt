@@ -14,7 +14,7 @@ sealed class ContractSource {
     abstract fun directoryRelativeTo(workingDirectory: File): File
     abstract fun getLatest(sourceGit: SystemGit)
     abstract fun pushUpdates(sourceGit: SystemGit)
-    abstract fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String): List<ContractPathData>
+    abstract fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String, configFilePath: String): List<ContractPathData>
 }
 
 data class GitRepo(
@@ -39,7 +39,7 @@ data class GitRepo(
         commitAndPush(sourceGit)
     }
 
-    override fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String): List<ContractPathData> {
+    override fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String, configFilePath: String): List<ContractPathData> {
         println("Looking for contracts in local environment")
         val userHome = File(System.getProperty("user.home"))
         val defaultQontractWorkingDir = userHome.resolve(".qontract/repos")
@@ -115,11 +115,12 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
         // In mono repos, we can't push arbitrarily
     }
 
-    override fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String): List<ContractPathData> {
-        val baseDir = File(SystemGit().gitRoot())
+    override fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String, configFilePath: String): List<ContractPathData> {
+        val monoRepoBaseDir = File(SystemGit().gitRoot())
+        val configFileLocation = File(configFilePath).parentFile
 
         return stubContracts.map {
-            ContractPathData(baseDir.path, baseDir.resolve(it).path)
+            ContractPathData(monoRepoBaseDir.canonicalPath, configFileLocation.resolve(it).canonicalPath)
         }
     }
 }

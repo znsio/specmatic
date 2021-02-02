@@ -47,30 +47,30 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources with mono repo`() {
-        val sources = listOf(GitMonoRepo(listOf(), listOf("a/1.qontract", "b/1.qontract", "c/1.qontract")))
+        val configFilePath = "monorepo/configLoc/qontract.json"
 
-        mockkStatic("run.qontract.core.utilities.Utilities")
-        every { loadSources(".") }.returns(sources)
-
-        mockkConstructor(SystemGit::class)
-        every { anyConstructed<SystemGit>().gitRoot() }.returns("/path/to/monorepo")
-
-        sources[0].stubContracts.forEach {
+        var monorepoContents = listOf(configFilePath, "monorepo/a/1.qontract", "monorepo/b/1.qontract", "monorepo/c/1.qontract");
+        monorepoContents.forEach {
             File(it).parentFile.mkdirs()
             File(it).createNewFile()
         }
 
-        val contractPaths = contractFilePathsFrom(".", ".qontract") { source -> source.stubContracts }
+        File(configFilePath).printWriter().use { it.println("{\"sources\":[{\"provider\":\"git\",\"stub\":[\"..\\/a\\/1.qontract\",\"..\\/b\\/1.qontract\",\"..\\/c\\/1.qontract\"]}]}") }
+
+        mockkConstructor(SystemGit::class)
+        every { anyConstructed<SystemGit>().gitRoot() }.returns("/path/to/monorepo")
+
+        val currentPath = File(".").canonicalPath
+        val contractPaths = contractFilePathsFrom(configFilePath, ".qontract") { source -> source.stubContracts }
         val expectedContractPaths = listOf(
-                ContractPathData("/path/to/monorepo", "/path/to/monorepo/a/1.qontract"),
-                ContractPathData("/path/to/monorepo", "/path/to/monorepo/b/1.qontract"),
-                ContractPathData("/path/to/monorepo", "/path/to/monorepo/c/1.qontract"),
+                ContractPathData("/path/to/monorepo", "$currentPath/monorepo/a/1.qontract"),
+                ContractPathData("/path/to/monorepo", "$currentPath/monorepo/b/1.qontract"),
+                ContractPathData("/path/to/monorepo", "$currentPath/monorepo/c/1.qontract"),
         )
 
         assertThat(contractPaths == expectedContractPaths).isTrue
 
-        listOf("a", "b", "c").forEach { File(it).deleteRecursively() }
-        File(".qontract").deleteRecursively()
+        File("monorepo").deleteRecursively()
     }
 
     @Test

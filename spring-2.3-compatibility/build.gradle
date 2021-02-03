@@ -1,0 +1,42 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+repositories {
+    mavenCentral()
+}
+
+def spring_boot_version = '2.3.2.RELEASE'
+def junit_version = "5.7.0"
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+
+    testImplementation project(':core')
+
+    testImplementation 'org.springframework:spring-web:5.3.3'
+    testImplementation "org.springframework.boot:spring-boot-starter:${spring_boot_version}"
+    testImplementation "org.springframework.boot:spring-boot-starter-web:${spring_boot_version}"
+    testImplementation "org.springframework.boot:spring-boot-starter-test:${spring_boot_version}"
+    testImplementation 'org.assertj:assertj-core:3.19.0'
+
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+group = 'run.qontract'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}

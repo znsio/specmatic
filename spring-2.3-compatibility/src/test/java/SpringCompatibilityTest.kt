@@ -15,10 +15,10 @@ Feature: Simple
     And response-body success
 """.trimIndent()
 
-        val stub = HttpStub(simpleContract)
-
-        val client = RestTemplate()
-        val result = client.getForEntity<String>("http://localhost:9000/")
-        assertThat(result.body).isEqualTo("success")
+        HttpStub(simpleContract).use {
+            val client = RestTemplate()
+            val result = client.getForEntity<String>("http://localhost:9000/")
+            assertThat(result.body).isEqualTo("success")
+        }
     }
 }

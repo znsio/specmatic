@@ -246,7 +246,7 @@ class PatternDefinitionTests {
     }
 
     @Test
-    fun `a key suffixed with ? is equivalent to one without`() {
+    fun `a key suffixed with a question mark is equivalent to one without`() {
         val jsonString = """{"result": 10.1, "id": 10}"""
         val jsonPattern = """{"result": "(number)", "id?": "(number)"}"""
 
@@ -254,7 +254,7 @@ class PatternDefinitionTests {
     }
 
     @Test
-    fun `A json object value missing a key (say id) will match the pattern having that key suffixed with ? (eg id?) `() {
+    fun `A json object value missing a key (say id) will match the pattern having that key suffixed with a question mark`() {
         val jsonString = """{"result": 10.1}"""
         val jsonPattern = """{"result": "(number)", "id?": "(number)"}"""
 

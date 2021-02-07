@@ -83,7 +83,12 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
         }
     }
 
-    private val server: ApplicationEngine = embeddedServer(Netty, environment)
+    private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
+        this.requestQueueLimit = 1000
+        this.callGroupSize = 5
+        this.connectionGroupSize = 20
+        this.workerGroupSize = 20
+    })
 
     private fun proxyURL(httpRequest: HttpRequest, baseURL: String): String {
         return when {

@@ -29,6 +29,9 @@ import java.net.URL
 import java.util.*
 import java.util.zip.GZIPInputStream
 
+// API for non-Kotlin invokers
+fun createHttpClient(baseURL: String, timeout: Int) = HttpClient(baseURL, timeout)
+
 class HttpClient(private val baseURL: String, private val timeout: Int = 60, private val log: (event: String) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(io.ktor.client.engine.apache.Apache) {
     expectSuccess = false
 

@@ -52,7 +52,7 @@ task codeCoverageReport(type: JacocoReport) {
 }
 
 codeCoverageReport.dependsOn {
-    subprojects*.test
+    subprojects.findAll {!it.name.startsWith("spring-")}.test
 }
 
 sonarqube {

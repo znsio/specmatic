@@ -39,7 +39,9 @@ task codeCoverageReport(type: JacocoReport) {
 
     // Add all relevant sourcesets from the subprojects
     subprojects.each {
-        sourceSets it.sourceSets.main
+        if(!it.name.startsWith("spring-")) {
+            sourceSets it.sourceSets.main
+        }
     }
 
     reports {

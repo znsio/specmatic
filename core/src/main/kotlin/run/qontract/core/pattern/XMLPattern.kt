@@ -98,7 +98,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
-        return XMLNode("", "", emptyMap(), valueList.map { it as XMLNode })
+        return XMLNode("", "", emptyMap(), valueList.map { it as XMLNode }, "", emptyMap())
     }
 
     override fun generate(resolver: Resolver): XMLNode {
@@ -126,7 +126,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             }
         }
 
-        return XMLNode(name, pattern.realName, newAttributes, nodes)
+        return XMLNode(pattern.realName, newAttributes, nodes)
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<XMLPattern> {

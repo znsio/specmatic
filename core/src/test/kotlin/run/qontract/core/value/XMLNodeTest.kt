@@ -29,11 +29,19 @@ internal class XMLNodeTest {
     }
 
     @Test
-    fun `looks up a node by name`() {
+    fun `looks up a child node by name`() {
         val personDetailsXmlNode = XMLNode("<data><person/></data>")
 
         val personNode = personDetailsXmlNode.findFirstChildByName("person")
         assertThat(personNode).isNotNull
+    }
+
+    @Test
+    fun `returns null if there is no child node by that`() {
+        val personDetailsXmlNode = XMLNode("<data><nobody/></data>")
+
+        val personNode = personDetailsXmlNode.findFirstChildByName("person")
+        assertThat(personNode).isNull()
     }
 
     @Test
@@ -45,11 +53,27 @@ internal class XMLNodeTest {
     }
 
     @Test
+    fun `path lookup returns null if there is no child node by the given name`() {
+        val personDetailsXmlNode = XMLNode("<data><nobody/></data>")
+
+        val personNode = personDetailsXmlNode.findFirstChildByPath("person")
+        assertThat(personNode).isNull()
+    }
+
+    @Test
     fun `looks up a node by path`() {
         val dataNode = XMLNode("<data><person><name>Jill</name></person></data>")
 
         val nameNode = dataNode.findFirstChildByPath("person.name")
         assertThat(nameNode).isNotNull
+    }
+
+    @Test
+    fun `returns null if there is no node at the given path`() {
+        val dataNode = XMLNode("<data><person><name>Jill</name></person></data>")
+
+        val nameNode = dataNode.findFirstChildByPath("person.nobody")
+        assertThat(nameNode).isNull()
     }
 
     @Test

@@ -233,15 +233,15 @@ Feature: Contract for /balance API
             override fun execute(request: HttpRequest): HttpResponse {
                 val root = (request.body as XMLNode)
 
-                val nameItem = root.nodes[0] as XMLNode
-                val cityItem = root.nodes[1] as XMLNode
+                val nameItem = root.childNodes[0] as XMLNode
+                val cityItem = root.childNodes[1] as XMLNode
                 assertThat(nameItem.name).isEqualTo("name")
                 assertThat(cityItem.name).isEqualTo("city")
 
-                val name = nameItem.nodes[0]
+                val name = nameItem.childNodes[0]
 
                 assertThat(name).isInstanceOf(StringValue::class.java)
-                assertThat(cityItem.nodes[0]).isInstanceOf(StringValue::class.java)
+                assertThat(cityItem.childNodes[0]).isInstanceOf(StringValue::class.java)
                 assertThat(request.method).isEqualTo("POST")
 
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {

@@ -6,12 +6,13 @@ import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
 import run.qontract.core.value.XMLNode
+import run.qontract.core.value.toXMLNode
 import run.qontract.core.value.XMLValue
 
 fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, node.realName, attributeTypeMap(node), nodeTypes(node))
 
 private fun nodeTypes(node: XMLNode): List<Pattern> {
-    return node.nodes.map {
+    return node.childNodes.map {
         it.exactMatchElseType()
     }
 }
@@ -27,7 +28,7 @@ private fun attributeTypeMap(node: XMLNode): Map<String, Pattern> {
 
 data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName = ""), override val typeAlias: String? = null) : Pattern, SequenceType {
     constructor(node: XMLNode, typeAlias: String? = null): this(toTypeData(node), typeAlias)
-    constructor(xmlString: String, typeAlias: String? = null): this(XMLNode(parseXML(xmlString)), typeAlias)
+    constructor(xmlString: String, typeAlias: String? = null): this(toXMLNode(parseXML(xmlString)), typeAlias)
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is XMLNode)
@@ -44,8 +45,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             pattern.nodes.asSequence().mapIndexed { index, patternItem ->
                 val type = resolvedHop(patternItem, resolver)
                 when {
-                    type is ListPattern -> type.matches(this.listOf(sampleData.nodes.subList(index, pattern.nodes.indices.last), resolver), resolver)
-                    index >= sampleData.nodes.size -> errorUnlessExpectingEmpty(sampleData, type, resolver)
+                    type is ListPattern -> type.matches(this.listOf(sampleData.childNodes.subList(index, pattern.nodes.indices.last), resolver), resolver)
+                    index >= sampleData.childNodes.size -> errorUnlessExpectingEmpty(sampleData, type, resolver)
                     else -> matchNodeContent(sampleData, index, type, resolver)
                 }
             }.find { it is Result.Failure }?.breadCrumb(this.pattern.name) ?: Result.Success()
@@ -54,7 +55,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
     private fun matchNodeContent(sampleData: XMLNode, index: Int, type: Pattern, resolver: Resolver): Result {
         return try {
-            val childNode = when (val childNode = sampleData.nodes[index]) {
+            val childNode = when (val childNode = sampleData.childNodes[index]) {
                 is StringValue -> when {
                     childNode.isPatternToken() -> childNode.trimmed()
                     else -> type.parse(childNode.string, resolver)
@@ -71,7 +72,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
     private fun errorUnlessExpectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver): Result {
         return when {
-            !expectingEmpty(sampleData, type, resolver) -> Result.Failure("The value had only ${sampleData.nodes.size} nodes but the contract expected more")
+            !expectingEmpty(sampleData, type, resolver) -> Result.Failure("The value had only ${sampleData.childNodes.size} nodes but the contract expected more")
             else -> Result.Success()
         }
     }
@@ -94,7 +95,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
     private fun expectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver): Boolean {
         val resolvedPatternSet = type.patternSet(resolver).map { resolvedHop(it, resolver) }
-        return sampleData.nodes.isEmpty() && pattern.nodes.size == 1 && (EmptyStringPattern in resolvedPatternSet || StringPattern in resolvedPatternSet)
+        return sampleData.childNodes.isEmpty() && pattern.nodes.size == 1 && (EmptyStringPattern in resolvedPatternSet || StringPattern in resolvedPatternSet)
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
@@ -115,7 +116,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         val nodes = pattern.nodes.map { resolvedHop(it, resolver) }.map {
             attempt(breadCrumb = name) {
                 when (it) {
-                    is ListPattern -> (it.generate(resolver) as XMLNode).nodes
+                    is ListPattern -> (it.generate(resolver) as XMLNode).childNodes
                     else -> listOf(it.generate(resolver))
                 }
             }
@@ -168,7 +169,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     override fun parse(value: String, resolver: Resolver): Value {
-        return XMLNode(parseXML(value))
+        return toXMLNode(parseXML(value))
     }
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
@@ -214,6 +215,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         get() = MemberList(pattern.nodes, null)
 
     override val typeName: String = "xml"
+
+    fun toGherkinString(additionalIndent: String = "", indent: String = ""): String {
+        return pattern.toGherkinString(additionalIndent, indent)
+    }
 }
-
-

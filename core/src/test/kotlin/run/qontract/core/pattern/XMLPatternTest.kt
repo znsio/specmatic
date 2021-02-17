@@ -5,10 +5,10 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.resultReport
-import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
+import run.qontract.core.value.toXMLNode
 import run.qontract.shouldMatch
 import run.qontract.shouldNotMatch
 
@@ -21,9 +21,9 @@ internal class XMLPatternTest {
         val resolver = Resolver(newPatterns = mapOf("(Item)" to itemType))
         val xmlValue = itemsType.generate(resolver) as XMLNode
 
-        for(node in xmlValue.nodes.map { it as XMLNode }) {
-            assertThat(node.nodes.size == 1)
-            assertThat(node.nodes[0]).isInstanceOf(StringValue::class.java)
+        for(node in xmlValue.childNodes.map { it as XMLNode }) {
+            assertThat(node.childNodes.size == 1)
+            assertThat(node.childNodes[0]).isInstanceOf(StringValue::class.java)
         }
     }
 
@@ -39,8 +39,8 @@ internal class XMLPatternTest {
         assertThat(xmlValue.attributes.size).isOne()
         assertThat(xmlValue.attributes.get("xmlns:ns1")).isEqualTo(StringValue("http://example.com/items"))
 
-        assertThat(xmlValue.nodes.size).isOne()
-        assertThat(xmlValue.nodes.first()).isInstanceOf(StringValue::class.java)
+        assertThat(xmlValue.childNodes.size).isOne()
+        assertThat(xmlValue.childNodes.first()).isInstanceOf(StringValue::class.java)
     }
 
     @Test
@@ -50,7 +50,7 @@ internal class XMLPatternTest {
 
     @Test
     fun `should match a number within a structure`() {
-        XMLNode("<outer><inner>1</inner></outer>") shouldMatch XMLPattern("<outer><inner>(number)</inner></outer>")
+        toXMLNode("<outer><inner>1</inner></outer>") shouldMatch XMLPattern("<outer><inner>(number)</inner></outer>")
     }
 
     @Test
@@ -62,17 +62,17 @@ internal class XMLPatternTest {
     </inner>
 </outer>
 """.trimMargin()
-        XMLNode("<outer><inner>1</inner></outer>") shouldMatch XMLPattern(xmlSpecWithWhitespace)
+        toXMLNode("<outer><inner>1</inner></outer>") shouldMatch XMLPattern(xmlSpecWithWhitespace)
     }
 
     @Test
     fun `optional node text should match non empty value`() {
-        XMLNode("<data>1</data>") shouldMatch XMLPattern("<data>(number?)</data>")
+        toXMLNode("<data>1</data>") shouldMatch XMLPattern("<data>(number?)</data>")
     }
 
     @Test
     fun `optional node text should match empty value`() {
-        XMLNode("<data></data>") shouldMatch XMLPattern("<data>(number?)</data>")
+        toXMLNode("<data></data>") shouldMatch XMLPattern("<data>(number?)</data>")
     }
 
     @Test
@@ -107,7 +107,7 @@ internal class XMLPatternTest {
 
     @Test
     fun `should not match a value that doesn't conform to the specified type`() {
-        XMLNode("<outer><inner>abc</inner></outer>") shouldNotMatch XMLPattern("<outer><inner>(number)</inner></outer>")
+        toXMLNode("<outer><inner>abc</inner></outer>") shouldNotMatch XMLPattern("<outer><inner>(number)</inner></outer>")
     }
 
     @Test
@@ -115,7 +115,7 @@ internal class XMLPatternTest {
         val numberInfoPattern = XMLPattern("<number>(number)</number>")
         val resolver = Resolver(newPatterns = mapOf("(NumberInfo)" to numberInfoPattern))
         val answerPattern = XMLPattern("<answer>(NumberInfo*)</answer>")
-        val value = XMLNode("<answer><number>10</number><number>20</number></answer>")
+        val value = toXMLNode("<answer><number>10</number><number>20</number></answer>")
 
         assertThat(resolver.matchesPattern(null, answerPattern, value)).isInstanceOf(Result.Success::class.java)
     }

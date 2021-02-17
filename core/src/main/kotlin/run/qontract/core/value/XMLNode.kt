@@ -11,9 +11,9 @@ import run.qontract.core.utilities.newBuilder
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.utilities.xmlToString
 
-fun XMLNode(document: Document): XMLNode = nonTextXMLNode(document.documentElement)
+fun toXMLNode(document: Document): XMLNode = nonTextXMLNode(document.documentElement)
 
-fun XMLNode(node: Node, parentNamespaces: Map<String, String> = emptyMap()): XMLValue {
+fun toXMLNode(node: Node, parentNamespaces: Map<String, String> = emptyMap()): XMLValue {
     return when (node.nodeType) {
         Node.TEXT_NODE -> StringValue(node.textContent)
         else -> nonTextXMLNode(node, parentNamespaces)
@@ -23,17 +23,14 @@ fun XMLNode(node: Node, parentNamespaces: Map<String, String> = emptyMap()): XML
 private fun nonTextXMLNode(node: Node, parentNamespaces: Map<String, String> = emptyMap()): XMLNode {
     val attributes = attributes(node)
     val namespacesForChildrenToInherit = getNamespaces(attributes)
-    return XMLNode(node.nodeName, attributes(node), childNodes(node, namespacesForChildrenToInherit), parentNamespaces)
+    return XMLNode(node.nodeName, attributes(node), childNodes(node, parentNamespaces.plus(namespacesForChildrenToInherit)), parentNamespaces)
 }
-
-private fun xmlNameWithoutNamespace(name: String): String =
-        name.substringAfter(':')
 
 private fun childNodes(node: Node, parentNamespaces: Map<String, String>): List<XMLValue> {
     return 0.until(node.childNodes.length).map {
         node.childNodes.item(it)
     }.fold(listOf()) { acc, item ->
-        acc.plus(XMLNode(item, parentNamespaces))
+        acc.plus(toXMLNode(item, parentNamespaces))
     }
 }
 
@@ -45,23 +42,35 @@ private fun attributes(node: Node): Map<String, StringValue> {
     }
 }
 
-fun XMLNode(xmlData: String): XMLNode {
+fun toXMLNode(xmlData: String): XMLNode {
     val document = parseXML(xmlData)
-    return XMLNode(document)
+    return toXMLNode(document)
 }
 
-fun getNamespace(realName: String): String {
-    val parts = realName.split(":")
-    return if(parts.size > 1)
-        parts[0]
-    else ""
+fun String.withoutNamespacePrefix(): String = this.substringAfter(':')
+
+fun String.namespacePrefix(): String {
+    val parts = this.split(":")
+    return when (parts.size) {
+        1 -> ""
+        else -> parts.first()
+    }
 }
 
 fun getNamespaces(attributes: Map<String, StringValue>): Map<String, String> =
     attributes.filterKeys { it.startsWith("xmlns:") }.mapKeys { it.key.removePrefix("xmlns:") }.mapValues { it.value.toString() }
 
-data class XMLNode(val name: String, val realName: String, val attributes: Map<String, StringValue>, val nodes: List<XMLValue>, val namespacePrefix: String, val namespaces: Map<String, String>) : XMLValue, ListValue {
-    constructor(realName: String, attributes: Map<String, StringValue>, nodes: List<XMLValue>, parentNamespaces: Map<String, String> = emptyMap()) : this(xmlNameWithoutNamespace(realName), realName, attributes, nodes, getNamespace(realName), parentNamespaces.plus(getNamespaces(attributes)))
+data class XMLNode(val name: String, val realName: String, val attributes: Map<String, StringValue>, val childNodes: List<XMLValue>, val namespacePrefix: String, val namespaces: Map<String, String>) : XMLValue, ListValue {
+    constructor(realName: String, attributes: Map<String, StringValue>, childNodes: List<XMLValue>, parentNamespaces: Map<String, String> = emptyMap()) : this(realName.withoutNamespacePrefix(), realName, attributes, childNodes, realName.namespacePrefix(), parentNamespaces.plus(getNamespaces(attributes)))
+
+    fun createNewNode(realName: String, attributes: Map<String, String> = emptyMap()): XMLNode {
+        val namespace = realName.namespacePrefix()
+
+        if(namespace.isNotBlank() && !namespaces.containsKey(namespace))
+            throw ContractException("Namespace prefix $namespace not found, can't create a node by the name $realName")
+
+        return XMLNode(realName, attributes.mapValues { StringValue(it.value) }, emptyList(), namespaces)
+    }
 
     val qname: String
         get() {
@@ -80,7 +89,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
     override val httpContentType: String = "text/xml"
 
     override val list: List<Value>
-        get() = nodes
+        get() = childNodes
 
     private fun build(): Document {
         val document = newBuilder().newDocument()
@@ -98,7 +107,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
             newElement.setAttribute(entry.key, entry.value.toStringValue())
         }
 
-        val newNodes = nodes.map {
+        val newNodes = childNodes.map {
             it.build(document)
         }
 
@@ -125,11 +134,15 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
     }
 
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> {
-        TODO("Not yet implemented")
+        return typeDeclarationWithKey(exampleKey, types, exampleDeclarations)
     }
 
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> {
-        TODO("Not yet implemented")
+        val newTypeName = exampleDeclarations.getNewName(key.capitalize(), types.keys)
+
+        val typeDeclaration = TypeDeclaration("($newTypeName)", types.plus(newTypeName to XMLPattern(this, key)))
+
+        return Pair(typeDeclaration, exampleDeclarations)
     }
 
     override fun listOf(valueList: List<Value>): Value {
@@ -138,9 +151,11 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     override fun toString(): String = toStringValue()
 
-    fun findFirstChildByName(name: String): XMLNode? = nodes.filterIsInstance<XMLNode>().find { it.name == name }
+    fun findFirstChildByName(name: String): XMLNode? =
+        childNodes.filterIsInstance<XMLNode>().find { it.name == name }
 
-    fun findFirstChildByPath(path: String): XMLNode? = findFirstChildByPath(path.split("."))
+    fun findFirstChildByPath(path: String): XMLNode? =
+        findFirstChildByPath(path.split("."))
 
     private fun findFirstChildByPath(path: List<String>): XMLNode? = when {
         path.isEmpty() -> this
@@ -150,5 +165,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
     private fun findFirstChildByPath(childName: String, rest: List<String>): XMLNode? =
         findFirstChildByName(childName)?.findFirstChildByPath(rest)
 
-    fun findChildrenByName(name: String): List<XMLNode> = nodes.filterIsInstance<XMLNode>().filter { it.name == name }
+    fun findChildrenByName(name: String): List<XMLNode> = childNodes.filterIsInstance<XMLNode>().filter { it.name == name }
+
+    fun resolveNamespaceFromName(name: String): String = namespaces.get(name.namespacePrefix()) ?: throw ContractException("Namespace ${name.namespacePrefix()} not found in node $this\nAvailable namespaces: $namespaces")
 }

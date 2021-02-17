@@ -17,8 +17,7 @@ object DateTimePattern : Pattern, ScalarType {
         else -> Result.Failure("DateTime types can only be represented using strings")
     }
 
-    override fun generate(resolver: Resolver): StringValue =
-            StringValue(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME))
+    override fun generate(resolver: Resolver): StringValue = currentDate()
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<DateTimePattern> = listOf(this)
 
@@ -43,3 +42,5 @@ object DateTimePattern : Pattern, ScalarType {
 
     override val pattern = "(datetime)"
 }
+
+fun currentDate() = StringValue(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME))

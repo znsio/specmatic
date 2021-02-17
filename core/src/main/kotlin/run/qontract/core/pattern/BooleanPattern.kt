@@ -17,10 +17,7 @@ object BooleanPattern : Pattern, ScalarType {
         }
 
     override fun generate(resolver: Resolver): Value =
-        when(Random().nextInt(2)) {
-            0 -> BooleanValue(false)
-            else -> BooleanValue(true)
-        }
+        randomBoolean()
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = when {
@@ -41,4 +38,9 @@ object BooleanPattern : Pattern, ScalarType {
     override val typeName: String = "boolean"
     override val pattern: Any = "(boolean)"
     override fun toString(): String = pattern.toString()
+}
+
+fun randomBoolean() = when (Random().nextInt(2)) {
+    0 -> BooleanValue(false)
+    else -> BooleanValue(true)
 }

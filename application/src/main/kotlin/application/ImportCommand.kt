@@ -7,8 +7,12 @@ import run.qontract.conversions.runTests
 import run.qontract.conversions.toFragment
 import run.qontract.core.NamedStub
 import run.qontract.core.QONTRACT_EXTENSION
+import run.qontract.core.parseWSDLIntoScenarios
 import run.qontract.core.toGherkinFeature
 import run.qontract.core.utilities.jsonStringToValueMap
+import run.qontract.core.utilities.parseXML
+import run.qontract.core.value.XMLNode
+import run.qontract.core.value.toXMLNode
 import run.qontract.mock.mockFromJSON
 import java.io.File
 import java.util.concurrent.Callable
@@ -42,6 +46,17 @@ class ImportCommand : Callable<Unit> {
                 }
             }
         }
+    }
+
+    @Command(name="wsdl")
+    fun wsdl(@Parameters(description = [ "Converts a WSDL file to a Qontract file" ], index = "0") path: String, @Option(names = ["-o", "--output"], description = [ "Write the contract into this file"], required = false) outputFile: String?) {
+        val inputFile = File(path)
+        val inputFileContent = inputFile.readText()
+        val wsdlXML = toXMLNode(parseXML(inputFileContent))
+        val stubData = parseWSDLIntoScenarios(wsdlXML)
+        val contract = toGherkinFeature("New SOAP contract", stubData)
+
+        writeOut(contract, outputFile, inputFile, "")
     }
 
     private fun writeOut(gherkin: String, outputFile: String?, inputFile: File, hostAndPort: String) {

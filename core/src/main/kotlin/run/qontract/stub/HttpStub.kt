@@ -445,7 +445,7 @@ fun softCastResponseToXML(mockResponse: HttpStubData): HttpStubData =
 fun softCastValueToXML(body: Value): Value {
     return when(body) {
         is StringValue -> try {
-            XMLNode(body.string)
+            toXMLNode(body.string)
         } catch (e: Throwable) {
             body
         }

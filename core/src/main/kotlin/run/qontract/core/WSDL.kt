@@ -1,8 +1,10 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.ContractException
+import run.qontract.core.pattern.Pattern
+import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.value.*
-import run.qontract.mock.ScenarioStub
+import java.net.URI
 
 private const val primitiveNamespace = "http://www.w3.org/2001/XMLSchema"
 
@@ -13,19 +15,6 @@ private fun soapSkeleton() = toXMLNode(
             </soapenv:Envelope>
         """)
 
-data class SOAPOperation(val name: String, val soapAction: String, val requestPayloadType: SOAPType, val responsePayloadType: SOAPType) {
-    fun getRequestPayload(wsdl: XMLNode): XMLNode {
-        val requestBody = requestPayloadType.getPayload(wsdl)
-        return soapMessage(requestBody)
-    }
-
-
-    fun getResponsePayload(wsdl: XMLNode): XMLNode {
-        val responseBody = responsePayloadType.getPayload(wsdl)
-        return soapMessage(responseBody)
-    }
-}
-
 fun soapMessage(bodyPayload: XMLNode): XMLNode {
     val payload = soapSkeleton()
     val bodyNode = toXMLNode("<soapenv:Body/>")
@@ -34,40 +23,118 @@ fun soapMessage(bodyPayload: XMLNode): XMLNode {
 }
 
 interface SOAPParser {
-    fun getOperations(wsdl: XMLNode): List<SOAPOperation>
+    fun convertToGherkin(wsdl: XMLNode, url: String): String
 }
 
 class SOAP11Parser: SOAPParser {
-    override fun getOperations(wsdl: XMLNode): List<SOAPOperation> {
+    override fun convertToGherkin(wsdl: XMLNode, url: String): String {
         val binding = getXMLNodeByPath(wsdl, "binding")
         val operations = binding.findChildrenByName("operation")
         val portType = getXMLNodeByPath(wsdl, "portType")
 
-        return operations.map { bindingOperationNode ->
-            val operationName = getAttributeValue(bindingOperationNode, "name")
+        val operationsTypeInfo = operations.map {
+            parseOperationType(it, url, wsdl, portType)
+        }
 
-            val soapAction = getAttributeValue(bindingOperationNode, "operation", "soapAction")
+        val featureName = wsdl.findFirstChildByName("service")?.attributes?.get("name") ?: throw ContractException("Couldn't find attribute name in node service")
 
-            val portOperationNode = findNodeByNameAttribute(portType, operationName)
+        val featureHeading = "Feature: $featureName"
 
-            val requestPayloadName = getAttributeValue(portOperationNode, "input", "message").withoutNamespacePrefix()
-            val responsePayloadName = getAttributeValue(portOperationNode, "output", "message").withoutNamespacePrefix()
+        val gherkinScenarios = operationsTypeInfo.map { it.toGherkinScenario("    ", "    ") }
 
-            val requestPayloadType = getPayloadElementNode(wsdl, requestPayloadName)
-            val responsePayloadType = getPayloadElementNode(wsdl, responsePayloadName)
+        return listOf(featureHeading).plus(gherkinScenarios).joinToString("\n\n")
+    }
 
-            SOAPOperation(operationName, soapAction, requestPayloadType, responsePayloadType)
+    private fun parseOperationType(bindingOperationNode: XMLNode, url: String, wsdl: XMLNode, portType: XMLNode): SOAPOperationTypeInfo {
+        val operationName = getAttributeValue(bindingOperationNode, "name")
+
+        val soapAction = getAttributeValue(bindingOperationNode, "operation", "soapAction")
+
+        val portOperationNode = findNodeByNameAttribute(portType, operationName)
+
+        val requestTypeInfo = getTypeInfo(portOperationNode, operationName, "input", wsdl, emptyMap())
+        val responseTypeInfo = getTypeInfo(portOperationNode, operationName, "output", wsdl, requestTypeInfo.types)
+
+        val path = URI(url).path
+
+        return SOAPOperationTypeInfo(path, operationName, soapAction, requestTypeInfo.typeName, responseTypeInfo.typeName, responseTypeInfo.types)
+    }
+
+    private fun getTypeInfo(portOperationNode: XMLNode, operationName: String, messageType: String, wsdl: XMLNode, existingTypes: Map<String, Pattern>): SoapPayloadTypeInfo {
+        val messageName = getAttributeValue(portOperationNode, messageType, "message").withoutNamespacePrefix()
+        val messageNode = wsdl.childNodes.filterIsInstance<XMLNode>().find { it.name == "message" && it.attributes["name"]?.toStringValue() == messageName } ?: throw ContractException("Message node $messageName not found")
+        val payloadName = messageNode.childNodes.filterIsInstance<XMLNode>().first().attributes["element"]?.toStringValue() ?: throw ContractException("part/element not found in message named $messageName")
+
+        val typesNodeInWsdl = wsdl.childNodes.filterIsInstance<XMLNode>().find { it.name == "types" } ?: throw ContractException("Couldn't find types node")
+        val element = findElement(typesNodeInWsdl, payloadName.withoutNamespacePrefix(), wsdl.resolveNamespaceFromName(payloadName))
+
+        val typeName = "${operationName.replace(":", "_")}${messageType.capitalize()}"
+        val (_, types) = getTypes(typeName, element, wsdl, existingTypes, emptySet())
+        return SoapPayloadTypeInfo(typeName, types)
+    }
+
+    private fun getTypes(typeName: String, element: XMLNode, wsdl: XMLNode, existingTypes: Map<String, Pattern>, typeStack: Set<String>): Pair<List<XMLValue>, Map<String, Pattern>> {
+        return when {
+            hasSimpleTypeAttribute(element) -> createSimpleType(element, existingTypes)
+            else -> {
+                if(typeName in typeStack) {
+                    Pair(emptyList(), existingTypes)
+                } else {
+                    val complexType = getElementTypeNode(wsdl, element)
+
+                    val (children, newTypes) = generateChildren(
+                        wsdl,
+                        complexType,
+                        existingTypes,
+                        typeStack.plus(typeName)
+                    )
+                    val nodeTypeInfo = XMLNode(getAttributeValue(element, "name").withoutNamespacePrefix(), emptyMap(), children)
+                    val inPlaceNode = toXMLNode("<qontract:$typeName/>")
+                    Pair(listOf(inPlaceNode), existingTypes.plus(newTypes).plus(typeName to XMLPattern(nodeTypeInfo)))
+                }
+            }
         }
     }
 
-    private fun getPayloadElementNode(wsdl: XMLNode, requestPayloadName: String): SOAPType {
-        val messageNode = wsdl.childNodes.filterIsInstance<XMLNode>().find {
-            it.name == "message" && it.attributes["name"]?.toStringValue() == requestPayloadName
-        } ?: throw ContractException("Could not find request message")
+    private fun generateChildren(wsdl: XMLNode, complexType: XMLNode, existingTypes: Map<String, Pattern>, typeStack: Set<String>): Pair<List<XMLValue>, Map<String, Pattern>> {
+        val childParts: List<XMLNode> = complexType.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }
 
-        val part = getXMLNodeByPath(messageNode, "part")
+        return childParts.fold(Pair(emptyList(), existingTypes)) { acc, childPart ->
+            when(childPart.name) {
+                "element" -> {
+                    val typeName = childPart.attributes["type"]?.toStringValue()?.replace(':', '_') ?: throw ContractException("Found an element without a type attribute")
+                    val (newNode, generatedTypes) = getTypes(typeName, childPart, wsdl, existingTypes, typeStack)
 
-        return part.messageType(messageNode)
+                    val newList: List<XMLValue> = acc.first.plus(newNode)
+                    val newTypes = acc.second.plus(generatedTypes)
+                    Pair(newList, newTypes)
+                }
+                "sequence", "all" -> generateChildren(wsdl, childPart, existingTypes, typeStack)
+                "complexContent" -> {
+                    val extension = childPart.findFirstChildByName("extension") ?: throw ContractException("Found complexContent node without base attribute: $childPart")
+
+                    val parentComplexType = findType(wsdl, extension, "base")
+                    val (childrenFromParent, generatedTypesFromParent) = generateChildren(wsdl, parentComplexType, existingTypes, typeStack)
+
+                    val extensionChild = extension.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }.getOrNull(0)
+                    val (childrenFromExtensionChild, generatedTypesFromChild) = when {
+                        extensionChild != null -> generateChildren(wsdl, extensionChild, acc.second.plus(generatedTypesFromParent), typeStack)
+                        else -> Pair(emptyList(), generatedTypesFromParent)
+                    }
+
+                    Pair(childrenFromParent.plus(childrenFromExtensionChild), generatedTypesFromChild)
+                }
+                else -> throw ContractException("Couldn't recognize child node $childPart")
+            }
+        }
+    }
+
+    private fun createSimpleType(
+        element: XMLNode,
+        types: Map<String, Pattern>
+    ): Pair<List<XMLValue>, Map<String, Pattern>> {
+        val node = createSimpleType(element)
+        return Pair(listOf(node), types)
     }
 
     private fun findNodeByNameAttribute(xmlNode: XMLNode, valueOfNameAttribute: String): XMLNode {
@@ -77,24 +144,100 @@ class SOAP11Parser: SOAPParser {
     }
 }
 
-fun XMLNode.messageType(messageNode: XMLNode) = when {
-    hasSimpleTypeAttribute(this) -> SimpleSOAPType(this)
-    else -> toComplexSOAPType(messageNode, this)
+data class SoapPayloadTypeInfo(val typeName: String, val types: Map<String, Pattern>)
+
+data class SOAPOperationTypeInfo(
+    val path: String,
+    val operationName: String,
+    val soapAction: String,
+    val requestTypeName: String,
+    val responseTypeName: String,
+    val types: Map<String, Pattern>
+) {
+    fun toGherkinScenario(scenarioIndent: String = "", incrementalIndent: String = "  "): String {
+        val titleStatement = listOf("Scenario: $operationName".prependIndent(scenarioIndent))
+
+        val typeStatements = typesToGherkin(types, incrementalIndent)
+        val requestStatements = requestStatements()
+        val responseStatements = responseStatements()
+
+        val statementIndent = "$scenarioIndent$incrementalIndent"
+        val bodyStatements = typeStatements.plus(requestStatements).plus(responseStatements).map { it.prependIndent(statementIndent) }
+
+        return titleStatement.plus(bodyStatements).joinToString("\n")
+    }
+
+    private fun requestStatements(): List<String> {
+        val pathStatement = listOf("When POST $path")
+        val soapActionHeaderStatement = when {
+            soapAction.isNotBlank() -> listOf("And response-header $soapAction")
+            else -> emptyList()
+        }
+
+        val requestBodyStatement = bodyPayloadStatement("request")
+        return pathStatement.plus(soapActionHeaderStatement).plus(requestBodyStatement)
+    }
+
+    private fun bodyPayloadStatement(bodyType: String): String {
+        val requestBody = soapMessage(toXMLNode("<qontract:$requestTypeName/>"))
+        return "And $bodyType-body\n\"\"\"\n$requestBody\n\"\"\""
+    }
+
+    private fun responseStatements(): List<String> {
+        val statusStatement = listOf("Then status 200")
+        val responseBodyStatement = bodyPayloadStatement("response")
+        return statusStatement.plus(responseBodyStatement)
+    }
+
+    private fun typesToGherkin(types: Map<String, Pattern>, incrementalIndent: String): List<String> {
+        val typeStrings = types.entries.map { (typeName, type) ->
+            if (type !is XMLPattern)
+                throw ContractException("Unexpected type (name=$typeName) $type")
+
+            val typeStringLines = type.toGherkinishXMLNode().toPrettyStringValue().trim().lines()
+
+            val indentedTypeString = when (typeStringLines.size) {
+                0 -> ""
+                1 -> typeStringLines.first().trim()
+                else -> {
+                    val firstLine = typeStringLines.first().trim()
+                    val lastLine = typeStringLines.last().trim()
+
+                    val rest = typeStringLines.drop(1).dropLast(1).map { it.prependIndent(incrementalIndent) }
+
+                    listOf(firstLine).plus(rest).plus(lastLine).joinToString("\n")
+                }
+            }
+
+            "And type $typeName\n\"\"\"\n$indentedTypeString\n\"\"\""
+        }
+
+        return when (typeStrings.size) {
+            0 -> typeStrings
+            else -> {
+                val firstLine = typeStrings.first().removePrefix("And ")
+                val adjustedFirstLine = "Given $firstLine"
+
+                listOf(adjustedFirstLine).plus(typeStrings.drop(1))
+            }
+        }
+    }
 }
 
-interface SOAPType {
-    fun getPayload(wsdl: XMLNode): XMLNode
-}
-
-fun findSchema(types: XMLNode, payloadNamespace: String): XMLNode {
-    return types.childNodes.filterIsInstance<XMLNode>().find {
-        it.attributes["targetNamespace"]?.toStringValue() == payloadNamespace
-    } ?: throw ContractException("Couldn't find schema with targetNamespace $payloadNamespace")
+fun findSchema(types: XMLNode, namespace: String): XMLNode {
+    return when {
+        namespace.isBlank() -> types.childNodes.filterIsInstance<XMLNode>().first()
+        else -> {
+            types.childNodes.filterIsInstance<XMLNode>().find {
+                it.attributes["targetNamespace"]?.toStringValue() == namespace
+            } ?: throw ContractException("Couldn't find schema with targetNamespace $namespace")
+        }
+    }
 }
 
 fun generateNodeFromElement(wsdl: XMLNode, element: XMLNode, typeStack: Map<String, Int>): XMLValue {
     return if(hasSimpleTypeAttribute(element))
-        createUsingTypeAttribute(element)
+        createSimpleType(element)
     else {
         val complexType = getElementTypeNode(wsdl, element)
 
@@ -106,9 +249,32 @@ fun generateNodeFromElement(wsdl: XMLNode, element: XMLNode, typeStack: Map<Stri
             } else
                 typeStack
 
-        val children: List<XMLValue> = generateChildren(wsdl, complexType, updatedTypeStack)
+        val children: List<XMLValue> = generateChildrenOld(wsdl, complexType, updatedTypeStack)
         XMLNode(getAttributeValue(element, "name").withoutNamespacePrefix(), emptyMap(), children)
     }
+}
+
+private fun generateChildrenOld(wsdl: XMLNode, complexType: XMLNode, typeStack: Map<String, Int>): List<XMLValue> {
+    val childParts = complexType.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }
+
+    return childParts.map { childPart ->
+        when(childPart.name) {
+            "element" -> ifStackWontOverflow(childPart, typeStack) { listOf(generateNodeFromElement(wsdl, childPart, typeStack)) }
+            "sequence" -> generateChildrenOld(wsdl, childPart, typeStack)
+            "complexContent" -> {
+                val extension = childPart.findFirstChildByName("extension") ?: throw ContractException("Found complexContent node without base attribute: $childPart")
+
+                val parentComplexType = findType(wsdl, extension, "base")
+                val childrenFromParent = generateChildrenOld(wsdl, parentComplexType, typeStack)
+
+                val extensionChild = extension.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }.getOrNull(0)
+                val childrenFromExtensionChild = if(extensionChild != null) generateChildrenOld(wsdl, extensionChild, typeStack) else emptyList()
+
+                childrenFromParent.plus(childrenFromExtensionChild)
+            }
+            else -> throw ContractException("Couldn't recognize child node $childPart")
+        }
+    }.flatten()
 }
 
 fun getElementTypeNode(wsdl: XMLNode, element: XMLNode): XMLNode {
@@ -136,14 +302,14 @@ fun findType(
     val fullTypeName = element.attributes.getValue(attributeName).toStringValue()
     val typeName = fullTypeName.withoutNamespacePrefix()
     val namespacePrefix = fullTypeName.namespacePrefix()
-    val namespace = element.namespaces[namespacePrefix] ?: throw ContractException("Could not find namespace with prefix $namespacePrefix in xml node $element")
+    val namespace = if(namespacePrefix.isBlank()) "" else element.namespaces[namespacePrefix] ?: throw ContractException("Could not find namespace with prefix $namespacePrefix in xml node $element")
 
-    return findType(types, typeName, namespace)
+    return findElement(types, typeName, namespace)
 }
 
 fun hasSimpleTypeAttribute(element: XMLNode): Boolean = element.attributes.containsKey("type") && isPrimitiveType(element)
 
-private fun createUsingTypeAttribute(
+private fun createSimpleType(
     element: XMLNode
 ): XMLNode {
     val typeName = element.attributes.getValue("type").toStringValue().withoutNamespacePrefix()
@@ -167,43 +333,17 @@ fun ifStackWontOverflow(element: XMLNode, typeStack: Map<String, Int>, fn: () ->
     }
 }
 
-private fun generateChildren(wsdl: XMLNode, complexType: XMLNode, typeStack: Map<String, Int>): List<XMLValue> {
-    val childParts = complexType.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }
-
-    return childParts.map { childPart ->
-        when(childPart.name) {
-            "element" -> ifStackWontOverflow(childPart, typeStack) { listOf(generateNodeFromElement(wsdl, childPart, typeStack)) }
-            "sequence" -> generateChildren(wsdl, childPart, typeStack)
-            "complexContent" -> {
-                val extension = childPart.findFirstChildByName("extension") ?: throw ContractException("Found complexContent node without base attribute: $childPart")
-
-                val parentComplexType = findType(wsdl, extension, "base")
-                val childrenFromParent = generateChildren(wsdl, parentComplexType, typeStack)
-
-                val extensionChild = extension.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }.getOrNull(0)
-                val childrenFromExtensionChild = if(extensionChild != null) generateChildren(wsdl, extensionChild, typeStack) else emptyList()
-
-                childrenFromParent.plus(childrenFromExtensionChild)
-            }
-            else -> throw ContractException("Couldn't recognize child node $childPart")
-        }
-    }.flatten()
-}
-
-data class ElementType(val typeName: String, val namespace: String) : SOAPType {
-    override fun getPayload(wsdl: XMLNode): XMLNode {
-        val types = getXMLNodeByName(wsdl, "types")
-        val element = findType(types, typeName.withoutNamespacePrefix(), namespace)
-        return generateNodeFromElement(wsdl, element, emptyMap()) as XMLNode
-    }
-}
-
 fun isPrimitiveType(node: XMLNode): Boolean {
     val type = node.attributes.getValue("type").toStringValue()
-    return node.resolveNamespaceFromName(type) == primitiveNamespace
+    val namespace = node.resolveNamespaceFromName(type)
+
+    if(namespace.isBlank())
+        return primitiveTypes.contains(type)
+
+    return namespace == primitiveNamespace
 }
 
-fun findType(types: XMLNode, typeName: String, namespace: String): XMLNode {
+fun findElement(types: XMLNode, typeName: String, namespace: String): XMLNode {
     val schema = findSchema(types, namespace)
     return getXMLNodeByAttributeValue(schema, "name", typeName)
 }
@@ -218,32 +358,15 @@ val primitiveStringTypes = listOf("string", "duration", "time", "date", "gYearMo
 val primitiveNumberTypes = listOf("int", "integer", "decimal", "float", "double")
 val primitiveDateTypes = listOf("dateTime")
 val primitiveBooleanType = listOf("boolean")
-
-data class SimpleSOAPType(val typeName: String) : SOAPType {
-    constructor(stringValue: StringValue): this(stringValue.toStringValue().withoutNamespacePrefix())
-    constructor(part: XMLNode) : this(part.attributes["type"]!!)
-
-    override fun getPayload(wsdl: XMLNode): XMLNode {
-        TODO("Not yet implemented")
-    }
-}
-
-fun toComplexSOAPType(messageNode: XMLNode, part: XMLNode): ElementType {
-    val requestPayloadElementTypeName = getAttributeValue(part, "element")
-    val requestPayloadNamespace: String =
-        messageNode.namespaces[requestPayloadElementTypeName.namespacePrefix()]
-            ?: throw ContractException("Could not find namespace prefix ${requestPayloadElementTypeName.namespacePrefix()}")
-    return ElementType(requestPayloadElementTypeName, requestPayloadNamespace)
-}
+val primitiveTypes = primitiveStringTypes.plus(primitiveNumberTypes).plus(primitiveDateTypes).plus(primitiveBooleanType)
 
 class SOAP20Parser : SOAPParser {
-    override fun getOperations(wsdl: XMLNode): List<SOAPOperation> {
-        TODO("SOAP 2.0 parser is not yet implemented")
+    override fun convertToGherkin(wsdl: XMLNode, url: String): String {
+        TODO("SOAP 2.0 is not yet implemented")
     }
-
 }
 
-fun parseWSDLIntoScenarios(wsdl: XMLNode): List<NamedStub> {
+fun convertWSDLToGherkin(wsdl: XMLNode): String {
     val port = getXMLNodeOrNull(wsdl, "service.port")
     val endpoint = getXMLNodeOrNull(wsdl, "service.endpoint")
 
@@ -253,18 +376,7 @@ fun parseWSDLIntoScenarios(wsdl: XMLNode): List<NamedStub> {
         else -> throw ContractException("Could not find the service endpoint")
     }
 
-    val operations = soapParser.getOperations(wsdl)
-
-    return operations.map {
-        val method = "POST"
-
-        val requestBody = it.getRequestPayload(wsdl)
-
-        val request = HttpRequest(method = method, path = url, headers = mapOf("Content-Type" to "application/xml"), body = requestBody)
-        val response = HttpResponse.OK(it.getResponsePayload(wsdl))
-
-        NamedStub(it.name, ScenarioStub(request, response))
-    }
+    return soapParser.convertToGherkin(wsdl, url)
 }
 
 private fun getAttributeValue(node: XMLNode, path: String, attributeName: String): String {

@@ -1,5 +1,8 @@
 package run.qontract.core.pattern
 
+import run.qontract.core.value.StringValue
+import run.qontract.core.value.XMLNode
+
 data class XMLTypeData(val name: String = "", val realName: String, val attributes: Map<String, Pattern> = emptyMap(), val nodes: List<Pattern> = emptyList()) {
     fun isEmpty(): Boolean {
         return name.isEmpty() && attributes.isEmpty() && nodes.isEmpty()
@@ -27,5 +30,16 @@ data class XMLTypeData(val name: String = "", val realName: String, val attribut
                 "$indent<$realName$attributeText>\n$childNodeText\n$indent</$realName>"
             }
         }
+    }
+
+    fun toGherkinishNode(): XMLNode {
+        val childXMLNodes = nodes.map {
+            when(it) {
+                is XMLPattern -> it.toGherkinishXMLNode()
+                else -> StringValue(it.pattern.toString())
+            }
+        }
+
+        return XMLNode(realName, attributes.mapValues { StringValue(it.value.pattern.toString()) }, childXMLNodes)
     }
 }

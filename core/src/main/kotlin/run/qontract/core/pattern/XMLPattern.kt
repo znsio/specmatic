@@ -3,11 +3,7 @@ package run.qontract.core.pattern
 import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.parseXML
-import run.qontract.core.value.StringValue
-import run.qontract.core.value.Value
-import run.qontract.core.value.XMLNode
-import run.qontract.core.value.toXMLNode
-import run.qontract.core.value.XMLValue
+import run.qontract.core.value.*
 
 fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, node.realName, attributeTypeMap(node), nodeTypes(node))
 
@@ -63,10 +59,21 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 else -> childNode
             }
 
+            val resolvedType = resolveType(type, resolver)
+
             val factKey = if (childNode is XMLNode) childNode.name else null
-            resolver.matchesPattern(factKey, type, childNode)
+            resolver.matchesPattern(factKey, resolvedType, childNode)
         } catch (e: ContractException) {
             e.failure()
+        }
+    }
+
+    private fun resolveType(node: Pattern, resolver: Resolver): Pattern {
+        return when {
+            node is XMLPattern && node.pattern.realName.namespacePrefix() == "qontract" -> {
+                resolver.getPattern("(${node.pattern.name.withoutNamespacePrefix()})")
+            }
+            else -> node
         }
     }
 
@@ -218,5 +225,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
     fun toGherkinString(additionalIndent: String = "", indent: String = ""): String {
         return pattern.toGherkinString(additionalIndent, indent)
+    }
+
+    fun toGherkinishXMLNode(): XMLNode {
+        return pattern.toGherkinishNode()
     }
 }

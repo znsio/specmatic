@@ -5,10 +5,7 @@ import picocli.CommandLine.*
 import run.qontract.conversions.postmanCollectionToGherkin
 import run.qontract.conversions.runTests
 import run.qontract.conversions.toFragment
-import run.qontract.core.NamedStub
-import run.qontract.core.QONTRACT_EXTENSION
-import run.qontract.core.parseWSDLIntoScenarios
-import run.qontract.core.toGherkinFeature
+import run.qontract.core.*
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.XMLNode
@@ -53,8 +50,7 @@ class ImportCommand : Callable<Unit> {
         val inputFile = File(path)
         val inputFileContent = inputFile.readText()
         val wsdlXML = toXMLNode(parseXML(inputFileContent))
-        val stubData = parseWSDLIntoScenarios(wsdlXML)
-        val contract = toGherkinFeature("New SOAP contract", stubData)
+        val contract = convertWSDLToGherkin(wsdlXML)
 
         writeOut(contract, outputFile, inputFile, "")
     }

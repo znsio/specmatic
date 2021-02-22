@@ -9,6 +9,7 @@ import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.utilities.newBuilder
 import run.qontract.core.utilities.parseXML
+import run.qontract.core.utilities.xmlToPrettyString
 import run.qontract.core.utilities.xmlToString
 
 fun toXMLNode(document: Document): XMLNode = nonTextXMLNode(document.documentElement)
@@ -120,9 +121,9 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     override fun displayableValue(): String = toStringValue()
 
-    override fun toStringValue(): String {
-        return xmlToString(build())
-    }
+    override fun toStringValue(): String = xmlToString(build())
+
+    fun toPrettyStringValue(): String = xmlToPrettyString(build())
 
     override fun displayableType(): String = "xml"
     override fun exactMatchElseType(): XMLPattern {
@@ -167,5 +168,13 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     fun findChildrenByName(name: String): List<XMLNode> = childNodes.filterIsInstance<XMLNode>().filter { it.name == name }
 
-    fun resolveNamespaceFromName(name: String): String = namespaces.get(name.namespacePrefix()) ?: throw ContractException("Namespace ${name.namespacePrefix()} not found in node $this\nAvailable namespaces: $namespaces")
+    fun resolveNamespaceFromName(name: String): String {
+        val namespacePrefix = name.namespacePrefix()
+
+        return when {
+            namespacePrefix.isBlank() -> ""
+            else -> namespaces[name.namespacePrefix()] ?: throw ContractException("Namespace ${name.namespacePrefix()} not found in node $this\nAvailable namespaces: $namespaces")
+        }
+    }
+
 }

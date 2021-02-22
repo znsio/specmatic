@@ -30,6 +30,7 @@ import java.io.StringWriter
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
+import javax.xml.transform.Transformer
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
@@ -71,7 +72,6 @@ fun parseXML(xmlData: String): Document {
 
 internal fun newBuilder(): DocumentBuilder {
     val builderFactory = DocumentBuilderFactory.newInstance()
-//    builderFactory.isNamespaceAware = true
     val builder = builderFactory.newDocumentBuilder()
     builder.setErrorHandler(null)
     return builder
@@ -104,12 +104,18 @@ private fun containsTextContent(node: Node) =
 
 fun xmlToString(node: Node): String = xmlToString(DOMSource(node))
 
-private fun xmlToString(domSource: DOMSource): String {
+fun xmlToPrettyString(node: Node): String = xmlToString(DOMSource(node)) {
+    it.setOutputProperty(OutputKeys.INDENT, "yes")
+    it.setOutputProperty(OutputKeys.METHOD, "xml")
+}
+
+private fun xmlToString(domSource: DOMSource, configureTransformer: (Transformer) -> Unit = {}): String {
     val writer = StringWriter()
     val result = StreamResult(writer)
     val tf = TransformerFactory.newInstance()
     val transformer = tf.newTransformer()
     transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
+    configureTransformer(transformer)
     transformer.transform(domSource, result)
     return writer.toString()
 }

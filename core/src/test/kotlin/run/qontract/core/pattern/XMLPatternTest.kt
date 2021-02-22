@@ -377,4 +377,15 @@ internal class XMLPatternTest {
         println(resultReport(result))
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
+
+    @Test
+    fun `given a node with the qontract namespace, look it up and match the type`() {
+        val nameType = parsedPattern("<name>(string)</name>")
+        val personType = parsedPattern("<person><qontract:Name/></person>")
+
+        val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
+
+        val xmlNode = parsedValue("<person><name>Jill</name></person>")
+        assertThat(resolver.matchesPattern(null, personType, xmlNode).isTrue()).isTrue
+    }
 }

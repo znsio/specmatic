@@ -1,53 +1,79 @@
 package run.qontract
 
 import org.junit.jupiter.api.Test
-import run.qontract.core.parseWSDLIntoScenarios
-import run.qontract.core.toGherkinFeature
+import run.qontract.core.convertWSDLToGherkin
 import run.qontract.core.value.toXMLNode
-import java.io.File
 
 class WSDLTest {
-//    @Test
-//    fun basicWSDL() {
-//        val basicWSDL = """
-//            <wsdl:definitions
-//                 name="Untitled"
-//                 targetNamespace="http://xmlns.example.com/1546843006089"
-//                 xmlns:ns2="http://www.jio.ril.com/integration/services/common/schema/CustomerConfigurationInquiryConcrete/"
-//                 xmlns:ns1="http://www.jio.ril.com/information/DataTypes/CustomerConfigurationInquiry/"
-//                 xmlns:ns3="http://www.jio.ril.com/information/CanonicalDataModel/CustomerConfigurationInquiry/"
-//                 xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
-//                 xmlns:tns="http://xmlns.example.com/1546843006089"
-//                 xmlns:ns0="http://www.jio.ril.com/integration/services/common/CustomerConfigurationInquiry/"
-//                 xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
-//                >
-//                <wsdl:binding name="CustomerConfigurationInquiryBinding" type="tns:CustomerConfigurationInquiryV0dot9">
-//                <wsdl:operation name="retrieveCustomerServiceConfiguration">
-//                    <soap:operation style="document" soapAction="/retrieveCustomerServiceConfiguration"/>
-//                    <wsdl:input>
-//                        <soap:body use="literal"/>
-//                    </wsdl:input>
-//                    <wsdl:output>
-//                        <soap:body use="literal"/>
-//                    </wsdl:output>
-//                    <wsdl:fault name="retrieveCustomerServiceConfigurationException">
-//                        <soap:fault name="retrieveCustomerServiceConfigurationException" use="literal"/>
-//                    </wsdl:fault>
-//                </wsdl:operation>
-//                </wsdl:binding>
-//
-//                    <wsdl:service name="CustomerConfigurationInquiry">
-//        <wsdl:port name="CustomerConfigurationInquiry" binding="tns:CustomerConfigurationInquiryBinding">
-//            <soap:address location="http://localhost:13041/CustomerConfigurationInquiryV0dot9"/>
-//        </wsdl:port>
-//    </wsdl:service>
-//                <wsdl:types/>
-//
-//        """.trimIndent()
-//        val wsdlContent = File("/Users/joelrosario/tmp/soap/CustomerConfigurationInquiry.wsdl").readText()
-//        val wsdl = toXMLNode(wsdlContent)
-//        val listOfStubs = parseWSDLIntoScenarios(wsdl)
-//        val gherkin = toGherkinFeature("New SOAP contract", listOfStubs)
-//        println(gherkin)
-//    }
+    @Test
+    fun superWSDL() {
+        val wsdlContent = """
+            <definitions name="StockQuote"
+                         targetNamespace="http://example.com/stockquote.wsdl"
+                         xmlns:tns="http://www.w3.org/2001/XMLSchema"
+                         xmlns:xsd1="http://example.com/stockquote.xsd"
+                         xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                         xmlns="http://schemas.xmlsoap.org/wsdl/">
+
+              <types>
+                <schema targetNamespace="http://example.com/stockquote.xsd"
+                        xmlns="http://www.w3.org/2000/10/XMLSchema">
+                  <element name="TradePriceRequest">
+                    <complexType>
+                      <all>
+                        <element name="tickerSymbol" type="string"/>
+                      </all>
+                    </complexType>
+                  </element>
+                  <element name="TradePrice">
+                     <complexType>
+                       <all>
+                         <element name="price" type="float"/>
+                       </all>
+                     </complexType>
+                  </element>
+                </schema>
+              </types>
+
+              <message name="GetLastTradePriceInput">
+                <part name="body" element="xsd1:TradePriceRequest"/>
+              </message>
+
+              <message name="GetLastTradePriceOutput">
+                <part name="body" element="xsd1:TradePrice"/>
+              </message>
+
+              <portType name="StockQuotePortType">
+                <operation name="GetLastTradePrice">
+                  <input message="tns:GetLastTradePriceInput"/>
+                  <output message="tns:GetLastTradePriceOutput"/>
+                </operation>
+              </portType>
+
+              <binding name="StockQuoteSoapBinding" type="tns:StockQuotePortType">
+                <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+                <operation name="GetLastTradePrice">
+                  <soap:operation soapAction="http://example.com/GetLastTradePrice"/>
+                  <input>
+                    <soap:body use="literal"/>
+                  </input>
+                  <output>
+                    <soap:body use="literal"/>
+                  </output>
+                </operation>
+              </binding>
+
+              <service name="StockQuoteService">
+                <documentation>My first service</documentation>
+                <port name="StockQuotePort" binding="tns:StockQuoteSoapBinding">
+                  <soap:address location="http://example.com/stockquote"/>
+                </port>
+              </service>
+
+            </definitions>
+        """.trimIndent()
+        val wsdl = toXMLNode(wsdlContent)
+        val gherkin: String = convertWSDLToGherkin(wsdl)
+        println(gherkin)
+    }
 }

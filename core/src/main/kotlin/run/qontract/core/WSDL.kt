@@ -147,9 +147,6 @@ class SOAP11Parser: SOAPParser {
         val schemaElementFormDefault = schema.attributes["elementFormDefault"]?.toStringValue()
         val elementForm = element.attributes["form"]?.toStringValue()
 
-        if(schemaElementFormDefault == "qualified" || elementForm == "qualified")
-            println("NODE NAMESPACE QUALIFIED: $element")
-
         return (elementForm ?: schemaElementFormDefault) == "qualified"
     }
 

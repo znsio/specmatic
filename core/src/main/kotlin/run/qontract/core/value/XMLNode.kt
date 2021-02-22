@@ -168,7 +168,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     fun findChildrenByName(name: String): List<XMLNode> = childNodes.filterIsInstance<XMLNode>().filter { it.name == name }
 
-    fun resolveNamespaceFromName(name: String): String {
+    fun resolveNamespace(name: String): String {
         val namespacePrefix = name.namespacePrefix()
 
         return when {

@@ -154,7 +154,7 @@ internal class XMLNodeTest {
     @Test
     fun `resolves the namespace of a name in terms of known namespaces`() {
         val node = toXMLNode("<data xmlns:data=\"http://data\">data</data>")
-        assertThat(node.resolveNamespaceFromName("data:stuff")).isEqualTo("http://data")
+        assertThat(node.resolveNamespace("data:stuff")).isEqualTo("http://data")
     }
 
     @Test

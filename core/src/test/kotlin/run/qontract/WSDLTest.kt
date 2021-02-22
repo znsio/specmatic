@@ -6,7 +6,7 @@ import run.qontract.core.value.toXMLNode
 
 class WSDLTest {
     @Test
-    fun superWSDL() {
+    fun `exploratory WSDL test - it is not even a real test`() {
         val wsdlContent = """
             <definitions name="StockQuote"
                          targetNamespace="http://example.com/stockquote.wsdl"
@@ -72,6 +72,7 @@ class WSDLTest {
 
             </definitions>
         """.trimIndent()
+
         val wsdl = toXMLNode(wsdlContent)
         val gherkin: String = convertWSDLToGherkin(wsdl)
         println(gherkin)

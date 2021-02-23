@@ -13,23 +13,24 @@ private fun soapSkeleton(namespaces: Map<String, String>): XMLNode {
         0 -> ""
         else -> namespaces.entries
             .joinToString(" ") {
-                "${it.key}=\"${it.value}\""
+                "xmlns:${it.key}=\"${it.value}\""
             }
             .prependIndent(" ")
     }
     return toXMLNode(
         """
             <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="$primitiveNamespace"$namespacesString>
-                <soapenv:Header/>
             </soapenv:Envelope>
         """)
 }
 
 fun soapMessage(bodyPayload: XMLNode, namespaces: Map<String, String>): XMLNode {
     val payload = soapSkeleton(namespaces)
-    val bodyNode = toXMLNode("<soapenv:Body/>")
+    val bodyNode = toXMLNode("<soapenv:Body/>").let {
+        it.copy(childNodes = it.childNodes.plus(bodyPayload))
+    }
 
-    return payload.copy(childNodes = payload.childNodes.plus(bodyNode.childNodes.plus(bodyPayload)))
+    return payload.copy(childNodes = payload.childNodes.plus(bodyNode))
 }
 
 data class WSDLTypeInfo(val nodes: List<XMLValue> = emptyList(), val types: Map<String, Pattern> = emptyMap(), val namespacesPrefixes: Set<String> = emptySet())
@@ -115,14 +116,15 @@ class SOAP11Parser: SOAPParser {
                 )
 
                 val isQualified = isQualified(element, wsdlTypeReference, wsdl)
+                val nodeName = getAttributeValue(element, "name")
 
-                val nodeName =
+                val qualifiedNodeName =
                     if(isQualified)
-                        wsdlTypeReference
+                        "${wsdlTypeReference.namespacePrefix()}:${nodeName.withoutNamespacePrefix()}"
                     else
-                        wsdlTypeReference.withoutNamespacePrefix()
+                        nodeName
 
-                val nodeTypeInfo = XMLNode(nodeName, emptyMap(), childTypeInfo.nodes)
+                val nodeTypeInfo = XMLNode(qualifiedNodeName, emptyMap(), childTypeInfo.nodes)
                 val inPlaceNode = toXMLNode("<qontract:$qontractTypeName/>")
 
                 val namespacePrefix = when {
@@ -228,7 +230,7 @@ data class SOAPOperationTypeInfo(
     private fun requestStatements(): List<String> {
         val pathStatement = listOf("When POST $path")
         val soapActionHeaderStatement = when {
-            soapAction.isNotBlank() -> listOf("And response-header $soapAction")
+            soapAction.isNotBlank() -> listOf("""And request-header SOAPAction "$soapAction"""")
             else -> emptyList()
         }
 

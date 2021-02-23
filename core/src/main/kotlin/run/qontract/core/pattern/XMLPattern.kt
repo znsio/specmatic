@@ -33,11 +33,34 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         if(sampleData.name != pattern.name)
             return mismatchResult(pattern.name, sampleData.name).breadCrumb(pattern.name)
 
-        val missingKey = resolver.findMissingKey(ignoreXMLNamespaces(pattern.attributes), ignoreXMLNamespaces(sampleData.attributes), ::validateUnexpectedKeys)
+        if(pattern.attributes.any { it.key == "xmlns" || it.key.startsWith("xmlns:") }) {
+            val patternXmlnsValues = pattern.attributes.entries.filter { it.key == "xmlns" || it.key.startsWith("xmlns:") }.map { (_, attributePattern) ->
+                when(attributePattern) {
+                    is ExactValuePattern -> attributePattern.pattern.toStringValue()
+                    else -> attributePattern.pattern.toString()
+                }
+            }.toSet()
+            val sampleXmlnsValues = sampleData.attributes.entries.filter { it.key == "xmlns" || it.key.startsWith("xmlns:") }.map { (_, attributeValue) ->
+                attributeValue.toStringValue()
+            }.toSet()
+
+            val missing = patternXmlnsValues - sampleXmlnsValues
+            if(missing.isNotEmpty())
+                return Result.Failure("In node named ${pattern.name}, the following namespaces were missing: $missing", breadCrumb = pattern.name)
+
+            val extra = sampleXmlnsValues - patternXmlnsValues
+            if(extra.isNotEmpty())
+                return Result.Failure("In node named ${pattern.name}, the following unexpected namespaces were found: $extra", breadCrumb = pattern.name)
+        }
+
+        val patternAttributesWithoutXmlns = pattern.attributes.filterNot { it.key == "xmlns" || it.key.startsWith("xmlns") }
+        val sampleAttributesWithoutXmlns = sampleData.attributes.filterNot { it.key == "xmlns" || it.key.startsWith("xmlns") }
+
+        val missingKey = resolver.findMissingKey(ignoreXMLNamespaces(patternAttributesWithoutXmlns), ignoreXMLNamespaces(sampleAttributesWithoutXmlns), ::validateUnexpectedKeys)
         if(missingKey != null)
             return missingKeyToResult(missingKey, "attribute").breadCrumb(pattern.name)
 
-        return matchAttributes(pattern, sampleData, resolver).ifSuccess {
+        return matchAttributes(patternAttributesWithoutXmlns, sampleAttributesWithoutXmlns, resolver).ifSuccess {
             pattern.nodes.asSequence().mapIndexed { index, patternItem ->
                 val type = resolvedHop(patternItem, resolver)
                 when {
@@ -84,8 +107,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         }
     }
 
-    private fun matchAttributes(pattern: XMLTypeData, sampleData: XMLNode, resolver: Resolver): Result =
-            mapZip(ignoreXMLNamespaces(pattern.attributes), ignoreXMLNamespaces(sampleData.attributes)).asSequence().map { (key, patternValue, sampleValue) ->
+    private fun matchAttributes(patternAttributesWithoutXmlns: Map<String, Pattern>, sampleAttributesWithoutXmlns: Map<String, StringValue>, resolver: Resolver): Result =
+            mapZip(ignoreXMLNamespaces(patternAttributesWithoutXmlns), ignoreXMLNamespaces(sampleAttributesWithoutXmlns)).asSequence().map { (key, patternValue, sampleValue) ->
                 try {
                     val resolvedValue: Value = when {
                         sampleValue.isPatternToken() -> sampleValue.trimmed()

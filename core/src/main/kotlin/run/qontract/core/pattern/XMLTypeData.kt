@@ -42,4 +42,16 @@ data class XMLTypeData(val name: String = "", val realName: String, val attribut
 
         return XMLNode(realName, attributes.mapValues { StringValue(it.value.pattern.toString()) }, childXMLNodes)
     }
+
+    fun isOptionalNode(): Boolean {
+        return attributes["qontract_optional"].let {
+            it is ExactValuePattern && it.pattern.toStringValue() == "true"
+        }
+    }
+
+    fun isMultipleNode(): Boolean {
+        return attributes["qontract_multiple"].let {
+            it is ExactValuePattern && it.pattern.toStringValue() == "true"
+        }
+    }
 }

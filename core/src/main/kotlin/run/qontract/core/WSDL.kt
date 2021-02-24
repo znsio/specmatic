@@ -124,7 +124,9 @@ class SOAP11Parser: SOAPParser {
                     else
                         nodeName
 
-                val nodeTypeInfo = XMLNode(qualifiedNodeName, emptyMap(), childTypeInfo.nodes)
+                val attributes: Map<String, StringValue> = getQontractAttributes(element)
+
+                val nodeTypeInfo = XMLNode(qualifiedNodeName, attributes, childTypeInfo.nodes)
                 val inPlaceNode = toXMLNode("<qontract:$qontractTypeName/>")
 
                 val namespacePrefix = when {
@@ -138,6 +140,24 @@ class SOAP11Parser: SOAPParser {
                     childTypeInfo.namespacesPrefixes.plus(namespacePrefix))
             }
         }
+    }
+
+    private fun getQontractAttributes(element: XMLNode): Map<String, StringValue> {
+        return when {
+            elementIsOptional(element) -> mapOf("qontract_optional" to StringValue("true"))
+            multipleElementsCanExist(element) -> mapOf("qontract_multiple" to StringValue("true"))
+            else -> emptyMap()
+        }
+    }
+
+    private fun multipleElementsCanExist(element: XMLNode): Boolean {
+        return element.attributes.containsKey("maxOccurs")
+                && (element.attributes["maxOccurs"]?.toStringValue() == "unbounded"
+                || element.attributes.getValue("maxOccurs").toStringValue().toInt() > 1)
+    }
+
+    private fun elementIsOptional(element: XMLNode): Boolean {
+        return element.attributes["minOccurs"]?.toStringValue() == "0" && !element.attributes.containsKey("maxOccurs")
     }
 
     private fun isQualified(element: XMLNode, wsdlTypeReference: String, wsdl: XMLNode): Boolean {

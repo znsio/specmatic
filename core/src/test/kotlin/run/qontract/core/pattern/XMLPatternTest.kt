@@ -388,4 +388,80 @@ internal class XMLPatternTest {
         val xmlNode = parsedValue("<person><name>Jill</name></person>")
         assertThat(resolver.matchesPattern(null, personType, xmlNode).isTrue()).isTrue
     }
+
+    @Test
+    fun `matching works for an xml node with more than one child node`() {
+        val type = XMLPattern("<account><name>John Doe</name><address>(string)</address></account>")
+        val value = toXMLNode("<account><name>John Doe</name><address>Baker street</address></account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    private val optionalAttribute: String = "qontract_optional=\"true\""
+
+    @Test
+    fun `last node can be optional`() {
+        val type = XMLPattern("<account><name>(string)</name><address $optionalAttribute>(string)</address></account>")
+        val value = toXMLNode("<account><name>John Doe</name></account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `second to last node can be optional`() {
+        val type = XMLPattern("<account><name>(string)</name><address $optionalAttribute>(string)</address><phone>(number)</phone></account>")
+        val value = toXMLNode("<account><name>John Doe</name><phone>10</phone></account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `multiple nodes can be optional`() {
+        val type = XMLPattern("<account><name $optionalAttribute>(string)</name><address $optionalAttribute>(string)</address><phone>(number)</phone></account>")
+        val value = toXMLNode("<account><phone>10</phone></account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    private val multipleAttribute: String = "qontract_multiple=\"true\""
+
+    @Test
+    fun `multiple nodes at the end can be matched`() {
+        val type = XMLPattern("<account><name>(string)</name><address $multipleAttribute>(string)</address></account>")
+        val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address></account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `multiple nodes in the middle can be matched`() {
+        val type = XMLPattern("<account><name>(string)</name><address $multipleAttribute>(string)</address><phone>(number)</phone></account>")
+        val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address><phone>10</phone></account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `multiple nodes at the start can be matched`() {
+        val type = XMLPattern("<account><address $multipleAttribute>(string)</address><phone>(number)</phone><name>(string)</name></account>")
+        val value = toXMLNode("<account><address>Baker Street</address><address>Downing Street</address><phone>10</phone><name>John Doe</name></account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `multi-node declaration can match 0 occurence of those nodes`() {
+        val type = XMLPattern("<account><name>(string)</name><address $multipleAttribute>(string)</address><phone>(number)</phone></account>")
+        val value = toXMLNode("<account><name>John Doe</name><phone>10</phone></account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `multi-node declaration can be followed by optional declaration in which none of the nodes declared are found in the matched value`() {
+        val type = XMLPattern("<account><name>(string)</name><address $multipleAttribute>(string)</address><phone $optionalAttribute>(number)</phone></account>")
+        val value = toXMLNode("<account><name>John Doe</name></account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
 }

@@ -77,7 +77,7 @@ dependencies {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
     testImplementation 'org.assertj:assertj-core:3.19.0'
-    testImplementation 'com.ginsberg:junit5-system-exit:1.0.0'
+    testImplementation 'com.ginsberg:junit5-system-exit:1.1.1'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
 }

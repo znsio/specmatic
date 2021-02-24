@@ -423,6 +423,14 @@ internal class XMLPatternTest {
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
+    @Test
+    fun `multiple optional nodes can be corresponding nodes that are actually present`() {
+        val type = XMLPattern("<account><name $optionalAttribute>(string)</name><address $optionalAttribute>(string)</address><phone>(number)</phone></account>")
+        val value = toXMLNode("<account><name>Jane Doe</name><address>Baker Street</address><phone>10</phone></account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
     private val multipleAttribute: String = "qontract_multiple=\"true\""
 
     @Test
@@ -464,4 +472,20 @@ internal class XMLPatternTest {
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
     }
+
+    @Test
+    fun `optional type returns an error when matching a value of a different type`() {
+        val type = XMLPattern("<account><name $optionalAttribute>(string)</name></account>")
+        val value = toXMLNode("<account>test</account>")
+
+        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
+
+//    @Test
+//    fun `test`() {
+//        val type = XMLPattern("<account><name $optionalAttribute>(string)</name></account>")
+//        val value = toXMLNode("<account>test</account>")
+//
+//        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Failure::class.java)
+//    }
 }

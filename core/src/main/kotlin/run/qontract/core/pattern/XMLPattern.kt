@@ -38,7 +38,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 else {
                     when (matches(xmlValues.first(), resolver)) {
                         is Result.Failure -> ConsumeResult(Result.Success(), xmlValues)
-                        is Result.Success -> ConsumeResult(Result.Success(), xmlValues)
+                        is Result.Success -> ConsumeResult(Result.Success(), xmlValues.drop(1))
                     }
                 }
             }
@@ -50,7 +50,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 ConsumeResult(Result.Success(), remainder)
             }
             else -> {
-                ConsumeResult(matches(xmlValues.first(), resolver), xmlValues.drop(1))
+                if(xmlValues.isEmpty())
+                    ConsumeResult(Result.Failure("Got fewer nodes than expected", breadCrumb = this.pattern.name), sampleData)
+                else
+                    ConsumeResult(matches(xmlValues.first(), resolver), xmlValues.drop(1))
             }
         }
     }
@@ -72,25 +75,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         sampleData: XMLNode,
         resolver: Resolver
     ): Result {
-        return pattern.nodes.asSequence().scanIndexed(ConsumeResult(Result.Success(), sampleData.childNodes)) { index, consumeResult, type ->
-            val resolvedType = resolveType(type, resolver)
-
-//            val childNodes = if(sampleData.childNodes.size == 1) {
-//                val childValue = when (val childNode = sampleData.childNodes[index]) {
-//                    is StringValue -> when {
-//                        childNode.isPatternToken() -> childNode.trimmed()
-//                        else -> resolvedType.parse(childNode.string, resolver)
-//                    }
-//                    else -> childNode
-//                }
-//
-//                listOf(childValue)
-//            } else {
-//                sampleData.childNodes
-//            }
-
-            when {
-                resolvedType is ListPattern -> ConsumeResult(
+        return pattern.nodes.scanIndexed(ConsumeResult(Result.Success(), sampleData.childNodes)) { index, consumeResult, type ->
+            when (val resolvedType = resolveType(type, resolver)) {
+                is ListPattern -> ConsumeResult(
                     resolvedType.matches(
                         this.listOf(
                             consumeResult.remainder.subList(index, pattern.nodes.indices.last),
@@ -105,15 +92,14 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                             val childValue = when (val childNode = sampleData.childNodes[index]) {
                                 is StringValue -> when {
                                     childNode.isPatternToken() -> childNode.trimmed()
-                                    else -> resolvedType.parse(childNode.string, resolver)
+                                    else -> try { resolvedType.parse(childNode.string, resolver) } catch(e: Throwable) { throw ContractException("Couldn't parse xml value to type ")}
                                 }
                                 else -> childNode
                             }
 
                             val factKey = if (childValue is XMLNode) childValue.name else null
                             ConsumeResult(resolver.matchesPattern(factKey, resolvedType, childValue), emptyList())
-                        }
-                        else if (expectingEmpty(sampleData, resolvedType, resolver)) {
+                        } else if (expectingEmpty(sampleData, resolvedType, resolver)) {
                             ConsumeResult(Result.Success())
                         } else {
                             resolvedType.matches(consumeResult.remainder, resolver).cast("xml")
@@ -176,13 +162,6 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 resolver.getPattern("(${resolvedType.pattern.name.withoutNamespacePrefix()})")
             }
             else -> resolvedType
-        }
-    }
-
-    private fun errorUnlessExpectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver): Result {
-        return when {
-            !expectingEmpty(sampleData, type, resolver) -> Result.Failure("The value had only ${sampleData.childNodes.size} nodes but the contract expected more")
-            else -> Result.Success()
         }
     }
 
@@ -296,7 +275,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                     val others = otherMembers.getEncompassables(otherResolver)
                     val these = theseMembers.getEncompassables(thisResolver)
 
-                    these.asSequence().runningFold(ConsumeResult(others)) { acc, thisOne ->
+                    these.runningFold(ConsumeResult(others)) { acc, thisOne ->
                         thisOne.encompasses(adaptEmpty(acc), thisResolver, otherResolver, "The lengths of the two XML types are unequal", typeStack)
                     }.find { it.result is Result.Failure }?.result ?: Result.Success()
                 }
@@ -329,7 +308,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return pattern.toGherkinString(additionalIndent, indent)
     }
 
-    fun toGherkinishXMLNode(): XMLNode {
+    fun toGherkinXMLNode(): XMLNode {
         return pattern.toGherkinishNode()
     }
 }

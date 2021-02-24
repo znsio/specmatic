@@ -35,7 +35,7 @@ data class XMLTypeData(val name: String = "", val realName: String, val attribut
     fun toGherkinishNode(): XMLNode {
         val childXMLNodes = nodes.map {
             when(it) {
-                is XMLPattern -> it.toGherkinishXMLNode()
+                is XMLPattern -> it.toGherkinXMLNode()
                 else -> StringValue(it.pattern.toString())
             }
         }

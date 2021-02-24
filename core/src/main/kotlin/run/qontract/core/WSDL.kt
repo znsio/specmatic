@@ -19,7 +19,7 @@ private fun soapSkeleton(namespaces: Map<String, String>): XMLNode {
     }
     return toXMLNode(
         """
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="$primitiveNamespace"$namespacesString>
+Mis            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="$primitiveNamespace"$namespacesString><soapenv:Header qontract_optional="true"/>
             </soapenv:Envelope>
         """)
 }
@@ -254,18 +254,18 @@ data class SOAPOperationTypeInfo(
             else -> emptyList()
         }
 
-        val requestBodyStatement = bodyPayloadStatement("request", requestNamespaces)
+        val requestBodyStatement = bodyPayloadStatement("request", requestTypeName, requestNamespaces)
         return pathStatement.plus(soapActionHeaderStatement).plus(requestBodyStatement)
     }
 
-    private fun bodyPayloadStatement(bodyType: String, namespaces: Map<String, String>): String {
-        val requestBody = soapMessage(toXMLNode("<qontract:$requestTypeName/>"), namespaces)
-        return "And $bodyType-body\n\"\"\"\n$requestBody\n\"\"\""
+    private fun bodyPayloadStatement(qontractBodyType: String, qontractTypeName: String, namespaces: Map<String, String>): String {
+        val requestBody = soapMessage(toXMLNode("<qontract:$qontractTypeName/>"), namespaces)
+        return "And $qontractBodyType-body\n\"\"\"\n$requestBody\n\"\"\""
     }
 
     private fun responseStatements(): List<String> {
         val statusStatement = listOf("Then status 200")
-        val responseBodyStatement = bodyPayloadStatement("response", responseNamespaces)
+        val responseBodyStatement = bodyPayloadStatement("response", responseTypeName, responseNamespaces)
         return statusStatement.plus(responseBodyStatement)
     }
 
@@ -274,7 +274,7 @@ data class SOAPOperationTypeInfo(
             if (type !is XMLPattern)
                 throw ContractException("Unexpected type (name=$typeName) $type")
 
-            val typeStringLines = type.toGherkinishXMLNode().toPrettyStringValue().trim().lines()
+            val typeStringLines = type.toGherkinXMLNode().toPrettyStringValue().trim().lines()
 
             val indentedTypeString = when (typeStringLines.size) {
                 0 -> ""

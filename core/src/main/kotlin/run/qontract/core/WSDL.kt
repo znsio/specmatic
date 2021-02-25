@@ -19,7 +19,7 @@ private fun soapSkeleton(namespaces: Map<String, String>): XMLNode {
     }
     return toXMLNode(
         """
-Mis            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="$primitiveNamespace"$namespacesString><soapenv:Header qontract_optional="true"/>
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="$primitiveNamespace"$namespacesString><soapenv:Header qontract_optional="true"/>
             </soapenv:Envelope>
         """)
 }

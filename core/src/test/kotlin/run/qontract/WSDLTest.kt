@@ -1,12 +1,14 @@
 package run.qontract
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.Feature
 import run.qontract.core.value.toXMLNode
 import run.qontract.core.wsdl.WSDL
 
 class WSDLTest {
     @Test
-    fun `exploratory WSDL test - it is not even a real test`() {
+    fun `happy path WSDL conversion`() {
         val wsdlContent = """
             <definitions name="StockQuote"
                          targetNamespace="http://example.com/stockquote.wsdl"
@@ -74,7 +76,38 @@ class WSDLTest {
         """.trimIndent()
 
         val wsdl = WSDL(toXMLNode(wsdlContent))
-        val gherkin: String = wsdl.convertToGherkin()
-        println(gherkin)
+        val generatedGherkin: String = wsdl.convertToGherkin()
+        val expectedGherkin = """
+            Feature: StockQuoteService
+
+                Scenario: GetLastTradePrice
+                    Given type GetLastTradePriceInput
+                    ""${'"'}
+                    <TradePriceRequest>
+                        <tickerSymbol>(string)</tickerSymbol>
+                    </TradePriceRequest>
+                    ""${'"'}
+                    And type GetLastTradePriceOutput
+                    ""${'"'}
+                    <TradePrice>
+                        <price>(number)</price>
+                    </TradePrice>
+                    ""${'"'}
+                    When POST /stockquote
+                    And request-header SOAPAction "http://example.com/GetLastTradePrice"
+                    And request-body
+                    ""${'"'}
+                    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header qontract_occurs="optional"/><soapenv:Body><qontract_GetLastTradePriceInput/></soapenv:Body></soapenv:Envelope>
+                    ""${'"'}
+                    Then status 200
+                    And response-body
+                    ""${'"'}
+                    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header qontract_occurs="optional"/><soapenv:Body><qontract_GetLastTradePriceOutput/></soapenv:Body></soapenv:Envelope>
+                    ""${'"'}
+        """.trimIndent()
+
+        println(generatedGherkin)
+
+        assertThat(Feature(generatedGherkin)).isEqualTo(Feature(expectedGherkin))
     }
 }

@@ -138,7 +138,6 @@ class SOAP11Parser: SOAPParser {
     }
 
     private fun isQualified(element: XMLNode, wsdlTypeReference: String, wsdl: WSDL): Boolean {
-//        val types = wsdl.getXMLNodeByName("types")
         val namespace = element.resolveNamespace(wsdlTypeReference)
 
         val schema = wsdl.findSchema(namespace)
@@ -227,53 +226,6 @@ fun soapMessage(bodyPayload: XMLNode, namespaces: Map<String, String>): XMLNode 
 
     return payload.copy(childNodes = payload.childNodes.plus(bodyNode))
 }
-
-//fun findSchema(types: XMLNode, namespace: String): XMLNode {
-//    return when {
-//        namespace.isBlank() -> types.childNodes.filterIsInstance<XMLNode>().first()
-//        else -> {
-//            types.childNodes.filterIsInstance<XMLNode>().find {
-//                it.attributes["targetNamespace"]?.toStringValue() == namespace
-//            } ?: throw ContractException("Couldn't find schema with targetNamespace $namespace")
-//        }
-//    }
-//}
-//
-//fun getElementTypeNode(wsdl: XMLNode, element: XMLNode): XMLNode {
-//    return when {
-//        element.attributes.containsKey("type") -> findType(wsdl, element)
-//        else -> element.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }.first()
-//    }.also {
-//        if(it.name != "complexType")
-//            throw ContractException("Unexpected type node found: $it")
-//    }
-//}
-//
-//fun findType(
-//    wsdl: XMLNode,
-//    element: XMLNode
-//): XMLNode = findType(wsdl, element, "type")
-//
-//fun findType(
-//    wsdl: XMLNode,
-//    element: XMLNode,
-//    attributeName: String
-//): XMLNode {
-//    val types = wsdl.getXMLNodeByName("types")
-//
-//    val fullTypeName = element.attributes.getValue(attributeName).toStringValue()
-//    val typeName = fullTypeName.withoutNamespacePrefix()
-//    val namespacePrefix = fullTypeName.namespacePrefix()
-//    val namespace = if(namespacePrefix.isBlank()) "" else element.namespaces[namespacePrefix] ?: throw ContractException("Could not find namespace with prefix $namespacePrefix in xml node $element")
-//
-//    return findElement(types, typeName, namespace)
-//}
-//
-//fun findElement(types: XMLNode, typeName: String, namespace: String): XMLNode {
-//    val schema = findSchema(types, namespace)
-//
-//    return schema.getXMLNodeByAttributeValue("name", typeName)
-//}
 
 fun hasSimpleTypeAttribute(element: XMLNode): Boolean = element.attributes.containsKey("type") && isPrimitiveType(element)
 

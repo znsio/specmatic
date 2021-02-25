@@ -21,9 +21,7 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode) {
         return soapParser.convertToGherkin(this, url)
     }
 
-    fun findType(
-        element: XMLNode
-    ): XMLNode = findType(element, "type")
+    fun findType(element: XMLNode): XMLNode = findType(element, "type")
 
     fun findType(
         element: XMLNode,

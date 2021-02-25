@@ -57,7 +57,15 @@ class ImportCommand : Callable<Unit> {
 
     private fun writeOut(gherkin: String, outputFile: String?, inputFile: File, hostAndPort: String) {
         when (outputFile) {
-            null -> println(gherkin)
+            null -> {
+                if(inputFile.name.endsWith(".wsdl")) {
+                    val filename = inputFile.nameWithoutExtension + ".qontract"
+                    File(filename).writeText(gherkin)
+                    println("Written to file $filename")
+                }
+                else
+                    println(gherkin)
+            }
             else -> File(outputFile).let {
                 val tag = if(hostAndPort.isNotEmpty()) "-${hostAndPort.replace(":", "-")}" else ""
 

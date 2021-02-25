@@ -177,4 +177,31 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         }
     }
 
+
+    fun getAttributeValue(path: String, attributeName: String): String {
+        val childNode = getXMLNodeByPath(path)
+        return childNode.attributes[attributeName]?.toStringValue() ?: throw ContractException("Couldn't find attribute $attributeName at path $path")
+    }
+
+    fun getAttributeValue(attributeName: String): String {
+        return this.attributes[attributeName]?.toStringValue() ?: throw ContractException("Couldn't find attribute $attributeName in node $this")
+    }
+
+    fun getXMLNodeByPath(path: String): XMLNode =
+        this.findFirstChildByPath(path) ?: throw ContractException("Couldn't find node at path $path")
+
+    fun getXMLNodeOrNull(path: String): XMLNode? =
+        this.findFirstChildByPath(path)
+
+    fun getXMLNodeByName(name: String): XMLNode =
+        this.findFirstChildByName(name) ?: throw ContractException("Couldn't find node named $name")
+
+    fun getXMLNodeByAttributeValue(attributeName: String, typeName: String): XMLNode {
+        return this.childNodes.filterIsInstance<XMLNode>().find {
+            it.attributes[attributeName]?.toStringValue() == typeName
+        } ?: throw ContractException("Couldn't find a node with attribute $attributeName=$typeName")
+    }
+
+    fun firstNode() =
+        this.childNodes.filterIsInstance<XMLNode>().first()
 }

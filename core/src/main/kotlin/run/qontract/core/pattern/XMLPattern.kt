@@ -4,6 +4,7 @@ import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.*
+import run.qontract.core.wsdl.XML_TYPE_PREFIX
 
 fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, node.realName, attributeTypeMap(node), nodeTypes(node))
 

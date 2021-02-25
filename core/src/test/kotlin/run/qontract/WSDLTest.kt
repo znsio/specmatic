@@ -1,8 +1,8 @@
 package run.qontract
 
 import org.junit.jupiter.api.Test
-import run.qontract.core.convertWSDLToGherkin
 import run.qontract.core.value.toXMLNode
+import run.qontract.core.wsdl.WSDL
 
 class WSDLTest {
     @Test
@@ -73,8 +73,8 @@ class WSDLTest {
             </definitions>
         """.trimIndent()
 
-        val wsdl = toXMLNode(wsdlContent)
-        val gherkin: String = convertWSDLToGherkin(wsdl)
+        val wsdl = WSDL(toXMLNode(wsdlContent))
+        val gherkin: String = wsdl.convertToGherkin()
         println(gherkin)
     }
 }

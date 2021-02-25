@@ -8,8 +8,8 @@ import run.qontract.conversions.toFragment
 import run.qontract.core.*
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.parseXML
-import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
+import run.qontract.core.wsdl.WSDL
 import run.qontract.mock.mockFromJSON
 import java.io.File
 import java.util.concurrent.Callable
@@ -50,7 +50,7 @@ class ImportCommand : Callable<Unit> {
         val inputFile = File(path)
         val inputFileContent = inputFile.readText()
         val wsdlXML = toXMLNode(parseXML(inputFileContent))
-        val contract = convertWSDLToGherkin(wsdlXML)
+        val contract = WSDL(wsdlXML).convertToGherkin()
 
         writeOut(contract, outputFile, inputFile, "")
     }

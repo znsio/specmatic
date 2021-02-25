@@ -7,6 +7,9 @@ import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
+import run.qontract.core.wsdl.MULTIPLE_ATTRIBUTE_VALUE
+import run.qontract.core.wsdl.OCCURS_ATTRIBUTE_NAME
+import run.qontract.core.wsdl.OPTIONAL_ATTRIBUTE_VALUE
 import run.qontract.shouldMatch
 import run.qontract.shouldNotMatch
 

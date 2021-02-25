@@ -33,12 +33,21 @@ class SOAP11Parser: SOAPParser {
 
         val portOperationNode = findNodeByNameAttribute(portType, operationName)
 
-        val requestTypeInfo = getTypeInfo(portOperationNode, operationName, "input", wsdl, emptyMap())
-        val responseTypeInfo = getTypeInfo(portOperationNode, operationName, "output", wsdl, requestTypeInfo.types)
+        val requestTypeInfo = getTypeInfo(
+            portOperationNode,
+            operationName,
+            SOAPMessageType.Input,
+            wsdl,
+            emptyMap()
+        )
 
-        val requestNamespaces = wsdl.namespacePrefixMap(requestTypeInfo.namespacesPrefixes)
-
-        val responseNamespaces = wsdl.namespacePrefixMap(responseTypeInfo.namespacesPrefixes)
+        val responseTypeInfo = getTypeInfo(
+            portOperationNode,
+            operationName,
+            SOAPMessageType.Output,
+            wsdl,
+            requestTypeInfo.types
+        )
 
         val path = URI(url).path
 
@@ -46,16 +55,20 @@ class SOAP11Parser: SOAPParser {
             path,
             operationName,
             soapAction,
-            requestTypeInfo.typeName,
-            responseTypeInfo.typeName,
             responseTypeInfo.types,
-            requestNamespaces,
-            responseNamespaces
+            requestTypeInfo.soapPayload,
+            responseTypeInfo.soapPayload
         )
     }
 
-    private fun getTypeInfo(portOperationNode: XMLNode, operationName: String, messageType: String, wsdl: WSDL, existingTypes: Map<String, Pattern>): SoapPayloadTypeInfo {
-        val messageName = portOperationNode.getAttributeValue(messageType, "message").withoutNamespacePrefix()
+    private fun getTypeInfo(
+        portOperationNode: XMLNode,
+        operationName: String,
+        soapMessageType: SOAPMessageType,
+        wsdl: WSDL,
+        existingTypes: Map<String, Pattern>
+    ): SoapPayloadType {
+        val messageName = portOperationNode.getAttributeValue(soapMessageType.messageTypeName, "message").withoutNamespacePrefix()
         val messageNode = wsdl.findMessageNode(messageName)
         val wsdlTypeReference = messageNode.firstNode().attributes["element"]?.toStringValue() ?: throw ContractException(
             "part/element not found in message named $messageName"
@@ -66,10 +79,12 @@ class SOAP11Parser: SOAPParser {
             wsdl.resolveNamespace(wsdlTypeReference)
         )
 
-        val qontractTypeName = "${operationName.replace(":", "_")}${messageType.capitalize()}"
+        val qontractTypeName = "${operationName.replace(":", "_")}${soapMessageType.messageTypeName.capitalize()}"
         val typeInfo = getQontractTypes(qontractTypeName, wsdlTypeReference, element, wsdl, existingTypes, emptySet())
+        val namespaces: Map<String, String> = wsdl.getNamespaces(typeInfo)
+        val soapPayload = NormalSOAPPayload(soapMessageType, qontractTypeName, namespaces)
 
-        return SoapPayloadTypeInfo(qontractTypeName, typeInfo.types, typeInfo.namespacesPrefixes)
+        return SoapPayloadType(typeInfo.types, soapPayload)
     }
 
     private fun getQontractTypes(qontractTypeName: String, wsdlTypeReference: String, element: XMLNode, wsdl: WSDL, existingTypes: Map<String, Pattern>, typeStack: Set<String>): WSDLTypeInfo {

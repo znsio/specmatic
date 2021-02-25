@@ -1,6 +1,7 @@
 package run.qontract.core.wsdl
 
 import run.qontract.core.pattern.ContractException
+import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.namespacePrefix
 import run.qontract.core.value.withoutNamespacePrefix
@@ -73,12 +74,6 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode) {
 
     fun resolveNamespace(name: String): String = wsdlNode.resolveNamespace(name)
 
-    fun namespacePrefixMap(
-        namespacesPrefixes: Set<String>
-    ) = namespacesPrefixes.toList().map {
-        Pair(it, wsdlNode.attributes.getValue("xmlns:$it").toStringValue())
-    }.toMap()
-
     fun getServiceName() =
         wsdlNode.findFirstChildByName("service")?.attributes?.get("name")
             ?: throw ContractException("Couldn't find attribute name in node service")
@@ -87,4 +82,7 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode) {
 
     fun getBinding() = wsdlNode.getXMLNodeByPath("binding")
 
+    fun getNamespaces(typeInfo: WSDLTypeInfo): Map<String, String> {
+        return typeInfo.getNamespaces(wsdlNode.attributes)
+    }
 }

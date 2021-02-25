@@ -158,8 +158,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         val resolvedType = resolvedHop(type, resolver)
 
         return when {
-            resolvedType is XMLPattern && resolvedType.pattern.realName.namespacePrefix() == "qontract" -> {
-                resolver.getPattern("(${resolvedType.pattern.name.withoutNamespacePrefix()})")
+            resolvedType is XMLPattern && resolvedType.pattern.name.startsWith(XML_TYPE_PREFIX) -> {
+                resolver.getPattern("(${resolvedType.pattern.name.removePrefix(XML_TYPE_PREFIX)})")
             }
             else -> resolvedType
         }

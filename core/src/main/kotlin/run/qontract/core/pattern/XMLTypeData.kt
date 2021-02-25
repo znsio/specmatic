@@ -44,14 +44,14 @@ data class XMLTypeData(val name: String = "", val realName: String, val attribut
     }
 
     fun isOptionalNode(): Boolean {
-        return attributes["qontract_optional"].let {
-            it is ExactValuePattern && it.pattern.toStringValue() == "true"
+        return attributes["qontract_occurs"].let {
+            it is ExactValuePattern && it.pattern.toStringValue() == "optional"
         }
     }
 
     fun isMultipleNode(): Boolean {
-        return attributes["qontract_multiple"].let {
-            it is ExactValuePattern && it.pattern.toStringValue() == "true"
+        return attributes["qontract_occurs"].let {
+            it is ExactValuePattern && it.pattern.toStringValue() == "multiple"
         }
     }
 }

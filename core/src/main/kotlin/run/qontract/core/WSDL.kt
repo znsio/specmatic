@@ -7,6 +7,11 @@ import run.qontract.core.value.*
 import java.net.URI
 
 private const val primitiveNamespace = "http://www.w3.org/2001/XMLSchema"
+const val XML_TYPE_PREFIX = "qontract_"
+
+const val OCCURS_ATTRIBUTE_NAME = "qontract_occurs"
+const val OPTIONAL_ATTRIBUTE_VALUE = "optional"
+const val MULTIPLE_ATTRIBUTE_VALUE = "multiple"
 
 private fun soapSkeleton(namespaces: Map<String, String>): XMLNode {
     val namespacesString = when(namespaces.size){
@@ -19,7 +24,7 @@ private fun soapSkeleton(namespaces: Map<String, String>): XMLNode {
     }
     return toXMLNode(
         """
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="$primitiveNamespace"$namespacesString><soapenv:Header qontract_optional="true"/>
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="$primitiveNamespace"$namespacesString><soapenv:Header $OCCURS_ATTRIBUTE_NAME="$OPTIONAL_ATTRIBUTE_VALUE"/>
             </soapenv:Envelope>
         """)
 }
@@ -127,7 +132,7 @@ class SOAP11Parser: SOAPParser {
                 val attributes: Map<String, StringValue> = getQontractAttributes(element)
 
                 val nodeTypeInfo = XMLNode(qualifiedNodeName, attributes, childTypeInfo.nodes)
-                val inPlaceNode = toXMLNode("<qontract:$qontractTypeName/>")
+                val inPlaceNode = toXMLNode("<$XML_TYPE_PREFIX$qontractTypeName/>")
 
                 val namespacePrefix = when {
                     isQualified -> listOf(wsdlTypeReference.namespacePrefix())
@@ -144,8 +149,8 @@ class SOAP11Parser: SOAPParser {
 
     private fun getQontractAttributes(element: XMLNode): Map<String, StringValue> {
         return when {
-            elementIsOptional(element) -> mapOf("qontract_optional" to StringValue("true"))
-            multipleElementsCanExist(element) -> mapOf("qontract_multiple" to StringValue("true"))
+            elementIsOptional(element) -> mapOf(OCCURS_ATTRIBUTE_NAME to StringValue(OPTIONAL_ATTRIBUTE_VALUE))
+            multipleElementsCanExist(element) -> mapOf(OCCURS_ATTRIBUTE_NAME to StringValue(MULTIPLE_ATTRIBUTE_VALUE))
             else -> emptyMap()
         }
     }
@@ -259,7 +264,7 @@ data class SOAPOperationTypeInfo(
     }
 
     private fun bodyPayloadStatement(qontractBodyType: String, qontractTypeName: String, namespaces: Map<String, String>): String {
-        val requestBody = soapMessage(toXMLNode("<qontract:$qontractTypeName/>"), namespaces)
+        val requestBody = soapMessage(toXMLNode("<$XML_TYPE_PREFIX$qontractTypeName/>"), namespaces)
         return "And $qontractBodyType-body\n\"\"\"\n$requestBody\n\"\"\""
     }
 

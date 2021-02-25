@@ -2,9 +2,7 @@ package run.qontract.core.pattern
 
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
-import run.qontract.core.Resolver
-import run.qontract.core.Result
-import run.qontract.core.resultReport
+import run.qontract.core.*
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
@@ -381,7 +379,7 @@ internal class XMLPatternTest {
     @Test
     fun `given a node with the qontract namespace, look it up and match the type`() {
         val nameType = parsedPattern("<name>(string)</name>")
-        val personType = parsedPattern("<person><qontract:Name/></person>")
+        val personType = parsedPattern("<person><qontract_Name/></person>")
 
         val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
 
@@ -397,7 +395,7 @@ internal class XMLPatternTest {
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
-    private val optionalAttribute: String = "qontract_optional=\"true\""
+    private val optionalAttribute: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
 
     @Test
     fun `last node can be optional`() {
@@ -431,7 +429,7 @@ internal class XMLPatternTest {
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
-    private val multipleAttribute: String = "qontract_multiple=\"true\""
+    private val multipleAttribute: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTIPLE_ATTRIBUTE_VALUE\""
 
     @Test
     fun `multiple nodes at the end can be matched`() {
@@ -480,12 +478,4 @@ internal class XMLPatternTest {
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Failure::class.java)
     }
-
-//    @Test
-//    fun `test`() {
-//        val type = XMLPattern("<account><name $optionalAttribute>(string)</name></account>")
-//        val value = toXMLNode("<account>test</account>")
-//
-//        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Failure::class.java)
-//    }
 }

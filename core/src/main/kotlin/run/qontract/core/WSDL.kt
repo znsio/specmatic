@@ -399,7 +399,7 @@ fun getXMLNodeByAttributeValue(schema: XMLNode, attributeName: String, typeName:
 }
 
 val primitiveStringTypes = listOf("string", "duration", "time", "date", "gYearMonth", "gYear", "gMonthDay", "gDay", "gMonth", "hexBinary", "base64Binary", "anyURI", "QName", "NOTATION")
-val primitiveNumberTypes = listOf("int", "integer", "decimal", "float", "double")
+val primitiveNumberTypes = listOf("int", "integer", "long", "decimal", "float", "double")
 val primitiveDateTypes = listOf("dateTime")
 val primitiveBooleanType = listOf("boolean")
 val primitiveTypes = primitiveStringTypes.plus(primitiveNumberTypes).plus(primitiveDateTypes).plus(primitiveBooleanType)

@@ -112,6 +112,11 @@ internal class XMLPatternTest {
     }
 
     @Test
+    fun `should not match a missing node`() {
+        toXMLNode("<person><name>Jane</name></person>") shouldNotMatch XMLPattern("<person><name>(string)</name><address>(string)</address></person>")
+    }
+
+    @Test
     fun `list type should match multiple xml values of the same type` () {
         val numberInfoPattern = XMLPattern("<number>(number)</number>")
         val resolver = Resolver(newPatterns = mapOf("(NumberInfo)" to numberInfoPattern))
@@ -398,11 +403,11 @@ internal class XMLPatternTest {
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
-    private val optionalAttribute: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
+    private val isOptional: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
 
     @Test
     fun `last node can be optional`() {
-        val type = XMLPattern("<account><name>(string)</name><address $optionalAttribute>(string)</address></account>")
+        val type = XMLPattern("<account><name>(string)</name><address $isOptional>(string)</address></account>")
         val value = toXMLNode("<account><name>John Doe</name></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -410,7 +415,7 @@ internal class XMLPatternTest {
 
     @Test
     fun `second to last node can be optional`() {
-        val type = XMLPattern("<account><name>(string)</name><address $optionalAttribute>(string)</address><phone>(number)</phone></account>")
+        val type = XMLPattern("<account><name>(string)</name><address $isOptional>(string)</address><phone>(number)</phone></account>")
         val value = toXMLNode("<account><name>John Doe</name><phone>10</phone></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -418,7 +423,7 @@ internal class XMLPatternTest {
 
     @Test
     fun `multiple nodes can be optional`() {
-        val type = XMLPattern("<account><name $optionalAttribute>(string)</name><address $optionalAttribute>(string)</address><phone>(number)</phone></account>")
+        val type = XMLPattern("<account><name $isOptional>(string)</name><address $isOptional>(string)</address><phone>(number)</phone></account>")
         val value = toXMLNode("<account><phone>10</phone></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -426,17 +431,17 @@ internal class XMLPatternTest {
 
     @Test
     fun `multiple optional nodes can be corresponding nodes that are actually present`() {
-        val type = XMLPattern("<account><name $optionalAttribute>(string)</name><address $optionalAttribute>(string)</address><phone>(number)</phone></account>")
+        val type = XMLPattern("<account><name $isOptional>(string)</name><address $isOptional>(string)</address><phone>(number)</phone></account>")
         val value = toXMLNode("<account><name>Jane Doe</name><address>Baker Street</address><phone>10</phone></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
-    private val multipleAttribute: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTIPLE_ATTRIBUTE_VALUE\""
+    private val occursMultipleTimes: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTIPLE_ATTRIBUTE_VALUE\""
 
     @Test
     fun `multiple nodes at the end can be matched`() {
-        val type = XMLPattern("<account><name>(string)</name><address $multipleAttribute>(string)</address></account>")
+        val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address></account>")
         val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -444,7 +449,7 @@ internal class XMLPatternTest {
 
     @Test
     fun `multiple nodes in the middle can be matched`() {
-        val type = XMLPattern("<account><name>(string)</name><address $multipleAttribute>(string)</address><phone>(number)</phone></account>")
+        val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address><phone>(number)</phone></account>")
         val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address><phone>10</phone></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -452,7 +457,7 @@ internal class XMLPatternTest {
 
     @Test
     fun `multiple nodes at the start can be matched`() {
-        val type = XMLPattern("<account><address $multipleAttribute>(string)</address><phone>(number)</phone><name>(string)</name></account>")
+        val type = XMLPattern("<account><address $occursMultipleTimes>(string)</address><phone>(number)</phone><name>(string)</name></account>")
         val value = toXMLNode("<account><address>Baker Street</address><address>Downing Street</address><phone>10</phone><name>John Doe</name></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -460,7 +465,7 @@ internal class XMLPatternTest {
 
     @Test
     fun `multi-node declaration can match 0 occurence of those nodes`() {
-        val type = XMLPattern("<account><name>(string)</name><address $multipleAttribute>(string)</address><phone>(number)</phone></account>")
+        val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address><phone>(number)</phone></account>")
         val value = toXMLNode("<account><name>John Doe</name><phone>10</phone></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -468,7 +473,7 @@ internal class XMLPatternTest {
 
     @Test
     fun `multi-node declaration can be followed by optional declaration in which none of the nodes declared are found in the matched value`() {
-        val type = XMLPattern("<account><name>(string)</name><address $multipleAttribute>(string)</address><phone $optionalAttribute>(number)</phone></account>")
+        val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address><phone $isOptional>(number)</phone></account>")
         val value = toXMLNode("<account><name>John Doe</name></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -476,9 +481,23 @@ internal class XMLPatternTest {
 
     @Test
     fun `optional type returns an error when matching a value of a different type`() {
-        val type = XMLPattern("<account><name $optionalAttribute>(string)</name></account>")
+        val type = XMLPattern("<account><name $isOptional>(string)</name></account>")
         val value = toXMLNode("<account>test</account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun temp() {
+        val accountType = XMLPattern("<account><id>(number)</id><qontract_Name/><qontract_Address/></account>")
+        val nameType = XMLPattern("<name $occursMultipleTimes><fullname>(string)</fullname><salutation>(string)</salutation></name>")
+        val addressType = XMLPattern("<address $isOptional>(string)</address>")
+        val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType, "(Address)" to addressType))
+
+        val accountValue = toXMLNode("<account><id>10</id><name><firstname>Jane</firstname></name><address>Baker street</address></account>")
+        val result = accountType.matches(accountValue, resolver)
+
+        println(result.reportString())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
     }
 }

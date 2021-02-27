@@ -2,6 +2,9 @@ package run.qontract.core.pattern
 
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
+import run.qontract.core.wsdl.MULTIPLE_ATTRIBUTE_VALUE
+import run.qontract.core.wsdl.OCCURS_ATTRIBUTE_NAME
+import run.qontract.core.wsdl.OPTIONAL_ATTRIBUTE_VALUE
 
 data class XMLTypeData(val name: String = "", val realName: String, val attributes: Map<String, Pattern> = emptyMap(), val nodes: List<Pattern> = emptyList()) {
     fun isEmpty(): Boolean {
@@ -44,14 +47,14 @@ data class XMLTypeData(val name: String = "", val realName: String, val attribut
     }
 
     fun isOptionalNode(): Boolean {
-        return attributes["qontract_occurs"].let {
-            it is ExactValuePattern && it.pattern.toStringValue() == "optional"
+        return attributes[OCCURS_ATTRIBUTE_NAME].let {
+            it is ExactValuePattern && it.pattern.toStringValue() == OPTIONAL_ATTRIBUTE_VALUE
         }
     }
 
     fun isMultipleNode(): Boolean {
-        return attributes["qontract_occurs"].let {
-            it is ExactValuePattern && it.pattern.toStringValue() == "multiple"
+        return attributes[OCCURS_ATTRIBUTE_NAME].let {
+            it is ExactValuePattern && it.pattern.toStringValue() == MULTIPLE_ATTRIBUTE_VALUE
         }
     }
 }

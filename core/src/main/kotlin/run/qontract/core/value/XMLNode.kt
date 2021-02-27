@@ -202,6 +202,12 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         } ?: throw ContractException("Couldn't find a node with attribute $attributeName=$typeName")
     }
 
-    fun firstNode() =
-        this.childNodes.filterIsInstance<XMLNode>().first()
+    fun findByNodeNameAndAttribute(nodeName: String, attributeName: String, typeName: String): XMLNode {
+        return this.childNodes.filterIsInstance<XMLNode>().find {
+            it.name == nodeName && it.attributes[attributeName]?.toStringValue() == typeName
+        } ?: throw ContractException("Couldn't find a node with attribute $attributeName=$typeName")
+    }
+
+    fun firstNode(): XMLNode? =
+        this.childNodes.filterIsInstance<XMLNode>().firstOrNull()
 }

@@ -68,10 +68,14 @@ class SOAP11Parser: SOAPParser {
         wsdl: WSDL,
         existingTypes: Map<String, Pattern>
     ): SoapPayloadType {
-        val messageName = portOperationNode.getAttributeValue(soapMessageType.messageTypeName, "message").withoutNamespacePrefix()
+        val messageTypeNode = portOperationNode.findFirstChildByName(soapMessageType.messageTypeName)
+            ?: return SoapPayloadType(existingTypes, EmptyHTTPBodyPayload())
+
+        val messageName = messageTypeNode.getAttributeValue("message").withoutNamespacePrefix()
         val messageNode = wsdl.findMessageNode(messageName)
-        val wsdlTypeReference = messageNode.firstNode().attributes["element"]?.toStringValue() ?: throw ContractException(
-            "part/element not found in message named $messageName"
+        val partNode = messageNode.firstNode() ?: return SoapPayloadType(existingTypes, EmptySOAPPayload(soapMessageType))
+        val wsdlTypeReference = partNode.attributes["element"]?.toStringValue() ?: throw ContractException(
+            "element not found in \"part\" in message named $messageName"
         )
 
         val element = wsdl.findElement(
@@ -97,10 +101,11 @@ class SOAP11Parser: SOAPParser {
             }
             qontractTypeName in typeStack -> WSDLTypeInfo(types = existingTypes)
             else -> {
-                val complexType = wsdl.getElementTypeNode(element)
+                val complexType = wsdl.getComplexTypeNode(element)
 
                 val childTypeInfo = generateChildren(
                     wsdl,
+                    qontractTypeName,
                     complexType,
                     existingTypes,
                     typeStack.plus(qontractTypeName)
@@ -109,11 +114,10 @@ class SOAP11Parser: SOAPParser {
                 val isQualified = isQualified(element, wsdlTypeReference, wsdl)
                 val nodeName = element.getAttributeValue("name")
 
-                val qualifiedNodeName =
-                    if(isQualified)
-                        "${wsdlTypeReference.namespacePrefix()}:${nodeName.withoutNamespacePrefix()}"
-                    else
-                        nodeName
+                val qualifiedNodeName = when {
+                    isQualified -> "${wsdlTypeReference.namespacePrefix()}:${nodeName.withoutNamespacePrefix()}"
+                    else -> nodeName
+                }
 
                 val attributes: Map<String, StringValue> = getQontractAttributes(element)
 
@@ -121,35 +125,22 @@ class SOAP11Parser: SOAPParser {
                 val inPlaceNode = toXMLNode("<$XML_TYPE_PREFIX$qontractTypeName/>")
 
                 val namespacePrefix = when {
-                    isQualified -> listOf(wsdlTypeReference.namespacePrefix())
-                    else -> emptyList()
+                    isQualified ->
+                        if(wsdlTypeReference.namespacePrefix().isNotBlank())
+                            listOf(wsdl.mapToNamespacePrefixInDefinitions(wsdlTypeReference.namespacePrefix(), element))
+                        else
+                            emptyList() // TODO we are not providing a prefix here, if the type reference didn't contain it, because it was defined inline, and did not have to be looked up. But if it is provided in a qualified schema, does it need a namespace?
+                    else ->
+                        emptyList()
                 }
 
                 WSDLTypeInfo(
                     listOf(inPlaceNode),
                     existingTypes.plus(childTypeInfo.types).plus(qontractTypeName to XMLPattern(nodeTypeInfo)),
-                    childTypeInfo.namespacesPrefixes.plus(namespacePrefix)
+                    childTypeInfo.namespacePrefixes.plus(namespacePrefix)
                 )
             }
         }
-    }
-
-    private fun getQontractAttributes(element: XMLNode): Map<String, StringValue> {
-        return when {
-            elementIsOptional(element) -> mapOf(OCCURS_ATTRIBUTE_NAME to StringValue(OPTIONAL_ATTRIBUTE_VALUE))
-            multipleElementsCanExist(element) -> mapOf(OCCURS_ATTRIBUTE_NAME to StringValue(MULTIPLE_ATTRIBUTE_VALUE))
-            else -> emptyMap()
-        }
-    }
-
-    private fun multipleElementsCanExist(element: XMLNode): Boolean {
-        return element.attributes.containsKey("maxOccurs")
-                && (element.attributes["maxOccurs"]?.toStringValue() == "unbounded"
-                || element.attributes.getValue("maxOccurs").toStringValue().toInt() > 1)
-    }
-
-    private fun elementIsOptional(element: XMLNode): Boolean {
-        return element.attributes["minOccurs"]?.toStringValue() == "0" && !element.attributes.containsKey("maxOccurs")
     }
 
     private fun isQualified(element: XMLNode, wsdlTypeReference: String, wsdl: WSDL): Boolean {
@@ -163,31 +154,61 @@ class SOAP11Parser: SOAPParser {
         return (elementForm ?: schemaElementFormDefault) == "qualified"
     }
 
-    private fun generateChildren(wsdl: WSDL, complexType: XMLNode, existingTypes: Map<String, Pattern>, typeStack: Set<String>): WSDLTypeInfo {
+    private fun generateChildren(wsdl: WSDL, parentTypeName: String, complexType: XMLNode, existingTypes: Map<String, Pattern>, typeStack: Set<String>): WSDLTypeInfo {
         val childParts: List<XMLNode> = complexType.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }
 
         return childParts.fold(WSDLTypeInfo()) { wsdlTypeInfo, child ->
             when(child.name) {
                 "element" -> {
-                    val wsdlTypeReference = child.attributes["type"]?.toStringValue() ?: throw ContractException("Found an element without a type attribute")
+                    val (wsdlTypeReference, qontractTypeName, resolvedChild) = when {
+                        child.attributes.containsKey("ref") -> {
+                            val wsdlTypeReference = child.attributes.getValue("ref").toStringValue()
+                            val qontractTypeName = wsdlTypeReference.replace(':', '_')
 
-                    val qontractTypeName = wsdlTypeReference.replace(':', '_')
-                    val (newNode, generatedTypes, namespacePrefixes) = getQontractTypes(qontractTypeName, wsdlTypeReference, child, wsdl, existingTypes, typeStack)
+                            val resolvedChild = wsdl.findElement(wsdlTypeReference)
+                            Triple(wsdlTypeReference, qontractTypeName, resolvedChild)
+                        }
+                        child.attributes.containsKey("type") -> {
+                            val wsdlTypeReference = child.attributes.getValue("type").toStringValue()
+                            val qontractTypeName = wsdlTypeReference.replace(':', '_')
+
+                            Triple(wsdlTypeReference, qontractTypeName, child)
+                        }
+                        else -> {
+                            val wsdlTypeReference = ""
+
+                            val elementName = child.attributes["name"]
+                                ?: throw ContractException("Element does not have a name: $child")
+                            val qontractTypeName = "${parentTypeName}_$elementName"
+
+                            Triple(wsdlTypeReference, qontractTypeName, child)
+                        }
+                    }
+
+                    val (newNode, generatedTypes, namespacePrefixes) = getQontractTypes(
+                        qontractTypeName,
+                        wsdlTypeReference,
+                        resolvedChild,
+                        wsdl,
+                        existingTypes,
+                        typeStack
+                    )
 
                     val newList: List<XMLValue> = wsdlTypeInfo.nodes.plus(newNode)
                     val newTypes = wsdlTypeInfo.types.plus(generatedTypes)
                     WSDLTypeInfo(newList, newTypes, namespacePrefixes)
+
                 }
-                "sequence", "all" -> generateChildren(wsdl, child, existingTypes, typeStack)
+                "sequence", "all" -> generateChildren(wsdl, parentTypeName, child, existingTypes, typeStack)
                 "complexContent" -> {
                     val extension = child.findFirstChildByName("extension") ?: throw ContractException("Found complexContent node without base attribute: $child")
 
                     val parentComplexType = wsdl.findType(extension, "base")
-                    val (childrenFromParent, generatedTypesFromParent, namespacePrefixesFromParent) = generateChildren(wsdl, parentComplexType, existingTypes, typeStack)
+                    val (childrenFromParent, generatedTypesFromParent, namespacePrefixesFromParent) = generateChildren(wsdl, parentTypeName, parentComplexType, existingTypes, typeStack)
 
                     val extensionChild = extension.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }.getOrNull(0)
                     val (childrenFromExtensionChild, generatedTypesFromChild, namespacePrefixesFromChild) = when {
-                        extensionChild != null -> generateChildren(wsdl, extensionChild, wsdlTypeInfo.types.plus(generatedTypesFromParent), typeStack)
+                        extensionChild != null -> generateChildren(wsdl, parentTypeName, extensionChild, wsdlTypeInfo.types.plus(generatedTypesFromParent), typeStack)
                         else -> WSDLTypeInfo(types = generatedTypesFromParent)
                     }
 
@@ -217,31 +238,6 @@ class SOAP11Parser: SOAPParser {
     }
 }
 
-private fun soapSkeleton(namespaces: Map<String, String>): XMLNode {
-    val namespacesString = when(namespaces.size){
-        0 -> ""
-        else -> namespaces.entries
-            .joinToString(" ") {
-                "xmlns:${it.key}=\"${it.value}\""
-            }
-            .prependIndent(" ")
-    }
-    return toXMLNode(
-        """
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="$primitiveNamespace"$namespacesString><soapenv:Header $OCCURS_ATTRIBUTE_NAME="$OPTIONAL_ATTRIBUTE_VALUE"/>
-            </soapenv:Envelope>
-        """)
-}
-
-fun soapMessage(bodyPayload: XMLNode, namespaces: Map<String, String>): XMLNode {
-    val payload = soapSkeleton(namespaces)
-    val bodyNode = toXMLNode("<soapenv:Body/>").let {
-        it.copy(childNodes = it.childNodes.plus(bodyPayload))
-    }
-
-    return payload.copy(childNodes = payload.childNodes.plus(bodyNode))
-}
-
 fun hasSimpleTypeAttribute(element: XMLNode): Boolean = element.attributes.containsKey("type") && isPrimitiveType(element)
 
 private fun createSimpleType(
@@ -256,7 +252,27 @@ private fun createSimpleType(
         else -> throw ContractException("""Primitive type "$typeName" not recognized""")
     }
 
-    return XMLNode(element.getAttributeValue("name").withoutNamespacePrefix(), emptyMap(), listOf(value))
+    val qontractAttributes = getQontractAttributes(element)
+
+    return XMLNode(element.getAttributeValue("name").withoutNamespacePrefix(), qontractAttributes, listOf(value))
+}
+
+private fun getQontractAttributes(element: XMLNode): Map<String, StringValue> {
+    return when {
+        elementIsOptional(element) -> mapOf(OCCURS_ATTRIBUTE_NAME to StringValue(OPTIONAL_ATTRIBUTE_VALUE))
+        multipleElementsCanExist(element) -> mapOf(OCCURS_ATTRIBUTE_NAME to StringValue(MULTIPLE_ATTRIBUTE_VALUE))
+        else -> emptyMap()
+    }
+}
+
+private fun multipleElementsCanExist(element: XMLNode): Boolean {
+    return element.attributes.containsKey("maxOccurs")
+            && (element.attributes["maxOccurs"]?.toStringValue() == "unbounded"
+            || element.attributes.getValue("maxOccurs").toStringValue().toInt() > 1)
+}
+
+private fun elementIsOptional(element: XMLNode): Boolean {
+    return element.attributes["minOccurs"]?.toStringValue() == "0" && !element.attributes.containsKey("maxOccurs")
 }
 
 fun isPrimitiveType(node: XMLNode): Boolean {
@@ -269,13 +285,13 @@ fun isPrimitiveType(node: XMLNode): Boolean {
     return namespace == primitiveNamespace
 }
 
-val primitiveStringTypes = listOf("string", "duration", "time", "date", "gYearMonth", "gYear", "gMonthDay", "gDay", "gMonth", "hexBinary", "base64Binary", "anyURI", "QName", "NOTATION")
+val primitiveStringTypes = listOf("string", "anyType", "duration", "time", "date", "gYearMonth", "gYear", "gMonthDay", "gDay", "gMonth", "hexBinary", "base64Binary", "anyURI", "QName", "NOTATION")
 val primitiveNumberTypes = listOf("int", "integer", "long", "decimal", "float", "double")
 val primitiveDateTypes = listOf("dateTime")
 val primitiveBooleanType = listOf("boolean")
 val primitiveTypes = primitiveStringTypes.plus(primitiveNumberTypes).plus(primitiveDateTypes).plus(primitiveBooleanType)
 
-private const val primitiveNamespace = "http://www.w3.org/2001/XMLSchema"
+internal const val primitiveNamespace = "http://www.w3.org/2001/XMLSchema"
 const val XML_TYPE_PREFIX = "qontract_"
 
 const val OCCURS_ATTRIBUTE_NAME = "qontract_occurs"

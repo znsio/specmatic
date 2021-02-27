@@ -110,6 +110,11 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                     }
                 }
             }
+        }.let {
+            if(it.isNotEmpty() && it.last().remainder.isNotEmpty())
+                return Result.Failure("Not all nodes matched successfully")
+
+            it
         }.find { it.result is Result.Failure }?.result?.breadCrumb(this.pattern.name) ?: Result.Success()
     }
 

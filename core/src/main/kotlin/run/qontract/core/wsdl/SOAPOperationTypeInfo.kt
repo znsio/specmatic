@@ -9,11 +9,7 @@ data class SOAPOperationTypeInfo(
     val path: String,
     val operationName: String,
     val soapAction: String,
-//    val requestTypeName: String,
-//    val responseTypeName: String,
     val types: Map<String, Pattern>,
-//    val requestNamespaces: Map<String, String>,
-//    val responseNamespaces: Map<String, String>
     val requestPayload: SOAPPayload,
     val responsePayload: SOAPPayload
 ) {
@@ -37,19 +33,12 @@ data class SOAPOperationTypeInfo(
             else -> emptyList()
         }
 
-//        val requestBodyStatement = bodyPayloadStatement("request", requestTypeName, requestNamespaces)
         val requestBodyStatement = requestPayload.qontractStatement()
         return pathStatement.plus(soapActionHeaderStatement).plus(requestBodyStatement)
     }
 
-    private fun bodyPayloadStatement(qontractBodyType: String, qontractTypeName: String, namespaces: Map<String, String>): String {
-        val requestBody = soapMessage(toXMLNode("<$XML_TYPE_PREFIX$qontractTypeName/>"), namespaces)
-        return "And $qontractBodyType-body\n\"\"\"\n$requestBody\n\"\"\""
-    }
-
     private fun responseStatements(): List<String> {
         val statusStatement = listOf("Then status 200")
-//        val responseBodyStatement = bodyPayloadStatement("response", responseTypeName, responseNamespaces)
         val responseBodyStatement = responsePayload.qontractStatement()
         return statusStatement.plus(responseBodyStatement)
     }
@@ -89,34 +78,3 @@ data class SOAPOperationTypeInfo(
     }
 }
 
-interface SOAPPayload {
-    fun qontractStatement(): List<String>
-}
-
-enum class SOAPMessageType {
-    Input {
-        override val qontractBodyType: String
-            get() = "request"
-    },
-
-    Output {
-        override val qontractBodyType: String
-            get() = "response"
-    };
-
-    abstract val qontractBodyType: String
-    val messageTypeName: String = this.name.toLowerCase()
-}
-
-data class NormalSOAPPayload(val soapMessageType: SOAPMessageType, val qontractTypeName: String, val namespaces: Map<String, String>) : SOAPPayload {
-    override fun qontractStatement(): List<String> {
-        val requestBody = soapMessage(toXMLNode("<$XML_TYPE_PREFIX$qontractTypeName/>"), namespaces)
-        return listOf("And ${soapMessageType.qontractBodyType}-body\n\"\"\"\n$requestBody\n\"\"\"")
-    }
-}
-
-class EmptySOAPPayload() : SOAPPayload {
-    override fun qontractStatement(): List<String> {
-        return emptyList()
-    }
-}

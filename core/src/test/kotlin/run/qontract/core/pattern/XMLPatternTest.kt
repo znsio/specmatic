@@ -488,7 +488,7 @@ internal class XMLPatternTest {
     }
 
     @Test
-    fun temp() {
+    fun `match should fail a node does not match and all the nodes are optional or multiple`() {
         val accountType = XMLPattern("<account><id>(number)</id><qontract_Name/><qontract_Address/></account>")
         val nameType = XMLPattern("<name $occursMultipleTimes><fullname>(string)</fullname><salutation>(string)</salutation></name>")
         val addressType = XMLPattern("<address $isOptional>(string)</address>")
@@ -499,5 +499,29 @@ internal class XMLPatternTest {
 
         println(result.reportString())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `an optional type of the same name should fail if the node does not match with an appropriate error`() {
+        val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid><fullname>(string)</fullname></name>")
+        val name = toXMLNode("<name><nameid>hello</nameid><fullname>Jane Doe</fullname></name>")
+
+        val result = nameType.matches(name, Resolver())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+
+        println(result.toString())
+        assertThat(result.reportString()).contains("nameid")
+    }
+
+    @Test
+    fun `a multiple type of the same name should fail if the node does not match with an appropriate error`() {
+        val nameType = XMLPattern("<name><nameid $occursMultipleTimes>(number)</nameid><fullname>(string)</fullname></name>")
+        val name = toXMLNode("<name><nameid>hello</nameid><fullname>Jane Doe</fullname></name>")
+
+        val result = nameType.matches(name, Resolver())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+
+        println(result.reportString())
+        assertThat(result.reportString()).contains("nameid")
     }
 }

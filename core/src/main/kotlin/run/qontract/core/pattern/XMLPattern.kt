@@ -37,9 +37,13 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 if(xmlValues.isEmpty())
                     ConsumeResult(Result.Success())
                 else {
-                    when (matches(xmlValues.first(), resolver)) {
-                        is Result.Failure -> ConsumeResult(Result.Success(), xmlValues)
-                        is Result.Success -> ConsumeResult(Result.Success(), xmlValues.drop(1))
+                    val xmlValue = xmlValues.first()
+                    val result = matches(xmlValue, resolver)
+
+                    when {
+                        result is Result.Success -> ConsumeResult(Result.Success(), xmlValues.drop(1))
+                        result is Result.Failure && xmlValue is XMLNode && xmlValue.name == this.pattern.name -> ConsumeResult(result, xmlValues)
+                        else -> ConsumeResult(Result.Success(), xmlValues)
                     }
                 }
             }
@@ -48,7 +52,11 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                     matches(it, resolver) is Result.Success
                 }
 
-                ConsumeResult(Result.Success(), remainder)
+                if(remainder.isNotEmpty() && remainder.first().let { it is XMLNode && it.name == this.pattern.name}) {
+                    ConsumeResult(matches(remainder.first(), resolver), remainder)
+                } else {
+                    ConsumeResult(Result.Success(), remainder)
+                }
             }
             else -> {
                 if(xmlValues.isEmpty())
@@ -76,7 +84,12 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         sampleData: XMLNode,
         resolver: Resolver
     ): Result {
-        return pattern.nodes.scanIndexed(ConsumeResult(Result.Success(), sampleData.childNodes)) { index, consumeResult, type ->
+        val results = pattern.nodes.scanIndexed(
+            ConsumeResult(
+                Result.Success(),
+                sampleData.childNodes
+            )
+        ) { index, consumeResult, type ->
             when (val resolvedType = resolveType(type, resolver)) {
                 is ListPattern -> ConsumeResult(
                     resolvedType.matches(
@@ -89,11 +102,15 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 )
                 else -> {
                     try {
-                        if(sampleData.childNodes.size == 1 && consumeResult.remainder.size == 1 && sampleData.childNodes.first() is StringValue) {
+                        if (sampleData.childNodes.size == 1 && consumeResult.remainder.size == 1 && sampleData.childNodes.first() is StringValue) {
                             val childValue = when (val childNode = sampleData.childNodes[index]) {
                                 is StringValue -> when {
                                     childNode.isPatternToken() -> childNode.trimmed()
-                                    else -> try { resolvedType.parse(childNode.string, resolver) } catch(e: Throwable) { throw ContractException("Couldn't parse xml value to type ")}
+                                    else -> try {
+                                        resolvedType.parse(childNode.string, resolver)
+                                    } catch (e: Throwable) {
+                                        throw ContractException("Couldn't read value ${childNode.string} as type ${resolvedType.pattern}")
+                                    }
                                 }
                                 else -> childNode
                             }
@@ -110,12 +127,24 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                     }
                 }
             }
-        }.let {
-            if(it.isNotEmpty() && it.last().remainder.isNotEmpty())
-                return Result.Failure("Not all nodes matched successfully")
+        }
 
-            it
-        }.find { it.result is Result.Failure }?.result?.breadCrumb(this.pattern.name) ?: Result.Success()
+        return failureFrom(results) ?: Result.Success()
+    }
+
+    private fun failureFrom(results: List<ConsumeResult<XMLValue>>): Result? {
+        val nodeStructureMismatchError = results.find {
+            it.result is Result.Failure
+        }?.result
+
+        val nothingEvenCameCloseError = lazy {
+            when {
+                results.isNotEmpty() && results.last().remainder.isNotEmpty() -> Result.Failure("Not all child nodes matched after optional and multiple nodes")
+                else -> null
+            }
+        }
+
+        return (nodeStructureMismatchError ?: nothingEvenCameCloseError.value)?.breadCrumb(this.pattern.name)
     }
 
     private fun matchNamespaces(sampleData: XMLNode): Result {

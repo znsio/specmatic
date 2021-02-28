@@ -86,7 +86,8 @@ class SOAP11Parser: SOAPParser {
         val qontractTypeName = "${operationName.replace(":", "_")}${soapMessageType.messageTypeName.capitalize()}"
         val typeInfo = getQontractTypes(qontractTypeName, wsdlTypeReference, element, wsdl, existingTypes, emptySet())
         val namespaces: Map<String, String> = wsdl.getNamespaces(typeInfo)
-        val soapPayload = NormalSOAPPayload(soapMessageType, qontractTypeName, namespaces)
+        val topLevelNodeName = (typeInfo.nodes.first() as XMLNode).realName
+        val soapPayload = NormalSOAPPayload(soapMessageType, topLevelNodeName, qontractTypeName, namespaces)
 
         return SoapPayloadType(typeInfo.types, soapPayload)
     }
@@ -119,10 +120,10 @@ class SOAP11Parser: SOAPParser {
                     else -> nodeName
                 }
 
-                val attributes: Map<String, StringValue> = getQontractAttributes(element)
-
-                val nodeTypeInfo = XMLNode(qualifiedNodeName, attributes, childTypeInfo.nodes)
-                val inPlaceNode = toXMLNode("<$XML_TYPE_PREFIX$qontractTypeName/>")
+                val nodeTypeInfo = XMLNode("qontract_type", emptyMap(), childTypeInfo.nodes)
+                val inPlaceNode = toXMLNode("<$qualifiedNodeName qontract_type=\"$qontractTypeName\"/>").let {
+                    it.copy(attributes = it.attributes.plus(getQontractAttributes(element)))
+                }
 
                 val namespacePrefix = when {
                     isQualified ->

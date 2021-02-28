@@ -97,7 +97,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         val matchingType = if(this.pattern.attributes.containsKey("qontract_type")) {
             val typeName =
                 (this.pattern.attributes.getValue("qontract_type") as ExactValuePattern).pattern.toStringValue()
-            resolver.getPattern("($typeName)") as XMLPattern
+            val xmlType = (resolver.getPattern("($typeName)") as XMLPattern)
+            xmlType.copy(pattern = xmlType.pattern.copy(name = this.pattern.name, realName = this.pattern.realName))
         } else {
             this
         }
@@ -233,14 +234,15 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     private fun resolveType(type: Pattern, resolver: Resolver): Pattern {
-        val resolvedType = resolvedHop(type, resolver)
-
-        return when {
-            resolvedType is XMLPattern && resolvedType.pattern.name.startsWith(XML_TYPE_PREFIX) -> {
-                resolver.getPattern("(${resolvedType.pattern.name.removePrefix(XML_TYPE_PREFIX)})")
-            }
-            else -> resolvedType
-        }
+        return resolvedHop(type, resolver)
+//        val resolvedType = resolvedHop(type, resolver)
+//
+//        return when {
+//            resolvedType is XMLPattern && resolvedType.pattern.name.startsWith(XML_TYPE_PREFIX) -> {
+//                resolver.getPattern("(${resolvedType.pattern.name.removePrefix(XML_TYPE_PREFIX)})")
+//            }
+//            else -> resolvedType
+//        }
     }
 
     private fun matchAttributes(patternAttributesWithoutXmlns: Map<String, Pattern>, sampleAttributesWithoutXmlns: Map<String, StringValue>, resolver: Resolver): Result =

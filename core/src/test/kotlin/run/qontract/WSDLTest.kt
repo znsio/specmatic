@@ -77,36 +77,37 @@ class WSDLTest {
 
         val wsdl = WSDL(toXMLNode(wsdlContent))
         val generatedGherkin: String = wsdl.convertToGherkin()
+        println(generatedGherkin)
+
         val expectedGherkin = """
             Feature: StockQuoteService
 
                 Scenario: GetLastTradePrice
                     Given type GetLastTradePriceInput
                     ""${'"'}
-                    <TradePriceRequest>
+                    <qontract_type>
                         <tickerSymbol>(string)</tickerSymbol>
-                    </TradePriceRequest>
+                    </qontract_type>
                     ""${'"'}
                     And type GetLastTradePriceOutput
                     ""${'"'}
-                    <TradePrice>
+                    <qontract_type>
                         <price>(number)</price>
-                    </TradePrice>
+                    </qontract_type>
                     ""${'"'}
                     When POST /stockquote
                     And request-header SOAPAction "http://example.com/GetLastTradePrice"
                     And request-body
                     ""${'"'}
-                    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header qontract_occurs="optional"/><soapenv:Body><qontract_GetLastTradePriceInput/></soapenv:Body></soapenv:Envelope>
+                    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header qontract_occurs="optional"/><soapenv:Body><TradePriceRequest qontract_type="GetLastTradePriceInput"/></soapenv:Body></soapenv:Envelope>
                     ""${'"'}
                     Then status 200
                     And response-body
                     ""${'"'}
-                    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header qontract_occurs="optional"/><soapenv:Body><qontract_GetLastTradePriceOutput/></soapenv:Body></soapenv:Envelope>
+                    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header qontract_occurs="optional"/><soapenv:Body><TradePrice qontract_type="GetLastTradePriceOutput"/></soapenv:Body></soapenv:Envelope>
                     ""${'"'}
-        """.trimIndent()
 
-        println(generatedGherkin)
+        """.trimIndent().trim()
 
         assertThat(Feature(generatedGherkin)).isEqualTo(Feature(expectedGherkin))
     }

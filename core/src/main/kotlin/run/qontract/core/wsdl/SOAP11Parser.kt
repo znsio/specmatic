@@ -89,7 +89,10 @@ class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
         val typeInfo = getQontractTypes(qontractTypeName, wsdlTypeReference, element, wsdl, existingTypes, emptySet())
         val namespaces: Map<String, String> = wsdl.getNamespaces(typeInfo)
         val topLevelNodeName = (typeInfo.nodes.first() as XMLNode).realName
-        val soapPayload = NormalSOAPPayload(soapMessageType, topLevelNodeName, qontractTypeName, namespaces)
+        val soapPayload = when {
+            (typeInfo.nodes.first() as XMLNode).attributes.containsKey("qontract_type") -> ComplexTypedSOAPPayload(soapMessageType, topLevelNodeName, qontractTypeName, namespaces)
+            else -> SimpleTypedSOAPPayload(soapMessageType, typeInfo.nodes.first() as XMLNode, namespaces)
+        }
 
         return SoapPayloadType(typeInfo.types, soapPayload)
     }

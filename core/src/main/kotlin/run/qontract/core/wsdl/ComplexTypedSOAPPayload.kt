@@ -3,10 +3,18 @@ package run.qontract.core.wsdl
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
 
-data class NormalSOAPPayload(val soapMessageType: SOAPMessageType, val nodeName: String, val qontractTypeName: String, val namespaces: Map<String, String>) :
+data class ComplexTypedSOAPPayload(val soapMessageType: SOAPMessageType, val nodeName: String, val qontractTypeName: String, val namespaces: Map<String, String>) :
     SOAPPayload {
     override fun qontractStatement(): List<String> {
         val body = soapMessage(toXMLNode("<$nodeName qontract_type=\"$qontractTypeName\"/>"), namespaces)
+        return listOf("And ${soapMessageType.qontractBodyType}-body\n\"\"\"\n$body\n\"\"\"")
+    }
+}
+
+data class SimpleTypedSOAPPayload(val soapMessageType: SOAPMessageType, val node: XMLNode, val namespaces: Map<String, String>) :
+    SOAPPayload {
+    override fun qontractStatement(): List<String> {
+        val body = soapMessage(node, namespaces)
         return listOf("And ${soapMessageType.qontractBodyType}-body\n\"\"\"\n$body\n\"\"\"")
     }
 }

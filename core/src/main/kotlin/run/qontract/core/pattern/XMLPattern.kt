@@ -33,36 +33,57 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             return ConsumeResult(Result.Failure("XMLPattern can only match XML values"))
 
         return when {
-            pattern.isOptionalNode() -> {
-                if(xmlValues.isEmpty())
-                    ConsumeResult(Result.Success())
-                else {
-                    val xmlValue = xmlValues.first()
-                    val result = matches(xmlValue, resolver)
+            pattern.isOptionalNode() -> matchesOptionalNode(xmlValues, resolver)
+            pattern.isMultipleNode() -> matchesMultipleNodes(xmlValues, resolver)
+            else -> matchesRequiredNode(xmlValues, sampleData, resolver)
+        }
+    }
 
-                    when {
-                        result is Result.Success -> ConsumeResult(Result.Success(), xmlValues.drop(1))
-                        result is Result.Failure && xmlValue is XMLNode && xmlValue.name == this.pattern.name -> ConsumeResult(result, xmlValues)
-                        else -> ConsumeResult(Result.Success(), xmlValues)
-                    }
-                }
-            }
-            pattern.isMultipleNode() -> {
-                val remainder = xmlValues.dropWhile {
-                    matches(it, resolver) is Result.Success
-                }
+    private fun matchesRequiredNode(
+        xmlValues: List<XMLValue>,
+        sampleData: List<Value>,
+        resolver: Resolver
+    ): ConsumeResult<Value> = if (xmlValues.isEmpty())
+        ConsumeResult(Result.Failure("Got fewer nodes than expected", breadCrumb = this.pattern.name), sampleData)
+    else
+        ConsumeResult(matches(xmlValues.first(), resolver), xmlValues.drop(1))
 
-                if(remainder.isNotEmpty() && remainder.first().let { it is XMLNode && it.name == this.pattern.name}) {
-                    ConsumeResult(matches(remainder.first(), resolver), remainder)
-                } else {
-                    ConsumeResult(Result.Success(), remainder)
-                }
-            }
-            else -> {
-                if(xmlValues.isEmpty())
-                    ConsumeResult(Result.Failure("Got fewer nodes than expected", breadCrumb = this.pattern.name), sampleData)
-                else
-                    ConsumeResult(matches(xmlValues.first(), resolver), xmlValues.drop(1))
+    private fun matchesMultipleNodes(
+        xmlValues: List<XMLValue>,
+        resolver: Resolver
+    ): ConsumeResult<Value> {
+        val remainder = xmlValues.dropWhile {
+            matches(it, resolver) is Result.Success
+        }
+
+        return if (remainder.isNotEmpty() && remainder.first().let { it is XMLNode && it.name == this.pattern.name }) {
+            ConsumeResult(matches(remainder.first(), resolver), remainder)
+        }
+        else if (remainder.isNotEmpty()) {
+            val provisionalError = ProvisionalError(
+                matches(remainder.first(), resolver) as Result.Failure,
+                this,
+                remainder.first())
+            ConsumeResult(Result.Success(), remainder, provisionalError)
+        } else {
+            ConsumeResult(Result.Success(), remainder)
+        }
+    }
+
+    private fun matchesOptionalNode(
+        xmlValues: List<XMLValue>,
+        resolver: Resolver
+    ): ConsumeResult<Value> = if (xmlValues.isEmpty())
+        ConsumeResult(Result.Success())
+    else {
+        val xmlValue = xmlValues.first()
+        val result = matches(xmlValue, resolver)
+
+        when (result) {
+            is Result.Success -> ConsumeResult(Result.Success(), xmlValues.drop(1))
+            is Result.Failure -> when {
+                xmlValue is XMLNode && xmlValue.name == this.pattern.name -> ConsumeResult(result, xmlValues)
+                else -> ConsumeResult(Result.Success(), xmlValues, ProvisionalError(result, this, xmlValue))
             }
         }
     }
@@ -123,6 +144,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                             resolvedType.matches(consumeResult.remainder, resolver).cast("xml")
                         }
                     } catch (e: ContractException) {
+                        println(e.errorMessage)
                         ConsumeResult(e.failure(), consumeResult.remainder)
                     }
                 }
@@ -135,16 +157,27 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     private fun failureFrom(results: List<ConsumeResult<XMLValue>>): Result? {
         val nodeStructureMismatchError = results.find {
             it.result is Result.Failure
-        }?.result
+        }?.result?.breadCrumb(this.pattern.name)
 
         val nothingEvenCameCloseError = lazy {
             when {
-                results.isNotEmpty() && results.last().remainder.isNotEmpty() -> Result.Failure("Not all child nodes matched after optional and multiple nodes")
+                results.isNotEmpty() && results.last().remainder.isNotEmpty() -> {
+                    results.find {
+                        it.provisionalError != null
+                    }?.provisionalError?.let {
+                        val nodeValue = it.value
+                        if(nodeValue is XMLNode)
+                            it.result.breadCrumb(nodeValue.name)
+                        else
+                            it.result.breadCrumb(this.pattern.name)
+                    }
+                        ?: Result.Failure("Not all child nodes matched after optional and multiple nodes. ConsumeResult list: $results").breadCrumb(this.pattern.name)
+                }
                 else -> null
             }
         }
 
-        return (nodeStructureMismatchError ?: nothingEvenCameCloseError.value)?.breadCrumb(this.pattern.name)
+        return (nodeStructureMismatchError ?: nothingEvenCameCloseError.value)
     }
 
     private fun matchNamespaces(sampleData: XMLNode): Result {

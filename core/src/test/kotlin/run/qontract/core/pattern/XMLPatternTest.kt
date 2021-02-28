@@ -385,9 +385,20 @@ internal class XMLPatternTest {
     }
 
     @Test
-    fun `given a node with the qontract namespace, look it up and match the type`() {
+    fun `do a type lookup for a node with the qontract namespace and match the type to the given a node`() {
         val nameType = parsedPattern("<name>(string)</name>")
         val personType = parsedPattern("<person><qontract_Name/></person>")
+
+        val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
+
+        val xmlNode = parsedValue("<person><name>Jill</name></person>")
+        assertThat(resolver.matchesPattern(null, personType, xmlNode).isTrue()).isTrue
+    }
+
+    @Test
+    fun `do a type lookup for a node with the qontract_type attribute and match the name to the current type but the namespaces and child nodes against the looked up type`() {
+        val nameType = parsedPattern("<qontract_type>(string)</qontract_type>")
+        val personType = parsedPattern("<person><name qontract_type=\"Name\"/></person>")
 
         val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
 
@@ -411,6 +422,17 @@ internal class XMLPatternTest {
         val value = toXMLNode("<account><name>John Doe</name></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `last typed node can be optional`() {
+        val accountType = XMLPattern("<account><name>(string)</name><address qontract_type=\"Address\" $isOptional/></account>")
+        val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
+        val value = toXMLNode("<account><name>John Doe</name></account>")
+
+        val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
+
+        assertThat(accountType.matches(value, resolver)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -445,6 +467,16 @@ internal class XMLPatternTest {
         val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address></account>")
 
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `multiple typed nodes at the end can be matched`() {
+        val type = XMLPattern("<account><name>(string)</name><address qontract_type=\"Address\" $occursMultipleTimes/></account>")
+        val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
+        val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
+        val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address></account>")
+
+        assertThat(type.matches(value, resolver)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -497,7 +529,6 @@ internal class XMLPatternTest {
         val accountValue = toXMLNode("<account><id>10</id><name><firstname>Jane</firstname></name><address>Baker street</address></account>")
         val result = accountType.matches(accountValue, resolver)
 
-        println(result.reportString())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
     }
 
@@ -509,7 +540,6 @@ internal class XMLPatternTest {
         val result = nameType.matches(name, Resolver())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
 
-        println(result.toString())
         assertThat(result.reportString()).contains("nameid")
     }
 
@@ -521,7 +551,6 @@ internal class XMLPatternTest {
         val result = nameType.matches(name, Resolver())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
 
-        println(result.reportString())
         assertThat(result.reportString()).contains("nameid")
     }
 }

@@ -44,7 +44,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         sampleData: List<Value>,
         resolver: Resolver
     ): ConsumeResult<Value> = if (xmlValues.isEmpty())
-        ConsumeResult(Result.Failure("Got fewer nodes than expected", breadCrumb = this.pattern.name), sampleData)
+        ConsumeResult(Result.Failure("Didn't get enough values", breadCrumb = this.pattern.name), sampleData)
     else
         ConsumeResult(matches(xmlValues.first(), resolver), xmlValues.drop(1))
 
@@ -92,12 +92,22 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         if(sampleData !is XMLNode)
             return Result.Failure("Expected xml, got ${sampleData?.displayableType()}").breadCrumb(pattern.name)
 
-        return matchName(sampleData).ifSuccess {
-            matchNamespaces(sampleData)
+        val nameResult = matchName(sampleData)
+
+        val matchingType = if(this.pattern.attributes.containsKey("qontract_type")) {
+            val typeName =
+                (this.pattern.attributes.getValue("qontract_type") as ExactValuePattern).pattern.toStringValue()
+            resolver.getPattern("($typeName)") as XMLPattern
+        } else {
+            this
+        }
+
+        return nameResult.ifSuccess {
+            matchingType.matchNamespaces(sampleData)
         }.ifSuccess {
-            matchAttributes(sampleData, resolver)
+            matchingType.matchAttributes(sampleData, resolver)
         }.ifSuccess {
-            matchNodes(sampleData, resolver)
+            matchingType.matchNodes(sampleData, resolver)
         }
     }
 

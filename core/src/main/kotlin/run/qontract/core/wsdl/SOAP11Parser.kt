@@ -6,8 +6,10 @@ import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.value.*
 import java.net.URI
 
-class SOAP11Parser: SOAPParser {
-    override fun convertToGherkin(wsdl: WSDL, url: String): String {
+const val typeNodeName = "QONTRACT_TYPE"
+
+class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
+    override fun convertToGherkin(url: String): String {
         val binding = wsdl.getBinding()
         val operations = binding.findChildrenByName("operation")
         val portType = wsdl.getPortType()
@@ -31,7 +33,7 @@ class SOAP11Parser: SOAPParser {
 
         val soapAction = bindingOperationNode.getAttributeValue("operation", "soapAction")
 
-        val portOperationNode = findNodeByNameAttribute(portType, operationName)
+        val portOperationNode = portType.findNodeByNameAttribute(operationName)
 
         val requestTypeInfo = getTypeInfo(
             portOperationNode,
@@ -120,7 +122,7 @@ class SOAP11Parser: SOAPParser {
                     else -> nodeName
                 }
 
-                val nodeTypeInfo = XMLNode("qontract_type", emptyMap(), childTypeInfo.nodes)
+                val nodeTypeInfo = XMLNode(typeNodeName, emptyMap(), childTypeInfo.nodes)
                 val inPlaceNode = toXMLNode("<$qualifiedNodeName qontract_type=\"$qontractTypeName\"/>").let {
                     it.copy(attributes = it.attributes.plus(getQontractAttributes(element)))
                 }
@@ -230,12 +232,6 @@ class SOAP11Parser: SOAPParser {
     ): Pair<List<XMLValue>, Map<String, Pattern>> {
         val node = createSimpleType(element)
         return Pair(listOf(node), types)
-    }
-
-    private fun findNodeByNameAttribute(xmlNode: XMLNode, valueOfNameAttribute: String): XMLNode {
-        return xmlNode.childNodes.filterIsInstance<XMLNode>().find {
-            it.attributes["name"]?.toStringValue() == valueOfNameAttribute
-        } ?: throw ContractException("Couldn't find name attribute")
     }
 }
 

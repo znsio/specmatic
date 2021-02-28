@@ -23,12 +23,12 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         val endpoint = wsdlNode.getXMLNodeOrNull("service.endpoint")
 
         val (url, soapParser) = when {
-            port != null -> Pair(port.getAttributeValue("address", "location"), SOAP11Parser())
+            port != null -> Pair(port.getAttributeValue("address", "location"), SOAP11Parser(this))
             endpoint != null -> Pair(endpoint.getAttributeValue("address", "location"), SOAP20Parser())
             else -> throw ContractException("Could not find the service endpoint")
         }
 
-        return soapParser.convertToGherkin(this, url)
+        return soapParser.convertToGherkin(url)
     }
 
     fun findComplexType(

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.Feature
 import run.qontract.core.value.toXMLNode
 import run.qontract.core.wsdl.WSDL
+import run.qontract.core.wsdl.typeNodeName
 
 class WSDLTest {
     @Test
@@ -85,15 +86,15 @@ class WSDLTest {
                 Scenario: GetLastTradePrice
                     Given type GetLastTradePriceInput
                     ""${'"'}
-                    <qontract_type>
+                    <$typeNodeName>
                         <tickerSymbol>(string)</tickerSymbol>
-                    </qontract_type>
+                    </$typeNodeName>
                     ""${'"'}
                     And type GetLastTradePriceOutput
                     ""${'"'}
-                    <qontract_type>
+                    <$typeNodeName>
                         <price>(number)</price>
-                    </qontract_type>
+                    </$typeNodeName>
                     ""${'"'}
                     When POST /stockquote
                     And request-header SOAPAction "http://example.com/GetLastTradePrice"

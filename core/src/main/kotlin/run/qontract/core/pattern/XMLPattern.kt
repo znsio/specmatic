@@ -4,7 +4,6 @@ import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.*
-import run.qontract.core.wsdl.XML_TYPE_PREFIX
 
 fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, node.realName, attributeTypeMap(node), nodeTypes(node))
 
@@ -122,7 +121,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 sampleData.childNodes
             )
         ) { index, consumeResult, type ->
-            when (val resolvedType = resolveType(type, resolver)) {
+            when (val resolvedType = resolvedHop(type, resolver)) {
                 is ListPattern -> ConsumeResult(
                     resolvedType.matches(
                         this.listOf(
@@ -231,18 +230,6 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             return mismatchResult(pattern.name, sampleData.name).breadCrumb(pattern.name)
 
         return Result.Success()
-    }
-
-    private fun resolveType(type: Pattern, resolver: Resolver): Pattern {
-        return resolvedHop(type, resolver)
-//        val resolvedType = resolvedHop(type, resolver)
-//
-//        return when {
-//            resolvedType is XMLPattern && resolvedType.pattern.name.startsWith(XML_TYPE_PREFIX) -> {
-//                resolver.getPattern("(${resolvedType.pattern.name.removePrefix(XML_TYPE_PREFIX)})")
-//            }
-//            else -> resolvedType
-//        }
     }
 
     private fun matchAttributes(patternAttributesWithoutXmlns: Map<String, Pattern>, sampleAttributesWithoutXmlns: Map<String, StringValue>, resolver: Resolver): Result =

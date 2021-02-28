@@ -283,13 +283,12 @@ fun isPrimitiveType(node: XMLNode): Boolean {
 }
 
 val primitiveStringTypes = listOf("string", "anyType", "duration", "time", "date", "gYearMonth", "gYear", "gMonthDay", "gDay", "gMonth", "hexBinary", "base64Binary", "anyURI", "QName", "NOTATION")
-val primitiveNumberTypes = listOf("int", "integer", "long", "decimal", "float", "double")
+val primitiveNumberTypes = listOf("int", "integer", "long", "decimal", "float", "double", "numeric")
 val primitiveDateTypes = listOf("dateTime")
 val primitiveBooleanType = listOf("boolean")
 val primitiveTypes = primitiveStringTypes.plus(primitiveNumberTypes).plus(primitiveDateTypes).plus(primitiveBooleanType)
 
 internal const val primitiveNamespace = "http://www.w3.org/2001/XMLSchema"
-const val XML_TYPE_PREFIX = "qontract_"
 
 const val OCCURS_ATTRIBUTE_NAME = "qontract_occurs"
 const val OPTIONAL_ATTRIBUTE_VALUE = "optional"

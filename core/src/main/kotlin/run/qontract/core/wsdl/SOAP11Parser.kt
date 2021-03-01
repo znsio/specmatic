@@ -1,22 +1,17 @@
 package run.qontract.core.wsdl
 
-import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Pattern
-import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
-import run.qontract.core.value.withoutNamespacePrefix
 import java.net.URI
 
 const val typeNodeName = "QONTRACT_TYPE"
 
 class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
     override fun convertToGherkin(url: String): String {
-        val binding = wsdl.getBinding()
-        val operations = binding.findChildrenByName("operation")
         val portType = wsdl.getPortType()
 
-        val operationsTypeInfo = operations.map {
-            parseOperationType(it, url, wsdl, portType)
+        val operationsTypeInfo = wsdl.operations.map {
+            parseOperation(it, url, wsdl, portType)
         }
 
         val featureName = wsdl.getServiceName()
@@ -29,14 +24,14 @@ class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
         return listOf(featureHeading).plus(gherkinScenarios).joinToString("\n\n")
     }
 
-    private fun parseOperationType(bindingOperationNode: XMLNode, url: String, wsdl: WSDL, portType: XMLNode): SOAPOperationTypeInfo {
+    private fun parseOperation(bindingOperationNode: XMLNode, url: String, wsdl: WSDL, portType: XMLNode): SOAPOperationTypeInfo {
         val operationName = bindingOperationNode.getAttributeValue("name")
 
         val soapAction = bindingOperationNode.getAttributeValue("operation", "soapAction")
 
         val portOperationNode = portType.findNodeByNameAttribute(operationName)
 
-        val requestTypeInfo = getTypeInfo(
+        val requestTypeInfo = parsePayloadTypes(
             portOperationNode,
             operationName,
             SOAPMessageType.Input,
@@ -44,7 +39,7 @@ class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
             emptyMap()
         )
 
-        val responseTypeInfo = getTypeInfo(
+        val responseTypeInfo = parsePayloadTypes(
             portOperationNode,
             operationName,
             SOAPMessageType.Output,
@@ -64,7 +59,7 @@ class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
         )
     }
 
-    private fun getTypeInfo(
+    private fun parsePayloadTypes(
         portOperationNode: XMLNode,
         operationName: String,
         soapMessageType: SOAPMessageType,

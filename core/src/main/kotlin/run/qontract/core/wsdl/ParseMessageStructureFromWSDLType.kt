@@ -5,7 +5,7 @@ import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.value.*
 
-class ParseMessageStructure(private val wsdl: WSDL, private val wsdlTypeReference: String, private val soapMessageType: SOAPMessageType, private val existingTypes: Map<String, Pattern>, private val operationName: String) :
+class ParseMessageStructureFromWSDLType(private val wsdl: WSDL, private val wsdlTypeReference: String, private val soapMessageType: SOAPMessageType, private val existingTypes: Map<String, Pattern>, private val operationName: String) :
     MessageTypeInfoParser {
     override fun execute(): MessageTypeInfoParser {
         val topLevelElement = wsdl.findElement(

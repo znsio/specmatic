@@ -18,6 +18,11 @@ private fun getXmlnsDefinitions(wsdlNode: XMLNode): Map<String, String> {
 data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, val namespaceToPrefix: Map<String, String>) {
     constructor(wsdlNode: XMLNode) : this (wsdlNode, wsdlNode.getXMLNodeByName("types"), getXmlnsDefinitions(wsdlNode))
 
+    val operations: List<XMLNode>
+        get() {
+        return getBinding().findChildrenByName("operation")
+    }
+
     fun convertToGherkin(): String {
         val port = wsdlNode.getXMLNodeOrNull("service.port")
         val endpoint = wsdlNode.getXMLNodeOrNull("service.endpoint")

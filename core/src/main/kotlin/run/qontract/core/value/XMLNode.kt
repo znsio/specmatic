@@ -177,7 +177,6 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         }
     }
 
-
     fun getAttributeValue(path: String, attributeName: String): String {
         val childNode = getXMLNodeByPath(path)
         return childNode.attributes[attributeName]?.toStringValue() ?: throw ContractException("Couldn't find attribute $attributeName at path $path")

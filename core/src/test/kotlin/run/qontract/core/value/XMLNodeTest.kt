@@ -158,6 +158,60 @@ internal class XMLNodeTest {
     }
 
     @Test
+    fun `find first child by name`() {
+        val node = toXMLNode("<person><name/></person>")
+        assertThat(node.findFirstChildByName("name")).isInstanceOf(XMLNode::class.java)
+    }
+
+    @Test
+    fun `return null if there is no child by the given name`() {
+        val node = toXMLNode("<person><name/></person>")
+        assertThat(node.findFirstChildByName("firstname")).isNull()
+    }
+
+    @Test
+    fun `find first child by path`() {
+        val node = toXMLNode("<person><name><firstname/></name></person>")
+        assertThat(node.findFirstChildByPath("name.firstname")).isInstanceOf(XMLNode::class.java)
+    }
+
+    @Test
+    fun `return null if there is no node at the given path`() {
+        val node = toXMLNode("<person><name><firstname/></name></person>")
+        assertThat(node.findFirstChildByPath("name.lastname")).isNull()
+    }
+
+    @Test
+    fun `should find all child nodes by the given name`() {
+        val node = toXMLNode("<person><name/><address/><address/></person>")
+        assertThat(node.findChildrenByName("address")).hasSize(2)
+    }
+
+    @Test
+    fun `should return an empty list if there is no child node by the given name`() {
+        val node = toXMLNode("<person><name/></person>")
+        assertThat(node.findChildrenByName("address")).isEmpty()
+    }
+
+    @Test
+    fun `should return the namespace of the prefix in the given name`() {
+        val node = toXMLNode("<person xmlns:ns0=\"http://ns\"><name/></person>")
+        assertThat(node.resolveNamespace("ns0:address")).isEqualTo("http://ns")
+    }
+
+    @Test
+    fun `should return an empty string if the given name has no prefix`() {
+        val node = toXMLNode("<person xmlns:ns0=\"http://ns\"><name/></person>")
+        assertThat(node.resolveNamespace("address")).isBlank
+    }
+
+    @Test
+    fun `should throw an exception if the prefix in the given name is not recognised`() {
+        val node = toXMLNode("<person xmlns:ns0=\"http://ns\"><name/></person>")
+        assertThrows<ContractException> { node.resolveNamespace("ns1:address") }
+    }
+
+    @Test
     fun `namespace definitions are inherited 3 levels down`() {
         val expectedNamespaces = mapOf("ns1" to "http://one", "ns2" to "http://two", "ns3" to "http://three")
 

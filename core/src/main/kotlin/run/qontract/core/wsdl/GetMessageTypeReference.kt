@@ -5,7 +5,7 @@ import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.withoutNamespacePrefix
 
-class GetMessageTypeReference(private val wsdl: WSDL, private val messageTypeNode: XMLNode, private val soapMessageType: SOAPMessageType, private val existingTypes: Map<String, Pattern>, private val operationName: String) :
+class GetMessageTypeReference(private val wsdl: WSDL, val messageTypeNode: XMLNode, private val soapMessageType: SOAPMessageType, private val existingTypes: Map<String, Pattern>, private val operationName: String) :
     MessageTypeInfoParser {
 
     override fun execute(): MessageTypeInfoParser {
@@ -23,6 +23,6 @@ class GetMessageTypeReference(private val wsdl: WSDL, private val messageTypeNod
             "element not found in \"part\" in message named $messageName"
         )
 
-        return ParseMessageStructure(wsdl, wsdlTypeReference, soapMessageType, existingTypes, operationName)
+        return ParseMessageStructureFromWSDLType(wsdl, wsdlTypeReference, soapMessageType, existingTypes, operationName)
     }
 }

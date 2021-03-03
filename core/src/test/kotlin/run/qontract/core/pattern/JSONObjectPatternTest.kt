@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 
 internal class JSONObjectPatternTest {
     @Test
-    fun `Given an optional key, the generated object should contain the key without the ?`() {
+    fun `Given an optional key, the generated object should contain the key without the question mark`() {
         when (val result = parsedPattern("""{"id?": "(number)"}""", null).generate(Resolver())) {
             is JSONObjectValue -> assertTrue("id" in result.jsonObject)
             else -> throw Exception("Wrong type, got ${result.javaClass}, expected JSONObjectValue")

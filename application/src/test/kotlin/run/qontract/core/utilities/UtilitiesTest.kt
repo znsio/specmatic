@@ -9,7 +9,7 @@ import run.qontract.core.git.SystemGit
 import run.qontract.core.git.clone
 import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.value.JSONObjectValue
-import run.qontract.core.value.XMLNode
+import run.qontract.core.value.toXMLNode
 import java.io.File
 
 internal class UtilitiesTest {
@@ -20,9 +20,9 @@ internal class UtilitiesTest {
 </line1>
         """
 
-        val xmlValue = XMLNode(xml)
+        val xmlValue = toXMLNode(xml)
 
-        assertThat(xmlValue.nodes.size).isOne
+        assertThat(xmlValue.childNodes.size).isOne
         assertThat(xmlValue.toStringValue().trim()).isEqualTo("""<line1><line2>data</line2></line1>""")
     }
 

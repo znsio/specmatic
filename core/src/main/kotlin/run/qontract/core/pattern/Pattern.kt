@@ -4,10 +4,18 @@ import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
-import run.qontract.core.value.XMLNode
+import run.qontract.core.value.XMLValue
 
 interface Pattern {
     fun matches(sampleData: Value?, resolver: Resolver): Result
+    fun matches(sampleData: List<Value>, resolver: Resolver): ConsumeResult<Value> {
+        val sample = sampleData.firstOrNull() ?: return ConsumeResult(Result.Failure("No data found. There should have been at least one."), emptyList())
+
+        val result = this.matches(sample, resolver)
+
+        return ConsumeResult(result, sampleData.drop(1))
+    }
+
     fun generate(resolver: Resolver): Value
     fun newBasedOn(row: Row, resolver: Resolver): List<Pattern>
     fun parse(value: String, resolver: Resolver): Value
@@ -15,7 +23,7 @@ interface Pattern {
     fun patternSet(resolver: Resolver): List<Pattern> = listOf(this)
 
     fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack = emptySet()): Result
-    fun encompasses(others: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, lengthError: String, typeStack: TypeStack = emptySet()): ConsumeResult {
+    fun encompasses(others: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, lengthError: String, typeStack: TypeStack = emptySet()): ConsumeResult<Pattern> {
         val otherOne = others.firstOrNull()
                 ?: return ConsumeResult(Result.Failure(lengthError), emptyList())
 

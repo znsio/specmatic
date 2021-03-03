@@ -211,7 +211,7 @@ Feature: XML namespace prefix
         """.trimIndent())
 
         val stubSetupRequest = HttpRequest().updateMethod("POST").updatePath("/")
-        val actualRequest = HttpRequest(method = "POST", path = "/", body = XMLNode("""<ns2:customer xmlns:ns2="http://example.com/customer"><name>John Doe</name></ns2:customer>"""))
+        val actualRequest = HttpRequest(method = "POST", path = "/", body = toXMLNode("""<ns2:customer xmlns:ns2="http://example.com/customer"><name>John Doe</name></ns2:customer>"""))
         val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(stubSetupRequest.toPattern(), HttpResponse.OK, feature.scenarios.single().resolver)), false)
         assertThat(response.response.status).isEqualTo(200)
     }

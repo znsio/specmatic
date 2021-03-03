@@ -429,13 +429,13 @@ Expected number, actual was string: "abc"""")
             override fun execute(request: HttpRequest): HttpResponse {
                 val root = (request.body as XMLNode)
 
-                val nameNode = root.nodes[0] as XMLNode
-                val addressNode = root.nodes[1] as XMLNode
+                val nameNode = root.childNodes[0] as XMLNode
+                val addressNode = root.childNodes[1] as XMLNode
 
                 assertEquals("name", nameNode.name)
                 assertEquals("address", addressNode.name)
-                assertEquals("John Doe", (nameNode.nodes[0] as StringValue).string)
-                assertThat(addressNode.nodes[0] is StringValue)
+                assertEquals("John Doe", (nameNode.childNodes[0] as StringValue).string)
+                assertThat(addressNode.childNodes[0] is StringValue)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/xml")

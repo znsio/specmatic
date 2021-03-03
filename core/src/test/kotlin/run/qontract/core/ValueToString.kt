@@ -7,7 +7,7 @@ import org.xml.sax.SAXException
 import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.Value
-import run.qontract.core.value.XMLNode
+import run.qontract.core.value.toXMLNode
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
 
@@ -32,11 +32,11 @@ class ValueToString {
     @Throws(IOException::class, SAXException::class, ParserConfigurationException::class)
     fun xmlStringTest() {
         val xmlData = "<node>1</node>"
-        val body: Value = XMLNode(xmlData)
+        val body: Value = toXMLNode(xmlData)
         val xmlData2 = body.toString()
-        val body2 = XMLNode(xmlData2)
+        val body2 = toXMLNode(xmlData2)
         val root = body2
         Assertions.assertEquals("node", root.name)
-        Assertions.assertEquals("1", root.nodes[0].toStringValue())
+        Assertions.assertEquals("1", root.childNodes[0].toStringValue())
     }
 }

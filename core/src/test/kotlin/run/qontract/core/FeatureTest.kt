@@ -878,9 +878,10 @@ Then status 200
             }
         }
 
-        test(HttpRequest("POST", path = "/number", body = XMLNode("""<request><number>10</number></request>""")))
-        test(HttpRequest("POST", path = "/number", body = XMLNode("""<request>
-<number>10</number> </request>""")))
+        test(HttpRequest("POST", path = "/number", body = toXMLNode("""<request><number>10</number></request>""")))
+        test(HttpRequest("POST", path = "/number", body = toXMLNode("""<request>
+        <number>10</number> </request>""")
+        ))
     }
 
     companion object {

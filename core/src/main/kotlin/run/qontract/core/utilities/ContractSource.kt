@@ -40,7 +40,6 @@ data class GitRepo(
     }
 
     override fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String, configFilePath: String): List<ContractPathData> {
-        println("Looking for contracts in local environment")
         val userHome = File(System.getProperty("user.home"))
         val defaultQontractWorkingDir = userHome.resolve(".qontract/repos")
         val defaultRepoDir = directoryRelativeTo(defaultQontractWorkingDir)

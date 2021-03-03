@@ -6,6 +6,8 @@ import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.withoutPatternDelimiters
 import run.qontract.core.utilities.valueArrayToJsonString
 
+typealias TypeDeclarationsCallType = (Value, String, Map<String, Pattern>, ExampleDeclarations) -> Pair<TypeDeclaration, ExampleDeclarations>
+
 data class JSONArrayValue(override val list: List<Value>) : Value, ListValue {
     override val httpContentType: String = "application/json"
 
@@ -15,7 +17,7 @@ data class JSONArrayValue(override val list: List<Value>) : Value, ListValue {
     override fun exactMatchElseType(): Pattern = JSONArrayPattern(list.map { it.exactMatchElseType() })
     override fun type(): Pattern = JSONArrayPattern()
 
-    private fun typeDeclaration(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations, typeDeclarationsStoreCall: (Value, String, Map<String, Pattern>, ExampleDeclarations) -> Pair<TypeDeclaration, ExampleDeclarations>): Pair<TypeDeclaration, ExampleDeclarations> = when {
+    private fun typeDeclaration(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations, typeDeclarationsStoreCall: TypeDeclarationsCallType): Pair<TypeDeclaration, ExampleDeclarations> = when {
         list.isEmpty() -> Pair(TypeDeclaration("[]", types), exampleDeclarations)
         else -> {
             val declarations = list.map {

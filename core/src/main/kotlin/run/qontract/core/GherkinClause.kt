@@ -1,10 +1,7 @@
 package run.qontract.core
 
 import run.qontract.core.GherkinSection.*
-import run.qontract.core.pattern.ContractException
-import run.qontract.core.pattern.Pattern
-import run.qontract.core.pattern.TabularPattern
-import run.qontract.core.pattern.withoutPatternDelimiters
+import run.qontract.core.pattern.*
 import run.qontract.core.value.*
 
 data class GherkinClause(val content: String, val section: GherkinSection)
@@ -53,14 +50,17 @@ fun headersToGherkin(headers: Map<String, String>, keyword: String, types: Map<S
 }
 
 fun toClause(key: String, type: Pattern): GherkinClause {
-    val title = "type ${withoutPatternDelimiters(key)}"
+    val typeNameStatement = "type ${withoutPatternDelimiters(key)}"
 
-    val table = when (type) {
+    val typeDefinitionStatement = when (type) {
         is TabularPattern -> patternMapToString(type.pattern)
-        else -> throw ContractException("Type not recognised: ${type.toString()}")
+        is XMLPattern -> {
+            "\"\"\"\n${type.toGherkinString("      ")}\n\"\"\"".trimIndent()
+        }
+        else -> throw ContractException("Type not recognised: $type")
     }
 
-    return GherkinClause("$title\n$table", Given)
+    return GherkinClause("$typeNameStatement\n$typeDefinitionStatement", Given)
 }
 
 private fun patternMapToString(json: Map<String, Pattern>): String {

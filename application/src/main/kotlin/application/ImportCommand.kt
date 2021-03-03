@@ -5,10 +5,11 @@ import picocli.CommandLine.*
 import run.qontract.conversions.postmanCollectionToGherkin
 import run.qontract.conversions.runTests
 import run.qontract.conversions.toFragment
-import run.qontract.core.NamedStub
-import run.qontract.core.QONTRACT_EXTENSION
-import run.qontract.core.toGherkinFeature
+import run.qontract.core.*
 import run.qontract.core.utilities.jsonStringToValueMap
+import run.qontract.core.utilities.parseXML
+import run.qontract.core.value.toXMLNode
+import run.qontract.core.wsdl.WSDL
 import run.qontract.mock.mockFromJSON
 import java.io.File
 import java.util.concurrent.Callable
@@ -44,9 +45,27 @@ class ImportCommand : Callable<Unit> {
         }
     }
 
+    @Command(name="wsdl")
+    fun wsdl(@Parameters(description = [ "Converts a WSDL file to a Qontract file" ], index = "0") path: String, @Option(names = ["-o", "--output"], description = [ "Write the contract into this file"], required = false) outputFile: String?) {
+        val inputFile = File(path)
+        val inputFileContent = inputFile.readText()
+        val wsdlXML = toXMLNode(parseXML(inputFileContent))
+        val contract = WSDL(wsdlXML).convertToGherkin()
+
+        writeOut(contract, outputFile, inputFile, "")
+    }
+
     private fun writeOut(gherkin: String, outputFile: String?, inputFile: File, hostAndPort: String) {
         when (outputFile) {
-            null -> println(gherkin)
+            null -> {
+                if(inputFile.name.endsWith(".wsdl")) {
+                    val filename = inputFile.nameWithoutExtension + ".qontract"
+                    File(filename).writeText(gherkin)
+                    println("Written to file $filename")
+                }
+                else
+                    println(gherkin)
+            }
             else -> File(outputFile).let {
                 val tag = if(hostAndPort.isNotEmpty()) "-${hostAndPort.replace(":", "-")}" else ""
 

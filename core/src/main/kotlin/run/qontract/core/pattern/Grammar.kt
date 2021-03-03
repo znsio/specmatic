@@ -190,7 +190,7 @@ fun parsedValue(content: String?): Value {
             when {
                 it.startsWith("{") -> JSONObjectValue(jsonStringToValueMap(it))
                 it.startsWith("[") -> JSONArrayValue(jsonStringToValueArray(it))
-                it.startsWith("<") -> XMLNode(it)
+                it.startsWith("<") -> toXMLNode(it)
                 else -> StringValue(it)
             }
         } catch(e: Throwable) {

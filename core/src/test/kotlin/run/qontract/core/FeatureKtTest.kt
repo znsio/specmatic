@@ -7,6 +7,7 @@ import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import run.qontract.mock.ScenarioStub
+import run.qontract.mock.mockFromJSON
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -298,4 +299,112 @@ class FeatureKtTest {
 
     private fun resolveDeferred(pattern: Pattern, resolver: Resolver): Pattern =
             (pattern as DeferredPattern).resolvePattern(resolver)
+
+    @Test
+    fun `should handle multiple types in the response at different levels with the same key and hence the same name`() {
+        val stubJSON = """
+            {
+            	"http-request": {
+            		"method": "POST",
+            		"path": "/data"
+            	},
+            	"http-response": {
+            		"status": 200,
+            		"body": {
+            			"entries": [
+            				{
+            					"name": "James"
+            				}
+            			],
+            			"data": {
+            				"entries": [
+            					{
+            						"id": 10
+            					}
+            				]
+            			}
+            		}
+            	}
+            }
+        """.trimIndent()
+
+        val gherkinString = stubJSON.toFeatureString().trim()
+
+        assertThat(gherkinString).isEqualTo("""Feature: New Feature
+  Scenario: Test Feature
+    Given type Entries
+      | name | (string) |
+    And type Entries_
+      | id | (number) |
+    And type Data
+      | entries | (Entries_*) |
+    And type ResponseBody
+      | entries | (Entries*) |
+      | data | (Data) |
+    When POST /data
+    Then status 200
+    And response-body (ResponseBody)""")
+    }
+
+    @Test
+    fun `should handle multiple types in the request at different levels with the same key and hence the same name`() {
+        val stubJSON = """
+            {
+                "http-request": {
+                    "method": "POST",
+                    "path": "/data",
+                    "body": {
+                        "entries": [
+                            {
+                                "name": "James"
+                            }
+                        ],
+                        "data": {
+                            "entries": [
+                                {
+                                    "id": 10
+                                }
+                            ]
+                        }
+                    }
+                },
+                "http-response": {
+                    "status": 200,
+                    "body": {
+                        "operationid": 10
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val gherkinString = stubJSON.toFeatureString().trim()
+
+        println(gherkinString)
+        assertThat(gherkinString).isEqualTo("""Feature: New Feature
+  Scenario: Test Feature
+    Given type Entries
+      | name | (string) |
+    And type Entries_
+      | id | (number) |
+    And type Data
+      | entries | (Entries_*) |
+    And type RequestBody
+      | entries | (Entries*) |
+      | data | (Data) |
+    And type ResponseBody
+      | operationid | (number) |
+    When POST /data
+    And request-body (RequestBody)
+    Then status 200
+    And response-body (ResponseBody)
+  
+    Examples:
+    | name | id |
+    | James | 10 |""")
+    }
+
+    fun String.toFeatureString(): String {
+        val parsedJSONValue = parsedJSON(this) as JSONObjectValue
+        return toGherkinFeature(NamedStub("Test Feature", mockFromJSON(parsedJSONValue.jsonObject)))
+    }
 }

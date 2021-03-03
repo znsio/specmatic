@@ -5,7 +5,10 @@ name: CI Build
 
 on:
   push:
+    branches: [ master, spring-issues ]
+  pull_request:
     branches: [ master ]
+
 
 jobs:
   build:
@@ -22,6 +25,10 @@ jobs:
       run: chmod +x gradlew
     - name: Build with Gradle
       run: ./gradlew build
+    - name: Install component locally
+      run: ./gradlew publishToMavenLocal
+    - name: Check for Spring 2.3 conflicts
+      run: cd spring-2.3-compatibility; mvn -Dqontract.version=`cat ../version.properties | cut -d = -f 2` test
     - name: Upload artifact
       uses: actions/upload-artifact@v2.2.2
       with:

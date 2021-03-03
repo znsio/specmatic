@@ -26,18 +26,18 @@ def ktor_version = "1.4.3"
 def karate_version = "0.9.6"
 def jgit_version = "5.10.0.202012080955-r"
 
-def junit_version = "5.7.0"
-def testcontainers_version = "1.15.1"
+def junit_version = "5.7.1"
+def testcontainers_version = "1.15.2"
 
 dependencies {
-    implementation 'io.cucumber:gherkin:16.0.0'
+    implementation 'io.cucumber:gherkin:17.0.2'
     implementation "io.ktor:ktor-server-netty:$ktor_version"
     implementation "io.ktor:ktor-server-core:$ktor_version"
     implementation "io.ktor:ktor-client-core-jvm:$ktor_version"
     implementation "io.ktor:ktor-client-apache:$ktor_version"
     implementation "io.ktor:ktor-client-features:$ktor_version"
 
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.0.1"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.1.0"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
@@ -57,9 +57,9 @@ dependencies {
     testImplementation "com.intuit.karate:karate-core:$karate_version"
     testImplementation "com.intuit.karate:karate-apache:$karate_version"
     testImplementation "com.intuit.karate:karate-junit5:$karate_version"
-    testImplementation 'org.springframework:spring-web:5.3.3'
+    testImplementation 'org.springframework:spring-web:5.3.4'
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
-    testImplementation 'io.mockk:mockk:1.10.5'
+    testImplementation 'io.mockk:mockk:1.10.6'
     testImplementation 'org.assertj:assertj-core:3.19.0'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
 }

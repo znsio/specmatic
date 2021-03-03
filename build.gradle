@@ -1,8 +1,8 @@
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'org.jetbrains.kotlin.jvm' version '1.4.21-2'
-    id 'org.jetbrains.kotlin.plugin.serialization' version '1.4.21-2'
+    id 'org.jetbrains.kotlin.jvm' version '1.4.31'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.4.30'
     id 'jacoco'
     id "org.sonarqube" version "3.1.1"
 }
@@ -39,7 +39,9 @@ task codeCoverageReport(type: JacocoReport) {
 
     // Add all relevant sourcesets from the subprojects
     subprojects.each {
-        sourceSets it.sourceSets.main
+        if(!it.name.startsWith("spring-")) {
+            sourceSets it.sourceSets.main
+        }
     }
 
     reports {
@@ -50,7 +52,7 @@ task codeCoverageReport(type: JacocoReport) {
 }
 
 codeCoverageReport.dependsOn {
-    subprojects*.test
+    subprojects.findAll {!it.name.startsWith("spring-")}.test
 }
 
 sonarqube {

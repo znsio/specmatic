@@ -7,6 +7,10 @@ import run.qontract.core.value.Value
 sealed class Result {
     var scenario: Scenario? = null
 
+    fun reportString(): String {
+        return resultReport(this)
+    }
+
     fun updateScenario(scenario: Scenario): Result {
         this.scenario = scenario
         return this

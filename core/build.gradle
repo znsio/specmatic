@@ -45,7 +45,7 @@ dependencies {
     implementation "org.testcontainers:kafka:$testcontainers_version"
 
     implementation 'org.apache.kafka:kafka-clients:2.7.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.1'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.2'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 

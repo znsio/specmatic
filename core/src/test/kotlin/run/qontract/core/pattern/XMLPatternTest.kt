@@ -553,4 +553,147 @@ internal class XMLPatternTest {
 
         assertThat(result.reportString()).contains("nameid")
     }
+
+    @Test
+    fun `xml with optional nodes generates 2 samples`() {
+        val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid></name>")
+        val newTypes = nameType.newBasedOn(Row(), Resolver())
+
+        assertThat(newTypes.size).isEqualTo(2)
+
+        val newValues = newTypes.map {
+            it.generate(Resolver())
+        }
+
+        assertThat(newValues).anySatisfy {
+            assertThat(it.name).isEqualTo("name")
+
+            val first = it.childNodes.first() as XMLNode
+
+            assertThat(first.name).isEqualTo("nameid")
+            assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+        }
+
+        assertThat(newValues).anySatisfy {
+            assertThat(it.name).isEqualTo("name")
+            assertThat(it.childNodes).isEmpty()
+        }
+    }
+
+    @Test
+    fun `xml with optional node generates one sample with the node and one without`() {
+        val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid></name>")
+        val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver())}
+
+        assertThat(newValues).anySatisfy {
+            assertThat(it.name).isEqualTo("name")
+
+            val first = it.childNodes.first() as XMLNode
+
+            assertThat(first.name).isEqualTo("nameid")
+            assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+        }
+
+        assertThat(newValues).anySatisfy {
+            assertThat(it.name).isEqualTo("name")
+            assertThat(it.childNodes).isEmpty()
+        }
+    }
+
+    @Test
+    fun `xml with an optional typed node generates one sample with the node and one without`() {
+        val nameType = XMLPattern("<name><nameid $isOptional $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+        val nameIdType = XMLPattern("<nameid>(number)</nameid>")
+        val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
+
+        val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver)}
+
+        assertThat(newValues).anySatisfy {
+            assertThat(it.name).isEqualTo("name")
+
+            val first = it.childNodes.first() as XMLNode
+
+            assertThat(first.name).isEqualTo("nameid")
+            assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+        }
+
+        assertThat(newValues).anySatisfy {
+            assertThat(it.name).isEqualTo("name")
+            assertThat(it.childNodes).isEmpty()
+        }
+    }
+
+    @Test
+    fun `xml with a node that occurs multiple times generates a single sample`() {
+        val nameType = XMLPattern("<name><title $occursMultipleTimes>(number)</title></name>")
+        val newTypes = nameType.newBasedOn(Row(), Resolver())
+
+        assertThat(newTypes.size).isOne
+    }
+
+    @Test
+    fun `xml with a node that occurs multiple times generates multiple nodes`() {
+        val nameType = XMLPattern("<name><title $occursMultipleTimes>(number)</title></name>")
+        val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver())}
+
+        assertThat(newValues.isNotEmpty())
+
+        assertThat(newValues).allSatisfy {
+            assertThat(it.name).isEqualTo("name")
+
+            val first = it.childNodes.first() as XMLNode
+
+            assertThat(first.name).isEqualTo("title")
+            assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+        }
+    }
+
+    @Test
+    fun `xml with a typed node that occurs multiple times generates multiple nodes`() {
+        val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+        val nameIdType = XMLPattern("<nameid>(number)</nameid>")
+        val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
+        val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver)}
+
+        assertThat(newValues.isNotEmpty())
+
+        assertThat(newValues).allSatisfy {
+            assertThat(it.name).isEqualTo("name")
+
+            val first = it.childNodes.first() as XMLNode
+
+            assertThat(first.name).isEqualTo("nameid")
+            assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+        }
+    }
+
+    @Test
+    fun `xml with a typed node that occurs multiple times loads data from examples`() {
+        val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+        val nameIdType = XMLPattern("<nameid>(number)</nameid>")
+        val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
+        val row = Row(listOf("nameid"), listOf("10"))
+        val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver)}
+
+        assertThat(newValues.isNotEmpty())
+
+        val name = newValues.first()
+        val nameId = name.childNodes.first() as XMLNode
+        assertThat(nameId.childNodes.first().toStringValue()).isEqualTo("10")
+    }
+
+    @Test
+    fun `xml with a typed optional node loads data from examples`() {
+        val nameType = XMLPattern("<name><nameid $isOptional $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+        val nameIdType = XMLPattern("<nameid>(number)</nameid>")
+        val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
+        val row = Row(listOf("nameid"), listOf("10"))
+        val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver)}
+
+        assertThat(newValues.isNotEmpty())
+
+        val name = newValues.first()
+        val nameId = name.childNodes.first() as XMLNode
+        assertThat(nameId.childNodes.first().toStringValue()).isEqualTo("10")
+    }
 }

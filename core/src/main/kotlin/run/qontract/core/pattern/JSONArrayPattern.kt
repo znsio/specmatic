@@ -129,16 +129,19 @@ fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<L
     return listCombinations(values)
 }
 
-fun listCombinations(values: List<List<Pattern>>): List<List<Pattern>> {
+fun listCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
     if(values.isEmpty())
         return listOf(emptyList())
 
-    val value: List<Pattern> = values.last()
+    val lastValueTypes: List<Pattern?> = values.last()
     val subLists = listCombinations(values.dropLast(1))
 
-    return subLists.flatMap { list ->
-        value.map { type ->
-            list.plus(type)
+    return subLists.flatMap { subList ->
+        lastValueTypes.map { lastValueType ->
+            if(lastValueType != null)
+                subList.plus(lastValueType)
+            else
+                subList
         }
     }
 }
@@ -154,6 +157,6 @@ fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
         }
     }.flatten()
 
-const val DEFAULT_CEILING = 10
+const val RANDOM_NUMBER_CEILING = 10
 
 internal fun randomNumber(max: Int) = Random().nextInt(max - 1) + 1

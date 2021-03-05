@@ -4,6 +4,11 @@ import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.*
+import run.qontract.core.wsdl.MULTIPLE_ATTRIBUTE_VALUE
+import run.qontract.core.wsdl.OCCURS_ATTRIBUTE_NAME
+import run.qontract.core.wsdl.OPTIONAL_ATTRIBUTE_VALUE
+
+const val QONTRACT_XML_ATTRIBUTE_PREFIX = "qontract_"
 
 fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, node.realName, attributeTypeMap(node), nodeTypes(node))
 
@@ -215,8 +220,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     private fun matchAttributes(sampleData: XMLNode, resolver: Resolver): Result {
-        val patternAttributesWithoutXmlns = pattern.attributes.filterNot { it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith("qontract_") }
-        val sampleAttributesWithoutXmlns = sampleData.attributes.filterNot { it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith("qontract_") }
+        val patternAttributesWithoutXmlns = pattern.attributes.filterNot { it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) }
+        val sampleAttributesWithoutXmlns = sampleData.attributes.filterNot { it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) }
 
         val missingKey = resolver.findMissingKey(ignoreXMLNamespaces(patternAttributesWithoutXmlns), ignoreXMLNamespaces(sampleAttributesWithoutXmlns), ::validateUnexpectedKeys)
         if(missingKey != null)
@@ -260,7 +265,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     override fun generate(resolver: Resolver): XMLNode {
         val name = pattern.name
 
-        val newAttributes = pattern.attributes.mapKeys { entry ->
+        val nonQontractAttributes = pattern.attributes.filterNot { it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) }
+
+        val newAttributes = nonQontractAttributes.mapKeys { entry ->
             withoutOptionality(entry.key)
         }.mapValues { (key, pattern) ->
             attempt(breadCrumb = "$name.$key") { resolver.generate(key, pattern) }

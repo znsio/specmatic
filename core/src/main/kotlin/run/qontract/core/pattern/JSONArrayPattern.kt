@@ -154,4 +154,6 @@ fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
         }
     }.flatten()
 
+const val DEFAULT_CEILING = 10
+
 internal fun randomNumber(max: Int) = Random().nextInt(max - 1) + 1

@@ -35,6 +35,8 @@ fun createHttpClient(baseURL: String, timeout: Int) = HttpClient(baseURL, timeou
 class HttpClient(private val baseURL: String, private val timeout: Int = 60, private val log: (event: String) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(io.ktor.client.engine.apache.Apache) {
     expectSuccess = false
 
+    followRedirects = false
+
     engine {
         customizeClient {
             setSSLContext(

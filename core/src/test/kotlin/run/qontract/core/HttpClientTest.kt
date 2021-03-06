@@ -1,17 +1,41 @@
 package run.qontract.core
 
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import run.qontract.stub.HttpStub
 import run.qontract.test.HttpClient
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import run.qontract.core.value.StringValue
+import com.github.tomakehurst.wiremock.WireMockServer
 
 class HttpClientTest {
+
+    @Test
+    fun clientShouldNotRedirect() {
+        val wireMockServer = WireMockServer()
+        wireMockServer.start()
+        stubFor(
+            get(urlEqualTo("/some/redirect")).willReturn(
+                aResponse().withStatus(302).withHeader("Location", "/newUrl")
+            )
+        )
+        stubFor(
+            get(urlEqualTo("/newUrl")).willReturn(aResponse().withStatus(200))
+        )
+        val request = HttpRequest().updateMethod("GET").updatePath("/some/redirect")
+        val response = HttpClient("http://localhost:8080").execute(request)
+        Assertions.assertEquals(302, response.status)
+        Assertions.assertEquals("/newUrl", response.headers.get("Location"))
+
+        wireMockServer.stop()
+    }
+
     @Test
     @Throws(Throwable::class)
     fun clientShouldGenerateRequestAndParseResponse() {
-        val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateQueryParam("account-id", "10").updateBody("{name: \"Sherlock\", address: \"221 Baker Street\"}")
+        val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateQueryParam("account-id", "10")
+            .updateBody("{name: \"Sherlock\", address: \"221 Baker Street\"}")
         val contractGherkin = "" +
                 "Feature: Unit test\n\n" +
                 "  Scenario: Unit test\n" +
@@ -35,7 +59,8 @@ class HttpClientTest {
     @Test
     @Throws(Throwable::class)
     fun clientShouldPerformServerSetup() {
-        val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateQueryParam("account-id", "10").updateBody("{name: \"Sherlock\", address: \"221 Baker Street\"}")
+        val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateQueryParam("account-id", "10")
+            .updateBody("{name: \"Sherlock\", address: \"221 Baker Street\"}")
         val contractGherkin = "" +
                 "Feature: Unit test\n\n" +
                 "  Scenario: Unit test\n" +

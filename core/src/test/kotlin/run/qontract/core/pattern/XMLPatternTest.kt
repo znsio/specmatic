@@ -1,6 +1,7 @@
 package run.qontract.core.pattern
 
 import org.assertj.core.api.Assertions.*
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import run.qontract.core.*
 import run.qontract.core.value.NullValue
@@ -12,6 +13,9 @@ import run.qontract.core.wsdl.OCCURS_ATTRIBUTE_NAME
 import run.qontract.core.wsdl.OPTIONAL_ATTRIBUTE_VALUE
 import run.qontract.shouldMatch
 import run.qontract.shouldNotMatch
+
+private val isOptional: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
+private val occursMultipleTimes: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTIPLE_ATTRIBUTE_VALUE\""
 
 internal class XMLPatternTest {
     @Test
@@ -385,28 +389,6 @@ internal class XMLPatternTest {
     }
 
     @Test
-    fun `do a type lookup for a node with the qontract namespace and match the type to the given a node`() {
-        val nameType = parsedPattern("<qontract_type>(string)</qontract_type>")
-        val personType = parsedPattern("<person><name qontract_type=\"Name\"/></person>")
-
-        val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
-
-        val xmlNode = parsedValue("<person><name>Jill</name></person>")
-        assertThat(resolver.matchesPattern(null, personType, xmlNode).isTrue()).isTrue
-    }
-
-    @Test
-    fun `do a type lookup for a node with the qontract_type attribute and match the name to the current type but the namespaces and child nodes against the looked up type`() {
-        val nameType = parsedPattern("<qontract_type>(string)</qontract_type>")
-        val personType = parsedPattern("<person><name qontract_type=\"Name\"/></person>")
-
-        val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
-
-        val xmlNode = parsedValue("<person><name>Jill</name></person>")
-        assertThat(resolver.matchesPattern(null, personType, xmlNode).isTrue()).isTrue
-    }
-
-    @Test
     fun `matching works for an xml node with more than one child node`() {
         val type = XMLPattern("<account><name>John Doe</name><address>(string)</address></account>")
         val value = toXMLNode("<account><name>John Doe</name><address>Baker street</address></account>")
@@ -414,286 +396,327 @@ internal class XMLPatternTest {
         assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
-    private val isOptional: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
+    class TypeLookup {
+        @Test
+        fun `do a type lookup for a node with the qontract namespace and match the type to the given a node`() {
+            val nameType = parsedPattern("<qontract_type>(string)</qontract_type>")
+            val personType = parsedPattern("<person><name qontract_type=\"Name\"/></person>")
 
-    @Test
-    fun `last node can be optional`() {
-        val type = XMLPattern("<account><name>(string)</name><address $isOptional>(string)</address></account>")
-        val value = toXMLNode("<account><name>John Doe</name></account>")
+            val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
 
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `last typed node can be optional`() {
-        val accountType = XMLPattern("<account><name>(string)</name><address qontract_type=\"Address\" $isOptional/></account>")
-        val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
-        val value = toXMLNode("<account><name>John Doe</name></account>")
-
-        val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
-
-        assertThat(accountType.matches(value, resolver)).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `second to last node can be optional`() {
-        val type = XMLPattern("<account><name>(string)</name><address $isOptional>(string)</address><phone>(number)</phone></account>")
-        val value = toXMLNode("<account><name>John Doe</name><phone>10</phone></account>")
-
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `multiple nodes can be optional`() {
-        val type = XMLPattern("<account><name $isOptional>(string)</name><address $isOptional>(string)</address><phone>(number)</phone></account>")
-        val value = toXMLNode("<account><phone>10</phone></account>")
-
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `multiple optional nodes can be corresponding nodes that are actually present`() {
-        val type = XMLPattern("<account><name $isOptional>(string)</name><address $isOptional>(string)</address><phone>(number)</phone></account>")
-        val value = toXMLNode("<account><name>Jane Doe</name><address>Baker Street</address><phone>10</phone></account>")
-
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    private val occursMultipleTimes: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTIPLE_ATTRIBUTE_VALUE\""
-
-    @Test
-    fun `multiple nodes at the end can be matched`() {
-        val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address></account>")
-        val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address></account>")
-
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `multiple typed nodes at the end can be matched`() {
-        val type = XMLPattern("<account><name>(string)</name><address qontract_type=\"Address\" $occursMultipleTimes/></account>")
-        val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
-        val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
-        val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address></account>")
-
-        assertThat(type.matches(value, resolver)).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `multiple nodes in the middle can be matched`() {
-        val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address><phone>(number)</phone></account>")
-        val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address><phone>10</phone></account>")
-
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `multiple nodes at the start can be matched`() {
-        val type = XMLPattern("<account><address $occursMultipleTimes>(string)</address><phone>(number)</phone><name>(string)</name></account>")
-        val value = toXMLNode("<account><address>Baker Street</address><address>Downing Street</address><phone>10</phone><name>John Doe</name></account>")
-
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `multi-node declaration can match 0 occurence of those nodes`() {
-        val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address><phone>(number)</phone></account>")
-        val value = toXMLNode("<account><name>John Doe</name><phone>10</phone></account>")
-
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `multi-node declaration can be followed by optional declaration in which none of the nodes declared are found in the matched value`() {
-        val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address><phone $isOptional>(number)</phone></account>")
-        val value = toXMLNode("<account><name>John Doe</name></account>")
-
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `optional type returns an error when matching a value of a different type`() {
-        val type = XMLPattern("<account><name $isOptional>(string)</name></account>")
-        val value = toXMLNode("<account>test</account>")
-
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Failure::class.java)
-    }
-
-    @Test
-    fun `match should fail a node does not match and all the nodes are optional or multiple`() {
-        val accountType = XMLPattern("<account><id>(number)</id><name type=\"Name\" $occursMultipleTimes/><address qontract_type=\"Address\" $isOptional/></account>")
-        val nameType = XMLPattern("<qontract_type><fullname>(string)</fullname><salutation>(string)</salutation></qontract_type>")
-        val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
-        val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType, "(Address)" to addressType))
-
-        val accountValue = toXMLNode("<account><id>10</id><name><firstname>Jane</firstname></name><address>Baker street</address></account>")
-        val result = accountType.matches(accountValue, resolver)
-
-        assertThat(result).isInstanceOf(Result.Failure::class.java)
-    }
-
-    @Test
-    fun `an optional type of the same name should fail if the node does not match with an appropriate error`() {
-        val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid><fullname>(string)</fullname></name>")
-        val name = toXMLNode("<name><nameid>hello</nameid><fullname>Jane Doe</fullname></name>")
-
-        val result = nameType.matches(name, Resolver())
-        assertThat(result).isInstanceOf(Result.Failure::class.java)
-
-        assertThat(result.reportString()).contains("nameid")
-    }
-
-    @Test
-    fun `a multiple type of the same name should fail if the node does not match with an appropriate error`() {
-        val nameType = XMLPattern("<name><nameid $occursMultipleTimes>(number)</nameid><fullname>(string)</fullname></name>")
-        val name = toXMLNode("<name><nameid>hello</nameid><fullname>Jane Doe</fullname></name>")
-
-        val result = nameType.matches(name, Resolver())
-        assertThat(result).isInstanceOf(Result.Failure::class.java)
-
-        assertThat(result.reportString()).contains("nameid")
-    }
-
-    @Test
-    fun `xml with optional nodes generates 2 samples`() {
-        val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid></name>")
-        val newTypes = nameType.newBasedOn(Row(), Resolver())
-
-        assertThat(newTypes.size).isEqualTo(2)
-
-        val newValues = newTypes.map {
-            it.generate(Resolver())
+            val xmlNode = parsedValue("<person><name>Jill</name></person>")
+            assertThat(resolver.matchesPattern(null, personType, xmlNode).isTrue()).isTrue
         }
 
-        assertThat(newValues).anySatisfy {
-            assertThat(it.name).isEqualTo("name")
+        @Test
+        fun `do a type lookup for a node with the qontract_type attribute and match the name to the current type but the namespaces and child nodes against the looked up type`() {
+            val nameType = parsedPattern("<qontract_type>(string)</qontract_type>")
+            val personType = parsedPattern("<person><name qontract_type=\"Name\"/></person>")
 
-            val first = it.childNodes.first() as XMLNode
+            val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
 
-            assertThat(first.name).isEqualTo("nameid")
-            assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
-        }
-
-        assertThat(newValues).anySatisfy {
-            assertThat(it.name).isEqualTo("name")
-            assertThat(it.childNodes).isEmpty()
+            val xmlNode = parsedValue("<person><name>Jill</name></person>")
+            assertThat(resolver.matchesPattern(null, personType, xmlNode).isTrue()).isTrue
         }
     }
 
-    @Test
-    fun `xml with optional node generates one sample with the node and one without`() {
-        val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid></name>")
-        val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver())}
+    @Nested
+    inner class OptionalNodes {
+        @Test
+        fun `last node can be optional`() {
+            val type = XMLPattern("<account><name>(string)</name><address $isOptional>(string)</address></account>")
+            val value = toXMLNode("<account><name>John Doe</name></account>")
 
-        assertThat(newValues).anySatisfy {
-            assertThat(it.name).isEqualTo("name")
-
-            val first = it.childNodes.first() as XMLNode
-
-            assertThat(first.name).isEqualTo("nameid")
-            assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
         }
 
-        assertThat(newValues).anySatisfy {
-            assertThat(it.name).isEqualTo("name")
-            assertThat(it.childNodes).isEmpty()
+        @Test
+        fun `last typed node can be optional`() {
+            val accountType = XMLPattern("<account><name>(string)</name><address qontract_type=\"Address\" $isOptional/></account>")
+            val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
+            val value = toXMLNode("<account><name>John Doe</name></account>")
+
+            val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
+
+            assertThat(accountType.matches(value, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `second to last node can be optional`() {
+            val type = XMLPattern("<account><name>(string)</name><address $isOptional>(string)</address><phone>(number)</phone></account>")
+            val value = toXMLNode("<account><name>John Doe</name><phone>10</phone></account>")
+
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `multiple nodes can be optional`() {
+            val type = XMLPattern("<account><name $isOptional>(string)</name><address $isOptional>(string)</address><phone>(number)</phone></account>")
+            val value = toXMLNode("<account><phone>10</phone></account>")
+
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `multiple optional nodes can be corresponding nodes that are actually present`() {
+            val type = XMLPattern("<account><name $isOptional>(string)</name><address $isOptional>(string)</address><phone>(number)</phone></account>")
+            val value = toXMLNode("<account><name>Jane Doe</name><address>Baker Street</address><phone>10</phone></account>")
+
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+
+        @Test
+        fun `an optional type of the same name should fail if the node does not match with an appropriate error`() {
+            val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid><fullname>(string)</fullname></name>")
+            val name = toXMLNode("<name><nameid>hello</nameid><fullname>Jane Doe</fullname></name>")
+
+            val result = nameType.matches(name, Resolver())
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+
+            assertThat(result.reportString()).contains("nameid")
+        }
+
+        @Test
+        fun `xml with optional nodes generates 2 samples`() {
+            val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid></name>")
+            val newTypes = nameType.newBasedOn(Row(), Resolver())
+
+            assertThat(newTypes.size).isEqualTo(2)
+
+            val newValues = newTypes.map {
+                it.generate(Resolver())
+            }
+
+            assertThat(newValues).anySatisfy {
+                assertThat(it.name).isEqualTo("name")
+
+                val first = it.childNodes.first() as XMLNode
+
+                assertThat(first.name).isEqualTo("nameid")
+                assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+            }
+
+            assertThat(newValues).anySatisfy {
+                assertThat(it.name).isEqualTo("name")
+                assertThat(it.childNodes).isEmpty()
+            }
+        }
+
+        @Test
+        fun `xml with optional node generates one sample with the node and one without`() {
+            val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid></name>")
+            val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver())}
+
+            assertThat(newValues).anySatisfy {
+                assertThat(it.name).isEqualTo("name")
+
+                val first = it.childNodes.first() as XMLNode
+
+                assertThat(first.name).isEqualTo("nameid")
+                assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+            }
+
+            assertThat(newValues).anySatisfy {
+                assertThat(it.name).isEqualTo("name")
+                assertThat(it.childNodes).isEmpty()
+            }
+        }
+
+        @Test
+        fun `xml with an optional typed node generates one sample with the node and one without`() {
+            val nameType = XMLPattern("<name><nameid $isOptional $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+            val nameIdType = XMLPattern("<nameid>(number)</nameid>")
+            val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
+
+            val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver)}
+
+            assertThat(newValues).anySatisfy {
+                assertThat(it.name).isEqualTo("name")
+
+                val first = it.childNodes.first() as XMLNode
+
+                assertThat(first.name).isEqualTo("nameid")
+                assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+            }
+
+            assertThat(newValues).anySatisfy {
+                assertThat(it.name).isEqualTo("name")
+                assertThat(it.childNodes).isEmpty()
+            }
+        }
+
+        @Test
+        fun `xml with a typed optional node loads data from examples`() {
+            val nameType = XMLPattern("<name><nameid $isOptional $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+            val nameIdType = XMLPattern("<nameid>(number)</nameid>")
+            val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
+            val row = Row(listOf("nameid"), listOf("10"))
+            val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver)}
+
+            assertThat(newValues.isNotEmpty())
+
+            val name = newValues.first()
+            val nameId = name.childNodes.first() as XMLNode
+            assertThat(nameId.childNodes.first().toStringValue()).isEqualTo("10")
+        }
+
+        @Test
+        fun `optional type returns an error when matching a value of a different type`() {
+            val type = XMLPattern("<account><name $isOptional>(string)</name></account>")
+            val value = toXMLNode("<account>test</account>")
+
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Failure::class.java)
+        }
+
+        @Test
+        fun `match should fail a node does not match and all the nodes are optional`() {
+            val accountType = XMLPattern("<account><id>(number)</id><name type=\"Name\" $isOptional/><address qontract_type=\"Address\" $isOptional/></account>")
+            val nameType = XMLPattern("<qontract_type><fullname>(string)</fullname><salutation>(string)</salutation></qontract_type>")
+            val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
+            val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType, "(Address)" to addressType))
+
+            val accountValue = toXMLNode("<account><id>10</id><name><firstname>Jane</firstname></name><address>Baker street</address></account>")
+            val result = accountType.matches(accountValue, resolver)
+
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
         }
     }
 
-    @Test
-    fun `xml with an optional typed node generates one sample with the node and one without`() {
-        val nameType = XMLPattern("<name><nameid $isOptional $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
-        val nameIdType = XMLPattern("<nameid>(number)</nameid>")
-        val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
+    @Nested
+    inner class MultiNodeMatch {
+        @Test
+        fun `xml with a node that occurs multiple times generates a single sample`() {
+            val nameType = XMLPattern("<name><title $occursMultipleTimes>(number)</title></name>")
+            val newTypes = nameType.newBasedOn(Row(), Resolver())
 
-        val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver)}
-
-        assertThat(newValues).anySatisfy {
-            assertThat(it.name).isEqualTo("name")
-
-            val first = it.childNodes.first() as XMLNode
-
-            assertThat(first.name).isEqualTo("nameid")
-            assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+            assertThat(newTypes.size).isOne
         }
 
-        assertThat(newValues).anySatisfy {
-            assertThat(it.name).isEqualTo("name")
-            assertThat(it.childNodes).isEmpty()
+        @Test
+        fun `xml with a node that occurs multiple times generates multiple nodes`() {
+            val nameType = XMLPattern("<name><title $occursMultipleTimes>(number)</title></name>")
+            val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver())}
+
+            assertThat(newValues.isNotEmpty())
+
+            assertThat(newValues).allSatisfy {
+                assertThat(it.name).isEqualTo("name")
+
+                val first = it.childNodes.first() as XMLNode
+
+                assertThat(first.name).isEqualTo("title")
+                assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+            }
         }
-    }
 
-    @Test
-    fun `xml with a node that occurs multiple times generates a single sample`() {
-        val nameType = XMLPattern("<name><title $occursMultipleTimes>(number)</title></name>")
-        val newTypes = nameType.newBasedOn(Row(), Resolver())
+        @Test
+        fun `xml with a typed node that occurs multiple times generates multiple nodes`() {
+            val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+            val nameIdType = XMLPattern("<nameid>(number)</nameid>")
+            val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
+            val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver)}
 
-        assertThat(newTypes.size).isOne
-    }
+            assertThat(newValues.isNotEmpty())
 
-    @Test
-    fun `xml with a node that occurs multiple times generates multiple nodes`() {
-        val nameType = XMLPattern("<name><title $occursMultipleTimes>(number)</title></name>")
-        val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver())}
+            assertThat(newValues).allSatisfy {
+                assertThat(it.name).isEqualTo("name")
 
-        assertThat(newValues.isNotEmpty())
+                val first = it.childNodes.first() as XMLNode
 
-        assertThat(newValues).allSatisfy {
-            assertThat(it.name).isEqualTo("name")
-
-            val first = it.childNodes.first() as XMLNode
-
-            assertThat(first.name).isEqualTo("title")
-            assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+                assertThat(first.name).isEqualTo("nameid")
+                assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+            }
         }
-    }
 
-    @Test
-    fun `xml with a typed node that occurs multiple times generates multiple nodes`() {
-        val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
-        val nameIdType = XMLPattern("<nameid>(number)</nameid>")
-        val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
-        val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver)}
+        @Test
+        fun `xml with a typed node that occurs multiple times loads data from examples`() {
+            val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+            val nameIdType = XMLPattern("<nameid>(number)</nameid>")
+            val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
+            val row = Row(listOf("nameid"), listOf("10"))
+            val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver)}
 
-        assertThat(newValues.isNotEmpty())
+            assertThat(newValues.isNotEmpty())
 
-        assertThat(newValues).allSatisfy {
-            assertThat(it.name).isEqualTo("name")
-
-            val first = it.childNodes.first() as XMLNode
-
-            assertThat(first.name).isEqualTo("nameid")
-            assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
+            val name = newValues.first()
+            val nameId = name.childNodes.first() as XMLNode
+            assertThat(nameId.childNodes.first().toStringValue()).isEqualTo("10")
         }
-    }
 
-    @Test
-    fun `xml with a typed node that occurs multiple times loads data from examples`() {
-        val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
-        val nameIdType = XMLPattern("<nameid>(number)</nameid>")
-        val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
-        val row = Row(listOf("nameid"), listOf("10"))
-        val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver)}
+        @Test
+        fun `multiple nodes at the end can be matched`() {
+            val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address></account>")
+            val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address></account>")
 
-        assertThat(newValues.isNotEmpty())
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
 
-        val name = newValues.first()
-        val nameId = name.childNodes.first() as XMLNode
-        assertThat(nameId.childNodes.first().toStringValue()).isEqualTo("10")
-    }
+        @Test
+        fun `multiple typed nodes at the end can be matched`() {
+            val type = XMLPattern("<account><name>(string)</name><address qontract_type=\"Address\" $occursMultipleTimes/></account>")
+            val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
+            val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
+            val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address></account>")
 
-    @Test
-    fun `xml with a typed optional node loads data from examples`() {
-        val nameType = XMLPattern("<name><nameid $isOptional $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
-        val nameIdType = XMLPattern("<nameid>(number)</nameid>")
-        val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
-        val row = Row(listOf("nameid"), listOf("10"))
-        val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver)}
+            assertThat(type.matches(value, resolver)).isInstanceOf(Result.Success::class.java)
+        }
 
-        assertThat(newValues.isNotEmpty())
+        @Test
+        fun `multiple nodes in the middle can be matched`() {
+            val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address><phone>(number)</phone></account>")
+            val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address><phone>10</phone></account>")
 
-        val name = newValues.first()
-        val nameId = name.childNodes.first() as XMLNode
-        assertThat(nameId.childNodes.first().toStringValue()).isEqualTo("10")
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `multiple nodes at the start can be matched`() {
+            val type = XMLPattern("<account><address $occursMultipleTimes>(string)</address><phone>(number)</phone><name>(string)</name></account>")
+            val value = toXMLNode("<account><address>Baker Street</address><address>Downing Street</address><phone>10</phone><name>John Doe</name></account>")
+
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `multi-node declaration can match 0 occurence of those nodes`() {
+            val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address><phone>(number)</phone></account>")
+            val value = toXMLNode("<account><name>John Doe</name><phone>10</phone></account>")
+
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `multi-node declaration can be followed by optional declaration in which none of the nodes declared are found in the matched value`() {
+            val type = XMLPattern("<account><name>(string)</name><address $occursMultipleTimes>(string)</address><phone $isOptional>(number)</phone></account>")
+            val value = toXMLNode("<account><name>John Doe</name></account>")
+
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+
+        @Test
+        fun `a multiple type of the same name should fail if the node does not match with an appropriate error`() {
+            val nameType = XMLPattern("<name><nameid $occursMultipleTimes>(number)</nameid><fullname>(string)</fullname></name>")
+            val name = toXMLNode("<name><nameid>hello</nameid><fullname>Jane Doe</fullname></name>")
+
+            val result = nameType.matches(name, Resolver())
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+
+            assertThat(result.reportString()).contains("nameid")
+        }
+
+        @Test
+        fun `match should fail a node does not match and all the nodes occur multiple times`() {
+            val accountType = XMLPattern("<account><id>(number)</id><name type=\"Name\" $occursMultipleTimes/><address qontract_type=\"Address\" $occursMultipleTimes/></account>")
+            val nameType = XMLPattern("<qontract_type><fullname>(string)</fullname><salutation>(string)</salutation></qontract_type>")
+            val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
+            val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType, "(Address)" to addressType))
+
+            val accountValue = toXMLNode("<account><id>10</id><name><firstname>Jane</firstname></name><address>Baker street</address></account>")
+            val result = accountType.matches(accountValue, resolver)
+
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+        }
     }
 }

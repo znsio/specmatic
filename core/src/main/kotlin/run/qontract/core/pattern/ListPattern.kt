@@ -34,7 +34,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun generate(resolver: Resolver): Value {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return pattern.listOf(0.until(randomNumber(10)).mapIndexed{ index, _ ->
+        return pattern.listOf(0.until(randomNumber(RANDOM_NUMBER_CEILING)).mapIndexed{ index, _ ->
             attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolverWithEmptyType) }
         }, resolverWithEmptyType)
     }

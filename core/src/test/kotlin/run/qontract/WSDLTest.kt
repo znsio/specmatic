@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.Feature
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.value.toXMLNode
-import run.qontract.core.wsdl.WSDL
+import run.qontract.core.wsdl.parser.WSDL
 import java.io.File
 
 class WSDLTest {

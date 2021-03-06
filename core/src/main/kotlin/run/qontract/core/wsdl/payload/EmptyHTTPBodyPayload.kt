@@ -1,4 +1,4 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.payload
 
 class EmptyHTTPBodyPayload() : SOAPPayload {
     override fun qontractStatement(): List<String> {

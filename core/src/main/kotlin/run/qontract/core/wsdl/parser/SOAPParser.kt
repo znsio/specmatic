@@ -1,4 +1,4 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.parser
 
 interface SOAPParser {
     fun convertToGherkin(url: String): String

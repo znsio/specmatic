@@ -1,9 +1,11 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.parser
 
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.withoutNamespacePrefix
+import run.qontract.core.wsdl.payload.EmptySOAPPayload
+import run.qontract.core.wsdl.payload.SoapPayloadType
 
 class GetMessageTypeReference(private val wsdl: WSDL, val messageTypeNode: XMLNode, private val soapMessageType: SOAPMessageType, private val existingTypes: Map<String, Pattern>, private val operationName: String) :
     MessageTypeInfoParser {

@@ -1,4 +1,4 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.parser
 
 enum class SOAPMessageType {
     Input {

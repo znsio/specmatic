@@ -1,7 +1,10 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.payload
 
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
+import run.qontract.core.wsdl.parser.OCCURS_ATTRIBUTE_NAME
+import run.qontract.core.wsdl.parser.OPTIONAL_ATTRIBUTE_VALUE
+import run.qontract.core.wsdl.parser.primitiveNamespace
 
 interface SOAPPayload {
     fun qontractStatement(): List<String>

@@ -1,4 +1,4 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.parser
 
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.value.XMLNode

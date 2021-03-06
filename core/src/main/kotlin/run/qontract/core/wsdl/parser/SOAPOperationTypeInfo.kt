@@ -1,9 +1,9 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.parser
 
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.XMLPattern
-import run.qontract.core.value.toXMLNode
+import run.qontract.core.wsdl.payload.SOAPPayload
 
 data class SOAPOperationTypeInfo(
     val path: String,

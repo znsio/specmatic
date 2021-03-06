@@ -4,9 +4,9 @@ import run.qontract.core.*
 import run.qontract.core.utilities.mapZip
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.*
-import run.qontract.core.wsdl.MULTIPLE_ATTRIBUTE_VALUE
-import run.qontract.core.wsdl.OCCURS_ATTRIBUTE_NAME
-import run.qontract.core.wsdl.OPTIONAL_ATTRIBUTE_VALUE
+import run.qontract.core.wsdl.parser.MULTIPLE_ATTRIBUTE_VALUE
+import run.qontract.core.wsdl.parser.OCCURS_ATTRIBUTE_NAME
+import run.qontract.core.wsdl.parser.OPTIONAL_ATTRIBUTE_VALUE
 
 const val QONTRACT_XML_ATTRIBUTE_PREFIX = "qontract_"
 const val TYPE_ATTRIBUTE = "qontract_type"

@@ -1,4 +1,4 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.parser
 
 import io.mockk.every
 import io.mockk.mockk
@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
 import run.qontract.core.value.withoutNamespacePrefix
+import run.qontract.core.wsdl.parser.*
+import run.qontract.core.wsdl.payload.EmptySOAPPayload
 
 internal class GetMessageTypeReferenceTest{
     @Test

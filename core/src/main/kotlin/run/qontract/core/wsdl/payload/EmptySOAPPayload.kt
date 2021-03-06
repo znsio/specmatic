@@ -1,7 +1,8 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.payload
 
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
+import run.qontract.core.wsdl.parser.SOAPMessageType
 
 data class EmptySOAPPayload(private val soapMessageType: SOAPMessageType): SOAPPayload {
     override fun qontractStatement(): List<String> {

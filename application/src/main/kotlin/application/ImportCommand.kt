@@ -9,7 +9,7 @@ import run.qontract.core.*
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.toXMLNode
-import run.qontract.core.wsdl.WSDL
+import run.qontract.core.wsdl.parser.WSDL
 import run.qontract.mock.mockFromJSON
 import java.io.File
 import java.util.concurrent.Callable

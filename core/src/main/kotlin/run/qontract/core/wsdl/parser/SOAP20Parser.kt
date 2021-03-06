@@ -1,4 +1,4 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.parser
 
 class SOAP20Parser : SOAPParser {
     override fun convertToGherkin(url: String): String {

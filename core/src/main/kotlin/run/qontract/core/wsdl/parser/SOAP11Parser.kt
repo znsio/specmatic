@@ -1,7 +1,8 @@
-package run.qontract.core.wsdl
+package run.qontract.core.wsdl.parser
 
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.XMLNode
+import run.qontract.core.wsdl.payload.SoapPayloadType
 import java.net.URI
 
 const val typeNodeName = "QONTRACT_TYPE"

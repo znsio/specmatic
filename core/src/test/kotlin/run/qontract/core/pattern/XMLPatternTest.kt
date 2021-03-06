@@ -81,36 +81,6 @@ internal class XMLPatternTest {
     }
 
     @Test
-    fun `optional node text type should encompass text type`() {
-        val resolver = Resolver()
-
-        val bigger = XMLPattern("<data>(number?)</data>")
-        val smaller = XMLPattern("<data>(number)</data>")
-
-        assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `optional node text type should encompass empty text`() {
-        val resolver = Resolver()
-
-        val bigger = XMLPattern("<data>(number?)</data>")
-        val smaller = XMLPattern("<data></data>")
-
-        assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `optional node text type should encompass empty text node without closing tag`() {
-        val resolver = Resolver()
-
-        val bigger = XMLPattern("<data>(number?)</data>")
-        val smaller = XMLPattern("<data/>")
-
-        assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
     fun `should not match a value that doesn't conform to the specified type`() {
         toXMLNode("<outer><inner>abc</inner></outer>") shouldNotMatch XMLPattern("<outer><inner>(number)</inner></outer>")
     }
@@ -130,130 +100,261 @@ internal class XMLPatternTest {
         assertThat(resolver.matchesPattern(null, answerPattern, value)).isInstanceOf(Result.Success::class.java)
     }
 
-    @Test
-    fun `sanity check for pattern encompassing` () {
-        val numberInfoPattern = XMLPattern("<number>(number)</number>")
-        val resolver = Resolver()
+    @Nested
+    inner class BackwardCompatibility {
+        @Test
+        fun `optional node text type should encompass text type`() {
+            val resolver = Resolver()
 
-        assertThat(numberInfoPattern.encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+            val bigger = XMLPattern("<data>(number?)</data>")
+            val smaller = XMLPattern("<data>(number)</data>")
+
+            assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `optional node text type should encompass empty text`() {
+            val resolver = Resolver()
+
+            val bigger = XMLPattern("<data>(number?)</data>")
+            val smaller = XMLPattern("<data></data>")
+
+            assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `optional node text type should encompass empty text node without closing tag`() {
+            val resolver = Resolver()
+
+            val bigger = XMLPattern("<data>(number?)</data>")
+            val smaller = XMLPattern("<data/>")
+
+            assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `sanity check for pattern encompassing` () {
+            val numberInfoPattern = XMLPattern("<number>(number)</number>")
+            val resolver = Resolver()
+
+            assertThat(numberInfoPattern.encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `sanity check for pattern encompassing with raw values` () {
+            val numberInfoPattern = XMLPattern("<number>100</number>")
+            val resolver = Resolver()
+
+            assertThat(numberInfoPattern.encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `sanity check for xml with number type encompassing another with raw number` () {
+            val pattern1 = XMLPattern("<number>(number)</number>")
+            val pattern2 = XMLPattern("<number>100</number>")
+            val resolver = Resolver()
+
+            assertThat(pattern1.encompasses(pattern2, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `pattern by name should encompass another pattern of the same structure` () {
+            val numberInfoPattern = XMLPattern("<number>(number)</number>")
+            val resolver = Resolver(newPatterns = mapOf("(Number)" to XMLPattern("<number>(number)</number>")))
+
+            assertThat(resolver.getPattern("(Number)").encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `sanity check for nested pattern encompassing` () {
+            val answersPattern = XMLPattern("<answer><number>(number)</number><name>(string)</name></answer>")
+            val resolver = Resolver()
+
+            assertThat(answersPattern.encompasses(answersPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `pattern should not encompass another with different order` () {
+            val answersPattern1 = XMLPattern("<answer><number>(number)</number><name>(string)</name></answer>")
+            val answersPattern2 = XMLPattern("<answer><name>(string)</name><number>(number)</number></answer>")
+            val resolver = Resolver()
+
+            assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
+        }
+
+        @Test
+        fun `repeating pattern should encompass another with similar elements` () {
+            val bigger = XMLPattern("<answers>(Number*)</answers>")
+            val smaller = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
+            val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+
+            assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `repeating pattern should encompass another with similar elements or empty` () {
+            val bigger = XMLPattern("<answers>(Number*?)</answers>")
+            val smallerList = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
+            val smallerEmpty = XMLPattern("<answers></answers>")
+            val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+
+            assertThat(bigger.encompasses(smallerList, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+            assertThat(bigger.encompasses(smallerEmpty, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `repeating pattern should not encompass another with dissimilar elements` () {
+            val answersPattern1 = XMLPattern("<answers>(Number*)</answers>")
+            val answersPattern2 = XMLPattern("<answers><number>(string)</number><number>(number)</number></answers>")
+            val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+
+            assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
+        }
+
+        @Test
+        fun `node with finite number of children should not encompass repeating pattern with similar type` () {
+            val answersPattern1 = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
+            val answersPattern2 = XMLPattern("<answer>(Number*)</answer>")
+            val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+
+            assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
+        }
+
+        @Test
+        fun `optional attribute encompasses non optional`() {
+            val bigger = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)">(number)</number>""")
+            val smaller = XMLPattern("""<number val="(number)">(number)</number>""")
+            assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
     }
 
-    @Test
-    fun `sanity check for pattern encompassing with raw values` () {
-        val numberInfoPattern = XMLPattern("<number>100</number>")
-        val resolver = Resolver()
+    @Nested
+    inner class Attributes {
+        @Test
+        fun `sanity check for attributes`() {
+            val pattern = XMLPattern("""<number val="(number)">(number)</number>""")
+            assertThat(pattern.encompasses(pattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
 
-        assertThat(numberInfoPattern.encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-    }
+        @Test
+        fun `sanity check for attributes with raw values`() {
+            val pattern = XMLPattern("""<number val="10">(number)</number>""")
+            assertThat(pattern.encompasses(pattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
 
-    @Test
-    fun `sanity check for xml with number type encompassing another with raw number` () {
-        val pattern1 = XMLPattern("<number>(number)</number>")
-        val pattern2 = XMLPattern("<number>100</number>")
-        val resolver = Resolver()
+        @Test
+        fun `different raw values in attributes should not match`() {
+            val pattern1 = XMLPattern("""<number val="10">(number)</number>""")
+            val pattern2 = XMLPattern("""<number val="20">(number)</number>""")
+            assertThat(pattern1.encompasses(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        }
 
-        assertThat(pattern1.encompasses(pattern2, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-    }
+        @Test
+        fun `should generate a value when the xml contains an empty node`() {
+            val pattern = XMLPattern("<data><empty/><value>10</value></data>")
+            val value = pattern.generate(Resolver())
 
-    @Test
-    fun `pattern by name should encompass another pattern of the same structure` () {
-        val numberInfoPattern = XMLPattern("<number>(number)</number>")
-        val resolver = Resolver(newPatterns = mapOf("(Number)" to XMLPattern("<number>(number)</number>")))
+            assertThat(value.toStringValue()).isEqualTo("<data><empty/><value>10</value></data>")
+        }
 
-        assertThat(resolver.getPattern("(Number)").encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-    }
+        @Test
+        fun `should pick up node names from examples`() {
+            val xmlType = XMLPattern("<data><name>(string)</name><age>(number)</age></data>")
+            val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
 
-    @Test
-    fun `sanity check for nested pattern encompassing` () {
-        val answersPattern = XMLPattern("<answer><number>(number)</number><name>(string)</name></answer>")
-        val resolver = Resolver()
+            val newTypes = xmlType.newBasedOn(example, Resolver())
 
-        assertThat(answersPattern.encompasses(answersPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-    }
+            val xmlNode = newTypes[0].generate(Resolver())
+            assertThat(xmlNode.toStringValue()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
+        }
 
-    @Test
-    fun `pattern should not encompass another with different order` () {
-        val answersPattern1 = XMLPattern("<answer><number>(number)</number><name>(string)</name></answer>")
-        val answersPattern2 = XMLPattern("<answer><name>(string)</name><number>(number)</number></answer>")
-        val resolver = Resolver()
+        @Test
+        fun `should pick up attribute names from examples`() {
+            val xmlType = XMLPattern("""<data name="(string)" age="(number)"></data>""")
+            val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
 
-        assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
-    }
+            val newTypes = xmlType.newBasedOn(example, Resolver())
 
-    @Test
-    fun `repeating pattern should encompass another with similar elements` () {
-        val bigger = XMLPattern("<answers>(Number*)</answers>")
-        val smaller = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
-        val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+            val xmlNode = newTypes[0].generate(Resolver())
+            assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="10" name="John Doe"/>""")
+        }
 
-        assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-    }
+        @Test
+        fun `should pick up attribute names with optional values from examples`() {
+            val xmlType = XMLPattern("""<data name="(string?)" age="(number?)"></data>""")
+            val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
 
-    @Test
-    fun `repeating pattern should encompass another with similar elements or empty` () {
-        val bigger = XMLPattern("<answers>(Number*?)</answers>")
-        val smallerList = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
-        val smallerEmpty = XMLPattern("<answers></answers>")
-        val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+            val newTypes = xmlType.newBasedOn(example, Resolver())
 
-        assertThat(bigger.encompasses(smallerList, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-        assertThat(bigger.encompasses(smallerEmpty, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-    }
+            val xmlNode = newTypes[0].generate(Resolver())
+            assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="10" name="John Doe"/>""")
+        }
 
-    @Test
-    fun `repeating pattern should not encompass another with dissimilar elements` () {
-        val answersPattern1 = XMLPattern("<answers>(Number*)</answers>")
-        val answersPattern2 = XMLPattern("<answers><number>(string)</number><number>(number)</number></answers>")
-        val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+        @Test
+        fun `should pick up attribute names with optional values from empty examples`() {
+            val xmlType = XMLPattern("""<data name="(string?)" age="(number?)"></data>""")
+            val example = Row(listOf("name", "age"), listOf("", ""))
 
-        assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
-    }
+            val newTypes = xmlType.newBasedOn(example, Resolver())
+            assertThat(newTypes.size).isOne()
 
-    @Test
-    fun `node with finite number of children should not encompass repeating pattern with similar type` () {
-        val answersPattern1 = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
-        val answersPattern2 = XMLPattern("<answer>(Number*)</answer>")
-        val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+            val xmlNode = newTypes[0].generate(Resolver())
+            assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="" name=""/>""")
+        }
 
-        assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
-    }
+        @Test
+        fun `optional attribute should pick up example value`() {
+            val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
+            val example = Row(listOf("val"), listOf("10"))
 
-    @Test
-    fun `sanity check for attributes`() {
-        val pattern = XMLPattern("""<number val="(number)">(number)</number>""")
-        assertThat(pattern.encompasses(pattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
-    }
+            val newTypes = type.newBasedOn(example, Resolver())
+            assertThat(newTypes.size).isOne()
 
-    @Test
-    fun `sanity check for attributes with raw values`() {
-        val pattern = XMLPattern("""<number val="10">(number)</number>""")
-        assertThat(pattern.encompasses(pattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
-    }
+            val xmlNode = newTypes[0].generate(Resolver())
+            assertThat(xmlNode.toStringValue()).isEqualTo("""<number val="10"/>""")
+        }
 
-    @Test
-    fun `different raw values in attributes should not match`() {
-        val pattern1 = XMLPattern("""<number val="10">(number)</number>""")
-        val pattern2 = XMLPattern("""<number val="20">(number)</number>""")
-        assertThat(pattern1.encompasses(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
-    }
+        @Test
+        fun `optional attribute without examples should generate two tests`() {
+            val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
 
-    @Test
-    fun `should generate a value when the xml contains an empty node`() {
-        val pattern = XMLPattern("<data><empty/><value>10</value></data>")
-        val value = pattern.generate(Resolver())
+            val newTypes = type.newBasedOn(Row(), Resolver())
+            assertThat(newTypes.size).isEqualTo(2)
 
-        assertThat(value.toStringValue()).isEqualTo("<data><empty/><value>10</value></data>")
-    }
+            val flags = mutableListOf<String>()
 
-    @Test
-    fun `should pick up node names from examples`() {
-        val xmlType = XMLPattern("<data><name>(string)</name><age>(number)</age></data>")
-        val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
+            for(newType in newTypes) {
+                when {
+                    newType.pattern.attributes.containsKey("val") -> flags.add("with")
+                    else -> flags.add("without")
+                }
+            }
 
-        val newTypes = xmlType.newBasedOn(example, Resolver())
+            assertThat(flags.size).isEqualTo(2)
+            assertThat(flags).contains("with")
+            assertThat(flags).contains("without")
+        }
 
-        val xmlNode = newTypes[0].generate(Resolver())
-        assertThat(xmlNode.toStringValue()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
+        @Test
+        fun `sanity test that double optional gets handled right`() {
+            val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
+
+            val newTypes = type.newBasedOn(Row(), Resolver())
+            assertThat(newTypes.size).isEqualTo(2)
+
+            val flags = mutableListOf<String>()
+
+            for(newType in newTypes) {
+                when {
+                    newType.pattern.attributes.containsKey("val$XML_ATTR_OPTIONAL_SUFFIX") -> flags.add("with")
+                    else -> flags.add("without")
+                }
+            }
+
+            assertThat(flags.size).isEqualTo(2)
+            assertThat(flags).contains("with")
+            assertThat(flags).contains("without")
+        }
     }
 
     @Test
@@ -273,101 +374,6 @@ internal class XMLPatternTest {
         val example = Row(listOf("name", "age"), listOf("John Doe", "ABC"))
 
         assertThatThrownBy { xmlType.newBasedOn(example, Resolver()) }.isInstanceOf(ContractException::class.java)
-    }
-
-    @Test
-    fun `should pick up attribute names from examples`() {
-        val xmlType = XMLPattern("""<data name="(string)" age="(number)"></data>""")
-        val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
-
-        val newTypes = xmlType.newBasedOn(example, Resolver())
-
-        val xmlNode = newTypes[0].generate(Resolver())
-        assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="10" name="John Doe"/>""")
-    }
-
-    @Test
-    fun `should pick up attribute names with optional values from examples`() {
-        val xmlType = XMLPattern("""<data name="(string?)" age="(number?)"></data>""")
-        val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
-
-        val newTypes = xmlType.newBasedOn(example, Resolver())
-
-        val xmlNode = newTypes[0].generate(Resolver())
-        assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="10" name="John Doe"/>""")
-    }
-
-    @Test
-    fun `should pick up attribute names with optional values from empty examples`() {
-        val xmlType = XMLPattern("""<data name="(string?)" age="(number?)"></data>""")
-        val example = Row(listOf("name", "age"), listOf("", ""))
-
-        val newTypes = xmlType.newBasedOn(example, Resolver())
-        assertThat(newTypes.size).isOne()
-
-        val xmlNode = newTypes[0].generate(Resolver())
-        assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="" name=""/>""")
-    }
-
-    @Test
-    fun `optional attribute encompasses non optional`() {
-        val bigger = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)">(number)</number>""")
-        val smaller = XMLPattern("""<number val="(number)">(number)</number>""")
-        assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `optional attribute should pick up example value`() {
-        val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
-        val example = Row(listOf("val"), listOf("10"))
-
-        val newTypes = type.newBasedOn(example, Resolver())
-        assertThat(newTypes.size).isOne()
-
-        val xmlNode = newTypes[0].generate(Resolver())
-        assertThat(xmlNode.toStringValue()).isEqualTo("""<number val="10"/>""")
-    }
-
-    @Test
-    fun `optional attribute without examples should generate two tests`() {
-        val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
-
-        val newTypes = type.newBasedOn(Row(), Resolver())
-        assertThat(newTypes.size).isEqualTo(2)
-
-        val flags = mutableListOf<String>()
-
-        for(newType in newTypes) {
-            when {
-                newType.pattern.attributes.containsKey("val") -> flags.add("with")
-                else -> flags.add("without")
-            }
-        }
-
-        assertThat(flags.size).isEqualTo(2)
-        assertThat(flags).contains("with")
-        assertThat(flags).contains("without")
-    }
-
-    @Test
-    fun `sanity test that double optional gets handled right`() {
-        val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
-
-        val newTypes = type.newBasedOn(Row(), Resolver())
-        assertThat(newTypes.size).isEqualTo(2)
-
-        val flags = mutableListOf<String>()
-
-        for(newType in newTypes) {
-            when {
-                newType.pattern.attributes.containsKey("val$XML_ATTR_OPTIONAL_SUFFIX") -> flags.add("with")
-                else -> flags.add("without")
-            }
-        }
-
-        assertThat(flags.size).isEqualTo(2)
-        assertThat(flags).contains("with")
-        assertThat(flags).contains("without")
     }
 
     @Test

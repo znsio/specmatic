@@ -18,86 +18,110 @@ private val isOptional: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_V
 private val occursMultipleTimes: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTIPLE_ATTRIBUTE_VALUE\""
 
 internal class XMLPatternTest {
-    @Test
-    fun `generate a value with a list of types`() {
-        val itemsType = parsedPattern("<items>(Item*)</items>")
-        val itemType = parsedPattern("<item>(string)</item>")
+    @Nested
+    inner class GenerateValues {
+        @Test
+        fun `generate a value with a list of types`() {
+            val itemsType = parsedPattern("<items>(Item*)</items>")
+            val itemType = parsedPattern("<item>(string)</item>")
 
-        val resolver = Resolver(newPatterns = mapOf("(Item)" to itemType))
-        val xmlValue = itemsType.generate(resolver) as XMLNode
+            val resolver = Resolver(newPatterns = mapOf("(Item)" to itemType))
+            val xmlValue = itemsType.generate(resolver) as XMLNode
 
-        for(node in xmlValue.childNodes.map { it as XMLNode }) {
-            assertThat(node.childNodes.size == 1)
-            assertThat(node.childNodes[0]).isInstanceOf(StringValue::class.java)
+            for(node in xmlValue.childNodes.map { it as XMLNode }) {
+                assertThat(node.childNodes.size == 1)
+                assertThat(node.childNodes[0]).isInstanceOf(StringValue::class.java)
+            }
+        }
+
+        @Test
+        fun `generate a value with namespace intact`() {
+            val itemsType = parsedPattern("<ns1:items xmlns:ns1=\"http://example.com/items\">(string)</ns1:items>")
+
+            val xmlValue = itemsType.generate(Resolver()) as XMLNode
+
+            assertThat(xmlValue.name).isEqualTo("items")
+            assertThat(xmlValue.realName).isEqualTo("ns1:items")
+
+            assertThat(xmlValue.attributes.size).isOne()
+            assertThat(xmlValue.attributes.get("xmlns:ns1")).isEqualTo(StringValue("http://example.com/items"))
+
+            assertThat(xmlValue.childNodes.size).isOne()
+            assertThat(xmlValue.childNodes.first()).isInstanceOf(StringValue::class.java)
         }
     }
 
-    @Test
-    fun `generate a value with namespace intact`() {
-        val itemsType = parsedPattern("<ns1:items xmlns:ns1=\"http://example.com/items\">(string)</ns1:items>")
+    @Nested
+    inner class MatchValues {
+        @Test
+        fun `should fail to match nulls gracefully`() {
+            NullValue shouldNotMatch XMLPattern("<data></data>")
+        }
 
-        val xmlValue = itemsType.generate(Resolver()) as XMLNode
+        @Test
+        fun `should match a number within a structure`() {
+            toXMLNode("<outer><inner>1</inner></outer>") shouldMatch XMLPattern("<outer><inner>(number)</inner></outer>")
+        }
 
-        assertThat(xmlValue.name).isEqualTo("items")
-        assertThat(xmlValue.realName).isEqualTo("ns1:items")
-
-        assertThat(xmlValue.attributes.size).isOne()
-        assertThat(xmlValue.attributes.get("xmlns:ns1")).isEqualTo(StringValue("http://example.com/items"))
-
-        assertThat(xmlValue.childNodes.size).isOne()
-        assertThat(xmlValue.childNodes.first()).isInstanceOf(StringValue::class.java)
-    }
-
-    @Test
-    fun `should fail to match nulls gracefully`() {
-        NullValue shouldNotMatch XMLPattern("<data></data>")
-    }
-
-    @Test
-    fun `should match a number within a structure`() {
-        toXMLNode("<outer><inner>1</inner></outer>") shouldMatch XMLPattern("<outer><inner>(number)</inner></outer>")
-    }
-
-    @Test
-    fun `should match a type with whitespace`() {
-        val xmlSpecWithWhitespace = """
+        @Test
+        fun `should match a type with whitespace`() {
+            val xmlSpecWithWhitespace = """
 <outer>
     <inner>
         (number)
     </inner>
 </outer>
 """.trimMargin()
-        toXMLNode("<outer><inner>1</inner></outer>") shouldMatch XMLPattern(xmlSpecWithWhitespace)
-    }
+            toXMLNode("<outer><inner>1</inner></outer>") shouldMatch XMLPattern(xmlSpecWithWhitespace)
+        }
 
-    @Test
-    fun `optional node text should match non empty value`() {
-        toXMLNode("<data>1</data>") shouldMatch XMLPattern("<data>(number?)</data>")
-    }
+        @Test
+        fun `optional node text should match non empty value`() {
+            toXMLNode("<data>1</data>") shouldMatch XMLPattern("<data>(number?)</data>")
+        }
 
-    @Test
-    fun `optional node text should match empty value`() {
-        toXMLNode("<data></data>") shouldMatch XMLPattern("<data>(number?)</data>")
-    }
+        @Test
+        fun `optional node text should match empty value`() {
+            toXMLNode("<data></data>") shouldMatch XMLPattern("<data>(number?)</data>")
+        }
 
-    @Test
-    fun `should not match a value that doesn't conform to the specified type`() {
-        toXMLNode("<outer><inner>abc</inner></outer>") shouldNotMatch XMLPattern("<outer><inner>(number)</inner></outer>")
-    }
+        @Test
+        fun `should not match a value that doesn't conform to the specified type`() {
+            toXMLNode("<outer><inner>abc</inner></outer>") shouldNotMatch XMLPattern("<outer><inner>(number)</inner></outer>")
+        }
 
-    @Test
-    fun `should not match a missing node`() {
-        toXMLNode("<person><name>Jane</name></person>") shouldNotMatch XMLPattern("<person><name>(string)</name><address>(string)</address></person>")
-    }
+        @Test
+        fun `should not match a missing node`() {
+            toXMLNode("<person><name>Jane</name></person>") shouldNotMatch XMLPattern("<person><name>(string)</name><address>(string)</address></person>")
+        }
 
-    @Test
-    fun `list type should match multiple xml values of the same type` () {
-        val numberInfoPattern = XMLPattern("<number>(number)</number>")
-        val resolver = Resolver(newPatterns = mapOf("(NumberInfo)" to numberInfoPattern))
-        val answerPattern = XMLPattern("<answer>(NumberInfo*)</answer>")
-        val value = toXMLNode("<answer><number>10</number><number>20</number></answer>")
+        @Test
+        fun `list type should match multiple xml values of the same type` () {
+            val numberInfoPattern = XMLPattern("<number>(number)</number>")
+            val resolver = Resolver(newPatterns = mapOf("(NumberInfo)" to numberInfoPattern))
+            val answerPattern = XMLPattern("<answer>(NumberInfo*)</answer>")
+            val value = toXMLNode("<answer><number>10</number><number>20</number></answer>")
 
-        assertThat(resolver.matchesPattern(null, answerPattern, value)).isInstanceOf(Result.Success::class.java)
+            assertThat(resolver.matchesPattern(null, answerPattern, value)).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `node with string should match empty node`() {
+            val type = parsedPattern("""<name>(string)</name>""")
+            val value = parsedValue("""<name/>""")
+
+            val result = type.matches(value, Resolver())
+            println(resultReport(result))
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `matching works for an xml node with more than one child node`() {
+            val type = XMLPattern("<account><name>John Doe</name><address>(string)</address></account>")
+            val value = toXMLNode("<account><name>John Doe</name><address>Baker street</address></account>")
+
+            assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
     }
 
     @Nested
@@ -357,49 +381,26 @@ internal class XMLPatternTest {
         }
     }
 
-    @Test
-    fun `should pick up node names with optional values from examples`() {
-        val xmlType = XMLPattern("<data><name>(string?)</name><age>(number?)</age></data>")
-        val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
+    @Nested
+    inner class Examples {
+        @Test
+        fun `should pick up node names with optional values from examples`() {
+            val xmlType = XMLPattern("<data><name>(string?)</name><age>(number?)</age></data>")
+            val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
 
-        val newTypes = xmlType.newBasedOn(example, Resolver())
+            val newTypes = xmlType.newBasedOn(example, Resolver())
 
-        val xmlNode = newTypes[0].generate(Resolver())
-        assertThat(xmlNode.toStringValue()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
-    }
+            val xmlNode = newTypes[0].generate(Resolver())
+            assertThat(xmlNode.toStringValue()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
+        }
 
-    @Test
-    fun `will not pick up node names with values from invalid examples`() {
-        val xmlType = XMLPattern("<data><name>(string?)</name><age>(number?)</age></data>")
-        val example = Row(listOf("name", "age"), listOf("John Doe", "ABC"))
+        @Test
+        fun `will not pick up node names with values from invalid examples`() {
+            val xmlType = XMLPattern("<data><name>(string?)</name><age>(number?)</age></data>")
+            val example = Row(listOf("name", "age"), listOf("John Doe", "ABC"))
 
-        assertThatThrownBy { xmlType.newBasedOn(example, Resolver()) }.isInstanceOf(ContractException::class.java)
-    }
-
-    @Test
-    fun `unbound namespace should be parsed`() {
-        val xml = """<ns1:name>(string)</ns1:name>"""
-        val type = parsedPattern(xml)
-
-        assertThat(type.matches(parsedValue(xml), Resolver())).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `node with string should match empty node`() {
-        val type = parsedPattern("""<name>(string)</name>""")
-        val value = parsedValue("""<name/>""")
-
-        val result = type.matches(value, Resolver())
-        println(resultReport(result))
-        assertThat(result).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `matching works for an xml node with more than one child node`() {
-        val type = XMLPattern("<account><name>John Doe</name><address>(string)</address></account>")
-        val value = toXMLNode("<account><name>John Doe</name><address>Baker street</address></account>")
-
-        assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+            assertThatThrownBy { xmlType.newBasedOn(example, Resolver()) }.isInstanceOf(ContractException::class.java)
+        }
     }
 
     class TypeLookup {
@@ -724,5 +725,13 @@ internal class XMLPatternTest {
 
             assertThat(result).isInstanceOf(Result.Failure::class.java)
         }
+    }
+
+    @Test
+    fun `unbound namespace should be parsed`() {
+        val xml = """<ns1:name>(string)</ns1:name>"""
+        val type = parsedPattern(xml)
+
+        assertThat(type.matches(parsedValue(xml), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

@@ -2,6 +2,7 @@ package run.qontract.core.wsdl.parser
 
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.XMLNode
+import run.qontract.core.wsdl.parser.operation.SOAPOperationTypeInfo
 import run.qontract.core.wsdl.payload.SoapPayloadType
 import java.net.URI
 

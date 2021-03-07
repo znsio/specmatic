@@ -207,12 +207,13 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `repeating pattern should not encompass another with dissimilar elements` () {
+        fun `repeating pattern should not encompass another with a different repeating type` () {
             val answersPattern1 = XMLPattern("<answers>(Number*)</answers>")
-            val answersPattern2 = XMLPattern("<answers><number>(string)</number><number>(number)</number></answers>")
-            val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+            val answersPattern2 = XMLPattern("<answers>(Number*)</answers>")
+            val resolver1 = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
+            val resolver2 = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(string)</number>")))
 
-            assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
+            assertThat(answersPattern1.encompasses(answersPattern2, resolver1, resolver2)).isInstanceOf(Result.Failure::class.java)
         }
 
         @Test
@@ -229,6 +230,62 @@ internal class XMLPatternTest {
             val bigger = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)">(number)</number>""")
             val smaller = XMLPattern("""<number val="(number)">(number)</number>""")
             assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `multiple should not encompass single`() {
+            val multiple = XMLPattern("<number $occursMultipleTimes>(number)</number>")
+            val single = XMLPattern("<number>(number)</number>")
+
+            assertThat(multiple.encompasses(single, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        }
+
+        @Test
+        fun `multiple should should encompass multiple`() {
+            val multiple = XMLPattern("<number $occursMultipleTimes>(number)</number>")
+            val optional = XMLPattern("<number $isOptional>(number)</number>")
+
+            assertThat(multiple.encompasses(optional, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `multiple should encompass multiple`() {
+            val multiple1 = XMLPattern("<number $occursMultipleTimes>(number)</number>")
+            val multiple2 = XMLPattern("<number $occursMultipleTimes>(number)</number>")
+
+            assertThat(multiple1.encompasses(multiple2, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `optional should encompass single`() {
+            val optional = XMLPattern("<number $isOptional>(number)</number>")
+            val single = XMLPattern("<number>(number)</number>")
+
+            assertThat(optional.encompasses(single, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `optional should not encompass multiple`() {
+            val multiple = XMLPattern("<number $occursMultipleTimes>(number)</number>")
+            val optional = XMLPattern("<number $isOptional>(number)</number>")
+
+            assertThat(optional.encompasses(multiple, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        }
+
+        @Test
+        fun `optional should encompass optional`() {
+            val optional1 = XMLPattern("<number $occursMultipleTimes>(number)</number>")
+            val optional2 = XMLPattern("<number $occursMultipleTimes>(number)</number>")
+
+            assertThat(optional1.encompasses(optional2, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `when some nodes are not matched at the end the two types are not compatible`() {
+            val type1 = XMLPattern("<contact_info><address $occursMultipleTimes>(string)</address></contact_info>")
+            val type2 = XMLPattern("<contact_info><address $occursMultipleTimes>(string)</address><phone>(number)</phone></contact_info>")
+
+            assertThat(type1.encompasses(type2, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
         }
     }
 

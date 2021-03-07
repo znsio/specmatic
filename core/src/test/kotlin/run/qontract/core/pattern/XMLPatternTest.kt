@@ -14,8 +14,8 @@ import run.qontract.core.wsdl.parser.OPTIONAL_ATTRIBUTE_VALUE
 import run.qontract.shouldMatch
 import run.qontract.shouldNotMatch
 
-private val isOptional: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
-private val occursMultipleTimes: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTIPLE_ATTRIBUTE_VALUE\""
+private const val isOptional: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
+private const val occursMultipleTimes: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTIPLE_ATTRIBUTE_VALUE\""
 
 internal class XMLPatternTest {
     @Nested
@@ -204,26 +204,6 @@ internal class XMLPatternTest {
             val resolver = Resolver()
 
             assertThat(answersPattern1.encompasses(answersPattern2, resolver, resolver)).isInstanceOf(Result.Failure::class.java)
-        }
-
-        @Test
-        fun `repeating pattern should encompass another with similar elements` () {
-            val bigger = XMLPattern("<answers>(Number*)</answers>")
-            val smaller = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
-            val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
-
-            assertThat(bigger.encompasses(smaller, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-        }
-
-        @Test
-        fun `repeating pattern should encompass another with similar elements or empty` () {
-            val bigger = XMLPattern("<answers>(Number*?)</answers>")
-            val smallerList = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
-            val smallerEmpty = XMLPattern("<answers></answers>")
-            val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
-
-            assertThat(bigger.encompasses(smallerList, resolver, resolver)).isInstanceOf(Result.Success::class.java)
-            assertThat(bigger.encompasses(smallerEmpty, resolver, resolver)).isInstanceOf(Result.Success::class.java)
         }
 
         @Test
@@ -532,7 +512,7 @@ internal class XMLPatternTest {
 
         @Test
         fun `xml with an optional typed node generates one sample with the node and one without`() {
-            val nameType = XMLPattern("<name><nameid $isOptional $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+            val nameType = XMLPattern("<name><nameid $isOptional $TYPE_ATTRIBUTE_NAME=\"Nameid\" /></name>")
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
 
@@ -555,7 +535,7 @@ internal class XMLPatternTest {
 
         @Test
         fun `xml with a typed optional node loads data from examples`() {
-            val nameType = XMLPattern("<name><nameid $isOptional $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+            val nameType = XMLPattern("<name><nameid $isOptional $TYPE_ATTRIBUTE_NAME=\"Nameid\" /></name>")
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
             val row = Row(listOf("nameid"), listOf("10"))
@@ -619,7 +599,7 @@ internal class XMLPatternTest {
 
         @Test
         fun `xml with a typed node that occurs multiple times generates multiple nodes`() {
-            val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+            val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE_NAME=\"Nameid\" /></name>")
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
             val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver)}
@@ -638,7 +618,7 @@ internal class XMLPatternTest {
 
         @Test
         fun `xml with a typed node that occurs multiple times loads data from examples`() {
-            val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE=\"Nameid\" /></name>")
+            val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE_NAME=\"Nameid\" /></name>")
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
             val row = Row(listOf("nameid"), listOf("10"))

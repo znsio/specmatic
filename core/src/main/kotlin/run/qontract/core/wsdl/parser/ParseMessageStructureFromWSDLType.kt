@@ -62,7 +62,7 @@ class ParseMessageStructureFromWSDLType(private val wsdl: WSDL, private val wsdl
                     else -> nodeName
                 }
 
-                val nodeTypeInfo = XMLNode(typeNodeName, emptyMap(), childTypeInfo.nodes)
+                val nodeTypeInfo = XMLNode(TYPE_NODE_NAME, emptyMap(), childTypeInfo.nodes)
                 val inPlaceNode = toXMLNode("<$qualifiedNodeName qontract_type=\"$qontractTypeName\"/>").let {
                     it.copy(attributes = it.attributes.plus(getQontractAttributes(element)))
                 }

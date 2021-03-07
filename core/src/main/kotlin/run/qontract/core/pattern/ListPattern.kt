@@ -68,7 +68,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         }
     }
 
-    override fun encompasses(others: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, lengthError: String, typeStack: TypeStack): ConsumeResult<Pattern> {
+    override fun encompasses(others: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, lengthError: String, typeStack: TypeStack): ConsumeResult<Pattern, Pattern> {
         val thisResolverWithEmptyType = withEmptyType(pattern, thisResolver)
         val otherResolverWithEmptyType = withEmptyType(pattern, otherResolver)
 

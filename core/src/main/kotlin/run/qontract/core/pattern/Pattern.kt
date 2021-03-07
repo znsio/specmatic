@@ -8,7 +8,7 @@ import run.qontract.core.value.XMLValue
 
 interface Pattern {
     fun matches(sampleData: Value?, resolver: Resolver): Result
-    fun matches(sampleData: List<Value>, resolver: Resolver): ConsumeResult<Value> {
+    fun matches(sampleData: List<Value>, resolver: Resolver): ConsumeResult<Value, Value> {
         val sample = sampleData.firstOrNull() ?: return ConsumeResult(Result.Failure("No data found. There should have been at least one."), emptyList())
 
         val result = this.matches(sample, resolver)
@@ -23,7 +23,7 @@ interface Pattern {
     fun patternSet(resolver: Resolver): List<Pattern> = listOf(this)
 
     fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack = emptySet()): Result
-    fun encompasses(others: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, lengthError: String, typeStack: TypeStack = emptySet()): ConsumeResult<Pattern> {
+    fun encompasses(others: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, lengthError: String, typeStack: TypeStack = emptySet()): ConsumeResult<Pattern, Pattern> {
         val otherOne = others.firstOrNull()
                 ?: return ConsumeResult(Result.Failure(lengthError), emptyList())
 

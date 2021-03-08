@@ -147,7 +147,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                                     else -> {
                                         attempt(
                                             "Couldn't read value ${childNode.string} as type ${resolvedType.pattern}",
-                                            breadCrumb = breadCrumb(resolvedType)
+                                            breadCrumb = breadCrumbIfXMLTag(resolvedType)
                                         ) { resolvedType.parse(childNode.string, resolver) }
                                     }
                                 }
@@ -163,7 +163,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         }
                     } catch (e: ContractException) {
                         println(e.errorMessage)
-                        ConsumeResult(e.failure(), consumeResult.remainder)
+                        ConsumeResult(e.failure().breadCrumb(breadCrumbIfXMLTag(resolvedType)), consumeResult.remainder)
                     }
                 }
             }
@@ -172,12 +172,11 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return failureFrom(results) ?: Success()
     }
 
-    private fun breadCrumb(resolvedType: Pattern): String {
-        val breadCrumb = when (resolvedType) {
+    private fun breadCrumbIfXMLTag(resolvedType: Pattern): String {
+        return when (resolvedType) {
             is XMLPattern -> resolvedType.pattern.name
             else -> ""
         }
-        return breadCrumb
     }
 
     private fun failureFrom(results: List<ConsumeResult<XMLValue, Value>>): Result? {

@@ -9,7 +9,6 @@ import run.qontract.core.value.*
 import run.qontract.core.wsdl.parser.MULTIPLE_ATTRIBUTE_VALUE
 import run.qontract.core.wsdl.parser.OCCURS_ATTRIBUTE_NAME
 import run.qontract.core.wsdl.parser.OPTIONAL_ATTRIBUTE_VALUE
-import run.qontract.core.wsdl.parser.TYPE_NODE_NAME
 
 const val QONTRACT_XML_ATTRIBUTE_PREFIX = "qontract_"
 const val TYPE_ATTRIBUTE_NAME = "qontract_type"
@@ -32,12 +31,12 @@ private fun attributeTypeMap(node: XMLNode): Map<String, Pattern> {
 }
 
 data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName = ""), override val typeAlias: String? = null) : Pattern, SequenceType {
-    constructor(node: XMLNode, typeAlias: String? = null): this(toTypeData(node), typeAlias)
-    constructor(xmlString: String, typeAlias: String? = null): this(toXMLNode(parseXML(xmlString)), typeAlias)
+    constructor(node: XMLNode, typeAlias: String? = null) : this(toTypeData(node), typeAlias)
+    constructor(xmlString: String, typeAlias: String? = null) : this(toXMLNode(parseXML(xmlString)), typeAlias)
 
     override fun matches(sampleData: List<Value>, resolver: Resolver): ConsumeResult<Value, Value> {
         val xmlValues = sampleData.filterIsInstance<XMLValue>()
-        if(xmlValues.size != sampleData.size)
+        if (xmlValues.size != sampleData.size)
             return ConsumeResult(Failure("XMLPattern can only match XML values"))
 
         return when {
@@ -66,12 +65,12 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
         return if (remainder.isNotEmpty() && remainder.first().let { it is XMLNode && it.name == this.pattern.name }) {
             ConsumeResult(matches(remainder.first(), resolver), remainder)
-        }
-        else if (remainder.isNotEmpty()) {
+        } else if (remainder.isNotEmpty()) {
             val provisionalError = ProvisionalError<Value>(
                 matches(remainder.first(), resolver) as Failure,
                 this,
-                remainder.first())
+                remainder.first()
+            )
             ConsumeResult(Success(), remainder, provisionalError)
         } else {
             ConsumeResult(Success(), remainder)
@@ -97,14 +96,13 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if(sampleData !is XMLNode)
+        if (sampleData !is XMLNode)
             return Failure("Expected xml, got ${sampleData?.displayableType()}").breadCrumb(pattern.name)
 
         val nameResult = matchName(sampleData)
 
-        val matchingType = if(this.pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)) {
-            val typeName =
-                (this.pattern.attributes.getValue(TYPE_ATTRIBUTE_NAME) as ExactValuePattern).pattern.toStringValue()
+        val matchingType = if (this.pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)) {
+            val typeName = this.pattern.getAttributeValue(TYPE_ATTRIBUTE_NAME)
             val xmlType = (resolver.getPattern("($typeName)") as XMLPattern)
             xmlType.copy(pattern = xmlType.pattern.copy(name = this.pattern.name, realName = this.pattern.realName))
         } else {
@@ -117,7 +115,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             matchingType.matchAttributes(sampleData, resolver)
         }.ifSuccess {
             matchingType.matchNodes(sampleData, resolver)
-        }
+        }.breadCrumb(pattern.name)
     }
 
     private fun matchNodes(
@@ -146,10 +144,11 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                             val childValue = when (val childNode = sampleData.childNodes[index]) {
                                 is StringValue -> when {
                                     childNode.isPatternToken() -> childNode.trimmed()
-                                    else -> try {
-                                        resolvedType.parse(childNode.string, resolver)
-                                    } catch (e: Throwable) {
-                                        throw ContractException("Couldn't read value ${childNode.string} as type ${resolvedType.pattern}")
+                                    else -> {
+                                        attempt(
+                                            "Couldn't read value ${childNode.string} as type ${resolvedType.pattern}",
+                                            breadCrumb = breadCrumb(resolvedType)
+                                        ) { resolvedType.parse(childNode.string, resolver) }
                                     }
                                 }
                                 else -> childNode
@@ -173,6 +172,14 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return failureFrom(results) ?: Success()
     }
 
+    private fun breadCrumb(resolvedType: Pattern): String {
+        val breadCrumb = when (resolvedType) {
+            is XMLPattern -> resolvedType.pattern.name
+            else -> ""
+        }
+        return breadCrumb
+    }
+
     private fun failureFrom(results: List<ConsumeResult<XMLValue, Value>>): Result? {
         val nodeStructureMismatchError = results.find {
             it.result is Failure
@@ -185,12 +192,14 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         it.provisionalError != null
                     }?.provisionalError?.let {
                         val nodeValue = it.value
-                        if(nodeValue is XMLNode)
+                        if (nodeValue is XMLNode)
                             it.result.breadCrumb(nodeValue.name)
                         else
                             it.result.breadCrumb(this.pattern.name)
                     }
-                        ?: Failure("Not all child nodes matched after optional and multiple nodes. ConsumeResult list: $results").breadCrumb(this.pattern.name)
+                        ?: Failure("Not all child nodes matched after optional and multiple nodes. ConsumeResult list: $results").breadCrumb(
+                            this.pattern.name
+                        )
                 }
                 else -> null
             }
@@ -200,62 +209,87 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     private fun matchNamespaces(sampleData: XMLNode): Result {
-        if(pattern.attributes.any { it.key == "xmlns" || it.key.startsWith("xmlns:") }) {
-            val patternXmlnsValues = pattern.attributes.entries.filter { it.key == "xmlns" || it.key.startsWith("xmlns:") }.map { (_, attributePattern) ->
-                when(attributePattern) {
-                    is ExactValuePattern -> attributePattern.pattern.toStringValue()
-                    else -> attributePattern.pattern.toString()
-                }
-            }.toSet()
-            val sampleXmlnsValues = sampleData.attributes.entries.filter { it.key == "xmlns" || it.key.startsWith("xmlns:") }.map { (_, attributeValue) ->
-                attributeValue.toStringValue()
-            }.toSet()
+        if (pattern.attributes.any { it.key == "xmlns" || it.key.startsWith("xmlns:") }) {
+            val patternXmlnsValues =
+                pattern.attributes.entries.filter { it.key == "xmlns" || it.key.startsWith("xmlns:") }
+                    .map { (_, attributePattern) ->
+                        when (attributePattern) {
+                            is ExactValuePattern -> attributePattern.pattern.toStringValue()
+                            else -> attributePattern.pattern.toString()
+                        }
+                    }.toSet()
+            val sampleXmlnsValues =
+                sampleData.attributes.entries.filter { it.key == "xmlns" || it.key.startsWith("xmlns:") }
+                    .map { (_, attributeValue) ->
+                        attributeValue.toStringValue()
+                    }.toSet()
 
             val missing = patternXmlnsValues - sampleXmlnsValues
-            if(missing.isNotEmpty())
-                Failure("In node named ${pattern.name}, the following namespaces were missing: $missing", breadCrumb = pattern.name)
+            if (missing.isNotEmpty())
+                Failure(
+                    "In node named ${pattern.name}, the following namespaces were missing: $missing",
+                    breadCrumb = pattern.name
+                )
 
             val extra = sampleXmlnsValues - patternXmlnsValues
-            if(extra.isNotEmpty())
-                return Failure("In node named ${pattern.name}, the following unexpected namespaces were found: $extra", breadCrumb = pattern.name)
+            if (extra.isNotEmpty())
+                return Failure(
+                    "In node named ${pattern.name}, the following unexpected namespaces were found: $extra",
+                    breadCrumb = pattern.name
+                )
         }
 
         return Success()
     }
 
     private fun matchAttributes(sampleData: XMLNode, resolver: Resolver): Result {
-        val patternAttributesWithoutXmlns = pattern.attributes.filterNot { it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) }
-        val sampleAttributesWithoutXmlns = sampleData.attributes.filterNot { it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) }
+        val patternAttributesWithoutXmlns = pattern.attributes.filterNot {
+            it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX)
+        }
+        val sampleAttributesWithoutXmlns = sampleData.attributes.filterNot {
+            it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX)
+        }
 
-        val missingKey = resolver.findMissingKey(ignoreXMLNamespaces(patternAttributesWithoutXmlns), ignoreXMLNamespaces(sampleAttributesWithoutXmlns), ::validateUnexpectedKeys)
-        if(missingKey != null)
+        val missingKey = resolver.findMissingKey(
+            ignoreXMLNamespaces(patternAttributesWithoutXmlns),
+            ignoreXMLNamespaces(sampleAttributesWithoutXmlns),
+            ::validateUnexpectedKeys
+        )
+        if (missingKey != null)
             return missingKeyToResult(missingKey, "attribute").breadCrumb(pattern.name)
 
         return matchAttributes(patternAttributesWithoutXmlns, sampleAttributesWithoutXmlns, resolver)
     }
 
     private fun matchName(sampleData: XMLNode): Result {
-        if(sampleData.name != pattern.name)
+        if (sampleData.name != pattern.name)
             return mismatchResult(pattern.name, sampleData.name).breadCrumb(pattern.name)
 
         return Success()
     }
 
-    private fun matchAttributes(patternAttributesWithoutXmlns: Map<String, Pattern>, sampleAttributesWithoutXmlns: Map<String, StringValue>, resolver: Resolver): Result =
-            mapZip(ignoreXMLNamespaces(patternAttributesWithoutXmlns), ignoreXMLNamespaces(sampleAttributesWithoutXmlns)).asSequence().map { (key, patternValue, sampleValue) ->
-                try {
-                    val resolvedValue: Value = when {
-                        sampleValue.isPatternToken() -> sampleValue.trimmed()
-                        else -> patternValue.parse(sampleValue.string, resolver)
-                    }
-                    resolver.matchesPattern(key, patternValue, resolvedValue)
-                } catch (e: ContractException) {
-                    e.failure()
-                }.breadCrumb(key).breadCrumb(pattern.name)
-            }.find { it is Failure } ?: Success()
+    private fun matchAttributes(
+        patternAttributesWithoutXmlns: Map<String, Pattern>,
+        sampleAttributesWithoutXmlns: Map<String, StringValue>,
+        resolver: Resolver
+    ): Result =
+        mapZip(
+            ignoreXMLNamespaces(patternAttributesWithoutXmlns),
+            ignoreXMLNamespaces(sampleAttributesWithoutXmlns)
+        ).asSequence().map { (key, patternValue, sampleValue) ->
+            try {
+                val resolvedValue: Value = when {
+                    sampleValue.isPatternToken() -> sampleValue.trimmed()
+                    else -> patternValue.parse(sampleValue.string, resolver)
+                }
+                resolver.matchesPattern(key, patternValue, resolvedValue)
+            } catch (e: ContractException) {
+                e.failure()
+            }.breadCrumb(key).breadCrumb(pattern.name)
+        }.find { it is Failure } ?: Success()
 
     private fun <ValueType> ignoreXMLNamespaces(attributes: Map<String, ValueType>): Map<String, ValueType> =
-            attributes.filterNot { it.key.toLowerCase().startsWith("xmlns:") }
+        attributes.filterNot { it.key.toLowerCase().startsWith("xmlns:") }
 
     private fun expectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver): Boolean {
         val resolvedPatternSet = type.patternSet(resolver).map { resolvedHop(it, resolver) }
@@ -283,14 +317,15 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             attempt(breadCrumb = name) {
                 when {
                     pattern is ListPattern -> (pattern.generate(resolver) as XMLNode).childNodes
-                    pattern is XMLPattern && pattern.occurMultipleTimes() -> 0.until(randomNumber(RANDOM_NUMBER_CEILING)).map {
-                        pattern.generate(resolver)
-                    }
+                    pattern is XMLPattern && pattern.occurMultipleTimes() -> 0.until(randomNumber(RANDOM_NUMBER_CEILING))
+                        .map {
+                            pattern.generate(resolver)
+                        }
                     else -> listOf(pattern.generate(resolver))
                 }
             }
         }.flatten().map {
-            when(it) {
+            when (it) {
                 is XMLValue -> it
                 else -> StringValue(it.toStringValue())
             }
@@ -314,7 +349,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         if (dereferenced.pattern.nodes.isEmpty())
                             throw ContractException("Node ${pattern.name} is empty but an example with this name exists")
 
-                        val parsedData = dereferenced.pattern.nodes[0].parse(row.getField(dereferenced.pattern.name), resolver)
+                        val parsedData =
+                            dereferenced.pattern.nodes[0].parse(row.getField(dereferenced.pattern.name), resolver)
                         val matchResult = dereferenced.pattern.nodes[0].matches(parsedData, resolver)
 
                         if (matchResult is Failure)
@@ -326,7 +362,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 else -> {
                     listCombinations(pattern.nodes.map { childPattern ->
                         attempt(breadCrumb = this.pattern.name) {
-                            when(childPattern) {
+                            when (childPattern) {
                                 is XMLPattern -> {
                                     val dereferenced: XMLPattern = childPattern.dereferenceType(resolver)
 
@@ -354,36 +390,53 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     private fun dereferenceType(resolver: Resolver): XMLPattern {
-        if(!hasType()) {
+        if (!hasType()) {
             return this
         }
 
         val qontractType = pattern.attributes["qontract_type"]
         val resolved = resolver.getPattern("($qontractType)") as XMLPattern
         val qontractAttributes = this.pattern.attributes.filterKeys { it.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) }
-        return resolved.copy(pattern = resolved.pattern.copy(name = this.pattern.name, attributes = resolved.pattern.attributes.plus(qontractAttributes)))
+        return resolved.copy(
+            pattern = resolved.pattern.copy(
+                name = this.pattern.name,
+                attributes = resolved.pattern.attributes.plus(qontractAttributes)
+            )
+        )
     }
 
-    fun hasType(): Boolean = pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)
+    private fun hasType(): Boolean = pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)
 
-    fun occurMultipleTimes(): Boolean = occursAttributeValue() == MULTIPLE_ATTRIBUTE_VALUE
+    fun occurMultipleTimes(): Boolean = pattern.getAttributeValue(OCCURS_ATTRIBUTE_NAME) == MULTIPLE_ATTRIBUTE_VALUE
 
-    private fun occursAttributeValue() =
-        (pattern.attributes[OCCURS_ATTRIBUTE_NAME] as ExactValuePattern?)?.pattern?.toStringValue()
-
-    fun isOptional(): Boolean = occursAttributeValue() == OPTIONAL_ATTRIBUTE_VALUE
+    private fun isOptional(): Boolean = pattern.getAttributeValue(OCCURS_ATTRIBUTE_NAME) == OPTIONAL_ATTRIBUTE_VALUE
 
     override fun parse(value: String, resolver: Resolver): Value {
         return toXMLNode(parseXML(value))
     }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+    override fun encompasses(
+        otherPattern: Pattern,
+        thisResolver: Resolver,
+        otherResolver: Resolver,
+        typeStack: TypeStack
+    ): Result {
         val otherResolvedPattern = resolvedHop(otherPattern, otherResolver)
 
         return when (otherResolvedPattern) {
-            is ExactValuePattern -> otherResolvedPattern.fitsWithin(listOf(this), otherResolver, thisResolver, typeStack)
+            is ExactValuePattern -> otherResolvedPattern.fitsWithin(
+                listOf(this),
+                otherResolver,
+                thisResolver,
+                typeStack
+            )
             is XMLPattern -> nodeNamesShouldBeEqual(otherResolvedPattern).ifSuccess {
-                mapEncompassesMap(pattern.attributes.filterNot { it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) }, otherResolvedPattern.pattern.attributes.filterNot { it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) }, thisResolver, otherResolver)
+                mapEncompassesMap(
+                    pattern.attributes.filterNot { it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) },
+                    otherResolvedPattern.pattern.attributes.filterNot { it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) },
+                    thisResolver,
+                    otherResolver
+                )
             }.ifSuccess {
                 thisOccurrenceEncompassesTheOther(this, otherResolvedPattern)
             }.ifSuccess {
@@ -395,30 +448,43 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
                 val adaptedOthers = adapt(others, otherResolver)
 
-                val results = these.runningFold(ConsumeResult<Pattern, Pattern>(adaptedOthers)) { consumeResult, thisOne ->
-                    val unmatched = consumeResult.remainder.dropWhile { otherOne ->
-                        val result = encompassesResult(thisOne, otherOne, thisResolver, otherResolver, typeStack)
-                        result is Success
-                    }
+                val results =
+                    these.runningFold(ConsumeResult<Pattern, Pattern>(adaptedOthers)) { consumeResult, thisOne ->
+                        val unmatched = consumeResult.remainder.dropWhile { otherOne ->
+                            val result = encompassResult(thisOne, otherOne, thisResolver, otherResolver, typeStack)
+                            result is Success
+                        }
 
-                    if(unmatched.size == consumeResult.remainder.size) {
-                        val failure = thisOne.encompasses(unmatched.first(), thisResolver, otherResolver, typeStack) as Failure
-                        ConsumeResult(failure, unmatched)
-                    } else {
-                        val provisionalError: ProvisionalError<Pattern>? =
-                            unmatched.firstOrNull()?.let { unmatchedPattern ->
-                                val failure = encompassesResult(thisOne, unmatchedPattern, thisResolver, otherResolver, typeStack) as Failure
-                                ProvisionalError(failure, thisOne, unmatchedPattern)
-                            }
+                        if (unmatched.size == consumeResult.remainder.size) {
+                            val failure = encompassResult(
+                                thisOne,
+                                unmatched.first(),
+                                thisResolver,
+                                otherResolver,
+                                typeStack
+                            ) as Failure
+                            ConsumeResult(failure, unmatched)
+                        } else {
+                            val provisionalError: ProvisionalError<Pattern>? =
+                                unmatched.firstOrNull()?.let { unmatchedPattern ->
+                                    val failure = encompassResult(
+                                        thisOne,
+                                        unmatchedPattern,
+                                        thisResolver,
+                                        otherResolver,
+                                        typeStack
+                                    ) as Failure
+                                    ProvisionalError(failure, thisOne, unmatchedPattern)
+                                }
 
-                        ConsumeResult(Success(), unmatched, provisionalError)
+                            ConsumeResult(Success(), unmatched, provisionalError)
+                        }
                     }
-                }
 
                 val failureResult = results.find { it.result is Failure }?.result
 
                 val provisionalFailure = lazy {
-                    if(results.isNotEmpty() && results.last().remainder.isNotEmpty()) {
+                    if (results.isNotEmpty() && results.last().remainder.isNotEmpty()) {
                         println(results.last())
                         results.mapNotNull { it.provisionalError }.first().result
                     } else {
@@ -432,26 +498,38 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         }.breadCrumb(this.pattern.name)
     }
 
-    private fun encompassesResult(thisOne: Pattern, otherOne: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+    private fun encompassResult(
+        thisOne: Pattern,
+        otherOne: Pattern,
+        thisResolver: Resolver,
+        otherResolver: Resolver,
+        typeStack: TypeStack
+    ): Result {
         return try {
             val otherOneAdjustedForExactValue = when {
-                otherOne is ExactValuePattern && otherOne.pattern is StringValue -> ExactValuePattern(thisOne.parse(otherOne.pattern.string, thisResolver))
+                otherOne is ExactValuePattern && otherOne.pattern is StringValue -> ExactValuePattern(
+                    thisOne.parse(
+                        otherOne.pattern.string,
+                        thisResolver
+                    )
+                )
                 else -> otherOne
             }
 
             thisOne.encompasses(otherOneAdjustedForExactValue, thisResolver, otherResolver, typeStack)
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             Failure(e.message ?: e.javaClass.name)
         }
 
     }
+
     private fun getNodeOccurrence(): NodeOccurrence {
         return pattern.getNodeOccurrence()
     }
 
     private fun thisOccurrenceEncompassesTheOther(thisOne: XMLPattern, otherOne: XMLPattern): Result {
-        val thisTypeOccurrence = (thisOne.pattern.attributes[OCCURS_ATTRIBUTE_NAME] as ExactValuePattern?)?.pattern?.toStringValue()
-        val otherTypeOccurrence = (otherOne.pattern.attributes[OCCURS_ATTRIBUTE_NAME] as ExactValuePattern?)?.pattern?.toStringValue()
+        val thisTypeOccurrence = thisOne.pattern.getAttributeValue(OCCURS_ATTRIBUTE_NAME)
+        val otherTypeOccurrence = otherOne.pattern.getAttributeValue(OCCURS_ATTRIBUTE_NAME)
 
         return when (thisTypeOccurrence) {
             otherTypeOccurrence -> Success()
@@ -466,7 +544,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     private fun adapt(types: List<Pattern>, resolver: Resolver): List<Pattern> {
-        if(types.isEmpty())
+        if (types.isEmpty())
             return listOf(EmptyStringPattern)
 
         return adaptFromList(types, resolver)
@@ -475,15 +553,24 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     private fun adaptFromList(types: List<Pattern>, resolver: Resolver): List<Pattern> {
         val first = types.firstOrNull()
 
-        if(first is ListPattern) {
+        if (first is ListPattern) {
             val typeName = first.pattern.pattern.toString().removeSurrounding("(", ")")
             val type = resolver.getPattern("($typeName)")
-            if(type !is XMLPattern)
+            if (type !is XMLPattern)
                 throw ContractException("A list specification inside an XML definition must refer to an XML type. But $typeName is not an XML type.")
 
-            val multipleOccursAttribute = mapOf(OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(MULTIPLE_ATTRIBUTE_VALUE)))
+            val multipleOccursAttribute =
+                mapOf(OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(MULTIPLE_ATTRIBUTE_VALUE)))
 
-            return listOf(type.copy(pattern = type.pattern.copy(attributes = type.pattern.attributes.plus(multipleOccursAttribute))))
+            return listOf(
+                type.copy(
+                    pattern = type.pattern.copy(
+                        attributes = type.pattern.attributes.plus(
+                            multipleOccursAttribute
+                        )
+                    )
+                )
+            )
         }
 
         return types

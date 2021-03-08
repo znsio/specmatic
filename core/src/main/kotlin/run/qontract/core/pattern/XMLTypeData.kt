@@ -5,45 +5,11 @@ import run.qontract.core.value.XMLNode
 import run.qontract.core.wsdl.parser.MULTIPLE_ATTRIBUTE_VALUE
 import run.qontract.core.wsdl.parser.OCCURS_ATTRIBUTE_NAME
 import run.qontract.core.wsdl.parser.OPTIONAL_ATTRIBUTE_VALUE
-import run.qontract.core.Result as Result
-
-enum class NodeOccurrence {
-    Multiple {
-        override fun encompasses(otherTypeOccurrence: NodeOccurrence): Result {
-            return when(otherTypeOccurrence) {
-                Optional -> Result.Success()
-                else -> Result.Failure("This node $description whereas the other ${otherTypeOccurrence.description}.")
-            }
-        }
-
-        override val description: String = "may occur 0 or more times"
-    },
-    Optional {
-        override fun encompasses(otherTypeOccurrence: NodeOccurrence): Result {
-            return when(otherTypeOccurrence) {
-                Once -> Result.Success()
-                else -> Result.Failure("This node $description whereas the other ${otherTypeOccurrence.description}.")
-            }
-        }
-
-        override val description: String = "is optional"
-    },
-    Once {
-        override fun encompasses(otherTypeOccurrence: NodeOccurrence): Result {
-            return when(otherTypeOccurrence) {
-                Multiple -> Result.Failure("This node $description whereas the other ${otherTypeOccurrence.description}.")
-                else -> Result.Failure("This node $description whereas the other ${otherTypeOccurrence.description}.")
-            }
-        }
-
-        override val description: String = "must occur"
-    };
-
-    abstract fun encompasses(otherTypeOccurrence: NodeOccurrence): Result
-    abstract val description: String
-}
 
 data class XMLTypeData(val name: String = "", val realName: String, val attributes: Map<String, Pattern> = emptyMap(), val nodes: List<Pattern> = emptyList()) {
+    fun getAttributeValue(name: String): String? =
+        (attributes[name] as ExactValuePattern?)?.pattern?.toStringValue()
+
     fun isEmpty(): Boolean {
         return name.isEmpty() && attributes.isEmpty() && nodes.isEmpty()
     }

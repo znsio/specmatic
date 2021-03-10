@@ -1,9 +1,12 @@
 package run.qontract.core.pattern
 
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import run.qontract.core.*
+import run.qontract.core.Resolver
+import run.qontract.core.Result
+import run.qontract.core.resultReport
 import run.qontract.core.value.NullValue
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
@@ -241,7 +244,7 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `multiple should should encompass multiple`() {
+        fun `multiple should should encompass optional`() {
             val multiple = XMLPattern("<number $occursMultipleTimes>(number)</number>")
             val optional = XMLPattern("<number $isOptional>(number)</number>")
 
@@ -465,7 +468,7 @@ internal class XMLPatternTest {
     }
 
     @Nested
-    inner class OptionalNodes {
+    inner class NewOptionalNodesSyntax {
         @Test
         fun `last node can be optional`() {
             val type = XMLPattern("<account><name>(string)</name><address $isOptional>(string)</address></account>")

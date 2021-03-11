@@ -97,7 +97,7 @@ fun stub(stubRequest: HttpRequest, stubResponse: HttpResponse): TestHttpStub =
 private fun stubsFrom(oldContract: String): TestHttpStubData {
     val oldFeature = Feature(oldContract)
 
-    val testScenarios = oldFeature.generateTestScenarios()
+    val testScenarios = oldFeature.generateBackwardCompatibilityTestScenarios()
 
     return TestHttpStubData(oldContract, testScenarios.map { scenario ->
         val request = scenario.generateHttpRequest()

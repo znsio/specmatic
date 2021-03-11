@@ -44,7 +44,8 @@ internal class URLSchemeTest {
 
     @Test
     fun `should match another pattern with the same scheme`() {
-        assertThat(URLPattern(URLScheme.HTTP).encompasses(URLPattern(URLScheme.HTTP), Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(URLPattern(URLScheme.HTTP).encompasses(URLPattern(URLScheme.HTTP), Resolver(), Resolver())).isInstanceOf(
+            Result.Success::class.java)
     }
 
     @Test

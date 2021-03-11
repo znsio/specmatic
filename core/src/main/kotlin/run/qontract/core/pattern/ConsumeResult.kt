@@ -2,7 +2,6 @@ package run.qontract.core.pattern
 
 import run.qontract.core.Result
 import run.qontract.core.breadCrumb
-import run.qontract.core.value.Value
 
 data class ProvisionalError<MatchedType>(val result: Result.Failure, val type: Pattern, val value: MatchedType)
 

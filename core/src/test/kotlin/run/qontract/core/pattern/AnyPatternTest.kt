@@ -3,7 +3,6 @@ package run.qontract.core.pattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import run.qontract.core.HttpRequest
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.resultReport
@@ -81,7 +80,8 @@ internal class AnyPatternTest {
 
     @Test
     fun `AnyPattern of null and string patterns should encompass null pattern`() {
-        assertThat(AnyPattern(listOf(NullPattern, StringPattern)).encompasses(NullPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(AnyPattern(listOf(NullPattern, StringPattern)).encompasses(NullPattern, Resolver(), Resolver())).isInstanceOf(
+            Result.Success::class.java)
     }
 
     @Test

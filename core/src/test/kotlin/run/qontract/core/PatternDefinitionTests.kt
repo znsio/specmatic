@@ -5,7 +5,6 @@ import run.qontract.core.pattern.*
 import run.qontract.core.utilities.parseXML
 import run.qontract.core.value.BooleanValue
 import run.qontract.core.value.NumberValue
-import run.qontract.core.value.Value
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.Test
 import org.w3c.dom.Node
 import run.qontract.core.value.StringValue
 import run.qontract.shouldMatch
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PatternDefinitionTests {

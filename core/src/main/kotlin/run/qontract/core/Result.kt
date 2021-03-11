@@ -1,7 +1,9 @@
 package run.qontract.core
 
-import run.qontract.core.Result.*
+import run.qontract.core.Result.Failure
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Pattern
+import run.qontract.core.value.JSONObjectValue
 import run.qontract.core.value.Value
 
 sealed class Result {
@@ -19,14 +21,13 @@ sealed class Result {
     abstract fun isTrue(): Boolean
 
     abstract fun ifSuccess(function: () -> Result): Result
-
-    class Success : Result() {
-        override fun isTrue() = true
-        override fun ifSuccess(function: () -> Result) = function()
-    }
+    abstract fun withDefinedVariablesSet(setters: Map<String, String>, response: HttpResponse): Result
 
     data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
         override fun ifSuccess(function: () -> Result) = this
+        override fun withDefinedVariablesSet(setters: Map<String, String>, response: HttpResponse): Result {
+            return this
+        }
 
         fun reason(errorMessage: String) = Failure(errorMessage, this)
         fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
@@ -46,6 +47,42 @@ sealed class Result {
 
         override fun isTrue() = false
     }
+
+    data class Success(val variables: Map<String, String> = emptyMap()) : Result() {
+        override fun isTrue() = true
+        override fun ifSuccess(function: () -> Result) = function()
+        override fun withDefinedVariablesSet(setters: Map<String, String>, response: HttpResponse): Result {
+            return setters.entries.fold(this) { acc, setter ->
+                update(acc, response, setter.key, setter.value)
+
+            }
+        }
+
+        private fun update(result: Success, response: HttpResponse, variableName: String, selector: String): Success {
+            val value: String = when {
+                selector.startsWith("response-header.") -> {
+                    val headerName = selector.removePrefix("response-header.").trim()
+                    response.headers[headerName] ?: throw ContractException("Couldn't find header name $headerName specified in $selector")
+                }
+                selector.startsWith("response-body") -> {
+                    val bodySelector = selector.removePrefix("response-body").trim()
+                    if(bodySelector.isBlank())
+                        response.body.toStringValue()
+                    else {
+                        if(response.body !is JSONObjectValue)
+                            throw ContractException("JSON selector can only be used for JSON body")
+
+                        val jsonBodySelector = bodySelector.removePrefix(".")
+                        response.body.findFirstChildByPath(jsonBodySelector)?.toStringValue() ?: throw ContractException("JSONselector $selector was not found")
+                    }
+                }
+                else -> throw ContractException("Selector $selector is unexpected. It must either start with response-header or response-body.")
+            }
+
+            return result.copy(variables = result.variables.plus(variableName to value))
+        }
+    }
+
 
 }
 
@@ -108,7 +145,7 @@ fun resultReport(result: Result, scenarioMessage: String? = null): String {
 
 fun shouldBeIgnored(result: Result): Boolean {
     return when(result) {
-        is Success -> false
+        is Result.Success -> false
         is Failure -> result.scenario?.ignoreFailure == true
     }
 }

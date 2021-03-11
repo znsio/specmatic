@@ -189,7 +189,8 @@ internal class XMLPatternTest {
             val numberInfoPattern = XMLPattern("<number>(number)</number>")
             val resolver = Resolver(newPatterns = mapOf("(Number)" to XMLPattern("<number>(number)</number>")))
 
-            assertThat(resolver.getPattern("(Number)").encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(Result.Success::class.java)
+            assertThat(resolver.getPattern("(Number)").encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(
+                Result.Success::class.java)
         }
 
         @Test

@@ -1,8 +1,6 @@
 package run.qontract.core
 
 import run.qontract.core.pattern.ContractException
-import run.qontract.core.utilities.contractFilePath
-import run.qontract.core.utilities.readFile
 import run.qontract.stub.HttpStub
 import run.qontract.test.HttpClient
 
@@ -23,7 +21,7 @@ data class Contract(val contractGherkin: String) {
         val contractBehaviour = Feature(contractGherkin)
         val httpClient = HttpClient(endPoint)
 
-        contractBehaviour.generateTestScenarios(emptyList()).fold(Results()) { results, scenario ->
+        contractBehaviour.generateContractTestScenarios(emptyList()).fold(Results()) { results, scenario ->
             when(val kafkaMessagePattern = scenario.kafkaMessagePattern) {
                 null -> Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
                 else -> {

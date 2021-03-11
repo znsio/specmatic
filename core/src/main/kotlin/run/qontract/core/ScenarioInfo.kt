@@ -14,5 +14,7 @@ data class ScenarioInfo(
         val fixtures: Map<String, Value> = emptyMap(),
         val examples: List<Examples> = emptyList(),
         val kafkaMessage: KafkaMessagePattern? = null,
-        val ignoreFailure: Boolean = false
+        val ignoreFailure: Boolean = false,
+        val references: Map<String, References> = emptyMap(),
+        val setters: Map<String, String> = emptyMap()
 )

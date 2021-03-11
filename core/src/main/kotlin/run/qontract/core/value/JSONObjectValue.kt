@@ -1,11 +1,7 @@
 package run.qontract.core.value
 
 import run.qontract.core.ExampleDeclarations
-import run.qontract.core.pattern.DeferredPattern
-import run.qontract.core.pattern.JSONObjectPattern
-import run.qontract.core.pattern.toJSONObjectPattern
-import run.qontract.core.pattern.Pattern
-import run.qontract.core.pattern.toTabularPattern
+import run.qontract.core.pattern.*
 import run.qontract.core.utilities.valueMapToPrettyJsonString
 
 data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Value {
@@ -63,6 +59,24 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     fun getJSONArray(key: String): List<Value> {
         return (jsonObject.getValue(key) as JSONArrayValue).list
     }
+
+    fun findFirstChildByPath(path: String): Value? =
+        findFirstChildByPath(path.split("."))
+
+    private fun findFirstChildByPath(path: List<String>): Value? =
+        findFirstChildByPath(path.first(), path.drop(1))
+
+    private fun findFirstChildByPath(childName: String, rest: List<String>): Value? {
+        return findFirstChildByName(childName)?.let {
+            if(it is JSONObjectValue)
+                findFirstChildByPath(rest)
+            else
+                null
+        }
+    }
+
+    fun findFirstChildByName(name: String): Value? =
+        jsonObject[name]
 }
 
 internal fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclarations> {

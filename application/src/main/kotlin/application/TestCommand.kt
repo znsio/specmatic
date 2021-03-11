@@ -1,6 +1,5 @@
 package application
 
-import run.qontract.test.QontractJUnitSupport
 import application.test.ContractExecutionListener
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
@@ -11,7 +10,9 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import run.qontract.core.Constants
-import run.qontract.core.utilities.*
+import run.qontract.core.utilities.exceptionCauseMessage
+import run.qontract.test.QontractJUnitSupport
+import run.qontract.test.QontractJUnitSupport.Companion.TEST_CONFIG_FILE
 import run.qontract.test.QontractJUnitSupport.Companion.CONTRACT_PATHS
 import run.qontract.test.QontractJUnitSupport.Companion.HOST
 import run.qontract.test.QontractJUnitSupport.Companion.INLINE_SUGGESTIONS
@@ -46,6 +47,9 @@ class TestCommand : Callable<Unit> {
 
     @Option(names = ["--suggestions"], description = ["A json value with scenario name and multiple suggestions"], defaultValue = "")
     var suggestions: String = ""
+
+    @Option(names = ["--context"], description = ["Context variables for the contract tests to use"], defaultValue = "")
+    var contextFile: String = ""
 
     @Option(names = ["--https"], description = ["Use https instead of the default http"], required = false)
     var useHttps: Boolean = false
@@ -97,6 +101,9 @@ class TestCommand : Callable<Unit> {
         System.setProperty("kafkaHost", kafkaHost)
         System.setProperty("kafkaPort", kafkaPort.toString())
         System.setProperty("commit", commit.toString())
+
+        if(contextFile.isNotBlank())
+            System.setProperty(TEST_CONFIG_FILE, contextFile)
 
         if(kafkaPort != 0)
             System.setProperty("kafkaPort", kafkaPort.toString())

@@ -28,6 +28,7 @@ open class QontractJUnitSupport {
         const val SUGGESTIONS_PATH = "suggestionsPath"
         const val HOST = "host"
         const val PORT = "port"
+        const val TEST_CONFIG_FILE = "testConfigFile"
     }
     
     @TestFactory
@@ -44,10 +45,14 @@ open class QontractJUnitSupport {
         val workingDirectory = File(valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified"))
         val workingDirectoryWasCreated = workingDirectory.exists()
 
+        val testConfigFile: String? = System.getProperty(TEST_CONFIG_FILE)
+
+        val testConfig = loadTestConfig(testConfigFile)
+
         val testScenarios = try {
             when {
                 contractPaths != null -> {
-                    contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData) }
+                    contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig) }
                 }
                 else -> {
                     val configFile = valueOrDefault(givenConfigFile, DEFAULT_QONTRACT_CONFIG_FILE_NAME, "Neither contract nor config were specified")
@@ -57,7 +62,7 @@ open class QontractJUnitSupport {
                     createIfDoesNotExist(workingDirectory.path)
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path).map { it.path }
-                    contractFilePaths.flatMap { loadTestScenarios(it, "", "") }
+                    contractFilePaths.flatMap { loadTestScenarios(it, "", "", testConfig) }
                 }
             }
         } catch(e: ContractException) {
@@ -122,8 +127,13 @@ open class QontractJUnitSupport {
         return executeTest(testScenario, httpClient)
     }
 
-    private fun loadTestScenarios(path: String, suggestionsPath: String, suggestionsData: String): List<Scenario> {
-        val feature = Feature(readFile(path))
+    private fun loadTestScenarios(
+        path: String,
+        suggestionsPath: String,
+        suggestionsData: String,
+        config: TestConfig
+    ): List<Scenario> {
+        val feature = Feature(readFile(path)).copy(testVariables = config.variables, testBsaeURLs = config.baseURLs)
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
@@ -131,7 +141,7 @@ open class QontractJUnitSupport {
             else -> emptyList()
         }
 
-        return feature.generateTestScenarios(suggestions)
+        return feature.generateContractTestScenarios(suggestions)
     }
 
     private fun suggestionsFromFile(suggestionsPath: String): List<Scenario> {
@@ -161,7 +171,16 @@ open class QontractJUnitSupport {
                 }
             }
         }.entries.map { (name, examples) ->
-            Scenario(name, HttpRequestPattern(), HttpResponsePattern(), emptyMap(), listOf(examples), emptyMap(), emptyMap(), null)
+            Scenario(
+                name,
+                HttpRequestPattern(),
+                HttpResponsePattern(),
+                emptyMap(),
+                listOf(examples),
+                emptyMap(),
+                emptyMap(),
+                null,
+            )
         }
     }
 

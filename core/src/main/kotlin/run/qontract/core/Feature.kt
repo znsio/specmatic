@@ -9,11 +9,11 @@ import run.qontract.core.pattern.*
 import run.qontract.core.pattern.Examples.Companion.examplesFrom
 import run.qontract.core.utilities.jsonStringToValueMap
 import run.qontract.core.value.*
-import run.qontract.core.value.UseExampleDeclarations
 import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.ScenarioStub
 import run.qontract.stub.HttpStubData
 import run.qontract.test.TestExecutor
+import java.io.File
 import java.net.URI
 
 fun Feature(gherkinData: String): Feature {
@@ -26,7 +26,7 @@ fun Feature(contractGherkinDocument: GherkinDocument): Feature {
     return Feature(scenarios = scenarios, name = name)
 }
 
-data class Feature(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap(), val name: String) {
+data class Feature(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap(), val name: String, val testVariables: Map<String, String> = emptyMap(), val testBsaeURLs: Map<String, String> = emptyMap()) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
             val resultList = lookupScenario(httpRequest, scenarios)
@@ -90,7 +90,7 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
     }
 
     fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results =
-            generateTestScenarios(suggestions).fold(Results()) { results, scenario ->
+            generateContractTestScenarios(suggestions).fold(Results()) { results, scenario ->
                 Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
             }
 
@@ -133,10 +133,12 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
     fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
             Results(results.map { it.second }.filter { it is Result.Failure }.toMutableList())
 
-    fun generateTestScenarios(suggestions: List<Scenario>): List<Scenario> =
-        scenarios.map { it.newBasedOn(suggestions) }.flatMap { it.generateTestScenarios() }
+    fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> =
+        scenarios.map { it.newBasedOn(suggestions) }.flatMap {
+            it.generateTestScenarios(testVariables, testBsaeURLs)
+        }
 
-    fun generateTestScenarios(): List<Scenario> =
+    fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->
             scenario.copy(examples = emptyList()).generateTestScenarios()
         }
@@ -255,6 +257,10 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
                 scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(multiPartFormDataPattern = scenarioInfo.httpRequestPattern.multiPartFormDataPattern.plus(toFormDataPart(step))))
             "KAFKA-MESSAGE" ->
                 scenarioInfo.copy(kafkaMessage = toAsyncMessage(step))
+            "VALUE" ->
+                scenarioInfo.copy(references = values(step.rest, scenarioInfo.references, backgroundScenarioInfo.references))
+            "SET" ->
+                scenarioInfo.copy(setters = setters(step.rest, backgroundScenarioInfo.setters, scenarioInfo.setters))
             else -> {
                 val location = when {
                     step.raw.hasLocation() -> " at line ${step.raw.location.line}"
@@ -273,6 +279,37 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
     }
 
     return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)), ignoreFailure = ignoreFailure)
+}
+
+fun setters(rest: String, backgroundSetters: Map<String, String>, scenarioSetters: Map<String, String>): Map<String, String> {
+    val parts = breakIntoPartsMaxLength(rest, 3)
+
+    if(parts.size != 3 || parts[1] != "=")
+        throw ContractException("Setter syntax is incorrect in \"$rest\". Syntax should be \"Then set <variable> = <selector>\"")
+
+    val variableName = parts[0]
+    val selector = parts[2]
+
+    return backgroundSetters.plus(scenarioSetters).plus(variableName to selector)
+}
+
+fun values(
+    rest: String,
+    scenarioReferences: Map<String, References>,
+    backgroundReferences: Map<String, References>,
+): Map<String, References> {
+    val parts = breakIntoPartsMaxLength(rest, 3)
+
+    if(parts.size != 3 || parts[1] != "from")
+        throw ContractException("Incorrect syntax for value statement: $rest - it should be \"Given value <value name> from <qontract file name>\"")
+
+    val valueStoreName = parts[0]
+    val qontractFileName = parts[2]
+
+    if(!File(qontractFileName).exists())
+        throw ContractException("File $qontractFileName does not exist")
+
+    return backgroundReferences.plus(scenarioReferences).plus(valueStoreName to References(valueStoreName, qontractFileName))
 }
 
 fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
@@ -361,24 +398,37 @@ internal fun parseGherkinString(gherkinData: String): GherkinDocument {
 internal fun lex(gherkinDocument: GherkinDocument): Pair<String, List<Scenario>> =
         Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.childrenList))
 
-internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>): List<Scenario> =
-    lex(featureChildren, lexBackground(featureChildren))
-
-internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, backgroundInfo: ScenarioInfo): List<Scenario> =
-    scenarios(featureChildren).map { featureChild ->
-        if(featureChild.scenario.name.isBlank())
+internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>): List<Scenario> {
+    return scenarios(featureChildren).map { featureChild ->
+        if (featureChild.scenario.name.isBlank())
             throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
 
-        val backgroundInfoCopy = backgroundInfo.copy(scenarioName = featureChild.scenario.name)
-        lexScenario(featureChild.scenario.stepsList, featureChild.scenario.examplesList, featureChild.scenario.tagsList, backgroundInfoCopy)
-    }.map { scenarioInfo ->
-        Scenario(scenarioInfo.scenarioName, scenarioInfo.httpRequestPattern, scenarioInfo.httpResponsePattern, scenarioInfo.expectedServerState, scenarioInfo.examples, scenarioInfo.patterns, scenarioInfo.fixtures, scenarioInfo.kafkaMessage, scenarioInfo.ignoreFailure)
-    }
+        val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
+            lexScenario(feature.background.stepsList, listOf(), emptyList(), ScenarioInfo())
+        } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
 
-private fun lexBackground(featureChildren: List<GherkinDocument.Feature.FeatureChild>): ScenarioInfo =
-    background(featureChildren)?.let { feature ->
-        lexScenario(feature.background.stepsList, listOf(), emptyList(), ScenarioInfo())
-    } ?: ScenarioInfo()
+        lexScenario(
+            featureChild.scenario.stepsList,
+            featureChild.scenario.examplesList,
+            featureChild.scenario.tagsList,
+            backgroundInfoCopy
+        )
+    }.map { scenarioInfo ->
+        Scenario(
+            scenarioInfo.scenarioName,
+            scenarioInfo.httpRequestPattern,
+            scenarioInfo.httpResponsePattern,
+            scenarioInfo.expectedServerState,
+            scenarioInfo.examples,
+            scenarioInfo.patterns,
+            scenarioInfo.fixtures,
+            scenarioInfo.kafkaMessage,
+            scenarioInfo.ignoreFailure,
+            scenarioInfo.references,
+            scenarioInfo.setters
+        )
+    }
+}
 
 private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
     featureChildren.firstOrNull { it.valueCase.name == "BACKGROUND" }

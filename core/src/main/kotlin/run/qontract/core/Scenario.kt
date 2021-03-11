@@ -8,9 +8,20 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.True
 import run.qontract.core.value.Value
 import run.qontract.test.TestExecutor
-import java.lang.StringBuilder
 
-data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern, val httpResponsePattern: HttpResponsePattern, val expectedFacts: Map<String, Value>, val examples: List<Examples>, val patterns: Map<String, Pattern>, val fixtures: Map<String, Value>, val kafkaMessagePattern: KafkaMessagePattern? = null, val ignoreFailure: Boolean = false) {
+data class Scenario(
+    val name: String,
+    val httpRequestPattern: HttpRequestPattern,
+    val httpResponsePattern: HttpResponsePattern,
+    val expectedFacts: Map<String, Value>,
+    val examples: List<Examples>,
+    val patterns: Map<String, Pattern>,
+    val fixtures: Map<String, Value>,
+    val kafkaMessagePattern: KafkaMessagePattern? = null,
+    val ignoreFailure: Boolean = false,
+    val references: Map<String, References> = emptyMap(),
+    val setters: Map<String, String> = emptyMap()
+) {
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
             expectedFacts.keys == actualState.keys &&
                     mapZip(expectedFacts, actualState).all { (key, expectedStateValue, actualStateValue) ->
@@ -115,23 +126,62 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
 
         return when (kafkaMessagePattern) {
             null -> httpRequestPattern.newBasedOn(row, resolver).map { newHttpRequestPattern ->
-                Scenario(name, newHttpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures, kafkaMessagePattern, ignoreFailure)
+                Scenario(
+                    name,
+                    newHttpRequestPattern,
+                    httpResponsePattern,
+                    newExpectedServerState,
+                    examples,
+                    patterns,
+                    fixtures,
+                    kafkaMessagePattern,
+                    ignoreFailure,
+                    references,
+                    setters
+                )
             }
             else -> {
                 kafkaMessagePattern.newBasedOn(row, resolver).map { newKafkaMessagePattern ->
-                    Scenario(name, httpRequestPattern, httpResponsePattern, newExpectedServerState, examples, patterns, fixtures, newKafkaMessagePattern, ignoreFailure)
+                    Scenario(
+                        name,
+                        httpRequestPattern,
+                        httpResponsePattern,
+                        newExpectedServerState,
+                        examples,
+                        patterns,
+                        fixtures,
+                        newKafkaMessagePattern,
+                        ignoreFailure,
+                        references,
+                        setters
+                    )
                 }
             }
         }
     }
 
-    fun generateTestScenarios(): List<Scenario> =
-        scenarioBreadCrumb(this) {
+    fun generateTestScenarios(context: Map<String, String> = emptyMap(), testBaseURLs: Map<String, String> = emptyMap()): List<Scenario> {
+        val referencesWithBaseURLs = references.mapValues { (key, reference) ->
+            val qontractFileName = reference.qontractFileName
+            val baseURL = testBaseURLs[qontractFileName]
+                ?: throw ContractException("Base url for qontract file $qontractFileName was not supplied.")
+
+            reference.copy(baseURL = baseURL)
+        }
+
+        return scenarioBreadCrumb(this) {
             when (examples.size) {
                 0 -> listOf(Row())
-                else -> examples.flatMap { it.rows }
-            }.flatMap { row -> newBasedOn(row) }
+                else -> examples.flatMap {
+                    it.rows.map { row ->
+                        row.copy(variables = context, references = referencesWithBaseURLs)
+                    }
+                }
+            }.flatMap { row ->
+                newBasedOn(row)
+            }
         }
+    }
 
     val resolver: Resolver = Resolver(newPatterns = patterns)
 
@@ -181,7 +231,19 @@ data class Scenario(val name: String, val httpRequestPattern: HttpRequestPattern
     }
 
     fun newBasedOn(scenario: Scenario): Scenario =
-        Scenario(this.name, this.httpRequestPattern, this.httpResponsePattern, this.expectedFacts, scenario.examples, this.patterns, this.fixtures, this.kafkaMessagePattern, this.ignoreFailure)
+        Scenario(
+            this.name,
+            this.httpRequestPattern,
+            this.httpResponsePattern,
+            this.expectedFacts,
+            scenario.examples,
+            this.patterns,
+            this.fixtures,
+            this.kafkaMessagePattern,
+            this.ignoreFailure,
+            scenario.references,
+            setters
+        )
 
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
@@ -217,7 +279,7 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
         when (response.headers.getOrDefault(QONTRACT_RESULT_HEADER, "success")) {
             "failure" -> Result.Failure(response.body.toStringValue()).updateScenario(testScenario)
             else -> testScenario.matches(response)
-        }
+        }.withDefinedVariablesSet(testScenario.setters, response)
     } catch (exception: Throwable) {
         Result.Failure(exceptionCauseMessage(exception))
                 .also { failure -> failure.updateScenario(testScenario) }

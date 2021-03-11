@@ -4,7 +4,6 @@ import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.Value
-import run.qontract.core.value.XMLValue
 
 interface Pattern {
     fun matches(sampleData: Value?, resolver: Resolver): Result

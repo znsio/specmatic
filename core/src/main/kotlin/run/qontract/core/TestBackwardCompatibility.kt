@@ -3,7 +3,7 @@ package run.qontract.core
 import run.qontract.core.pattern.ContractException
 
 fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results {
-    return older.generateTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
+    return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
         if(olderScenario.kafkaMessagePattern != null) {
             val scenarioMatchResults = newerBehaviour.lookupKafkaScenario(olderScenario.kafkaMessagePattern, olderScenario.resolver)
 

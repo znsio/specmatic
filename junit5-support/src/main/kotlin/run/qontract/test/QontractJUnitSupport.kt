@@ -133,7 +133,7 @@ open class QontractJUnitSupport {
         suggestionsData: String,
         config: TestConfig
     ): List<Scenario> {
-        val feature = Feature(readFile(path)).copy(testVariables = config.variables, testBsaeURLs = config.baseURLs)
+        val feature = Feature(readFile(path)).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)

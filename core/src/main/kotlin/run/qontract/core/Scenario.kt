@@ -160,13 +160,9 @@ data class Scenario(
         }
     }
 
-    fun generateTestScenarios(context: Map<String, String> = emptyMap(), testBaseURLs: Map<String, String> = emptyMap()): List<Scenario> {
-        val referencesWithBaseURLs = references.mapValues { (key, reference) ->
-            val qontractFileName = reference.qontractFileName
-            val baseURL = testBaseURLs[qontractFileName]
-                ?: throw ContractException("Base url for qontract file $qontractFileName was not supplied.")
-
-            reference.copy(baseURL = baseURL)
+    fun generateTestScenarios(variables: Map<String, String> = emptyMap(), testBaseURLs: Map<String, String> = emptyMap()): List<Scenario> {
+        val referencesWithBaseURLs = references.mapValues { (_, reference) ->
+            reference.copy(variables = variables, baseURLs = testBaseURLs)
         }
 
         return scenarioBreadCrumb(this) {
@@ -174,7 +170,7 @@ data class Scenario(
                 0 -> listOf(Row())
                 else -> examples.flatMap {
                     it.rows.map { row ->
-                        row.copy(variables = context, references = referencesWithBaseURLs)
+                        row.copy(variables = variables, references = referencesWithBaseURLs)
                     }
                 }
             }.flatMap { row ->

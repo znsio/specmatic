@@ -26,7 +26,7 @@ fun Feature(contractGherkinDocument: GherkinDocument): Feature {
     return Feature(scenarios = scenarios, name = name)
 }
 
-data class Feature(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap(), val name: String, val testVariables: Map<String, String> = emptyMap(), val testBsaeURLs: Map<String, String> = emptyMap()) {
+data class Feature(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap(), val name: String, val testVariables: Map<String, String> = emptyMap(), val testBaseURLs: Map<String, String> = emptyMap()) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
             val resultList = lookupScenario(httpRequest, scenarios)
@@ -135,7 +135,7 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> =
         scenarios.map { it.newBasedOn(suggestions) }.flatMap {
-            it.generateTestScenarios(testVariables, testBsaeURLs)
+            it.generateTestScenarios(testVariables, testBaseURLs)
         }
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
@@ -386,6 +386,7 @@ fun plusHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHea
 fun toPatternPair(key: String, value: String): Pair<String, Pattern> = key to parsedPattern(value)
 
 fun breakIntoPartsMaxLength(whole: String, partCount: Int) = whole.split("\\s+".toRegex(), partCount)
+fun breakIntoPartsMaxLength(whole: String, separator: String, partCount: Int) = whole.split(separator.toRegex(), partCount)
 
 private val HTTP_METHODS = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
 

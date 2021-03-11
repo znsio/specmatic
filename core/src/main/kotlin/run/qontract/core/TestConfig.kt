@@ -5,6 +5,9 @@ import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.value.JSONObjectValue
 import java.io.File
 
+private const val VARIABLES_KEY = "variables"
+private const val BASE_URLS_KEY = "baseURLs"
+
 fun loadTestConfig(configFile: String?): TestConfig {
     val config = configFile?.let {
         if(!File(configFile).exists())
@@ -18,8 +21,8 @@ fun loadTestConfig(configFile: String?): TestConfig {
         contextJSON
     } ?: JSONObjectValue()
 
-    val variables = readFromConfig(config, "variables")
-    val baseURLs = readFromConfig(config, "baseURLs")
+    val variables = readFromConfig(config, VARIABLES_KEY)
+    val baseURLs = readFromConfig(config, BASE_URLS_KEY)
 
     return TestConfig(variables, baseURLs)
 }

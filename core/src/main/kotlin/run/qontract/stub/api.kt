@@ -12,6 +12,7 @@ import run.qontract.core.value.StringValue
 import run.qontract.mock.*
 import java.io.File
 import java.time.Duration
+import kotlin.math.log
 
 // Used by stub client code
 fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): HttpStub {
@@ -39,7 +40,7 @@ fun createStub(host: String = "localhost", port: Int = 9000): HttpStub {
     val features = stubs.map { it.first }
     val expectations = contractInfoToHttpExpectations(stubs)
 
-    return HttpStub(features, expectations, host, port)
+    return HttpStub(features, expectations, host, port, log = ::consoleLog)
 }
 
 // Used by stub client code

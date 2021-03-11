@@ -112,6 +112,7 @@ private fun valueToJsonElement(value: Value): JsonElement {
         is NumberValue -> JsonPrimitive(value.number)
         is BooleanValue -> JsonPrimitive(value.booleanValue)
         is StringValue -> JsonPrimitive(value.string)
+        is XMLNode -> JsonPrimitive(value.toStringValue())
         else -> JsonNull
     }
 }

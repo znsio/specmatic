@@ -22,10 +22,6 @@ data class Examples(val columnNames: List<String> = emptyList(), val rows: List<
 
         private fun getValues(row: Messages.GherkinDocument.Feature.TableRow): ArrayList<String> = ArrayList(row.cellsList.map { it.value })
 
-        private fun getValues(line: String): List<String> {
-            val values = " $line ".split("\\|".toRegex()).map { value -> value.trim()}
-            return values.drop(1).dropLast(1)
-        }
     }
 
 }

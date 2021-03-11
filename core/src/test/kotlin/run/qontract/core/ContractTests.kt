@@ -10,34 +10,6 @@ import kotlin.test.*
 
 class ContractTests {
     @Test
-    @Throws(Throwable::class)
-    fun shouldBeAbleToGetFakeFromContract() {
-        val contract = fromGherkin(contractGherkin)
-        contract.startFake(8080).close()
-    }
-
-    @Test
-    @Throws(Throwable::class)
-    fun shouldBeAbleToRunTestFromContract() {
-        val contract = fromGherkin(contractGherkin)
-        contract.startFake(8080).use { fake -> contract.test(fake.endPoint) }
-    }
-
-    @Test
-    @Throws(Throwable::class)
-    fun shouldBeAbleToTestFakeObject() {
-        val contract = fromGherkin(contractGherkin)
-        contract.startFake(8080).use { fake -> contract.test(fake) }
-    }
-
-    @Test
-    @Throws(Throwable::class)
-    fun shouldBeAbleToTestFakeObjectWithPath() {
-        val contract = fromGherkin(pathParameterContractGherkin)
-        contract.startFake(8080).use { fake -> contract.test(fake) }
-    }
-
-    @Test
     fun `contract with one optional key and no examples should generate two tests` () {
         val gherkin = """
 Feature: Older contract API

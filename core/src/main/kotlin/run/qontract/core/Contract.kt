@@ -4,10 +4,7 @@ import run.qontract.core.pattern.ContractException
 import run.qontract.stub.HttpStub
 import run.qontract.test.HttpClient
 
-// TODO this class can probably be deleted
 data class Contract(val contractGherkin: String) {
-    fun startFake(port: Int) = HttpStub(contractGherkin, emptyList(), "localhost", port)
-
     fun test(endPoint: String) {
         val contractBehaviour = Feature(contractGherkin)
         val results = contractBehaviour.executeTests(HttpClient(endPoint))

@@ -2,7 +2,7 @@ package run.qontract.core.value
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.Feature
+import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.core.NamedStub
 import run.qontract.core.Result
 import run.qontract.core.toGherkinFeature
@@ -17,7 +17,7 @@ internal class KafkaMessageTest {
 
         println(featureString)
 
-        val feature = Feature(featureString)
+        val feature = parseGherkinStringToFeature(featureString)
         assertThat(feature.matchesMockKafkaMessage(message)).isInstanceOf(Result.Success::class.java)
         assertThat(featureString.trim()).isEqualTo("""Feature: New Feature
   Scenario: New Kafka scenario
@@ -32,7 +32,7 @@ internal class KafkaMessageTest {
 
         println(featureString)
 
-        val feature = Feature(featureString)
+        val feature = parseGherkinStringToFeature(featureString)
         assertThat(feature.matchesMockKafkaMessage(message)).isInstanceOf(Result.Success::class.java)
         assertThat(featureString.trim()).isEqualTo("""Feature: New Feature
   Scenario: New Kafka scenario

@@ -35,7 +35,7 @@ fun runTests(contract: ImportedPostmanContracts) {
     val (name, gherkin, baseURLInfo, _) = contract
     println("Testing contract \"$name\" with base URL ${baseURLInfo.originalBaseURL}")
     try {
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
         val results = feature.executeTests(HttpClient(baseURL = baseURLInfo.originalBaseURL))
 
         println("### Test result for contract \"$name\" ###")

@@ -58,7 +58,7 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
 
 class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = dontPrintToConsole, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory()) : ContractStub {
     constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = dontPrintToConsole) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
-    constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = dontPrintToConsole) : this(Feature(gherkinData), scenarioStubs, host, port, log)
+    constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = dontPrintToConsole) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.toMutableList())
     val endPoint = endPointFromHostAndPort(host, port, keyStoreData)

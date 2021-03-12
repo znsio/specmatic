@@ -831,7 +831,7 @@ fun validateStubAndQontract(request: HttpRequest, response: HttpResponse, expect
             println(gherkin)
         }
 
-        val behaviour = Feature(gherkin)
+        val behaviour = parseGherkinStringToFeature(gherkin)
         behaviour.matchingStub(request, cleanedUpResponse)
     } catch (e: Throwable) {
         println(e.localizedMessage)

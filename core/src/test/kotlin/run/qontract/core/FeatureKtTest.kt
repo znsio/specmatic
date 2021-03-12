@@ -8,6 +8,7 @@ import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import run.qontract.mock.ScenarioStub
 import run.qontract.mock.mockFromJSON
+import java.lang.ref.Reference
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -26,7 +27,7 @@ class FeatureKtTest {
               And response-body (number)
         """.trimIndent()
 
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
         val request = HttpRequest().updateMethod("POST").updatePath("/add").updateBody("[1, 2]")
 
@@ -53,7 +54,7 @@ class FeatureKtTest {
               And response-body (number)
         """.trimIndent()
 
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
         val request = HttpRequest().updateMethod("POST").updatePath("/pets").updateBody("""{"name": "Benny", "description": "Fluffy and white"}""")
         val response = contractBehaviour.lookupResponse(request)
@@ -74,7 +75,7 @@ class FeatureKtTest {
                 | name | (string) |
         """.trimIndent()
 
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
         val request = HttpRequest().updateMethod("GET").updatePath("/pets/10")
         val response = contractBehaviour.lookupResponse(request)
@@ -98,7 +99,7 @@ class FeatureKtTest {
               Then status 202
         """.trimIndent()
 
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
         val request = HttpRequest().updateMethod("PATCH").updatePath("/pets").updateBody("""{"health": "good"}""")
 
@@ -109,7 +110,7 @@ class FeatureKtTest {
 
     @Test
     fun `should parse multipart file spec`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
             Feature: Customer Data API
             
             Scenario: Upload customer information
@@ -127,7 +128,7 @@ class FeatureKtTest {
 
     @Test
     fun `should parse multipart file spec without content encoding`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
             Feature: Customer Data API
             
             Scenario: Upload customer information
@@ -145,7 +146,7 @@ class FeatureKtTest {
 
     @Test
     fun `should parse multipart file spec without content type and content encoding`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
             Feature: Customer Data API
             
             Scenario: Upload customer information
@@ -163,7 +164,7 @@ class FeatureKtTest {
 
     @Test
     fun `should parse multipart content spec`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
             Feature: Customer Data API
             
             Scenario: Upload multipart info
@@ -194,7 +195,7 @@ class FeatureKtTest {
 
     @Test
     fun `should parse a row lookup pattern`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
             Feature: Customer Data API
 
             Scenario: Upload multipart info
@@ -218,7 +219,7 @@ class FeatureKtTest {
 
     @Test
     fun `should parse the WIP tag`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
             Feature: Test feature
             
             @WIP
@@ -401,6 +402,51 @@ class FeatureKtTest {
     Examples:
     | name | id |
     | James | 10 |""")
+    }
+
+    @Test
+    fun `bindings should get generated when a feature contains the export statement`() {
+        val contractGherkin = """
+            Feature: Pet API
+            
+            Scenario: Get details
+              When GET /pets/(id:number)
+              Then status 200
+              And response-header X-Data (string)
+              And export data = response-header.X-Data
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(contractGherkin)
+
+        feature.scenarios.first().let {
+            assertThat(it.bindings).containsKey("data")
+            assertThat(it.bindings["data"]).isEqualTo("response-header.X-Data")
+        }
+    }
+
+    @Test
+    fun `references should get generated when a feature contains the value statement`() {
+        val contractGherkin = """
+            Feature: Pet API
+            
+            Background:
+              Given value data from data.qontract
+            
+            Scenario: Get details
+              When GET /pets/(id:number)
+              Then status 200
+              And response-header X-Data (string)
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(contractGherkin, "original.qontract")
+
+        feature.scenarios.first().let {
+            assertThat(it.references).containsKey("data")
+            assertThat(it.references["data"]).isInstanceOf(References::class.java)
+            assertThat(it.references["data"]?.valueName).isEqualTo("data")
+            assertThat(it.references["data"]?.qontractFilePath?.path).isEqualTo("data.qontract")
+            assertThat(it.references["data"]?.qontractFilePath?.relativeTo).isEqualTo("original.qontract")
+        }
     }
 
     fun String.toFeatureString(): String {

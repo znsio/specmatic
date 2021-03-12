@@ -12,7 +12,7 @@ import java.io.PrintStream
 internal class ApiKtTest {
     @Test
     fun `given an expectation json with a key and one without, the request with the key should always match`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -38,7 +38,7 @@ Feature: Math API
 
     @Test
     fun `given an expectation with optional header, a request without the header should match`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -59,7 +59,7 @@ Feature: Math API
 
     @Test
     fun `given an expectation with optional header, a request with the header should match`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -80,7 +80,7 @@ Feature: Math API
 
     @Test
     fun `should be able to setup a mock with an optional header`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -103,7 +103,7 @@ Feature: Math API
 
     @Test
     fun `should be able to setup a mock without an optional header`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -126,7 +126,7 @@ Feature: Math API
 
     @Test
     fun `given a mock with fewer headers before a mock with more params, the mock with fewer should not eat up all requests with its subset of headers`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -152,7 +152,7 @@ Feature: Math API
 
     @Test
     fun `given a mock with fewer query params before a mock with more params, the mock with fewer should not eat up all requests with its subset of headers`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Some number
@@ -175,7 +175,7 @@ Feature: Math API
 
     @Test
     fun `stubbing out a contract pattern in json by specifying a sub pattern in stub data`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -210,7 +210,7 @@ Feature: Math API
 
     @Test
     fun `stubbing out a contract pattern in request body by specifying a sub pattern in stub data`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -244,7 +244,7 @@ Feature: Math API
 
     @Test
     fun `should load a stub with a form content part and match such a request`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -266,7 +266,7 @@ Feature: Math API
 
     @Test
     fun `should match multipart content part`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -287,7 +287,7 @@ Feature: Math API
 
     @Test
     fun `should load a stub with a file part and match such a request`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -309,7 +309,7 @@ Feature: Math API
 
     @Test
     fun `should match multipart file part`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
 
     Scenario: Square of a number
@@ -330,7 +330,7 @@ Feature: Math API
 
     @Test
     fun `should get a stub out of a qontract and a matching stub file`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
     Scenario: Square of a number
         When POST /square
@@ -352,7 +352,7 @@ Feature: Math API
 
     @Test
     fun `qontract should reject a stub file that does not match the qontract`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
     Scenario: Square of a number
         When POST /square
@@ -379,7 +379,7 @@ Feature: Math API
 
     @Test
     fun `should get a stub out of two qontracts and a single stub file that matches only one of them`() {
-        val squareFeature = Feature("""
+        val squareFeature = parseGherkinStringToFeature("""
 Feature: Square API
     Scenario: Square of a number
         When POST /square
@@ -388,7 +388,7 @@ Feature: Square API
         And response-body (number)
 """.trim())
 
-        val cubeFeature = Feature("""
+        val cubeFeature = parseGherkinStringToFeature("""
 Feature: Cube API
     Scenario: Cube of a number
         When POST /cube
@@ -415,7 +415,7 @@ Feature: Cube API
 
     @Test
     fun `should not be able to load a stub json with unexpected keys in the request`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
     Scenario: Square of a number
         When POST /square
@@ -437,7 +437,7 @@ Feature: Math API
 
     @Test
     fun `should not be able to load a stub json with unexpected keys in the response`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
     Scenario: Square of a number
         When POST /square
@@ -460,7 +460,7 @@ Feature: Math API
 
     @Test
     fun `should get a stub out of a qontract and a matching kafka stub file`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Customer Data
     Scenario: Send customer info
         * kafka-message customers (string)

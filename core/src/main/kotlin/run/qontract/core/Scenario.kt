@@ -20,7 +20,7 @@ data class Scenario(
     val kafkaMessagePattern: KafkaMessagePattern? = null,
     val ignoreFailure: Boolean = false,
     val references: Map<String, References> = emptyMap(),
-    val setters: Map<String, String> = emptyMap()
+    val bindings: Map<String, String> = emptyMap()
 ) {
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
             expectedFacts.keys == actualState.keys &&
@@ -137,7 +137,7 @@ data class Scenario(
                     kafkaMessagePattern,
                     ignoreFailure,
                     references,
-                    setters
+                    bindings
                 )
             }
             else -> {
@@ -153,7 +153,7 @@ data class Scenario(
                         newKafkaMessagePattern,
                         ignoreFailure,
                         references,
-                        setters
+                        bindings
                     )
                 }
             }
@@ -238,7 +238,7 @@ data class Scenario(
             this.kafkaMessagePattern,
             this.ignoreFailure,
             scenario.references,
-            setters
+            bindings
         )
 
     fun newBasedOn(suggestions: List<Scenario>) =
@@ -272,10 +272,12 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
 
         val response = testExecutor.execute(request)
 
-        when (response.headers.getOrDefault(QONTRACT_RESULT_HEADER, "success")) {
+        val result = when (response.headers.getOrDefault(QONTRACT_RESULT_HEADER, "success")) {
             "failure" -> Result.Failure(response.body.toStringValue()).updateScenario(testScenario)
             else -> testScenario.matches(response)
-        }.withDefinedVariablesSet(testScenario.setters, response)
+        }
+
+        result.withBindings(testScenario.bindings, response)
     } catch (exception: Throwable) {
         Result.Failure(exceptionCauseMessage(exception))
                 .also { failure -> failure.updateScenario(testScenario) }

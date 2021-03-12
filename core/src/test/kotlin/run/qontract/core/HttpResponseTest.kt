@@ -1,15 +1,19 @@
 package run.qontract.core
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import run.qontract.core.GherkinSection.Then
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedJSON
 import run.qontract.core.pattern.parsedValue
 import run.qontract.core.value.EmptyString
 import run.qontract.core.value.JSONObjectValue
+import run.qontract.core.value.NumberValue
 import run.qontract.core.value.StringValue
 import java.util.*
+import kotlin.math.exp
 import kotlin.test.assertEquals
 
 internal class HttpResponseTest {
@@ -94,5 +98,53 @@ internal class HttpResponseTest {
         for(clause in clauses) {
             assertThat(clause.content).doesNotContain("_")
         }
+    }
+
+    @Test
+    fun `response-body selector with no path should return response body`() {
+        val response = HttpResponse.OK("hello")
+        testSelection(response, "response-body", "hello")
+    }
+
+    private fun testSelection(response: HttpResponse, selector: String, expectedValue: String) {
+        val selectedValue = response.selectValue(selector)
+        assertThat(selectedValue).isEqualTo(expectedValue)
+    }
+
+    @Test
+    fun `response-body selector with a path should return the JSON value at that path`() {
+        val response = HttpResponse.OK(JSONObjectValue(mapOf("token" to NumberValue(10))))
+        testSelection(response, "response-body.token", "10")
+    }
+
+    @Test
+    fun `response-body selector with a path that points to a JSON object should return it`() {
+        val nameData = mapOf("name" to StringValue("Jack"))
+        val responseBody = JSONObjectValue(mapOf("person" to JSONObjectValue(nameData)))
+
+        val response = HttpResponse.OK(responseBody)
+        val selectedValue = response.selectValue("response-body.person")
+        val parsedValue = parsedValue(selectedValue)
+
+        assertThat(parsedValue).isEqualTo(JSONObjectValue(nameData))
+    }
+
+    @Test
+    fun `response-header selector with a path should return the JSON value at that path`() {
+        val response = HttpResponse.OK.copy(headers = mapOf("Token" to "abc123"))
+        testSelection(response, "response-header.Token", "abc123")
+    }
+
+    @Test
+    fun `exports bindings`() {
+        val response = HttpResponse.OK(JSONObjectValue(mapOf("token" to NumberValue(10))))
+        val bindings = response.export(mapOf("token" to "response-body.token"))
+        assertThat(bindings).isEqualTo(mapOf("token" to "10"))
+    }
+
+    @Test
+    fun `throws error if export is not found`() {
+        val response = HttpResponse.OK(JSONObjectValue(mapOf("token" to NumberValue(10))))
+        assertThatThrownBy { response.export(mapOf("token" to "response-body.notfound")) }.isInstanceOf(ContractException::class.java)
     }
 }

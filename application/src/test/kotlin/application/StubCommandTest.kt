@@ -3,8 +3,6 @@ package application
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
-import io.mockk.justRun
-import io.mockk.runs
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -15,16 +13,12 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import picocli.CommandLine
 import picocli.CommandLine.IFactory
-import run.qontract.core.Feature
+import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.core.QONTRACT_EXTENSION
 import run.qontract.mock.ScenarioStub
 import run.qontract.stub.HttpClientFactory
-import run.qontract.stub.HttpStubData
 import java.io.File
 import java.nio.file.Path
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.createFile
-import kotlin.io.path.writeText
 
 @SpringBootTest(webEnvironment = NONE, classes = [QontractApplication::class, StubCommand::class, HttpClientFactory::class])
 internal class StubCommandTest {
@@ -92,7 +86,7 @@ internal class StubCommandTest {
                 Then status 200
                 And response-body (number)
         """.trimIndent()
-        val feature = Feature(contract)
+        val feature = parseGherkinStringToFeature(contract)
 
         every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
 
@@ -167,7 +161,7 @@ internal class StubCommandTest {
                 Then status 200
         """.trimIndent()
 
-        val feature = Feature(contract)
+        val feature = parseGherkinStringToFeature(contract)
 
         every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
 

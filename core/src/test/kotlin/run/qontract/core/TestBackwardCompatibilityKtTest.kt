@@ -31,8 +31,8 @@ And request-body (Value)
 Then status 200
     """.trim()
 
-        val olderContract = Feature(gherkin1)
-        val newerContract = Feature(gherkin2)
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
 
         val result: Results = testBackwardCompatibility(olderContract, newerContract)
 
@@ -70,8 +70,8 @@ And request-body (Value)
 Then status 200
     """.trim()
 
-        val olderContract = Feature(gherkin1)
-        val newerContract = Feature(gherkin2)
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
 
         val result: Results = testBackwardCompatibility(olderContract, newerContract)
 
@@ -108,8 +108,8 @@ And request-body (Value)
 Then status 200
     """.trim()
 
-        val olderContract = Feature(gherkin1)
-        val newerContract = Feature(gherkin2)
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
 
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
 
@@ -128,7 +128,7 @@ When POST /value/(id:number)
 Then status 200
     """.trim()
 
-        val contract = Feature(gherkin)
+        val contract = parseGherkinStringToFeature(gherkin)
 
         val results: Results = testBackwardCompatibility(contract, contract)
 
@@ -150,7 +150,7 @@ When GET /value?id=(number)
 Then status 200
     """.trim()
 
-        val contract = Feature(gherkin)
+        val contract = parseGherkinStringToFeature(gherkin)
 
         val results: Results = testBackwardCompatibility(contract, contract)
 
@@ -172,7 +172,7 @@ And request-body (number?)
 Then status 200
     """.trim()
 
-        val contract = Feature(gherkin)
+        val contract = parseGherkinStringToFeature(gherkin)
 
         val results: Results = testBackwardCompatibility(contract, contract)
 
@@ -196,7 +196,7 @@ And request-body (Number)
 Then status 200
     """.trim()
 
-        val contract = Feature(gherkin)
+        val contract = parseGherkinStringToFeature(gherkin)
 
         val results: Results = testBackwardCompatibility(contract, contract)
 
@@ -218,7 +218,7 @@ Then status 200
 And response-body (number?)
     """.trim()
 
-        val contract = Feature(gherkin)
+        val contract = parseGherkinStringToFeature(gherkin)
 
         val results: Results = testBackwardCompatibility(contract, contract)
 
@@ -242,7 +242,7 @@ Then status 200
 And response-body (Number)
     """.trim()
 
-        val contract = Feature(gherkin)
+        val contract = parseGherkinStringToFeature(gherkin)
 
         val results: Results = testBackwardCompatibility(contract, contract)
 
@@ -255,7 +255,7 @@ And response-body (Number)
 
     @Test
     fun `contract with a required key should not match a contract with the same key made optional`() {
-        val olderBehaviour = Feature("""
+        val olderBehaviour = parseGherkinStringToFeature("""
 Feature: Contract API
 
 Scenario: api call
@@ -267,7 +267,7 @@ And response-body
 | description | (string) |
 """.trim())
 
-        val newerBehaviour = Feature("""
+        val newerBehaviour = parseGherkinStringToFeature("""
 Feature: Contract API
 
 Scenario: api call
@@ -289,7 +289,7 @@ And response-body
 
     @Test
     fun `contract with an optional key in the response should pass against itself`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Contract API
 
 Scenario: api call
@@ -310,7 +310,7 @@ And response-body
 
     @Test
     fun `should work with multipart content part`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Contract API
 
 Scenario: api call
@@ -331,7 +331,7 @@ And response-body
 
     @Test
     fun `should work with multipart file part`() {
-        val behaviour = Feature("""
+        val behaviour = parseGherkinStringToFeature("""
 Feature: Contract API
 
 Scenario: api call
@@ -352,7 +352,7 @@ And response-body
 
     @Test
     fun `should fail given a file part in one and a content part in the other`() {
-        val older = Feature("""
+        val older = parseGherkinStringToFeature("""
 Feature: Contract API
 
 Scenario: api call
@@ -364,7 +364,7 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val newer = Feature("""
+        val newer = parseGherkinStringToFeature("""
 Feature: Contract API
 
 Scenario: api call
@@ -393,7 +393,7 @@ Then status 200
 And response-body (number)
     """.trim()
 
-        val contract = Feature(gherkin)
+        val contract = parseGherkinStringToFeature(gherkin)
 
         val results: Results = testBackwardCompatibility(contract, contract)
 
@@ -418,7 +418,7 @@ Then status 200
 And response-body (number)
     """.trim()
 
-        val contract = Feature(gherkin)
+        val contract = parseGherkinStringToFeature(gherkin)
 
         val results: Results = testBackwardCompatibility(contract, contract)
 
@@ -455,7 +455,7 @@ Then status 200
 And response-body (number)
     """.trim()
 
-        val results: Results = testBackwardCompatibility(Feature(gherkin1), Feature(gherkin2))
+        val results: Results = testBackwardCompatibility(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
 
         if(results.failureCount > 0)
             println(results.report())
@@ -486,7 +486,7 @@ When POST /data
 Then status 200
     """.trim()
 
-        val results: Results = testBackwardCompatibility(Feature(gherkin1), Feature(gherkin2))
+        val results: Results = testBackwardCompatibility(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
 
         if(results.failureCount > 0)
             println(results.report())
@@ -516,7 +516,7 @@ When POST /data
 Then status 200
     """.trim()
 
-        val results: Results = testBackwardCompatibility(Feature(gherkin1), Feature(gherkin2))
+        val results: Results = testBackwardCompatibility(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
 
         if(results.failureCount > 0)
             println(results.report())

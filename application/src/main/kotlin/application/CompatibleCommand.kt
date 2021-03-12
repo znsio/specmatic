@@ -7,6 +7,7 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import run.qontract.core.Feature
+import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.core.Result
 import run.qontract.core.Results
 import run.qontract.core.git.GitCommand
@@ -85,7 +86,7 @@ internal fun compatibilityReport(results: Results, resultMessage: String): Strin
 
 internal fun backwardCompatibleFile(newerContractPath: String, fileOperations: FileOperations, git: GitCommand): Outcome<Results> {
     return try {
-        val newerFeature = Feature(fileOperations.read(newerContractPath))
+        val newerFeature = parseGherkinStringToFeature(fileOperations.read(newerContractPath))
         val result = getOlderFeature(newerContractPath, git)
 
         result.onSuccess {
@@ -105,7 +106,7 @@ internal fun backwardCompatibleCommit(contractPath: String, newerCommit: String,
 
     return partial(newerCommit).onSuccess { newerGherkin ->
         partial(olderCommit).onSuccess { olderGherkin ->
-            Outcome(testBackwardCompatibility(Feature(olderGherkin), Feature(newerGherkin)))
+            Outcome(testBackwardCompatibility(parseGherkinStringToFeature(olderGherkin), parseGherkinStringToFeature(newerGherkin)))
         }
     }
 
@@ -123,7 +124,7 @@ internal fun getOlderFeature(newerContractPath: String, git: GitCommand): Outcom
         return Outcome(null, "Older contract file must be provided, or the file must be in a git directory")
 
     val(contractGit, relativeContractPath) = git.relativeGitPath(newerContractPath)
-    return Outcome(Feature(contractGit.show("HEAD", relativeContractPath)))
+    return Outcome(parseGherkinStringToFeature(contractGit.show("HEAD", relativeContractPath)))
 }
 
 internal data class CompatibilityOutput(val exitCode: Int, val message: String)

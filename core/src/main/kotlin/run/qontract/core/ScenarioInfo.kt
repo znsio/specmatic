@@ -16,5 +16,5 @@ data class ScenarioInfo(
         val kafkaMessage: KafkaMessagePattern? = null,
         val ignoreFailure: Boolean = false,
         val references: Map<String, References> = emptyMap(),
-        val setters: Map<String, String> = emptyMap()
+        val bindings: Map<String, String> = emptyMap()
 )

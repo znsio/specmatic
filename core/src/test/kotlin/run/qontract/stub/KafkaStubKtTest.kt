@@ -7,7 +7,7 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.Feature
+import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.core.value.KafkaMessage
 import run.qontract.core.value.StringValue
 import run.qontract.mock.ScenarioStub
@@ -55,7 +55,7 @@ internal class KafkaStubKtTest {
 
     @Test
     fun `creating Kafka message expectations`() {
-        val feature = Feature("""Feature: Kafka Qontract
+        val feature = parseGherkinStringToFeature("""Feature: Kafka Qontract
   Scenario: New message
     * kafka-message order (string)""".trimMargin())
 

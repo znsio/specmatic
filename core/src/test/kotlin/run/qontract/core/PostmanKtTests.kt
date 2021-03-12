@@ -616,7 +616,7 @@ class PostmanKtTests {
     }
 
     private fun validate(gherkinString: String, stubs: List<NamedStub>) {
-        val behaviour = Feature(gherkinString)
+        val behaviour = parseGherkinStringToFeature(gherkinString)
         val cleanedUpStubs = stubs.map { it.stub }.map { it.copy(response = dropContentAndCORSResponseHeaders(it.response) ) }
         for(stub in cleanedUpStubs) {
             behaviour.matchingStub(stub)
@@ -895,7 +895,7 @@ Scenario: With form data
   And response-body (number)
 """
 
-            val contractBehaviour = Feature(gherkin)
+            val contractBehaviour = parseGherkinStringToFeature(gherkin)
             stub = HttpStub(contractBehaviour)
         }
 

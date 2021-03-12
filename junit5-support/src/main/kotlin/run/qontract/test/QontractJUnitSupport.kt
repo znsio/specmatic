@@ -28,7 +28,7 @@ open class QontractJUnitSupport {
         const val SUGGESTIONS_PATH = "suggestionsPath"
         const val HOST = "host"
         const val PORT = "port"
-        const val TEST_CONFIG_FILE = "testConfigFile"
+        const val ENV_CONFIG_FILE = "envConfigFile"
     }
     
     @TestFactory
@@ -45,7 +45,7 @@ open class QontractJUnitSupport {
         val workingDirectory = File(valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified"))
         val workingDirectoryWasCreated = workingDirectory.exists()
 
-        val testConfigFile: String? = System.getProperty(TEST_CONFIG_FILE)
+        val testConfigFile: String? = System.getProperty(ENV_CONFIG_FILE)
 
         val testConfig = loadTestConfig(testConfigFile)
 
@@ -133,7 +133,7 @@ open class QontractJUnitSupport {
         suggestionsData: String,
         config: TestConfig
     ): List<Scenario> {
-        val feature = Feature(readFile(path)).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
+        val feature = parseGherkinStringToFeature(readFile(path), File(path).absolutePath).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)

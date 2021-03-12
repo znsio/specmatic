@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
 import run.qontract.test.QontractJUnitSupport
 import run.qontract.test.QontractJUnitSupport.Companion.CONTRACT_PATHS
+import run.qontract.test.QontractJUnitSupport.Companion.ENV_CONFIG_FILE
 import run.qontract.test.QontractJUnitSupport.Companion.HOST
 import run.qontract.test.QontractJUnitSupport.Companion.PORT
 import run.qontract.test.QontractJUnitSupport.Companion.TIMEOUT
@@ -87,6 +88,16 @@ internal class TestCommandTest {
         verify { junitLauncher.registerTestExecutionListeners(any<ContractExecutionListener>()) }
         verify { junitLauncher.registerTestExecutionListeners(any<org.junit.platform.reporting.legacy.xml.LegacyXmlReportGeneratingListener>()) }
         verify(exactly = 1) { junitLauncher.execute(any<LauncherDiscoveryRequest>()) }
+    }
+
+    @Test
+    fun `should set envConfig`() {
+        every { qontractConfig.contractTestPaths() }.returns(contractsToBeRunAsTests)
+
+        testCommand.envConfigFile = "envConfig.json"
+        CommandLine(testCommand, factory).execute()
+
+        assertThat(System.getProperty(ENV_CONFIG_FILE)).isEqualTo("envConfig.json")
     }
 
     @ParameterizedTest

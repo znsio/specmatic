@@ -44,6 +44,34 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
         return startLinesWith(responseString, prefix)
     }
 
+    fun selectValue(selector: String): String {
+        return when {
+            selector.startsWith("response-header.") -> {
+                val headerName = selector.removePrefix("response-header.").trim()
+                this.headers[headerName] ?: throw ContractException("Couldn't find header name $headerName specified in $selector")
+            }
+            selector.startsWith("response-body") -> {
+                val bodySelector = selector.removePrefix("response-body").trim()
+                if(bodySelector.isBlank())
+                    this.body.toStringValue()
+                else {
+                    if(this.body !is JSONObjectValue)
+                        throw ContractException("JSON selector can only be used for JSON body")
+
+                    val jsonBodySelector = bodySelector.removePrefix(".")
+                    this.body.findFirstChildByPath(jsonBodySelector)?.toStringValue() ?: throw ContractException("JSON selector $selector was not found")
+                }
+            }
+            else -> throw ContractException("Selector $selector is unexpected. It must either start with response-header or response-body.")
+        }
+    }
+
+    fun export(bindings: Map<String, String>): Map<String, String> {
+        return bindings.entries.fold(emptyMap()) { acc, setter ->
+            acc.plus(setter.key to selectValue(setter.value))
+        }
+    }
+
     companion object {
         val ERROR_400 = HttpResponse(400, "This request did not match any scenario.", emptyMap())
         val OK = HttpResponse(200, emptyMap())

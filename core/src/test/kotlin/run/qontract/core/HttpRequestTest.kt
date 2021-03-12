@@ -126,7 +126,7 @@ internal class HttpRequestTest {
         val request = HttpRequest("POST", path = "/square", body = parsedValue("10"))
         val featureGherkin = toGherkinFeature(NamedStub("Test", ScenarioStub(request, HttpResponse.OK(NumberValue(100)))))
 
-        val feature = Feature(featureGherkin)
+        val feature = parseGherkinStringToFeature(featureGherkin)
         val generatedRequest = feature.scenarios.first().generateHttpRequest()
 
         assertThat(generatedRequest.method).isEqualTo("POST")

@@ -492,7 +492,7 @@ Then status 200
 
     @Test
     fun `should be able to query stub logs`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
 
 Scenario: Square of a number
@@ -512,7 +512,7 @@ Scenario: Square of a number
 
     @Test
     fun `it should proxy all unstubbed requests to the specified end point`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
 
 Scenario: Square of a number
@@ -540,7 +540,7 @@ Scenario: Square of a number
 
     @Test
     fun `a proxied response should contain the header X-Qontract-Source`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
 
 Scenario: Square of a number
@@ -566,7 +566,7 @@ Scenario: Square of a number
 
     @Test
     fun `it should not proxy stubbed requests`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
 
 Scenario: Square of a number

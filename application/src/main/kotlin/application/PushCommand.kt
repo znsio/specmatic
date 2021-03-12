@@ -2,7 +2,7 @@ package application
 
 import picocli.CommandLine
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
-import run.qontract.core.Feature
+import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.git.SystemGit
 import run.qontract.core.git.loadFromPath
@@ -74,8 +74,8 @@ class PushCommand: Callable<Unit> {
         }
 
         if (oldVersion.isNotEmpty()) {
-            val newVersionFeature = Feature(newVersion)
-            val oldVersionFeature = Feature(oldVersion)
+            val newVersionFeature = parseGherkinStringToFeature(newVersion)
+            val oldVersionFeature = parseGherkinStringToFeature(oldVersion)
 
             val results = testBackwardCompatibility(oldVersionFeature, newVersionFeature)
 

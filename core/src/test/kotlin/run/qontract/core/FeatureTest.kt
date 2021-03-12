@@ -22,7 +22,7 @@ class FeatureTest {
     @Throws(Throwable::class)
     fun `should lookup a single feature contract`(gherkinData: String?, accountId: String?, expectedBody: String?) {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account-id", accountId ?: "")
-        val contractBehaviour = Feature(gherkinData!!)
+        val contractBehaviour = parseGherkinStringToFeature(gherkinData!!)
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(200)
         val responseBodyJSON = JSONObject(httpResponse.body.displayableValue())
@@ -41,7 +41,7 @@ class FeatureTest {
                     Then status 200
                     And response-body {calls_left: 10, messages_left: 30}
                 """
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance2").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
@@ -59,7 +59,7 @@ class FeatureTest {
                     Then status 200
                     And response-body {calls_left: 10, messages_left: 30}
                 """
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateHeader("y-loginId", "abc123")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
@@ -81,7 +81,7 @@ Expected header named "x-loginId" was missing""".trimIndent())
                     And response-header length (number)
                     And response-body {calls_left: 10, messages_left: 30}
                 """
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(200)
@@ -99,7 +99,7 @@ Expected header named "x-loginId" was missing""".trimIndent())
                     Then status 200
                     And response-body {calls_left: 10, messages_left: 30}
                 """
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(200)
@@ -116,7 +116,7 @@ Expected header named "x-loginId" was missing""".trimIndent())
                 "    When POST /balance\n" +
                 "    And request-body {calls_made: [3, 10, \"(number)\"]}\n" +
                 "    Then status 200"
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10, 2]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertEquals(200, httpResponse.status)
@@ -132,7 +132,7 @@ Expected header named "x-loginId" was missing""".trimIndent())
                     And request-body {calls_made: [3, 10, 2]}
                     Then status 200
                 """
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
@@ -152,7 +152,7 @@ Expected an array of length 3, actual length 2""")
                     And request-body {"calls_made": [3, 10, "(number)"]}
                     Then status 200
                 """
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10, \"test\"]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
@@ -170,7 +170,7 @@ Expected number, actual was string: "test"""")
                 "    When GET /balance?account-id=(number)\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: 10, messages_left: 30}"
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account-id", "10.1")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
@@ -190,7 +190,7 @@ Expected number, actual was string: "test"""")
                     Then status 200
                     And response-body {calls_left: 10, messages_left: 30}
                 """
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updatePath("/balance").updateQueryParam("account-id", "abc").updateMethod("GET")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
@@ -208,7 +208,7 @@ Expected number, actual was string: "abc"""")
                 "    When GET /balance?account-id=(string)\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: 10, messages_left: 30}"
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updatePath("/balance").updateQueryParam("account-id", "abc").updateMethod("GET")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
@@ -230,7 +230,7 @@ Feature: Contract for /balance API
     And request-body {name: "(string)", address: "(string)"}
     Then status 200
     And response-body {calls_left: "(number)", messages_left: "(number)"}"""
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/accounts").updateBody("{name: \"Holmes\", address: \"221 Baker Street\"}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertEquals(200, httpResponse.status)
@@ -252,7 +252,7 @@ Feature: Contract for /balance API
                 "    When POST /accounts\n" +
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n"
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         var httpRequest: HttpRequest
         var httpResponse: HttpResponse
         val jsonResponse: JSONObject
@@ -286,7 +286,7 @@ Feature: Contract for /balance API
   | cities_exist | 
   | city_list | 
     """
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpResponse: HttpResponse
         val httpRequest: HttpRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
         contractBehaviour.setServerState(object : HashMap<String, Value>() {
@@ -314,7 +314,7 @@ Feature: Contract for /balance API
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n" +
                 "    And response-body {calls_left: \"(number)\", messages_left: \"(number)\"}"
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/accounts").updateBody("{name: \"Holmes\", address: \"221 Baker Street\"}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         val actual = JSONObject(httpResponse.body.displayableValue())
@@ -347,7 +347,7 @@ Feature: Contract for /balance API
                 And response-body (Info)
             """
 
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
         val test = { httpRequest: HttpRequest ->
             val httpResponse = contractBehaviour.lookupResponse(httpRequest)
@@ -376,7 +376,7 @@ Feature: Contract for /balance API
                 Then status 200
                 And response-body {"name": "(string)"}"""
 
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
         contractBehaviour.setServerState(mutableMapOf<String, Value>().apply {
             this["id"] = True
@@ -402,7 +402,7 @@ Feature: Contract for /balance API
                 Then status 200
                 And response-body {"name": "(string)"}"""
 
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
         contractBehaviour.setServerState(mutableMapOf<String, Value>().apply {
             this["id"] = NumberValue(10)
@@ -428,7 +428,7 @@ Feature: Contract for /balance API
                 Then status 200
                   And response-body (number)"""
 
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/account").updateBody("10")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
@@ -453,7 +453,7 @@ Feature: Contract for /balance API
             Then status 200
         """.trimIndent()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/user").updateBody("""{"id": 10, "name": "John Doe"}""")
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -476,7 +476,7 @@ Feature: Contract for /balance API
             Then status 200
         """.trimIndent()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/user").updateBody("""[{"id": 10, "name": "John Doe"}, {"id": 20, "name": "Jane Doe"}]""")
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -500,7 +500,7 @@ Feature: Contract for /balance API
             Then status 200
         """.trimIndent()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/user").updateBody("""[{"id": 10, "name": "John Doe"}, {"id": 20, "name": "Jane Doe"}]""")
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -523,7 +523,7 @@ Feature: Contract for /balance API
                 And response-body (User)
         """.trimIndent()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/user/10")
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -546,7 +546,7 @@ Feature: Contract for /balance API
                 And response-body (User*)
         """.trimIndent()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/user")
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -582,7 +582,7 @@ Feature: Contract for /balance API
                 And response-body (UserData)
         """.trimIndent()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/userdata")
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -617,7 +617,7 @@ Feature: Contract for /balance API
                 And response-body (UserData)
         """.trimIndent()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/userdata")
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -665,7 +665,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest(method="POST", path="/squareof", formFields=mapOf("number" to "10"))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -685,7 +685,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest(method="POST", path="/squareof", formFields=mapOf("number" to "hello"))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -705,7 +705,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest(method="POST", path="/product", formFields=mapOf("number" to "[1]"))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -725,7 +725,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest(method="POST", path="/product", formFields=mapOf("number" to "[1, 2]"))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -747,7 +747,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest(method="POST", path="/product", formFields=mapOf("number" to """{"val1": 10, "val2": 20}"""))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -769,7 +769,7 @@ Then status 200
     And response-body (number)
 """.trim()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest(method="POST", path="/product", formFields=mapOf("number" to """{"val1": 10, "val2": 20}"""))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -788,7 +788,7 @@ When POST /order
 Then status 200
 """.trim()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest(method="POST", path="/order", body = JSONObjectValue(mapOf("soap" to NumberValue(2), "toothpaste" to NumberValue(3))))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -807,7 +807,7 @@ Then status 200
     And response-body (Quantities)
 """.trim()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest(method="GET", path="/order")
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -834,7 +834,7 @@ And response-body
 | number | (number in string) |
 """.trim()
 
-        val behaviour = Feature(contractGherkin)
+        val behaviour = parseGherkinStringToFeature(contractGherkin)
         val httpRequest = HttpRequest(method="GET", path="/number")
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
@@ -867,7 +867,7 @@ $threeQuotes
 Then status 200
 """.trim()
 
-        val feature = Feature(contractGherkin)
+        val feature = parseGherkinStringToFeature(contractGherkin)
 
         fun test(request: HttpRequest) {
             try {

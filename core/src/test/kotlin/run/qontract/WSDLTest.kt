@@ -2,7 +2,7 @@ package run.qontract
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import run.qontract.core.Feature
+import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.value.toXMLNode
 import run.qontract.core.wsdl.parser.WSDL
@@ -17,7 +17,7 @@ class WSDLTest {
 
         val generatedGherkin: String = wsdl.convertToGherkin().trim()
 
-        assertThat(Feature(generatedGherkin)).isEqualTo(Feature(expectedGherkin))
+        assertThat(parseGherkinStringToFeature(generatedGherkin)).isEqualTo(parseGherkinStringToFeature(expectedGherkin))
     }
 
     @Test
@@ -27,7 +27,7 @@ class WSDLTest {
         val wsdl = WSDL(toXMLNode(wsdlContent))
         val generatedGherkin: String = wsdl.convertToGherkin().trim()
 
-        assertThat(Feature(generatedGherkin)).isEqualTo(Feature(expectedGherkin))
+        assertThat(parseGherkinStringToFeature(generatedGherkin)).isEqualTo(parseGherkinStringToFeature(expectedGherkin))
     }
 
     private fun readContracts(filename: String): Pair<String, String> {
@@ -36,7 +36,7 @@ class WSDLTest {
         return Pair(wsdlContent, expectedGherkin)
     }
 
-    private fun readTextResource(path: String) =
+    fun readTextResource(path: String) =
         File(
             javaClass.classLoader.getResource(path)?.file
                 ?: throw ContractException("Could not find resource file $path")

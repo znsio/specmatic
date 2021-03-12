@@ -40,7 +40,7 @@ Feature: Unit test
 
     private fun testResponseGeneration(contractGherkin: String) {
         try {
-            val contractBehaviour = Feature(contractGherkin)
+            val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
             val request = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("account_id", "10")
             val response = contractBehaviour.lookupResponse(request)
             Assertions.assertEquals(200, response.status)
@@ -87,7 +87,7 @@ Feature: Unit test
     }
 
     private fun testResponseMatching(contractGherkin: String) {
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("<account type=\"user\"><name>John</name><address>Mumbai</address><age>25</age></account>")
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)

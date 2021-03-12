@@ -13,16 +13,15 @@ import run.qontract.mock.NoMatchingScenario
 import run.qontract.mock.ScenarioStub
 import run.qontract.stub.HttpStubData
 import run.qontract.test.TestExecutor
-import java.io.File
 import java.net.URI
 
-fun Feature(gherkinData: String): Feature {
+fun parseGherkinStringToFeature(gherkinData: String, filePath: String = ""): Feature {
     val gherkinDocument = parseGherkinString(gherkinData)
-    return Feature(gherkinDocument)
+    return parseGherkinDocumentToFeature(gherkinDocument, filePath)
 }
 
-fun Feature(contractGherkinDocument: GherkinDocument): Feature {
-    val (name, scenarios) = lex(contractGherkinDocument)
+fun parseGherkinDocumentToFeature(contractGherkinDocument: GherkinDocument, filePath: String): Feature {
+    val (name, scenarios) = lex(contractGherkinDocument, filePath)
     return Feature(scenarios = scenarios, name = name)
 }
 
@@ -219,7 +218,7 @@ private fun toFacts(rest: String, fixtures: Map<String, Value>): Map<String, Val
     }
 }
 
-private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, featureTags: List<GherkinDocument.Feature.Tag>, backgroundScenarioInfo: ScenarioInfo): ScenarioInfo {
+private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, featureTags: List<GherkinDocument.Feature.Tag>, backgroundScenarioInfo: ScenarioInfo, filePath: String): ScenarioInfo {
     val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList, it) }.filterNot { it.isEmpty }
 
     val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo) { scenarioInfo, step ->
@@ -258,9 +257,9 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             "KAFKA-MESSAGE" ->
                 scenarioInfo.copy(kafkaMessage = toAsyncMessage(step))
             "VALUE" ->
-                scenarioInfo.copy(references = values(step.rest, scenarioInfo.references, backgroundScenarioInfo.references))
-            "SET" ->
-                scenarioInfo.copy(setters = setters(step.rest, backgroundScenarioInfo.setters, scenarioInfo.setters))
+                scenarioInfo.copy(references = values(step.rest, scenarioInfo.references, backgroundScenarioInfo.references, filePath))
+            "EXPORT" ->
+                scenarioInfo.copy(bindings = setters(step.rest, backgroundScenarioInfo.bindings, scenarioInfo.bindings))
             else -> {
                 val location = when {
                     step.raw.hasLocation() -> " at line ${step.raw.location.line}"
@@ -297,6 +296,7 @@ fun values(
     rest: String,
     scenarioReferences: Map<String, References>,
     backgroundReferences: Map<String, References>,
+    filePath: String
 ): Map<String, References> {
     val parts = breakIntoPartsMaxLength(rest, 3)
 
@@ -306,10 +306,11 @@ fun values(
     val valueStoreName = parts[0]
     val qontractFileName = parts[2]
 
-    if(!File(qontractFileName).exists())
-        throw ContractException("File $qontractFileName does not exist")
+    val qontractFilePath = QontractFilePath(qontractFileName, filePath)
 
-    return backgroundReferences.plus(scenarioReferences).plus(valueStoreName to References(valueStoreName, qontractFileName))
+    return backgroundReferences.plus(scenarioReferences).plus(valueStoreName to References(valueStoreName,
+        qontractFilePath
+    ))
 }
 
 fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
@@ -396,23 +397,24 @@ internal fun parseGherkinString(gherkinData: String): GherkinDocument {
     return parser.parse(gherkinData).build()
 }
 
-internal fun lex(gherkinDocument: GherkinDocument): Pair<String, List<Scenario>> =
-        Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.childrenList))
+internal fun lex(gherkinDocument: GherkinDocument, filePath: String = ""): Pair<String, List<Scenario>> =
+        Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.childrenList, filePath))
 
-internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>): List<Scenario> {
+internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, filePath: String): List<Scenario> {
     return scenarios(featureChildren).map { featureChild ->
         if (featureChild.scenario.name.isBlank())
             throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
 
         val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
-            lexScenario(feature.background.stepsList, listOf(), emptyList(), ScenarioInfo())
+            lexScenario(feature.background.stepsList, listOf(), emptyList(), ScenarioInfo(), filePath)
         } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
 
         lexScenario(
             featureChild.scenario.stepsList,
             featureChild.scenario.examplesList,
             featureChild.scenario.tagsList,
-            backgroundInfoCopy
+            backgroundInfoCopy,
+            filePath
         )
     }.map { scenarioInfo ->
         Scenario(
@@ -426,7 +428,7 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>): L
             scenarioInfo.kafkaMessage,
             scenarioInfo.ignoreFailure,
             scenarioInfo.references,
-            scenarioInfo.setters
+            scenarioInfo.bindings
         )
     }
 }

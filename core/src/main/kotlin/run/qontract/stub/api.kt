@@ -12,11 +12,10 @@ import run.qontract.core.value.StringValue
 import run.qontract.mock.*
 import java.io.File
 import java.time.Duration
-import kotlin.math.log
 
 // Used by stub client code
 fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): HttpStub {
-    val contractBehaviour = Feature(contractGherkin)
+    val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
     val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->
         consoleLog("Loading data from ${file.name}")
@@ -66,7 +65,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
         when {
             contractPath.isFile && contractPath.extension == "qontract" -> {
                 consoleLog("Loading $contractPath")
-                val feature = Feature(contractPath.readText().trim())
+                val feature = parseGherkinStringToFeature(contractPath.readText().trim())
                 val implicitDataDir = implicitContractDataDir(contractPath.path)
 
                 val stubData = when {
@@ -111,7 +110,7 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
     val dataDirFileList = allDirsInTree(dataDirPaths)
 
     val features = contractPaths.map { path ->
-        Pair(path, Feature(readFile(path)))
+        Pair(path, parseGherkinStringToFeature(readFile(path)))
     }
 
     val dataFiles = dataDirFileList.flatMap {
@@ -200,7 +199,7 @@ fun implicitContractDataDir(contractPath: String): File {
 // Used by stub client code
 fun stubKafkaMessage(contractPath: String, message: String, bootstrapServers: String) {
     val kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, jsonStringToValueMap(message)))
-    Feature(File(contractPath).readText()).assertMatchesMockKafkaMessage(kafkaMessage)
+    parseGherkinStringToFeature(File(contractPath).readText()).assertMatchesMockKafkaMessage(kafkaMessage)
     createProducer(bootstrapServers).use {
         it.send(producerRecord(kafkaMessage))
     }
@@ -208,7 +207,7 @@ fun stubKafkaMessage(contractPath: String, message: String, bootstrapServers: St
 
 // Used by stub client code
 fun testKafkaMessage(contractPath: String, bootstrapServers: String, commit: Boolean) {
-    val feature = Feature(File(contractPath).readText())
+    val feature = parseGherkinStringToFeature(File(contractPath).readText())
 
     val results = feature.scenarios.map {
         testKafkaMessages(it, bootstrapServers, commit)

@@ -34,7 +34,7 @@ class ContractAsTestWithSamplesInTable {
 
     @Throws(Throwable::class)
     private fun jsonResponsesTestsShouldBeVerifiedAgainstTable(contractGherkin: String) {
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val accountId = request.queryParams.getOrElse("account_id") {
@@ -126,7 +126,7 @@ Feature: Contract for /balance API
   | 20 | Jane Doe | Bangalore | 
 """
 
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -166,7 +166,7 @@ Feature: Contract for /balance API
 
     @Throws(Throwable::class)
     private fun jsonRequestAndResponseTest(contractGherkin: String) {
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val flags = mutableMapOf("john" to false, "jane" to false)
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
@@ -228,7 +228,7 @@ Feature: Contract for /balance API
 
     @Throws(Throwable::class)
     private fun xmlRequestAndResponseTest(contractGherkin: String) {
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val root = (request.body as XMLNode)

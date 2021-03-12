@@ -22,7 +22,7 @@ class ContractIntegrationTest {
                 ""
         wireMockServer.stubFor(WireMock.post("/_qontract/state").withRequestBody(WireMock.equalToJson("{\"user\": \"jack\"}")).willReturn(WireMock.aResponse().withStatus(200)))
         wireMockServer.stubFor(WireMock.post("/accounts").withRequestBody(WireMock.equalToJson("{\"name\": \"jack\", \"address\": \"Mumbai\"}")).willReturn(WireMock.aResponse().withStatus(409)))
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val results = contractBehaviour.executeTests(HttpClient(wireMockServer.baseUrl()))
         assertTrue(results.success(), results.report())
     }

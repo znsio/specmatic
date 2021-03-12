@@ -3,7 +3,7 @@ package run.qontract.core.pattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import run.qontract.core.Feature
+import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.core.Resolver
 import run.qontract.core.Result
 import run.qontract.core.testBackwardCompatibility
@@ -79,7 +79,7 @@ Feature: Recursive test
     And response-body (Data)
 """.trim()
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
         val result = testBackwardCompatibility(feature, feature)
         println(result.report())
         assertThat(result.success()).isTrue()

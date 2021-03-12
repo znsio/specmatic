@@ -6,7 +6,7 @@ import run.qontract.core.value.JSONObjectValue
 import java.io.File
 
 private const val VARIABLES_KEY = "variables"
-private const val BASE_URLS_KEY = "baseURLs"
+private const val BASE_URLS_KEY = "baseurls"
 
 fun loadTestConfig(configFile: String?): TestConfig {
     val config = configFile?.let {

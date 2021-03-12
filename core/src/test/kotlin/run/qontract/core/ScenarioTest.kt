@@ -6,8 +6,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
 import run.qontract.core.pattern.*
+import run.qontract.core.utilities.readFile
 import run.qontract.core.value.*
 import run.qontract.mock.ScenarioStub
+import java.io.File
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -205,7 +207,7 @@ And response-header X-ResponseKey (number)
         val response = HttpResponse(200, "", mapOf("X-ResponseKey" to "(number)"))
         val stub = ScenarioStub(request, response)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", mapOf("X-RequestKey" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -228,7 +230,7 @@ And response-header X-ResponseKey (number)
         val response = HttpResponse(200, "", mapOf("X-ResponseKey" to "20"))
         val stub = ScenarioStub(request, response)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", mapOf("X-RequestKey" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -248,7 +250,7 @@ Then status 200
         val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "(number)"))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -268,7 +270,7 @@ Then status 200
         val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10"))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -288,7 +290,7 @@ Then status 200
         val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "(boolean)"))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true")), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -308,7 +310,7 @@ Then status 200
         val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true"))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true")), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -329,7 +331,7 @@ Then status 200
         val request = HttpRequest("POST", "/resource", formFields = mapOf("value" to "(number)"))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", formFields = mapOf("value" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -350,7 +352,7 @@ Then status 200
         val request = HttpRequest("POST", "/resource", formFields = mapOf("value" to "10"))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", formFields = mapOf("value" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -371,7 +373,7 @@ Then status 200
         val request = HttpRequest("POST", "/resource", multiPartFormData = listOf(MultiPartContentValue("value", StringValue("(number)"))))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", multiPartFormData = listOf(MultiPartContentValue("value", StringValue("10")))), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -392,7 +394,7 @@ Then status 200
         val request = HttpRequest("POST", "/resource", multiPartFormData = listOf(MultiPartContentValue("value", StringValue("10"))))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", multiPartFormData = listOf(MultiPartContentValue("value", StringValue("10")))), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -415,12 +417,49 @@ And response-body (number)
         val response = HttpResponse(200, body = StringValue("(number)"))
         val stub = ScenarioStub(request, response)
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", body = StringValue("10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
         assertDoesNotThrow { matchingResponse.response.body.toStringValue().toInt() }
+    }
+
+    @Test
+    fun `should add bindings and variables if passed when generating test scenarios`() {
+        val gherkin = """Feature: Test API
+            Background:
+                Given value auth from auth.qontract
+
+            Scenario: Test Scenario
+                When GET /
+                And request-header X-Header1 (string)
+                And request-header X-Header2 (string)
+                Then status 200
+                And response-header X-Data (string)
+                And export data = response-header.X-Data
+                
+                Examples:
+                | X-Header1                   | X-Header2                         |
+                | (${DEREFERENCE_PREFIX}data) | (${DEREFERENCE_PREFIX}auth.token) | 
+                """.trim()
+
+        val feature = parseGherkinStringToFeature(gherkin, "original.qontract").copy(testVariables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.qontract" to "http://baseurl"))
+
+        val testScenarios = feature.scenarios.map { scenario ->
+            val updatedReferences = scenario.references.mapValues {
+                it.value.copy(valuesCache = mapOf("token" to "20"))
+            }
+
+            scenario.copy(references = updatedReferences).generateTestScenarios(variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.qontract" to "http://baseurl"))
+        }.flatten()
+
+        assertThat(testScenarios).allSatisfy {
+            assertThat(it.bindings).isEqualTo(mapOf("data" to "response-header.X-Data"))
+
+            assertThat((it.httpRequestPattern.headersPattern.pattern["X-Header1"] as ExactValuePattern).pattern.toStringValue()).isEqualTo("10")
+            assertThat((it.httpRequestPattern.headersPattern.pattern["X-Header2"] as ExactValuePattern).pattern.toStringValue()).isEqualTo("20")
+        }
     }
 }

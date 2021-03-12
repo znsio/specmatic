@@ -45,8 +45,8 @@ infix fun String.notBackwardCompatibleWith(oldContractGherkin: String) {
 }
 
 fun String.testBackwardCompatibility(oldContractGherkin: String): Results {
-    val oldFeature = Feature(oldContractGherkin)
-    val newFeature = Feature(this)
+    val oldFeature = parseGherkinStringToFeature(oldContractGherkin)
+    val newFeature = parseGherkinStringToFeature(this)
     return testBackwardCompatibility(oldFeature, newFeature)
 }
 
@@ -82,7 +82,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeSt
 }
 
 fun testStub(contractGherkin: String, stubRequest: HttpRequest, stubResponse: HttpResponse): HttpResponse {
-    val feature = Feature(contractGherkin)
+    val feature = parseGherkinStringToFeature(contractGherkin)
     val stub = ScenarioStub(stubRequest, stubResponse)
     val matchingStub = feature.matchingStub(stub)
 
@@ -95,7 +95,7 @@ fun stub(stubRequest: HttpRequest, stubResponse: HttpResponse): TestHttpStub =
         TestHttpStub(stubRequest, stubResponse)
 
 private fun stubsFrom(oldContract: String): TestHttpStubData {
-    val oldFeature = Feature(oldContract)
+    val oldFeature = parseGherkinStringToFeature(oldContract)
 
     val testScenarios = oldFeature.generateBackwardCompatibilityTestScenarios()
 

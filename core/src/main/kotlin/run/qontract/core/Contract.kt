@@ -6,7 +6,7 @@ import run.qontract.test.HttpClient
 
 data class Contract(val contractGherkin: String) {
     fun test(endPoint: String) {
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val results = contractBehaviour.executeTests(HttpClient(endPoint))
         if (results.hasFailures())
             throw ContractException(results.report())
@@ -16,7 +16,7 @@ data class Contract(val contractGherkin: String) {
 
     fun samples(fake: HttpStub) = samples(fake.endPoint)
     fun samples(endPoint: String) {
-        val contractBehaviour = Feature(contractGherkin)
+        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val httpClient = HttpClient(endPoint)
 
         contractBehaviour.generateContractTestScenarios(emptyList()).fold(Results()) { results, scenario ->

@@ -26,7 +26,7 @@ Feature: Test
     Then status 200
 """.trim()
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
 
         val request = HttpRequest(method = "POST", path = "/", body = NumberValue(10))
         val scenarioStub = ScenarioStub(request, HttpResponse.OK, null)
@@ -51,7 +51,7 @@ Expected number, actual was "Hello"""")
     fun `undeclared keys should not be accepted by stub without expectations`() {
         val request = HttpRequest(method = "POST", path = "/", body = parsedValue("""{"number": 10, "undeclared": 20}"""))
 
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: POST API
   Scenario: Test
     When POST /
@@ -72,7 +72,7 @@ Key named "undeclared" was unexpected""")
     fun `unexpected headers should be accepted by a stub without expectations`() {
         val request = HttpRequest(method = "GET", path = "/", headers = mapOf("X-Expected" to "data", "Accept" to "text"))
 
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: GET API
   Scenario: Test
     When GET /
@@ -107,7 +107,7 @@ Feature: GET API
 
     @Test
     fun `should not match extra keys in the request`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
 
 Scenario: Square of a number
@@ -129,7 +129,7 @@ Key named "unexpected" was unexpected""")
 
     @Test
     fun `stub should not match a request in which all the query params are missing`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
 
 Scenario: Square of a number
@@ -156,7 +156,7 @@ Expected query param named "status" was missing""")
 
     @Test
     fun `should not generate any key from the ellipsis in the response`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
 
 Scenario: Square of a number
@@ -178,7 +178,7 @@ Scenario: Square of a number
 
     @Test
     fun `invalid stub request`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: Math API
 
 Scenario: Square of a number
@@ -202,7 +202,7 @@ Scenario: Square of a number
 
     @Test
     fun `stub should validate expectations and serve generated xml when the namespace prefix changes`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: XML namespace prefix
   Scenario: Request has namespace prefixes
     When POST /
@@ -218,7 +218,7 @@ Feature: XML namespace prefix
 
     @Test
     fun `multithreading test`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: POST API
   Scenario: Test
     Given type Number
@@ -308,7 +308,7 @@ Feature: POST API
 
     @Test
     fun `kafka stubs should not be picked up when creating http expectations`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
             Feature: Kafka
               Scenario: Kafka 
                 * kafka-message customer data

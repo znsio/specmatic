@@ -2,13 +2,13 @@ package run.qontract.test
 
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import run.qontract.core.Feature
+import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.test.ResultAssert.Companion.assertThat
 
 internal class ResultAssertTest {
     @Test
     fun `it should not allow a failing test on a finalised scenario through`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
             Feature: Test feature
             
             Scenario: Test scenario

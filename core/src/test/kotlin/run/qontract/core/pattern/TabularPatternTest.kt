@@ -288,7 +288,7 @@ Given request-body
 
     @Test
     fun `error message when a json object does not match nullable primitive such as string in the contract`() {
-        val feature = Feature("""
+        val feature = parseGherkinStringToFeature("""
 Feature: test feature
   Scenario: api call
     Given type Request
@@ -325,7 +325,7 @@ Feature: Recursive test
     And response-body (Data)
 """.trim()
 
-        val feature = Feature(gherkin)
+        val feature = parseGherkinStringToFeature(gherkin)
         val result = testBackwardCompatibility(feature, feature)
         assertThat(result.success()).isTrue()
     }

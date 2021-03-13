@@ -7,7 +7,7 @@ import run.qontract.core.wsdl.parser.*
 import run.qontract.core.wsdl.payload.ComplexTypedSOAPPayload
 import run.qontract.core.wsdl.payload.SOAPPayload
 
-data class ComplexTypeElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL) : WSDLPayloadElement {
+data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL): WSDLElement {
     override fun getQontractTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
         if(qontractTypeName in typeStack)
             return WSDLTypeInfo(types = existingTypes)
@@ -86,7 +86,7 @@ data class ComplexTypeElement(val wsdlTypeReference: String, val element: XMLNod
 }
 
 class ComplexContentInComplexType(
-    private val parent: ComplexTypeElement,
+    private val parent: ComplexElement,
     private val child: XMLNode,
     val wsdl: WSDL,
     private val parentTypeName: String
@@ -116,48 +116,75 @@ class ComplexContentInComplexType(
 
 }
 
-class CollectionOfChildrenInComplexType(private val parent: ComplexTypeElement, private val child: XMLNode, val wsdl: WSDL, private val parentTypeName: String): ComplexTypeChild {
+class CollectionOfChildrenInComplexType(private val parent: ComplexElement, private val child: XMLNode, val wsdl: WSDL, private val parentTypeName: String): ComplexTypeChild {
     override fun process(wsdlTypeInfo: WSDLTypeInfo, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo =
         parent.generateChildren(parentTypeName, child, existingTypes, typeStack)
 
 }
 
+interface ChildElementType {
+    fun getWSDLElement(): Pair<String, WSDLElement>
+}
+
+data class ElementReference(val child: XMLNode, val wsdl: WSDL) : ChildElementType {
+    override fun getWSDLElement(): Pair<String, WSDLElement> {
+        val wsdlTypeReference = child.attributes.getValue("ref").toStringValue()
+        val qontractTypeName = wsdlTypeReference.replace(':', '_')
+
+        val resolvedChild = wsdl.getSOAPElement(wsdlTypeReference)
+        return Pair(qontractTypeName, resolvedChild)
+    }
+}
+
+data class TypeReference(val child: XMLNode, val wsdl: WSDL): ChildElementType {
+    override fun getWSDLElement(): Pair<String, WSDLElement> {
+        val wsdlTypeReference = child.attributes.getValue("type").toStringValue()
+        val qontractTypeName = wsdlTypeReference.replace(':', '_')
+
+        val element = when {
+            hasSimpleTypeAttribute(child) -> SimpleElement(wsdlTypeReference, child, wsdl)
+            else -> ComplexElement(wsdlTypeReference, child, wsdl)
+        }
+
+        return Pair(qontractTypeName, element)
+    }
+}
+
+data class InlineType(val parentTypeName: String, val child: XMLNode, val wsdl: WSDL): ChildElementType {
+    override fun getWSDLElement(): Pair<String, WSDLElement> {
+        val wsdlTypeReference = ""
+
+        val elementName = child.attributes["name"]
+            ?: throw ContractException("Element does not have a name: $child")
+        val qontractTypeName = "${parentTypeName}_$elementName"
+
+        val element = when {
+            hasSimpleTypeAttribute(child) -> SimpleElement(wsdlTypeReference, child, wsdl)
+            else -> ComplexElement(wsdlTypeReference, child, wsdl)
+        }
+
+        return Pair(qontractTypeName, element)
+    }
+}
+
+fun getWSDLElementType(parentTypeName: String, child: XMLNode, wsdl: WSDL): ChildElementType {
+    return when {
+        child.attributes.containsKey("ref") -> {
+            ElementReference(child, wsdl)
+        }
+        child.attributes.containsKey("type") -> {
+            TypeReference(child, wsdl)
+        }
+        else -> {
+            InlineType(parentTypeName, child, wsdl)
+        }
+    }
+}
+
 class ElementInComplexType(private val child: XMLNode, val wsdl: WSDL, private val parentTypeName: String): ComplexTypeChild {
     override fun process(wsdlTypeInfo: WSDLTypeInfo, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
-        val (qontractTypeName, soapElement) = when {
-            child.attributes.containsKey("ref") -> {
-                val wsdlTypeReference = child.attributes.getValue("ref").toStringValue()
-                val qontractTypeName = wsdlTypeReference.replace(':', '_')
-
-                val resolvedChild = wsdl.getSOAPElement(wsdlTypeReference)
-                Pair(qontractTypeName, resolvedChild)
-            }
-            child.attributes.containsKey("type") -> {
-                val wsdlTypeReference = child.attributes.getValue("type").toStringValue()
-                val qontractTypeName = wsdlTypeReference.replace(':', '_')
-
-                val element = when {
-                    hasSimpleTypeAttribute(child) -> SimpleElement(wsdlTypeReference, child, wsdl)
-                    else -> ComplexTypeElement(wsdlTypeReference, child, wsdl)
-                }
-
-                Pair(qontractTypeName, element)
-            }
-            else -> {
-                val wsdlTypeReference = ""
-
-                val elementName = child.attributes["name"]
-                    ?: throw ContractException("Element does not have a name: $child")
-                val qontractTypeName = "${parentTypeName}_$elementName"
-
-                val element = when {
-                    hasSimpleTypeAttribute(child) -> SimpleElement(wsdlTypeReference, child, wsdl)
-                    else -> ComplexTypeElement(wsdlTypeReference, child, wsdl)
-                }
-
-                Pair(qontractTypeName, element)
-            }
-        }
+        val wsdlElement = getWSDLElementType(parentTypeName, child, wsdl)
+        val (qontractTypeName, soapElement) = wsdlElement.getWSDLElement()
 
         val (newNode, generatedTypes, namespacePrefixes) =
             soapElement.getQontractTypes(qontractTypeName, existingTypes, typeStack)

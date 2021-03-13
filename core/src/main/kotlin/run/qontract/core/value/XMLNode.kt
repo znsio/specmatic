@@ -124,7 +124,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
     override fun toStringValue(): String = xmlToString(build())
 
     fun toPrettyStringValue(incrementalIndent: String): String {
-        val xmlStringLines = xmlToPrettyString(build()).lines()
+        val xmlStringLines = xmlToPrettyString(build()).trim().lines()
         return when (xmlStringLines.size) {
             1 -> xmlStringLines.first().trim()
             else -> indentChildrenNodeLines(xmlStringLines, incrementalIndent)

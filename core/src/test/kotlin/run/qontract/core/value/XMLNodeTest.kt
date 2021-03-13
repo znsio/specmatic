@@ -222,4 +222,16 @@ internal class XMLNodeTest {
             assertThat(level3.namespaces[prefix]).isEqualTo(namespace)
         }
     }
+
+    @Test
+    fun `serialize to pretty string value`() {
+        val xml = toXMLNode("<customer><firstname>Jill</firstname><surname>Granger</surname></customer>")
+        val prettyStringValue = xml.toPrettyStringValue("  ")
+        val expected = """
+            <customer>
+              <firstname>Jill</firstname>
+              <surname>Granger</surname>
+            </customer>""".trimIndent()
+        assertThat(prettyStringValue).isEqualTo(expected)
+    }
 }

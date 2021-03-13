@@ -12,7 +12,7 @@ import run.qontract.core.wsdl.parser.WSDLTypeInfo
 import run.qontract.core.wsdl.payload.SOAPPayload
 import run.qontract.core.wsdl.payload.SimpleTypedSOAPPayload
 
-data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL) : WSDLPayloadElement {
+data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL) : WSDLElement {
     override fun getQontractTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
         return createSimpleType(element, existingTypes).let {
             WSDLTypeInfo(it.first, it.second)

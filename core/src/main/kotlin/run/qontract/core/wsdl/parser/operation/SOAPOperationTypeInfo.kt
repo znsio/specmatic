@@ -1,6 +1,6 @@
 package run.qontract.core.wsdl.parser.operation
 
-import run.qontract.core.pattern.Pattern
+import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.wsdl.payload.SOAPPayload
 
 data class SOAPOperationTypeInfo(val operationName: String, val request: SOAPRequest, val response: SOAPResponse, val types: SOAPTypes) {
@@ -8,7 +8,7 @@ data class SOAPOperationTypeInfo(val operationName: String, val request: SOAPReq
         path: String,
         operationName: String,
         soapAction: String,
-        types: Map<String, Pattern>,
+        types: Map<String, XMLPattern>,
         requestPayload: SOAPPayload,
         responsePayload: SOAPPayload
     ) : this(operationName, SOAPRequest(path, operationName, soapAction, requestPayload), SOAPResponse(responsePayload), SOAPTypes(types))

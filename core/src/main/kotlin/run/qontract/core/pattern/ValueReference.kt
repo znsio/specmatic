@@ -1,6 +1,6 @@
 package run.qontract.core.pattern
 
-class ValueReference(valueName: String) {
+data class ValueReference(private val valueName: String) {
     val name: String = withoutPatternDelimiters(valueName).trim().removePrefix(DEREFERENCE_PREFIX)
 
     override fun equals(other: Any?): Boolean {

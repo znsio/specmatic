@@ -1,6 +1,5 @@
 package run.qontract.core.wsdl.payload
 
-import run.qontract.core.pattern.Pattern
-import run.qontract.core.wsdl.payload.SOAPPayload
+import run.qontract.core.pattern.XMLPattern
 
-data class SoapPayloadType(val types: Map<String, Pattern>, val soapPayload: SOAPPayload)
+data class SoapPayloadType(val types: Map<String, XMLPattern>, val soapPayload: SOAPPayload)

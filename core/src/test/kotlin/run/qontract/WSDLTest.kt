@@ -17,7 +17,10 @@ class WSDLTest {
 
         val generatedGherkin: String = wsdl.convertToGherkin().trim()
 
-        assertThat(parseGherkinStringToFeature(generatedGherkin)).isEqualTo(parseGherkinStringToFeature(expectedGherkin))
+        val expectedFeature = parseGherkinStringToFeature(generatedGherkin)
+        val generatedFeature = parseGherkinStringToFeature(expectedGherkin)
+
+        assertThat(expectedFeature).isEqualTo(generatedFeature)
     }
 
     @Test

@@ -3,7 +3,7 @@ package run.qontract.core.pattern
 import run.qontract.core.References
 import run.qontract.core.breakIntoPartsMaxLength
 
-class ReferenceValue(private val valueReference: ValueReference, private val references: Map<String, References> = emptyMap()): RowValue {
+data class ReferenceValue(private val valueReference: ValueReference, private val references: Map<String, References> = emptyMap()): RowValue {
     override fun fetch(): String {
         val parts = breakUpIntoParts()
         if(parts.size <= 1)

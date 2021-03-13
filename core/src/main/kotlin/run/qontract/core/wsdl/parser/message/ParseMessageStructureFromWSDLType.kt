@@ -10,8 +10,7 @@ import run.qontract.core.wsdl.payload.ComplexTypedSOAPPayload
 import run.qontract.core.wsdl.payload.SimpleTypedSOAPPayload
 import run.qontract.core.wsdl.payload.SoapPayloadType
 
-class ParseMessageStructureFromWSDLType(private val wsdl: WSDL, private val wsdlTypeReference: String, private val soapMessageType: SOAPMessageType, private val existingTypes: Map<String, Pattern>, private val operationName: String) :
-    MessageTypeInfoParser {
+data class ParseMessageStructureFromWSDLType(private val wsdl: WSDL, private val wsdlTypeReference: String, private val soapMessageType: SOAPMessageType, private val existingTypes: Map<String, XMLPattern>, private val operationName: String) : MessageTypeInfoParser {
     override fun execute(): MessageTypeInfoParser {
         val topLevelElement = wsdl.findElement(
             wsdlTypeReference.withoutNamespacePrefix(), // TODO might need to do this in a cleaner way
@@ -36,13 +35,10 @@ class ParseMessageStructureFromWSDLType(private val wsdl: WSDL, private val wsdl
         return MessageTypeProcessingComplete(SoapPayloadType(typeInfo.types, soapPayload))
     }
 
-    private fun getQontractTypes(qontractTypeName: String, wsdlTypeReference: String, element: XMLNode, wsdl: WSDL, existingTypes: Map<String, Pattern>, typeStack: Set<String>): WSDLTypeInfo {
+    fun getQontractTypes(qontractTypeName: String, wsdlTypeReference: String, element: XMLNode, wsdl: WSDL, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
         return when {
             hasSimpleTypeAttribute(element) -> createSimpleType(element, existingTypes).let {
-                WSDLTypeInfo(
-                    it.first,
-                    it.second
-                )
+                WSDLTypeInfo(it.first, it.second)
             }
             qontractTypeName in typeStack -> WSDLTypeInfo(types = existingTypes)
             else -> {
@@ -99,7 +95,7 @@ class ParseMessageStructureFromWSDLType(private val wsdl: WSDL, private val wsdl
         return (elementForm ?: schemaElementFormDefault) == "qualified"
     }
 
-    private fun generateChildren(wsdl: WSDL, parentTypeName: String, complexType: XMLNode, existingTypes: Map<String, Pattern>, typeStack: Set<String>): WSDLTypeInfo {
+    private fun generateChildren(wsdl: WSDL, parentTypeName: String, complexType: XMLNode, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
         val childParts: List<XMLNode> = complexType.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }
 
         return childParts.fold(WSDLTypeInfo()) { wsdlTypeInfo, child ->
@@ -170,8 +166,8 @@ class ParseMessageStructureFromWSDLType(private val wsdl: WSDL, private val wsdl
 
     private fun createSimpleType(
         element: XMLNode,
-        types: Map<String, Pattern>
-    ): Pair<List<XMLValue>, Map<String, Pattern>> {
+        types: Map<String, XMLPattern>
+    ): Pair<List<XMLValue>, Map<String, XMLPattern>> {
         val node = createSimpleType(element)
         return Pair(listOf(node), types)
     }

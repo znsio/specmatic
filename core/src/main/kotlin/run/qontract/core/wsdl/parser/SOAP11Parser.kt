@@ -1,6 +1,6 @@
 package run.qontract.core.wsdl.parser
 
-import run.qontract.core.pattern.Pattern
+import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.value.XMLNode
 import run.qontract.core.wsdl.parser.message.MessageTypeInfoParser
 import run.qontract.core.wsdl.parser.message.MessageTypeInfoParserStart
@@ -69,7 +69,7 @@ class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
         operationName: String,
         soapMessageType: SOAPMessageType,
         wsdl: WSDL,
-        existingTypes: Map<String, Pattern>
+        existingTypes: Map<String, XMLPattern>
     ): SoapPayloadType {
         var messageTypeInfoParser: MessageTypeInfoParser = MessageTypeInfoParserStart(wsdl, portOperationNode, soapMessageType, existingTypes, operationName)
 

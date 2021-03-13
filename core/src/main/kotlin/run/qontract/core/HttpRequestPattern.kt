@@ -308,7 +308,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
         }
     }
 
-    override fun toString(): String {
+    fun testDescription(): String {
         return "$method ${urlMatcher.toString()}"
     }
 }

@@ -3,7 +3,7 @@ package run.qontract.core
 import run.qontract.core.pattern.ContractException
 import java.io.File
 
-class QontractFilePath(val path: String, val relativeTo: String = "") {
+data class QontractFilePath(val path: String, val relativeTo: String = "") {
     fun readFeatureForValue(valueName: String): Feature {
         println(relativeTo)
         return file().let {

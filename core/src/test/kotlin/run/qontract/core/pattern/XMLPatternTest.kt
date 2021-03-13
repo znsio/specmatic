@@ -742,7 +742,6 @@ internal class XMLPatternTest {
             assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
         }
 
-
         @Test
         fun `a multiple type of the same name should fail if the node does not match with an appropriate error`() {
             val nameType = XMLPattern("<name><nameid $occursMultipleTimes>(number)</nameid><fullname>(string)</fullname></name>")
@@ -774,5 +773,21 @@ internal class XMLPatternTest {
         val type = parsedPattern(xml)
 
         assertThat(type.matches(parsedValue(xml), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `generate Gherkin statements`() {
+        val xml = XMLPattern("<account><id>(number)</id></account>")
+        val gherkinStatement = xml.toGherkinStatement("TypeName", "")
+        val expectedGherkinStatement = """
+            And type TypeName
+            ""${'"'}
+            <account>
+            <id>(number)</id>
+            </account>
+            ""${'"'}
+            """.trimIndent()
+
+        assertThat(gherkinStatement).isEqualTo(expectedGherkinStatement)
     }
 }

@@ -213,7 +213,7 @@ data class Scenario(
             }
         }
 
-    override fun toString(): String {
+    fun testDescription(): String {
         val scenarioDescription = StringBuilder()
         scenarioDescription.append("Scenario: ")
         when {
@@ -223,7 +223,7 @@ data class Scenario(
         return if(kafkaMessagePattern != null)
             scenarioDescription.append(kafkaMessagePattern.topic).toString()
         else
-            scenarioDescription.append("$httpRequestPattern").toString()
+            scenarioDescription.append(httpRequestPattern.testDescription()).toString()
     }
 
     fun newBasedOn(scenario: Scenario): Scenario =

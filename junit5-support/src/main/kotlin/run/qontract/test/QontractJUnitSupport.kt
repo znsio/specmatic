@@ -77,7 +77,7 @@ open class QontractJUnitSupport {
         }
 
         return testScenarios.map { testScenario ->
-            DynamicTest.dynamicTest(testScenario.toString()) {
+            DynamicTest.dynamicTest(testScenario.testDescription()) {
                 val kafkaMessagePattern = testScenario.kafkaMessagePattern
 
                 val result = when {

@@ -90,16 +90,6 @@ internal class TestCommandTest {
         verify(exactly = 1) { junitLauncher.execute(any<LauncherDiscoveryRequest>()) }
     }
 
-    @Test
-    fun `should set envConfig`() {
-        every { qontractConfig.contractTestPaths() }.returns(contractsToBeRunAsTests)
-
-        testCommand.envConfigFile = "envConfig.json"
-        CommandLine(testCommand, factory).execute()
-
-        assertThat(System.getProperty(ENV_CONFIG_FILE)).isEqualTo("envConfig.json")
-    }
-
     @ParameterizedTest
     @MethodSource("commandLineArguments")
     fun `applies command line arguments`(
@@ -120,7 +110,8 @@ internal class TestCommandTest {
         fun commandLineArguments(): Stream<Arguments> = Stream.of(
                 Arguments.of("--port", "9999", PORT, "9999"),
                 Arguments.of("--host", "10.10.10.10", HOST, "10.10.10.10"),
-                Arguments.of("--timeout", "33", TIMEOUT, "33")
+                Arguments.of("--timeout", "33", TIMEOUT, "33"),
+                Arguments.of("--envConfig", "envConfig.json", ENV_CONFIG_FILE, "envConfig.json")
         )
     }
 

@@ -2,9 +2,9 @@ package run.qontract.core.wsdl.payload
 
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
-import run.qontract.core.wsdl.parser.OCCURS_ATTRIBUTE_NAME
-import run.qontract.core.wsdl.parser.OPTIONAL_ATTRIBUTE_VALUE
-import run.qontract.core.wsdl.parser.primitiveNamespace
+import run.qontract.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
+import run.qontract.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
+import run.qontract.core.wsdl.parser.message.primitiveNamespace
 
 
 fun soapMessage(bodyPayload: XMLNode, namespaces: Map<String, String>): XMLNode {

@@ -1,9 +1,11 @@
-package run.qontract.core.wsdl.parser
+package run.qontract.core.wsdl.parser.message
 
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.value.*
+import run.qontract.core.wsdl.parser.*
+import run.qontract.core.wsdl.parser.message.MessageTypeProcessingComplete
 import run.qontract.core.wsdl.payload.ComplexTypedSOAPPayload
 import run.qontract.core.wsdl.payload.SimpleTypedSOAPPayload
 import run.qontract.core.wsdl.payload.SoapPayloadType

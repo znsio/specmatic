@@ -1,9 +1,9 @@
-package run.qontract.core.wsdl.parser
+package run.qontract.core.wsdl.parser.message
 
-import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.withoutNamespacePrefix
+import run.qontract.core.wsdl.parser.*
 import run.qontract.core.wsdl.payload.EmptySOAPPayload
 import run.qontract.core.wsdl.payload.SoapPayloadType
 
@@ -21,9 +21,7 @@ class GetMessageTypeReference(private val wsdl: WSDL, val messageTypeNode: XMLNo
                 )
             )
 
-        val wsdlTypeReference = partNode.attributes["element"]?.toStringValue() ?: throw ContractException(
-            "element not found in \"part\" in message named $messageName"
-        )
+        val wsdlTypeReference = partNode.getAttributeValue("element", "element not found in \"part\" in message named $messageName")
 
         return ParseMessageStructureFromWSDLType(wsdl, wsdlTypeReference, soapMessageType, existingTypes, operationName)
     }

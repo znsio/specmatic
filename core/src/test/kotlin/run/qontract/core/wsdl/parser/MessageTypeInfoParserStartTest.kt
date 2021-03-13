@@ -7,6 +7,9 @@ import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Test
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
+import run.qontract.core.wsdl.parser.message.GetMessageTypeReference
+import run.qontract.core.wsdl.parser.message.MessageTypeInfoParserStart
+import run.qontract.core.wsdl.parser.message.MessageTypeProcessingComplete
 import run.qontract.core.wsdl.payload.EmptyHTTPBodyPayload
 
 internal class MessageTypeInfoParserStartTest {

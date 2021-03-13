@@ -8,7 +8,9 @@ import org.junit.jupiter.api.Test
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
 import run.qontract.core.value.withoutNamespacePrefix
-import run.qontract.core.wsdl.parser.*
+import run.qontract.core.wsdl.parser.message.GetMessageTypeReference
+import run.qontract.core.wsdl.parser.message.MessageTypeProcessingComplete
+import run.qontract.core.wsdl.parser.message.ParseMessageStructureFromWSDLType
 import run.qontract.core.wsdl.payload.EmptySOAPPayload
 
 internal class GetMessageTypeReferenceTest{

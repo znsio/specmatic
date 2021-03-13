@@ -2,6 +2,9 @@ package run.qontract.core.wsdl.parser
 
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.XMLNode
+import run.qontract.core.wsdl.parser.message.MessageTypeInfoParser
+import run.qontract.core.wsdl.parser.message.MessageTypeInfoParserStart
+import run.qontract.core.wsdl.parser.message.isPrimitiveType
 import run.qontract.core.wsdl.parser.operation.SOAPOperationTypeInfo
 import run.qontract.core.wsdl.payload.SoapPayloadType
 import java.net.URI
@@ -29,7 +32,7 @@ class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
     private fun parseOperation(bindingOperationNode: XMLNode, url: String, wsdl: WSDL, portType: XMLNode): SOAPOperationTypeInfo {
         val operationName = bindingOperationNode.getAttributeValue("name")
 
-        val soapAction = bindingOperationNode.getAttributeValue("operation", "soapAction")
+        val soapAction = bindingOperationNode.getAttributeValueAtPath("operation", "soapAction")
 
         val portOperationNode = portType.findNodeByNameAttribute(operationName)
 

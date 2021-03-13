@@ -2,9 +2,9 @@ package run.qontract.core.pattern
 
 import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
-import run.qontract.core.wsdl.parser.MULTIPLE_ATTRIBUTE_VALUE
-import run.qontract.core.wsdl.parser.OCCURS_ATTRIBUTE_NAME
-import run.qontract.core.wsdl.parser.OPTIONAL_ATTRIBUTE_VALUE
+import run.qontract.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
+import run.qontract.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
+import run.qontract.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 
 data class XMLTypeData(val name: String = "", val realName: String, val attributes: Map<String, Pattern> = emptyMap(), val nodes: List<Pattern> = emptyList()) {
     fun getAttributeValue(name: String): String? =

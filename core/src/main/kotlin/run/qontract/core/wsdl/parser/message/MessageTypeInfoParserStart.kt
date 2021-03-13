@@ -1,7 +1,9 @@
-package run.qontract.core.wsdl.parser
+package run.qontract.core.wsdl.parser.message
 
 import run.qontract.core.pattern.Pattern
 import run.qontract.core.value.XMLNode
+import run.qontract.core.wsdl.parser.SOAPMessageType
+import run.qontract.core.wsdl.parser.WSDL
 import run.qontract.core.wsdl.payload.EmptyHTTPBodyPayload
 import run.qontract.core.wsdl.payload.SoapPayloadType
 

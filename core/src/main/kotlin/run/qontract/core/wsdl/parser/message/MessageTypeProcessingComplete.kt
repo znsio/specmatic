@@ -1,4 +1,4 @@
-package run.qontract.core.wsdl.parser
+package run.qontract.core.wsdl.parser.message
 
 import run.qontract.core.wsdl.payload.SoapPayloadType
 

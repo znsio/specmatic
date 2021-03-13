@@ -5,28 +5,16 @@ import run.qontract.core.value.StringValue
 import run.qontract.core.value.XMLNode
 import run.qontract.core.wsdl.parser.SOAPMessageType
 import run.qontract.core.wsdl.parser.WSDL
-import run.qontract.core.wsdl.parser.WSDLTypeInfo
-import run.qontract.core.wsdl.payload.SOAPPayload
 import run.qontract.core.wsdl.payload.SoapPayloadType
-
-interface SOAPElement {
-    fun getQontractTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo
-
-    fun getSOAPPayload(
-        soapMessageType: SOAPMessageType,
-        nodeNameForSOAPBody: String,
-        qontractTypeName: String,
-        namespaces: Map<String, String>,
-        typeInfo: WSDLTypeInfo
-    ): SOAPPayload
-}
 
 data class ParseMessageStructureFromWSDLType(private val wsdl: WSDL, private val wsdlTypeReference: String, private val soapMessageType: SOAPMessageType, private val existingTypes: Map<String, XMLPattern>, private val operationName: String) : MessageTypeInfoParser {
     override fun execute(): MessageTypeInfoParser {
         val topLevelElement = wsdl.getSOAPElement(wsdlTypeReference)
 
         val qontractTypeName = "${operationName.replace(":", "_")}${soapMessageType.messageTypeName.capitalize()}"
+
         val typeInfo = topLevelElement.getQontractTypes(qontractTypeName, existingTypes, emptySet())
+
         val namespaces: Map<String, String> = wsdl.getNamespaces(typeInfo)
         val nodeNameForSOAPBody = (typeInfo.nodes.first() as XMLNode).realName
 
@@ -64,7 +52,23 @@ fun isPrimitiveType(node: XMLNode): Boolean {
     return namespace == primitiveNamespace
 }
 
-val primitiveStringTypes = listOf("string", "anyType", "duration", "time", "date", "gYearMonth", "gYear", "gMonthDay", "gDay", "gMonth", "hexBinary", "base64Binary", "anyURI", "QName", "NOTATION")
+val primitiveStringTypes = listOf(
+    "string",
+    "anyType",
+    "duration",
+    "time",
+    "date",
+    "gYearMonth",
+    "gYear",
+    "gMonthDay",
+    "gDay",
+    "gMonth",
+    "hexBinary",
+    "base64Binary",
+    "anyURI", // TODO maybe this can be converted to URL type
+    "QName",
+    "NOTATION"
+)
 val primitiveNumberTypes = listOf("int", "integer", "long", "decimal", "float", "double", "numeric")
 val primitiveDateTypes = listOf("dateTime")
 val primitiveBooleanType = listOf("boolean")

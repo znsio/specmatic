@@ -4,8 +4,8 @@ import run.qontract.core.pattern.ContractException
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.namespacePrefix
 import run.qontract.core.value.withoutNamespacePrefix
-import run.qontract.core.wsdl.parser.message.ComplexElement
-import run.qontract.core.wsdl.parser.message.SOAPElement
+import run.qontract.core.wsdl.parser.message.ComplexTypeElement
+import run.qontract.core.wsdl.parser.message.WSDLPayloadElement
 import run.qontract.core.wsdl.parser.message.SimpleElement
 
 private fun getXmlnsDefinitions(wsdlNode: XMLNode): Map<String, String> {
@@ -82,7 +82,7 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         return schema.getXMLNodeByAttributeValue("name", typeName)
     }
 
-    fun getSOAPElement(wsdlTypeReference: String): SOAPElement {
+    fun getSOAPElement(wsdlTypeReference: String): WSDLPayloadElement {
         val typeName = wsdlTypeReference.withoutNamespacePrefix() // TODO might need to do this in a cleaner way
         val namespace = this.resolveNamespace(wsdlTypeReference)
 
@@ -93,7 +93,7 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         return if(hasSimpleTypeAttribute(node)) {
             SimpleElement(wsdlTypeReference, node, this)
         } else {
-            ComplexElement(wsdlTypeReference, node, this)
+            ComplexTypeElement(wsdlTypeReference, node, this)
         }
     }
 

@@ -1,7 +1,6 @@
 package run.qontract.core
 
-import assertk.assertThat
-import assertk.assertions.isEqualTo
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 internal class ResultKtTest {

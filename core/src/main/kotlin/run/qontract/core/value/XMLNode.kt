@@ -170,6 +170,9 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     override fun toString(): String = toStringValue()
 
+    fun findFirstChildByName(name: String, errorMessage: String): XMLNode =
+        childNodes.filterIsInstance<XMLNode>().find { it.name == name } ?: throw ContractException(errorMessage)
+
     fun findFirstChildByName(name: String): XMLNode? =
         childNodes.filterIsInstance<XMLNode>().find { it.name == name }
 

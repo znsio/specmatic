@@ -4,9 +4,7 @@ import run.qontract.core.pattern.ContractException
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.namespacePrefix
 import run.qontract.core.value.withoutNamespacePrefix
-import run.qontract.core.wsdl.parser.message.ComplexElement
-import run.qontract.core.wsdl.parser.message.WSDLElement
-import run.qontract.core.wsdl.parser.message.SimpleElement
+import run.qontract.core.wsdl.parser.message.*
 
 private fun getXmlnsDefinitions(wsdlNode: XMLNode): Map<String, String> {
     return wsdlNode.attributes.filterKeys {
@@ -48,7 +46,7 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         return schema.findByNodeNameAndAttribute("complexType", "name", fullTypeName.withoutNamespacePrefix())
     }
 
-    fun findType(
+    fun findTypeFromAttribute(
         element: XMLNode,
         attributeName: String
     ): XMLNode {
@@ -145,5 +143,33 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         val namespaceValue = element.namespaces[namespacePrefix]
             ?: throw ContractException("Can't find namespace prefix $namespacePrefix for element $element")
         return namespaceToPrefix.getValue(namespaceValue)
+    }
+
+    fun getWSDLElementType(parentTypeName: String, child: XMLNode): ChildElementType {
+        return when {
+            child.attributes.containsKey("ref") -> {
+                ElementReference(child, this)
+            }
+            child.attributes.containsKey("type") -> {
+                TypeReference(child, this)
+            }
+            else -> {
+                InlineType(parentTypeName, child, this)
+            }
+        }
+    }
+
+    fun getQualification(element: XMLNode, wsdlTypeReference: String): NamespaceQualification {
+        val namespace = element.resolveNamespace(wsdlTypeReference)
+
+        val schema = this.findSchema(namespace)
+
+        val schemaElementFormDefault = schema.attributes["elementFormDefault"]?.toStringValue()
+        val elementForm = element.attributes["form"]?.toStringValue()
+
+        return when(elementForm ?: schemaElementFormDefault) {
+            "qualified" -> QualifiedNamespace(element, wsdlTypeReference, this)
+            else -> UnqualifiedNamespace(element.getAttributeValue("name"))
+        }
     }
 }

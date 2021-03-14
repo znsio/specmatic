@@ -1,7 +1,6 @@
 package run.qontract.core.wsdl.payload
 
-import assertk.assertThat
-import assertk.assertions.isEmpty
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 internal class EmptyHTTPBodyPayloadTest {

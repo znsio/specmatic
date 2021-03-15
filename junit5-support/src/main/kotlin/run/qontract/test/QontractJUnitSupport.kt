@@ -36,7 +36,7 @@ open class QontractJUnitSupport {
         val config = loadConfigJSON(File(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY))
         println("CONFIG: $config")
         println("Environment name: $envName")
-        val envConfig = config.findFirstChildByPath("env.$envName").also { println("First child: $it") } ?: return JSONObjectValue()
+        val envConfig = config.findFirstChildByPath("environments.$envName").also { println("First child: $it") } ?: return JSONObjectValue()
 
         if(envConfig !is JSONObjectValue)
             throw ContractException("The environment config must be a JSON object.")

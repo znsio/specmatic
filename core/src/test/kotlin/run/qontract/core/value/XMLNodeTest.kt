@@ -225,13 +225,17 @@ internal class XMLNodeTest {
 
     @Test
     fun `serialize to pretty string value`() {
-        val xml = toXMLNode("<customer><firstname>Jill</firstname><surname>Granger</surname></customer>")
-        val prettyStringValue = xml.toPrettyStringValue("  ")
-        val expected = """
-            <customer>
-              <firstname>Jill</firstname>
-              <surname>Granger</surname>
-            </customer>""".trimIndent()
-        assertThat(prettyStringValue).isEqualTo(expected)
+        val originalXml = toXMLNode("<customer><firstname>Jill</firstname><surname>Granger</surname></customer>")
+
+        val spacePrefix = "  "
+
+        val prettyStringValue = originalXml.toPrettyStringValue(spacePrefix)
+        assertThat(toXMLNode(prettyStringValue)).isEqualTo(originalXml)
+
+        val lines = prettyStringValue.trim().lines()
+
+        assertThat(lines.size).isEqualTo(4)
+        assertThat(lines[1]).startsWith(spacePrefix)
+        assertThat(lines[2]).startsWith(spacePrefix)
     }
 }

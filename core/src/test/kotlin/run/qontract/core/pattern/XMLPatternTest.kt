@@ -779,15 +779,10 @@ internal class XMLPatternTest {
     fun `generate Gherkin statements`() {
         val xml = XMLPattern("<account><id>(number)</id></account>")
         val gherkinStatement = xml.toGherkinStatement("TypeName", "")
-        val expectedGherkinStatement = """
-            And type TypeName
-            ""${'"'}
-            <account>
-            <id>(number)</id>
-            </account>
-            ""${'"'}
-            """.trimIndent()
 
-        assertThat(gherkinStatement).isEqualTo(expectedGherkinStatement)
+        val lines = gherkinStatement.trim().lines()
+
+        assertThat(lines).isEqualTo(listOf("And type TypeName", "\"\"\"", "<account>", "<id>(number)</id>", "</account>", "\"\"\""))
+
     }
 }

@@ -5,10 +5,8 @@ import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import run.qontract.core.*
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_FILE_NAME
-import run.qontract.core.pattern.ContractException
-import run.qontract.core.pattern.Examples
-import run.qontract.core.pattern.Row
-import run.qontract.core.pattern.parsedValue
+import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import run.qontract.core.pattern.*
 import run.qontract.core.utilities.*
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
@@ -28,9 +26,25 @@ open class QontractJUnitSupport {
         const val SUGGESTIONS_PATH = "suggestionsPath"
         const val HOST = "host"
         const val PORT = "port"
-        const val ENV_CONFIG_FILE = "envConfigFile"
+        const val ENV_NAME = "environment"
     }
-    
+
+    private fun getEnvConfig(envName: String?): JSONObjectValue {
+        if(envName == null || envName.isBlank())
+            return JSONObjectValue()
+
+        val config = loadConfigJSON(File(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY))
+        println("CONFIG: $config")
+        println("Environment name: $envName")
+        val envConfig = config.findFirstChildByPath("env.$envName").also { println("First child: $it") } ?: return JSONObjectValue()
+
+        if(envConfig !is JSONObjectValue)
+            throw ContractException("The environment config must be a JSON object.")
+
+        println("Returned config: $envConfig")
+        return envConfig
+    }
+
     @TestFactory
     fun contractAsTest(): Collection<DynamicTest> {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
@@ -45,9 +59,10 @@ open class QontractJUnitSupport {
         val workingDirectory = File(valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified"))
         val workingDirectoryWasCreated = workingDirectory.exists()
 
-        val testConfigFile: String? = System.getProperty(ENV_CONFIG_FILE)
-
-        val testConfig = loadTestConfig(testConfigFile)
+        val envConfig = getEnvConfig(System.getProperty(ENV_NAME))
+        println(envConfig)
+        val testConfig = loadTestConfig(envConfig)
+        println(testConfig)
 
         val testScenarios = try {
             when {

@@ -70,7 +70,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
         return findFirstChildByName(first)?.let {
             when {
                 rest.isEmpty() -> it
-                it is JSONObjectValue -> findFirstChildByPath(rest)
+                it is JSONObjectValue -> it.findFirstChildByPath(rest)
                 else -> null
             }
         }

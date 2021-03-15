@@ -2,8 +2,12 @@ package application
 
 import org.springframework.stereotype.Component
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import run.qontract.core.pattern.ContractException
 import run.qontract.core.utilities.ContractPathData
 import run.qontract.core.utilities.contractFilePathsFrom
+import run.qontract.core.utilities.loadConfigJSON
+import run.qontract.core.value.JSONObjectValue
+import java.io.File
 
 @Component
 class QontractConfig {

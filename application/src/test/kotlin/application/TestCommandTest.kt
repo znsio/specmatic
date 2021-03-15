@@ -16,9 +16,7 @@ import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
-import run.qontract.test.QontractJUnitSupport
 import run.qontract.test.QontractJUnitSupport.Companion.CONTRACT_PATHS
-import run.qontract.test.QontractJUnitSupport.Companion.ENV_CONFIG_FILE
 import run.qontract.test.QontractJUnitSupport.Companion.HOST
 import run.qontract.test.QontractJUnitSupport.Companion.PORT
 import run.qontract.test.QontractJUnitSupport.Companion.TIMEOUT
@@ -111,7 +109,6 @@ internal class TestCommandTest {
                 Arguments.of("--port", "9999", PORT, "9999"),
                 Arguments.of("--host", "10.10.10.10", HOST, "10.10.10.10"),
                 Arguments.of("--timeout", "33", TIMEOUT, "33"),
-                Arguments.of("--envConfig", "envConfig.json", ENV_CONFIG_FILE, "envConfig.json")
         )
     }
 

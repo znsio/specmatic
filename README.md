@@ -1,15 +1,15 @@
 Qontract
 ========
-[![Maven Central](https://img.shields.io/maven-central/v/run.qontract/qontract-core.svg)](https://mvnrepository.com/artifact/run.qontract/qontract-core) [![GitHub release](https://img.shields.io/github/release/qontract/qontract.svg)](https://github.com/qontract/qontract/releases) ![CI Build](https://github.com/qontract/qontract/workflows/CI%20Build/badge.svg) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=qontract_qontract&metric=alert_status)](https://sonarcloud.io/dashboard?id=qontract_qontract) [![Twitter Follow](https://img.shields.io/twitter/follow/qontract.svg?style=social&label=Follow)](https://twitter.com/qontract)
+[![Maven Central](https://img.shields.io/maven-central/v/run.qontract/qontract-core.svg)](https://mvnrepository.com/artifact/run.qontract/qontract-core) [![GitHub release](https://img.shields.io/github/release/qontract/qontract.svg)](https://github.com/qontract/qontract/releases) ![CI Build](https://github.com/qontract/qontract/workflows/CI%20Build/badge.svg) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=qontract_qontract&metric=alert_status)](https://sonarcloud.io/dashboard?id=qontract_qontract) [![Twitter Follow](https://img.shields.io/twitter/follow/specmatic.svg?style=social&label=Follow)](https://twitter.com/specmatic)
 
 ### Context
 
-In a complex, interdependent eco-system, where each service is evolving rapidly, we want to make the dependencies between them explicit in the form of executable contracts. By doing so, [Contract Testing](https://qontract.run/contract_testing.html) allows teams to get instantaneous feedback while making changes to avoid accidental breakage.
+In a complex, interdependent eco-system, where each service is evolving rapidly, we want to make the dependencies between them explicit in the form of executable contracts. By doing so, [Contract Testing](https://specmatic.in/contract_testing.html) allows teams to get instantaneous feedback while making changes to avoid accidental breakage.
 
 With this ability, we can now deploy, at will, any service at any time without having to depend on expensive and fragile integration tests.
 
 ### What is Qontract
-Qontract is a [contract driven development tool](https://qontract.run/faqs.html#what-is-contract-first) that allows us to turn our contracts into executable specification.
+Qontract is a [contract driven development tool](https://specmatic.in/faqs.html#what-is-contract-first) that allows us to turn our contracts into executable specification.
 
 According to us there are 2 key advantages, which were never possible before:
 * **Death of Integration Testing** - As long as the service provider and consumer adhere to the contract, you can be 100% confident that each of them can develop and deploy their parts independently. **No need for integration testing**. 
@@ -29,7 +29,7 @@ Systems interact with each other through several means. Qontract hopes to addres
 ---
 ### Key Features
 
-* [**Contract First**](https://qontract.run/faqs.html#what-is-contract-first) - With an API-first approach, you can use Consumer or Provider driven contracts, whatever suits your needs the best.
+* [**Contract First**](https://specmatic.in/faqs.html#what-is-contract-first) - With an API-first approach, you can use Consumer or Provider driven contracts, whatever suits your needs the best.
   - Once a Contract is written, both Consumers and Providers can start development in parallel
 * **Human readable contracts** - Qontract leverages **Gherkin**'s strength as a specification mechanism to define your services (APIs.) No additional language specific tooling required.
   - Anyone 1.Developer (Consumer or Provider), 2.Architect, 3.Tech Leads, 4.Developer, 5.Tester can author the contracts
@@ -42,5 +42,5 @@ Systems interact with each other through several means. Qontract hopes to addres
 * Support for **SOAP/XML**, **Kafka**, **callbacks** and more
 * Already have a lot of APIs? Don't worry, we can take your **Postman Collection** and easily generate contracts from it
 
-[Get started now](https://qontract.run/getting_started.html)
+[Get started now](https://specmatic.in/getting_started.html)
 ---

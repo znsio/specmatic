@@ -19,7 +19,7 @@ internal class InlineTypeTest {
     fun `simple element type`() {
         val element = toXMLNode("<xsd:element name=\"Name\" type=\"xsd:string\" />").copy(namespaces = mapOf("xsd" to "http://www.w3.org/2001/XMLSchema"))
         val type = InlineType("ParentType", element, mockk())
-        val (typeName, wsdlElement) = type.getWSDLElement()
+        val (typeName, _) = type.getWSDLElement()
         assertThat(typeName).isEqualTo("ParentType_Name")
     }
 
@@ -27,7 +27,7 @@ internal class InlineTypeTest {
     fun `complex element type`() {
         val element = toXMLNode("<xsd:element name=\"Customer\" type=\"ns0:Person\" />").copy(namespaces = mapOf("ns0" to "http://person-service"))
         val type = InlineType("ParentType", element, mockk())
-        val (typeName, wsdlElement) = type.getWSDLElement()
+        val (typeName, _) = type.getWSDLElement()
         assertThat(typeName).isEqualTo("ParentType_Customer")
     }
 }

@@ -123,25 +123,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     override fun toStringValue(): String = xmlToString(build())
 
-    fun toPrettyStringValue(incrementalIndent: String): String {
-        val xmlStringLines = xmlToPrettyString(build()).trim().lines()
-        return when (xmlStringLines.size) {
-            1 -> xmlStringLines.first().trim()
-            else -> indentChildrenNodeLines(xmlStringLines, incrementalIndent)
-        }
-    }
-
-    private fun indentChildrenNodeLines(
-        xmlStringLines: List<String>,
-        incrementalIndent: String
-    ): String {
-        val firstLine = xmlStringLines.first().trim()
-        val lastLine = xmlStringLines.last().trim()
-
-        val rest = xmlStringLines.drop(1).dropLast(1).map { it.prependIndent(incrementalIndent) }
-
-        return listOf(firstLine).plus(rest).plus(lastLine).joinToString("\n")
-    }
+    fun toPrettyStringValue(): String = xmlToPrettyString(build()).trim()
 
     override fun displayableType(): String = "xml"
     override fun exactMatchElseType(): XMLPattern {

@@ -106,6 +106,7 @@ fun xmlToString(node: Node): String = xmlToString(DOMSource(node))
 
 fun xmlToPrettyString(node: Node): String = xmlToString(DOMSource(node)) {
     it.setOutputProperty(OutputKeys.INDENT, "yes")
+    it.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
     it.setOutputProperty(OutputKeys.METHOD, "xml")
 }
 

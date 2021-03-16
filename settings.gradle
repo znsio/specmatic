@@ -1,4 +1,4 @@
-rootProject.name = 'qontract'
+rootProject.name = 'specmatic'
 
 include 'application'
 include 'core'

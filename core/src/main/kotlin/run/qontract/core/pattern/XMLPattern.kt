@@ -589,8 +589,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return pattern.toGherkinishNode()
     }
 
-    fun toGherkinStatement(qontractTypeName: String, incrementalIndent: String): String {
-        val typeString = this.toGherkinXMLNode().toPrettyStringValue(incrementalIndent).trim()
+    fun toGherkinStatement(qontractTypeName: String): String {
+        val typeString = this.toGherkinXMLNode().toPrettyStringValue().trim()
         return "And type $qontractTypeName\n\"\"\"\n$typeString\n\"\"\""
     }
 }

@@ -19,11 +19,11 @@ sealed class Result {
     abstract fun isTrue(): Boolean
 
     abstract fun ifSuccess(function: () -> Result): Result
-    abstract fun withBindings(setters: Map<String, String>, response: HttpResponse): Result
+    abstract fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result
 
     data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
         override fun ifSuccess(function: () -> Result) = this
-        override fun withBindings(setters: Map<String, String>, response: HttpResponse): Result {
+        override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
             return this
         }
 

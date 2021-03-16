@@ -187,7 +187,11 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                     results.find {
                         it.provisionalError != null
                     }?.provisionalError?.result
-                        ?: Failure("Not all child nodes matched after optional and multiple nodes. ConsumeResult list: $results")
+                        ?: if(results.last().remainder.size == 1) {
+                            Failure("Unexpected value found: ${results.last().remainder.first().toStringValue()}")
+                        }else {
+                            Failure("Unexpected values found: ${results.last().remainder.joinToString(", ") { it.toStringValue() }}")
+                        }
                 }
                 else -> null
             }

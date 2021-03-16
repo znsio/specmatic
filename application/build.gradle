@@ -39,7 +39,7 @@ repositories {
 
 def ktor_version = "1.4.3"
 def junit_version = "5.7.1"
-def jgit_version = "5.10.0.202012080955-r"
+def jgit_version = "5.11.0.202103091610-r"
 
 dependencies {
     implementation('info.picocli:picocli-spring-boot-starter:4.6.1') {

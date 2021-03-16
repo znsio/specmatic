@@ -3,7 +3,7 @@ package run.qontract.core.wsdl.parser.operation
 import run.qontract.core.pattern.XMLPattern
 
 data class SOAPTypes(val types: Map<String, XMLPattern>) {
-    fun statements(incrementalIndent: String): List<String> {
+    fun statements(): List<String> {
         val typeStrings = types.entries.map { (typeName, type) ->
             type.toGherkinStatement(typeName)
         }

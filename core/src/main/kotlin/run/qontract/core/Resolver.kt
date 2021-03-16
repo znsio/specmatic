@@ -23,19 +23,25 @@ data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boole
                 && pattern.encompasses(getPattern(sampleValue.string), this, this).isTrue())
             return Result.Success()
 
-        when (val result = pattern.matches(sampleValue, this)) {
-            is Result.Failure -> {
-                return result
+        return pattern.matches(sampleValue, this).ifSuccess {
+            if (factKey != null && factStore.has(factKey)) {
+                val result = factStore.match(sampleValue, factKey)
+
+                if(result is Result.Failure) {
+                    result.reason("Resolver was not able to match fact $factKey with value $sampleValue.")
+                }
             }
+
+            Result.Success()
         }
 
-        if (factKey != null && factStore.has(factKey)) {
-            when(val result = factStore.match(sampleValue, factKey)) {
-                is Result.Failure -> result.reason("Resolver was not able to match fact $factKey with value $sampleValue.")
-            }
-        }
+//        val result = pattern.matches(sampleValue, this)
+//        if(result is Result.Failure) {
+//            return result
+//        }
 
-        return Result.Success()
+
+//        return Result.Success()
     }
 
     fun getPattern(patternValue: String): Pattern =

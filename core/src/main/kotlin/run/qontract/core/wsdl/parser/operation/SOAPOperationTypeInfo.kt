@@ -18,7 +18,7 @@ data class SOAPOperationTypeInfo(val operationName: String, val request: SOAPReq
 
         val statementIndent = "$scenarioIndent$incrementalIndent"
         val bodyStatements =
-            types.statements(incrementalIndent)
+            types.statements()
             .plus(request.statements())
             .plus(response.statements())
             .map { it.prependIndent(statementIndent) }

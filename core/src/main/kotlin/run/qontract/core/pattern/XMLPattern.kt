@@ -99,8 +99,6 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         if (sampleData !is XMLNode)
             return Failure("Expected xml, got ${sampleData?.displayableType()}").breadCrumb(pattern.name)
 
-        val nameResult = matchName(sampleData)
-
         val matchingType = if (this.pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)) {
             val typeName = this.pattern.getAttributeValue(TYPE_ATTRIBUTE_NAME)
             val xmlType = (resolver.getPattern("($typeName)") as XMLPattern)
@@ -109,7 +107,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             this
         }
 
-        return nameResult.ifSuccess {
+        return matchName(sampleData).ifSuccess {
             matchingType.matchNamespaces(sampleData)
         }.ifSuccess {
             matchingType.matchAttributes(sampleData, resolver)
@@ -162,8 +160,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                             resolvedType.matches(consumeResult.remainder, resolver).cast("xml")
                         }
                     } catch (e: ContractException) {
-                        println(e.errorMessage)
-                        ConsumeResult(e.failure().breadCrumb(breadCrumbIfXMLTag(resolvedType)), consumeResult.remainder)
+                        ConsumeResult(e.failure(), consumeResult.remainder)
                     }
                 }
             }
@@ -182,23 +179,15 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     private fun failureFrom(results: List<ConsumeResult<XMLValue, Value>>): Result? {
         val nodeStructureMismatchError = results.find {
             it.result is Failure
-        }?.result?.breadCrumb(this.pattern.name)
+        }?.result
 
         val nothingEvenCameCloseError = lazy {
             when {
                 results.isNotEmpty() && results.last().remainder.isNotEmpty() -> {
                     results.find {
                         it.provisionalError != null
-                    }?.provisionalError?.let {
-                        val nodeValue = it.value
-                        if (nodeValue is XMLNode)
-                            it.result.breadCrumb(nodeValue.name)
-                        else
-                            it.result.breadCrumb(this.pattern.name)
-                    }
-                        ?: Failure("Not all child nodes matched after optional and multiple nodes. ConsumeResult list: $results").breadCrumb(
-                            this.pattern.name
-                        )
+                    }?.provisionalError?.result
+                        ?: Failure("Not all child nodes matched after optional and multiple nodes. ConsumeResult list: $results")
                 }
                 else -> null
             }
@@ -227,14 +216,12 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             if (missing.isNotEmpty())
                 Failure(
                     "In node named ${pattern.name}, the following namespaces were missing: $missing",
-                    breadCrumb = pattern.name
                 )
 
             val extra = sampleXmlnsValues - patternXmlnsValues
             if (extra.isNotEmpty())
                 return Failure(
                     "In node named ${pattern.name}, the following unexpected namespaces were found: $extra",
-                    breadCrumb = pattern.name
                 )
         }
 
@@ -255,14 +242,14 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             ::validateUnexpectedKeys
         )
         if (missingKey != null)
-            return missingKeyToResult(missingKey, "attribute").breadCrumb(pattern.name)
+            return missingKeyToResult(missingKey, "attribute")
 
         return matchAttributes(patternAttributesWithoutXmlns, sampleAttributesWithoutXmlns, resolver)
     }
 
     private fun matchName(sampleData: XMLNode): Result {
         if (sampleData.name != pattern.name)
-            return mismatchResult(pattern.name, sampleData.name).breadCrumb(pattern.name)
+            return mismatchResult(pattern.name, sampleData.name)
 
         return Success()
     }
@@ -284,7 +271,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 resolver.matchesPattern(key, patternValue, resolvedValue)
             } catch (e: ContractException) {
                 e.failure()
-            }.breadCrumb(key).breadCrumb(pattern.name)
+            }.breadCrumb(key)
         }.find { it is Failure } ?: Success()
 
     private fun <ValueType> ignoreXMLNamespaces(attributes: Map<String, ValueType>): Map<String, ValueType> =

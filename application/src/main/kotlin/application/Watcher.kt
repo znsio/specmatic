@@ -1,7 +1,7 @@
 package application
 
-import run.qontract.consoleLog
-import run.qontract.core.CONTRACT_EXTENSIONS
+import `in`.specmatic.consoleLog
+import `in`.specmatic.core.CONTRACT_EXTENSIONS
 import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Path

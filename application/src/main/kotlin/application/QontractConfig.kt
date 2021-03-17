@@ -1,10 +1,10 @@
 package application
 
 import org.springframework.stereotype.Component
-import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.core.utilities.ContractPathData
-import run.qontract.core.utilities.contractFilePathsFrom
+import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.utilities.ContractPathData
+import `in`.specmatic.core.utilities.contractFilePathsFrom
 
 @Component
 class QontractConfig {

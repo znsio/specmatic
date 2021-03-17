@@ -1,7 +1,7 @@
 package application
 
-import run.qontract.core.git.GitCommand
-import run.qontract.core.git.SystemGit
+import `in`.specmatic.core.git.GitCommand
+import `in`.specmatic.core.git.SystemGit
 import java.io.File
 
 abstract class FakeGit: GitCommand {

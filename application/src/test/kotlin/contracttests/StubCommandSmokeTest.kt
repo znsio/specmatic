@@ -12,11 +12,11 @@ import org.junit.jupiter.api.io.TempDir
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.core.HttpRequest
-import run.qontract.core.HttpResponse
-import run.qontract.core.utilities.exceptionCauseMessage
-import run.qontract.test.HttpClient
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.HttpRequest
+import `in`.specmatic.core.HttpResponse
+import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.test.HttpClient
 import java.io.File
 import kotlin.concurrent.thread
 

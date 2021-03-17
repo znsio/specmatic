@@ -1,11 +1,11 @@
 package application
 
 import picocli.CommandLine.*
-import run.qontract.consoleLog
-import run.qontract.core.APPLICATION_NAME_LOWER_CASE
-import run.qontract.core.utilities.exceptionCauseMessage
-import run.qontract.core.utilities.exitWithMessage
-import run.qontract.proxy.Proxy
+import `in`.specmatic.consoleLog
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.utilities.exitWithMessage
+import `in`.specmatic.proxy.Proxy
 import java.io.File
 import java.lang.Thread.sleep
 import java.util.concurrent.Callable

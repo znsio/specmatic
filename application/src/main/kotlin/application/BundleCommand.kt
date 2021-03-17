@@ -5,8 +5,8 @@ package application
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import picocli.CommandLine
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.core.utilities.ContractPathData
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.utilities.ContractPathData
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Callable

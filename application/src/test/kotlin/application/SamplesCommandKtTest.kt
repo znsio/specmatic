@@ -4,8 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.core.SPECMATIC_RESULT_HEADER
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.SPECMATIC_RESULT_HEADER
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream

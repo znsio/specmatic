@@ -4,18 +4,18 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import org.springframework.stereotype.Component
 import picocli.CommandLine.*
-import run.qontract.LogTail
-import run.qontract.consoleLog
-import run.qontract.core.*
-import run.qontract.core.Constants.Companion.DEFAULT_HTTP_STUB_HOST
-import run.qontract.core.Constants.Companion.DEFAULT_HTTP_STUB_PORT
-import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
-import run.qontract.core.pattern.ContractException
-import run.qontract.core.utilities.exceptionCauseMessage
-import run.qontract.core.utilities.exitWithMessage
-import run.qontract.mock.NoMatchingScenario
-import run.qontract.mock.ScenarioStub
-import run.qontract.stub.*
+import `in`.specmatic.LogTail
+import `in`.specmatic.consoleLog
+import `in`.specmatic.core.*
+import `in`.specmatic.core.Constants.Companion.DEFAULT_HTTP_STUB_HOST
+import `in`.specmatic.core.Constants.Companion.DEFAULT_HTTP_STUB_PORT
+import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.utilities.exitWithMessage
+import `in`.specmatic.mock.NoMatchingScenario
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.*
 import java.util.concurrent.Callable
 
 @Command(name = "stub",

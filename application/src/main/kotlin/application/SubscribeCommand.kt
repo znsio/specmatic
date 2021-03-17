@@ -1,13 +1,13 @@
 package application
 
 import picocli.CommandLine
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
-import run.qontract.core.git.SystemGit
-import run.qontract.core.git.NonZeroExitError
-import run.qontract.core.pattern.ContractException
-import run.qontract.core.resultReport
-import run.qontract.core.utilities.*
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import `in`.specmatic.core.git.SystemGit
+import `in`.specmatic.core.git.NonZeroExitError
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.resultReport
+import `in`.specmatic.core.utilities.*
 import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess

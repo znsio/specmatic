@@ -28,6 +28,6 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        files: application/build/libs/qontract.jar
+        files: application/build/libs/specmatic.jar
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

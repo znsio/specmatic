@@ -1,9 +1,9 @@
 package application
 
 import picocli.CommandLine.*
-import run.qontract.core.Contract
-import run.qontract.core.pattern.ContractException
-import run.qontract.stub.HttpStub
+import `in`.specmatic.core.Contract
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.stub.HttpStub
 import java.io.File
 import java.util.concurrent.Callable
 

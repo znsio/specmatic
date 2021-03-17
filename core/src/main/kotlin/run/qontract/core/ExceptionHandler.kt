@@ -1,2 +1,0 @@
-package run.qontract.core
-

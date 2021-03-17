@@ -15,12 +15,12 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import picocli.CommandLine
 import picocli.CommandLine.IFactory
-import run.qontract.core.LEGACY_CONTRACT_EXTENSION
-import run.qontract.core.parseGherkinStringToFeature
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.core.CONTRACT_EXTENSIONS
-import run.qontract.mock.ScenarioStub
-import run.qontract.stub.HttpClientFactory
+import `in`.specmatic.core.LEGACY_CONTRACT_EXTENSION
+import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.CONTRACT_EXTENSIONS
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.HttpClientFactory
 import java.io.File
 import java.nio.file.Path
 

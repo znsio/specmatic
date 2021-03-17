@@ -16,11 +16,11 @@ import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.test.QontractJUnitSupport.Companion.CONTRACT_PATHS
-import run.qontract.test.QontractJUnitSupport.Companion.HOST
-import run.qontract.test.QontractJUnitSupport.Companion.PORT
-import run.qontract.test.QontractJUnitSupport.Companion.TIMEOUT
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import java.util.stream.Stream
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = arrayOf(SpecmaticApplication::class, TestCommand::class))

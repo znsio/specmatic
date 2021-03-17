@@ -32,5 +32,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v2.2.2
       with:
-        name: Qontract Standalone Executable
-        path: application/build/libs/qontract.jar
+        name: Specmatic Standalone Executable
+        path: application/build/libs/specmatic.jar

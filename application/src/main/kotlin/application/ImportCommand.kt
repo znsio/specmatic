@@ -2,15 +2,15 @@ package application
 
 import picocli.CommandLine
 import picocli.CommandLine.*
-import run.qontract.conversions.postmanCollectionToGherkin
-import run.qontract.conversions.runTests
-import run.qontract.conversions.toFragment
-import run.qontract.core.*
-import run.qontract.core.utilities.jsonStringToValueMap
-import run.qontract.core.utilities.parseXML
-import run.qontract.core.value.toXMLNode
-import run.qontract.core.wsdl.parser.WSDL
-import run.qontract.mock.mockFromJSON
+import `in`.specmatic.conversions.postmanCollectionToGherkin
+import `in`.specmatic.conversions.runTests
+import `in`.specmatic.conversions.toFragment
+import `in`.specmatic.core.*
+import `in`.specmatic.core.utilities.jsonStringToValueMap
+import `in`.specmatic.core.utilities.parseXML
+import `in`.specmatic.core.value.toXMLNode
+import `in`.specmatic.core.wsdl.parser.WSDL
+import `in`.specmatic.mock.mockFromJSON
 import java.io.File
 import java.util.concurrent.Callable
 

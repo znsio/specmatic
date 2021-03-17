@@ -6,10 +6,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.core.Result
-import run.qontract.core.Results
-import run.qontract.core.git.GitCommand
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.Result
+import `in`.specmatic.core.Results
+import `in`.specmatic.core.git.GitCommand
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, CompatibleCommand::class])
 internal class CompatibleCommandKtTest {

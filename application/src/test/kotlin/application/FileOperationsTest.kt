@@ -5,9 +5,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import run.qontract.core.LEGACY_CONTRACT_EXTENSION
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.core.CONTRACT_EXTENSIONS
+import `in`.specmatic.core.LEGACY_CONTRACT_EXTENSION
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.CONTRACT_EXTENSIONS
 import java.io.File
 import java.nio.file.Path
 

@@ -6,15 +6,15 @@ import org.springframework.context.annotation.Configuration
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
-import run.qontract.core.Feature
-import run.qontract.core.parseGherkinStringToFeature
-import run.qontract.core.Result
-import run.qontract.core.Results
-import run.qontract.core.git.GitCommand
-import run.qontract.core.git.NonZeroExitError
-import run.qontract.core.git.SystemGit
-import run.qontract.core.testBackwardCompatibility
-import run.qontract.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.Feature
+import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.Result
+import `in`.specmatic.core.Results
+import `in`.specmatic.core.git.GitCommand
+import `in`.specmatic.core.git.NonZeroExitError
+import `in`.specmatic.core.git.SystemGit
+import `in`.specmatic.core.testBackwardCompatibility
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.FileNotFoundException
 import java.util.concurrent.Callable
 

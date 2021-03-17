@@ -8,9 +8,9 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
-import run.qontract.core.CONTRACT_EXTENSION
-import run.qontract.core.git.GitCommand
-import run.qontract.core.git.NonZeroExitError
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.git.GitCommand
+import `in`.specmatic.core.git.NonZeroExitError
 import java.io.FileNotFoundException
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, CompatibleCommand::class])

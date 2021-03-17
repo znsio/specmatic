@@ -1,7 +1,7 @@
 package application
 
-import run.qontract.core.git.GitCommand
-import run.qontract.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.git.GitCommand
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 
 val getFileContentAtSpecifiedCommit = {
     gitRoot: GitCommand -> { relativeContractPath: String -> { contractPath: String -> { commit: String ->

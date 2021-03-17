@@ -2,11 +2,11 @@ package application
 
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
-import run.qontract.core.Feature
-import run.qontract.core.parseGherkinStringToFeature
-import run.qontract.core.pattern.ContractException
-import run.qontract.core.testBackwardCompatibility
-import run.qontract.core.utilities.readFile
+import `in`.specmatic.core.Feature
+import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.testBackwardCompatibility
+import `in`.specmatic.core.utilities.readFile
 import java.util.concurrent.Callable
 
 @Command(name = "compare",

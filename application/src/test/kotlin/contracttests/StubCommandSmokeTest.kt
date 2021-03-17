@@ -1,8 +1,8 @@
 package contracttests
 
 import application.Outcome
-import application.QontractApplication
-import application.QontractCommand
+import application.SpecmaticApplication
+import application.SpecmaticCommand
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.Disabled
@@ -12,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
+import run.qontract.core.CONTRACT_EXTENSION
 import run.qontract.core.HttpRequest
 import run.qontract.core.HttpResponse
 import run.qontract.core.utilities.exceptionCauseMessage
@@ -19,13 +20,13 @@ import run.qontract.test.HttpClient
 import java.io.File
 import kotlin.concurrent.thread
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [QontractApplication::class, QontractCommand::class])
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, SpecmaticCommand::class])
 class StubCommandSmokeTest {
     @Autowired
     lateinit var factory: CommandLine.IFactory
 
     @Autowired
-    lateinit var picoCommand: QontractCommand
+    lateinit var picoCommand: SpecmaticCommand
 
     val contract = """
             Feature: Random API
@@ -37,7 +38,7 @@ class StubCommandSmokeTest {
 
     @Test @Disabled
     fun `simple http stub`(@TempDir tempDir: File) {
-        val contractFile = tempDir.resolve("random.qontract")
+        val contractFile = tempDir.resolve("random.$CONTRACT_EXTENSION")
         contractFile.writeText(contract)
 
         val request = HttpRequest(method = "GET", path = "/")

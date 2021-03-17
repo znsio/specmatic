@@ -77,7 +77,7 @@ class QontractKafka(private val kafkaInstance: KafkaInstance, private val create
 fun createConsumer(brokers: String, commit: Boolean): Consumer<String, String> {
     val props = Properties()
     props["bootstrap.servers"] = brokers
-    props["group.id"] = "qontract"
+    props["group.id"] = "specmatic"
     props["key.deserializer"] = StringDeserializer::class.java
     props["value.deserializer"] = StringDeserializer::class.java
     props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"

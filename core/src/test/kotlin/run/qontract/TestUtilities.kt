@@ -87,7 +87,7 @@ fun testStub(contractGherkin: String, stubRequest: HttpRequest, stubResponse: Ht
     val matchingStub = feature.matchingStub(stub)
 
     return stubResponse(stubRequest, listOf(feature), listOf(matchingStub), true).let {
-        it.response.copy(headers = it.response.headers - QONTRACT_RESULT_HEADER)
+        it.response.copy(headers = it.response.headers - SPECMATIC_RESULT_HEADER)
     }
 }
 
@@ -103,7 +103,7 @@ private fun stubsFrom(oldContract: String): TestHttpStubData {
         val request = scenario.generateHttpRequest()
         val response = scenario.generateHttpResponse(emptyMap())
 
-        TestHttpStub(stubRequest = request, stubResponse = response.copy(headers = response.headers.minus(QONTRACT_RESULT_HEADER)))
+        TestHttpStub(stubRequest = request, stubResponse = response.copy(headers = response.headers.minus(SPECMATIC_RESULT_HEADER)))
     })
 
 }

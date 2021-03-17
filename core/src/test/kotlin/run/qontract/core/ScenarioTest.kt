@@ -430,7 +430,7 @@ And response-body (number)
     fun `should add bindings and variables if passed when generating test scenarios`() {
         val gherkin = """Feature: Test API
             Background:
-                Given value auth from auth.qontract
+                Given value auth from auth.spec
 
             Scenario: Test Scenario
                 When GET /
@@ -445,14 +445,14 @@ And response-body (number)
                 | (${DEREFERENCE_PREFIX}data) | (${DEREFERENCE_PREFIX}auth.token) | 
                 """.trim()
 
-        val feature = parseGherkinStringToFeature(gherkin, "original.qontract").copy(testVariables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.qontract" to "http://baseurl"))
+        val feature = parseGherkinStringToFeature(gherkin, "original.spec").copy(testVariables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl"))
 
         val testScenarios = feature.scenarios.map { scenario ->
             val updatedReferences = scenario.references.mapValues {
                 it.value.copy(valuesCache = mapOf("token" to "20"))
             }
 
-            scenario.copy(references = updatedReferences).generateTestScenarios(variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.qontract" to "http://baseurl"))
+            scenario.copy(references = updatedReferences).generateTestScenarios(variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl"))
         }.flatten()
 
         assertThat(testScenarios).allSatisfy {

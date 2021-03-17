@@ -116,7 +116,7 @@ fun getPersonalAccessToken(): String? {
     val homeDir = File(System.getProperty("user.home"))
 
     if(homeDir.exists()) {
-        val configFile = homeDir.resolve("qontract.json")
+        val configFile = homeDir.resolve("specmatic.json")
 
         if(configFile.exists()) {
             val qontractConfig = readQontractConfig(configFile)

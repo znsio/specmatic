@@ -55,7 +55,7 @@ internal class KafkaStubKtTest {
 
     @Test
     fun `creating Kafka message expectations`() {
-        val feature = parseGherkinStringToFeature("""Feature: Kafka Qontract
+        val feature = parseGherkinStringToFeature("""Feature: Kafka Contract
   Scenario: New message
     * kafka-message order (string)""".trimMargin())
 

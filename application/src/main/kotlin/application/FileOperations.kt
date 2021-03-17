@@ -22,5 +22,5 @@ class FileOperations {
     fun isJSONFile(file: File): Boolean =
         file.isFile && file.extension.equals("json", ignoreCase = true)
 
-    fun extensionIsNot(fileName: String, extension: String): Boolean = File(fileName).extension != extension
+    fun extensionIsNot(fileName: String, extensions: List<String>): Boolean = File(fileName).extension !in extensions
 }

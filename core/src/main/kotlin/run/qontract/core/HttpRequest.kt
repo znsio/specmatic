@@ -265,10 +265,10 @@ fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>, 
 }
 
 fun firstLineToGherkin(request: HttpRequest, types: Map<String, Pattern>, exampleDeclarationsStore: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-    val method = request.method ?: throw ContractException("Can't generate a qontract without the http method.")
+    val method = request.method ?: throw ContractException("Can't generate a spec file without the http method.")
 
     if (request.path == null)
-        throw ContractException("Can't generate a qontract without the url.")
+        throw ContractException("Can't generate a contract without the url.")
 
     val (query, newTypes, newExamples) = when {
         request.queryParams.isNotEmpty() -> {

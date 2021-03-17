@@ -375,7 +375,7 @@ class PostmanKtTests {
 							"value": "Origin"
 						},
 						{
-							"key": "X-Qontract-Result",
+							"key": "$SPECMATIC_RESULT_HEADER",
 							"value": "success"
 						},
 						{
@@ -821,7 +821,7 @@ class PostmanKtTests {
 							"value": "Origin"
 						},
 						{
-							"key": "X-Qontract-Result",
+							"key": "$SPECMATIC_RESULT_HEADER",
 							"value": "success"
 						},
 						{

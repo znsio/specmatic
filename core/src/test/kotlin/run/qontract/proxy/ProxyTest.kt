@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestTemplate
+import run.qontract.core.CONTRACT_EXTENSION
 import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.core.pattern.parsedJSON
 import run.qontract.stub.HttpStub
@@ -40,7 +41,7 @@ internal class ProxyTest {
             override fun writeText(path: String, content: String) {
                 receivedPaths.add(path)
 
-                if(path.endsWith(".qontract"))
+                if(path.endsWith(".$CONTRACT_EXTENSION"))
                     receivedContract = content
                 else
                     receivedStub = content
@@ -63,7 +64,7 @@ internal class ProxyTest {
         assertThat(receivedContract?.trim()).startsWith("Feature:")
         assertThatCode { parseGherkinStringToFeature(receivedContract ?: "") }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.qontract", "stub0.json"))
+        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.$CONTRACT_EXTENSION", "stub0.json"))
     }
 
     @Test
@@ -86,7 +87,7 @@ internal class ProxyTest {
             override fun writeText(path: String, content: String) {
                 receivedPaths.add(path)
 
-                if(path.endsWith(".qontract"))
+                if(path.endsWith(".$CONTRACT_EXTENSION"))
                     receivedContract = content
                 else
                     receivedStub = content
@@ -106,6 +107,6 @@ internal class ProxyTest {
         assertThat(receivedContract?.trim()).startsWith("Feature:")
         assertThatCode { parseGherkinStringToFeature(receivedContract ?: "") }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.qontract", "stub0.json"))
+        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.$CONTRACT_EXTENSION", "stub0.json"))
     }
 }

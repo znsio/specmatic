@@ -56,12 +56,12 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
     }
 }
 
-class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = dontPrintToConsole, private val strictMode: Boolean = false, keyStoreData: KeyStoreData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory()) : ContractStub {
+class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = dontPrintToConsole, private val strictMode: Boolean = false, keyData: KeyData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory()) : ContractStub {
     constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = dontPrintToConsole) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
     constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = dontPrintToConsole) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.toMutableList())
-    val endPoint = endPointFromHostAndPort(host, port, keyStoreData)
+    val endPoint = endPointFromHostAndPort(host, port, keyData)
 
     private val environment = applicationEngineEnvironment {
         module {
@@ -122,12 +122,12 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             }
         }
 
-        when (keyStoreData) {
+        when (keyData) {
             null -> connector {
                 this.host = host
                 this.port = port
             }
-            else -> sslConnector(keyStore = keyStoreData.keyStore, keyAlias = keyStoreData.keyAlias, privateKeyPassword = { keyStoreData.keyPassword.toCharArray() }, keyStorePassword = { keyStoreData.keyPassword.toCharArray() }) {
+            else -> sslConnector(keyStore = keyData.keyStore, keyAlias = keyData.keyAlias, privateKeyPassword = { keyData.keyPassword.toCharArray() }, keyStorePassword = { keyData.keyPassword.toCharArray() }) {
                 this.host = host
                 this.port = port
             }
@@ -161,10 +161,10 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             HttpStubResponse(HttpResponse.OK)
         }
         catch(e: ContractException) {
-            HttpStubResponse(HttpResponse(status = 400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue(e.report())))
+            HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.report())))
         }
         catch (e: Exception) {
-            HttpStubResponse(HttpResponse(status = 400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)))
+            HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)))
         }
     }
 
@@ -310,7 +310,7 @@ fun getHttpResponse(httpRequest: HttpRequest, features: List<Feature>, threadSaf
     }
 }
 
-const val QONTRACT_SOURCE_HEADER = "X-Qontract-Source"
+const val QONTRACT_SOURCE_HEADER = "X-$APPLICATION_NAME-Source"
 
 fun passThroughResponse(httpRequest: HttpRequest, passThroughUrl: String, httpClientFactory: HttpClientFactory): HttpStubResponse {
     val response = httpClientFactory.client(passThroughUrl).execute(httpRequest)
@@ -343,18 +343,18 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
         it.stubResponse(httpRequest)
     }.toList()
 
-    return when (val fakeResponse = responses.firstOrNull { it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure" }) {
+    return when (val fakeResponse = responses.firstOrNull { it.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "none") != "failure" }) {
         null -> {
             val (headers, body) = when {
-                responses.all { it.headers.getOrDefault("X-Qontract-Empty", "none") == "true" } -> {
-                    Pair(mapOf("X-Qontract-Empty" to "true"), StringValue(PATH_NOT_RECOGNIZED_ERROR))
+                responses.all { it.headers.getOrDefault(SPECMATIC_EMPTY_HEADER, "none") == "true" } -> {
+                    Pair(mapOf(SPECMATIC_EMPTY_HEADER to "true"), StringValue(PATH_NOT_RECOGNIZED_ERROR))
                 }
                 else -> Pair(emptyMap(), StringValue(responses.map {
                     it.body
                 }.filter { it != EmptyString }.joinToString("\n\n")))
             }
 
-            HttpResponse(400, headers = headers.plus(mapOf(QONTRACT_RESULT_HEADER to "failure")), body = body)
+            HttpResponse(400, headers = headers.plus(mapOf(SPECMATIC_RESULT_HEADER to "failure")), body = body)
         }
         else -> fakeResponse
     }
@@ -364,7 +364,7 @@ private fun http400Response(matchResults: List<Pair<Result, HttpStubData>>): Htt
     val failureResults = matchResults.map { it.first }
 
     val results = Results(failureResults.toMutableList()).withoutFluff()
-    return HttpResponse(400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report()}"))
+    return HttpResponse(400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report()}"))
 }
 
 fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>, stubs: StubDataItems): HttpResponse {
@@ -378,7 +378,7 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List
                 }
 
                 responses.firstOrNull {
-                    it.headers.getOrDefault(QONTRACT_RESULT_HEADER, "none") != "failure"
+                    it.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "none") != "failure"
                 } ?: HttpResponse(400, responses.map {
                     it.body
                 }.filter { it != EmptyString }.joinToString("\n\n"))
@@ -401,7 +401,7 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<Scenari
 }
 
 fun badRequest(errorMessage: String?): HttpResponse {
-    return HttpResponse(HttpStatusCode.BadRequest.value, errorMessage, mapOf(QONTRACT_RESULT_HEADER to "failure"))
+    return HttpResponse(HttpStatusCode.BadRequest.value, errorMessage, mapOf(SPECMATIC_RESULT_HEADER to "failure"))
 }
 
 internal fun httpResponseLog(response: HttpResponse): String =
@@ -410,8 +410,8 @@ internal fun httpResponseLog(response: HttpResponse): String =
 internal fun httpRequestLog(httpRequest: HttpRequest): String =
         ">> Request Start At ${Date()}\n${httpRequest.toLogString("-> ")}"
 
-fun endPointFromHostAndPort(host: String, port: Int?, keyStoreData: KeyStoreData?): String {
-    val protocol = when(keyStoreData) {
+fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String {
+    val protocol = when(keyData) {
         null -> "http"
         else -> "https"
     }
@@ -424,20 +424,24 @@ fun endPointFromHostAndPort(host: String, port: Int?, keyStoreData: KeyStoreData
     return "$protocol://$host$computedPortString"
 }
 
+internal fun isPath(path: String?, lastPart: String): Boolean {
+    return path == "/_$APPLICATION_NAME_LOWER_CASE_LEGACY/$lastPart" || path == "/_$APPLICATION_NAME_LOWER_CASE/$lastPart"
+}
+
 internal fun isFetchLogRequest(httpRequest: HttpRequest): Boolean =
-        httpRequest.path == "/_qontract/log" && httpRequest.method == "GET"
+    isPath(httpRequest.path, "log") && httpRequest.method == "GET"
 
 internal fun isFetchContractsRequest(httpRequest: HttpRequest): Boolean =
-        httpRequest.path == "/_qontract/contracts" && httpRequest.method == "GET"
+    isPath(httpRequest.path, "contracts") && httpRequest.method == "GET"
 
 internal fun isFetchLoadLogRequest(httpRequest: HttpRequest): Boolean =
-        httpRequest.path == "/_qontract/load_log" && httpRequest.method == "GET"
+    isPath(httpRequest.path, "load_log") && httpRequest.method == "GET"
 
 internal fun isExpectationCreation(httpRequest: HttpRequest) =
-        httpRequest.path == "/_qontract/expectations" && httpRequest.method == "POST"
+    isPath(httpRequest.path, "expectations") && httpRequest.method == "POST"
 
 internal fun isStateSetupRequest(httpRequest: HttpRequest): Boolean =
-        httpRequest.path == "/_qontract/state" && httpRequest.method == "POST"
+    isPath(httpRequest.path, "state") && httpRequest.method == "POST"
 
 fun softCastResponseToXML(mockResponse: HttpStubData): HttpStubData =
         mockResponse.copy(response = mockResponse.response.copy(body = softCastValueToXML(mockResponse.response.body)))

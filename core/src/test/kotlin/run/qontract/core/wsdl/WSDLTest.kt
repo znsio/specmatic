@@ -2,6 +2,7 @@ package run.qontract.core.wsdl
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.CONTRACT_EXTENSION
 import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.value.toXMLNode
@@ -35,7 +36,7 @@ class WSDLTest {
 
     private fun readContracts(filename: String): Pair<String, String> {
         val wsdlContent = readTextResource("wsdl/$filename.wsdl")
-        val expectedGherkin = readTextResource("wsdl/$filename.qontract").trimIndent().trim()
+        val expectedGherkin = readTextResource("wsdl/$filename.$CONTRACT_EXTENSION").trimIndent().trim()
         return Pair(wsdlContent, expectedGherkin)
     }
 

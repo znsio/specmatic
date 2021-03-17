@@ -31,7 +31,7 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
 
 // Used by stub client code
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
-    File(dirContainingContracts).listFiles()?.filter { it.extension == QONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
+    File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStub(host: String = "localhost", port: Int = 9000): HttpStub {
     val contractPaths = contractStubPaths().map { it.path }
@@ -63,7 +63,7 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
 fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
     return contractPaths.map { File(it) }.flatMap { contractPath ->
         when {
-            contractPath.isFile && contractPath.extension == "qontract" -> {
+            contractPath.isFile && contractPath.extension in CONTRACT_EXTENSIONS -> {
                 consoleLog("Loading $contractPath")
                 val feature = parseGherkinStringToFeature(contractPath.readText().trim())
                 val implicitDataDir = implicitContractDataDir(contractPath.path)

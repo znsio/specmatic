@@ -301,7 +301,7 @@ fun values(
     val parts = breakIntoPartsMaxLength(rest, 3)
 
     if(parts.size != 3 || parts[1] != "from")
-        throw ContractException("Incorrect syntax for value statement: $rest - it should be \"Given value <value name> from <qontract file name>\"")
+        throw ContractException("Incorrect syntax for value statement: $rest - it should be \"Given value <value name> from <$APPLICATION_NAME file name>\"")
 
     val valueStoreName = parts[0]
     val qontractFileName = parts[2]

@@ -1,6 +1,8 @@
 package application
 
 import picocli.CommandLine
+import run.qontract.core.APPLICATION_NAME
+import run.qontract.core.CONTRACT_EXTENSION
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.resultReport
@@ -14,7 +16,7 @@ import java.util.concurrent.Callable
 class InstallCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
-        val workingDirectory = userHome.resolve(".qontract/repos")
+        val workingDirectory = userHome.resolve(".$CONTRACT_EXTENSION/repos")
 
         val sources = try { loadSources(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
 

@@ -53,7 +53,7 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
         requestTimeoutMillis = (timeout * 1000).toLong()
     }
 }) : TestExecutor {
-    private val serverStateURL = "/_qontract/state"
+    private val serverStateURL = "/_$APPLICATION_NAME_LOWER_CASE/state"
 
     @OptIn(KtorExperimentalAPI::class)
     override fun execute(request: HttpRequest): HttpResponse {

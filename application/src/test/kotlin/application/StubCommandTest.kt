@@ -8,19 +8,23 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import picocli.CommandLine
 import picocli.CommandLine.IFactory
+import run.qontract.core.LEGACY_CONTRACT_EXTENSION
 import run.qontract.core.parseGherkinStringToFeature
-import run.qontract.core.QONTRACT_EXTENSION
+import run.qontract.core.CONTRACT_EXTENSION
+import run.qontract.core.CONTRACT_EXTENSIONS
 import run.qontract.mock.ScenarioStub
 import run.qontract.stub.HttpClientFactory
 import java.io.File
 import java.nio.file.Path
 
-@SpringBootTest(webEnvironment = NONE, classes = [QontractApplication::class, StubCommand::class, HttpClientFactory::class])
+@SpringBootTest(webEnvironment = NONE, classes = [SpecmaticApplication::class, StubCommand::class, HttpClientFactory::class])
 internal class StubCommandTest {
     @MockkBean
     lateinit var qontractConfig: QontractConfig
@@ -56,9 +60,7 @@ internal class StubCommandTest {
 
     @Test
     fun `when contract files are not given it should load from qontract config`() {
-        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.qontract"))
-        every { fileOperations.isFile("/config/path/to/contract.qontract") }.returns(true)
-        every { fileOperations.extensionIsNot("/config/path/to/contract.qontract", QONTRACT_EXTENSION) }.returns(false)
+        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
 
         CommandLine(stubCommand, factory).execute()
 
@@ -67,18 +69,16 @@ internal class StubCommandTest {
 
     @Test
     fun `when contract files are given it should not load from qontract config`() {
-        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.qontract"))
-        every { fileOperations.isFile("/parameter/path/to/contract.qontract") }.returns(true)
-        every { fileOperations.extensionIsNot("/parameter/path/to/contract.qontract", QONTRACT_EXTENSION) }.returns(false)
+        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
 
-        CommandLine(stubCommand, factory).execute("/parameter/path/to/contract.qontract")
+        CommandLine(stubCommand, factory).execute("/parameter/path/to/contract.$CONTRACT_EXTENSION")
 
         verify(exactly = 0) { qontractConfig.contractStubPaths() }
     }
 
     @Test
     fun `should attempt to start HTTP and Kafka stubs`() {
-        val contractPath = "/path/to/contract.qontract"
+        val contractPath = "/path/to/contract.$CONTRACT_EXTENSION"
         val contract = """
             Feature: Math API
               Scenario: Random API
@@ -105,7 +105,7 @@ internal class StubCommandTest {
 
         every { qontractConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
         every { fileOperations.isFile(contractPath) }.returns(true)
-        every { fileOperations.extensionIsNot(contractPath, QONTRACT_EXTENSION) }.returns(false)
+        every { fileOperations.extensionIsNot(contractPath, CONTRACT_EXTENSIONS) }.returns(false)
 
         val exitStatus = CommandLine(stubCommand, factory).execute(contractPath)
         assertThat(exitStatus).isZero()
@@ -114,9 +114,10 @@ internal class StubCommandTest {
         verify(exactly = 1) { kafkaStubEngine.runKafkaStub(stubInfo, kafkaHost, kafkaPort, false) }
     }
 
-    @Test
-    fun `when a contract with the correct extension is given it should be loaded`(@TempDir tempDir: Path) {
-        val validQontract = tempDir.resolve("contract.qontract")
+    @ParameterizedTest
+    @ValueSource(strings = [CONTRACT_EXTENSION, LEGACY_CONTRACT_EXTENSION])
+    fun `when a contract with the correct extension is given it should be loaded`(extension: String, @TempDir tempDir: Path) {
+        val validQontract = tempDir.resolve("contract.$extension")
 
         val qontractFilePath = validQontract.toAbsolutePath().toString()
         File(qontractFilePath).writeText("""
@@ -124,9 +125,9 @@ internal class StubCommandTest {
         """.trimIndent())
 
         every { watchMaker.make(listOf(qontractFilePath)) }.returns(watcher)
-        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.qontract"))
+        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$extension"))
         every { fileOperations.isFile(qontractFilePath) }.returns(true)
-        every { fileOperations.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION) }.returns(false)
+        every { fileOperations.extensionIsNot(qontractFilePath, CONTRACT_EXTENSIONS) }.returns(false)
 
         val execute = CommandLine(stubCommand, factory).execute(qontractFilePath)
 
@@ -144,16 +145,16 @@ internal class StubCommandTest {
         """.trimIndent())
 
         every { watchMaker.make(listOf(qontractFilePath)) }.returns(watcher)
-        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.qontract"))
+        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
         every { fileOperations.isFile(qontractFilePath) }.returns(true)
-        every { fileOperations.extensionIsNot(qontractFilePath, QONTRACT_EXTENSION) }.returns(true)
+        every { fileOperations.extensionIsNot(qontractFilePath, CONTRACT_EXTENSIONS) }.returns(true)
 
         CommandLine(stubCommand, factory).execute(qontractFilePath)
     }
 
     @Test
     fun `should run the stub with the specified pass-through url target`() {
-        val contractPath = "/path/to/contract.qontract"
+        val contractPath = "/path/to/contract.$CONTRACT_EXTENSION"
         val contract = """
             Feature: Simple API
               Scenario: GET request
@@ -178,7 +179,7 @@ internal class StubCommandTest {
 
         every { qontractConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
         every { fileOperations.isFile(contractPath) }.returns(true)
-        every { fileOperations.extensionIsNot(contractPath, QONTRACT_EXTENSION) }.returns(false)
+        every { fileOperations.extensionIsNot(contractPath, CONTRACT_EXTENSIONS) }.returns(false)
 
         val exitStatus = CommandLine(stubCommand, factory).execute("--passThroughTargetBase=$passThroughTargetBase", contractPath)
         assertThat(exitStatus).isZero()

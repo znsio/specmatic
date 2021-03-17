@@ -1,16 +1,13 @@
 package application
 
-import io.ktor.network.tls.certificates.generateCertificate
 import picocli.CommandLine.*
 import run.qontract.consoleLog
-import run.qontract.core.KeyStoreData
-import run.qontract.core.pattern.key
+import run.qontract.core.APPLICATION_NAME_LOWER_CASE
 import run.qontract.core.utilities.exceptionCauseMessage
 import run.qontract.core.utilities.exitWithMessage
 import run.qontract.proxy.Proxy
 import java.io.File
 import java.lang.Thread.sleep
-import java.security.KeyStore
 import java.util.concurrent.Callable
 
 @Command(name = "proxy",
@@ -32,14 +29,14 @@ class ProxyCommand : Callable<Unit> {
     @Option(names = ["--httpsKeyStore"], description = ["Run the proxy on https using a key in this store"])
     var keyStoreFile = ""
 
-    @Option(names = ["--httpsKeyStoreDir"], description = ["Run the proxy on https, create a store named qontract.jks in this directory"])
+    @Option(names = ["--httpsKeyStoreDir"], description = ["Run the proxy on https, create a store named specmatic.jks in this directory"])
     var keyStoreDir = ""
 
     @Option(names = ["--httpsKeyStorePassword"], description = ["Run the proxy on https, password for pre-existing key store"])
     var keyStorePassword = "forgotten"
 
     @Option(names = ["--httpsKeyAlias"], description = ["Run the proxy on https using a key by this name"])
-    var keyStoreAlias = "qontractproxy"
+    var keyStoreAlias = "${APPLICATION_NAME_LOWER_CASE}proxy"
 
     @Option(names = ["--httpsPassword"], description = ["Key password if any"])
     var keyPassword = "forgotten"
@@ -50,7 +47,7 @@ class ProxyCommand : Callable<Unit> {
         validatedProxySettings(targetBaseURL, proxyQontractDataDir)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
-        val keyStoreData = getHttpsCert(certInfo.keyStoreFile, certInfo.keyStoreDir, certInfo.keyStorePassword, certInfo.keyStoreAlias, certInfo.keyPassword)
+        val keyStoreData = certInfo.getHttpsCert()
 
         proxy = Proxy(host, port, targetBaseURL, proxyQontractDataDir, keyStoreData)
         addShutdownHook()
@@ -91,40 +88,5 @@ class ProxyCommand : Callable<Unit> {
                 }
             }
         })
-    }
-}
-
-fun getHttpsCert(keyStoreFile: String, keyStoreDir: String, keyStorePassword: String, keyAlias: String, keyPassword: String): KeyStoreData? {
-    return when {
-        keyStoreFile.isNotBlank() -> KeyStoreData(keyStore = loadKeyStoreFromFile(keyStoreFile, keyStorePassword), keyStorePassword = keyStorePassword, keyAlias = keyAlias, keyPassword = keyPassword)
-        keyStoreDir.isNotBlank() -> createKeyStore(keyStoreDir, keyStorePassword, keyAlias, keyPassword)
-        else -> null
-    }
-}
-
-private fun createKeyStore(keyStoreDirPath: String, keyStorePassword: String, keyAlias: String, keyPassword: String): KeyStoreData {
-    val keyStoreDir = File(keyStoreDirPath)
-    if (!keyStoreDir.exists())
-        keyStoreDir.mkdirs()
-
-    val filename = "qontract.jks"
-    val keyStoreFile = keyStoreDir.resolve(filename)
-    if (keyStoreFile.exists())
-        keyStoreFile.delete()
-
-    val keyStore = generateCertificate(keyStoreFile, jksPassword = keyStorePassword, keyAlias = keyAlias, keyPassword = keyPassword)
-    return KeyStoreData(keyStore = keyStore, keyStorePassword = keyStorePassword, keyAlias = keyAlias, keyPassword = keyPassword)
-}
-
-private fun loadKeyStoreFromFile(keyStoreFile: String, keyStorePassword: String): KeyStore {
-    val certFilePath = File(keyStoreFile)
-    val keyStoreType = when (certFilePath.extension.toLowerCase()) {
-        "jks" -> "JKS"
-        "pfx" -> "PKCS12"
-        else -> exitWithMessage("The certificate file must be either in Java Key Store or PKCS12 format")
-    }
-
-    return KeyStore.getInstance(keyStoreType).apply {
-        this.load(certFilePath.inputStream(), keyStorePassword.toCharArray())
     }
 }

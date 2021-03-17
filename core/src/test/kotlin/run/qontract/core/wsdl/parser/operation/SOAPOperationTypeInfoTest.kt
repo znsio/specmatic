@@ -3,6 +3,7 @@ package run.qontract.core.wsdl.parser.operation
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.wsdl.parser.SOAPMessageType
+import run.qontract.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import run.qontract.core.wsdl.payload.EmptySOAPPayload
 
 internal class SOAPOperationTypeInfoTest {
@@ -15,12 +16,12 @@ internal class SOAPOperationTypeInfoTest {
               And request-header SOAPAction "/getDetails"
               And request-body
               ""${'"'}
-              <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header qontract_occurs="optional"/><soapenv:Body/></soapenv:Envelope>
+              <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header $OCCURS_ATTRIBUTE_NAME="optional"/><soapenv:Body/></soapenv:Envelope>
               ""${'"'}
               Then status 200
               And response-body
               ""${'"'}
-              <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header qontract_occurs="optional"/><soapenv:Body/></soapenv:Envelope>
+              <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header $OCCURS_ATTRIBUTE_NAME="optional"/><soapenv:Body/></soapenv:Envelope>
               ""${'"'}
         """.trimIndent().trim()
 

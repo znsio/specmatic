@@ -10,8 +10,8 @@ import run.qontract.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import run.qontract.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import run.qontract.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 
-const val QONTRACT_XML_ATTRIBUTE_PREFIX = "qontract_"
-const val TYPE_ATTRIBUTE_NAME = "qontract_type"
+const val SPECMATIC_XML_ATTRIBUTE_PREFIX = "${APPLICATION_NAME_LOWER_CASE}_"
+const val TYPE_ATTRIBUTE_NAME = "specmatic_type"
 
 fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, node.realName, attributeTypeMap(node), nodeTypes(node))
 
@@ -234,10 +234,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
     private fun matchAttributes(sampleData: XMLNode, resolver: Resolver): Result {
         val patternAttributesWithoutXmlns = pattern.attributes.filterNot {
-            it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX)
+            it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX)
         }
         val sampleAttributesWithoutXmlns = sampleData.attributes.filterNot {
-            it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX)
+            it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX)
         }
 
         val missingKey = resolver.findMissingKey(
@@ -293,7 +293,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     override fun generate(resolver: Resolver): XMLNode {
         val name = pattern.name
 
-        val nonQontractAttributes = pattern.attributes.filterNot { it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) }
+        val nonQontractAttributes = pattern.attributes.filterNot { it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) }
 
         val newAttributes = nonQontractAttributes.mapKeys { entry ->
             withoutOptionality(entry.key)
@@ -384,9 +384,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             return this
         }
 
-        val qontractType = pattern.attributes["qontract_type"]
+        val qontractType = pattern.attributes[TYPE_ATTRIBUTE_NAME]
         val resolved = resolver.getPattern("($qontractType)") as XMLPattern
-        val qontractAttributes = this.pattern.attributes.filterKeys { it.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) }
+        val qontractAttributes = this.pattern.attributes.filterKeys { it.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) }
         return resolved.copy(
             pattern = resolved.pattern.copy(
                 name = this.pattern.name,
@@ -397,9 +397,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
     private fun hasType(): Boolean = pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)
 
-    fun occurMultipleTimes(): Boolean = pattern.getAttributeValue(OCCURS_ATTRIBUTE_NAME) == MULTIPLE_ATTRIBUTE_VALUE
+    fun occurMultipleTimes(): Boolean = pattern.getNodeOccurrence() == NodeOccurrence.Multiple
 
-    private fun isOptional(): Boolean = pattern.getAttributeValue(OCCURS_ATTRIBUTE_NAME) == OPTIONAL_ATTRIBUTE_VALUE
+    private fun isOptional(): Boolean = pattern.getNodeOccurrence() == NodeOccurrence.Optional
 
     override fun parse(value: String, resolver: Resolver): Value {
         return toXMLNode(parseXML(value))
@@ -422,8 +422,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             )
             is XMLPattern -> nodeNamesShouldBeEqual(otherResolvedPattern).ifSuccess {
                 mapEncompassesMap(
-                    pattern.attributes.filterNot { it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) },
-                    otherResolvedPattern.pattern.attributes.filterNot { it.key.startsWith(QONTRACT_XML_ATTRIBUTE_PREFIX) },
+                    pattern.attributes.filterNot { it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) },
+                    otherResolvedPattern.pattern.attributes.filterNot { it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) },
                     thisResolver,
                     otherResolver
                 )

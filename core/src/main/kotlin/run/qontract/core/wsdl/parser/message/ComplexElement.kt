@@ -1,6 +1,7 @@
 package run.qontract.core.wsdl.parser.message
 
 import run.qontract.core.pattern.ContractException
+import run.qontract.core.pattern.TYPE_ATTRIBUTE_NAME
 import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
@@ -26,7 +27,7 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
 
         val qualification = wsdl.getQualification(element, wsdlTypeReference)
 
-        val inPlaceNode = toXMLNode("<${qualification.nodeName} qontract_type=\"$qontractTypeName\"/>").let {
+        val inPlaceNode = toXMLNode("<${qualification.nodeName} $TYPE_ATTRIBUTE_NAME=\"$qontractTypeName\"/>").let {
             it.copy(attributes = it.attributes.plus(getQontractAttributes(element)))
         }
 

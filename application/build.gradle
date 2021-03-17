@@ -14,7 +14,7 @@ jacoco {
 }
 
 application {
-    mainClassName = "application.QontractApplication"
+    mainClassName = "application.SpecmaticApplication"
 }
 
 jar {
@@ -22,7 +22,7 @@ jar {
 }
 
 shadowJar {
-    archiveFileName = "qontract.${archiveExtension.get()}"
+    archiveFileName = "specmatic.${archiveExtension.get()}"
     from '../version.properties'
 }
 
@@ -96,7 +96,7 @@ jacocoTestReport {
     }
 }
 
-group = 'run.qontract'
+group = 'in.specmatic'
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     kotlinOptions {

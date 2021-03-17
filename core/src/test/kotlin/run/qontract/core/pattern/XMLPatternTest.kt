@@ -447,8 +447,8 @@ internal class XMLPatternTest {
     class TypeLookup {
         @Test
         fun `do a type lookup for a node with the qontract namespace and match the type to the given a node`() {
-            val nameType = parsedPattern("<qontract_type>(string)</qontract_type>")
-            val personType = parsedPattern("<person><name qontract_type=\"Name\"/></person>")
+            val nameType = parsedPattern("<$TYPE_ATTRIBUTE_NAME>(string)</$TYPE_ATTRIBUTE_NAME>")
+            val personType = parsedPattern("<person><name $TYPE_ATTRIBUTE_NAME=\"Name\"/></person>")
 
             val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
 
@@ -457,9 +457,9 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `do a type lookup for a node with the qontract_type attribute and match the name to the current type but the namespaces and child nodes against the looked up type`() {
-            val nameType = parsedPattern("<qontract_type>(string)</qontract_type>")
-            val personType = parsedPattern("<person><name qontract_type=\"Name\"/></person>")
+        fun `do a type lookup for a node with the type attribute and match the name to the current type but the namespaces and child nodes against the looked up type`() {
+            val nameType = parsedPattern("<$TYPE_ATTRIBUTE_NAME>(string)</$TYPE_ATTRIBUTE_NAME>")
+            val personType = parsedPattern("<person><name $TYPE_ATTRIBUTE_NAME=\"Name\"/></person>")
 
             val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
 
@@ -480,8 +480,8 @@ internal class XMLPatternTest {
 
         @Test
         fun `last typed node can be optional`() {
-            val accountType = XMLPattern("<account><name>(string)</name><address qontract_type=\"Address\" $isOptional/></account>")
-            val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
+            val accountType = XMLPattern("<account><name>(string)</name><address $TYPE_ATTRIBUTE_NAME=\"Address\" $isOptional/></account>")
+            val addressType = XMLPattern("<$TYPE_ATTRIBUTE_NAME>(string)</$TYPE_ATTRIBUTE_NAME>")
             val value = toXMLNode("<account><name>John Doe</name></account>")
 
             val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
@@ -619,9 +619,9 @@ internal class XMLPatternTest {
 
         @Test
         fun `match should fail a node does not match and all the nodes are optional`() {
-            val accountType = XMLPattern("<account><id>(number)</id><name type=\"Name\" $isOptional/><address qontract_type=\"Address\" $isOptional/></account>")
-            val nameType = XMLPattern("<qontract_type><fullname>(string)</fullname><salutation>(string)</salutation></qontract_type>")
-            val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
+            val accountType = XMLPattern("<account><id>(number)</id><name type=\"Name\" $isOptional/><address $TYPE_ATTRIBUTE_NAME=\"Address\" $isOptional/></account>")
+            val nameType = XMLPattern("<$TYPE_ATTRIBUTE_NAME><fullname>(string)</fullname><salutation>(string)</salutation></$TYPE_ATTRIBUTE_NAME>")
+            val addressType = XMLPattern("<$TYPE_ATTRIBUTE_NAME>(string)</$TYPE_ATTRIBUTE_NAME>")
             val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType, "(Address)" to addressType))
 
             val accountValue = toXMLNode("<account><id>10</id><name><firstname>Jane</firstname></name><address>Baker street</address></account>")
@@ -702,8 +702,8 @@ internal class XMLPatternTest {
 
         @Test
         fun `multiple typed nodes at the end can be matched`() {
-            val type = XMLPattern("<account><name>(string)</name><address qontract_type=\"Address\" $occursMultipleTimes/></account>")
-            val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
+            val type = XMLPattern("<account><name>(string)</name><address $TYPE_ATTRIBUTE_NAME=\"Address\" $occursMultipleTimes/></account>")
+            val addressType = XMLPattern("<$TYPE_ATTRIBUTE_NAME>(string)</$TYPE_ATTRIBUTE_NAME>")
             val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
             val value = toXMLNode("<account><name>John Doe</name><address>Baker Street</address><address>Downing Street</address></account>")
 
@@ -755,9 +755,9 @@ internal class XMLPatternTest {
 
         @Test
         fun `match should fail a node does not match and all the nodes occur multiple times`() {
-            val accountType = XMLPattern("<account><id>(number)</id><name type=\"Name\" $occursMultipleTimes/><address qontract_type=\"Address\" $occursMultipleTimes/></account>")
-            val nameType = XMLPattern("<qontract_type><fullname>(string)</fullname><salutation>(string)</salutation></qontract_type>")
-            val addressType = XMLPattern("<qontract_type>(string)</qontract_type>")
+            val accountType = XMLPattern("<account><id>(number)</id><name type=\"Name\" $occursMultipleTimes/><address $TYPE_ATTRIBUTE_NAME=\"Address\" $occursMultipleTimes/></account>")
+            val nameType = XMLPattern("<$TYPE_ATTRIBUTE_NAME><fullname>(string)</fullname><salutation>(string)</salutation></$TYPE_ATTRIBUTE_NAME>")
+            val addressType = XMLPattern("<$TYPE_ATTRIBUTE_NAME>(string)</$TYPE_ATTRIBUTE_NAME>")
             val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType, "(Address)" to addressType))
 
             val accountValue = toXMLNode("<account><id>10</id><name><firstname>Jane</firstname></name><address>Baker street</address></account>")

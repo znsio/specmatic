@@ -430,7 +430,7 @@ class FeatureKtTest {
             Feature: Pet API
             
             Background:
-              Given value data from data.qontract
+              Given value data from data.$CONTRACT_EXTENSION
             
             Scenario: Get details
               When GET /pets/(id:number)
@@ -438,14 +438,14 @@ class FeatureKtTest {
               And response-header X-Data (string)
         """.trimIndent()
 
-        val feature = parseGherkinStringToFeature(contractGherkin, "original.qontract")
+        val feature = parseGherkinStringToFeature(contractGherkin, "original.$CONTRACT_EXTENSION")
 
         feature.scenarios.first().let {
             assertThat(it.references).containsKey("data")
             assertThat(it.references["data"]).isInstanceOf(References::class.java)
             assertThat(it.references["data"]?.valueName).isEqualTo("data")
-            assertThat(it.references["data"]?.qontractFilePath?.path).isEqualTo("data.qontract")
-            assertThat(it.references["data"]?.qontractFilePath?.relativeTo).isEqualTo("original.qontract")
+            assertThat(it.references["data"]?.qontractFilePath?.path).isEqualTo("data.$CONTRACT_EXTENSION")
+            assertThat(it.references["data"]?.qontractFilePath?.relativeTo).isEqualTo("original.$CONTRACT_EXTENSION")
         }
     }
 

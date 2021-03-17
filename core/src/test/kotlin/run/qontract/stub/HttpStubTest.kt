@@ -63,7 +63,7 @@ Scenario: Get a number
 
         HttpStub(gherkin).use { fake ->
             val mockData = """{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 10}}"""
-            val stubSetupURL = "${fake.endPoint}/_qontract/expectations"
+            val stubSetupURL = "${fake.endPoint}/_specmatic/expectations"
             val headers = HttpHeaders()
             headers.contentType = MediaType.APPLICATION_JSON
             val stubRequest = RequestEntity(mockData, headers, HttpMethod.POST, URI.create(stubSetupURL))
@@ -93,7 +93,7 @@ Scenario: Get a number
     }
 
     fun testMock(mockData: String, output: String, fake: HttpStub) {
-        val stubSetupURL = "${fake.endPoint}/_qontract/expectations"
+        val stubSetupURL = "${fake.endPoint}/_specmatic/expectations"
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
 
@@ -197,7 +197,7 @@ And response-body (string)
 "$DELAY_IN_SECONDS": 1
 }""".trimIndent()
 
-                val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_qontract/expectations", expectation)
+                val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_specmatic/expectations", expectation)
                 assertThat(stubResponse.statusCode.value()).isEqualTo(200)
 
                 val duration = measureTime {
@@ -240,7 +240,7 @@ And response-body (string)
 "$DELAY_IN_SECONDS": $delayInSeconds
 }""".trimIndent()
 
-                val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_qontract/expectations", expectation)
+                val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_specmatic/expectations", expectation)
                 assertThat(stubResponse.statusCode.value()).isEqualTo(200)
 
                 data class TimedResponse(val id: Int, val duration: Long, val body: String)
@@ -486,7 +486,7 @@ Then status 200
 
     @Test
     fun `generate a bad request from an error message`() {
-        val expectedResponse = HttpResponse(status = 400, headers = mapOf(QONTRACT_RESULT_HEADER to "failure"), body = StringValue("error occurred"))
+        val expectedResponse = HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue("error occurred"))
         assertThat(badRequest("error occurred")).isEqualTo(expectedResponse)
     }
 

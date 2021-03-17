@@ -1,15 +1,13 @@
 package application
 
 import picocli.CommandLine
+import run.qontract.core.*
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
-import run.qontract.core.parseGherkinStringToFeature
 import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.git.SystemGit
 import run.qontract.core.git.loadFromPath
 import run.qontract.core.pattern.ContractException
 import run.qontract.core.pattern.parsedJSON
-import run.qontract.core.resultReport
-import run.qontract.core.testBackwardCompatibility
 import run.qontract.core.utilities.*
 import run.qontract.core.value.JSONArrayValue
 import run.qontract.core.value.JSONObjectValue
@@ -24,7 +22,7 @@ private const val pipelineKeyInQontracConfig = "pipeline"
 class PushCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
-        val workingDirectory = userHome.resolve(".qontract/repos")
+        val workingDirectory = userHome.resolve(".$CONTRACT_EXTENSION/repos")
         val manifestFile = File(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
         val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
@@ -37,7 +35,9 @@ class PushCommand: Callable<Unit> {
                 if (sourceGit.workingDirectoryIsGitRepo()) {
                     source.getLatest(sourceGit)
 
-                    val changedQontractFiles = sourceGit.getChangedFiles().filter { it.endsWith(".qontract") }
+                    val changedQontractFiles = sourceGit.getChangedFiles().filter {
+                        File(it).extension in CONTRACT_EXTENSIONS
+                    }
                     for (contractPath in changedQontractFiles) {
                         testBackwardCompatibility(sourceDir, contractPath, sourceGit, source)
                         subscribeToContract(manifestData, sourceDir.resolve(contractPath).path, sourceGit)

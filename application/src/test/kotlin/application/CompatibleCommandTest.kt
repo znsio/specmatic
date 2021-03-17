@@ -8,11 +8,12 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
+import run.qontract.core.CONTRACT_EXTENSION
 import run.qontract.core.git.GitCommand
 import run.qontract.core.git.NonZeroExitError
 import java.io.FileNotFoundException
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [QontractApplication::class, CompatibleCommand::class])
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, CompatibleCommand::class])
 internal class CompatibleCommandTest {
     @Autowired
     lateinit var factory: CommandLine.IFactory
@@ -26,7 +27,7 @@ internal class CompatibleCommandTest {
     @MockkBean
     lateinit var fileOperations: FileOperations
 
-    val relativeContractPath = "api_1.qontract"
+    val relativeContractPath = "api_1.$CONTRACT_EXTENSION"
     val contractPath = "/path/to/$relativeContractPath"
 
     @Test
@@ -124,8 +125,8 @@ internal class CompatibleCommandTest {
         val newCommitHash = "commit456"
         val oldCommitHash = "commit123"
 
-        val contractPath = "/path/to/api.qontract"
-        val relativeContractPath = "api.qontract"
+        val contractPath = "/path/to/api.$CONTRACT_EXTENSION"
+        val relativeContractPath = "api.$CONTRACT_EXTENSION"
 
         val contract = """
             Feature: Random number
@@ -150,8 +151,8 @@ internal class CompatibleCommandTest {
         val newCommitHash = "commit456"
         val oldCommitHash = "commit123"
 
-        val contractPath = "/path/to/api.qontract"
-        val relativeContractPath = "api.qontract"
+        val contractPath = "/path/to/api.$CONTRACT_EXTENSION"
+        val relativeContractPath = "api.$CONTRACT_EXTENSION"
 
         val contract = """
             Feature: Random number
@@ -176,8 +177,8 @@ internal class CompatibleCommandTest {
         val newCommitHash = "commit456"
         val oldCommitHash = "commit123"
 
-        val contractPath = "/path/to/api.qontract"
-        val relativeContractPath = "api.qontract"
+        val contractPath = "/path/to/api.$CONTRACT_EXTENSION"
+        val relativeContractPath = "api.$CONTRACT_EXTENSION"
 
         val contract = """
             Feature: Random number

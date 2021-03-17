@@ -9,7 +9,7 @@ data class QontractFilePath(val path: String, val relativeTo: String = "") {
         return file().let {
             println(it)
             if(!it.exists())
-                throw ContractException("Qontract file $path does not exist, but is used as the source of variables in value $valueName")
+                throw ContractException("$APPLICATION_NAME file $path does not exist, but is used as the source of variables in value $valueName")
 
             parseGherkinStringToFeature(it.readText())
         }

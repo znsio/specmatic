@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
                   xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
-                  xmlns:qr="http://qontract.run/SOAPService/"
-                  targetNamespace="http://qontract.run/SOAPService/">
+                  xmlns:qr="http://specmatic.in/SOAPService/"
+                  targetNamespace="http://specmatic.in/SOAPService/">
     <wsdl:types>
         <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-                    targetNamespace="http://qontract.run/SOAPService/">
+                    targetNamespace="http://specmatic.in/SOAPService/">
             <xsd:element name="SimpleRequest" type="xsd:string"/>
             <xsd:element name="SimpleResponse" type="xsd:string"/>
         </xsd:schema>
@@ -31,7 +31,7 @@
         <soap:binding transport="http://schemas.xmlsoap.org/soap/http"/>
         <wsdl:operation name="SimpleOperation">
             <soap:operation
-                    soapAction="http://qontract.run/SOAPService/SimpleOperation"/>
+                    soapAction="http://specmatic.in/SOAPService/SimpleOperation"/>
             <wsdl:input name="simpleInput">
                 <soap:body use="literal"/>
             </wsdl:input>
@@ -44,7 +44,7 @@
     <wsdl:service name="simpleService">
         <wsdl:port name="simplePort" binding="qr:simpleBinding">
             <soap:address
-                    location="http://qontract.run/SOAPService/SimpleSOAP"/>
+                    location="http://specmatic.in/SOAPService/SimpleSOAP"/>
         </wsdl:port>
     </wsdl:service>
 

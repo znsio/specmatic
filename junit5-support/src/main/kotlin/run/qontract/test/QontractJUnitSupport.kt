@@ -56,7 +56,7 @@ open class QontractJUnitSupport {
         val suggestionsData = System.getProperty(INLINE_SUGGESTIONS) ?: ""
         val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""
 
-        val workingDirectory = File(valueOrDefault(givenWorkingDirectory, ".qontract", "Working was not specified specified"))
+        val workingDirectory = File(valueOrDefault(givenWorkingDirectory, ".specmatic", "Working was not specified specified"))
         val workingDirectoryWasCreated = workingDirectory.exists()
 
         val envConfig = getEnvConfig(System.getProperty(ENV_NAME))

@@ -272,7 +272,7 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
 
         val response = testExecutor.execute(request)
 
-        val result = when (response.headers.getOrDefault(QONTRACT_RESULT_HEADER, "success")) {
+        val result = when (response.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "success")) {
             "failure" -> Result.Failure(response.body.toStringValue()).updateScenario(testScenario)
             else -> testScenario.matches(response)
         }

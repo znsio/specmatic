@@ -21,9 +21,9 @@ data class Results(val results: List<Result> = emptyList()) {
     fun generateErrorHttpResponse(): HttpResponse {
         val report = report("").trim()
 
-        val defaultHeaders = mapOf("Content-Type" to "text/plain", QONTRACT_RESULT_HEADER to "failure")
+        val defaultHeaders = mapOf("Content-Type" to "text/plain", SPECMATIC_RESULT_HEADER to "failure")
         val headers = when {
-            report.isEmpty() -> defaultHeaders.plus("X-Qontract-Empty" to "true")
+            report.isEmpty() -> defaultHeaders.plus(SPECMATIC_EMPTY_HEADER to "true")
             else -> defaultHeaders
         }
 

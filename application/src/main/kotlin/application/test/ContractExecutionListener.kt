@@ -13,7 +13,7 @@ class ContractExecutionListener : TestExecutionListener {
     private val failedLog: MutableList<String> = mutableListOf()
 
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
-        if (listOf("QontractJUnitSupport", "contractAsTest()", "JUnit Jupiter").any {
+        if (listOf("SpecmaticJUnitSupport", "contractAsTest()", "JUnit Jupiter").any {
                     testIdentifier!!.displayName.contains(it)
                 }) return
 

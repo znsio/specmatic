@@ -12,6 +12,7 @@ import org.w3c.dom.Node.ELEMENT_NODE
 import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
 import run.qontract.consoleLog
+import run.qontract.core.CONTRACT_EXTENSION
 import run.qontract.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import run.qontract.core.Resolver
 import run.qontract.core.git.SystemGit
@@ -201,27 +202,6 @@ internal fun jsonArray(source: JSONObjectValue, key: String): List<String> {
     }
 }
 
-internal fun ensureEmptyOrNotExists(workingDirectory: File) {
-    if(workingDirectory.exists() && workingDirectory.listFiles()?.isNotEmpty() == true) {
-        exitWithMessage("The provided working directory ${workingDirectory.path} must be empty or must not exist")
-    }
-}
-
-fun ensureExists(configFilePath: String, workingDirectoryPath: String) {
-    if(!File(configFilePath).exists())
-        exitWithMessage("$configFilePath does not exist")
-
-    val workingDirectory = File(workingDirectoryPath)
-
-    if(!workingDirectory.exists()) {
-        try {
-            workingDirectory.mkdirs()
-        } catch (e: Throwable) {
-            exitWithMessage(exceptionCauseMessage(e))
-        }
-    }
-}
-
 fun createIfDoesNotExist(workingDirectoryPath: String) {
     val workingDirectory = File(workingDirectoryPath)
 
@@ -241,7 +221,7 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
 
 // Used by QontractJUnitSupport users for loading contracts to stub or mock
 fun contractStubPaths(): List<ContractPathData> =
-        contractFilePathsFrom(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY, ".qontract") { source -> source.stubContracts }
+        contractFilePathsFrom(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY, ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
 
 fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>

@@ -2,7 +2,9 @@ package run.qontract.core.wsdl.payload
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.TYPE_ATTRIBUTE_NAME
 import run.qontract.core.wsdl.parser.SOAPMessageType
+import run.qontract.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 
 internal class ComplexTypedSOAPPayloadTest {
     @Test
@@ -13,7 +15,7 @@ internal class ComplexTypedSOAPPayloadTest {
         println(statement)
         assertThat(statement).isEqualTo("""And request-body
 ""${'"'}
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns0="http://ns" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header qontract_occurs="optional"/><soapenv:Body><person qontract_type="Person"/></soapenv:Body></soapenv:Envelope>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns0="http://ns" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header $OCCURS_ATTRIBUTE_NAME="optional"/><soapenv:Body><person $TYPE_ATTRIBUTE_NAME="Person"/></soapenv:Body></soapenv:Envelope>
 ""${'"'}""")
     }
 }

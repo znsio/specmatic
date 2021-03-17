@@ -23,7 +23,7 @@ internal class ReferencesTest {
         val feature = mockFeature(baseURL, results)
         val qontractFile = mockQontractFilePath(feature)
 
-        val references = References("person", qontractFile, baseURLs = mapOf("person.qontract" to baseURL))
+        val references = References("person", qontractFile, baseURLs = mapOf("person.$CONTRACT_EXTENSION" to baseURL))
 
         assertThatThrownBy { references.lookup("name") }.isInstanceOf(ContractException::class.java)
     }
@@ -36,7 +36,7 @@ internal class ReferencesTest {
         val feature = mockFeature(baseURL, results)
         val qontractFile = mockQontractFilePath(feature)
 
-        val references = References("person", qontractFile, baseURLs = mapOf("person.qontract" to baseURL))
+        val references = References("person", qontractFile, baseURLs = mapOf("person.$CONTRACT_EXTENSION" to baseURL))
 
         assertThat(references.lookup("name")).isEqualTo("Jack")
         assertThat(references.lookup("address")).isEqualTo("Baker Street")
@@ -49,7 +49,7 @@ internal class ReferencesTest {
         }.returns(mockFeature)
         every {
             qontractFileMock.path
-        }.returns("person.qontract")
+        }.returns("person.$CONTRACT_EXTENSION")
         return qontractFileMock
     }
 

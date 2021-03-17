@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>run.qontract</groupId>
-    <artifactId>qontract.spring-2.3-compatibility</artifactId>
+    <groupId>in.specmatic</groupId>
+    <artifactId>specmatic.spring-2.3-compatibility</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <parent>
@@ -18,13 +18,14 @@
     <properties>
         <maven.compiler>8</maven.compiler>
         <kotlin.version>1.4.30</kotlin.version>
+        <specmatic.version>0.24.0</specmatic.version>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>run.qontract</groupId>
-            <artifactId>qontract-core</artifactId>
-            <version>${qontract.version}</version>
+            <groupId>in.specmatic</groupId>
+            <artifactId>specmatic-core</artifactId>
+            <version>${specmatic.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

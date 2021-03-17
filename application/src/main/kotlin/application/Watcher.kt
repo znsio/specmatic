@@ -1,6 +1,7 @@
 package application
 
 import run.qontract.consoleLog
+import run.qontract.core.CONTRACT_EXTENSIONS
 import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Path
@@ -30,7 +31,7 @@ class Watcher(private val contractPaths: List<String>) {
     private fun getPaths(contractPaths: List<String>): List<String> {
         return contractPaths.map { File(it) }.flatMap {
             when {
-                it.isFile && it.extension.equals("qontract", ignoreCase = true) ->
+                it.isFile && it.extension.toLowerCase() in CONTRACT_EXTENSIONS ->
                     listOf(it.absoluteFile.parentFile.path).plus(getPaths(listOf(dataDirOf(it))))
                 it.isFile && it.extension.equals("json", ignoreCase = true) ->
                     listOf(it.absoluteFile.parentFile.path)

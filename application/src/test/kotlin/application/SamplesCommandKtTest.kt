@@ -4,6 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import run.qontract.core.CONTRACT_EXTENSION
+import run.qontract.core.SPECMATIC_RESULT_HEADER
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
@@ -51,12 +53,12 @@ internal class SamplesCommandKtTest {
 ->""".trimIndent())
 
         assertThat(data).contains("<- 200 OK")
-        assertThat(data).contains("<- X-Qontract-Result: success")
+        assertThat(data).contains("<- $SPECMATIC_RESULT_HEADER: success")
     }
 
     @BeforeEach
     fun setup() {
-        qontractFile = File(tempDir, "math.qontract").also {
+        qontractFile = File(tempDir, "math.$CONTRACT_EXTENSION").also {
             it.writeText(simpleGherkin)
         }
     }

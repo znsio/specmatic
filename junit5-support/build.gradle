@@ -43,7 +43,7 @@ test {
     useJUnitPlatform()
 }
 
-group = 'run.qontract'
+group = 'in.specmatic'
 
 jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
@@ -64,25 +64,25 @@ publishing {
             artifactId = 'junit5-support'
             from components.java
             pom {
-                name = 'QontractJUnit5Support'
-                description = 'Qontract JUnit 5 Support'
-                url = 'https://qontract.run'
+                name = 'SpecmaticJUnit5Support'
+                description = 'Specmatic JUnit 5 Support'
+                url = 'https://specmatic.in'
                 licenses {
                     license {
                         name = 'MIT'
-                        url = 'https://github.com/qontract/qontract/blob/master/License.md'
+                        url = 'https://github.com/znsio/specmatic/blob/master/License.md'
                     }
                 }
                 developers {
                     developer {
-                        id = 'qontractBuilders'
-                        name = 'Qontract Builders'
-                        email = 'info@qontract.run'
+                        id = 'specmaticBuilders'
+                        name = 'Specmatic Builders'
+                        email = 'info@specmatic.in'
                     }
                 }
                 scm {
-                    connection = 'scm:git:git@github.com:qontract/qontract.git'
-                    url = 'https://qontract.run/'
+                    connection = 'scm:git:git@github.com:znsio/specmatic.git'
+                    url = 'https://specmatic.in/'
                 }
             }
         }

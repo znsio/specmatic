@@ -5,6 +5,7 @@ package application
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import picocli.CommandLine
+import run.qontract.core.CONTRACT_EXTENSION
 import run.qontract.core.utilities.ContractPathData
 import java.io.File
 import java.io.FileOutputStream
@@ -14,7 +15,7 @@ import java.util.zip.ZipOutputStream
 
 @CommandLine.Command(name = "bundle",
         mixinStandardHelpOptions = true,
-        description = ["Generate a zip file of all stub contracts in qontract.json"])
+        description = ["Generate a zip file of all stub contracts in $CONTRACT_EXTENSION.json"])
 class BundleCommand : Callable<Unit> {
     @CommandLine.Option(names = ["--bundlePath"], description = ["path in which to write the contract"], required = false, defaultValue = "./bundle.zip")
     lateinit var bundlePath: String

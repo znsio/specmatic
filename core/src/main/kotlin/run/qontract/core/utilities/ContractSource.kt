@@ -1,5 +1,6 @@
 package run.qontract.core.utilities
 
+import run.qontract.core.APPLICATION_NAME_LOWER_CASE
 import run.qontract.core.git.NonZeroExitError
 import run.qontract.core.git.SystemGit
 import run.qontract.core.git.clone
@@ -41,7 +42,7 @@ data class GitRepo(
 
     override fun loadContracts(selector: ContractsSelectorPredicate, workingDirectory: String, configFilePath: String): List<ContractPathData> {
         val userHome = File(System.getProperty("user.home"))
-        val defaultQontractWorkingDir = userHome.resolve(".qontract/repos")
+        val defaultQontractWorkingDir = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
         val defaultRepoDir = directoryRelativeTo(defaultQontractWorkingDir)
 
         val repoDir = when {

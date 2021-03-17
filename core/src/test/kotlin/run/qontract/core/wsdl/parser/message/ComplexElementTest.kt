@@ -4,9 +4,11 @@ import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import run.qontract.core.pattern.TYPE_ATTRIBUTE_NAME
 import run.qontract.core.pattern.XMLPattern
 import run.qontract.core.value.XMLNode
 import run.qontract.core.value.toXMLNode
+import run.qontract.core.wsdl.parser.TYPE_NODE_NAME
 import run.qontract.core.wsdl.parser.WSDL
 import run.qontract.core.wsdl.parser.WSDLTypeInfo
 
@@ -46,7 +48,7 @@ internal class ComplexElementTest {
         val complexElement = ComplexElement("ns0:PersonRequest", element, wsdl)
         val wsdlTypeInfo = complexElement.getQontractTypes("PersonRequest", emptyMap(), emptySet())
 
-        val expected = WSDLTypeInfo(listOf(toXMLNode("<Person qontract_type=\"PersonRequest\"/>")), mapOf("PersonRequest" to XMLPattern("<QONTRACT_TYPE><data>(string)</data></QONTRACT_TYPE>")))
+        val expected = WSDLTypeInfo(listOf(toXMLNode("<Person $TYPE_ATTRIBUTE_NAME=\"PersonRequest\"/>")), mapOf("PersonRequest" to XMLPattern("<$TYPE_NODE_NAME><data>(string)</data></$TYPE_NODE_NAME>")))
         assertThat(wsdlTypeInfo).isEqualTo(expected)
     }
 }

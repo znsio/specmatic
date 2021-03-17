@@ -43,7 +43,7 @@ Expected number, actual was "Hello"""")
 
     private fun assertResponseFailure(stubResponse: HttpStubResponse, errorMessage: String) {
         assertThat(stubResponse.response.status).isEqualTo(400)
-        assertThat(stubResponse.response.headers).containsEntry(QONTRACT_RESULT_HEADER, "failure")
+        assertThat(stubResponse.response.headers).containsEntry(SPECMATIC_RESULT_HEADER, "failure")
         assertThat(stubResponse.response.body.toStringValue()).isEqualTo(errorMessage)
     }
 
@@ -102,7 +102,7 @@ Feature: GET API
 
     @Test
     fun `generates an https endpoint when key store data is provided`() {
-        assertThat(endPointFromHostAndPort("localhost", 80, KeyStoreData(KeyStore.getInstance(KeyStore.getDefaultType()), ""))).isEqualTo("https://localhost")
+        assertThat(endPointFromHostAndPort("localhost", 80, KeyData(KeyStore.getInstance(KeyStore.getDefaultType()), ""))).isEqualTo("https://localhost")
     }
 
     @Test
@@ -319,11 +319,11 @@ Feature: POST API
 
     @Test
     fun `routing functions`() {
-        assertThat(isFetchLogRequest(HttpRequest("GET", "/_qontract/log"))).isTrue()
-        assertThat(isFetchLoadLogRequest(HttpRequest("GET", "/_qontract/load_log"))).isTrue()
-        assertThat(isFetchContractsRequest(HttpRequest("GET", "/_qontract/contracts"))).isTrue()
-        assertThat(isExpectationCreation(HttpRequest("POST", "/_qontract/expectations"))).isTrue()
-        assertThat(isStateSetupRequest(HttpRequest("POST", "/_qontract/state"))).isTrue()
+        assertThat(isFetchLogRequest(HttpRequest("GET", "/_$APPLICATION_NAME_LOWER_CASE/log"))).isTrue()
+        assertThat(isFetchLoadLogRequest(HttpRequest("GET", "/_$APPLICATION_NAME_LOWER_CASE/load_log"))).isTrue()
+        assertThat(isFetchContractsRequest(HttpRequest("GET", "/_$APPLICATION_NAME_LOWER_CASE/contracts"))).isTrue()
+        assertThat(isExpectationCreation(HttpRequest("POST", "/_$APPLICATION_NAME_LOWER_CASE/expectations"))).isTrue()
+        assertThat(isStateSetupRequest(HttpRequest("POST", "/_$APPLICATION_NAME_LOWER_CASE/state"))).isTrue()
     }
 
     private fun createStubsUsingMultipleThreads(range: IntRange, stub: HttpStub) {
@@ -364,7 +364,7 @@ Feature: POST API
     """.trimIndent()
 
         val client = HttpClient(stub.endPoint, log = ::consoleLog)
-        val request = HttpRequest("POST", path = "/_qontract/expectations", body = parsedValue(stubInfo))
+        val request = HttpRequest("POST", path = "/_specmatic/expectations", body = parsedValue(stubInfo))
         val response = client.execute(request)
 
         return when(response.status) {

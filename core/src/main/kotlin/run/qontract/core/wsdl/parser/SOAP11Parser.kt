@@ -9,7 +9,7 @@ import run.qontract.core.wsdl.parser.operation.SOAPOperationTypeInfo
 import run.qontract.core.wsdl.payload.SoapPayloadType
 import java.net.URI
 
-const val TYPE_NODE_NAME = "QONTRACT_TYPE"
+const val TYPE_NODE_NAME = "SPECMATIC_TYPE"
 
 class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
     override fun convertToGherkin(url: String): String {

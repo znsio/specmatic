@@ -9,15 +9,15 @@ import java.io.File
 internal class QontractFilePathTest {
     @Test
     fun `reads a qontract file and instantiates a feature file from it`() {
-        val actualFeature = QontractFilePath(pathTo("random.qontract")).readFeatureForValue("")
-        val expectedFeature = parseGherkinStringToFeature(readTextResource("random.qontract"))
+        val actualFeature = QontractFilePath(pathTo("random.$CONTRACT_EXTENSION")).readFeatureForValue("")
+        val expectedFeature = parseGherkinStringToFeature(readTextResource("random.$CONTRACT_EXTENSION"))
         assertThat(actualFeature).isEqualTo(expectedFeature)
     }
 
     @Test
     fun `throws an exception when the given path does not exist`() {
         assertThatThrownBy {
-            QontractFilePath("doesnotexist.qontract").readFeatureForValue("")
+            QontractFilePath("doesnotexist.$CONTRACT_EXTENSION").readFeatureForValue("")
         }.isInstanceOf(ContractException::class.java)
     }
 

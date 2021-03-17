@@ -3,6 +3,7 @@ package run.qontract.core.wsdl.parser.operation
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import run.qontract.core.wsdl.parser.SOAPMessageType
+import run.qontract.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import run.qontract.core.wsdl.payload.EmptySOAPPayload
 
 internal class SOAPResponseTest {
@@ -14,7 +15,7 @@ internal class SOAPResponseTest {
         assertThat(statements).contains("Then status 200")
         assertThat(statements).contains("And request-body\n" +
                 "\"\"\"\n" +
-                "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soapenv:Header qontract_occurs=\"optional\"/><soapenv:Body/></soapenv:Envelope>\n" +
+                "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soapenv:Header $OCCURS_ATTRIBUTE_NAME=\"optional\"/><soapenv:Body/></soapenv:Envelope>\n" +
                 "\"\"\"")
     }
 }

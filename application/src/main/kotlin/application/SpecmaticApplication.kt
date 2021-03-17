@@ -12,7 +12,7 @@ import java.util.logging.LogManager
 import kotlin.system.exitProcess
 
 @SpringBootApplication
-open class QontractApplication {
+open class SpecmaticApplication {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
@@ -21,9 +21,9 @@ open class QontractApplication {
             Thread.setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler())
 
             when {
-                args.isEmpty() -> CommandLine(QontractCommand()).usage(System.out)
+                args.isEmpty() -> CommandLine(SpecmaticCommand()).usage(System.out)
                 else ->  {
-                    val app = SpringApplication(QontractApplication::class.java)
+                    val app = SpringApplication(SpecmaticApplication::class.java)
                     app.setBannerMode(Banner.Mode.OFF)
 
                     exitProcess(SpringApplication.exit(app.run(*args)))

@@ -15,8 +15,8 @@ import java.io.Closeable
 import java.net.URI
 import java.net.URL
 
-class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: FileWriter, keyStoreData: KeyStoreData? = null): Closeable {
-    constructor(host: String, port: Int, baseURL: String, proxyQontractDataDir: String, keyStoreData: KeyStoreData? = null) : this(host, port, baseURL, RealFileWriter(proxyQontractDataDir), keyStoreData)
+class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractDataDir: FileWriter, keyData: KeyData? = null): Closeable {
+    constructor(host: String, port: Int, baseURL: String, proxyQontractDataDir: String, keyData: KeyData? = null) : this(host, port, baseURL, RealFileWriter(proxyQontractDataDir), keyData)
 
     private val stubs = mutableListOf<NamedStub>()
 
@@ -61,12 +61,12 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
             }
         }
 
-        when (keyStoreData) {
+        when (keyData) {
             null -> connector {
                 this.host = host
                 this.port = port
             }
-            else -> sslConnector(keyStore = keyStoreData.keyStore, keyAlias = keyStoreData.keyAlias, privateKeyPassword = { keyStoreData.keyPassword.toCharArray() }, keyStorePassword = { keyStoreData.keyPassword.toCharArray() }) {
+            else -> sslConnector(keyStore = keyData.keyStore, keyAlias = keyData.keyAlias, privateKeyPassword = { keyData.keyPassword.toCharArray() }, keyStorePassword = { keyData.keyPassword.toCharArray() }) {
                 this.host = host
                 this.port = port
             }
@@ -124,7 +124,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
         } else {
             proxyQontractDataDir.createDirectory()
 
-            val featureFileName = "proxy_generated.qontract"
+            val featureFileName = "proxy_generated.$CONTRACT_EXTENSION"
             println("Writing contract to $featureFileName")
             proxyQontractDataDir.writeText(featureFileName, gherkin)
 

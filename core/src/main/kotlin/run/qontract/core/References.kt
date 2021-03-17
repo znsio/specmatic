@@ -16,7 +16,7 @@ data class References(val valueName: String, val qontractFilePath: QontractFileP
 
         val feature = qontractFilePath.readFeatureForValue(valueName).copy(testVariables = variables, testBaseURLs = baseURLs)
         val baseURL = baseURLs[qontractFilePath.path]
-        val results = feature.executeTests(HttpClient(baseURL ?: throw ContractException("Base URL for qontract file ${qontractFilePath.path} was not supplied.")))
+        val results = feature.executeTests(HttpClient(baseURL ?: throw ContractException("Base URL for spec file ${qontractFilePath.path} was not supplied.")))
 
         if(results.hasFailures()) {
             throw ContractException("There were failures when running ${qontractFilePath.path} as a test against URL $baseURL:\n" + results.report().prependIndent("  "))

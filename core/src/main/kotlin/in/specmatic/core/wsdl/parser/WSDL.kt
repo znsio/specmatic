@@ -19,6 +19,10 @@ private fun getXmlnsDefinitions(wsdlNode: XMLNode): Map<String, String> {
 data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, val namespaceToPrefix: Map<String, String>) {
     constructor(wsdlNode: XMLNode) : this (wsdlNode, wsdlNode.getXMLNodeByName("types"), getXmlnsDefinitions(wsdlNode))
 
+    fun mapNamespaceToPrefix(targetNamespace: String): String {
+        return namespaceToPrefix[targetNamespace] ?: throw ContractException("The target namespace $targetNamespace was not found in the WSDL definitions tag.")
+    }
+
     val operations: List<XMLNode>
         get() {
         return getBinding().findChildrenByName("operation")
@@ -116,6 +120,18 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         }
     }
 
+    fun getComplexTypeNode2(element: XMLNode): ComplexType {
+        val node = when {
+            element.attributes.containsKey("type") -> findComplexType(element, "type")
+            else -> element.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }.first()
+        }.also {
+            if (it.name != "complexType")
+                throw ContractException("Unexpected type node found\nSource: $element\nType: $it")
+        }
+
+        return ComplexType(node, this)
+    }
+
     fun findMessageNode(
         messageName: String
     ) =
@@ -145,16 +161,16 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         return namespaceToPrefix.getValue(namespaceValue)
     }
 
-    fun getWSDLElementType(parentTypeName: String, child: XMLNode): ChildElementType {
+    fun getWSDLElementType(parentTypeName: String, node: XMLNode): ChildElementType {
         return when {
-            child.attributes.containsKey("ref") -> {
-                ElementReference(child, this)
+            node.attributes.containsKey("ref") -> {
+                ElementReference(node, this)
             }
-            child.attributes.containsKey("type") -> {
-                TypeReference(child, this)
+            node.attributes.containsKey("type") -> {
+                TypeReference(node, this)
             }
             else -> {
-                InlineType(parentTypeName, child, this)
+                InlineType(parentTypeName, node, this)
             }
         }
     }
@@ -168,7 +184,7 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         val elementForm = element.attributes["form"]?.toStringValue()
 
         return when(elementForm ?: schemaElementFormDefault) {
-            "qualified" -> QualifiedNamespace(element, wsdlTypeReference, this)
+            "qualified" -> QualifiedNamespace(element, schema, wsdlTypeReference, this)
             else -> UnqualifiedNamespace(element.getAttributeValue("name"))
         }
     }

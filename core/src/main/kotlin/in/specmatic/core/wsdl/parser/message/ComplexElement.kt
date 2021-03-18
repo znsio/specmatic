@@ -16,11 +16,10 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
         if(qontractTypeName in typeStack)
             return WSDLTypeInfo(types = existingTypes)
 
-        val complexType = wsdl.getComplexTypeNode(element)
+        val complexType = wsdl.getComplexTypeNode2(element)
 
-        val childTypeInfo = generateChildren(
+        val childTypeInfo = complexType.generateChildren(
             qontractTypeName,
-            complexType,
             existingTypes,
             typeStack.plus(qontractTypeName)
         )
@@ -58,8 +57,8 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
     private fun complexTypeChildNode(child: XMLNode, wsdl: WSDL, parentTypeName: String): ComplexTypeChild {
         return when(child.name) {
             "element" -> ElementInComplexType(child, wsdl, parentTypeName)
-            "sequence", "all" -> CollectionOfChildrenInComplexType(this, child, wsdl, parentTypeName)
-            "complexContent" -> ComplexTypeExtension(this, child, wsdl, parentTypeName)
+            "sequence", "all" -> CollectionOfChildrenInComplexType(child, wsdl, parentTypeName)
+            "complexContent" -> ComplexTypeExtension(child, wsdl, parentTypeName)
             else -> throw ContractException("Couldn't recognize child node $child")
         }
     }
@@ -74,3 +73,28 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
         ComplexTypedSOAPPayload(soapMessageType, nodeNameForSOAPBody, qontractTypeName, namespaces)
 }
 
+data class ComplexType(val complexType: XMLNode, val wsdl: WSDL) {
+    fun generateChildren(parentTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
+        return generateChildren(parentTypeName, complexType, existingTypes, typeStack, wsdl)
+    }
+}
+
+internal fun generateChildren(parentTypeName: String, complexType: XMLNode, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>, wsdl: WSDL): WSDLTypeInfo {
+    return eliminateAnnotations(complexType.childNodes.filterIsInstance<XMLNode>()).map {
+        complexTypeChildNode(it, wsdl, parentTypeName)
+    }.fold(WSDLTypeInfo()) { wsdlTypeInfo, child ->
+        child.process(wsdlTypeInfo, existingTypes, typeStack)
+    }
+}
+
+private fun eliminateAnnotations(childNodes: List<XMLNode>) =
+    childNodes.filterNot { it.name == "annotation" }
+
+private fun complexTypeChildNode(child: XMLNode, wsdl: WSDL, parentTypeName: String): ComplexTypeChild {
+    return when(child.name) {
+        "element" -> ElementInComplexType(child, wsdl, parentTypeName)
+        "sequence", "all" -> CollectionOfChildrenInComplexType(child, wsdl, parentTypeName)
+        "complexContent" -> ComplexTypeExtension(child, wsdl, parentTypeName)
+        else -> throw ContractException("Couldn't recognize child node $child")
+    }
+}

@@ -30,12 +30,13 @@ internal class ComplexElementTest {
 
         val wsdl = mockk<WSDL>()
 
-        val complexType =
-            toXMLNode("<complexType name=\"ns0:Person\"><annotation>docs</annotation><sequence><element name=\"data\" type=\"xsd:string\" /></sequence></complexType>").withPrimitiveNamespace()
-
+        val complexType2 = mockk<ComplexType>()
         every {
-            wsdl.getComplexTypeNode(element)
-        } returns complexType
+            complexType2.generateChildren(any(), any(), any())
+        } returns WSDLTypeInfo(listOf(toXMLNode("<data>(string)</data>")))
+        every {
+            wsdl.getComplexTypeNode2(element)
+        } returns complexType2
 
         every {
             wsdl.getQualification(toXMLNode("<xsd:element type=\"ns0:Person\"/>").withPrimitiveNamespace(), "ns0:PersonRequest")
@@ -59,6 +60,6 @@ internal class ComplexElementTest {
     }
 }
 
-private fun XMLNode.withPrimitiveNamespace(): XMLNode {
+internal fun XMLNode.withPrimitiveNamespace(): XMLNode {
     return this.copy(namespaces = mapOf("xsd" to primitiveNamespace))
 }

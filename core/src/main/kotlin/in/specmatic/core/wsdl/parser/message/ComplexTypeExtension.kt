@@ -6,7 +6,6 @@ import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.core.wsdl.parser.WSDLTypeInfo
 
 class ComplexTypeExtension(
-    private val parent: ComplexElement,
     private val complexTypeNode: XMLNode,
     val wsdl: WSDL,
     private val parentTypeName: String
@@ -19,14 +18,14 @@ class ComplexTypeExtension(
         val extension = complexTypeNode.findFirstChildByName("extension", "Found complexContent node without base attribute: $complexTypeNode")
 
         val parentComplexType = wsdl.findTypeFromAttribute(extension, "base")
-        val parentTypeInfo = parent.generateChildren(parentTypeName, parentComplexType, existingTypes, typeStack)
+        val parentTypeInfo = generateChildren(parentTypeName, parentComplexType, existingTypes, typeStack, wsdl)
 
         val extensionChild = extension.childNodes.filterIsInstance<XMLNode>().filterNot {
             it.name == "annotation"
-        }.getOrNull(0)
+        }.firstOrNull()
 
         val childTypeInfo = when {
-            extensionChild != null -> parent.generateChildren(parentTypeName, extensionChild, wsdlTypeInfo.types.plus(parentTypeInfo.types), typeStack)
+            extensionChild != null -> generateChildren(parentTypeName, extensionChild, wsdlTypeInfo.types.plus(parentTypeInfo.types), typeStack, wsdl)
             else -> WSDLTypeInfo(types = parentTypeInfo.types)
         }
 

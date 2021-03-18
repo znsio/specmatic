@@ -2,27 +2,33 @@ package `in`.specmatic.core.wsdl.parser.message
 
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.toXMLNode
+import `in`.specmatic.core.wsdl.parser.WSDL
+import `in`.specmatic.core.wsdl.parser.WSDLTypeInfo
+import org.assertj.core.api.Assertions.assertThat
 
 internal class CollectionOfChildrenInComplexTypeTest {
     @Test
     fun `should generate child nodes`() {
-        val parent = mockk<ComplexElement>()
-
-        val child = toXMLNode("<data/>")
+        val sequence = toXMLNode("<sequence><element name=\"data\" type=\"xsd:string\" /></sequence>")
         val parentTypeName = "ParentType"
 
+        val wsdl = mockk<WSDL>()
+
+        val typeReference = mockk<TypeReference>()
+        val element = toXMLNode("<element name=\"data\" type=\"xsd:string\"/>")
         every {
-            parent.generateChildren(parentTypeName, child, emptyMap(), emptySet())
-        }.returns(mockk())
+            typeReference.getWSDLElement()
+        } returns Pair("xsd_string", SimpleElement("xsd:string", element, wsdl))
 
-        val collection = CollectionOfChildrenInComplexType(parent, child, mockk(), parentTypeName)
-        collection.process(mockk(), emptyMap(), emptySet())
+        every {
+            wsdl.getWSDLElementType("ParentType", element)
+        } returns typeReference
 
-        verify(exactly = 1) {
-            parent.generateChildren(parentTypeName, child, emptyMap(), emptySet())
-        }
+        val collection = CollectionOfChildrenInComplexType(sequence, wsdl, parentTypeName)
+        val wsdlTypeInfo = collection.process(mockk(), emptyMap(), emptySet())
+        val expected = WSDLTypeInfo(listOf(toXMLNode("<data>(string)</data>")))
+        assertThat(wsdlTypeInfo).isEqualTo(expected)
     }
 }

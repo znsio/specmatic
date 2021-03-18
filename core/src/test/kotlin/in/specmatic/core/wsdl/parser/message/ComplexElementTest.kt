@@ -51,6 +51,12 @@ internal class ComplexElementTest {
         val expected = WSDLTypeInfo(listOf(toXMLNode("<Person $TYPE_ATTRIBUTE_NAME=\"PersonRequest\"/>")), mapOf("PersonRequest" to XMLPattern("<$TYPE_NODE_NAME><data>(string)</data></$TYPE_NODE_NAME>")))
         assertThat(wsdlTypeInfo).isEqualTo(expected)
     }
+
+    @Test
+    fun `complex node with no children returns no children`() {
+        val typeInfo = ComplexElement("", mockk(), mockk()).generateChildren("", toXMLNode("<complexType/>"), emptyMap(), emptySet())
+        assertThat(typeInfo.nodes).isEmpty()
+    }
 }
 
 private fun XMLNode.withPrimitiveNamespace(): XMLNode {

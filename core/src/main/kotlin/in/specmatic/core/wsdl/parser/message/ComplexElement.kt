@@ -45,15 +45,15 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
     }
 
     internal fun generateChildren(parentTypeName: String, complexType: XMLNode, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
-        return eliminateAnnotations(complexType).map {
+        return eliminateAnnotations(complexType.childNodes.filterIsInstance<XMLNode>()).map {
             complexTypeChildNode(it, wsdl, parentTypeName)
         }.fold(WSDLTypeInfo()) { wsdlTypeInfo, child ->
             child.process(wsdlTypeInfo, existingTypes, typeStack)
         }
     }
 
-    private fun eliminateAnnotations(complexType: XMLNode) =
-        complexType.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }
+    private fun eliminateAnnotations(childNodes: List<XMLNode>) =
+        childNodes.filterNot { it.name == "annotation" }
 
     private fun complexTypeChildNode(child: XMLNode, wsdl: WSDL, parentTypeName: String): ComplexTypeChild {
         return when(child.name) {

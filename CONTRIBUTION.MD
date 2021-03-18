@@ -15,7 +15,7 @@ Thanks for being willing to contribute!
 > pull requests from branches on your fork. To do this, run:
 >
 > ```
-> git remote add upstream https://github.com/qontract/qontract.git
+> git remote add upstream https://github.com/znsio/specmatic.git
 > git fetch upstream
 > git branch --set-upstream-to=upstream/master master
 > ```
@@ -32,11 +32,11 @@ Please make sure to run the tests before you commit your changes by using the co
 
 ```./gradlew clean test```
 
-Generate Fat Jar. The `qontract.jar` should be available in `<projectRoot>/application/build/libs`
+Generate Fat Jar. The `specmatic.jar` should be available in `<projectRoot>/application/build/libs`
 
 ```./gradlew clean build shadowJar```
 
-Run the `qontract.jar` to verify any commands as part of your changes.
+Run the `specmatic.jar` to verify any commands as part of your changes.
 
 ## Help needed
 

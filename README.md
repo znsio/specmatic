@@ -1,6 +1,6 @@
-Qontract
+Specmatic
 ========
-[![Maven Central](https://img.shields.io/maven-central/v/run.qontract/qontract-core.svg)](https://mvnrepository.com/artifact/run.qontract/qontract-core) [![GitHub release](https://img.shields.io/github/release/qontract/qontract.svg)](https://github.com/qontract/qontract/releases) ![CI Build](https://github.com/qontract/qontract/workflows/CI%20Build/badge.svg) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=qontract_qontract&metric=alert_status)](https://sonarcloud.io/dashboard?id=qontract_qontract) [![Twitter Follow](https://img.shields.io/twitter/follow/specmatic.svg?style=social&label=Follow)](https://twitter.com/specmatic)
+[![Maven Central](https://img.shields.io/maven-central/v/in.specmatic/specmatic-core.svg)](https://mvnrepository.com/artifact/run.qontract/qontract-core) [![GitHub release](https://img.shields.io/github/v/release/znsio/specmatic.svg)](https://github.com/znsio/specmatic/releases) ![CI Build](https://github.com/znsio/specmatic/workflows/CI%20Build/badge.svg) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=qontract_qontract&metric=alert_status)](https://sonarcloud.io/dashboard?id=qontract_qontract) [![Twitter Follow](https://img.shields.io/twitter/follow/specmatic.svg?style=social&label=Follow)](https://twitter.com/specmatic)
 
 ### Context
 
@@ -8,8 +8,8 @@ In a complex, interdependent eco-system, where each service is evolving rapidly,
 
 With this ability, we can now deploy, at will, any service at any time without having to depend on expensive and fragile integration tests.
 
-### What is Qontract
-Qontract is a [contract driven development tool](https://specmatic.in/faqs.html#what-is-contract-first) that allows us to turn our contracts into executable specification.
+### What is Specmatic
+Specmatic is a [contract driven development tool](https://specmatic.in/faqs.html#what-is-contract-first) that allows us to turn our contracts into executable specification.
 
 According to us there are 2 key advantages, which were never possible before:
 * **Death of Integration Testing** - As long as the service provider and consumer adhere to the contract, you can be 100% confident that each of them can develop and deploy their parts independently. **No need for integration testing**. 

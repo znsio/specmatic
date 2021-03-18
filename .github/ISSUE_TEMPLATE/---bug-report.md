@@ -24,7 +24,7 @@ If applicable, add screenshots to help explain your problem.
 **System Information:**
  - OS & version: [e.g. MacOS 10.15.7]
  - Browser & version: [e.g. chrome, safari]
- - Qontract version: [e.g. 0.17.0]
+ - Specmatic version: [e.g. 0.17.0]
  - JDK version: [e.g. 14]
 
 **Additional context**

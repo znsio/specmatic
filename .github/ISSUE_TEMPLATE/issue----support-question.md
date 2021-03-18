@@ -20,5 +20,5 @@ and feature requests so we recommend not using this medium to ask them here 😁
 For questions related to using the library, please visit a support community
 instead of filing an issue on GitHub.
 
-- Documentation: https://qontract.run/documentation.html
+- Documentation: https://specmatic.in/documentation.html
 

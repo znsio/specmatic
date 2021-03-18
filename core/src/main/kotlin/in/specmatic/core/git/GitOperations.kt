@@ -2,6 +2,7 @@
 
 package `in`.specmatic.core.git
 
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.ktor.http.*
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
@@ -116,7 +117,7 @@ fun getPersonalAccessToken(): String? {
     val homeDir = File(System.getProperty("user.home"))
 
     if(homeDir.exists()) {
-        val configFile = homeDir.resolve("specmatic.json")
+        val configFile = homeDir.resolve("$APPLICATION_NAME_LOWER_CASE.json")
 
         if(configFile.exists()) {
             val qontractConfig = readQontractConfig(configFile)

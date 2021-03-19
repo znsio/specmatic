@@ -110,17 +110,7 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         }
     }
 
-    fun getComplexTypeNode(element: XMLNode): XMLNode {
-        return when {
-            element.attributes.containsKey("type") -> findComplexType(element, "type")
-            else -> element.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }.first()
-        }.also {
-            if (it.name != "complexType")
-                throw ContractException("Unexpected type node found\nSource: $element\nType: $it")
-        }
-    }
-
-    fun getComplexTypeNode2(element: XMLNode): ComplexType {
+    fun getComplexTypeNode(element: XMLNode): ComplexType {
         val node = when {
             element.attributes.containsKey("type") -> findComplexType(element, "type")
             else -> element.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }.first()

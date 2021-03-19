@@ -16,7 +16,7 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
         if(qontractTypeName in typeStack)
             return WSDLTypeInfo(types = existingTypes)
 
-        val complexType = wsdl.getComplexTypeNode2(element)
+        val complexType = wsdl.getComplexTypeNode(element)
 
         val childTypeInfo = complexType.generateChildren(
             qontractTypeName,

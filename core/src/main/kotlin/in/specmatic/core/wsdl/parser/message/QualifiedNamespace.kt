@@ -15,7 +15,6 @@ class QualifiedNamespace(val element: XMLNode, val schema: XMLNode, private val 
             else {
                 val targetNamespace = schema.getAttributeValue("targetNamespace")
                 listOf(wsdl.mapNamespaceToPrefix(targetNamespace))
-//                emptyList() // TODO Open caveat: we are not providing a prefix here, if the type reference didn't contain it, because it was defined inline, and did not have to be looked up. But if it is provided in a qualified schema, does it need a namespace?
             }
         }
 

@@ -145,6 +145,12 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         return typeInfo.getNamespaces(wsdlNode.attributes)
     }
 
+    fun getNamespaces(): Map<String, String> {
+        return namespaceToPrefix.entries.map {
+            Pair(it.value, it.key)
+        }.toMap()
+    }
+
     fun mapToNamespacePrefixInDefinitions(namespacePrefix: String, element: XMLNode): String {
         val namespaceValue = element.namespaces[namespacePrefix]
             ?: throw ContractException("Can't find namespace prefix $namespacePrefix for element $element")

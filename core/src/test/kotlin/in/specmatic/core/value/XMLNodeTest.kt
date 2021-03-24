@@ -228,10 +228,66 @@ internal class XMLNodeTest {
         val originalXml = toXMLNode("<customer><firstname>Jill</firstname><surname>Granger</surname></customer>")
 
         val prettyStringValue = originalXml.toPrettyStringValue()
-        print(prettyStringValue)
-        assertThat(prettyStringValue).isEqualTo("""<customer>
-  <firstname>Jill</firstname>
-  <surname>Granger</surname>
-</customer>""")
+
+        assertThat(prettyStringValue).isEqualTo("""
+            <customer>
+              <firstname>Jill</firstname>
+              <surname>Granger</surname>
+            </customer>""".trimIndent())
+    }
+
+    @Test
+    fun `serialize xml with an undeclared namespace prefix to pretty string value`() {
+        val originalXml = xmlNode("ns0:customer") {
+            xmlNode("firstname", mapOf("ns0:correct" to "true")) {
+                text("Jill")
+            }
+            xmlNode("surname") {
+                text("Granger")
+            }
+        }
+
+        val prettyStringValue = originalXml.toPrettyStringValue()
+
+        assertThat(prettyStringValue).isEqualTo("""
+            <ns0:customer>
+              <firstname ns0:correct="true">Jill</firstname>
+              <surname>Granger</surname>
+            </ns0:customer>""".trimIndent())
+    }
+
+    @Test
+    fun `xml node DSL should generate an xml node correctly`() {
+        val parentNamespaces = mapOf("ns" to "http://namespace")
+
+        val dslXML = xmlNode("ns0:customer", mapOf("ns0:special" to "true")) {
+            parentNamespaces(parentNamespaces)
+            xmlNode("firstname", mapOf("ns0:correct" to "true")) {
+                text("Jill")
+            }
+            xmlNode("surname") {
+                text("Granger")
+            }
+        }
+
+        val expected = XMLNode("ns0:customer", mapOf("ns0:special" to StringValue("true")),
+            childNodes = listOf(
+                XMLNode("firstname", mapOf("ns0:correct" to StringValue("true")),
+                    childNodes = listOf(
+                        StringValue("Jill")
+                    ),
+                    parentNamespaces = parentNamespaces
+                ),
+                XMLNode("surname", emptyMap(),
+                    childNodes = listOf(
+                        StringValue("Granger")
+                    ),
+                    parentNamespaces = parentNamespaces
+                ),
+            ),
+            parentNamespaces = parentNamespaces
+        )
+
+        assertThat(dslXML).isEqualTo(expected)
     }
 }

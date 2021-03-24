@@ -17,7 +17,7 @@ internal class ParseMessageStructureFromWSDLTypeTest {
     fun `simple type generation`() {
         val wsdl = WSDL(toXMLNode(readTextResource("wsdl/stockquote.wsdl")))
 
-        val parser = ParseMessageStructureFromWSDLType(wsdl, "xsd1:TradePriceRequest", SOAPMessageType.Input, emptyMap(), "GetLastTradePrice")
+        val parser = ParseMessageWithElementRef(wsdl, "xsd1:TradePriceRequest", SOAPMessageType.Input, emptyMap(), "GetLastTradePrice")
         val parsed = parser.execute()
 
         val xmlType = XMLPattern("""

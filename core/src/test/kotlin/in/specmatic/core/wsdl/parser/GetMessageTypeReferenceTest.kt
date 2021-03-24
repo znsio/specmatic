@@ -10,7 +10,7 @@ import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.core.value.withoutNamespacePrefix
 import `in`.specmatic.core.wsdl.parser.message.GetMessageTypeReference
 import `in`.specmatic.core.wsdl.parser.message.MessageTypeProcessingComplete
-import `in`.specmatic.core.wsdl.parser.message.ParseMessageStructureFromWSDLType
+import `in`.specmatic.core.wsdl.parser.message.ParseMessageWithElementRef
 import `in`.specmatic.core.wsdl.payload.EmptySOAPPayload
 
 internal class GetMessageTypeReferenceTest{
@@ -45,7 +45,7 @@ internal class GetMessageTypeReferenceTest{
 
         val next = GetMessageTypeReference(wsdl, messageTypeNode, SOAPMessageType.Input, emptyMap(), "").execute()
 
-        if(next is ParseMessageStructureFromWSDLType) {
+        if(next is ParseMessageWithElementRef) {
             assertThat(next.soapPayloadType).isNull()
         } else {
             fail("Expected the processing to start parsing the structure of what goes inside the SOAP body")

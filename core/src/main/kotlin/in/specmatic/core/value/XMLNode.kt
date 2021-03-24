@@ -9,7 +9,6 @@ import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.utilities.newBuilder
 import `in`.specmatic.core.utilities.parseXML
-import `in`.specmatic.core.utilities.xmlToPrettyString
 import `in`.specmatic.core.utilities.xmlToString
 
 fun toXMLNode(document: Document): XMLNode = nonTextXMLNode(document.documentElement)
@@ -123,7 +122,81 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     override fun toStringValue(): String = xmlToString(build())
 
-    fun toPrettyStringValue(): String = xmlToPrettyString(build()).trim()
+    fun toPrettyStringValue(): String {
+        val attributesString = when {
+                attributes.isEmpty() -> ""
+                else -> {
+                    " " + attributes.entries.joinToString(" ") {
+                        "${it.key}=${quoted(it.value)}"
+                    }
+                }
+            }
+
+        return when {
+                childNodes.isEmpty() -> {
+                    "<$realName$attributesString/>"
+                }
+                else -> {
+                    val firstLine = "<$realName$attributesString>"
+                    val lastLine = "</$realName>"
+
+                    val linesBetween = childNodes.map {
+                        when (it) {
+                            is XMLNode -> it.nodeToPrettyString("  ")
+                            else -> it.toString()
+                        }
+                    }
+
+                    when {
+                        childNodes.first() is StringValue -> {
+                            firstLine + linesBetween.first() + lastLine
+                        }
+                        else -> {
+                            firstLine + "\n" + linesBetween.joinToString("\n").prependIndent("  ") + "\n" + lastLine
+                        }
+                    }
+                }
+            }
+    }
+
+    private fun nodeToPrettyString(indent: String): String {
+        val attributesString = when {
+            attributes.isEmpty() -> ""
+            else -> {
+                " " + attributes.entries.joinToString(" ") {
+                    "${it.key}=${quoted(it.value)}"
+                }
+            }
+        }
+
+        return when {
+            childNodes.isEmpty() -> {
+                "<$realName$attributesString/>"
+            }
+            else -> {
+                val firstLine = "<$realName$attributesString>"
+                val lastLine = "</$realName>"
+
+                val linesBetween = childNodes.map {
+                    when(it) {
+                        is XMLNode -> it.nodeToPrettyString(indent)
+                        else -> it.toString()
+                    }
+                }
+
+                when {
+                    childNodes.first() is StringValue -> {
+                        firstLine + linesBetween.first() + lastLine
+                    }
+                    else -> {
+                        firstLine + "\n" + linesBetween.joinToString("\n").prependIndent(indent) + "\n" + lastLine
+                    }
+                }
+            }
+        }
+    }
+
+    private fun quoted(value: StringValue): String = "\"${value.toStringValue()}\""
 
     override fun displayableType(): String = "xml"
     override fun exactMatchElseType(): XMLPattern {
@@ -217,5 +290,40 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         return this.childNodes.filterIsInstance<XMLNode>().find {
             it.attributes["name"]?.toStringValue() == valueOfNameAttribute
         } ?: throw ContractException("Couldn't find name attribute")
+    }
+}
+
+fun xmlNode(name: String, attributes: Map<String, String> = emptyMap(), childrenFn: XMLNodeBuilder.() -> Unit = {}): XMLNode {
+    val nodeBuilder = XMLNodeBuilder(emptyMap())
+    nodeBuilder.childrenFn()
+    val children = nodeBuilder.nodes
+    val parentNamespaces = nodeBuilder.parentNamespaces
+
+    return XMLNode(name, attributes.mapValues { StringValue(it.value) }, children, parentNamespaces)
+}
+
+class XMLNodeBuilder {
+    constructor(parentNamespaces: Map<String, String>) {
+        this.parentNamespaces = parentNamespaces.toMutableMap()
+    }
+
+    val nodes: MutableList<XMLValue> = mutableListOf()
+    var parentNamespaces: MutableMap<String, String> = mutableMapOf()
+
+    fun xmlNode(name: String, attributes: Map<String, String> = emptyMap(), childrenFn: XMLNodeBuilder.() -> Unit = {}) {
+        val nodeBuilder = XMLNodeBuilder(this.parentNamespaces)
+        nodeBuilder.childrenFn()
+        val children = nodeBuilder.nodes
+        val parentNamespaces = nodeBuilder.parentNamespaces
+
+        nodes.add(XMLNode(name, attributes.mapValues { StringValue(it.value) }, children, parentNamespaces))
+    }
+
+    fun text(text: String) {
+        nodes.add(StringValue(text))
+    }
+
+    fun parentNamespaces(parentNamespaces: Map<String, String>) {
+        this.parentNamespaces.putAll(parentNamespaces)
     }
 }

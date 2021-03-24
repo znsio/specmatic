@@ -8,8 +8,6 @@ import org.eclipse.jgit.transport.TransportHttp
 import org.eclipse.jgit.transport.sshd.SshdSessionFactory
 import org.w3c.dom.Document
 import org.w3c.dom.Node
-import org.w3c.dom.Node.ELEMENT_NODE
-import org.w3c.dom.Node.TEXT_NODE
 import org.xml.sax.InputSource
 import `in`.specmatic.consoleLog
 import `in`.specmatic.core.CONTRACT_EXTENSION
@@ -25,6 +23,8 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import org.testcontainers.shaded.org.apache.commons.lang.StringEscapeUtils
+import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
 import java.io.StringWriter
@@ -68,7 +68,7 @@ fun readFile(filePath: String): String {
 
 fun parseXML(xmlData: String): Document {
     val builder = newBuilder()
-    return removeWhiteSpace(builder.parse(InputSource(StringReader(xmlData))))
+    return removeIrrelevantNodes(builder.parse(InputSource(StringReader(xmlData))))
 }
 
 internal fun newBuilder(): DocumentBuilder {
@@ -78,38 +78,35 @@ internal fun newBuilder(): DocumentBuilder {
     return builder
 }
 
-fun removeWhiteSpace(document: Document): Document {
-    removeWhiteSpace(document.documentElement)
+fun removeIrrelevantNodes(document: Document): Document {
+    removeIrrelevantNodes(document.documentElement)
     return document
 }
 
-fun removeWhiteSpace(node: Node): Node {
+fun removeIrrelevantNodes(node: Node): Node {
     if(node.hasChildNodes() && !containsTextContent(node)) {
         val childNodes = 0.until(node.childNodes.length).map { i ->
             node.childNodes.item(i)
         }
 
         childNodes.forEach {
-            if (it.nodeType == TEXT_NODE && node.nodeType == ELEMENT_NODE && it.textContent.trim().isBlank())
+            if (isEmptyText(it, node) || it.nodeType == COMMENT_NODE)
                 node.removeChild(it)
             else if (it.hasChildNodes())
-                removeWhiteSpace(it)
+                removeIrrelevantNodes(it)
         }
     }
 
     return node
 }
 
+private fun isEmptyText(it: Node, node: Node) =
+    it.nodeType == TEXT_NODE && node.nodeType == ELEMENT_NODE && it.textContent.trim().isBlank()
+
 private fun containsTextContent(node: Node) =
         node.childNodes.length == 1 && node.firstChild.nodeType == TEXT_NODE && node.nodeType == ELEMENT_NODE
 
 fun xmlToString(node: Node): String = xmlToString(DOMSource(node))
-
-fun xmlToPrettyString(node: Node): String = xmlToString(DOMSource(node)) {
-    it.setOutputProperty(OutputKeys.INDENT, "yes")
-    it.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-    it.setOutputProperty(OutputKeys.METHOD, "xml")
-}
 
 private fun xmlToString(domSource: DOMSource, configureTransformer: (Transformer) -> Unit = {}): String {
     val writer = StringWriter()

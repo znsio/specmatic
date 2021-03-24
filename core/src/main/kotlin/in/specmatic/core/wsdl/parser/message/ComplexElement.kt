@@ -11,20 +11,24 @@ import `in`.specmatic.core.wsdl.parser.WSDLTypeInfo
 import `in`.specmatic.core.wsdl.payload.ComplexTypedSOAPPayload
 import `in`.specmatic.core.wsdl.payload.SOAPPayload
 
-data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL): WSDLElement {
+data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL, val namespaceQualification: NamespaceQualification? = null): WSDLElement {
     override fun getQontractTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
         if(qontractTypeName in typeStack)
             return WSDLTypeInfo(types = existingTypes)
 
-        val complexType = wsdl.getComplexTypeNode(element)
+        val childTypeInfo = try {
+            val complexType = wsdl.getComplexTypeNode(element)
 
-        val childTypeInfo = complexType.generateChildren(
-            qontractTypeName,
-            existingTypes,
-            typeStack.plus(qontractTypeName)
-        )
+            complexType.generateChildren(
+                qontractTypeName,
+                existingTypes,
+                typeStack.plus(qontractTypeName)
+            )
+        } catch(e: ContractException) {
+            WSDLTypeInfo(types = existingTypes)
+        }
 
-        val qualification = wsdl.getQualification(element, wsdlTypeReference)
+        val qualification = namespaceQualification ?: wsdl.getQualification(element, wsdlTypeReference)
 
         val inPlaceNode = toXMLNode("<${qualification.nodeName} $TYPE_ATTRIBUTE_NAME=\"$qontractTypeName\"/>").let {
             it.copy(attributes = it.attributes.plus(getQontractAttributes(element)))

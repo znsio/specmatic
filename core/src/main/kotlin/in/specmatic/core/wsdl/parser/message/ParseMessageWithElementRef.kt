@@ -7,7 +7,7 @@ import `in`.specmatic.core.wsdl.parser.SOAPMessageType
 import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.core.wsdl.payload.SoapPayloadType
 
-data class ParseMessageStructureFromWSDLType(private val wsdl: WSDL, private val wsdlTypeReference: String, private val soapMessageType: SOAPMessageType, private val existingTypes: Map<String, XMLPattern>, private val operationName: String) : MessageTypeInfoParser {
+data class ParseMessageWithElementRef(private val wsdl: WSDL, private val wsdlTypeReference: String, private val soapMessageType: SOAPMessageType, private val existingTypes: Map<String, XMLPattern>, private val operationName: String) : MessageTypeInfoParser {
     override fun execute(): MessageTypeInfoParser {
         val topLevelElement = wsdl.getSOAPElement(wsdlTypeReference)
 

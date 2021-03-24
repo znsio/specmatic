@@ -24,7 +24,7 @@ internal class UtilitiesTest {
         val xmlValue = toXMLNode(xml)
 
         assertThat(xmlValue.childNodes.size).isOne
-        assertThat(xmlValue.toStringValue().trim()).isEqualTo("""<line1><line2>data</line2></line1>""")
+        assertThat(xmlValue.toStringValue().trim()).isEqualTo("""<line1><line2>data</line2></line1>""".trimIndent())
     }
 
     @Test
@@ -50,7 +50,7 @@ internal class UtilitiesTest {
     fun `contractFilePathsFrom sources with mono repo`() {
         val configFilePath = "monorepo/configLoc/specmatic.json"
 
-        var monorepoContents = listOf(configFilePath, "monorepo/a/1.$CONTRACT_EXTENSION", "monorepo/b/1.$CONTRACT_EXTENSION", "monorepo/c/1.$CONTRACT_EXTENSION");
+        var monorepoContents = listOf(configFilePath, "monorepo/a/1.$CONTRACT_EXTENSION", "monorepo/b/1.$CONTRACT_EXTENSION", "monorepo/c/1.$CONTRACT_EXTENSION")
         monorepoContents.forEach {
             File(it).parentFile.mkdirs()
             File(it).createNewFile()

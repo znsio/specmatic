@@ -341,7 +341,7 @@ internal class XMLPatternTest {
             val newTypes = xmlType.newBasedOn(example, Resolver())
 
             val xmlNode = newTypes[0].generate(Resolver())
-            assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="10" name="John Doe"/>""")
+            assertThat(xmlNode).isEqualTo(toXMLNode("""<data age="10" name="John Doe"/>"""))
         }
 
         @Test
@@ -352,7 +352,7 @@ internal class XMLPatternTest {
             val newTypes = xmlType.newBasedOn(example, Resolver())
 
             val xmlNode = newTypes[0].generate(Resolver())
-            assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="10" name="John Doe"/>""")
+            assertThat(xmlNode).isEqualTo(toXMLNode("""<data age="10" name="John Doe"/>"""))
         }
 
         @Test
@@ -364,7 +364,7 @@ internal class XMLPatternTest {
             assertThat(newTypes.size).isOne()
 
             val xmlNode = newTypes[0].generate(Resolver())
-            assertThat(xmlNode.toStringValue()).isEqualTo("""<data age="" name=""/>""")
+            assertThat(xmlNode).isEqualTo(toXMLNode("""<data age="" name=""/>"""))
         }
 
         @Test

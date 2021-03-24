@@ -9,7 +9,6 @@ import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.utilities.newBuilder
 import `in`.specmatic.core.utilities.parseXML
-import `in`.specmatic.core.utilities.xmlToString
 
 fun toXMLNode(document: Document): XMLNode = nonTextXMLNode(document.documentElement)
 
@@ -120,46 +119,13 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     override fun displayableValue(): String = toStringValue()
 
-    override fun toStringValue(): String = xmlToString(build())
+    override fun toStringValue(): String = this.nodeToString("", "")
 
     fun toPrettyStringValue(): String {
-        val attributesString = when {
-                attributes.isEmpty() -> ""
-                else -> {
-                    " " + attributes.entries.joinToString(" ") {
-                        "${it.key}=${quoted(it.value)}"
-                    }
-                }
-            }
-
-        return when {
-                childNodes.isEmpty() -> {
-                    "<$realName$attributesString/>"
-                }
-                else -> {
-                    val firstLine = "<$realName$attributesString>"
-                    val lastLine = "</$realName>"
-
-                    val linesBetween = childNodes.map {
-                        when (it) {
-                            is XMLNode -> it.nodeToPrettyString("  ")
-                            else -> it.toString()
-                        }
-                    }
-
-                    when {
-                        childNodes.first() is StringValue -> {
-                            firstLine + linesBetween.first() + lastLine
-                        }
-                        else -> {
-                            firstLine + "\n" + linesBetween.joinToString("\n").prependIndent("  ") + "\n" + lastLine
-                        }
-                    }
-                }
-            }
+        return this.nodeToString("  ", System.lineSeparator())
     }
 
-    private fun nodeToPrettyString(indent: String): String {
+    private fun nodeToString(indent: String, lineSeparator: String): String {
         val attributesString = when {
             attributes.isEmpty() -> ""
             else -> {
@@ -179,7 +145,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
                 val linesBetween = childNodes.map {
                     when(it) {
-                        is XMLNode -> it.nodeToPrettyString(indent)
+                        is XMLNode -> it.nodeToString(indent, lineSeparator)
                         else -> it.toString()
                     }
                 }
@@ -189,7 +155,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
                         firstLine + linesBetween.first() + lastLine
                     }
                     else -> {
-                        firstLine + "\n" + linesBetween.joinToString("\n").prependIndent(indent) + "\n" + lastLine
+                        firstLine + lineSeparator + linesBetween.joinToString(lineSeparator).prependIndent(indent) + lineSeparator + lastLine
                     }
                 }
             }

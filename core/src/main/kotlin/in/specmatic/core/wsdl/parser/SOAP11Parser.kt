@@ -1,5 +1,6 @@
 package `in`.specmatic.core.wsdl.parser
 
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.value.XMLNode
 import `in`.specmatic.core.wsdl.parser.message.MessageTypeInfoParser
@@ -71,13 +72,15 @@ class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
         wsdl: WSDL,
         existingTypes: Map<String, XMLPattern>
     ): SoapPayloadType {
-        var messageTypeInfoParser: MessageTypeInfoParser = MessageTypeInfoParserStart(wsdl, portOperationNode, soapMessageType, existingTypes, operationName)
+        var messageTypeInfoParser: MessageTypeInfoParser =
+            MessageTypeInfoParserStart(wsdl, portOperationNode, soapMessageType, existingTypes, operationName)
 
-        while(messageTypeInfoParser.soapPayloadType == null) {
+        while (messageTypeInfoParser.soapPayloadType == null) {
             messageTypeInfoParser = messageTypeInfoParser.execute()
         }
 
-        return messageTypeInfoParser.soapPayloadType!!
+        return messageTypeInfoParser.soapPayloadType
+            ?: throw ContractException("Parsing of $operationName did not complete successfully.")
     }
 }
 

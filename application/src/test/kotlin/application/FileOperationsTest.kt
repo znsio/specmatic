@@ -44,9 +44,8 @@ internal class FileOperationsTest {
         assertThat(reader.extensionIsNot(qontractFilePath, CONTRACT_EXTENSIONS)).isFalse
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = [CONTRACT_EXTENSION, LEGACY_CONTRACT_EXTENSION])
-    fun `given a contract with a mismatched extension, it is found to be invalid`(extension: String, @TempDir tempDir: Path) {
+    @Test
+    fun `given a contract with a mismatched extension, it is found to be invalid`(@TempDir tempDir: Path) {
         val validExtensionContract = tempDir.resolve("contract.txt")
         val qontractFilePath = validExtensionContract.toAbsolutePath().toString()
 

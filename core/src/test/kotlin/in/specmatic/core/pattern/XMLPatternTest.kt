@@ -7,10 +7,7 @@ import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.resultReport
-import `in`.specmatic.core.value.NullValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.XMLNode
-import `in`.specmatic.core.value.toXMLNode
+import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
@@ -51,6 +48,12 @@ internal class XMLPatternTest {
 
             assertThat(xmlValue.childNodes.size).isOne()
             assertThat(xmlValue.childNodes.first()).isInstanceOf(StringValue::class.java)
+        }
+
+        @Test
+        fun `anything value becomes a random string`() {
+            val xmlNode = XMLPattern("<data>(anything)</data>").generate(Resolver())
+            assertThat(xmlNode.childNodes.first().toStringValue()).isNotBlank()
         }
     }
 
@@ -124,6 +127,21 @@ internal class XMLPatternTest {
             val value = toXMLNode("<account><name>John Doe</name><address>Baker street</address></account>")
 
             assertThat(type.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        private fun XMLPattern.matches(value: XMLNode) {
+            assertThat(this.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `anything type matches anything`() {
+            val anything = XMLPattern("<data>(anything)</data>")
+
+            val string = toXMLNode("<data>hello world</data>")
+            val xml = toXMLNode("<data><hello>world</hello></data>")
+
+            anything.matches(string)
+            anything.matches(xml)
         }
     }
 
@@ -290,6 +308,19 @@ internal class XMLPatternTest {
             val type2 = XMLPattern("<contact_info><address $occursMultipleTimes>(string)</address><phone>(number)</phone></contact_info>")
 
             assertThat(type1.encompasses(type2, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        }
+
+        @Test
+        fun `node containing anything is backward compatible with itself`() {
+            val nodeContainingAnything = XMLPattern("<data>(anything)</data>")
+            assertThat(nodeContainingAnything.encompasses(nodeContainingAnything, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `node containing anything is NOT backward compatible with a node with a different type`() {
+            val nodeContainingAnything = XMLPattern("<data>(anything)</data>")
+            val nodeContainingString = XMLPattern("<data>(string)</data>")
+            assertThat(nodeContainingAnything.encompasses(nodeContainingString, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
         }
     }
 

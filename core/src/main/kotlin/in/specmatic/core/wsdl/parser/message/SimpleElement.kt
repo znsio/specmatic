@@ -37,11 +37,13 @@ data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, va
 
 internal fun createSimpleType(element: XMLNode): XMLNode {
     val typeName = element.attributes.getValue("type").toStringValue().withoutNamespacePrefix()
-    val value = when {
-        primitiveStringTypes.contains(typeName) -> StringValue("(string)")
-        primitiveNumberTypes.contains(typeName) -> StringValue("(number)")
-        primitiveDateTypes.contains(typeName) -> StringValue("(datetime)")
-        primitiveBooleanType.contains(typeName) -> StringValue("(boolean)")
+    val value = when(typeName) {
+        in primitiveStringTypes -> StringValue("(string)")
+        in primitiveNumberTypes -> StringValue("(number)")
+        in primitiveDateTypes -> StringValue("(datetime)")
+        in primitiveBooleanType -> StringValue("(boolean)")
+        "anyType" -> StringValue("(anything)")
+
         else -> throw ContractException("""Primitive type "$typeName" not recognized""")
     }
 

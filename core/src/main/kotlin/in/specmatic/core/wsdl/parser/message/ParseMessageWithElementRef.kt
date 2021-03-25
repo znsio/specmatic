@@ -54,7 +54,6 @@ fun isPrimitiveType(node: XMLNode): Boolean {
 
 val primitiveStringTypes = listOf(
     "string",
-    "anyType",
     "duration",
     "time",
     "date",

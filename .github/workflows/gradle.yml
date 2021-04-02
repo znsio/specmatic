@@ -28,7 +28,7 @@ jobs:
     - name: Publish to local maven
       run: ./gradlew publishToMavenLocal
     - name: Run maven project to check for Spring 2.3 conflicts
-      run: cd spring-2.3-compatibility; mvn -Dspecmatic.version=`cat ../version.properties | cut -d = -f 2` test
+      run: cd spring-2.3-compatibility; mvn -Dspecmatic.version=`cat ../version.properties | cut -d = -f 2` clean test
     - name: Upload artifact
       uses: actions/upload-artifact@v2.2.2
       with:

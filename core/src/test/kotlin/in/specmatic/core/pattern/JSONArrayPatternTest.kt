@@ -5,7 +5,7 @@ import `in`.specmatic.core.Resolver
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.testBackwardCompatibility
+import `in`.specmatic.core.testBackwardCompatibilityInParallel
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
@@ -123,7 +123,7 @@ Feature: Recursive test
 """.trim()
 
         val feature = parseGherkinStringToFeature(gherkin)
-        val result = testBackwardCompatibility(feature, feature)
+        val result = testBackwardCompatibilityInParallel(feature, feature)
         println(result.report())
         assertThat(result.success()).isTrue()
     }
@@ -143,7 +143,7 @@ Feature: Recursive test
 """.trim()
 
         val feature = parseGherkinStringToFeature(gherkin)
-        val result = testBackwardCompatibility(feature, feature)
+        val result = testBackwardCompatibilityInParallel(feature, feature)
         println(result.report())
         assertThat(result.success()).isTrue()
     }
@@ -163,7 +163,7 @@ Feature: Recursive test
 """.trim()
 
         val feature = parseGherkinStringToFeature(gherkin)
-        val result = testBackwardCompatibility(feature, feature)
+        val result = testBackwardCompatibilityInParallel(feature, feature)
         println(result.report())
         assertThat(result.success()).isTrue()
     }

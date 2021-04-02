@@ -34,7 +34,7 @@ Then status 200
         val olderContract = parseGherkinStringToFeature(gherkin1)
         val newerContract = parseGherkinStringToFeature(gherkin2)
 
-        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+        val result: Results = testBackwardCompatibilityInParallel(olderContract, newerContract)
 
         println(result.report())
 
@@ -73,7 +73,7 @@ Then status 200
         val olderContract = parseGherkinStringToFeature(gherkin1)
         val newerContract = parseGherkinStringToFeature(gherkin2)
 
-        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+        val result: Results = testBackwardCompatibilityInParallel(olderContract, newerContract)
 
         println(result.report())
 
@@ -111,7 +111,7 @@ Then status 200
         val olderContract = parseGherkinStringToFeature(gherkin1)
         val newerContract = parseGherkinStringToFeature(gherkin2)
 
-        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        val results: Results = testBackwardCompatibilityInParallel(olderContract, newerContract)
 
         assertEquals(0, results.successCount)
         assertEquals(2, results.failureCount)
@@ -130,7 +130,7 @@ Then status 200
 
         val contract = parseGherkinStringToFeature(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -152,7 +152,7 @@ Then status 200
 
         val contract = parseGherkinStringToFeature(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -174,7 +174,7 @@ Then status 200
 
         val contract = parseGherkinStringToFeature(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -198,7 +198,7 @@ Then status 200
 
         val contract = parseGherkinStringToFeature(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -220,7 +220,7 @@ And response-body (number?)
 
         val contract = parseGherkinStringToFeature(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -244,7 +244,7 @@ And response-body (Number)
 
         val contract = parseGherkinStringToFeature(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -279,7 +279,7 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val results: Results = testBackwardCompatibility(olderBehaviour, newerBehaviour)
+        val results: Results = testBackwardCompatibilityInParallel(olderBehaviour, newerBehaviour)
 
         println(results.report())
 
@@ -301,7 +301,7 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val results: Results = testBackwardCompatibility(behaviour, behaviour)
+        val results: Results = testBackwardCompatibilityInParallel(behaviour, behaviour)
 
         println(results.report())
         assertEquals(1, results.successCount)
@@ -322,7 +322,7 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val results: Results = testBackwardCompatibility(behaviour, behaviour)
+        val results: Results = testBackwardCompatibilityInParallel(behaviour, behaviour)
 
         println(results.report())
         assertEquals(1, results.successCount)
@@ -343,7 +343,7 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val results: Results = testBackwardCompatibility(behaviour, behaviour)
+        val results: Results = testBackwardCompatibilityInParallel(behaviour, behaviour)
 
         println(results.report())
         assertEquals(1, results.successCount)
@@ -376,7 +376,7 @@ And response-body
 | description? | (string) |
 """.trim())
 
-        val results: Results = testBackwardCompatibility(older, newer)
+        val results: Results = testBackwardCompatibilityInParallel(older, newer)
 
         println(results.report())
         assertThat(results.success()).isFalse()
@@ -395,7 +395,7 @@ And response-body (number)
 
         val contract = parseGherkinStringToFeature(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -420,7 +420,7 @@ And response-body (number)
 
         val contract = parseGherkinStringToFeature(gherkin)
 
-        val results: Results = testBackwardCompatibility(contract, contract)
+        val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
         if(results.failureCount > 0)
             println(results.report())
@@ -455,7 +455,7 @@ Then status 200
 And response-body (number)
     """.trim()
 
-        val results: Results = testBackwardCompatibility(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
+        val results: Results = testBackwardCompatibilityInParallel(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
 
         if(results.failureCount > 0)
             println(results.report())
@@ -486,7 +486,7 @@ When POST /data
 Then status 200
     """.trim()
 
-        val results: Results = testBackwardCompatibility(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
+        val results: Results = testBackwardCompatibilityInParallel(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
 
         if(results.failureCount > 0)
             println(results.report())
@@ -516,7 +516,7 @@ When POST /data
 Then status 200
     """.trim()
 
-        val results: Results = testBackwardCompatibility(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
+        val results: Results = testBackwardCompatibilityInParallel(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
 
         if(results.failureCount > 0)
             println(results.report())

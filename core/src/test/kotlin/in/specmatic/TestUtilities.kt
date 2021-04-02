@@ -47,7 +47,7 @@ infix fun String.notBackwardCompatibleWith(oldContractGherkin: String) {
 fun String.testBackwardCompatibility(oldContractGherkin: String): Results {
     val oldFeature = parseGherkinStringToFeature(oldContractGherkin)
     val newFeature = parseGherkinStringToFeature(this)
-    return testBackwardCompatibility(oldFeature, newFeature)
+    return testBackwardCompatibilityInParallel(oldFeature, newFeature)
 }
 
 fun stubShouldNotBreak(stubRequest: HttpRequest, stubResponse: HttpResponse, oldContract: String, newContract: String) {

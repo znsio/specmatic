@@ -1,19 +1,16 @@
 package application
 
+import `in`.specmatic.core.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
-import `in`.specmatic.core.Feature
-import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.Result
-import `in`.specmatic.core.Results
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.testBackwardCompatibility
+import `in`.specmatic.core.testBackwardCompatibilityInParallel
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.FileNotFoundException
 import java.util.concurrent.Callable
@@ -37,9 +34,9 @@ class GitCompatibleCommand : Callable<Int> {
     lateinit var fileOperations: FileOperations
 
     @Command(name = "file", description = ["Compare file in working tree against HEAD"])
-    fun file(@Parameters(paramLabel = "contractPath") contractPath: String): Int {
+    fun file(@Parameters(paramLabel = "contractPath") contractPath: String, @CommandLine.Option(names = ["numberOfThreads"], defaultValue = "3", required = false) numberOfThreads: Int): Int {
         val output = checkCompatibility {
-            backwardCompatibleFile(contractPath, fileOperations, gitCommand)
+            backwardCompatibleFile(contractPath, fileOperations, gitCommand, numberOfThreads)
         }
 
         println(output.message)
@@ -47,9 +44,11 @@ class GitCompatibleCommand : Callable<Int> {
     }
 
     @Command(name = "commits", description = ["Compare file in newer commit against older commit"])
-    fun commits(@Parameters(paramLabel = "contractPath") path: String, @Parameters(paramLabel = "newerCommit") newerCommit: String, @Parameters(paramLabel = "olderCommit") olderCommit: String): Int {
+    fun commits(@Parameters(paramLabel = "contractPath") path: String, @Parameters(paramLabel = "newerCommit") newerCommit: String, @Parameters(paramLabel = "olderCommit") olderCommit: String, @CommandLine.Option(names = ["numberOfThreads"], defaultValue = "3", required = false) numberOfThreads: Int): Int {
+        println("Using $numberOfThreads threads")
+
         val output = checkCompatibility {
-            backwardCompatibleCommit(path, newerCommit, olderCommit, gitCommand)
+            backwardCompatibleCommit(path, newerCommit, olderCommit, gitCommand, numberOfThreads)
         }
 
         println(output.message)
@@ -84,13 +83,18 @@ internal fun compatibilityReport(results: Results, resultMessage: String): Strin
     return "$countsMessage$resultReport$resultMessage".trim()
 }
 
-internal fun backwardCompatibleFile(newerContractPath: String, fileOperations: FileOperations, git: GitCommand): Outcome<Results> {
+internal fun backwardCompatibleFile(
+    newerContractPath: String,
+    fileOperations: FileOperations,
+    git: GitCommand,
+    numberOfThreads: Int? = null
+): Outcome<Results> {
     return try {
         val newerFeature = parseGherkinStringToFeature(fileOperations.read(newerContractPath))
         val result = getOlderFeature(newerContractPath, git)
 
         result.onSuccess {
-            Outcome(testBackwardCompatibility(it, newerFeature))
+            Outcome(testBackwardCompatibility(it, newerFeature, numberOfThreads))
         }
     } catch(e: NonZeroExitError) {
         Outcome(Results(mutableListOf(Result.Success())), "Could not find $newerContractPath at HEAD")
@@ -99,7 +103,13 @@ internal fun backwardCompatibleFile(newerContractPath: String, fileOperations: F
     }
 }
 
-internal fun backwardCompatibleCommit(contractPath: String, newerCommit: String, olderCommit: String, git: GitCommand): Outcome<Results> {
+internal fun backwardCompatibleCommit(
+    contractPath: String,
+    newerCommit: String,
+    olderCommit: String,
+    git: GitCommand,
+    numberOfThreads: Int? = null
+): Outcome<Results> {
     val (gitRoot, relativeContractPath) = git.relativeGitPath(contractPath)
 
     val partial = getFileContentAtSpecifiedCommit(gitRoot)(relativeContractPath)(contractPath)
@@ -109,14 +119,6 @@ internal fun backwardCompatibleCommit(contractPath: String, newerCommit: String,
             Outcome(testBackwardCompatibility(parseGherkinStringToFeature(olderGherkin), parseGherkinStringToFeature(newerGherkin)))
         }
     }
-
-//    val partial = PartialCommitFetch(gitRoot, relativeContractPath, contractPath)
-
-//    return partial.apply(newerCommit).onSuccess { newerGherkin ->
-//        partial.apply(olderCommit).onSuccess { olderGherkin ->
-//            Outcome(testBackwardCompatibility(Feature(olderGherkin), Feature(newerGherkin)))
-//        }
-//    }
 }
 
 internal fun getOlderFeature(newerContractPath: String, git: GitCommand): Outcome<Feature> {

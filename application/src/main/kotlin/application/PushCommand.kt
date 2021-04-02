@@ -77,7 +77,7 @@ class PushCommand: Callable<Unit> {
             val newVersionFeature = parseGherkinStringToFeature(newVersion)
             val oldVersionFeature = parseGherkinStringToFeature(oldVersion)
 
-            val results = testBackwardCompatibility(oldVersionFeature, newVersionFeature)
+            val results = testBackwardCompatibilityInParallel(oldVersionFeature, newVersionFeature)
 
             if (!results.success()) {
                 println(results.report())

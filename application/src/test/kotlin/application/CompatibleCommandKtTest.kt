@@ -57,7 +57,11 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val outcome = backwardCompatibleFile("/Users/fakeuser/newer.$CONTRACT_EXTENSION", fileOperations, fakeGit)
+        val outcome = backwardCompatibleFile(
+            "/Users/fakeuser/newer.$CONTRACT_EXTENSION",
+            fileOperations,
+            fakeGit
+        )
         assertThat(outcome.result?.successCount).isOne()
         assertThat(outcome.result?.success()).isTrue()
     }
@@ -85,7 +89,11 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val outcome = backwardCompatibleFile("/Users/fakeuser/newer.$CONTRACT_EXTENSION", fileOperations, fakeGit)
+        val outcome = backwardCompatibleFile(
+            "/Users/fakeuser/newer.$CONTRACT_EXTENSION",
+            fileOperations,
+            fakeGit
+        )
         assertThat(outcome.result?.successCount).isZero()
         assertThat(outcome.result?.success()).isFalse()
     }
@@ -110,7 +118,12 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val outcome = backwardCompatibleCommit("/Users/fakeuser/newer.$CONTRACT_EXTENSION", "HEAD", "HEAD^1", fakeGit)
+        val outcome = backwardCompatibleCommit(
+            "/Users/fakeuser/newer.$CONTRACT_EXTENSION",
+            "HEAD",
+            "HEAD^1",
+            fakeGit
+        )
 
         assertThat(commitsRequested.toList().sorted()).isEqualTo(listOf("HEAD", "HEAD^1"))
 
@@ -141,7 +154,12 @@ internal class CompatibleCommandKtTest {
             }
         }
 
-        val outcome = backwardCompatibleCommit("/Users/fakeuser/newer.$CONTRACT_EXTENSION", "HEAD", "HEAD^1", fakeGit)
+        val outcome = backwardCompatibleCommit(
+            "/Users/fakeuser/newer.$CONTRACT_EXTENSION",
+            "HEAD",
+            "HEAD^1",
+            fakeGit
+        )
 
         assertThat(outcome.errorMessage).isEqualTo("""Could not load HEAD^1:/Users/fakeuser/newer.$CONTRACT_EXTENSION because of error:
 Error: Only one commit

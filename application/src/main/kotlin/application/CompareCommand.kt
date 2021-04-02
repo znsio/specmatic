@@ -5,7 +5,7 @@ import picocli.CommandLine.Parameters
 import `in`.specmatic.core.Feature
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.testBackwardCompatibility
+import `in`.specmatic.core.testBackwardCompatibilityInParallel
 import `in`.specmatic.core.utilities.readFile
 import java.util.concurrent.Callable
 
@@ -58,7 +58,7 @@ private fun mutualCompatibility(path1: String, path2: String): Pair<Boolean, Boo
 
 fun backwardCompatible(behaviour1: Feature, behaviour2: Feature): Boolean =
         try {
-            testBackwardCompatibility(behaviour1, behaviour2).let { results ->
+            testBackwardCompatibilityInParallel(behaviour1, behaviour2).let { results ->
                 when {
                     results.failureCount > 0 -> {
                         println(results.report().prependIndent("| "))

@@ -23,6 +23,13 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-coroutines-core</artifactId>
+            <version>1.4.3</version>
+            <type>pom</type>
+        </dependency>
+
+        <dependency>
             <groupId>in.specmatic</groupId>
             <artifactId>specmatic-core</artifactId>
             <version>${specmatic.version}</version>

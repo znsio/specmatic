@@ -1,17 +1,16 @@
 package application
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.git.GitCommand
+import `in`.specmatic.core.git.NonZeroExitError
+import `in`.specmatic.core.git.SystemGit
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
-import `in`.specmatic.core.git.GitCommand
-import `in`.specmatic.core.git.NonZeroExitError
-import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.testBackwardCompatibilityInParallel
-import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.FileNotFoundException
 import java.util.concurrent.Callable
 
@@ -94,7 +93,7 @@ internal fun backwardCompatibleFile(
         val result = getOlderFeature(newerContractPath, git)
 
         result.onSuccess {
-            Outcome(testBackwardCompatibility(it, newerFeature, numberOfThreads))
+            Outcome(testBackwardCompatibility(it, newerFeature, numberOfThreads ?: 1))
         }
     } catch(e: NonZeroExitError) {
         Outcome(Results(mutableListOf(Result.Success())), "Could not find $newerContractPath at HEAD")
@@ -116,7 +115,7 @@ internal fun backwardCompatibleCommit(
 
     return partial(newerCommit).onSuccess { newerGherkin ->
         partial(olderCommit).onSuccess { olderGherkin ->
-            Outcome(testBackwardCompatibility(parseGherkinStringToFeature(olderGherkin), parseGherkinStringToFeature(newerGherkin)))
+            Outcome(testBackwardCompatibility(parseGherkinStringToFeature(olderGherkin), parseGherkinStringToFeature(newerGherkin), numberOfThreads ?: 1))
         }
     }
 }

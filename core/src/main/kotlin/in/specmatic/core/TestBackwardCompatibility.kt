@@ -46,12 +46,21 @@ fun testBackwardCompatibilitySerially(older: Feature, newerBehaviour: Feature): 
     }
 }
 
-fun testBackwardCompatibility(olderContract: Feature, newerContract: Feature, threadCount: Int? = null): Results {
+fun testBackwardCompatibility(olderContract: Feature, newerContract: Feature): Results {
+    return testBackwardCompatibilityInParallel(olderContract, newerContract, 3)
+}
+
+fun testBackwardCompatibility(olderContract: Feature, newerContract: Feature, threadCount: Int): Results {
+    // USED AS A CONVENIENT SWITCH FOR TESTING, CAN BE DISPOSED OF ONCE THIS WORK IS COMPLETE
     return testBackwardCompatibilityInParallel(olderContract, newerContract, threadCount)
 //    return testBackwardCompatibilitySerially(olderContract, newerContract)
 }
 
-fun testBackwardCompatibilityInParallel(olderContract: Feature, newerContract: Feature, threadCount: Int? = null): Results {
+fun testBackwardCompatibilityInParallel(olderContract: Feature, newerContract: Feature): Results {
+    return testBackwardCompatibilityInParallel(olderContract, newerContract, 1)
+}
+
+fun testBackwardCompatibilityInParallel(olderContract: Feature, newerContract: Feature, threadCount: Int): Results {
     val parallelism = getParallelism(threadCount)
     println("Number of threads: $parallelism")
 
@@ -71,7 +80,7 @@ fun testBackwardCompatibilityInParallel(olderContract: Feature, newerContract: F
 
 private fun getParallelism(threadCount: Int?) = threadCount ?: Runtime.getRuntime().availableProcessors()
 
-private fun testBackwardCompatibility(
+fun testBackwardCompatibility(
     oldScenario: Scenario,
     newFeature_: Feature
 ): List<Result> {

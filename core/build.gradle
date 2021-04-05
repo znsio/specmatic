@@ -22,7 +22,7 @@ repositories {
     }
 }
 
-def ktor_version = "1.5.2"
+def ktor_version = "1.5.3"
 def karate_version = "0.9.6"
 def jgit_version = "5.11.0.202103091610-r"
 

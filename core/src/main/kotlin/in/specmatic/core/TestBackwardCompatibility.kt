@@ -52,7 +52,7 @@ fun testBackwardCompatibility(olderContract: Feature, newerContract: Feature, th
 }
 
 fun testBackwardCompatibilityInParallel(olderContract: Feature, newerContract: Feature, threadCount: Int? = null): Results {
-    val parallelism = getThreadCount(threadCount)
+    val parallelism = getParallelism(threadCount)
     println("Number of threads: $parallelism")
 
     val threadPool = Executors.newFixedThreadPool(parallelism)
@@ -69,7 +69,7 @@ fun testBackwardCompatibilityInParallel(olderContract: Feature, newerContract: F
     }
 }
 
-private fun getThreadCount(threadCount: Int?) = threadCount ?: Runtime.getRuntime().availableProcessors()
+private fun getParallelism(threadCount: Int?) = threadCount ?: Runtime.getRuntime().availableProcessors()
 
 private fun testBackwardCompatibility(
     oldScenario: Scenario,

@@ -2,7 +2,6 @@ package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.ContractException
 import kotlinx.coroutines.*
-import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 
 fun testBackwardCompatibility_old(older: Feature, newerBehaviour: Feature): Results {
@@ -48,14 +47,15 @@ fun testBackwardCompatibilitySerially(older: Feature, newerBehaviour: Feature): 
 }
 
 fun testBackwardCompatibility(olderContract: Feature, newerContract: Feature, threadCount: Int? = null): Results {
-    return testBackwardCompatibilitySerially(olderContract, newerContract)
+    return testBackwardCompatibilityInParallel(olderContract, newerContract, threadCount)
+//    return testBackwardCompatibilitySerially(olderContract, newerContract)
 }
 
 fun testBackwardCompatibilityInParallel(olderContract: Feature, newerContract: Feature, threadCount: Int? = null): Results {
-    val numberOfThreads = getThreadCount(threadCount)
-    println("Number of threads: $numberOfThreads")
+    val parallelism = getThreadCount(threadCount)
+    println("Number of threads: $parallelism")
 
-    val threadPool = Executors.newFixedThreadPool(numberOfThreads)
+    val threadPool = Executors.newFixedThreadPool(parallelism)
     val dispatcher = threadPool.asCoroutineDispatcher()
 
     return runBlocking(dispatcher) {

@@ -23,7 +23,6 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import org.testcontainers.shaded.org.apache.commons.lang.StringEscapeUtils
 import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
@@ -42,12 +41,16 @@ fun exitWithMessage(message: String): Nothing {
     exitProcess(1)
 }
 
+fun messageStringFrom(e: Throwable): String {
+    val messageStack = exceptionMessageStack(e, emptyList())
+    return messageStack.joinToString("; ") { it.trim().removeSuffix(".") }.trim()
+}
+
 fun exceptionCauseMessage(e: Throwable): String {
-    return when(val messageStack = exceptionMessageStack(e, emptyList())) {
-        emptyList<String>() -> "Exception class=${e.javaClass.name}, no message found"
-        else -> {
-            val messageString = messageStack.joinToString("; ") { it.trim().removeSuffix(".") }
-            "Error: $messageString"
+    return when(e) {
+        is ContractException -> e.report()
+        else -> messageStringFrom(e).ifEmpty {
+            "Exception class=${e.javaClass.name}, no message found"
         }
     }
 }

@@ -40,7 +40,7 @@ internal class PartialCommitFetchTest {
         val outcome = partial(commitHash)
 
         assertThat(outcome.errorMessage).isEqualTo("""Could not load 12345:$contractPath because of error:
-Error: Error""")
+Error""")
         assertThat(outcome.result).isNull()
     }
 }

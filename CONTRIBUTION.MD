@@ -42,7 +42,7 @@ Run the `specmatic.jar` to verify any commands as part of your changes.
 
 ## Help needed
 
-Please checkout the [the open issues][issues]
+Please checkout the [the open issues](/znsio/specmatic/issues)
 
 Also, please watch the repo and respond to questions/bug reports/feature
 requests! Thanks!

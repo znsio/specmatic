@@ -36,8 +36,6 @@ Generate Fat Jar. The `specmatic.jar` should be available in `<projectRoot>/appl
 
 ```./gradlew clean build shadowJar```
 
-The shadowJar should be in ```<specmatic repo>/application/build/libs/specmatic.jar```
-
 Run the `specmatic.jar` to verify any commands as part of your changes.
 
 ## Help needed

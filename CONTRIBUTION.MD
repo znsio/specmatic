@@ -26,6 +26,13 @@ Thanks for being willing to contribute!
 > can make all of your pull request branches based on this `master` branch.
 > Whenever you want to update your version of `master`, do a regular `git pull`.
 
+## Analsysing Performance Issues
+
+1.  Run specmacticJMS.sh. This file runs specmatic with Prometheus Java Agent and publishes metrics on localhost:8089/metrics
+2.  To monitor the above metrics in Grafana setup [Perfiz](https://github.com/znsio/perfiz#detailed-tutorial) (Steps 1 and 2)
+3.  Run ```$PERFIZ_HOME/perfiz.sh start``` and navigate to localhost:3000 to view Grafana Dashboard
+4.  Run ```$PERFIZ_HOME/perfiz.sh stop``` to stop Grafana and other Docker Containers
+
 ## Committing and Pushing changes
 
 Please make sure to run the tests before you commit your changes by using the command

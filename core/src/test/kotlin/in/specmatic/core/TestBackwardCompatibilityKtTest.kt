@@ -96,7 +96,7 @@ Feature: Old contract
 Feature: New contract
   Scenario: Test Scenario
     Given type RequestBody
-    | address | (Address?) |
+    | address | (Address) |
     And type Address
     | street? | (string) |
     When POST /
@@ -111,7 +111,7 @@ Feature: New contract
 
         println(result.report())
 
-        assertEquals(1, result.failureCount)
+        assertEquals(0, result.failureCount)
     }
 
     @Test

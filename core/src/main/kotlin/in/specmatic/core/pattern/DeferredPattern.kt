@@ -25,6 +25,10 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
         return resolver.getPattern(pattern).newBasedOn(row, resolver)
     }
 
+    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+        return resolver.getPattern(pattern).newBasedOn(resolver)
+    }
+
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         return thisResolver.getPattern(pattern).encompasses(resolvedHop(otherPattern, otherResolver), thisResolver, otherResolver, typeStack)
     }

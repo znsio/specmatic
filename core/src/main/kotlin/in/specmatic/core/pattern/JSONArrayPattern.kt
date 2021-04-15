@@ -76,6 +76,11 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         val resolverWithNullType = withNullPattern(resolver)
         return newBasedOn(pattern, row, resolverWithNullType).map { JSONArrayPattern(it) }
     }
+
+    override fun newBasedOn(resolver: Resolver): List<JSONArrayPattern> {
+        val resolverWithNullType = withNullPattern(resolver)
+        return newBasedOn(pattern, resolverWithNullType).map { JSONArrayPattern(it) }
+    }
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val thisResolverWithNullType = withNullPattern(thisResolver)
@@ -123,6 +128,16 @@ fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<L
     val values = jsonPattern.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             pattern.newBasedOn(row, resolver)
+        }
+    }
+
+    return listCombinations(values)
+}
+
+fun newBasedOn(jsonPattern: List<Pattern>, resolver: Resolver): List<List<Pattern>> {
+    val values = jsonPattern.mapIndexed { index, pattern ->
+        attempt(breadCrumb = "[$index]") {
+            pattern.newBasedOn(resolver)
         }
     }
 

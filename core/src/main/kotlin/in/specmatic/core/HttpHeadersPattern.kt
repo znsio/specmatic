@@ -82,6 +82,11 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
             newBasedOn(pattern, row, resolver)
         }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
 
+    fun newBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
+            allOrNothingCombinationIn(pattern) { pattern ->
+                newBasedOn(pattern, resolver)
+            }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+
     fun encompasses(other: HttpHeadersPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
         val otherRequiredKeys = other.pattern.keys.filter { !isOptional(it) }

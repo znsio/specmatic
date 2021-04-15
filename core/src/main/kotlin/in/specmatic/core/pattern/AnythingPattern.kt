@@ -18,6 +18,10 @@ object AnythingPattern: Pattern {
         return listOf(this)
     }
 
+    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+        return listOf(this)
+    }
+
     override fun parse(value: String, resolver: Resolver): Value {
         return StringValue(value)
     }

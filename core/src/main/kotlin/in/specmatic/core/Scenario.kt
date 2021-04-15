@@ -160,6 +160,47 @@ data class Scenario(
         }
     }
 
+    private fun newBasedOnBackwarCompatibility(row: Row): List<Scenario> {
+        val resolver = Resolver(expectedFacts, false, patterns)
+
+        val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
+
+        return when (kafkaMessagePattern) {
+            null -> httpRequestPattern.newBasedOn(resolver).map { newHttpRequestPattern ->
+                Scenario(
+                        name,
+                        newHttpRequestPattern,
+                        httpResponsePattern,
+                        newExpectedServerState,
+                        examples,
+                        patterns,
+                        fixtures,
+                        kafkaMessagePattern,
+                        ignoreFailure,
+                        references,
+                        bindings
+                )
+            }
+            else -> {
+                kafkaMessagePattern.newBasedOn(row, resolver).map { newKafkaMessagePattern ->
+                    Scenario(
+                            name,
+                            httpRequestPattern,
+                            httpResponsePattern,
+                            newExpectedServerState,
+                            examples,
+                            patterns,
+                            fixtures,
+                            newKafkaMessagePattern,
+                            ignoreFailure,
+                            references,
+                            bindings
+                    )
+                }
+            }
+        }
+    }
+
     fun generateTestScenarios(variables: Map<String, String> = emptyMap(), testBaseURLs: Map<String, String> = emptyMap()): List<Scenario> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -175,6 +216,25 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 newBasedOn(row)
+            }
+        }
+    }
+
+    fun generateBackwardCompatibilityScenarios(variables: Map<String, String> = emptyMap(), testBaseURLs: Map<String, String> = emptyMap()): List<Scenario> {
+        val referencesWithBaseURLs = references.mapValues { (_, reference) ->
+            reference.copy(variables = variables, baseURLs = testBaseURLs)
+        }
+
+        return scenarioBreadCrumb(this) {
+            when (examples.size) {
+                0 -> listOf(Row())
+                else -> examples.flatMap {
+                    it.rows.map { row ->
+                        row.copy(variables = variables, references = referencesWithBaseURLs)
+                    }
+                }
+            }.flatMap { row ->
+                newBasedOnBackwarCompatibility(row)
             }
         }
     }

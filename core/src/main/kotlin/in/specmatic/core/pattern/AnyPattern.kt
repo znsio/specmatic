@@ -38,6 +38,9 @@ data class AnyPattern(override val pattern: List<Pattern>, val key: String? = nu
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
             pattern.flatMap { it.newBasedOn(row, resolver) }
 
+    override fun newBasedOn(resolver: Resolver): List<Pattern> =
+            pattern.flatMap { it.newBasedOn(resolver) }
+
     override fun parse(value: String, resolver: Resolver): Value =
         pattern.asSequence().map {
             try { it.parse(value, resolver) } catch(e: Throwable) { null }

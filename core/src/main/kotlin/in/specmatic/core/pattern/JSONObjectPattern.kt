@@ -22,7 +22,7 @@ fun toJSONObjectPattern(map: Map<String, Pattern>): JSONObjectPattern {
 val ignoreUnexpectedKeys = { _: Map<String, Any>, _: Map<String, Any> -> null }
 
 data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap(), private val unexpectedKeyCheck: UnexpectedKeyCheck = ::validateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
-    override fun equals(other: Any?): Boolean = when(other) {
+    override fun equals(other: Any?): Boolean = when (other) {
         is JSONObjectPattern -> this.pattern == other.pattern
         else -> false
     }
@@ -44,11 +44,11 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         val resolverWithNullType = withNullPattern(resolver)
-        if(sampleData !is JSONObjectValue)
+        if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
 
         val missingKey = resolverWithNullType.findMissingKey(pattern, sampleData.jsonObject, unexpectedKeyCheck)
-        if(missingKey != null)
+        if (missingKey != null)
             return missingKeyToResult(missingKey, "key")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
@@ -69,6 +69,13 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         val resolverWithNullType = withNullPattern(resolver)
         return forEachKeyCombinationIn(pattern.minus("..."), row) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
+        }.map { toJSONObjectPattern(it) }
+    }
+
+    override fun newBasedOn(resolver: Resolver): List<JSONObjectPattern> {
+        val resolverWithNullType = withNullPattern(resolver)
+        return allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
+            newBasedOn(pattern, resolverWithNullType)
         }.map { toJSONObjectPattern(it) }
     }
 

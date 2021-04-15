@@ -24,6 +24,13 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
         }
     }
 
+    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+        return when(key) {
+            null -> pattern.newBasedOn(resolver)
+            else -> newBasedOn(pattern, resolver)
+        }
+    }
+
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {

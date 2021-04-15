@@ -21,6 +21,8 @@ object DateTimePattern : Pattern, ScalarType {
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<DateTimePattern> = listOf(this)
 
+    override fun newBasedOn(resolver: Resolver): List<DateTimePattern> = listOf(this)
+
     override fun parse(value: String, resolver: Resolver): StringValue =
             attempt {
                 DateTimeFormatter.ISO_DATE_TIME.parse(value)

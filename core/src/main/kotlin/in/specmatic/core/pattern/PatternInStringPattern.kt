@@ -25,6 +25,9 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern,
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
             pattern.newBasedOn(row, resolver).map { PatternInStringPattern(it) }
 
+    override fun newBasedOn(resolver: Resolver): List<Pattern> =
+            pattern.newBasedOn(resolver).map { PatternInStringPattern(it) }
+
     override fun parse(value: String, resolver: Resolver): Value = StringValue(pattern.parse(value, resolver).toStringValue())
 
     override fun patternSet(resolver: Resolver): List<PatternInStringPattern> =

@@ -139,7 +139,7 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->
-            scenario.copy(examples = emptyList()).generateTestScenarios()
+            scenario.copy(examples = emptyList()).generateBackwardCompatibilityScenarios()
         }
 
     fun assertMatchesMockKafkaMessage(kafkaMessage: KafkaMessage) {

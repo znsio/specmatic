@@ -32,6 +32,7 @@ object StringPattern : Pattern, ScalarType {
     override fun generate(resolver: Resolver): Value = StringValue(randomString())
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
+    override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = StringValue(value)
     override val typeName: String = "string"
 

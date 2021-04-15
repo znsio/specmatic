@@ -56,6 +56,14 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         }
     }
 
+    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+        val newValuePatterns = valuePattern.newBasedOn(resolver)
+
+        return newValuePatterns.map {
+            DictionaryPattern(keyPattern, it)
+        }
+    }
+
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result =

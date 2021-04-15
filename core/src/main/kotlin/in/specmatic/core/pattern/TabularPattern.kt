@@ -20,12 +20,12 @@ fun toTabularPattern(map: Map<String, Pattern>, typeAlias: String? = null): Tabu
 
 data class TabularPattern(override val pattern: Map<String, Pattern>, private val unexpectedKeyCheck: UnexpectedKeyCheck = ::validateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if(sampleData !is JSONObjectValue)
+        if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
 
         val resolverWithNullType = withNullPattern(resolver)
         val missingKey = resolverWithNullType.findMissingKey(pattern, sampleData.jsonObject, unexpectedKeyCheck)
-        if(missingKey != null)
+        if (missingKey != null)
             return missingKeyToResult(missingKey, "key")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
@@ -50,6 +50,13 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
         val resolverWithNullType = withNullPattern(resolver)
         return forEachKeyCombinationIn(pattern, row) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
+        }.map { toTabularPattern(it) }
+    }
+
+    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+        val resolverWithNullType = withNullPattern(resolver)
+        return allOrNothingCombinationIn(pattern) { pattern ->
+            newBasedOn(pattern, resolverWithNullType)
         }.map { toTabularPattern(it) }
     }
 
@@ -78,6 +85,16 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
     return patternList(patternCollection)
 }
 
+fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<String, Pattern>> {
+    val patternCollection = patternMap.mapValues { (key, pattern) ->
+        attempt(breadCrumb = key) {
+            newBasedOn(pattern, resolver)
+        }
+    }
+
+    return patternValues(patternCollection)
+}
+
 fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): List<Pattern> {
     val keyWithoutOptionality = key(pattern, key)
 
@@ -98,7 +115,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
                     pattern.parse(rowValue, resolver)
                 }
 
-                when(val matchResult = pattern.matches(parsedRowValue, resolver)) {
+                when (val matchResult = pattern.matches(parsedRowValue, resolver)) {
                     is Result.Failure -> throw ContractException(resultReport(matchResult))
                     else -> listOf(ExactValuePattern(parsedRowValue))
                 }
@@ -106,6 +123,10 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
         }
         else -> pattern.newBasedOn(row, resolver)
     }
+}
+
+fun newBasedOn(pattern: Pattern, resolver: Resolver): List<Pattern> {
+    return pattern.newBasedOn(resolver)
 }
 
 fun key(pattern: Pattern, key: String): String {
@@ -116,7 +137,7 @@ fun key(pattern: Pattern, key: String): String {
 }
 
 fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): List<Map<String, ValueType>> {
-    if(patternCollection.isEmpty())
+    if (patternCollection.isEmpty())
         return listOf(emptyMap())
 
     val key = patternCollection.keys.first()
@@ -130,15 +151,37 @@ fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): Li
             }
 }
 
+fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): List<Map<String, ValueType>> {
+    if (patternCollection.isEmpty())
+        return listOf(emptyMap())
+
+    val optionalValues = patternCollection.filter { entry -> entry.value.contains(NullPattern) }
+
+    val mandatoryValues = patternCollection.filter { entry -> !entry.value.contains(NullPattern) }.map { entry -> Pair(entry.key, entry.value.first()) }.toMap()
+    return listOf(optionalValues.map { entry -> Pair(entry.key, NullPattern as ValueType) }.toMap().plus(mandatoryValues),
+            optionalValues.map { entry -> Pair(entry.key, entry.value.find { p -> p !is NullPattern } as ValueType) }.toMap().plus(mandatoryValues))
+}
+
 fun <ValueType> forEachKeyCombinationIn(patternMap: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
-    keySets(patternMap.keys.toList(), row).map { keySet ->
+        keySets(patternMap.keys.toList(), row).map { keySet ->
+            patternMap.filterKeys { key -> key in keySet }
+        }.map { newPattern ->
+            creator(newPattern)
+        }.flatten()
+
+fun <ValueType> allOrNothingCombinationIn(patternMap: Map<String, ValueType>, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> {
+    val keyList = patternMap.keys.toList()
+    val mandatoryFields = keyList.filter { k -> !isOptional(k) }
+
+    return listOf(keyList, mandatoryFields).map { keySet ->
         patternMap.filterKeys { key -> key in keySet }
     }.map { newPattern ->
         creator(newPattern)
     }.flatten()
+}
 
 internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {
-    if(listOfKeys.isEmpty())
+    if (listOfKeys.isEmpty())
         return listOf(listOfKeys)
 
     val key = listOfKeys.last()
@@ -160,7 +203,11 @@ fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>, 
 
 fun toJSONPattern(value: String): Pattern {
     return value.trim().let {
-        val asNumber: Number? = try { convertToNumber(value) } catch (e: Throwable) { null }
+        val asNumber: Number? = try {
+            convertToNumber(value)
+        } catch (e: Throwable) {
+            null
+        }
 
         when {
             asNumber != null -> ExactValuePattern(NumberValue(asNumber))
@@ -178,16 +225,36 @@ fun isNumber(value: StringValue): Boolean {
     return try {
         convertToNumber(value.string)
         true
-    } catch(e: ContractException) {
+    } catch (e: ContractException) {
         false
     }
 }
 
 fun convertToNumber(value: String): Number = value.trim().let {
-    stringToInt(it) ?: stringToLong(it) ?: stringToFloat(it) ?: stringToDouble(it) ?: throw ContractException("""Expected number, actual was "$value"""")
+    stringToInt(it) ?: stringToLong(it) ?: stringToFloat(it) ?: stringToDouble(it)
+    ?: throw ContractException("""Expected number, actual was "$value"""")
 }
 
-internal fun stringToInt(value: String): Int? = try { value.toInt() } catch(e: Throwable) { null }
-internal fun stringToLong(value: String): Long? = try { value.toLong() } catch(e: Throwable) { null }
-internal fun stringToFloat(value: String): Float? = try { value.toFloat() } catch(e: Throwable) { null }
-internal fun stringToDouble(value: String): Double? = try { value.toDouble() } catch(e: Throwable) { null }
+internal fun stringToInt(value: String): Int? = try {
+    value.toInt()
+} catch (e: Throwable) {
+    null
+}
+
+internal fun stringToLong(value: String): Long? = try {
+    value.toLong()
+} catch (e: Throwable) {
+    null
+}
+
+internal fun stringToFloat(value: String): Float? = try {
+    value.toFloat()
+} catch (e: Throwable) {
+    null
+}
+
+internal fun stringToDouble(value: String): Double? = try {
+    value.toDouble()
+} catch (e: Throwable) {
+    null
+}

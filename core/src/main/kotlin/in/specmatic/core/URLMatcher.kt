@@ -25,7 +25,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
     private fun matchesPath(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
-        return when(val pathResult = matchesPath(URI(httpRequest.path!!), resolver)) {
+        return when (val pathResult = matchesPath(URI(httpRequest.path!!), resolver)) {
             is Failure -> MatchFailure(pathResult.copy(failureReason = FailureReason.URLPathMisMatch))
             else -> MatchSuccess(parameters)
         }
@@ -33,7 +33,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
     private fun matchesQuery(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
-        return when(val queryResult = matchesQuery(queryPattern, httpRequest.queryParams, resolver)) {
+        return when (val queryResult = matchesQuery(queryPattern, httpRequest.queryParams, resolver)) {
             is Failure -> MatchFailure(queryResult.breadCrumb(QUERY_PARAMS_BREADCRUMB))
             else -> MatchSuccess(parameters)
         }
@@ -118,6 +118,32 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
             forEachKeyCombinationIn(optionalQueryParams, row) { entry ->
                 newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver)
+            }
+        }
+
+        return newURLPathPatternsList.flatMap { newURLPathPatterns ->
+            newQueryParamsList.map { newQueryParams ->
+                URLMatcher(newQueryParams, newURLPathPatterns, path)
+            }
+        }
+    }
+
+    fun newBasedOn(resolver: Resolver): List<URLMatcher> {
+        val newPathPartsList = newBasedOn(pathPattern.mapIndexed { index, urlPathPattern ->
+            val key = urlPathPattern.key
+
+            attempt(breadCrumb = "[$index]") {
+                urlPathPattern
+            }
+        }, resolver)
+
+        val newURLPathPatternsList = newPathPartsList.map { list -> list.map { it as URLPathPattern } }
+
+        val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+            val optionalQueryParams = queryPattern
+
+            allOrNothingCombinationIn(optionalQueryParams) { entry ->
+                newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, resolver)
             }
         }
 

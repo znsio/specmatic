@@ -308,6 +308,35 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
         }
     }
 
+    fun newBasedOn(resolver: Resolver): List<HttpRequestPattern> {
+        return attempt(breadCrumb = "REQUEST") {
+            val newURLMatchers = urlMatcher?.newBasedOn(resolver) ?: listOf<URLMatcher?>(null)
+            val newBodies = attempt(breadCrumb = "BODY") { body.newBasedOn(resolver) }
+            val newHeadersPattern = headersPattern.newBasedOn(resolver)
+            val newFormFieldsPatterns = newBasedOn(formFieldsPattern, resolver)
+            //TODO: Backward Compatibility
+            val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, Row(), resolver)
+
+            newURLMatchers.flatMap { newURLMatcher ->
+                newBodies.flatMap { newBody ->
+                    newHeadersPattern.flatMap { newHeadersPattern ->
+                        newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
+                            newFormDataPartLists.map { newFormDataPartList ->
+                                HttpRequestPattern(
+                                        headersPattern = newHeadersPattern,
+                                        urlMatcher = newURLMatcher,
+                                        method = method,
+                                        body = newBody,
+                                        formFieldsPattern = newFormFieldsPattern,
+                                        multiPartFormDataPattern = newFormDataPartList)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun testDescription(): String {
         return "$method ${urlMatcher.toString()}"
     }

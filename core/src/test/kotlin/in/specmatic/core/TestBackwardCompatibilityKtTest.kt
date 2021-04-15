@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 
 internal class TestBackwardCompatibilityKtTest {
     @Test
-    fun `contract backward compatibility should break when one has an optional key and the other does not` () {
+    fun `contract backward compatibility should break when one has an optional key and the other does not`() {
         val gherkin1 = """
 Feature: Older contract API
 
@@ -20,7 +20,7 @@ Then status 200
     """.trim()
 
         val gherkin2 = """
-Feature: Older contract API
+Feature: Newer contract API
 
 Scenario: api call
 Given json Value
@@ -43,7 +43,43 @@ Then status 200
     }
 
     @Test
-    fun `contract backward compatibility should not break when both have an optional keys` () {
+    fun `contract backward compatibility should break when there is incompatibility one level down`() {
+        val gherkin1 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | address? | (Address?) |
+    And type Address
+    | street | (string) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: New contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | address? | (Address?) |
+    And type Address
+    | street | (number) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
+
+        val result: Results = testBackwardCompatibilityInParallel(olderContract, newerContract)
+
+        println(result.report())
+
+        assertEquals(1, result.failureCount)
+    }
+
+    @Test
+    fun `contract backward compatibility should not break when both have an optional keys`() {
         val gherkin1 = """
 Feature: API contract
 
@@ -82,7 +118,7 @@ Then status 200
     }
 
     @Test
-    fun `contract backward compatibility should break when a new fact is added` () {
+    fun `contract backward compatibility should break when a new fact is added`() {
         val gherkin1 = """
 Feature: Older contract API
 
@@ -132,7 +168,7 @@ Then status 200
 
         val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertEquals(1, results.successCount)
@@ -154,7 +190,7 @@ Then status 200
 
         val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertEquals(2, results.successCount)
@@ -176,7 +212,7 @@ Then status 200
 
         val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertEquals(2, results.successCount)
@@ -200,7 +236,7 @@ Then status 200
 
         val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertEquals(2, results.successCount)
@@ -222,7 +258,7 @@ And response-body (number?)
 
         val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertEquals(1, results.successCount)
@@ -246,7 +282,7 @@ And response-body (Number)
 
         val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertEquals(1, results.successCount)
@@ -397,7 +433,7 @@ And response-body (number)
 
         val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertEquals(1, results.successCount)
@@ -422,7 +458,7 @@ And response-body (number)
 
         val results: Results = testBackwardCompatibilityInParallel(contract, contract)
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertEquals(1, results.successCount)
@@ -457,7 +493,7 @@ And response-body (number)
 
         val results: Results = testBackwardCompatibilityInParallel(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertEquals(0, results.successCount)
@@ -488,7 +524,7 @@ Then status 200
 
         val results: Results = testBackwardCompatibilityInParallel(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertThat(results.successCount).isZero()
@@ -518,7 +554,7 @@ Then status 200
 
         val results: Results = testBackwardCompatibilityInParallel(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
         assertThat(results.successCount).isOne()

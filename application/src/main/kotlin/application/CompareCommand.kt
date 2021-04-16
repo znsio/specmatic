@@ -14,22 +14,24 @@ import java.util.concurrent.Callable
         description = ["Checks if two contracts are equivalent"])
 class CompareCommand : Callable<Unit> {
     @Parameters(index = "0", description = ["Older contract file path"])
-    lateinit var path1: String
+    lateinit var olderContractFilePath: String
 
     @Parameters(index = "1", description = ["Newer contract file path"])
-    lateinit var path2: String
+    lateinit var newerContractFilePath: String
 
     override fun call() {
-        val report = backwardCompatibilityOfContractPaths(path1, path2)
+        val olderContract = olderContractFilePath.loadContract()
+        val newerContract = newerContractFilePath.loadContract()
+
+        val report = backwardCompatible(olderContract, newerContract)
+
         println(report.message())
     }
+
 }
 
-fun backwardCompatibilityOfContractPaths(path1: String, path2: String): CompatibilityReport {
-    val behaviour1 = parseGherkinStringToFeature(readFile(path1))
-    val behaviour2 = parseGherkinStringToFeature(readFile(path2))
-
-    return backwardCompatible(behaviour1, behaviour2)
+private fun String.loadContract(): Feature {
+    return parseGherkinStringToFeature(readFile(this))
 }
 
 fun backwardCompatible(olderContract: Feature, newerContract: Feature): CompatibilityReport =

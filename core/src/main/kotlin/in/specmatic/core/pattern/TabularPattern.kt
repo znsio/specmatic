@@ -57,7 +57,6 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
         val resolverWithNullType = withNullPattern(resolver)
         return allOrNothingCombinationIn(pattern) { pattern ->
             newBasedOn(pattern, resolverWithNullType)
-//            listOf(pattern)
         }.map { toTabularPattern(it) }
     }
 
@@ -156,7 +155,7 @@ fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): 
     if (patternCollection.isEmpty())
         return listOf(emptyMap())
 
-    val optionalValues = patternCollection.filter { entry -> entry.value.size > 1 }
+    val optionalValues = patternCollection.filter { entry -> optionalValues(entry) }
 
     val optionalValuesSetToNull = optionalValues.map { entry ->
         Pair(entry.key, NullPattern as ValueType)
@@ -168,7 +167,7 @@ fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): 
         } as ValueType)
     }.toMap()
 
-    val singleValues = patternCollection.filter { entry -> entry.value.size == 1 }
+    val singleValues = patternCollection.filter { entry -> !optionalValues(entry) }
 
     val singleValuesSetToValues = singleValues.map { entry ->
         Pair(entry.key, entry.value.first())
@@ -182,6 +181,9 @@ fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): 
     }
 }
 
+private fun <ValueType> optionalValues(entry: Map.Entry<String, List<ValueType>>) =
+        entry.value.size > 1 && entry.value.contains(NullPattern)
+
 fun <ValueType> forEachKeyCombinationIn(patternMap: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
         keySets(patternMap.keys.toList(), row).map { keySet ->
             patternMap.filterKeys { key -> key in keySet }
@@ -190,20 +192,23 @@ fun <ValueType> forEachKeyCombinationIn(patternMap: Map<String, ValueType>, row:
         }.flatten()
 
 fun <ValueType> allOrNothingCombinationIn(patternMap: Map<String, ValueType>, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> {
-//    val keyList = patternMap.keys.toList()
-//    val mandatoryFields = keyList.filter { k -> !isOptional(k) }
-
     val keyLists = if (patternMap.keys.any { isOptional(it) }) {
         listOf(patternMap.keys, patternMap.keys.filter { k -> !isOptional(k) })
     } else {
         listOf(patternMap.keys)
     }
 
-    return keyLists.map { keySet ->
+    val keySets: List<Map<String, ValueType>> = keyLists.map { keySet ->
         patternMap.filterKeys { key -> key in keySet }
-    }.map { newPattern ->
+    }
+
+    val keySetValues: List<List<Map<String, ValueType>>> = keySets.map { newPattern ->
         creator(newPattern)
-    }.flatten()
+    }
+
+    val flatten: List<Map<String, ValueType>> = keySetValues.flatten()
+
+    return flatten
 }
 
 internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {

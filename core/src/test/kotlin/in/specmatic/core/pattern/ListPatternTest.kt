@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.testBackwardCompatibilityInParallel
+import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.shouldNotMatch
 
@@ -80,7 +80,7 @@ Feature: Recursive test
 """.trim()
 
         val feature = parseGherkinStringToFeature(gherkin)
-        val result = testBackwardCompatibilityInParallel(feature, feature)
+        val result = testBackwardCompatibility(feature, feature)
         println(result.report())
         assertThat(result.success()).isTrue()
     }

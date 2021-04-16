@@ -12,65 +12,39 @@ import java.util.concurrent.Callable
 @Command(name = "compare",
         mixinStandardHelpOptions = true,
         description = ["Checks if two contracts are equivalent"])
-class CompareCommand : Callable<Void> {
-    @Parameters(index = "0", description = ["Contract path"])
+class CompareCommand : Callable<Unit> {
+    @Parameters(index = "0", description = ["Older contract file path"])
     lateinit var path1: String
 
-    @Parameters(index = "1", description = ["Contract path"])
+    @Parameters(index = "1", description = ["Newer contract file path"])
     lateinit var path2: String
 
-    override fun call(): Void? {
-        val (successWith1To2, successWith2To1) = mutualCompatibility(path1, path2)
-        val both = successWith1To2 && successWith2To1
-
-        println()
-
-        println(when {
-            both -> "The contracts are mutually compatible."
-            successWith1To2 -> "$path2 is backward compatible with $path1."
-            successWith2To1 -> "$path1 is backward compatible with $path2."
-            else -> "The contracts are mutually incompatible."
-        })
-
-        return null
+    override fun call() {
+        val report = backwardCompatibilityOfContractPaths(path1, path2)
+        println(report.message())
     }
 }
 
-private fun showPath(path1: String, path2: String) {
-    println("| $path1 => $path2")
-}
-
-private fun mutualCompatibility(path1: String, path2: String): Pair<Boolean, Boolean> {
+fun backwardCompatibilityOfContractPaths(path1: String, path2: String): CompatibilityReport {
     val behaviour1 = parseGherkinStringToFeature(readFile(path1))
     val behaviour2 = parseGherkinStringToFeature(readFile(path2))
 
-    showPath(path1, path2)
-    val successWith1To2 = backwardCompatible(behaviour1, behaviour2)
-    if(successWith1To2) println("| All good.")
-
-    println()
-    showPath(path2, path1)
-    val successWith2To1 = backwardCompatible(behaviour2, behaviour1)
-    if(successWith2To1) println("| All good.")
-
-    return Pair(successWith1To2, successWith2To1)
+    return backwardCompatible(behaviour1, behaviour2)
 }
 
-fun backwardCompatible(behaviour1: Feature, behaviour2: Feature): Boolean =
+fun backwardCompatible(olderContract: Feature, newerContract: Feature): CompatibilityReport =
         try {
-            testBackwardCompatibility(behaviour1, behaviour2).let { results ->
+            testBackwardCompatibility(olderContract, newerContract).let { results ->
                 when {
                     results.failureCount > 0 -> {
-                        println(results.report().prependIndent("| "))
-                        false
+                        IncompatibleReport(results)
                     }
-                    else -> true
+                    else -> CompatibleReport
                 }
             }
         } catch(e: ContractException) {
-            println(e.report().prependIndent("| "))
-            false
+            ContractExceptionReport(e)
         } catch(e: Throwable) {
-            println("Another error: " + e.localizedMessage)
-            false
+            ExceptionReport(e)
         }
+

@@ -39,46 +39,12 @@ fun testBackwardCompatibility_old(older: Feature, newerBehaviour: Feature): Resu
     }
 }
 
-fun testBackwardCompatibilitySerially(older: Feature, newerBehaviour: Feature): Results {
+fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results {
     return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
         val scenarioResults: List<Result> = testBackwardCompatibility(olderScenario, newerBehaviour)
         results.copy(results = results.results.plus(scenarioResults))
     }
 }
-
-fun testBackwardCompatibility(olderContract: Feature, newerContract: Feature): Results {
-    return testBackwardCompatibilityInParallel(olderContract, newerContract, 3)
-}
-
-fun testBackwardCompatibility(olderContract: Feature, newerContract: Feature, threadCount: Int): Results {
-    // USED AS A CONVENIENT SWITCH FOR TESTING, CAN BE DISPOSED OF ONCE THIS WORK IS COMPLETE
-    return testBackwardCompatibilityInParallel(olderContract, newerContract, threadCount)
-//    return testBackwardCompatibilitySerially(olderContract, newerContract)
-}
-
-fun testBackwardCompatibilityInParallel(olderContract: Feature, newerContract: Feature): Results {
-    return testBackwardCompatibilityInParallel(olderContract, newerContract, 1)
-}
-
-fun testBackwardCompatibilityInParallel(olderContract: Feature, newerContract: Feature, threadCount: Int): Results {
-    val parallelism = getParallelism(threadCount)
-    println("Number of threads: $parallelism")
-
-    val threadPool = Executors.newFixedThreadPool(parallelism)
-    val dispatcher = threadPool.asCoroutineDispatcher()
-
-    return runBlocking(dispatcher) {
-        olderContract.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.map { olderScenario ->
-            async(dispatcher) {
-                testBackwardCompatibility(olderScenario, newerContract)
-            }
-        }.awaitAll()
-    }.fold(Results()) { results, scenarioResults ->
-        results.copy(results = results.results.plus(scenarioResults))
-    }
-}
-
-private fun getParallelism(threadCount: Int?) = threadCount ?: Runtime.getRuntime().availableProcessors()
 
 fun testBackwardCompatibility(
     oldScenario: Scenario,

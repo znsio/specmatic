@@ -326,7 +326,7 @@ Feature: Recursive test
 """.trim()
 
         val feature = parseGherkinStringToFeature(gherkin)
-        val result = testBackwardCompatibilityInParallel(feature, feature)
+        val result = testBackwardCompatibility(feature, feature)
         assertThat(result.success()).isTrue()
     }
 

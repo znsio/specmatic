@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 
 internal class TestBackwardCompatibilityKtTest {
     @Test
-    fun `contract backward compatibility should break when one has an optional key and the other does not`() {
+    fun `contract backward compatibility should break when optional key is made mandatory in request`() {
         val gherkin1 = """
 Feature: Older contract API
 
@@ -40,6 +40,45 @@ Then status 200
 
         assertEquals(1, result.failureCount)
         assertEquals(1, result.successCount)
+    }
+
+    @Test
+    fun `contract backward compatibility should break when mandatory key is made optional in response`() {
+        val gherkin1 = """
+Feature: Older contract API
+
+Scenario: api call
+Given json Value
+| value     | (number) |
+| mandatory | (number) |
+When POST /value
+And request-body "test"
+Then status 200
+And response-body (Value)
+    """.trim()
+
+        val gherkin2 = """
+Feature: Newer contract API
+
+Scenario: api call
+Given json Value
+| value      | (number) |
+| mandatory? | (number) |
+When POST /value
+And request-body "test"
+Then status 200
+And response-body (Value)
+    """.trim()
+
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
+
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        println(result.report())
+
+        assertEquals(1, result.failureCount)
+        assertEquals(0, result.successCount)
     }
 
     @Test
@@ -112,6 +151,80 @@ Feature: New contract
         println(result.report())
 
         assertEquals(0, result.failureCount)
+    }
+
+    @Test
+    fun `contract backward compatibility should break when optional key is made mandatory one level down in request`() {
+        val gherkin1 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | address | (Address) |
+    And type Address
+    | street? | (string) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: New contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | address | (Address) |
+    And type Address
+    | street | (string) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
+
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        println(result.report())
+
+        assertEquals(1, result.failureCount)
+    }
+
+    @Test
+    fun `contract backward compatibility should break when mandatory key is made optional one level down in response`() {
+        val gherkin1 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type ResponseBody
+    | address | (Address) |
+    And type Address
+    | street | (string) |
+    When POST /
+    And request-body "test"
+    Then status 200
+    And response-body (ResponseBody)
+    """.trim()
+
+        val gherkin2 = """
+Feature: New contract
+  Scenario: Test Scenario
+    Given type ResponseBody
+    | address | (Address) |
+    And type Address
+    | street? | (string) |
+    When POST /
+    And request-body "test"
+    Then status 200
+    And response-body (ResponseBody) 
+    """.trim()
+
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
+
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        println(result.report())
+
+        assertEquals(1, result.failureCount)
     }
 
     @Test

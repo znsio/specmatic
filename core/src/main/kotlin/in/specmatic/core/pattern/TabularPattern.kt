@@ -170,14 +170,16 @@ fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): 
     val singleValues = patternCollection.filter { entry -> !optionalValues(entry) }
 
     val singleValuesSetToValues = singleValues.map { entry ->
-        Pair(entry.key, entry.value.first())
-    }.toMap()
+        entry.value.map {
+            Pair(entry.key, it)
+        }
+    }.flatten().toMap()
 
-    return if (patternCollection.any { entry -> entry.value.size > 1 }) {
+    return if (patternCollection.any { entry -> optionalValues(entry) }) {
         listOf(optionalValuesSetToNull.plus(singleValuesSetToValues),
                 optionalValuesSetToValue.plus(singleValuesSetToValues))
     } else {
-        listOf(singleValuesSetToValues)
+       listOf(singleValuesSetToValues)
     }
 }
 

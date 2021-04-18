@@ -387,10 +387,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 }
             }
         }.flatMap { newAttributes ->
-            val newNodesList = listCombinations(pattern.nodes.map { childPattern ->
+            val newNodesList = allOrNothingListCombinations(pattern.nodes.map { childPattern ->
                 attempt(breadCrumb = this.pattern.name) {
-                    /*
-                    TODO: Why do we have to add the null when XMLPattern is optional?
                     when (childPattern) {
                         is XMLPattern -> {
                             val dereferenced: XMLPattern = childPattern.dereferenceType(resolver)
@@ -406,8 +404,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                             }
                         }
                         else -> childPattern.newBasedOn(resolver)
-                    }*/
-                    childPattern.newBasedOn(resolver)
+                    }
                 }
             })
 

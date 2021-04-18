@@ -710,4 +710,66 @@ Then status 200
         assertThat(results.failureCount).isZero()
         assertThat(results.success()).isTrue()
     }
+
+    @Test
+    fun `two xml contracts should not be backward compatibility when optional key is made mandatory in request`() {
+        val gherkin1 = """
+Feature: Contract API
+
+Scenario: api call
+When POST /data
+  And request-body <ns1:customer xmlns:ns1="http://example.com/customer"><name specmatic_occurs="optional">(string)</name></ns1:customer>
+Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: Contract API
+
+Scenario: api call
+When POST /data
+  And request-body <ns2:customer xmlns:ns2="http://example.com/customer"><name>(string)</name></ns2:customer>
+Then status 200
+    """.trim()
+
+        val results: Results = testBackwardCompatibility(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
+
+        if (results.failureCount > 0)
+            println(results.report())
+
+        assertThat(results.successCount).isOne()
+        assertThat(results.failureCount).isOne()
+        assertThat(results.success()).isFalse()
+    }
+
+    @Test
+    fun `two xml contracts should not be backward compatibility when mandatory key is made optional in response`() {
+        val gherkin1 = """
+Feature: Contract API
+
+Scenario: api call
+When POST /data
+  And request-body "test"
+Then status 200
+  And response-body <ns1:customer xmlns:ns1="http://example.com/customer"><name>(string)</name></ns1:customer>
+    """.trim()
+
+        val gherkin2 = """
+Feature: Contract API
+
+Scenario: api call
+When POST /data
+  And request-body "test"
+Then status 200
+  And response-body <ns1:customer xmlns:ns1="http://example.com/customer"><name specmatic_occurs="optional">(string)</name></ns1:customer>
+    """.trim()
+
+        val results: Results = testBackwardCompatibility(parseGherkinStringToFeature(gherkin1), parseGherkinStringToFeature(gherkin2))
+
+        if (results.failureCount > 0)
+            println(results.report())
+
+        assertThat(results.successCount).isZero()
+        assertThat(results.failureCount).isOne()
+        assertThat(results.success()).isFalse()
+    }
 }

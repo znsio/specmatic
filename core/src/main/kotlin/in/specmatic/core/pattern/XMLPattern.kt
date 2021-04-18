@@ -387,7 +387,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 }
             }
         }.flatMap { newAttributes ->
-            val newNodesList = listCombinations(pattern.nodes.map { childPattern ->
+            val newNodesList = allOrNothingListCombinations(pattern.nodes.map { childPattern ->
                 attempt(breadCrumb = this.pattern.name) {
                     when (childPattern) {
                         is XMLPattern -> {

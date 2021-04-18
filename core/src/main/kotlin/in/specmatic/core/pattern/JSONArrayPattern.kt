@@ -161,6 +161,24 @@ fun listCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
     }
 }
 
+fun allOrNothingListCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
+    if(values.isEmpty())
+        return listOf(emptyList())
+
+    val optionalKeys = values.filter { it.size == 2 }
+    val optionalKeysSetToNonNullValues = optionalKeys.map { it.filter { it != null } }.flatten()
+
+    val mandatoryKeys = values.filter { it.size == 1 }.flatten()
+
+    val keyLists = if (values.any{ it.size == 2}) {
+        listOf(mandatoryKeys.plus(optionalKeysSetToNonNullValues), mandatoryKeys)
+    } else {
+        listOf(mandatoryKeys)
+    }
+
+    return keyLists as List<List<Pattern>>
+}
+
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
     jsonPattern.mapIndexed { index, pattern ->
         when (pattern) {

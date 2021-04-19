@@ -27,7 +27,7 @@ dependencies {
     implementation 'org.assertj:assertj-core:3.19.0'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
 
-    implementation 'org.apache.kafka:kafka-clients:2.7.0'
+    implementation 'org.apache.kafka:kafka-clients:2.8.0'
 
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-client-cio:${ktor_version}"

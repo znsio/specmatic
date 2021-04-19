@@ -9,6 +9,7 @@ import kotlin.system.exitProcess
 class ContractExecutionListener : TestExecutionListener {
     private var success: Int = 0
     private var failure: Int = 0
+    private var aborted: Int = 0
 
     private val failedLog: MutableList<String> = mutableListOf()
 
@@ -18,36 +19,45 @@ class ContractExecutionListener : TestExecutionListener {
                 }) return
 
         println("${testIdentifier?.displayName} ${testExecutionResult?.status}")
-        testExecutionResult?.status?.name?.equals("SUCCESSFUL").let {
-            when (it) {
-                false -> {
-                    failure++
 
-                    val message = testExecutionResult?.throwable?.get()?.message?.replace("\n", "\n\t")?.trimIndent()
-                            ?: ""
-
-                    val reason = "Reason: $message"
-                    println("$reason\n\n")
-
-                    val log = """"${testIdentifier?.displayName} ${testExecutionResult?.status}"
-${reason.prependIndent("  ")}"""
-
-                    failedLog.add(log)
-                }
-                else -> {
-                    success++
-                    println()
-                }
+        when(testExecutionResult?.status) {
+            TestExecutionResult.Status.SUCCESSFUL ->  {
+                success++
+                println()
+            }
+            TestExecutionResult.Status.ABORTED -> {
+                aborted++
+                printAndLogFailure(testExecutionResult, testIdentifier)
+            }
+            TestExecutionResult.Status.FAILED -> {
+                failure++
+                printAndLogFailure(testExecutionResult, testIdentifier)
             }
         }
     }
 
+    private fun printAndLogFailure(
+        testExecutionResult: TestExecutionResult,
+        testIdentifier: TestIdentifier?
+    ) {
+        val message = testExecutionResult.throwable?.get()?.message?.replace("\n", "\n\t")?.trimIndent()
+            ?: ""
+
+        val reason = "Reason: $message"
+        println("$reason\n\n")
+
+        val log = """"${testIdentifier?.displayName} ${testExecutionResult.status}"
+    ${reason.prependIndent("  ")}"""
+
+        failedLog.add(log)
+    }
+
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
-        println("Tests run: ${success + failure}, Failures: $failure")
+        println("Tests run: ${success + aborted + failure}, Failures: $failure, Aborted: $aborted")
 
         if (failedLog.isNotEmpty()) {
             println()
-            println("Failed scenarios:")
+            println("Unsuccessful scenarios:")
             println(failedLog.distinct().joinToString(System.lineSeparator()) { it.prependIndent("  ") })
         }
     }

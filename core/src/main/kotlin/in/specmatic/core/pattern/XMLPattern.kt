@@ -34,6 +34,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     constructor(node: XMLNode, typeAlias: String? = null) : this(toTypeData(node), typeAlias)
     constructor(xmlString: String, typeAlias: String? = null) : this(toXMLNode(parseXML(xmlString)), typeAlias)
 
+    fun toPrettyString(): String {
+        return pattern.toGherkinishNode().toPrettyStringValue()
+    }
+
     override fun matches(sampleData: List<Value>, resolver: Resolver): ConsumeResult<Value, Value> {
         val xmlValues = sampleData.filterIsInstance<XMLValue>()
         if (xmlValues.size != sampleData.size)
@@ -395,12 +399,12 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
                             when {
                                 dereferenced.occurMultipleTimes() -> {
-                                    childPattern.newBasedOn(resolver)
+                                    dereferenced.newBasedOn(resolver)
                                 }
                                 dereferenced.isOptional() -> {
-                                    childPattern.newBasedOn(resolver).plus(null)
+                                    dereferenced.newBasedOn(resolver).plus(null)
                                 }
-                                else -> childPattern.newBasedOn(resolver)
+                                else -> dereferenced.newBasedOn(resolver)
                             }
                         }
                         else -> childPattern.newBasedOn(resolver)
@@ -425,6 +429,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return resolved.copy(
                 pattern = resolved.pattern.copy(
                         name = this.pattern.name,
+                        realName = this.pattern.realName,
                         attributes = resolved.pattern.attributes.plus(qontractAttributes)
                 )
         )

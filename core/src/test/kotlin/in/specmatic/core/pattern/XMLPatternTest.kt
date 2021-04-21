@@ -167,6 +167,10 @@ internal class XMLPatternTest {
 
             val testTypes = personType.newBasedOn(resolver).map { it.toPrettyString() }
 
+            for(type in testTypes) {
+                println(type)
+            }
+
             assertThat(testTypes).contains("""
                 <person>
                   <name>(string)</name>

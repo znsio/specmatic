@@ -148,6 +148,43 @@ internal class XMLPatternTest {
     @Nested
     inner class BackwardCompatibility {
         @Test
+        fun temp() {
+            val personType = XMLPattern("""
+                <person>
+                    <name>(string)</name>
+                    <address specmatic_type="Address" />
+                </person>
+            """.trimIndent())
+
+            val addressType = XMLPattern("""
+                <SPECMATIC_TYPE>
+                    <flat_no specmatic_occurs="optional">(string)</flat_no>
+                    <street specmatic_occurs="optional">(string)</street>
+                </SPECMATIC_TYPE>
+            """.trimIndent())
+
+            val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
+
+            val testTypes = personType.newBasedOn(resolver).map { it.toPrettyString() }
+
+            assertThat(testTypes).contains("""
+                <person>
+                  <name>(string)</name>
+                  <address specmatic_type="Address">
+                    <flat_no specmatic_occurs="optional">(string)</flat_no>
+                    <street specmatic_occurs="optional">(string)</street>
+                  </address>
+                </person>
+                """.trimIndent())
+
+            assertThat(testTypes).contains("""
+                <person>
+                  <name>(string)</name>
+                  <address specmatic_type="Address" />
+                </person>""".trimIndent())
+        }
+
+        @Test
         fun `optional node text type should encompass text type`() {
             val resolver = Resolver()
 

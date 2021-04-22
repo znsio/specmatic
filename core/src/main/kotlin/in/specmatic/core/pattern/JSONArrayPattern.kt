@@ -167,23 +167,36 @@ fun allOrNothingListCombinations(values: List<List<Pattern?>>): List<List<Patter
         return listOf(emptyList())
 
     val optionalKeys = values.filter { it.contains(null) }
-    val optionalKeysSetToNonNullValues = optionalKeys.map { it.filter { it != null } }.flatten()
+    val optionalKeysWithOptionalChildren = optionalKeys.filter { it.size == 3 }
+    val optionalKeysWithoutOptionalChildren = optionalKeys.filter { it.size == 2 }
 
     val mandatoryKeys = values.filter { !it.contains(null) }
     val mandatoryKeysWithoutOptionalChildren = mandatoryKeys.filter { it.size == 1 }.flatten()
     val mandatoryKeysWithOptionalChildren = mandatoryKeys.filter { it.size > 1 }
 
-    val keyLists = if (!optionalKeys.isEmpty()) {
-        listOf(mandatoryKeysWithoutOptionalChildren.plus(optionalKeysSetToNonNullValues), mandatoryKeysWithoutOptionalChildren)
+    val keyLists = if (optionalKeys.isNotEmpty()) {
+        val allOptionals = if (optionalKeysWithOptionalChildren.isNotEmpty()) {
+            optionalKeysWithoutOptionalChildren.map { it.filter { it != null } }.flatten()
+                    .plus(optionalKeysWithOptionalChildren.map { it[0] })
+        } else optionalKeysWithoutOptionalChildren.map { it.filter { it != null } }.flatten()
+        if (mandatoryKeysWithOptionalChildren.isNotEmpty()) {
+            val mandatoryFirstValues = mandatoryKeysWithOptionalChildren.map { it[0] }
+            val mandatorySecondValues = mandatoryKeysWithOptionalChildren.map { it[1] }
+            listOf(mandatoryFirstValues, mandatorySecondValues).map {
+                listOf(mandatoryKeysWithoutOptionalChildren.plus(it).plus(allOptionals), mandatoryKeysWithoutOptionalChildren.plus(it))
+            }.flatten()
+        } else listOf(mandatoryKeysWithoutOptionalChildren.plus(allOptionals), mandatoryKeysWithoutOptionalChildren)
     } else {
-        listOf(mandatoryKeysWithoutOptionalChildren)
+        if (mandatoryKeysWithOptionalChildren.isNotEmpty()) {
+            val mandatoryFirstValues = mandatoryKeysWithOptionalChildren.map { it[0] }
+            val mandatorySecondValues = mandatoryKeysWithOptionalChildren.map { it[1] }
+            listOf(mandatoryFirstValues, mandatorySecondValues).map {
+                mandatoryKeysWithoutOptionalChildren.plus(it)
+            }
+        } else listOf(mandatoryKeysWithoutOptionalChildren)
     }
 
-    return if (!mandatoryKeysWithOptionalChildren.isEmpty()) {
-        mandatoryKeysWithOptionalChildren.flatten().map { pattern ->
-            keyLists.map { it.plus(pattern) }
-        }.flatten() as List<List<Pattern>>
-    } else keyLists as List<List<Pattern>>
+    return keyLists as List<List<Pattern>>
 }
 
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =

@@ -32,10 +32,10 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
 
     @Throws(Exception::class)
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if(sampleData !is JSONArrayValue)
+        if (sampleData !is JSONArrayValue)
             return Result.Failure("Value is not a JSON array")
 
-        if(sampleData.list.isEmpty())
+        if (sampleData.list.isEmpty())
             return Result.Success()
 
         val resolverWithNumberType = withNumberType(withNullPattern(resolver))
@@ -81,6 +81,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         val resolverWithNullType = withNullPattern(resolver)
         return newBasedOn(pattern, resolverWithNullType).map { JSONArrayPattern(it) }
     }
+
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val thisResolverWithNullType = withNullPattern(thisResolver)
@@ -105,8 +106,8 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
 
                     results.find {
                         it.result is Result.Failure
-                    }?.let {
-                        result -> result.result.breadCrumb("[${result.index}]")
+                    }?.let { result ->
+                        result.result.breadCrumb("[${result.index}]")
                     } ?: Result.Success()
                 }
             } catch (e: ContractException) {
@@ -145,7 +146,7 @@ fun newBasedOn(jsonPattern: List<Pattern>, resolver: Resolver): List<List<Patter
 }
 
 fun listCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
-    if(values.isEmpty())
+    if (values.isEmpty())
         return listOf(emptyList())
 
     val lastValueTypes: List<Pattern?> = values.last()
@@ -153,7 +154,7 @@ fun listCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
 
     return subLists.flatMap { subList ->
         lastValueTypes.map { lastValueType ->
-            if(lastValueType != null)
+            if (lastValueType != null)
                 subList.plus(lastValueType)
             else
                 subList
@@ -162,33 +163,39 @@ fun listCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
 }
 
 fun allOrNothingListCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
-    if(values.isEmpty())
+    if (values.isEmpty())
         return listOf(emptyList())
 
-    val optionalKeys = values.filter { it.size == 2 }
+    val optionalKeys = values.filter { it.contains(null) }
     val optionalKeysSetToNonNullValues = optionalKeys.map { it.filter { it != null } }.flatten()
 
-    val mandatoryKeys = values.filter { it.size == 1 }.flatten()
+    val mandatoryKeys = values.filter { !it.contains(null) }
+    val mandatoryKeysWithoutOptionalChildren = mandatoryKeys.filter { it.size == 1 }.flatten()
+    val mandatoryKeysWithOptionalChildren = mandatoryKeys.filter { it.size > 1 }
 
-    val keyLists = if (values.any{ it.size == 2}) {
-        listOf(mandatoryKeys.plus(optionalKeysSetToNonNullValues), mandatoryKeys)
+    val keyLists = if (!optionalKeys.isEmpty()) {
+        listOf(mandatoryKeysWithoutOptionalChildren.plus(optionalKeysSetToNonNullValues), mandatoryKeysWithoutOptionalChildren)
     } else {
-        listOf(mandatoryKeys)
+        listOf(mandatoryKeysWithoutOptionalChildren)
     }
 
-    return keyLists as List<List<Pattern>>
+    return if (!mandatoryKeysWithOptionalChildren.isEmpty()) {
+        mandatoryKeysWithOptionalChildren.flatten().map { pattern ->
+            keyLists.map { it.plus(pattern) }
+        }.flatten() as List<List<Pattern>>
+    } else keyLists as List<List<Pattern>>
 }
 
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
-    jsonPattern.mapIndexed { index, pattern ->
-        when (pattern) {
-            is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
-                val list = pattern.generate(resolver) as ListValue
-                list.list
+        jsonPattern.mapIndexed { index, pattern ->
+            when (pattern) {
+                is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
+                    val list = pattern.generate(resolver) as ListValue
+                    list.list
+                }
+                else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(resolver)) }
             }
-            else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(resolver)) }
-        }
-    }.flatten()
+        }.flatten()
 
 const val RANDOM_NUMBER_CEILING = 10
 

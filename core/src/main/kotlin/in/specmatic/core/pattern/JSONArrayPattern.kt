@@ -175,17 +175,22 @@ fun allOrNothingListCombinations(values: List<List<Pattern?>>): List<List<Patter
     val mandatoryKeysWithOptionalChildren = mandatoryKeys.filter { it.size > 1 }
 
     val keyLists = if (optionalKeys.isNotEmpty()) {
+        val nonNullOptionals = optionalKeysWithoutOptionalChildren.map { it.filter { it != null } }.flatten()
         val allOptionals = if (optionalKeysWithOptionalChildren.isNotEmpty()) {
-            optionalKeysWithoutOptionalChildren.map { it.filter { it != null } }.flatten()
-                    .plus(optionalKeysWithOptionalChildren.map { it[0] })
-        } else optionalKeysWithoutOptionalChildren.map { it.filter { it != null } }.flatten()
+            listOf(nonNullOptionals.plus(optionalKeysWithOptionalChildren.map { it[0] }),
+                    nonNullOptionals.plus(optionalKeysWithOptionalChildren.map { it[1] }))
+        } else listOf(nonNullOptionals)
         if (mandatoryKeysWithOptionalChildren.isNotEmpty()) {
             val mandatoryFirstValues = mandatoryKeysWithOptionalChildren.map { it[0] }
             val mandatorySecondValues = mandatoryKeysWithOptionalChildren.map { it[1] }
             listOf(mandatoryFirstValues, mandatorySecondValues).map {
-                listOf(mandatoryKeysWithoutOptionalChildren.plus(it).plus(allOptionals), mandatoryKeysWithoutOptionalChildren.plus(it))
+                allOptionals.map { optionals ->
+                    listOf(mandatoryKeysWithoutOptionalChildren.plus(it).plus(optionals), mandatoryKeysWithoutOptionalChildren.plus(it))
+                }.flatten()
             }.flatten()
-        } else listOf(mandatoryKeysWithoutOptionalChildren.plus(allOptionals), mandatoryKeysWithoutOptionalChildren)
+        } else allOptionals.map { optionals ->
+            listOf(mandatoryKeysWithoutOptionalChildren.plus(optionals))
+        }.flatten().plus(listOf(mandatoryKeysWithoutOptionalChildren))
     } else {
         if (mandatoryKeysWithOptionalChildren.isNotEmpty()) {
             val mandatoryFirstValues = mandatoryKeysWithOptionalChildren.map { it[0] }

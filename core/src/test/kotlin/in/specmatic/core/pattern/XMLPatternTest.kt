@@ -171,6 +171,8 @@ internal class XMLPatternTest {
                 println(type)
             }
 
+            assertThat(testTypes.size).isEqualTo(2)
+
             assertThat(testTypes).contains("""
                 <person>
                   <name>(string)</name>
@@ -185,6 +187,56 @@ internal class XMLPatternTest {
                 <person>
                   <name>(string)</name>
                   <address specmatic_type="Address"/>
+                </person>
+                """.trimIndent())
+        }
+
+        @Test
+        fun `creates three combinations per optional field with optional children`() {
+            val personType = XMLPattern("""
+                <person>
+                    <name>(string)</name>
+                    <address specmatic_occurs="optional" specmatic_type="Address" />
+                </person>
+            """.trimIndent())
+
+            val addressType = XMLPattern("""
+                <SPECMATIC_TYPE>
+                    <flat_no specmatic_occurs="optional">(string)</flat_no>
+                    <street specmatic_occurs="optional">(string)</street>
+                </SPECMATIC_TYPE>
+            """.trimIndent())
+
+            val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
+
+            val testTypes = personType.newBasedOn(resolver).map { it.toPrettyString() }
+
+            for (type in testTypes) {
+                println(type)
+            }
+
+            assertThat(testTypes.size).isEqualTo(3)
+
+            assertThat(testTypes).contains("""
+                <person>
+                  <name>(string)</name>
+                  <address specmatic_occurs="optional" specmatic_type="Address">
+                    <flat_no specmatic_occurs="optional">(string)</flat_no>
+                    <street specmatic_occurs="optional">(string)</street>
+                  </address>
+                </person>
+                """.trimIndent())
+
+            assertThat(testTypes).contains("""
+                <person>
+                  <name>(string)</name>
+                  <address specmatic_occurs="optional" specmatic_type="Address"/>
+                </person>
+                """.trimIndent())
+
+            assertThat(testTypes).contains("""
+                <person>
+                  <name>(string)</name>
                 </person>
                 """.trimIndent())
         }

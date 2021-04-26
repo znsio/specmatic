@@ -56,7 +56,7 @@ internal class JSONObjectPatternTest {
         val patterns = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(row, Resolver())
 
         val value = patterns.map { it.generate(Resolver()) }.map {
-            if(it !is JSONObjectValue)
+            if (it !is JSONObjectValue)
                 throw Exception("Expected JSONObjectValue2, got ${it.javaClass}")
 
             it.jsonObject.getOrDefault("id", NumberValue(0))
@@ -105,21 +105,21 @@ internal class JSONObjectPatternTest {
         val row = Row(listOf("city"), listOf("Mumbai"))
 
         val newPattern = personPattern.newBasedOn(row, resolver).first()
-        if(newPattern !is JSONObjectPattern)
+        if (newPattern !is JSONObjectPattern)
             throw AssertionError("Expected JSONObjectPattern, got ${newPattern.javaClass.name}")
 
         assertTrue(newPattern.pattern["name"] is StringPattern)
 
         val addressPattern = newPattern.pattern["address"]
-        if(addressPattern !is JSONObjectPattern)
+        if (addressPattern !is JSONObjectPattern)
             throw AssertionError("Expected JSONObjectPattern, got ${addressPattern?.javaClass?.name}")
 
         val cityPattern = addressPattern.pattern["city"]
-        if(cityPattern !is ExactValuePattern)
+        if (cityPattern !is ExactValuePattern)
             throw AssertionError("Expected ExactMatchPattern, got ${cityPattern?.javaClass?.name}")
 
         val cityValue = cityPattern.pattern
-        if(cityValue !is StringValue)
+        if (cityValue !is StringValue)
             throw AssertionError("Expected StringValue, got ${cityValue.javaClass.name}")
 
         assertEquals("Mumbai", cityValue.string)
@@ -133,7 +133,7 @@ internal class JSONObjectPatternTest {
 
         val newPattern = personPattern.newBasedOn(Row(), resolver).first()
 
-        if(newPattern !is JSONObjectPattern)
+        if (newPattern !is JSONObjectPattern)
             throw AssertionError("Expected JSONObjectPattern, got ${newPattern.javaClass.name}")
 
         assertTrue(newPattern.pattern["name"] is StringPattern)
@@ -226,5 +226,26 @@ internal class JSONObjectPatternTest {
 
         assertThat(theOne.encompasses(theOther, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(theOther.encompasses(theOne, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `creates three combinations per optional field with optional children`() {
+        val resolver = Resolver(newPatterns = mapOf("(Address)" to parsedPattern("""{"number": "(string)", "street?": "(string)"}""")))
+
+        val personPattern = parsedPattern("""{"name": "(string)", "address?": "(Address)"}""")
+
+        val combinations = personPattern.newBasedOn(resolver)
+
+        assertThat(combinations.size).isEqualTo(3)
+
+        val addressPatternWithStreet = toJSONObjectPattern(mapOf("number" to StringPattern, "street?" to StringPattern))
+        val addressPatternWithoutStreet = toJSONObjectPattern(mapOf("number" to StringPattern))
+        val personWithAddressWithStreet = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to addressPatternWithStreet))
+        val personWithAddressWithoutStreet = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to addressPatternWithoutStreet))
+        val personWithoutAddress = toJSONObjectPattern(mapOf("name" to StringPattern))
+
+        assertThat(combinations).contains(personWithAddressWithStreet)
+        assertThat(combinations).contains(personWithAddressWithoutStreet)
+        assertThat(combinations).contains(personWithoutAddress)
     }
 }

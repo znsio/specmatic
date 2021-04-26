@@ -190,6 +190,84 @@ Feature: New contract
     }
 
     @Test
+    fun `contract backward compatibility should break when optional key is made mandatory inside an optional parent`() {
+        val gherkin1 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | address? | (Address) |
+    And type Address
+    | street? | (string) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: New contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | address? | (Address) |
+    And type Address
+    | street | (string) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
+
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        println(result.report())
+
+        assertEquals(2, result.successCount)
+        assertEquals(1, result.failureCount)
+    }
+
+    @Test
+    fun `contract backward compatibility should break when optional key is made mandatory inside an optional parent two levels down`() {
+        val gherkin1 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | person | (Person) |
+    And type Person
+    | address? | (Address) |
+    And type Address
+    | street? | (string) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | person | (Person) |
+    And type Person
+    | address? | (Address) |
+    And type Address
+    | street | (string) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
+
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        println(result.report())
+
+        assertEquals(1, result.successCount)
+        assertEquals(1, result.failureCount)
+    }
+
+    @Test
     fun `contract backward compatibility should break when mandatory key is made optional one level down in response`() {
         val gherkin1 = """
 Feature: Old contract
@@ -209,6 +287,48 @@ Feature: New contract
   Scenario: Test Scenario
     Given type ResponseBody
     | address | (Address) |
+    And type Address
+    | street? | (string) |
+    When POST /
+    And request-body "test"
+    Then status 200
+    And response-body (ResponseBody) 
+    """.trim()
+
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
+
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        println(result.report())
+
+        assertEquals(1, result.failureCount)
+    }
+
+    @Test
+    fun `contract backward compatibility should break when mandatory key is made optional two levels down in response`() {
+        val gherkin1 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type ResponseBody
+    | person | (Person) |
+    And type Person
+    | address? | (Address) |
+    And type Address
+    | street | (string) |
+    When POST /
+    And request-body "test"
+    Then status 200
+    And response-body (ResponseBody)
+    """.trim()
+
+        val gherkin2 = """
+Feature: New contract
+  Scenario: Test Scenario
+    Given type ResponseBody
+    | person | (Person) |
+    And type Person
+    | address? | (Address) |
     And type Address
     | street? | (string) |
     When POST /

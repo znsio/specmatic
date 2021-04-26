@@ -222,7 +222,7 @@ Feature: New contract
 
         println(result.report())
 
-        assertEquals(1, result.successCount)
+        assertEquals(2, result.successCount)
         assertEquals(1, result.failureCount)
     }
 

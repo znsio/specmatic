@@ -55,9 +55,10 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
 
     override fun newBasedOn(resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
-        return allOrNothingCombinationIn(pattern) { pattern ->
+        val allOrNothingCombinationIn = allOrNothingCombinationIn(pattern) { pattern ->
             newBasedOn(pattern, resolverWithNullType)
-        }.map { toTabularPattern(it) }
+        }
+        return allOrNothingCombinationIn.map { toTabularPattern(it) }
     }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
@@ -169,17 +170,29 @@ fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): 
 
     val singleValues = patternCollection.filter { entry -> !optionalValues(entry) }
 
-    val singleValuesSetToValues = singleValues.map { entry ->
-        entry.value.map {
-            Pair(entry.key, it)
-        }
-    }.flatten().toMap()
+    val parentsWithoutOptionalChildren = singleValues.filter { it.value.size == 1 }
+    val parentsWithOptionalChildren = singleValues.filter { it.value.size > 1 }
+
+    val parents = parentsWithoutOptionalChildren.map { entry ->
+        Pair(entry.key, entry.value[0])
+    }.toMap()
+
+    val firstValuesSetToValues = parentsWithOptionalChildren.map { entry -> entry.key to entry.value[0] }.toMap()
+
+    val secondValuesSetToValues = parentsWithOptionalChildren.map { entry -> entry.key to entry.value[1] }.toMap()
+
+    val list = if (parentsWithOptionalChildren.isNotEmpty()) {
+        listOf(parents.plus(firstValuesSetToValues), parents.plus(secondValuesSetToValues))
+    } else {
+        listOf(parents)
+    }
 
     return if (patternCollection.any { entry -> optionalValues(entry) }) {
-        listOf(optionalValuesSetToNull.plus(singleValuesSetToValues),
-                optionalValuesSetToValue.plus(singleValuesSetToValues))
+        list.map {
+            listOf(optionalValuesSetToNull.plus(it), optionalValuesSetToValue.plus(it))
+        }.flatten()
     } else {
-       listOf(singleValuesSetToValues)
+        list
     }
 }
 

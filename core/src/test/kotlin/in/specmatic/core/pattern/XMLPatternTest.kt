@@ -28,7 +28,7 @@ internal class XMLPatternTest {
             val resolver = Resolver(newPatterns = mapOf("(Item)" to itemType))
             val xmlValue = itemsType.generate(resolver) as XMLNode
 
-            for(node in xmlValue.childNodes.map { it as XMLNode }) {
+            for (node in xmlValue.childNodes.map { it as XMLNode }) {
                 assertThat(node.childNodes.size == 1)
                 assertThat(node.childNodes[0]).isInstanceOf(StringValue::class.java)
             }
@@ -102,7 +102,7 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `list type should match multiple xml values of the same type` () {
+        fun `list type should match multiple xml values of the same type`() {
             val numberInfoPattern = XMLPattern("<number>(number)</number>")
             val resolver = Resolver(newPatterns = mapOf("(NumberInfo)" to numberInfoPattern))
             val answerPattern = XMLPattern("<answer>(NumberInfo*)</answer>")
@@ -148,6 +148,100 @@ internal class XMLPatternTest {
     @Nested
     inner class BackwardCompatibility {
         @Test
+        fun `creates two combinations per mandatory field with optional children`() {
+            val personType = XMLPattern("""
+                <person>
+                    <name>(string)</name>
+                    <address specmatic_type="Address" />
+                </person>
+            """.trimIndent())
+
+            val addressType = XMLPattern("""
+                <SPECMATIC_TYPE>
+                    <flat_no specmatic_occurs="optional">(string)</flat_no>
+                    <street specmatic_occurs="optional">(string)</street>
+                </SPECMATIC_TYPE>
+            """.trimIndent())
+
+            val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
+
+            val testTypes = personType.newBasedOn(resolver).map { it.toPrettyString() }
+
+            for (type in testTypes) {
+                println(type)
+            }
+
+            assertThat(testTypes.size).isEqualTo(2)
+
+            assertThat(testTypes).contains("""
+                <person>
+                  <name>(string)</name>
+                  <address specmatic_type="Address">
+                    <flat_no specmatic_occurs="optional">(string)</flat_no>
+                    <street specmatic_occurs="optional">(string)</street>
+                  </address>
+                </person>
+                """.trimIndent())
+
+            assertThat(testTypes).contains("""
+                <person>
+                  <name>(string)</name>
+                  <address specmatic_type="Address"/>
+                </person>
+                """.trimIndent())
+        }
+
+        @Test
+        fun `creates three combinations per optional field with optional children`() {
+            val personType = XMLPattern("""
+                <person>
+                    <name>(string)</name>
+                    <address specmatic_occurs="optional" specmatic_type="Address" />
+                </person>
+            """.trimIndent())
+
+            val addressType = XMLPattern("""
+                <SPECMATIC_TYPE>
+                    <flat_no specmatic_occurs="optional">(string)</flat_no>
+                    <street specmatic_occurs="optional">(string)</street>
+                </SPECMATIC_TYPE>
+            """.trimIndent())
+
+            val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
+
+            val testTypes = personType.newBasedOn(resolver).map { it.toPrettyString() }
+
+            for (type in testTypes) {
+                println(type)
+            }
+
+            assertThat(testTypes.size).isEqualTo(3)
+
+            assertThat(testTypes).contains("""
+                <person>
+                  <name>(string)</name>
+                  <address specmatic_occurs="optional" specmatic_type="Address">
+                    <flat_no specmatic_occurs="optional">(string)</flat_no>
+                    <street specmatic_occurs="optional">(string)</street>
+                  </address>
+                </person>
+                """.trimIndent())
+
+            assertThat(testTypes).contains("""
+                <person>
+                  <name>(string)</name>
+                  <address specmatic_occurs="optional" specmatic_type="Address"/>
+                </person>
+                """.trimIndent())
+
+            assertThat(testTypes).contains("""
+                <person>
+                  <name>(string)</name>
+                </person>
+                """.trimIndent())
+        }
+
+        @Test
         fun `optional node text type should encompass text type`() {
             val resolver = Resolver()
 
@@ -178,7 +272,7 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `sanity check for pattern encompassing` () {
+        fun `sanity check for pattern encompassing`() {
             val numberInfoPattern = XMLPattern("<number>(number)</number>")
             val resolver = Resolver()
 
@@ -186,7 +280,7 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `sanity check for pattern encompassing with raw values` () {
+        fun `sanity check for pattern encompassing with raw values`() {
             val numberInfoPattern = XMLPattern("<number>100</number>")
             val resolver = Resolver()
 
@@ -194,7 +288,7 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `sanity check for xml with number type encompassing another with raw number` () {
+        fun `sanity check for xml with number type encompassing another with raw number`() {
             val pattern1 = XMLPattern("<number>(number)</number>")
             val pattern2 = XMLPattern("<number>100</number>")
             val resolver = Resolver()
@@ -203,16 +297,16 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `pattern by name should encompass another pattern of the same structure` () {
+        fun `pattern by name should encompass another pattern of the same structure`() {
             val numberInfoPattern = XMLPattern("<number>(number)</number>")
             val resolver = Resolver(newPatterns = mapOf("(Number)" to XMLPattern("<number>(number)</number>")))
 
             assertThat(resolver.getPattern("(Number)").encompasses(numberInfoPattern, resolver, resolver)).isInstanceOf(
-                Result.Success::class.java)
+                    Result.Success::class.java)
         }
 
         @Test
-        fun `sanity check for nested pattern encompassing` () {
+        fun `sanity check for nested pattern encompassing`() {
             val answersPattern = XMLPattern("<answer><number>(number)</number><name>(string)</name></answer>")
             val resolver = Resolver()
 
@@ -220,7 +314,7 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `pattern should not encompass another with different order` () {
+        fun `pattern should not encompass another with different order`() {
             val answersPattern1 = XMLPattern("<answer><number>(number)</number><name>(string)</name></answer>")
             val answersPattern2 = XMLPattern("<answer><name>(string)</name><number>(number)</number></answer>")
             val resolver = Resolver()
@@ -229,7 +323,7 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `repeating pattern should not encompass another with a different repeating type` () {
+        fun `repeating pattern should not encompass another with a different repeating type`() {
             val answersPattern1 = XMLPattern("<answers>(Number*)</answers>")
             val answersPattern2 = XMLPattern("<answers>(Number*)</answers>")
             val resolver1 = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
@@ -239,7 +333,7 @@ internal class XMLPatternTest {
         }
 
         @Test
-        fun `node with finite number of children should not encompass repeating pattern with similar type` () {
+        fun `node with finite number of children should not encompass repeating pattern with similar type`() {
             val answersPattern1 = XMLPattern("<answers><number>(number)</number><number>(number)</number></answers>")
             val answersPattern2 = XMLPattern("<answer>(Number*)</answer>")
             val resolver = Resolver(newPatterns = mapOf("(Number)" to parsedPattern("<number>(number)</number>")))
@@ -419,7 +513,7 @@ internal class XMLPatternTest {
 
             val flags = mutableListOf<String>()
 
-            for(newType in newTypes) {
+            for (newType in newTypes) {
                 when {
                     newType.pattern.attributes.containsKey("val") -> flags.add("with")
                     else -> flags.add("without")
@@ -440,7 +534,7 @@ internal class XMLPatternTest {
 
             val flags = mutableListOf<String>()
 
-            for(newType in newTypes) {
+            for (newType in newTypes) {
                 when {
                     newType.pattern.attributes.containsKey("val$XML_ATTR_OPTIONAL_SUFFIX") -> flags.add("with")
                     else -> flags.add("without")
@@ -585,7 +679,7 @@ internal class XMLPatternTest {
         @Test
         fun `xml with optional node generates one sample with the node and one without`() {
             val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid></name>")
-            val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver())}
+            val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver()) }
 
             assertThat(newValues).anySatisfy {
                 assertThat(it.name).isEqualTo("name")
@@ -608,7 +702,7 @@ internal class XMLPatternTest {
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
 
-            val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver)}
+            val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver) }
 
             assertThat(newValues).anySatisfy {
                 assertThat(it.name).isEqualTo("name")
@@ -631,7 +725,7 @@ internal class XMLPatternTest {
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
             val row = Row(listOf("nameid"), listOf("10"))
-            val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver)}
+            val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver) }
 
             assertThat(newValues.isNotEmpty())
 
@@ -675,7 +769,7 @@ internal class XMLPatternTest {
         @Test
         fun `xml with a node that occurs multiple times generates multiple nodes`() {
             val nameType = XMLPattern("<name><title $occursMultipleTimes>(number)</title></name>")
-            val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver())}
+            val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver()) }
 
             assertThat(newValues.isNotEmpty())
 
@@ -694,7 +788,7 @@ internal class XMLPatternTest {
             val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE_NAME=\"Nameid\" /></name>")
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
-            val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver)}
+            val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver) }
 
             assertThat(newValues.isNotEmpty())
 
@@ -714,7 +808,7 @@ internal class XMLPatternTest {
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
             val row = Row(listOf("nameid"), listOf("10"))
-            val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver)}
+            val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver) }
 
             assertThat(newValues.isNotEmpty())
 
@@ -812,7 +906,7 @@ internal class XMLPatternTest {
         val gherkinStatement = xml.toGherkinStatement("TypeName")
 
         assertThat(gherkinStatement).isEqualTo(
-            """And type TypeName
+                """And type TypeName
 ""${'"'}
 <account>
   <id>(number)</id>

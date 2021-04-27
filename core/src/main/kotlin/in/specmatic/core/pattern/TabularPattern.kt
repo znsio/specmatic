@@ -158,15 +158,7 @@ fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): 
 
     val optionalValues = patternCollection.filter { entry -> optionalValues(entry) }
 
-    val optionalValuesSetToNull = optionalValues.map { entry ->
-        Pair(entry.key, NullPattern as ValueType)
-    }.toMap()
-
-    val optionalValuesSetToValue = optionalValues.map { entry ->
-        Pair(entry.key, entry.value.find { p ->
-            p !is NullPattern
-        } as ValueType)
-    }.toMap()
+    val optionalValuesList = optionalValueCombinations(0..3, optionalValues)
 
     val singleValues = patternCollection.filter { entry -> !optionalValues(entry) }
 
@@ -177,23 +169,32 @@ fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): 
         Pair(entry.key, entry.value[0])
     }.toMap()
 
-    val firstValuesSetToValues = parentsWithOptionalChildren.map { entry -> entry.key to entry.value[0] }.toMap()
+    val parentsWithOptionalChildrenList = optionalValueCombinations(0..2, parentsWithOptionalChildren)
 
-    val secondValuesSetToValues = parentsWithOptionalChildren.map { entry -> entry.key to entry.value[1] }.toMap()
-
-    val list = if (parentsWithOptionalChildren.isNotEmpty()) {
-        listOf(parents.plus(firstValuesSetToValues), parents.plus(secondValuesSetToValues))
-    } else {
-        listOf(parents)
+    val mandatoryValueCombinations = when {
+        parentsWithOptionalChildren.isNotEmpty() -> parentsWithOptionalChildrenList.map { parents.plus(it) }.toList()
+        else -> listOf(parents)
     }
 
-    return if (patternCollection.any { entry -> optionalValues(entry) }) {
-        list.map {
-            listOf(optionalValuesSetToNull.plus(it), optionalValuesSetToValue.plus(it))
-        }.flatten()
-    } else {
-        list
+    return when {
+        patternCollection.any { entry -> optionalValues(entry) } -> {
+            mandatoryValueCombinations.map { mandatoryValues ->
+                optionalValuesList.map { it.plus(mandatoryValues) }.toList()
+            }.flatten()
+        }
+        else -> mandatoryValueCombinations
     }
+}
+
+private fun <ValueType> optionalValueCombinations(intRange: IntRange, optionalValues: Map<String, List<ValueType>>): List<Map<String, ValueType>> {
+    return intRange.map {
+        optionalValues.map { entry ->
+            when {
+                entry.value.size > it -> entry.key to entry.value[it]
+                else -> entry.key to null as ValueType
+            }
+        }.toMap().filter { it.value != null }
+    }.toList().filter { it.isNotEmpty() }
 }
 
 private fun <ValueType> optionalValues(entry: Map.Entry<String, List<ValueType>>) =

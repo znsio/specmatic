@@ -263,7 +263,89 @@ Feature: Old contract
 
         println(result.report())
 
+        assertEquals(2, result.successCount)
+        assertEquals(1, result.failureCount)
+    }
+
+    @Test
+    fun `contract backward compatibility should break when optional key data type is changed inside an optional parent two levels down`() {
+        val gherkin1 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | person | (Person) |
+    And type Person
+    | address? | (Address) |
+    And type Address
+    | street? | (string) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | person | (Person) |
+    And type Person
+    | address? | (Address) |
+    And type Address
+    | street | (number) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
+
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        println(result.report())
+
         assertEquals(1, result.successCount)
+        assertEquals(2, result.failureCount)
+    }
+
+    @Test
+    fun `contract backward compatibility should break when optional value is made mandatory inside an optional parent two levels down`() {
+        val gherkin1 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | person | (Person) |
+    And type Person
+    | address? | (Address) |
+    And type Address
+    | street? | (string?) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val gherkin2 = """
+Feature: Old contract
+  Scenario: Test Scenario
+    Given type RequestBody
+    | person | (Person) |
+    And type Person
+    | address? | (Address) |
+    And type Address
+    | street? | (string) |
+    When POST /
+    And request-body (RequestBody)
+    Then status 200
+    """.trim()
+
+        val olderContract = parseGherkinStringToFeature(gherkin1)
+        val newerContract = parseGherkinStringToFeature(gherkin2)
+
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        println(result.report())
+
+        assertEquals(2, result.successCount)
         assertEquals(1, result.failureCount)
     }
 

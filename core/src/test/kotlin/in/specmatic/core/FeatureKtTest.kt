@@ -253,8 +253,8 @@ class FeatureKtTest {
 
     @Test
     fun `a single scenario with 2 examples of a multipart file should be generated out of 2 stubs with the same structure`() {
-        val stub1 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees1.csv", content="1,2,3"))), HttpResponse.OK))
-        val stub2 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees2.csv", content="1,2,3"))), HttpResponse.OK))
+        val stub1 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees1.csv", content=MultiPartContent("1,2,3")))), HttpResponse.OK))
+        val stub2 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees2.csv", content=MultiPartContent("1,2,3")))), HttpResponse.OK))
 
         val generatedGherkin = toGherkinFeature("new feature", listOf(stub1, stub2)).trim()
 

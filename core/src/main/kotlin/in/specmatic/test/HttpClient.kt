@@ -114,22 +114,22 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
     private fun loadFileContentIntoParts(request: HttpRequest): HttpRequest {
         val parts = request.multiPartFormData
 
-        val newParts = parts.map { part ->
+        val newMultiPartFormData: List<MultiPartFormDataValue> = parts.map { part ->
             when(part) {
                 is MultiPartContentValue -> part
                 is MultiPartFileValue -> {
                     val partFile = File(part.filename.removePrefix("@"))
-                    val content = if(partFile.exists()) {
-                        partFile.readText()
+                    val binaryContent = if(partFile.exists()) {
+                        MultiPartContent(partFile)
                     } else {
-                        StringPattern.generate(Resolver()).toStringValue()
+                        MultiPartContent(StringPattern.generate(Resolver()).toStringValue())
                     }
-                    part.copy(content = content)
+                    part.copy(content = binaryContent)
                 }
             }
         }
 
-        return request.copy(multiPartFormData = newParts)
+        return request.copy(multiPartFormData = newMultiPartFormData)
     }
 
     @OptIn(KtorExperimentalAPI::class)

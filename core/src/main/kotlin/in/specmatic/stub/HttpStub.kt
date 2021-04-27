@@ -244,8 +244,8 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
             val parts = multiPartData.readAllParts().map {
                 when (it) {
                     is PartData.FileItem -> {
-                        val content: String = it.provider().asStream().use { inputStream ->
-                             inputStream.bufferedReader().readText()
+                        val content = it.provider().asStream().use { inputStream ->
+                             MultiPartContent(inputStream.readBytes())
                         }
                         MultiPartFileValue(it.name ?: "", it.originalFileName ?: "", "${it.contentType?.contentType}/${it.contentType?.contentSubtype}", null, content, boundary)
                     }

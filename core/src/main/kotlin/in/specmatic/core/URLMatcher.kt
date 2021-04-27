@@ -130,8 +130,6 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
     fun newBasedOn(resolver: Resolver): List<URLMatcher> {
         val newPathPartsList = newBasedOn(pathPattern.mapIndexed { index, urlPathPattern ->
-            val key = urlPathPattern.key
-
             attempt(breadCrumb = "[$index]") {
                 urlPathPattern
             }

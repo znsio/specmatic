@@ -57,9 +57,7 @@ open class SpecmaticJUnitSupport {
         val workingDirectoryWasCreated = workingDirectory.exists()
 
         val envConfig = getEnvConfig(System.getProperty(ENV_NAME))
-        println(envConfig)
         val testConfig = loadTestConfig(envConfig)
-        println(testConfig)
 
         val testScenarios = try {
             when {

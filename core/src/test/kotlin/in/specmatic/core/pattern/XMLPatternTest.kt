@@ -148,6 +148,13 @@ internal class XMLPatternTest {
     @Nested
     inner class BackwardCompatibility {
         @Test
+        fun `empty xml node should be compatible with itself`() {
+            val type = XMLPattern("<xml/>")
+            val result: Result = type.encompasses(type, Resolver(), Resolver())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
         fun `creates two combinations per mandatory field with optional children`() {
             val personType = XMLPattern("""
                 <person>

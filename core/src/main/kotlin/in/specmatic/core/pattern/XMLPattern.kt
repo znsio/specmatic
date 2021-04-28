@@ -474,7 +474,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 val otherMembers = otherResolvedPattern.memberList
 
                 val others = otherMembers.getEncompassables(otherResolver)
-                val these = adaptFromList(theseMembers.getEncompassables(thisResolver), thisResolver)
+                val these = adapt(adaptFromList(theseMembers.getEncompassables(thisResolver), thisResolver), thisResolver)
 
                 val adaptedOthers = adapt(others, otherResolver)
 

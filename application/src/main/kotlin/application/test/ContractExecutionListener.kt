@@ -13,10 +13,21 @@ class ContractExecutionListener : TestExecutionListener {
 
     private val failedLog: MutableList<String> = mutableListOf()
 
+    private var couldNotStart = false;
+
+    override fun executionSkipped(testIdentifier: TestIdentifier?, reason: String?) {
+        super.executionSkipped(testIdentifier, reason)
+    }
+
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
         if (listOf("SpecmaticJUnitSupport", "contractAsTest()", "JUnit Jupiter").any {
                     testIdentifier!!.displayName.contains(it)
-                }) return
+                }) {
+                    if(testExecutionResult?.status != TestExecutionResult.Status.SUCCESSFUL)
+                        couldNotStart = true
+
+                    return
+        }
 
         println("${testIdentifier?.displayName} ${testExecutionResult?.status}")
 
@@ -63,7 +74,7 @@ class ContractExecutionListener : TestExecutionListener {
     }
 
     fun exitProcess() {
-        val exitStatus = when (failure != 0) {
+        val exitStatus = when (failure != 0 || couldNotStart) {
             true -> 1
             false -> 0
         }

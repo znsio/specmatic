@@ -10,6 +10,7 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import `in`.specmatic.core.Constants
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.test.SpecmaticJUnitSupport
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
@@ -19,6 +20,7 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
+import java.io.File
 import java.io.PrintWriter
 import java.nio.file.Paths
 import java.util.concurrent.Callable
@@ -119,6 +121,19 @@ class TestCommand : Callable<Unit> {
         }
 
         junitLauncher.execute(request)
+
+        junitReportDirName?.let {
+            val reportDirectory = File(it)
+            val reportFile = reportDirectory.resolve("TEST-junit-jupiter.xml")
+
+            if(reportFile.isFile) {
+                val text = reportFile.readText()
+                val newText = text.replace("JUnit Jupiter", "Contract Tests")
+                reportFile.writeText(newText)
+            } else {
+                throw ContractException("Was expecting a JUnit report file called TEST-junit-jupiter.xml inside $junitReportDirName but could not find it.")
+            }
+        }
 
         contractExecutionListener.exitProcess()
     }

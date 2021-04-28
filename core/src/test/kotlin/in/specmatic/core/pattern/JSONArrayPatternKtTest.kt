@@ -17,4 +17,12 @@ internal class JSONArrayPatternKtTest {
         println(patterns.size)
         for(json in patterns) println(json)
     }
+
+    @Test
+    fun allOrNothingTest() {
+        val combinations = allOrNothingListCombinations(listOf(listOf(StringPattern, null), listOf(NumberPattern)))
+        assertThat(combinations[0]).isEqualTo(listOf(StringPattern, NumberPattern))
+        assertThat(combinations[1]).isEqualTo(listOf(NumberPattern))
+        println(combinations)
+    }
 }

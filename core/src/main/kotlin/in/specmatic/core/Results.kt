@@ -1,12 +1,15 @@
 package `in`.specmatic.core
 
-const val PATH_NOT_RECOGNIZED_ERROR = "URL path not recognised"
+import `in`.specmatic.core.FailureReason.SOAPActionMismatch
+import `in`.specmatic.core.FailureReason.URLPathMisMatch
+
+const val PATH_NOT_RECOGNIZED_ERROR = "URL path or SOAPAction not recognised"
 
 data class Results(val results: List<Result> = emptyList()) {
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
     fun success(): Boolean = !hasFailures()
 
-    fun withoutFluff(): Results = copy(results = results.filterNot { isURLPathMismatch(it) }.toMutableList())
+    fun withoutFluff(): Results = copy(results = results.filterNot { isFluffyError(it) }.toMutableList())
 
     fun toResultIfAny(): Result {
         return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { resultReport(it) })
@@ -31,7 +34,7 @@ data class Results(val results: List<Result> = emptyList()) {
     }
 
     fun report(defaultMessage: String = PATH_NOT_RECOGNIZED_ERROR): String {
-        val filteredResults = results.filterNot { isURLPathMismatch(it) }
+        val filteredResults = results.filterNot { isFluffyError(it) }
 
         return when {
             filteredResults.isNotEmpty() -> listToReport(filteredResults)
@@ -41,9 +44,12 @@ data class Results(val results: List<Result> = emptyList()) {
 
 }
 
-internal fun isURLPathMismatch(it: Result?): Boolean {
+internal fun isFluffyError(it: Result?): Boolean {
     return when(it) {
-        is Result.Failure -> it.failureReason == FailureReason.URLPathMisMatch || isURLPathMismatch(it.cause)
+        is Result.Failure ->
+            it.failureReason == URLPathMisMatch
+                    || it.failureReason == SOAPActionMismatch
+                    || isFluffyError(it.cause)
         else -> false
     }
 }

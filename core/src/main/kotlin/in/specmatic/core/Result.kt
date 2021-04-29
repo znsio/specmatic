@@ -57,7 +57,8 @@ sealed class Result {
 
 enum class FailureReason {
     PartNameMisMatch,
-    URLPathMisMatch
+    URLPathMisMatch,
+    SOAPActionMismatch
 }
 
 fun Result.breadCrumb(breadCrumb: String): Result =

@@ -26,7 +26,8 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
 
         val missingKey = resolver.findMissingKey(pattern, headersWithRelevantKeys.mapValues { StringValue(it.value) }, ignoreUnexpectedKeys)
         if(missingKey != null) {
-            return MatchFailure(missingKeyToResult(missingKey, "header"))
+            val failureReason: FailureReason? = highlightIfSOAPActionMismatch(missingKey.name)
+            return MatchFailure(missingKeyToResult(missingKey, "header").copy(failureReason = failureReason))
         }
 
         this.pattern.forEach { (key, pattern) ->
@@ -37,19 +38,24 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
                 sampleValue != null -> try {
                     val result = resolver.matchesPattern(keyWithoutOptionality, pattern, attempt(breadCrumb = keyWithoutOptionality) { parseOrString(pattern, sampleValue, resolver) } )
                     if (result is Result.Failure) {
-                        return MatchFailure(result.breadCrumb(keyWithoutOptionality))
+                        return MatchFailure(result.breadCrumb(keyWithoutOptionality).copy(failureReason = highlightIfSOAPActionMismatch(key)))
                     }
                 } catch(e: ContractException) {
-                    return MatchFailure(e.failure())
+                    return MatchFailure(e.failure().copy(failureReason = highlightIfSOAPActionMismatch(key)))
                 } catch(e: Throwable) {
-                    return MatchFailure(Result.Failure(e.localizedMessage, breadCrumb = keyWithoutOptionality))
+                    return MatchFailure(Result.Failure(e.localizedMessage, breadCrumb = keyWithoutOptionality).copy(failureReason = highlightIfSOAPActionMismatch(key)))
                 }
                 !key.endsWith("?") ->
-                    return MatchFailure(missingKeyToResult(MissingKeyError(key), "header").breadCrumb(key))
+                    return MatchFailure(missingKeyToResult(MissingKeyError(key), "header").breadCrumb(key).copy(failureReason = highlightIfSOAPActionMismatch(key)))
             }
         }
 
         return MatchSuccess(parameters)
+    }
+
+    private fun highlightIfSOAPActionMismatch(missingKey: String) = when (withoutOptionality(missingKey)) {
+        "SOAPAction" -> FailureReason.SOAPActionMismatch
+        else -> null
     }
 
     private fun withoutIgnorableHeaders(headers: Map<String, String>, ancestorHeaders: Map<String, Pattern>): Map<String, String> {

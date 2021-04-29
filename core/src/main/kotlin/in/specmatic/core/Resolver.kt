@@ -5,10 +5,12 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.True
 import `in`.specmatic.core.value.Value
 
-sealed class KeyError
+sealed class KeyError {
+    abstract val name: String
+}
 
-data class MissingKeyError(val name: String) : KeyError()
-data class UnexpectedKeyError(val name: String) : KeyError()
+data class MissingKeyError(override val name: String) : KeyError()
+data class UnexpectedKeyError(override val name: String) : KeyError()
 
 data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Any>, actual: Map<String, Any>, UnexpectedKeyCheck) -> KeyError? = ::checkOnlyPatternKeys, val context: Map<String, String> = emptyMap()) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)

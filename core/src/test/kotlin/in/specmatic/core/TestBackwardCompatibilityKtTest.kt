@@ -974,4 +974,32 @@ Then status 200
         assertThat(results.failureCount).isOne()
         assertThat(results.success()).isFalse()
     }
+
+    @Test
+    fun `a contract with an optional and a required node in that order should be backward compatible with itself`() {
+        val docString = "\"\"\""
+        val gherkin =
+            """
+                Feature: test xml
+                    Scenario: Test xml
+                    Given type RequestBody
+                    $docString
+                        <parent>
+                            <optionalNode specmatic_occurs="optional" />
+                            <requiredNode />
+                        </parent>
+                    $docString
+                    When POST /
+                    And request-body (RequestBody)
+                    Then status 200
+            """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(gherkin)
+        val results = testBackwardCompatibility(feature, feature)
+
+        if (results.failureCount > 0)
+            println(results.report())
+
+        assertThat(results.success()).isTrue()
+    }
 }

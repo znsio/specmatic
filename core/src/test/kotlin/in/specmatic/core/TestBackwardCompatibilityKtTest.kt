@@ -345,7 +345,7 @@ Feature: Old contract
 
         println(result.report())
 
-        assertEquals(2, result.successCount)
+        assertEquals(3, result.successCount)
         assertEquals(1, result.failureCount)
     }
 

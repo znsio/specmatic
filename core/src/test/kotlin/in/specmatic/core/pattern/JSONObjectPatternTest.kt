@@ -274,7 +274,7 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
-    fun `creates four combinations per optional field with optional value with optional children`() {
+    fun `creates five combinations per optional field with optional value with optional children`() {
         val resolver = Resolver(newPatterns = mapOf("(Address)" to parsedPattern("""{"number": "(string)", "street?": "(string?)"}""")))
 
         val personPattern = parsedPattern("""{"name": "(string)", "address?": "(Address?)"}""")

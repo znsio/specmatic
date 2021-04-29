@@ -156,34 +156,23 @@ fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): 
     if (patternCollection.isEmpty())
         return listOf(emptyMap())
 
-    val optionalValues = patternCollection.filter { entry -> optionalValues(entry) }
+    val maxKeyValues = patternCollection.map { (_, value) -> value.size }.maxOrNull() ?: 0
 
-    val optionalValuesList = optionalValueCombinations(0..3, optionalValues)
-
-    val singleValues = patternCollection.filter { entry -> !optionalValues(entry) }
-
-    val parentsWithoutOptionalChildren = singleValues.filter { it.value.size == 1 }
-    val parentsWithOptionalChildren = singleValues.filter { it.value.size > 1 }
-
-    val parents = parentsWithoutOptionalChildren.map { entry ->
-        Pair(entry.key, entry.value[0])
-    }.toMap()
-
-    val parentsWithOptionalChildrenList = optionalValueCombinations(0..2, parentsWithOptionalChildren)
-
-    val mandatoryValueCombinations = when {
-        parentsWithOptionalChildren.isNotEmpty() -> parentsWithOptionalChildrenList.map { parents.plus(it) }.toList()
-        else -> listOf(parents)
-    }
-
-    return when {
-        patternCollection.any { entry -> optionalValues(entry) } -> {
-            mandatoryValueCombinations.map { mandatoryValues ->
-                optionalValuesList.map { it.plus(mandatoryValues) }.toList()
-            }.flatten()
+    return (0 until maxKeyValues).map {
+        keyCombinations(patternCollection) { key, value ->
+            when {
+                value.size > it -> key to value[it]
+                else -> key to value[0]
+            }
         }
-        else -> mandatoryValueCombinations
-    }
+    }.toList()
+}
+
+private fun <ValueType> keyCombinations(patternCollection: Map<String, List<ValueType>>,
+                                        optionalSelector: (String, List<ValueType>) -> Pair<String, ValueType>): Map<String, ValueType> {
+    return patternCollection.map { (key, value) ->
+        optionalSelector(key, value)
+    }.toMap()
 }
 
 private fun <ValueType> optionalValueCombinations(intRange: IntRange, optionalValues: Map<String, List<ValueType>>): List<Map<String, ValueType>> {

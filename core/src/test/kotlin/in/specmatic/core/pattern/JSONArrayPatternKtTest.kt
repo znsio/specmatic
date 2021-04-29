@@ -17,7 +17,7 @@ internal class JSONArrayPatternKtTest {
         assertThat(patterns).contains(JSONArrayPattern(listOf<Pattern>(NullPattern, NumberPattern)))
 
         println(patterns.size)
-        for(json in patterns) println(json)
+        for (json in patterns) println(json)
     }
 
     @Nested
@@ -53,7 +53,7 @@ internal class JSONArrayPatternKtTest {
 
         @Test
         fun `one result should have only the required types with order preserved`() {
-            assertThat(combinations).contains(listOf(NumberPattern), listOf(DateTimePattern))
+            assertThat(combinations).contains(listOf(NumberPattern, DateTimePattern))
         }
 
         @Test

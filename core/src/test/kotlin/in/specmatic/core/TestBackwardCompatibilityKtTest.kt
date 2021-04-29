@@ -976,7 +976,7 @@ Then status 200
     }
 
     @Test
-    fun temp() {
+    fun `a contract with an optional and a required node in that order should be backward compatible with itself`() {
         val docString = "\"\"\""
         val gherkin =
             """

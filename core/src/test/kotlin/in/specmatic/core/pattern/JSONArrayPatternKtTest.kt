@@ -3,6 +3,8 @@ package `in`.specmatic.core.pattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
 
 internal class JSONArrayPatternKtTest {
     @Test
@@ -18,11 +20,45 @@ internal class JSONArrayPatternKtTest {
         for(json in patterns) println(json)
     }
 
-    @Test
-    fun allOrNothingTest() {
-        val combinations = allOrNothingListCombinations(listOf(listOf(StringPattern, null), listOf(NumberPattern)))
-        assertThat(combinations[0]).isEqualTo(listOf(StringPattern, NumberPattern))
-        assertThat(combinations[1]).isEqualTo(listOf(NumberPattern))
-        println(combinations)
+    @Nested
+    @DisplayName("Given [optional, required]")
+    inner class FirstCompulsorySecondRequired {
+        private val combinations = allOrNothingListCombinations(listOf(listOf(StringPattern, null), listOf(NumberPattern)))
+
+        @Test
+        fun `two results should be generated`() {
+            assertThat(combinations).hasSize(2)
+        }
+
+        @Test
+        fun `one result should have only the required type`() {
+            assertThat(combinations).contains(listOf(NumberPattern))
+        }
+
+        @Test
+        fun `the other result should have both types with order preserved`() {
+            assertThat(combinations).contains(listOf(StringPattern, NumberPattern))
+        }
+    }
+
+    @Nested
+    @DisplayName("Given [optional, required, optional, required]")
+    inner class OneCompulsoryAndOneRequired {
+        private val combinations = allOrNothingListCombinations(listOf(listOf(StringPattern, null), listOf(NumberPattern), listOf(BooleanPattern, null), listOf(DateTimePattern)))
+
+        @Test
+        fun `two results should be generated`() {
+            assertThat(combinations).hasSize(2)
+        }
+
+        @Test
+        fun `one result should have only the required types with order preserved`() {
+            assertThat(combinations).contains(listOf(NumberPattern), listOf(DateTimePattern))
+        }
+
+        @Test
+        fun `the other result should have all the types with order preserved`() {
+            assertThat(combinations).contains(listOf(StringPattern, NumberPattern, BooleanPattern, DateTimePattern))
+        }
     }
 }

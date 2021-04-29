@@ -166,23 +166,20 @@ fun allOrNothingListCombinations(values: List<List<Pattern?>>): List<List<Patter
     if (values.isEmpty())
         return listOf(emptyList())
 
-    val optionalKeys = values.filter { it.contains(null) }
-    val mandatoryKeys = values.filter { !it.contains(null) }
+    val maxKeyValues = values.map { it.size }.maxOrNull() ?: 0
 
-    val maxOptionalKeyValues = optionalKeys.map { it.size }.maxOrNull() ?: 0
-    val maxMandatoryKeyValues = mandatoryKeys.map { it.size }.maxOrNull() ?: 0
-
-    val keyCombinations = (0 until maxOf(maxOptionalKeyValues, maxMandatoryKeyValues)).map {
+    return (0 until maxKeyValues).map {
         keyCombinations(values) { value ->
-            if (value.size > it) value[it] else value[0]
+            when {
+                value.size > it -> value[it]
+                else -> value[0]
+            }
         }
-    }
-
-    return keyCombinations as List<List<Pattern>>
+    } as List<List<Pattern>>
 }
 
-fun keyCombinations(values: List<List<Pattern?>>,
-                    optionalSelector: (List<Pattern?>) -> Pattern?): List<Pattern?> {
+private fun keyCombinations(values: List<List<Pattern?>>,
+                            optionalSelector: (List<Pattern?>) -> Pattern?): List<Pattern?> {
     return values.map {
         optionalSelector(it)
     }.toList().filterNotNull()

@@ -145,7 +145,9 @@ $headerString
 
             append("Content-Transfer-Encoding", "binary")
 
-            append(CONTENT_DISPOSITION, "form-data; name=${name}; filename=${filename.removePrefix("@")}")
+            val partFilePath = filename.removePrefix("@")
+            val partFileName = File(partFilePath).name
+            append(CONTENT_DISPOSITION, "form-data; name=${name}; filename=$partFileName")
         }, content.length) {
             content.input
         }

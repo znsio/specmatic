@@ -4,6 +4,9 @@ import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.StringValue
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.Path
+import kotlin.io.path.name
 
 sealed class MultiPartFormDataPattern(open val name: String) {
     abstract fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?>
@@ -62,7 +65,7 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
         return when {
             value !is MultiPartFileValue -> Failure("The contract expected a file, but got content instead.")
             name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}.", failureReason = FailureReason.PartNameMisMatch)
-            !filename.matches(StringValue(value.filename), resolver).isTrue() -> Failure("In the part named $name, the contract expected the filename to be ${filename.typeName}, but got ${value.filename}.", failureReason = FailureReason.PartNameMisMatch, cause = filename.matches(StringValue(value.filename), resolver) as Failure)
+            filenameMismatch(value, resolver) -> filenameMismatchError(value, resolver)
             contentType != null && value.contentType != contentType -> Failure("The contract expected ${contentType.let { "content type $contentType" }}, but got ${value.contentType?.let { "content type $value.contentType" } ?: "no content type."}.")
             contentEncoding != null && value.contentEncoding != contentEncoding -> {
                 val contentEncodingMessage = contentEncoding.let { "content encoding $contentEncoding" }
@@ -74,6 +77,38 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
             else -> Success()
         }
     }
+
+    private fun filenameMismatchError(
+        value: MultiPartFileValue,
+        resolver: Resolver
+    ) = when(filename) {
+        is ExactValuePattern -> {
+            Failure(
+                "In the part named $name, the contract expected the filename to end with ${filename.typeName}, but got ${value.filename}.",
+                failureReason = FailureReason.PartNameMisMatch
+            )
+        }
+        else -> Failure(
+            "In the part named $name, the contract expected the filename to be ${filename.typeName}, but got ${value.filename}.",
+            failureReason = FailureReason.PartNameMisMatch,
+            cause = filename.matches(StringValue(value.filename), resolver) as Failure
+        )
+    }
+
+    private fun filenameMismatch(
+        value: MultiPartFileValue,
+        resolver: Resolver
+    ) = when(filename) {
+        is ExactValuePattern -> {
+            val patternFilePath = filename.pattern.toStringValue()
+            fileNameFromPath(patternFilePath) != fileNameFromPath(value.filename)
+        }
+        else ->
+            !filename.matches(StringValue(value.filename), resolver).isTrue()
+    }
+
+    @OptIn(ExperimentalPathApi::class)
+    private fun fileNameFromPath(patternFilePath: String) = Path(patternFilePath).name
 
     override fun nonOptional(): MultiPartFormDataPattern {
         return copy(name = withoutOptionality(name))

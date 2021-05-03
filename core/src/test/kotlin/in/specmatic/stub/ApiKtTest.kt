@@ -288,14 +288,14 @@ Feature: Math API
     @Test
     fun `should load a stub with a file part and match such a request`() {
         val behaviour = parseGherkinStringToFeature("""
-Feature: Math API
-
-    Scenario: Square of a number
-        When POST /square
-        And request-part number @number.txt text/plain
-        Then status 200
-        And response-body (number)
-""".trim())
+            Feature: Math API
+            
+                Scenario: Square of a number
+                    When POST /square
+                    And request-part number @number.txt text/plain
+                    Then status 200
+                    And response-body (number)
+        """.trim())
 
         val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "number.txt", "text/plain", null)))
         val mock = ScenarioStub(request, HttpResponse.OK(10))
@@ -310,14 +310,14 @@ Feature: Math API
     @Test
     fun `should match multipart file part`() {
         val feature = parseGherkinStringToFeature("""
-Feature: Math API
-
-    Scenario: Square of a number
-        When POST /square
-        And request-part number @number.txt text/plain
-        Then status 200
-        And response-body (number)
-""".trim())
+            Feature: Math API
+            
+                Scenario: Square of a number
+                    When POST /square
+                    And request-part number @number.txt text/plain
+                    Then status 200
+                    And response-body (number)
+        """.trim())
 
         val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "number.txt", "text/plain", null)))
 

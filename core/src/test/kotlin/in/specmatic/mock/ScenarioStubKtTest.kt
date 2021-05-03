@@ -321,38 +321,40 @@ internal class ScenarioStubKtTest {
     @Test
     fun `converts mock json to gherkin`() {
         val mockText = """
-{
-  "http-request": {
-    "method": "POST",
-    "path": "/square",
-    "multipart-formdata": [
-      {
-        "name": "employees",
-        "filename": "@employees.csv",
-        "contentType": "text/csv",
-        "contentEncoding": "gzip"
-      }
-    ]
-  },
-
-  "http-response": {
-    "status": 200,
-    "body": 100
-  }
-}
+            {
+              "http-request": {
+                "method": "POST",
+                "path": "/square",
+                "multipart-formdata": [
+                  {
+                    "name": "employees",
+                    "filename": "@employees.csv",
+                    "contentType": "text/csv",
+                    "contentEncoding": "gzip"
+                  }
+                ]
+              },
+            
+              "http-response": {
+                "status": 200,
+                "body": 100
+              }
+            }
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
         validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
-  Scenario: New scenario
-    When POST /square
-    And request-part employees @(string) text/csv gzip
-    Then status 200
-    And response-body (number)
-  
-    Examples:
-    | employees_filename |
-    | employees.csv |""")
+          Scenario: New scenario
+            When POST /square
+            And request-part employees @(string) text/csv gzip
+            Then status 200
+            And response-body (number)
+          
+            Examples:
+            | employees_filename |
+            | employees.csv      |
+        """
+        )
     }
 
     @Test

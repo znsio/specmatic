@@ -610,13 +610,13 @@ Then status 200
     @Test
     fun `should generate a test with a multipart file part` () {
         val gherkin = """
-Feature: Dumb API
-
-Scenario: api call
-When POST /number
-And request-part number @number.txt text/plain
-Then status 200
-""".trim()
+            Feature: Dumb API
+            
+            Scenario: api call
+            When POST /number
+            And request-part number @number.txt text/plain
+            Then status 200
+        """.trim()
 
         val contract = parseGherkinStringToFeature(gherkin)
         val flags = mutableListOf<String>()
@@ -627,7 +627,7 @@ Then status 200
 
                 val part = request.multiPartFormData.single() as MultiPartFileValue
                 assertThat(part.name).isEqualTo("number")
-                assertThat(part.filename).isEqualTo("number.txt")
+                assertThat(part.filename).endsWith("/number.txt")
                 assertThat(part.contentType).isEqualTo("text/plain")
 
                 return HttpResponse.OK
@@ -644,13 +644,13 @@ Then status 200
     @Test
     fun `should generate a test with a multipart file part with no content type` () {
         val gherkin = """
-Feature: Dumb API
-
-Scenario: api call
-When POST /number
-And request-part number @number.txt
-Then status 200
-""".trim()
+            Feature: Dumb API
+            
+            Scenario: api call
+            When POST /number
+            And request-part number @number.txt
+            Then status 200
+        """.trim()
 
         val contract = parseGherkinStringToFeature(gherkin)
         val flags = mutableListOf<String>()
@@ -661,7 +661,7 @@ Then status 200
 
                 val part = request.multiPartFormData.single() as MultiPartFileValue
                 assertThat(part.name).isEqualTo("number")
-                assertThat(part.filename).isEqualTo("number.txt")
+                assertThat(part.filename).endsWith("/number.txt")
 
                 return HttpResponse.OK
             }

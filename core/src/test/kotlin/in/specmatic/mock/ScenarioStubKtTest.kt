@@ -344,16 +344,15 @@ internal class ScenarioStubKtTest {
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
         validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
-          Scenario: New scenario
-            When POST /square
-            And request-part employees @(string) text/csv gzip
-            Then status 200
-            And response-body (number)
-          
-            Examples:
-            | employees_filename |
-            | employees.csv      |
-        """
+  Scenario: New scenario
+    When POST /square
+    And request-part employees @(string) text/csv gzip
+    Then status 200
+    And response-body (number)
+  
+    Examples:
+    | employees_filename |
+    | employees.csv |"""
         )
     }
 

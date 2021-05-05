@@ -48,6 +48,8 @@ dependencies {
     implementation 'org.apache.kafka:kafka-clients:2.8.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.3'
 
+    implementation 'io.swagger.parser.v3:swagger-parser:2.0.25'
+
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
     testImplementation 'com.github.tomakehurst:wiremock-jre8:2.27.2'

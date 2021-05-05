@@ -14,10 +14,10 @@ fun toFeatures(openApiFile: String): List<Feature> {
     val openApi = OpenAPIV3Parser().read(openApiFile)
     val scenarioInfosMap = openApi.paths.map { (path, pathItem) ->
         val get = pathItem.get
-        path to toHttpResponsePattern(get.responses).map {
-            ScenarioInfo(scenarioName = get.summary,
+        path to toHttpResponsePattern(get.responses).map {(scenarioName, httpResponsePattern) ->
+            ScenarioInfo(scenarioName = "Request: " + get.summary + " Response: " + scenarioName,
                     httpRequestPattern = httpRequestPattern(path, get),
-                    httpResponsePattern = it
+                    httpResponsePattern = httpResponsePattern
             )
         }
     }.toMap()
@@ -38,10 +38,10 @@ fun toFeatures(openApiFile: String): List<Feature> {
     }
 }
 
-fun toHttpResponsePattern(responses: ApiResponses?): List<HttpResponsePattern> {
+fun toHttpResponsePattern(responses: ApiResponses?): List<Pair<String, HttpResponsePattern>> {
     return responses!!.map { (status, response) ->
         response.content.map { (contentType, mediaType) ->
-            HttpResponsePattern(headersPattern = HttpHeadersPattern(mapOf(toPatternPair("Content-Type", contentType))),
+            response.description to HttpResponsePattern(headersPattern = HttpHeadersPattern(mapOf(toPatternPair("Content-Type", contentType))),
                     status = status.toInt(),
                     body = toSpecmaticPattern(mediaType)
             )

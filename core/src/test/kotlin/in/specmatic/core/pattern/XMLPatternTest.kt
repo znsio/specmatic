@@ -130,7 +130,9 @@ internal class XMLPatternTest {
         }
 
         private fun XMLPattern.matches(value: XMLNode) {
-            assertThat(this.matches(value, Resolver())).isInstanceOf(Result.Success::class.java)
+            val result = this.matches(value, Resolver())
+            println(result.reportString())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
         }
 
         @Test

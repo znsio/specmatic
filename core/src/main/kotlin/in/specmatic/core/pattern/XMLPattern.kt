@@ -8,7 +8,6 @@ import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
-import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 
 const val SPECMATIC_XML_ATTRIBUTE_PREFIX = "${APPLICATION_NAME_LOWER_CASE}_"
 const val TYPE_ATTRIBUTE_NAME = "specmatic_type"
@@ -188,14 +187,18 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         val nothingEvenCameCloseError = lazy {
             when {
                 results.isNotEmpty() && results.last().remainder.isNotEmpty() -> {
-                    results.find {
-                        it.provisionalError != null
-                    }?.provisionalError?.result
-                            ?: if (results.last().remainder.size == 1) {
-                                Failure("Unexpected value found: ${results.last().remainder.first().toStringValue()}")
-                            } else {
-                                Failure("Unexpected values found: ${results.last().remainder.joinToString(", ") { it.toStringValue() }}")
-                            }
+                    val unexpectedValue = results.last().remainder.first()
+
+                    unexpectedValue.matchFailure()
+
+//                    results.find {
+//                        it.provisionalError != null
+//                    }?.provisionalError?.result
+//                            ?: if (results.last().remainder.size == 1) {
+//                                Failure("Unexpected value found: ${results.last().remainder.first().toStringValue()}")
+//                            } else {
+//                                Failure("Unexpected values found: ${results.last().remainder.joinToString(", ") { it.toStringValue() }}")
+//                            }
                 }
                 else -> null
             }

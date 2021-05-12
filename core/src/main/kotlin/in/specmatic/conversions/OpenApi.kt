@@ -12,11 +12,13 @@ import io.swagger.v3.parser.OpenAPIV3Parser
 
 fun toFeatures(openApiFile: String): List<Feature> {
     val openApi = OpenAPIV3Parser().read(openApiFile)
-    val scenarioInfosMap = openApi.paths.map { (path, pathItem) ->
+    val scenarioInfosMap = openApi.paths.map { (openApiPath, pathItem) ->
         val get = pathItem.get
-        path to toHttpResponsePattern(get.responses).map {(scenarioName, httpResponsePattern) ->
+        var specmaticPath = openApiPath
+        get.parameters.filter { it.`in` == "path" }.map { specmaticPath = specmaticPath.replace("{${it.name}}", "(${it.name}:number)") }
+        openApiPath to toHttpResponsePattern(get.responses).map { (scenarioName, httpResponsePattern) ->
             ScenarioInfo(scenarioName = "Request: " + get.summary + " Response: " + scenarioName,
-                    httpRequestPattern = httpRequestPattern(path, get),
+                    httpRequestPattern = httpRequestPattern(specmaticPath, get),
                     httpResponsePattern = httpResponsePattern
             )
         }

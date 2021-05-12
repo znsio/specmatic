@@ -1,19 +1,19 @@
 package `in`.specmatic.conversions
 
+import `in`.specmatic.core.HttpRequest
+import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
 import org.springframework.web.client.RestTemplate
 import java.io.File
 import java.net.URI
-import `in`.specmatic.core.*
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.BeforeEach
 import kotlin.test.assertTrue
 
 internal class OpenApiKtTest {
@@ -35,10 +35,17 @@ servers:
   - url: http://staging-api.example.com
     description: Optional server description, e.g. Internal staging server for testing
 paths:
-  /hello:
+  /hello/{id}:
     get:
       summary: hello world
       description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Numeric ID
       responses:
         '200':
           description: Says hello
@@ -51,6 +58,17 @@ paths:
         val openApiFile = File(OPENAPI_FILE)
         openApiFile.createNewFile()
         openApiFile.writeText(openAPI)
+
+        val openAPISpec = """
+#include openapi openApiTest.yaml            
+
+Feature: /hello
+
+Scenario Outline: get200
+    When GET /hello
+    Then status 200
+    And request-body 
+        """.trimIndent()
     }
 
     @AfterEach
@@ -64,7 +82,7 @@ paths:
 
         val response = HttpStub(feature).use { mock ->
             val restTemplate = RestTemplate()
-            restTemplate.exchange(URI.create("http://localhost:9000/hello"), HttpMethod.GET, null, String::class.java)
+            restTemplate.exchange(URI.create("http://localhost:9000/hello/1"), HttpMethod.GET, null, String::class.java)
         }
 
         assertThat(response.statusCodeValue).isEqualTo(200)
@@ -80,7 +98,7 @@ paths:
                 object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         flags["executed"] = true
-                        Assertions.assertEquals("/hello", request.path)
+                        assertThat(request.path).matches("""\/hello\/[0-9]+""")
                         val headers: HashMap<String, String> = object : HashMap<String, String>() {
                             init {
                                 put("Content-Type", "application/json")
@@ -108,7 +126,7 @@ paths:
                 object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         flags["executed"] = true
-                        Assertions.assertEquals("/hello", request.path)
+                        assertThat(request.path).matches("""\/hello\/[0-9]+""")
                         val headers: HashMap<String, String> = object : HashMap<String, String>() {
                             init {
                                 put("Content-Type", "application/json")

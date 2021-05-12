@@ -13,6 +13,7 @@ import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.test.TestExecutor
+import java.io.File
 import java.net.URI
 
 fun parseGherkinStringToFeature(gherkinData: String, filePath: String = ""): Feature {
@@ -253,7 +254,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
             "FORM-FIELD" ->
                 scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(formFieldsPattern = plusFormFields(scenarioInfo.httpRequestPattern.formFieldsPattern, step.rest, step.rowsList)))
             "REQUEST-PART" ->
-                scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(multiPartFormDataPattern = scenarioInfo.httpRequestPattern.multiPartFormDataPattern.plus(toFormDataPart(step))))
+                scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(multiPartFormDataPattern = scenarioInfo.httpRequestPattern.multiPartFormDataPattern.plus(toFormDataPart(step, filePath))))
             "KAFKA-MESSAGE" ->
                 scenarioInfo.copy(kafkaMessage = toAsyncMessage(step))
             "VALUE" ->
@@ -329,7 +330,7 @@ fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
     }
 }
 
-fun toFormDataPart(step: StepInfo): MultiPartFormDataPattern {
+fun toFormDataPart(step: StepInfo, contractFilePath: String): MultiPartFormDataPattern {
     val parts = breakIntoPartsMaxLength(step.rest, 4)
 
     if(parts.size < 2)
@@ -342,9 +343,18 @@ fun toFormDataPart(step: StepInfo): MultiPartFormDataPattern {
             val contentType = parts.getOrNull(2)
             val contentEncoding = parts.getOrNull(3)
 
-            val filename = content.removePrefix("@")
+            val multipartFilename = content.removePrefix("@")
 
-            MultiPartFilePattern(name, parsedPattern(filename), contentType, contentEncoding)
+            val expandedFilenamePattern = when(val filenamePattern = parsedPattern(multipartFilename)) {
+                is ExactValuePattern -> {
+                    val multipartFilePath = File(contractFilePath).absoluteFile.parentFile.resolve(multipartFilename).absolutePath
+                    ExactValuePattern(StringValue(multipartFilePath))
+                }
+                else ->
+                    filenamePattern
+            }
+
+            MultiPartFilePattern(name, expandedFilenamePattern, contentType, contentEncoding)
         }
         isPatternToken(content) -> {
             MultiPartContentPattern(name, parsedPattern(content))

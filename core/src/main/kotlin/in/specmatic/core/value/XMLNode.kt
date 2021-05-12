@@ -4,6 +4,7 @@ import org.w3c.dom.Attr
 import org.w3c.dom.Document
 import org.w3c.dom.Node
 import `in`.specmatic.core.ExampleDeclarations
+import `in`.specmatic.core.Result
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.XMLPattern
@@ -116,6 +117,9 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
         return newElement
     }
+
+    override fun matchFailure(): Result.Failure =
+        Result.Failure("Found unexpected child node named \"${realName}\"")
 
     override fun displayableValue(): String = toStringValue()
 

@@ -121,7 +121,8 @@ class FeatureKtTest {
 
         val pattern = feature.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
-        assertThat(pattern.filename).isEqualTo(ExactValuePattern(StringValue("customer_info.csv")))
+        val filename = (pattern.filename as ExactValuePattern).pattern.toStringValue()
+        assertThat(filename).endsWith("/customer_info.csv")
         assertThat(pattern.contentType).isEqualTo("text/csv")
         assertThat(pattern.contentEncoding).isEqualTo("gzip")
     }
@@ -139,7 +140,8 @@ class FeatureKtTest {
 
         val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
-        assertThat(pattern.filename).isEqualTo(ExactValuePattern(StringValue("customer_info.csv")))
+        val filename = (pattern.filename as ExactValuePattern).pattern.toStringValue()
+        assertThat(filename).endsWith("/customer_info.csv")
         assertThat(pattern.contentType).isEqualTo("text/csv")
         assertThat(pattern.contentEncoding).isEqualTo(null)
     }
@@ -157,7 +159,8 @@ class FeatureKtTest {
 
         val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
-        assertThat(pattern.filename).isEqualTo(ExactValuePattern(StringValue("customer_info.csv")))
+        val filename = (pattern.filename as ExactValuePattern).pattern.toStringValue()
+        assertThat(filename).endsWith("/customer_info.csv")
         assertThat(pattern.contentType).isEqualTo(null)
         assertThat(pattern.contentEncoding).isEqualTo(null)
     }

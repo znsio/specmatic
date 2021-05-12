@@ -321,25 +321,25 @@ internal class ScenarioStubKtTest {
     @Test
     fun `converts mock json to gherkin`() {
         val mockText = """
-{
-  "http-request": {
-    "method": "POST",
-    "path": "/square",
-    "multipart-formdata": [
-      {
-        "name": "employees",
-        "filename": "@employees.csv",
-        "contentType": "text/csv",
-        "contentEncoding": "gzip"
-      }
-    ]
-  },
-
-  "http-response": {
-    "status": 200,
-    "body": 100
-  }
-}
+            {
+              "http-request": {
+                "method": "POST",
+                "path": "/square",
+                "multipart-formdata": [
+                  {
+                    "name": "employees",
+                    "filename": "@employees.csv",
+                    "contentType": "text/csv",
+                    "contentEncoding": "gzip"
+                  }
+                ]
+              },
+            
+              "http-response": {
+                "status": 200,
+                "body": 100
+              }
+            }
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
@@ -352,7 +352,8 @@ internal class ScenarioStubKtTest {
   
     Examples:
     | employees_filename |
-    | employees.csv |""")
+    | employees.csv |"""
+        )
     }
 
     @Test

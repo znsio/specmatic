@@ -2,6 +2,7 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
+import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
@@ -11,14 +12,28 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import java.io.File
 import java.net.URI
 import kotlin.test.assertTrue
 
+
 internal class OpenApiKtTest {
     companion object {
         const val OPENAPI_FILE = "openApiTest.yaml"
+
+        val openAPISpec = """
+Feature: openapi /hello/{id}
+
+Background:
+  Given openapi openApiTest.yaml            
+
+Scenario: openapi GET zero id is not found
+  When GET /hello/0
+  Then status 404
+        """.trimIndent()
     }
 
     @BeforeEach
@@ -59,16 +74,6 @@ paths:
         openApiFile.createNewFile()
         openApiFile.writeText(openAPI)
 
-        val openAPISpec = """
-#include openapi openApiTest.yaml            
-
-Feature: /hello
-
-Scenario Outline: get200
-    When GET /hello
-    Then status 200
-    And request-body 
-        """.trimIndent()
     }
 
     @AfterEach
@@ -148,5 +153,26 @@ Scenario Outline: get200
 
             Expected status: 200, actual: 400
         """.trimIndent())
+    }
+
+    @Test
+    fun `should create stub from gherkin that includes OpenAPI spec`() {
+        val feature = parseGherkinStringToFeature(openAPISpec)
+
+        val response = HttpStub(feature).use { mock ->
+            val restTemplate = RestTemplate()
+            restTemplate.exchange(URI.create("http://localhost:9000/hello/1"), HttpMethod.GET, null, String::class.java)
+        }
+
+        assertThat(response.statusCodeValue).isEqualTo(200)
+
+        HttpStub(feature).use { mock ->
+            val restTemplate = RestTemplate()
+            try {
+                restTemplate.exchange(URI.create("http://localhost:9000/hello/0"), HttpMethod.GET, null, String::class.java)
+            } catch (e: HttpClientErrorException) {
+                assertThat(e.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+            }
+        }
     }
 }

@@ -40,6 +40,21 @@ fun toFeatures(openApiFile: String): List<Feature> {
     }
 }
 
+fun toScenarioInfos(openApiFile: String): List<ScenarioInfo> {
+    val openApi = OpenAPIV3Parser().read(openApiFile)
+    return openApi.paths.map { (openApiPath, pathItem) ->
+        val get = pathItem.get
+        var specmaticPath = openApiPath
+        get.parameters.filter { it.`in` == "path" }.map { specmaticPath = specmaticPath.replace("{${it.name}}", "(${it.name}:number)") }
+        toHttpResponsePattern(get.responses).map { (scenarioName, httpResponsePattern) ->
+            ScenarioInfo(scenarioName = "Request: " + get.summary + " Response: " + scenarioName,
+                    httpRequestPattern = httpRequestPattern(specmaticPath, get),
+                    httpResponsePattern = httpResponsePattern
+            )
+        }
+    }.flatten()
+}
+
 fun toHttpResponsePattern(responses: ApiResponses?): List<Pair<String, HttpResponsePattern>> {
     return responses!!.map { (status, response) ->
         response.content.map { (contentType, mediaType) ->

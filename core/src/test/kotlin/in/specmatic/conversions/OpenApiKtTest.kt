@@ -3,6 +3,7 @@ package `in`.specmatic.conversions
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
@@ -12,11 +13,11 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
-import org.springframework.http.HttpStatus
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import java.io.File
 import java.net.URI
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 
@@ -25,13 +26,24 @@ internal class OpenApiKtTest {
         const val OPENAPI_FILE = "openApiTest.yaml"
 
         val openAPISpec = """
-Feature: openapi /hello/{id}
+Feature: Hello world
 
 Background:
   Given openapi openApiTest.yaml            
 
-Scenario: openapi GET zero id is not found
+Scenario: zero should return not found
   When GET /hello/0
+  Then status 404
+        """.trimIndent()
+
+        val specThatIsNotAsPerOpenApiSpec = """
+Feature: Hello world
+
+Background:
+  Given openapi openApiTest.yaml            
+
+Scenario: sending string instead of number
+  When GET /hello/test
   Then status 404
         """.trimIndent()
     }
@@ -171,8 +183,16 @@ paths:
             try {
                 restTemplate.exchange(URI.create("http://localhost:9000/hello/0"), HttpMethod.GET, null, String::class.java)
             } catch (e: HttpClientErrorException) {
-                assertThat(e.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+                assertThat(e.statusCode).isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND)
             }
         }
+    }
+
+    @Test
+    fun `should throw error when scenario in Gherkin does not match included OpenAPI spec`() {
+        val (errorMessage, _, _, _) = assertFailsWith<ContractException> {
+            parseGherkinStringToFeature(specThatIsNotAsPerOpenApiSpec)
+        }
+        assertThat(errorMessage).isEqualTo("""Scenario: "sending string instead of number" is not part of OpenApi spec""")
     }
 }

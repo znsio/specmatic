@@ -225,7 +225,7 @@ private fun toFacts(rest: String, fixtures: Map<String, Value>): Map<String, Val
     }
 }
 
-private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, featureTags: List<GherkinDocument.Feature.Tag>, backgroundScenarioInfo: ScenarioInfo, filePath: String): ScenarioInfo {
+private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, featureTags: List<GherkinDocument.Feature.Tag>, backgroundScenarioInfo: ScenarioInfo, filePath: String, openApiScenarioInfos: List<ScenarioInfo>?): ScenarioInfo {
     val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList, it) }.filterNot { it.isEmpty }
 
     val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo) { scenarioInfo, step ->
@@ -282,6 +282,11 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
     val ignoreFailure = when {
         tags.asSequence().map { it.uppercase() }.contains("@WIP") -> true
         else -> false
+    }
+
+    if (!openApiScenarioInfos.isNullOrEmpty() &&
+            !openApiScenarioInfos!!.any { it.httpRequestPattern.matches(parsedScenarioInfo.httpRequestPattern.generate(Resolver()), Resolver()).isTrue() }) {
+        throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" is not part of OpenApi spec""")
     }
 
     return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)), ignoreFailure = ignoreFailure)
@@ -417,15 +422,15 @@ internal fun lex(gherkinDocument: GherkinDocument, filePath: String = ""): Pair<
         Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.childrenList, filePath))
 
 internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, filePath: String): List<Scenario> {
-    val list: List<ScenarioInfo>? = backgroundOpenApi(featureChildren)?.let {
+    val openApiScenarioInfos: List<ScenarioInfo>? = backgroundOpenApi(featureChildren)?.let {
         toScenarioInfos(it.text.split(" ")[1])
     }
-    val map: List<ScenarioInfo> = scenarios(featureChildren).map { featureChild ->
+    val specmaticScenarioInfos: List<ScenarioInfo> = scenarios(featureChildren).map { featureChild ->
         if (featureChild.scenario.name.isBlank())
             throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
 
         val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
-            lexScenario(feature.background.stepsList.filter { !it.text.contains("openapi", true) }, listOf(), emptyList(), ScenarioInfo(), filePath)
+            lexScenario(feature.background.stepsList.filter { !it.text.contains("openapi", true) }, listOf(), emptyList(), ScenarioInfo(), filePath, listOf())
         } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
 
         lexScenario(
@@ -433,10 +438,11 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, fi
                 featureChild.scenario.examplesList,
                 featureChild.scenario.tagsList,
                 backgroundInfoCopy,
-                filePath
+                filePath,
+                openApiScenarioInfos
         )
     }
-    return map.plus(list!!).map { scenarioInfo ->
+    return specmaticScenarioInfos.plus(openApiScenarioInfos.orEmpty()).map { scenarioInfo ->
         Scenario(
                 scenarioInfo.scenarioName,
                 scenarioInfo.httpRequestPattern,

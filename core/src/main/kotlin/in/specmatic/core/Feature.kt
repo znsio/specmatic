@@ -284,9 +284,13 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
         else -> false
     }
 
-    if (!openApiScenarioInfos.isNullOrEmpty() &&
-            !openApiScenarioInfos!!.any { it.httpRequestPattern.matches(parsedScenarioInfo.httpRequestPattern.generate(Resolver()), Resolver()).isTrue() }) {
-        throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" is not part of OpenApi spec""")
+    if (!openApiScenarioInfos.isNullOrEmpty() && steps.isNotEmpty()) {
+        if (!openApiScenarioInfos!!.any { it.httpRequestPattern.matches(parsedScenarioInfo.httpRequestPattern.generate(Resolver()), Resolver()).isTrue() }) {
+            throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" request is not as per OpenApi spec""")
+        }
+        if (!openApiScenarioInfos!!.any { it.httpResponsePattern.matches(parsedScenarioInfo.httpResponsePattern.generateResponse(Resolver()), Resolver()).isTrue() }) {
+            throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" response is not as per OpenApi spec""")
+        }
     }
 
     return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)), ignoreFailure = ignoreFailure)
@@ -442,7 +446,7 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, fi
                 openApiScenarioInfos
         )
     }
-    return specmaticScenarioInfos.plus(openApiScenarioInfos.orEmpty()).map { scenarioInfo ->
+    return specmaticScenarioInfos.plus(openApiScenarioInfos.orEmpty().filter { it.httpResponsePattern.status in 200..299 }).map { scenarioInfo ->
         Scenario(
                 scenarioInfo.scenarioName,
                 scenarioInfo.httpRequestPattern,

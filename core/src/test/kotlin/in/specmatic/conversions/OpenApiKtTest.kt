@@ -47,6 +47,7 @@ Background:
 Scenario: sending string instead of number should return not found
   When GET /hello/test
   Then status 404
+  And response-header Content-Type application/json
         """.trimIndent()
 
         val openAPISpec2 = """
@@ -58,6 +59,7 @@ Background:
 Scenario: zero should return forbidden
   When GET /hello/0
   Then status 403
+  And response-header Content-Type application/json
         """.trimIndent()
     }
 

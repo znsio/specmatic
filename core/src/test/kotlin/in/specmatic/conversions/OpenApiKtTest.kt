@@ -8,7 +8,6 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
@@ -38,7 +37,7 @@ Scenario: zero should return not found
   And response-header Content-Type application/json
         """.trimIndent()
 
-        val specThatIsNotAsPerOpenApiSpec = """
+        val gherkinScenarioWithPathParameterDataTypeThatDoesNotMatchOpenAPI = """
 Feature: Hello world
 
 Background:
@@ -50,7 +49,7 @@ Scenario: sending string instead of number should return not found
   And response-header Content-Type application/json
         """.trimIndent()
 
-        val openAPISpec2 = """
+        val gherkinScenarioWithResponseCodeNotDefinedInOpenAPI = """
 Feature: Hello world
 
 Background:
@@ -101,6 +100,12 @@ paths:
             application/json:
               schema:
                 error: 'Not Found'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                error: 'Bad Request'
     """.trim()
 
         val openApiFile = File(OPENAPI_FILE)
@@ -112,80 +117,6 @@ paths:
     @AfterEach
     fun `teardown`() {
         File(OPENAPI_FILE).delete()
-    }
-
-    @Ignore
-    fun `should create stub from OpenAPI spec`() {
-        val feature = toFeatures(File(OPENAPI_FILE).absolutePath)
-
-        val response = HttpStub(feature).use { mock ->
-            val restTemplate = RestTemplate()
-            restTemplate.exchange(URI.create("http://localhost:9000/hello/1"), HttpMethod.GET, null, String::class.java)
-        }
-
-        assertThat(response.statusCodeValue).isEqualTo(200)
-    }
-
-    @Ignore
-    fun `should create test from OpenAPI spec`() {
-        val flags = mutableMapOf<String, Boolean>()
-
-        val feature = toFeatures(File(OPENAPI_FILE).absolutePath)
-
-        val results = feature[0].executeTests(
-                object : TestExecutor {
-                    override fun execute(request: HttpRequest): HttpResponse {
-                        flags["executed"] = true
-                        assertThat(request.path).matches("""\/hello\/[0-9]+""")
-                        val headers: HashMap<String, String> = object : HashMap<String, String>() {
-                            init {
-                                put("Content-Type", "application/json")
-                            }
-                        }
-                        return HttpResponse(200, "", headers)
-                    }
-
-                    override fun setServerState(serverState: Map<String, Value>) {
-                    }
-                }
-        )
-
-        assertThat(flags["executed"]).isTrue
-        assertTrue(results.success(), results.report())
-    }
-
-    @Ignore
-    fun `should report error on test from OpenAPI spec with scenario name`() {
-        val flags = mutableMapOf<String, Boolean>()
-
-        val feature = toFeatures(File(OPENAPI_FILE).absolutePath)
-
-        val results = feature[0].executeTests(
-                object : TestExecutor {
-                    override fun execute(request: HttpRequest): HttpResponse {
-                        flags["executed"] = true
-                        assertThat(request.path).matches("""\/hello\/[0-9]+""")
-                        val headers: HashMap<String, String> = object : HashMap<String, String>() {
-                            init {
-                                put("Content-Type", "application/json")
-                            }
-                        }
-                        return HttpResponse(400, "Error", headers)
-                    }
-
-                    override fun setServerState(serverState: Map<String, Value>) {
-                    }
-                }
-        )
-
-        assertThat(flags["executed"]).isTrue
-        assertFalse(results.success())
-        assertThat(results.report()).isEqualTo("""
-            In scenario "Request: hello world Response: Says hello"
-            >> RESPONSE.STATUS
-
-            Expected status: 200, actual: 400
-        """.trimIndent())
     }
 
     @Test
@@ -289,7 +220,7 @@ paths:
     @Test
     fun `should throw error when request in Gherkin scenario does not match included OpenAPI spec`() {
         val (errorMessage, _, _, _) = assertFailsWith<ContractException> {
-            parseGherkinStringToFeature(specThatIsNotAsPerOpenApiSpec)
+            parseGherkinStringToFeature(gherkinScenarioWithPathParameterDataTypeThatDoesNotMatchOpenAPI)
         }
         assertThat(errorMessage).isEqualTo("""Scenario: "sending string instead of number should return not found" request is not as per OpenApi spec""")
     }
@@ -297,7 +228,7 @@ paths:
     @Test
     fun `should throw error when response code in Gherkin scenario does not match included OpenAPI spec`() {
         val (errorMessage, _, _, _) = assertFailsWith<ContractException> {
-            parseGherkinStringToFeature(openAPISpec2)
+            parseGherkinStringToFeature(gherkinScenarioWithResponseCodeNotDefinedInOpenAPI)
         }
         assertThat(errorMessage).isEqualTo("""Scenario: "zero should return forbidden" response is not as per OpenApi spec""")
     }

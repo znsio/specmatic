@@ -32,7 +32,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
             intercept(ApplicationCallPipeline.Call) {
                 val httpRequest = ktorHttpRequestToHttpRequest(call)
 
-                when(httpRequest.method?.toUpperCase()) {
+                when(httpRequest.method?.uppercase()) {
                     "CONNECT" -> {
                         val errorResponse = HttpResponse(400, "CONNECT is not supported")
                         println(listOf(httpRequestLog(httpRequest), httpResponseLog(errorResponse)).joinToString(System.lineSeparator()))
@@ -74,9 +74,9 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
     }
 
     private fun withoutContentEncodingGzip(httpResponse: HttpResponse): HttpResponse {
-        val contentEncodingKey = httpResponse.headers.keys.find { it.toLowerCase() == "content-encoding" } ?: "Content-Encoding"
+        val contentEncodingKey = httpResponse.headers.keys.find { it.lowercase() == "content-encoding" } ?: "Content-Encoding"
         return when {
-            httpResponse.headers[contentEncodingKey]?.toLowerCase()?.contains("gzip") == true ->
+            httpResponse.headers[contentEncodingKey]?.lowercase()?.contains("gzip") == true ->
                 httpResponse.copy(headers = httpResponse.headers.minus(contentEncodingKey))
             else ->
                 httpResponse

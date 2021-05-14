@@ -8,6 +8,7 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.XMLPattern
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.newBuilder
 import `in`.specmatic.core.utilities.parseXML
 
@@ -182,7 +183,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
     }
 
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> {
-        val newTypeName = exampleDeclarations.getNewName(key.capitalize(), types.keys)
+        val newTypeName = exampleDeclarations.getNewName(key.capitalizeFirstChar(), types.keys)
 
         val typeDeclaration = TypeDeclaration("($newTypeName)", types.plus(newTypeName to XMLPattern(this, key)))
 

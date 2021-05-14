@@ -276,8 +276,8 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     val headerString = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
     val textContent = TextContent(httpResponse.body.toStringValue(), ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
 
-    val headersControlledByEngine = HttpHeaders.UnsafeHeadersList.map { it.toLowerCase() }
-    for ((name, value) in httpResponse.headers.filterNot { it.key.toLowerCase() in headersControlledByEngine }) {
+    val headersControlledByEngine = HttpHeaders.UnsafeHeadersList.map { it.lowercase() }
+    for ((name, value) in httpResponse.headers.filterNot { it.key.lowercase() in headersControlledByEngine }) {
         call.response.headers.append(name, value)
     }
 

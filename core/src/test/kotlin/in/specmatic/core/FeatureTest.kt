@@ -886,7 +886,7 @@ Then status 200
 
     companion object {
         @JvmStatic
-        private fun singleFeatureContractSource(): Stream<Arguments> {
+        fun singleFeatureContractSource(): Stream<Arguments> {
             val featureData = arrayOf(
                     "Feature: Contract for /balance API\n\n" +
                             "  Scenario: api call\n\n" +

@@ -22,7 +22,7 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS, override val type
     }
 
     override fun generate(resolver: Resolver): StringValue =
-            StringValue("${scheme.prefix}${randomString().toLowerCase()}.com/${randomString().toLowerCase()}")
+            StringValue("${scheme.prefix}${randomString().lowercase()}.com/${randomString().lowercase()}")
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
 

@@ -12,5 +12,5 @@ enum class SOAPMessageType {
     };
 
     abstract val qontractBodyType: String
-    val messageTypeName: String = this.name.toLowerCase()
+    val messageTypeName: String = this.name.lowercase()
 }

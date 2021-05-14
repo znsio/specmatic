@@ -45,7 +45,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         return copy(path = path, queryParams = queryParams)
     }
 
-    fun updateMethod(name: String): HttpRequest = copy(method = name.toUpperCase())
+    fun updateMethod(name: String): HttpRequest = copy(method = name.uppercase())
 
     private fun updateBody(contentBuffer: ByteBuf) {
         val bodyString = contentBuffer.toString(Charset.defaultCharset())

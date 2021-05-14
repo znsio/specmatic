@@ -232,7 +232,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
                         throw Exception("Could not parse the contract URL \"${step.rest}\" in scenario \"${scenarioInfo.scenarioName}\"", e)
                     }
 
-                    scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(urlMatcher = urlMatcher, method = step.keyword.toUpperCase()))
+                    scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(urlMatcher = urlMatcher, method = step.keyword.uppercase()))
                 } ?: throw ContractException("Line ${step.line}: $step.text")
             }
             "REQUEST-HEADER" ->
@@ -274,7 +274,7 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
 
     val tags = featureTags.map { tag -> tag.name }
     val ignoreFailure = when {
-        tags.asSequence().map { it.toUpperCase() }.contains("@WIP") -> true
+        tags.asSequence().map { it.uppercase() }.contains("@WIP") -> true
         else -> false
     }
 

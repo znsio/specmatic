@@ -218,7 +218,7 @@ fun guessType(value: Value): Value = when(value) {
     is StringValue -> try {
         when {
             isNumber(value) -> NumberValue(convertToNumber(value.string))
-            value.string.toLowerCase() in listOf("true", "false") -> BooleanValue(value.string.toLowerCase().toBoolean())
+            value.string.lowercase() in listOf("true", "false") -> BooleanValue(value.string.lowercase().toBoolean())
             value.string.startsWith("{") || value.string.startsWith("[") -> parsedJSON(value.string)
             value.string.startsWith("<") -> toXMLNode(parseXML(value.string))
             else -> value

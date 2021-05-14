@@ -9,7 +9,7 @@ plugins {
 
 apply plugin: "jacoco"
 jacoco {
-    toolVersion = "0.8.5"
+    toolVersion = "0.8.7"
 }
 
 application {
@@ -36,7 +36,7 @@ repositories {
     }
 }
 
-def ktor_version = "1.5.3"
+def ktor_version = "1.5.4"
 def junit_version = "5.7.1"
 def jgit_version = "5.11.0.202103091610-r"
 

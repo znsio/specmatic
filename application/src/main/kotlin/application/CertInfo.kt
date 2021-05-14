@@ -33,7 +33,7 @@ private fun createKeyStore(keyStoreDirPath: String, keyStorePassword: String, ke
 
 private fun loadKeyStoreFromFile(keyStoreFile: String, keyStorePassword: String): KeyStore {
     val certFilePath = File(keyStoreFile)
-    val keyStoreType = when (certFilePath.extension.toLowerCase()) {
+    val keyStoreType = when (certFilePath.extension.lowercase()) {
         "jks" -> "JKS"
         "pfx" -> "PKCS12"
         else -> exitWithMessage("The certificate file must be either in Java Key Store or PKCS12 format")

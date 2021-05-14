@@ -286,7 +286,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             }.find { it is Failure } ?: Success()
 
     private fun <ValueType> ignoreXMLNamespaces(attributes: Map<String, ValueType>): Map<String, ValueType> =
-            attributes.filterNot { it.key.toLowerCase().startsWith("xmlns:") }
+            attributes.filterNot { it.key.lowercase().startsWith("xmlns:") }
 
     private fun expectingEmpty(sampleData: XMLNode, type: Pattern, resolver: Resolver): Boolean {
         val resolvedPatternSet = type.patternSet(resolver).map { resolvedHop(it, resolver) }

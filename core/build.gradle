@@ -8,7 +8,7 @@ plugins {
 
 apply plugin: "jacoco"
 jacoco {
-    toolVersion = "0.8.5"
+    toolVersion = "0.8.7"
 }
 
 repositories {
@@ -22,7 +22,7 @@ repositories {
     }
 }
 
-def ktor_version = "1.5.3"
+def ktor_version = "1.5.4"
 def karate_version = "0.9.6"
 def jgit_version = "5.11.0.202103091610-r"
 
@@ -37,7 +37,8 @@ dependencies {
     implementation "io.ktor:ktor-client-apache:$ktor_version"
     implementation "io.ktor:ktor-client-features:$ktor_version"
 
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.1.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.2.1"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.5.0"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 

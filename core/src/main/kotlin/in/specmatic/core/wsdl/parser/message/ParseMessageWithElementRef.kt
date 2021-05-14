@@ -1,6 +1,7 @@
 package `in`.specmatic.core.wsdl.parser.message
 
 import `in`.specmatic.core.pattern.XMLPattern
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.XMLNode
 import `in`.specmatic.core.wsdl.parser.SOAPMessageType
@@ -11,7 +12,7 @@ data class ParseMessageWithElementRef(private val wsdl: WSDL, private val wsdlTy
     override fun execute(): MessageTypeInfoParser {
         val topLevelElement = wsdl.getSOAPElement(wsdlTypeReference)
 
-        val qontractTypeName = "${operationName.replace(":", "_")}${soapMessageType.messageTypeName.capitalize()}"
+        val qontractTypeName = "${operationName.replace(":", "_")}${soapMessageType.messageTypeName.capitalizeFirstChar()}"
 
         val typeInfo = topLevelElement.getQontractTypes(qontractTypeName, existingTypes, emptySet())
 

@@ -2,6 +2,7 @@ package `in`.specmatic.core.value
 
 import `in`.specmatic.core.ExampleDeclarations
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.valueMapToPrettyJsonString
 
 data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Value {
@@ -22,7 +23,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
             DeferredPattern(it.value.pattern)
         })
 
-        val newTypeName = exampleDeclarations.getNewName(key.capitalize(), newTypes.keys)
+        val newTypeName = exampleDeclarations.getNewName(key.capitalizeFirstChar(), newTypes.keys)
 
         val typeDeclaration = TypeDeclaration("($newTypeName)", newTypes.plus(newTypeName to newType))
 

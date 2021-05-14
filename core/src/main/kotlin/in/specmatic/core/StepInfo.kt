@@ -6,7 +6,7 @@ data class StepInfo(val text: String, val rowsList: MutableList<Messages.Gherkin
     val line = text.trim()
     val words = line.split("\\s+".toRegex(), 2)
     val originalKeyword = words[0]
-    val keyword = originalKeyword.toUpperCase()
+    val keyword = originalKeyword.uppercase()
     val rest = if (words.size == 2) words[1] else ""
 
     val docString: String = if(raw.hasDocString()) raw.docString.content else ""

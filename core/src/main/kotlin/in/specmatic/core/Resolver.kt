@@ -1,6 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.True
 import `in`.specmatic.core.value.Value
@@ -107,8 +108,8 @@ internal val checkAllKeys = { pattern: Map<String, Any>, actual: Map<String, Any
 
 fun missingKeyToResult(keyError: KeyError, keyLabel: String): Result.Failure {
     val message = when(keyError) {
-        is MissingKeyError -> "Expected ${keyLabel.toLowerCase()} named \"${keyError.name}\" was missing"
-        is UnexpectedKeyError -> "${keyLabel.toLowerCase().capitalize()} named \"${keyError.name}\" was unexpected"
+        is MissingKeyError -> "Expected ${keyLabel.lowercase()} named \"${keyError.name}\" was missing"
+        is UnexpectedKeyError -> "${keyLabel.lowercase().capitalizeFirstChar()} named \"${keyError.name}\" was unexpected"
     }
 
     return Result.Failure(message)

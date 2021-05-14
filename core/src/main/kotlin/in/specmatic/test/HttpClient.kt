@@ -67,10 +67,10 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
             val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
                 this.method = HttpMethod.parse(requestWithFileContent.method as String)
 
-                val listOfExcludedHeaders = HttpHeaders.UnsafeHeadersList.map { it.toLowerCase() }
+                val listOfExcludedHeaders = HttpHeaders.UnsafeHeadersList.map { it.lowercase() }
 
                 requestWithFileContent.headers
-                        .map {Triple(it.key.trim(), it.key.trim().toLowerCase(), it.value.trim())}
+                        .map {Triple(it.key.trim(), it.key.trim().lowercase(), it.value.trim())}
                         .filter { (_, loweredKey, _) -> loweredKey !in listOfExcludedHeaders }
                         .forEach { (key, _, value) ->
                             this.headers[key] = value

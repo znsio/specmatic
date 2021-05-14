@@ -216,7 +216,7 @@ fun createIfDoesNotExist(workingDirectoryPath: String) {
 
 fun exitIfDoesNotExist(label: String, filePath: String) {
     if(!File(filePath).exists())
-        exitWithMessage("${label.capitalize()} $filePath does not exist")
+        exitWithMessage("${label.capitalizeFirstChar()} $filePath does not exist")
 }
 
 // Used by SpecmaticJUnitSupport users for loading contracts to stub or mock
@@ -265,3 +265,5 @@ internal fun withNullPattern(resolver: Resolver): Resolver {
 
 internal fun withNumberType(resolverWithNullType: Resolver) =
         resolverWithNullType.copy(newPatterns = resolverWithNullType.newPatterns.plus("(number)" to NumberPattern))
+
+fun String.capitalizeFirstChar() = this.replaceFirstChar { it.uppercase() }

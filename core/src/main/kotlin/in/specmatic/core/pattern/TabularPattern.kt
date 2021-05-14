@@ -175,20 +175,6 @@ private fun <ValueType> keyCombinations(patternCollection: Map<String, List<Valu
     }.toMap()
 }
 
-private fun <ValueType> optionalValueCombinations(intRange: IntRange, optionalValues: Map<String, List<ValueType>>): List<Map<String, ValueType>> {
-    return intRange.map {
-        optionalValues.map { entry ->
-            when {
-                entry.value.size > it -> entry.key to entry.value[it]
-                else -> entry.key to null as ValueType
-            }
-        }.toMap().filter { it.value != null }
-    }.toList().filter { it.isNotEmpty() }
-}
-
-private fun <ValueType> optionalValues(entry: Map.Entry<String, List<ValueType>>) =
-        entry.value.size > 1 && entry.value.contains(NullPattern)
-
 fun <ValueType> forEachKeyCombinationIn(patternMap: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
         keySets(patternMap.keys.toList(), row).map { keySet ->
             patternMap.filterKeys { key -> key in keySet }

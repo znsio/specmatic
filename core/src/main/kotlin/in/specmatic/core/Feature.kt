@@ -1,6 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.toScenarioInfos
+import `in`.specmatic.conversions.toScenarioInfosWithExamples
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
@@ -429,6 +430,9 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, fi
     val openApiScenarioInfos: List<ScenarioInfo>? = backgroundOpenApi(featureChildren)?.let {
         toScenarioInfos(it.text.split(" ")[1])
     }
+    val openApiScenarioInfosWithExamples: List<ScenarioInfo>? = backgroundOpenApi(featureChildren)?.let {
+        toScenarioInfosWithExamples(it.text.split(" ")[1])
+    }
     val specmaticScenarioInfos: List<ScenarioInfo> = scenarios(featureChildren).map { featureChild ->
         if (featureChild.scenario.name.isBlank())
             throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
@@ -446,7 +450,9 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, fi
                 openApiScenarioInfos
         )
     }
-    return specmaticScenarioInfos.plus(openApiScenarioInfos.orEmpty().filter { it.httpResponsePattern.status in 200..299 }).map { scenarioInfo ->
+    return specmaticScenarioInfos
+            .plus(openApiScenarioInfos.orEmpty().filter { it.httpResponsePattern.status in 200..299 })
+            .plus(openApiScenarioInfosWithExamples.orEmpty()).map { scenarioInfo ->
         Scenario(
                 scenarioInfo.scenarioName,
                 scenarioInfo.httpRequestPattern,

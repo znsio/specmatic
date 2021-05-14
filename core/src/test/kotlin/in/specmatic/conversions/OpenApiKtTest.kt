@@ -24,6 +24,7 @@ import kotlin.test.assertTrue
 internal class OpenApiKtTest {
     companion object {
         const val OPENAPI_FILE = "openApiTest.yaml"
+        const val OPENAPI_FILE_WITH_EXAMPLES = "openApiWithExamples.yaml"
 
         val openAPISpec = """
 Feature: Hello world
@@ -99,24 +100,87 @@ paths:
           content:
             application/json:
               schema:
-                error: 'Not Found'
+                type: string
         '400':
           description: Bad Request
           content:
             application/json:
               schema:
-                error: 'Bad Request'
+                type: string
     """.trim()
 
         val openApiFile = File(OPENAPI_FILE)
         openApiFile.createNewFile()
         openApiFile.writeText(openAPI)
 
+        val openAPIWithExamples = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /hello/{id}:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Numeric ID
+          examples:
+            200_OKAY:
+              value: 15
+              summary: value that returns 200
+            404_NOT_FOUND:
+              value: 0
+              summary: value that returns 404
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+              examples:
+                200_OKAY:
+                  value: hello15
+                  summary: response that matches 200_OKAY
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: string
+              examples:
+                404_NOT_FOUND:
+                  value: zero not found
+                  summary: response that matches 404_NOT_FOUND
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: string
+    """.trim()
+
+        val openApiFileWithExamples = File(OPENAPI_FILE_WITH_EXAMPLES)
+        openApiFileWithExamples.createNewFile()
+        openApiFileWithExamples.writeText(openAPIWithExamples)
     }
 
     @AfterEach
     fun `teardown`() {
         File(OPENAPI_FILE).delete()
+        File(OPENAPI_FILE_WITH_EXAMPLES).delete()
     }
 
     @Test
@@ -149,7 +213,7 @@ paths:
         val results = feature.executeTests(
                 object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
-                        flags["executed"] = true
+                        flags["${request.path} executed"] = true
                         assertThat(request.path).matches("""\/hello\/[0-9]+""")
                         val headers: HashMap<String, String> = object : HashMap<String, String>() {
                             init {
@@ -169,7 +233,48 @@ paths:
                 }
         )
 
-        assertThat(flags["executed"]).isTrue
+        assertThat(flags["/hello/0 executed"]).isTrue
+        assertThat(flags.size).isEqualTo(2)
+        assertTrue(results.success(), results.report())
+    }
+
+    @Test
+    fun `should create tests from OpenAPI examples`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature("""
+Feature: Hello world
+
+Background:
+  Given openapi openApiWithExamples.yaml
+        """.trimIndent())
+
+        val results = feature.executeTests(
+                object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        flags["${request.path} executed"] = true
+                        assertThat(request.path).matches("""\/hello\/[0-9]+""")
+                        val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                            init {
+                                put("Content-Type", "application/json")
+                            }
+                        }
+                        val id = request.path!!.split('/')[2].toInt()
+                        val status = when (id) {
+                            0 -> 404
+                            else -> 200
+                        }
+                        return HttpResponse(status, "hello world", headers)
+                    }
+
+                    override fun setServerState(serverState: Map<String, Value>) {
+                    }
+                }
+        )
+
+        assertThat(flags["/hello/0 executed"]).isTrue
+        assertThat(flags["/hello/15 executed"]).isTrue
+        assertThat(flags.size).isEqualTo(3)
         assertTrue(results.success(), results.report())
     }
 

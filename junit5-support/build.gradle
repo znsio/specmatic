@@ -18,7 +18,7 @@ repositories {
 }
 
 def ktor_version = "1.5.3"
-def junit_version = "5.7.1"
+def junit_version = "5.7.2"
 
 dependencies {
     implementation project(':core')
@@ -26,7 +26,7 @@ dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-maven-serialization'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.1'
     implementation 'org.assertj:assertj-core:3.19.0'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.7.2'
 
     implementation 'org.apache.kafka:kafka-clients:2.8.0'
 

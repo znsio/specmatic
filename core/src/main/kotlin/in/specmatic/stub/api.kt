@@ -73,7 +73,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
                         consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
                         logIgnoredFiles(implicitDataDir)
 
-                        val stubDataFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension == "json" } ?: emptyList()
+                        val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" } ?: emptyList()
                         printDataFiles(stubDataFiles)
                         stubDataFiles.map {
                             Pair(it.path, stringToMockScenario(StringValue(it.readText())))
@@ -93,7 +93,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
 }
 
 private fun logIgnoredFiles(implicitDataDir: File) {
-    val ignoredFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension != "json" } ?: emptyList()
+    val ignoredFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension != "json" }?.filter { it.isFile } ?: emptyList()
     if (ignoredFiles.isNotEmpty()) {
         consoleLog("Ignoring the following files:".prependIndent("  "))
         for (file in ignoredFiles) {
@@ -181,6 +181,25 @@ private fun pathToFileListRecursive(dataDirFiles: List<File>): List<File> =
             val fileList: List<File> = it.listFiles()?.toList()?.filterNotNull() ?: emptyList()
             pathToFileListRecursive(fileList).plus(it)
         }.flatten()
+
+private fun filesInDir(implicitDataDir: File): List<File>? {
+    val files = implicitDataDir.listFiles()?.map {
+        when {
+            it.isDirectory -> {
+                it.listFiles()?.toList() ?: emptyList<File>()
+            }
+            it.isFile -> {
+                listOf(it)
+            }
+            else -> {
+                println("Could not recognise ${it.absolutePath}, ignoring it.")
+                emptyList<File>()
+            }
+        }
+    }
+
+    return files?.flatten()
+}
 
 // Used by stub client code
 fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {

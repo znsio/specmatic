@@ -186,14 +186,14 @@ private fun filesInDir(implicitDataDir: File): List<File>? {
     val files = implicitDataDir.listFiles()?.map {
         when {
             it.isDirectory -> {
-                it.listFiles()?.toList() ?: emptyList<File>()
+                filesInDir(it) ?: emptyList()
             }
             it.isFile -> {
                 listOf(it)
             }
             else -> {
                 println("Could not recognise ${it.absolutePath}, ignoring it.")
-                emptyList<File>()
+                emptyList()
             }
         }
     }

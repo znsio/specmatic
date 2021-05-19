@@ -188,17 +188,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             when {
                 results.isNotEmpty() && results.last().remainder.isNotEmpty() -> {
                     val unexpectedValue = results.last().remainder.first()
-
                     unexpectedValue.matchFailure()
-
-//                    results.find {
-//                        it.provisionalError != null
-//                    }?.provisionalError?.result
-//                            ?: if (results.last().remainder.size == 1) {
-//                                Failure("Unexpected value found: ${results.last().remainder.first().toStringValue()}")
-//                            } else {
-//                                Failure("Unexpected values found: ${results.last().remainder.joinToString(", ") { it.toStringValue() }}")
-//                            }
                 }
                 else -> null
             }

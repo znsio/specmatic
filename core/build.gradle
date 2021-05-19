@@ -24,9 +24,9 @@ repositories {
 
 def ktor_version = "1.5.4"
 def karate_version = "0.9.6"
-def jgit_version = "5.11.0.202103091610-r"
+def jgit_version = "5.11.1.202105131744-r"
 
-def junit_version = "5.7.1"
+def junit_version = "5.7.2"
 def testcontainers_version = "1.15.3"
 
 dependencies {
@@ -52,7 +52,7 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.27.2'
+    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.28.0'
     testImplementation 'org.assertj:assertj-core:3.19.0'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
@@ -60,7 +60,7 @@ dependencies {
     testImplementation "com.intuit.karate:karate-core:$karate_version"
     testImplementation "com.intuit.karate:karate-apache:$karate_version"
     testImplementation "com.intuit.karate:karate-junit5:$karate_version"
-    testImplementation 'org.springframework:spring-web:5.3.6'
+    testImplementation 'org.springframework:spring-web:5.3.7'
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
     testImplementation 'io.mockk:mockk:1.11.0'
     testImplementation 'org.assertj:assertj-core:3.19.0'

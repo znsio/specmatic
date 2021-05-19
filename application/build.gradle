@@ -37,8 +37,8 @@ repositories {
 }
 
 def ktor_version = "1.5.4"
-def junit_version = "5.7.1"
-def jgit_version = "5.11.0.202103091610-r"
+def junit_version = "5.7.2"
+def jgit_version = "5.11.1.202105131744-r"
 
 dependencies {
     implementation('info.picocli:picocli-spring-boot-starter:4.6.1') {
@@ -49,8 +49,8 @@ dependencies {
     implementation "io.ktor:ktor-network-tls:$ktor_version"
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"
 
-    implementation 'org.junit.platform:junit-platform-launcher:1.7.1'
-    implementation 'org.junit.platform:junit-platform-reporting:1.7.1'
+    implementation 'org.junit.platform:junit-platform-launcher:1.7.2'
+    implementation 'org.junit.platform:junit-platform-reporting:1.7.2'
 
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"

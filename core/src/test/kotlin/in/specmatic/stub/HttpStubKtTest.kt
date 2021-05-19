@@ -232,7 +232,7 @@ Feature: POST API
         val errors: Vector<String> = Vector()
 
         HttpStub(feature).use { stub ->
-            usingMultipleThreads(10) { stubNumber ->
+            usingMultipleThreads(30) { stubNumber ->
                 `set an expectation and exercise it`(stubNumber, stub)?.let {
                     errors.add(it)
                 }

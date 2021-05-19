@@ -1,5 +1,20 @@
 package `in`.specmatic.stub
 
+import `in`.specmatic.LogTail
+import `in`.specmatic.core.*
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.pattern.withoutOptionality
+import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.utilities.jsonStringToValueMap
+import `in`.specmatic.core.utilities.toMap
+import `in`.specmatic.core.utilities.valueMapToPlainJsonString
+import `in`.specmatic.core.value.*
+import `in`.specmatic.dontPrintToConsole
+import `in`.specmatic.mock.NoMatchingScenario
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.mock.mockFromJSON
+import `in`.specmatic.mock.validateMock
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.http.*
@@ -13,26 +28,9 @@ import io.ktor.util.asStream
 import io.ktor.util.toMap
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import `in`.specmatic.LogTail
-import `in`.specmatic.core.*
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.parsedValue
-import `in`.specmatic.core.pattern.withoutOptionality
-import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.utilities.jsonStringToValueMap
-import `in`.specmatic.core.utilities.toMap
-import `in`.specmatic.core.utilities.valueMapToPlainJsonString
-import `in`.specmatic.core.value.*
-import `in`.specmatic.mock.NoMatchingScenario
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.mock.mockFromJSON
-import `in`.specmatic.mock.validateMock
-import `in`.specmatic.dontPrintToConsole
 import java.io.ByteArrayOutputStream
 import java.util.*
-import kotlin.text.isEmpty
 import kotlin.text.toCharArray
-import kotlin.text.toLowerCase
 
 data class HttpStubResponse(val response: HttpResponse, val responseLog: String, val delayInSeconds: Int? = null) {
     constructor(httpResponse: HttpResponse): this (httpResponse, httpResponseLog(httpResponse))
@@ -40,20 +38,35 @@ data class HttpStubResponse(val response: HttpResponse, val responseLog: String,
 }
 
 class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
-    @Synchronized
-    fun <ReturnType> listOfStubs(fn: (List<HttpStubData>) -> ReturnType): ReturnType {
-        return fn(httpStubs.toList())
+    fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
+        synchronized(this) {
+            return fn(httpStubs.toList())
+        }
     }
 
-    @Synchronized
     fun addToStub(result: Pair<Result, HttpStubData?>, stub: ScenarioStub) {
-        result.second.let {
-            when (it) {
-                null -> Unit
-                else -> httpStubs.add(0, it.copy(delayInSeconds = stub.delayInSeconds))
+        synchronized(this) {
+            result.second.let {
+                when (it) {
+                    null -> Unit
+                    else -> httpStubs.add(0, it.copy(delayInSeconds = stub.delayInSeconds))
+                }
             }
         }
     }
+}
+
+fun getDateStringValue(): StringValue {
+    val date = Calendar.getInstance()
+    val year = date.get(Calendar.YEAR)
+    val month = date.get(Calendar.MONTH)
+    val day = date.get(Calendar.DATE)
+    val hour = date.get(Calendar.HOUR)
+    val minute = date.get(Calendar.MINUTE)
+    val second = date.get(Calendar.SECOND)
+    val millisecond = date.get(Calendar.MILLISECOND)
+
+    return StringValue("$year-$month-$day $hour:$minute:$second.$millisecond")
 }
 
 class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = dontPrintToConsole, private val strictMode: Boolean = false, keyData: KeyData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory()) : ContractStub {
@@ -90,7 +103,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
                 try {
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
-                    logs["requestTime"] = StringValue(Date().toString())
+                    logs["requestTime"] = getDateStringValue()
                     logs["http-request"] = httpRequest.toJSON()
 
                     val httpStubResponse: HttpStubResponse = when {
@@ -116,7 +129,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                     respondToKtorHttpResponse(call, response)
                 }
 
-                logs["responseTime"] = StringValue(Date().toString())
+                logs["responseTime"] = getDateStringValue()
 
                 log(JSONObjectValue(logs.toMap()).displayableValue() + ",")
             }
@@ -321,7 +334,7 @@ private fun stubbedResponse(
     threadSafeStubs: ThreadSafeListOfStubs,
     httpRequest: HttpRequest
 ): Pair<List<Pair<Result, HttpStubData>>, HttpStubResponse?> {
-    val matchResults = threadSafeStubs.listOfStubs { stubs ->
+    val matchResults = threadSafeStubs.matchResults { stubs ->
         stubs.map {
             val (requestPattern, _, resolver) = it
             Pair(requestPattern.matches(httpRequest, resolver.copy(findMissingKey = checkAllKeys)), it)

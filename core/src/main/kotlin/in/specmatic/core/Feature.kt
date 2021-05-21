@@ -2,6 +2,7 @@ package `in`.specmatic.core
 
 import `in`.specmatic.conversions.toScenarioInfos
 import `in`.specmatic.conversions.toScenarioInfosWithExamples
+import `in`.specmatic.conversions.wsdlToFeatureChildren
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
@@ -28,12 +29,18 @@ fun parseGherkinDocumentToFeature(contractGherkinDocument: GherkinDocument, file
     return Feature(scenarios = scenarios, name = name)
 }
 
-data class Feature(val scenarios: List<Scenario> = emptyList(), private var serverState: Map<String, Value> = emptyMap(), val name: String, val testVariables: Map<String, String> = emptyMap(), val testBaseURLs: Map<String, String> = emptyMap()) {
+data class Feature(
+    val scenarios: List<Scenario> = emptyList(),
+    private var serverState: Map<String, Value> = emptyMap(),
+    val name: String,
+    val testVariables: Map<String, String> = emptyMap(),
+    val testBaseURLs: Map<String, String> = emptyMap()
+) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
             val resultList = lookupScenario(httpRequest, scenarios)
             return matchingScenario(resultList)?.generateHttpResponse(serverState)
-                    ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff().generateErrorHttpResponse()
+                ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff().generateErrorHttpResponse()
         } finally {
             serverState = emptyMap()
         }
@@ -48,29 +55,29 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
                 it.matchesStub(httpRequest, localCopyOfServerState)
             })
             return matchingScenario(resultList)?.generateHttpResponse(serverState)
-                    ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff().generateErrorHttpResponse()
+                ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff().generateErrorHttpResponse()
         } finally {
             serverState = emptyMap()
         }
     }
 
     fun lookupScenario(httpRequest: HttpRequest): List<Scenario> =
-            try {
-                val resultList = lookupScenario(httpRequest, scenarios)
-                val matchingScenarios = matchingScenarios(resultList)
+        try {
+            val resultList = lookupScenario(httpRequest, scenarios)
+            val matchingScenarios = matchingScenarios(resultList)
 
-                val firstRealResult = resultList.filterNot { isFluffyError(it.second) }.firstOrNull()
-                val resultsExist = resultList.firstOrNull() != null
+            val firstRealResult = resultList.filterNot { isFluffyError(it.second) }.firstOrNull()
+            val resultsExist = resultList.firstOrNull() != null
 
-                when {
-                    matchingScenarios.isNotEmpty() -> matchingScenarios
-                    firstRealResult != null -> throw ContractException(resultReport(firstRealResult.second))
-                    resultsExist -> throw ContractException(PATH_NOT_RECOGNIZED_ERROR)
-                    else -> throw ContractException("The contract is empty.")
-                }
-            } finally {
-                serverState = emptyMap()
+            when {
+                matchingScenarios.isNotEmpty() -> matchingScenarios
+                firstRealResult != null -> throw ContractException(resultReport(firstRealResult.second))
+                resultsExist -> throw ContractException(PATH_NOT_RECOGNIZED_ERROR)
+                else -> throw ContractException("The contract is empty.")
             }
+        } finally {
+            serverState = emptyMap()
+        }
 
     private fun matchingScenarios(resultList: Sequence<Pair<Scenario, Result>>): List<Scenario> {
         return resultList.filter {
@@ -94,16 +101,17 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
     }
 
     fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results =
-            generateContractTestScenarios(suggestions).fold(Results()) { results, scenario ->
-                Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
-            }
+        generateContractTestScenarios(suggestions).fold(Results()) { results, scenario ->
+            Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
+        }
 
     fun setServerState(serverState: Map<String, Value>) {
         this.serverState = this.serverState.plus(serverState)
     }
 
     fun matches(request: HttpRequest, response: HttpResponse): Boolean {
-        return scenarios.firstOrNull { it.matches(request, serverState) is Result.Success }?.matches(response) is Result.Success
+        return scenarios.firstOrNull { it.matches(request, serverState) is Result.Success }
+            ?.matches(response) is Result.Success
     }
 
     fun matchingStub(request: HttpRequest, response: HttpResponse): HttpStubData {
@@ -111,12 +119,22 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
             val results = scenarios.map { scenario ->
                 try {
                     when (val matchResult = scenario.matchesMock(request, response)) {
-                        is Result.Success -> Pair(scenario.resolverAndResponseFrom(response).let { (resolver, response) ->
-                            val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
-                            val requestTypeWithAncestors =
-                                    newRequestType.copy(headersPattern = newRequestType.headersPattern.copy(ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern))
-                            HttpStubData(response = response, resolver = resolver, requestType = requestTypeWithAncestors)
-                        }, Result.Success())
+                        is Result.Success -> Pair(
+                            scenario.resolverAndResponseFrom(response).let { (resolver, response) ->
+                                val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
+                                val requestTypeWithAncestors =
+                                    newRequestType.copy(
+                                        headersPattern = newRequestType.headersPattern.copy(
+                                            ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
+                                        )
+                                    )
+                                HttpStubData(
+                                    response = response,
+                                    resolver = resolver,
+                                    requestType = requestTypeWithAncestors
+                                )
+                            }, Result.Success()
+                        )
                         is Result.Failure -> {
                             Pair(null, matchResult.updateScenario(scenario))
                         }
@@ -129,24 +147,24 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
             return results.find {
                 it.first != null
             }?.let { it.first as HttpStubData }
-                    ?: throw NoMatchingScenario(failureResults(results).withoutFluff().report())
+                ?: throw NoMatchingScenario(failureResults(results).withoutFluff().report())
         } finally {
             serverState = emptyMap()
         }
     }
 
     fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
-            Results(results.map { it.second }.filter { it is Result.Failure }.toMutableList())
+        Results(results.map { it.second }.filter { it is Result.Failure }.toMutableList())
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> =
-            scenarios.map { it.newBasedOn(suggestions) }.flatMap {
-                it.generateTestScenarios(testVariables, testBaseURLs)
-            }
+        scenarios.map { it.newBasedOn(suggestions) }.flatMap {
+            it.generateTestScenarios(testVariables, testBaseURLs)
+        }
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
-            scenarios.flatMap { scenario ->
-                scenario.copy(examples = emptyList()).generateBackwardCompatibilityScenarios()
-            }
+        scenarios.flatMap { scenario ->
+            scenario.copy(examples = emptyList()).generateBackwardCompatibilityScenarios()
+        }
 
     fun assertMatchesMockKafkaMessage(kafkaMessage: KafkaMessage) {
         val result = matchesMockKafkaMessage(kafkaMessage)
@@ -164,19 +182,29 @@ data class Feature(val scenarios: List<Scenario> = emptyList(), private var serv
     }
 
     fun matchingStub(scenarioStub: ScenarioStub): HttpStubData =
-            matchingStub(scenarioStub.request, scenarioStub.response).copy(delayInSeconds = scenarioStub.delayInSeconds)
+        matchingStub(scenarioStub.request, scenarioStub.response).copy(delayInSeconds = scenarioStub.delayInSeconds)
 
     fun clearServerState() {
         serverState = emptyMap()
     }
 
-    fun lookupKafkaScenario(olderKafkaMessagePattern: KafkaMessagePattern, olderResolver: Resolver): Sequence<Pair<Scenario, Result>> {
+    fun lookupKafkaScenario(
+        olderKafkaMessagePattern: KafkaMessagePattern,
+        olderResolver: Resolver
+    ): Sequence<Pair<Scenario, Result>> {
         try {
             return scenarios.asSequence()
-                    .filter { it.kafkaMessagePattern != null }
-                    .map { newerScenario ->
-                        Pair(newerScenario, olderKafkaMessagePattern.encompasses(newerScenario.kafkaMessagePattern as KafkaMessagePattern, newerScenario.resolver, olderResolver))
-                    }
+                .filter { it.kafkaMessagePattern != null }
+                .map { newerScenario ->
+                    Pair(
+                        newerScenario,
+                        olderKafkaMessagePattern.encompasses(
+                            newerScenario.kafkaMessagePattern as KafkaMessagePattern,
+                            newerScenario.resolver,
+                            olderResolver
+                        )
+                    )
+                }
         } finally {
             serverState = emptyMap()
         }
@@ -226,7 +254,14 @@ private fun toFacts(rest: String, fixtures: Map<String, Value>): Map<String, Val
     }
 }
 
-private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList: List<GherkinDocument.Feature.Scenario.Examples>, featureTags: List<GherkinDocument.Feature.Tag>, backgroundScenarioInfo: ScenarioInfo, filePath: String, openApiScenarioInfos: List<ScenarioInfo>?): ScenarioInfo {
+private fun lexScenario(
+    steps: List<GherkinDocument.Feature.Step>,
+    examplesList: List<GherkinDocument.Feature.Scenario.Examples>,
+    featureTags: List<GherkinDocument.Feature.Tag>,
+    backgroundScenarioInfo: ScenarioInfo,
+    filePath: String,
+    openApiScenarioInfos: List<ScenarioInfo>?
+): ScenarioInfo {
     val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList, it) }.filterNot { it.isEmpty }
 
     val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo) { scenarioInfo, step ->
@@ -236,36 +271,92 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
                     val urlMatcher = try {
                         toURLMatcherWithOptionalQueryParams(URI.create(step.rest))
                     } catch (e: Throwable) {
-                        throw Exception("Could not parse the contract URL \"${step.rest}\" in scenario \"${scenarioInfo.scenarioName}\"", e)
+                        throw Exception(
+                            "Could not parse the contract URL \"${step.rest}\" in scenario \"${scenarioInfo.scenarioName}\"",
+                            e
+                        )
                     }
 
-                    scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(urlMatcher = urlMatcher, method = step.keyword.uppercase()))
+                    scenarioInfo.copy(
+                        httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
+                            urlMatcher = urlMatcher,
+                            method = step.keyword.uppercase()
+                        )
+                    )
                 } ?: throw ContractException("Line ${step.line}: $step.text")
             }
             "REQUEST-HEADER" ->
-                scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(headersPattern = plusHeaderPattern(step.rest, scenarioInfo.httpRequestPattern.headersPattern)))
+                scenarioInfo.copy(
+                    httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
+                        headersPattern = plusHeaderPattern(
+                            step.rest,
+                            scenarioInfo.httpRequestPattern.headersPattern
+                        )
+                    )
+                )
             "RESPONSE-HEADER" ->
-                scenarioInfo.copy(httpResponsePattern = scenarioInfo.httpResponsePattern.copy(headersPattern = plusHeaderPattern(step.rest, scenarioInfo.httpResponsePattern.headersPattern)))
+                scenarioInfo.copy(
+                    httpResponsePattern = scenarioInfo.httpResponsePattern.copy(
+                        headersPattern = plusHeaderPattern(
+                            step.rest,
+                            scenarioInfo.httpResponsePattern.headersPattern
+                        )
+                    )
+                )
             "STATUS" ->
-                scenarioInfo.copy(httpResponsePattern = scenarioInfo.httpResponsePattern.copy(status = Integer.valueOf(step.rest)))
+                scenarioInfo.copy(
+                    httpResponsePattern = scenarioInfo.httpResponsePattern.copy(
+                        status = Integer.valueOf(
+                            step.rest
+                        )
+                    )
+                )
             "REQUEST-BODY" ->
                 scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(body = toPattern(step)))
             "RESPONSE-BODY" ->
                 scenarioInfo.copy(httpResponsePattern = scenarioInfo.httpResponsePattern.bodyPattern(toPattern(step)))
             "FACT" ->
-                scenarioInfo.copy(expectedServerState = scenarioInfo.expectedServerState.plus(toFacts(step.rest, scenarioInfo.fixtures)))
+                scenarioInfo.copy(
+                    expectedServerState = scenarioInfo.expectedServerState.plus(
+                        toFacts(
+                            step.rest,
+                            scenarioInfo.fixtures
+                        )
+                    )
+                )
             "TYPE", "PATTERN", "JSON" ->
                 scenarioInfo.copy(patterns = scenarioInfo.patterns.plus(toPatternInfo(step, step.rowsList)))
             "FIXTURE" ->
                 scenarioInfo.copy(fixtures = scenarioInfo.fixtures.plus(toFixtureInfo(step.rest)))
             "FORM-FIELD" ->
-                scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(formFieldsPattern = plusFormFields(scenarioInfo.httpRequestPattern.formFieldsPattern, step.rest, step.rowsList)))
+                scenarioInfo.copy(
+                    httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
+                        formFieldsPattern = plusFormFields(
+                            scenarioInfo.httpRequestPattern.formFieldsPattern,
+                            step.rest,
+                            step.rowsList
+                        )
+                    )
+                )
             "REQUEST-PART" ->
-                scenarioInfo.copy(httpRequestPattern = scenarioInfo.httpRequestPattern.copy(multiPartFormDataPattern = scenarioInfo.httpRequestPattern.multiPartFormDataPattern.plus(toFormDataPart(step, filePath))))
+                scenarioInfo.copy(
+                    httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
+                        multiPartFormDataPattern = scenarioInfo.httpRequestPattern.multiPartFormDataPattern.plus(
+                            toFormDataPart(step, filePath)
+                        )
+                    )
+                )
             "KAFKA-MESSAGE" ->
                 scenarioInfo.copy(kafkaMessage = toAsyncMessage(step))
             "VALUE" ->
-                scenarioInfo.copy(references = values(step.rest, scenarioInfo.references, backgroundScenarioInfo.references, filePath))
+                scenarioInfo.copy(
+                    references = values(
+                        step.rest,
+                        scenarioInfo.references,
+                        backgroundScenarioInfo.references,
+                        filePath
+                    )
+                )
             "EXPORT" ->
                 scenarioInfo.copy(bindings = setters(step.rest, backgroundScenarioInfo.bindings, scenarioInfo.bindings))
             else -> {
@@ -286,18 +377,37 @@ private fun lexScenario(steps: List<GherkinDocument.Feature.Step>, examplesList:
     }
 
     if (!openApiScenarioInfos.isNullOrEmpty() && steps.isNotEmpty()) {
-        if (!openApiScenarioInfos!!.any { it.httpRequestPattern.matches(parsedScenarioInfo.httpRequestPattern.generate(Resolver()), Resolver()).isTrue() }) {
+        if (!openApiScenarioInfos!!.any {
+                it.httpRequestPattern.matches(
+                    parsedScenarioInfo.httpRequestPattern.generate(
+                        Resolver()
+                    ), Resolver()
+                ).isTrue()
+            }) {
             throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" request is not as per OpenApi spec""")
         }
-        if (!openApiScenarioInfos!!.any { it.httpResponsePattern.matches(parsedScenarioInfo.httpResponsePattern.generateResponse(Resolver()), Resolver()).isTrue() }) {
+        if (!openApiScenarioInfos!!.any {
+                it.httpResponsePattern.matches(
+                    parsedScenarioInfo.httpResponsePattern.generateResponse(
+                        Resolver()
+                    ), Resolver()
+                ).isTrue()
+            }) {
             throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" response is not as per OpenApi spec""")
         }
     }
 
-    return parsedScenarioInfo.copy(examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)), ignoreFailure = ignoreFailure)
+    return parsedScenarioInfo.copy(
+        examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)),
+        ignoreFailure = ignoreFailure
+    )
 }
 
-fun setters(rest: String, backgroundSetters: Map<String, String>, scenarioSetters: Map<String, String>): Map<String, String> {
+fun setters(
+    rest: String,
+    backgroundSetters: Map<String, String>,
+    scenarioSetters: Map<String, String>
+): Map<String, String> {
     val parts = breakIntoPartsMaxLength(rest, 3)
 
     if (parts.size != 3 || parts[1] != "=")
@@ -310,10 +420,10 @@ fun setters(rest: String, backgroundSetters: Map<String, String>, scenarioSetter
 }
 
 fun values(
-        rest: String,
-        scenarioReferences: Map<String, References>,
-        backgroundReferences: Map<String, References>,
-        filePath: String
+    rest: String,
+    scenarioReferences: Map<String, References>,
+    backgroundReferences: Map<String, References>,
+    filePath: String
 ): Map<String, References> {
     val parts = breakIntoPartsMaxLength(rest, 3)
 
@@ -325,9 +435,12 @@ fun values(
 
     val qontractFilePath = QontractFilePath(qontractFileName, filePath)
 
-    return backgroundReferences.plus(scenarioReferences).plus(valueStoreName to References(valueStoreName,
+    return backgroundReferences.plus(scenarioReferences).plus(
+        valueStoreName to References(
+            valueStoreName,
             qontractFilePath
-    ))
+        )
+    )
 }
 
 fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
@@ -363,7 +476,8 @@ fun toFormDataPart(step: StepInfo, contractFilePath: String): MultiPartFormDataP
 
             val expandedFilenamePattern = when (val filenamePattern = parsedPattern(multipartFilename)) {
                 is ExactValuePattern -> {
-                    val multipartFilePath = File(contractFilePath).absoluteFile.parentFile.resolve(multipartFilename).absolutePath
+                    val multipartFilePath =
+                        File(contractFilePath).absoluteFile.parentFile.resolve(multipartFilename).absolutePath
                     ExactValuePattern(StringValue(multipartFilePath))
                 }
                 else ->
@@ -391,14 +505,19 @@ fun toPattern(step: StepInfo): Pattern {
     }
 }
 
-fun plusFormFields(formFields: Map<String, Pattern>, rest: String, rowsList: List<GherkinDocument.Feature.TableRow>): Map<String, Pattern> =
-        formFields.plus(when (rowsList.size) {
-            0 -> toQueryParams(rest).map { (key, value) -> key to value }
-            else -> rowsList.map { row -> row.cellsList[0].value to row.cellsList[1].value }
-        }.map { (key, value) -> key to parsedPattern(value) }.toMap())
+fun plusFormFields(
+    formFields: Map<String, Pattern>,
+    rest: String,
+    rowsList: List<GherkinDocument.Feature.TableRow>
+): Map<String, Pattern> =
+    formFields.plus(when (rowsList.size) {
+        0 -> toQueryParams(rest).map { (key, value) -> key to value }
+        else -> rowsList.map { row -> row.cellsList[0].value to row.cellsList[1].value }
+    }.map { (key, value) -> key to parsedPattern(value) }.toMap()
+    )
 
 private fun toQueryParams(rest: String) = rest.split("&")
-        .map { breakIntoPartsMaxLength(it, 2) }
+    .map { breakIntoPartsMaxLength(it, 2) }
 
 fun plusHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHeadersPattern {
     val parts = breakIntoPartsMaxLength(rest, 2)
@@ -413,7 +532,8 @@ fun plusHeaderPattern(rest: String, headersPattern: HttpHeadersPattern): HttpHea
 fun toPatternPair(key: String, value: String): Pair<String, Pattern> = key to parsedPattern(value)
 
 fun breakIntoPartsMaxLength(whole: String, partCount: Int) = whole.split("\\s+".toRegex(), partCount)
-fun breakIntoPartsMaxLength(whole: String, separator: String, partCount: Int) = whole.split(separator.toRegex(), partCount)
+fun breakIntoPartsMaxLength(whole: String, separator: String, partCount: Int) =
+    whole.split(separator.toRegex(), partCount)
 
 private val HTTP_METHODS = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
 
@@ -424,7 +544,7 @@ internal fun parseGherkinString(gherkinData: String): GherkinDocument {
 }
 
 internal fun lex(gherkinDocument: GherkinDocument, filePath: String = ""): Pair<String, List<Scenario>> =
-        Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.childrenList, filePath))
+    Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.childrenList, filePath))
 
 internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, filePath: String): List<Scenario> {
     val openApiScenarioInfos: List<ScenarioInfo>? = backgroundOpenApi(featureChildren)?.let {
@@ -433,27 +553,16 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, fi
     val openApiScenarioInfosWithExamples: List<ScenarioInfo>? = backgroundOpenApi(featureChildren)?.let {
         toScenarioInfosWithExamples(it.text.split(" ")[1])
     }
-    val specmaticScenarioInfos: List<ScenarioInfo> = scenarios(featureChildren).map { featureChild ->
-        if (featureChild.scenario.name.isBlank())
-            throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
-
-        val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
-            lexScenario(feature.background.stepsList.filter { !it.text.contains("openapi", true) }, listOf(), emptyList(), ScenarioInfo(), filePath, listOf())
-        } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
-
-        lexScenario(
-                featureChild.scenario.stepsList,
-                featureChild.scenario.examplesList,
-                featureChild.scenario.tagsList,
-                backgroundInfoCopy,
-                filePath,
-                openApiScenarioInfos
-        )
+    val wsdlScenarioInfos = backgroundWsdl(featureChildren)?.let {
+        scenarioInfos(wsdlToFeatureChildren(it.text.split(" ")[1]), "", listOf())
     }
+    val specmaticScenarioInfos: List<ScenarioInfo> = scenarioInfos(featureChildren, filePath, openApiScenarioInfos)
     return specmaticScenarioInfos
-            .plus(openApiScenarioInfos.orEmpty().filter { it.httpResponsePattern.status in 200..299 })
-            .plus(openApiScenarioInfosWithExamples.orEmpty()).map { scenarioInfo ->
-        Scenario(
+        .plus(openApiScenarioInfos.orEmpty().filter { it.httpResponsePattern.status in 200..299 })
+        .plus(openApiScenarioInfosWithExamples.orEmpty())
+        .plus(wsdlScenarioInfos.orEmpty())
+        .map { scenarioInfo ->
+            Scenario(
                 scenarioInfo.scenarioName,
                 scenarioInfo.httpRequestPattern,
                 scenarioInfo.httpResponsePattern,
@@ -465,12 +574,41 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, fi
                 scenarioInfo.ignoreFailure,
                 scenarioInfo.references,
                 scenarioInfo.bindings
+            )
+        }
+}
+
+private fun scenarioInfos(
+    featureChildren: List<GherkinDocument.Feature.FeatureChild>,
+    filePath: String,
+    openApiScenarioInfos: List<ScenarioInfo>?
+) = scenarios(featureChildren).map { featureChild ->
+    if (featureChild.scenario.name.isBlank())
+        throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
+
+    val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
+        lexScenario(
+            feature.background.stepsList.filter { !it.text.contains("openapi", true) },
+            listOf(),
+            emptyList(),
+            ScenarioInfo(),
+            filePath,
+            listOf()
         )
-    }
+    } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
+
+    lexScenario(
+        featureChild.scenario.stepsList,
+        featureChild.scenario.examplesList,
+        featureChild.scenario.tagsList,
+        backgroundInfoCopy,
+        filePath,
+        openApiScenarioInfos
+    )
 }
 
 private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
-        featureChildren.firstOrNull { it.valueCase.name == "BACKGROUND" }
+    featureChildren.firstOrNull { it.valueCase.name == "BACKGROUND" }
 
 private fun backgroundOpenApi(featureChildren: List<GherkinDocument.Feature.FeatureChild>): GherkinDocument.Feature.Step? {
     return background(featureChildren)?.let { background ->
@@ -481,8 +619,17 @@ private fun backgroundOpenApi(featureChildren: List<GherkinDocument.Feature.Feat
     }
 }
 
+private fun backgroundWsdl(featureChildren: List<GherkinDocument.Feature.FeatureChild>): GherkinDocument.Feature.Step? {
+    return background(featureChildren)?.let { background ->
+        background.background.stepsList.firstOrNull {
+            it.keyword.contains("Given", true)
+                    && it.text.contains("wsdl", true)
+        }
+    }
+}
+
 private fun scenarios(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
-        featureChildren.filter { it.valueCase.name != "BACKGROUND" }
+    featureChildren.filter { it.valueCase.name != "BACKGROUND" }
 
 fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature("New Feature", listOf(stub))
 
@@ -512,9 +659,9 @@ fun toGherkinFeature(featureName: String, stubs: List<NamedStub>): String {
 
         Pair(GherkinScenario(stub.name, clauses), listOf(commentedExamples))
     }.fold(emptyMap<GherkinScenario, List<ExampleDeclarations>>(),
-            { groups, (scenario, examples) ->
-                groups.plus(scenario to groups.getOrDefault(scenario, emptyList()).plus(examples))
-            })
+        { groups, (scenario, examples) ->
+            groups.plus(scenario to groups.getOrDefault(scenario, emptyList()).plus(examples))
+        })
 
     val scenarioStrings = groupedStubs.map { (nameAndClauses, examplesList) ->
         val (name, clauses) = nameAndClauses

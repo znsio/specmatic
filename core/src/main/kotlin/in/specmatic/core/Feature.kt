@@ -588,7 +588,9 @@ private fun scenarioInfos(
 
     val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
         lexScenario(
-            feature.background.stepsList.filter { !it.text.contains("openapi", true) },
+            feature.background.stepsList
+                .filter { !it.text.contains("openapi", true) }
+                .filter { !it.text.contains("wsdl", true) },
             listOf(),
             emptyList(),
             ScenarioInfo(),

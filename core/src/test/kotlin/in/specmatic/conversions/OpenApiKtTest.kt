@@ -327,7 +327,7 @@ Background:
         val (errorMessage, _, _, _) = assertFailsWith<ContractException> {
             parseGherkinStringToFeature(gherkinScenarioWithPathParameterDataTypeThatDoesNotMatchOpenAPI)
         }
-        assertThat(errorMessage).isEqualTo("""Scenario: "sending string instead of number should return not found" request is not as per OpenApi spec""")
+        assertThat(errorMessage).isEqualTo("""Scenario: "sending string instead of number should return not found" request is not as per included wsdl / OpenApi spec""")
     }
 
     @Test
@@ -335,6 +335,6 @@ Background:
         val (errorMessage, _, _, _) = assertFailsWith<ContractException> {
             parseGherkinStringToFeature(gherkinScenarioWithResponseCodeNotDefinedInOpenAPI)
         }
-        assertThat(errorMessage).isEqualTo("""Scenario: "zero should return forbidden" response is not as per OpenApi spec""")
+        assertThat(errorMessage).isEqualTo("""Scenario: "zero should return forbidden" response is not as per included wsdl / OpenApi spec""")
     }
 }

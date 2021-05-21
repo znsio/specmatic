@@ -1,6 +1,7 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.stub.HttpStub
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.AfterEach
@@ -9,10 +10,10 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
-import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import java.io.File
 import java.net.URI
+import kotlin.test.assertFailsWith
 
 class WsdlKtTest {
 
@@ -85,11 +86,12 @@ Feature: Hello world
 Background:
   Given wsdl test.wsdl           
   
-Scenario: test request returns 401
+Scenario: test request returns test response
   When POST /SOAPService/SimpleSOAP
   And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
   And request-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleRequest>test request</SimpleRequest></soapenv:Body></soapenv:Envelope>
-  Then status 401
+  Then status 200
+  And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
         """.trimIndent()
 
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
@@ -109,19 +111,38 @@ Scenario: test request returns 401
             Assertions.assertThat(response.body)
                 .matches("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>[A-Z]*</SimpleResponse></soapenv:Body></soapenv:Envelope>""")
 
-            val unauthorisedSoapRequest =
+            val testRequest =
                 """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleRequest>test request</SimpleRequest></soapenv:Body></soapenv:Envelope>"""
-            try {
-                RestTemplate().exchange(
-                    URI.create("http://localhost:9000/SOAPService/SimpleSOAP"),
-                    HttpMethod.POST,
-                    HttpEntity(unauthorisedSoapRequest, headers),
-                    String::class.java
-                )
-            } catch (e: HttpClientErrorException) {
-                Assertions.assertThat(e.statusCode).isEqualTo(org.springframework.http.HttpStatus.UNAUTHORIZED)
-            }
+            val testResponse = RestTemplate().exchange(
+                URI.create("http://localhost:9000/SOAPService/SimpleSOAP"),
+                HttpMethod.POST,
+                HttpEntity(testRequest, headers),
+                String::class.java
+            )
+            Assertions.assertThat(testResponse.body)
+                .matches("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>""")
         }
+    }
+
+    @Test
+    fun `should throw error when request in Gherkin scenario does not match included wsdl spec`() {
+        val wsdlSpec = """
+Feature: Hello world
+
+Background:
+  Given wsdl test.wsdl           
+  
+Scenario: request not matching wsdl
+  When POST /SOAPService/SimpleSOAP2
+  And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+  And request-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleRequest>test request</SimpleRequest></soapenv:Body></soapenv:Envelope>
+  Then status 200
+        """.trimIndent()
+
+        val (errorMessage, _, _, _) = assertFailsWith<ContractException> {
+            parseGherkinStringToFeature(wsdlSpec)
+        }
+        Assertions.assertThat(errorMessage).isEqualTo("""Scenario: "request not matching wsdl" request is not as per included wsdl / OpenApi spec""")
     }
 
     @AfterEach

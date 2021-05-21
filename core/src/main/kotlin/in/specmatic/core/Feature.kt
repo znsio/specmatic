@@ -384,7 +384,7 @@ private fun lexScenario(
                     ), Resolver()
                 ).isTrue()
             }) {
-            throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" request is not as per OpenApi spec""")
+            throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" request is not as per included wsdl / OpenApi spec""")
         }
         if (!openApiScenarioInfos!!.any {
                 it.httpResponsePattern.matches(
@@ -393,7 +393,7 @@ private fun lexScenario(
                     ), Resolver()
                 ).isTrue()
             }) {
-            throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" response is not as per OpenApi spec""")
+            throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" response is not as per included wsdl / OpenApi spec""")
         }
     }
 
@@ -556,7 +556,8 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, fi
     val wsdlScenarioInfos = backgroundWsdl(featureChildren)?.let {
         scenarioInfos(wsdlToFeatureChildren(it.text.split(" ")[1]), "", listOf())
     }
-    val specmaticScenarioInfos: List<ScenarioInfo> = scenarioInfos(featureChildren, filePath, openApiScenarioInfos)
+    val specmaticScenarioInfos: List<ScenarioInfo> =
+        scenarioInfos(featureChildren, filePath, openApiScenarioInfos.orEmpty().plus(wsdlScenarioInfos.orEmpty()))
     return specmaticScenarioInfos
         .plus(openApiScenarioInfos.orEmpty().filter { it.httpResponsePattern.status in 200..299 })
         .plus(openApiScenarioInfosWithExamples.orEmpty())

@@ -55,6 +55,49 @@ internal class XMLPatternTest {
             val xmlNode = XMLPattern("<data>(anything)</data>").generate(Resolver())
             assertThat(xmlNode.childNodes.first().toStringValue()).isNotBlank()
         }
+
+        @Test
+        fun `values should be generated for nested values`() {
+            val customerType = XMLPattern("<SPECMATIC_TYPE><name>John</name></SPECMATIC_TYPE>")
+            val salesDataType = XMLPattern("<sales><customer specmatic_type=\"Customer\" /></sales>")
+
+            val resolver = Resolver(newPatterns = mapOf("(Customer)" to customerType))
+
+            val salesDataValue = salesDataType.newBasedOn(Row(), resolver).map { it.generate(resolver) }.first()
+            val expected = xmlNode("sales") {
+                xmlNode("customer") {
+                    xmlNode("name") {
+                        text("John")
+                    }
+                }
+            }
+
+            assertThat(salesDataValue).isEqualTo(expected)
+        }
+
+        @Test
+        fun `values should be generated for nested referenced types`() {
+            val customerType = XMLPattern("<SPECMATIC_TYPE><name>(string)</name></SPECMATIC_TYPE>")
+            val salesDataType = XMLPattern("<sales><customer specmatic_type=\"Customer\" /></sales>")
+
+            val resolver = Resolver(newPatterns = mapOf("(Customer)" to customerType))
+
+            val salesDataValue = salesDataType.newBasedOn(Row(), resolver).map { it.generate(resolver) }.first()
+
+            assertThat(salesDataValue.findFirstChildByPath("customer.name")?.childNodes?.first()).isInstanceOf(StringValue::class.java)
+        }
+
+        @Test
+        fun `values should be generated for nested multiples`() {
+            val customerType = XMLPattern("<SPECMATIC_TYPE><name>(string)</name></SPECMATIC_TYPE>")
+            val salesDataType = XMLPattern("<sales><customer specmatic_type=\"Customer\" specmatic_occurs=\"multiple\"/></sales>")
+
+            val resolver = Resolver(newPatterns = mapOf("(Customer)" to customerType))
+
+            val salesDataValue = salesDataType.newBasedOn(Row(), resolver).map { it.generate(resolver) }.first()
+
+            assertThat(salesDataValue.findFirstChildByPath("customer.name")?.childNodes?.first()).isInstanceOf(StringValue::class.java)
+        }
     }
 
     @Nested

@@ -16,7 +16,6 @@ import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
-import kotlin.test.assertFalse
 
 class ContractAsTest {
     @Test

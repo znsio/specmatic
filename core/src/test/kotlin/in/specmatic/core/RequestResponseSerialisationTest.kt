@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class RequestResponseSerialisationTest {
     @Test

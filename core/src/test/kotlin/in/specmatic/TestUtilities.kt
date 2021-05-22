@@ -11,15 +11,15 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.HttpStubResponse
 import `in`.specmatic.stub.ThreadSafeListOfStubs
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import junit.framework.Assert.assertFalse
+import org.assertj.core.api.Assertions.assertThat
 
 fun optionalPattern(pattern: Pattern): AnyPattern = AnyPattern(listOf(DeferredPattern("(empty)"), pattern))
 
 infix fun Value.shouldMatch(pattern: Pattern) {
     val result = pattern.matches(this, Resolver())
     if(!result.isTrue()) println(resultReport(result))
-    assertTrue(result.isTrue())
+    assertThat(result).isInstanceOf(Result.Success::class.java)
 }
 
 infix fun Value.shouldNotMatch(pattern: Pattern) {
@@ -30,16 +30,16 @@ fun emptyPattern() = DeferredPattern("(empty)")
 
 infix fun String.backwardCompatibleWith(oldContractGherkin: String) {
     val results = testBackwardCompatibility(oldContractGherkin)
-    Assertions.assertThat(results.success()).isTrue()
-    Assertions.assertThat(results.failureCount).isZero()
+    assertThat(results.success()).isTrue()
+    assertThat(results.failureCount).isZero()
 
     stubsFrom(oldContractGherkin).workWith(this)
 }
 
 infix fun String.notBackwardCompatibleWith(oldContractGherkin: String) {
     val results = testBackwardCompatibility(oldContractGherkin)
-    Assertions.assertThat(results.success()).isFalse()
-    Assertions.assertThat(results.failureCount).isPositive()
+    assertThat(results.success()).isFalse()
+    assertThat(results.failureCount).isPositive()
 
     stubsFrom(oldContractGherkin).breakOn(this)
 }
@@ -52,15 +52,15 @@ fun String.testBackwardCompatibility(oldContractGherkin: String): Results {
 
 fun stubShouldNotBreak(stubRequest: HttpRequest, stubResponse: HttpResponse, oldContract: String, newContract: String) {
     val responseFromOldContract = testStub(oldContract, stubRequest, stubResponse)
-    Assertions.assertThat(responseFromOldContract).isEqualTo(stubResponse)
+    assertThat(responseFromOldContract).isEqualTo(stubResponse)
 
     val responseFromNewContract = testStub(newContract, stubRequest, stubResponse)
-    Assertions.assertThat(responseFromNewContract.status).isEqualTo(200)
+    assertThat(responseFromNewContract.status).isEqualTo(200)
 }
 
 fun stubShouldBreak(stubRequest: HttpRequest, stubResponse: HttpResponse, oldContract: String, newContract: String) {
     val responseFromOldContract = testStub(oldContract, stubRequest, stubResponse)
-    Assertions.assertThat(responseFromOldContract).isEqualTo(stubResponse)
+    assertThat(responseFromOldContract).isEqualTo(stubResponse)
 
     val responseFromNewContract = try {
         testStub(newContract, stubRequest, stubResponse)
@@ -69,7 +69,7 @@ fun stubShouldBreak(stubRequest: HttpRequest, stubResponse: HttpResponse, oldCon
         return
     }
 
-    Assertions.assertThat(responseFromNewContract.status).isEqualTo(400)
+    assertThat(responseFromNewContract.status).isEqualTo(400)
 }
 
 fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeStubs: List<HttpStubData>, strictMode: Boolean): HttpStubResponse {

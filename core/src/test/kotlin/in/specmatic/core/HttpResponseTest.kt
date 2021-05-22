@@ -14,7 +14,7 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import java.util.*
 import kotlin.math.exp
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 internal class HttpResponseTest {
     @Test

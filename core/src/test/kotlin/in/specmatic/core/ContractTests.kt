@@ -1,12 +1,12 @@
 package `in`.specmatic.core
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.value.*
 import `in`.specmatic.test.TestExecutor
-import kotlin.test.*
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.fail
 
 class ContractTests {
     @Test

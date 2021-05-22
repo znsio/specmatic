@@ -12,7 +12,7 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.emptyPattern
 import `in`.specmatic.shouldMatch
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 internal class AnyPatternTest {
     @Test

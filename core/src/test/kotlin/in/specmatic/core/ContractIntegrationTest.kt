@@ -3,10 +3,10 @@ package `in`.specmatic.core
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import `in`.specmatic.test.HttpClient
+import junit.framework.Assert.assertTrue
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import kotlin.test.assertTrue
 
 class ContractIntegrationTest {
     @Test
@@ -24,7 +24,7 @@ class ContractIntegrationTest {
         wireMockServer.stubFor(WireMock.post("/accounts").withRequestBody(WireMock.equalToJson("{\"name\": \"jack\", \"address\": \"Mumbai\"}")).willReturn(WireMock.aResponse().withStatus(409)))
         val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val results = contractBehaviour.executeTests(HttpClient(wireMockServer.baseUrl()))
-        assertTrue(results.success(), results.report())
+        assertTrue(results.report(), results.success())
     }
 
     companion object {

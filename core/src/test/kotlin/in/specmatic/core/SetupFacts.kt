@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import `in`.specmatic.core.value.*
 import java.util.*
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class SetupFacts {
     @Test

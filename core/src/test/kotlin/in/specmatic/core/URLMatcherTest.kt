@@ -7,13 +7,11 @@ import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.*
+import org.junit.jupiter.api.Assertions.*
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 internal class URLMatcherTest {
     @Test

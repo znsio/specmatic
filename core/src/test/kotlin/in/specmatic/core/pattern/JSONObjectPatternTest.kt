@@ -6,9 +6,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.value.*
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.*
 
 internal class JSONObjectPatternTest {
     @Test

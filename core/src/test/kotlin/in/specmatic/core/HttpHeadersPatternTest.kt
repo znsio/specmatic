@@ -8,8 +8,8 @@ import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.pattern.stringToPattern
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.collections.HashMap
-import kotlin.test.assertEquals
 
 internal class HttpHeadersPatternTest {
     @Test

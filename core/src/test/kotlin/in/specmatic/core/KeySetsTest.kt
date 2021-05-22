@@ -3,7 +3,7 @@ package `in`.specmatic.core
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.Row
 import `in`.specmatic.core.pattern.keySets
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class KeySetsTest {
     @Test

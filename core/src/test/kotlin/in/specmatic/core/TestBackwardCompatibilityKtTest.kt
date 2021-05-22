@@ -2,7 +2,7 @@ package `in`.specmatic.core
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 internal class TestBackwardCompatibilityKtTest {
     @Test

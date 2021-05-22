@@ -9,8 +9,8 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
+import org.junit.jupiter.api.Assertions.assertEquals
 import java.net.URI
-import kotlin.test.assertEquals
 
 internal class HttpRequestPatternTest {
     @Test

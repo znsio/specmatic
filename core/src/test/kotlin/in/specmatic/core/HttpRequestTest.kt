@@ -15,7 +15,7 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.optionalPattern
 import java.util.stream.Stream
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 internal class HttpRequestTest {
     @Test

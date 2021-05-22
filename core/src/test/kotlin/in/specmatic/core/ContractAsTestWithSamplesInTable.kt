@@ -8,10 +8,9 @@ import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.value.*
 import `in`.specmatic.test.TestExecutor
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.fail
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import kotlin.test.fail
 
 class ContractAsTestWithSamplesInTable {
     @Test
@@ -60,7 +59,7 @@ class ContractAsTestWithSamplesInTable {
             override fun setServerState(serverState: Map<String, Value>) {}
         })
 
-        assertTrue(results.success(), results.report())
+        assertThat(results.success()).isTrue()
     }
 
     @Test
@@ -145,8 +144,8 @@ Feature: Contract for /balance API
                     throw Exception("Unexpected name $name")
 
                 when (name.string) {
-                    "John Doe" -> assertEquals("Mumbai", city.string)
-                    "Jane Doe" -> assertEquals("Bangalore", city.string)
+                    "John Doe" -> assertThat(city.string).isEqualTo("Mumbai")
+                    "Jane Doe" -> assertThat(city.string).isEqualTo("Bangalore")
                 }
 
                 val jsonResponseString: String? = when (name.string) {
@@ -161,7 +160,7 @@ Feature: Contract for /balance API
             }
         })
 
-        assertTrue(results.success(), results.report())
+        assertThat(results.success()).isTrue()
     }
 
     @Throws(Throwable::class)

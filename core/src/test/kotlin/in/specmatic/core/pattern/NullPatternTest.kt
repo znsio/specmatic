@@ -5,7 +5,7 @@ import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 internal class NullPatternTest {
     @Test

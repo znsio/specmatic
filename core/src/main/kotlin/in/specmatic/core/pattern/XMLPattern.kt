@@ -300,14 +300,16 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             StringValue(it.value.toStringValue())
         }
 
-        val nodes = pattern.nodes.map { resolvedHop(it, resolver) }.map { pattern ->
+        val nodes = pattern.nodes.asSequence().map {
+            resolvedHop(it, resolver)
+        }.map { pattern ->
             attempt(breadCrumb = name) {
                 when {
                     pattern is ListPattern -> (pattern.generate(resolver) as XMLNode).childNodes
                     pattern is XMLPattern && pattern.occurMultipleTimes() -> 0.until(randomNumber(RANDOM_NUMBER_CEILING))
-                            .map {
-                                pattern.generate(resolver)
-                            }
+                        .map {
+                            pattern.generate(resolver)
+                        }
                     else -> listOf(pattern.generate(resolver))
                 }
             }
@@ -316,7 +318,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 is XMLValue -> it
                 else -> StringValue(it.toStringValue())
             }
-        }
+        }.toList()
 
         return XMLNode(pattern.realName, newAttributes, nodes)
     }
@@ -355,12 +357,12 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
                                     when {
                                         dereferenced.occurMultipleTimes() -> {
-                                            childPattern.newBasedOn(row, resolver)
+                                            dereferenced.newBasedOn(row, resolver)
                                         }
                                         dereferenced.isOptional() -> {
-                                            childPattern.newBasedOn(row, resolver).plus(null)
+                                            dereferenced.newBasedOn(row, resolver).plus(null)
                                         }
-                                        else -> childPattern.newBasedOn(row, resolver)
+                                        else -> dereferenced.newBasedOn(row, resolver)
                                     }
                                 }
                                 else -> childPattern.newBasedOn(row, resolver)

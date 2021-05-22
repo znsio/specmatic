@@ -273,11 +273,7 @@ fun xmlNode(name: String, attributes: Map<String, String> = emptyMap(), children
     return XMLNode(name, attributes.mapValues { StringValue(it.value) }, children, parentNamespaces)
 }
 
-class XMLNodeBuilder {
-    constructor(parentNamespaces: Map<String, String>) {
-        this.parentNamespaces = parentNamespaces.toMutableMap()
-    }
-
+class XMLNodeBuilder(parentNamespaces: Map<String, String>) {
     val nodes: MutableList<XMLValue> = mutableListOf()
     var parentNamespaces: MutableMap<String, String> = mutableMapOf()
 
@@ -296,5 +292,9 @@ class XMLNodeBuilder {
 
     fun parentNamespaces(parentNamespaces: Map<String, String>) {
         this.parentNamespaces.putAll(parentNamespaces)
+    }
+
+    init {
+        this.parentNamespaces = parentNamespaces.toMutableMap()
     }
 }

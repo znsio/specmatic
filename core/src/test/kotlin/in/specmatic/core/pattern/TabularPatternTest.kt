@@ -7,9 +7,9 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.value.*
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import kotlin.test.fail
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.fail
 
 class TabularPatternTest {
     @Test
@@ -170,7 +170,8 @@ Given pattern User
         val newPattern = pattern.newBasedOn(Row(listOf("id"), listOf("10")), Resolver()).first()
 
         val value = newPattern.generate(Resolver())
-        assertTrue(value is JSONObjectValue)
+        if(value !is JSONObjectValue)
+            fail("Expected $value to be JSON")
         value.jsonObject.getValue("id").let { assertEquals(10, (it as NumberValue).number) }
     }
 
@@ -199,13 +200,14 @@ And pattern Address
         val resolver = Resolver(newPatterns = mapOf("(User)" to userPattern, "(Address)" to addressPattern))
 
         val value = userPattern.newBasedOn(row, resolver).first().generate(resolver)
-
-        assertTrue(value is JSONObjectValue)
+        if(value !is JSONObjectValue)
+            fail("Expected $value to be JSON")
         val id = value.jsonObject["id"] as NumberValue
         assertEquals(10, id.number)
 
         val address = value.jsonObject["address"]
-        assertTrue(address is JSONObjectValue)
+        if(address !is JSONObjectValue)
+            fail("Expected $address to be JSON")
         address.jsonObject.getValue("flat").let { assertEquals(100, (it as NumberValue).number) }
     }
 

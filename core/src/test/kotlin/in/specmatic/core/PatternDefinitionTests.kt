@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 import org.w3c.dom.Node
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class PatternDefinitionTests {
     @Test

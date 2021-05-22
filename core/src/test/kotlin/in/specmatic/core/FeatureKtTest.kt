@@ -8,10 +8,10 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.fail
 import java.lang.ref.Reference
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import kotlin.test.fail
 
 class FeatureKtTest {
     @Test

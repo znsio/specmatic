@@ -1,12 +1,11 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.pattern.NullPattern
-import `in`.specmatic.core.pattern.Pattern
-import `in`.specmatic.core.pattern.Row
-import `in`.specmatic.core.pattern.StringPattern
+import `in`.specmatic.core.pattern.*
 import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.media.IntegerSchema
 import io.swagger.v3.oas.models.media.MediaType
+import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.media.StringSchema
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
@@ -17,7 +16,7 @@ fun toScenarioInfos(openApiFile: String): List<ScenarioInfo> {
     return openApi.paths.map { (openApiPath, pathItem) ->
         val get = pathItem.get
         var specmaticPath = openApiPath
-        get.parameters.filter { it.`in` == "path" }.map { specmaticPath = specmaticPath.replace("{${it.name}}", "(${it.name}:number)") }
+        get.parameters.filter { it.`in` == "path" }.map { specmaticPath = specmaticPath.replace("{${it.name}}", "(${it.name}:${toSpecmaticPattern(it.schema).typeName})") }
         toHttpResponsePattern(get.responses).map { (response, responseMediaType, httpResponsePattern) ->
             ScenarioInfo(scenarioName = "Request: " + get.summary + " Response: " + response.description,
                     httpRequestPattern = httpRequestPattern(specmaticPath, get),
@@ -32,7 +31,7 @@ fun toScenarioInfosWithExamples(openApiFile: String): List<ScenarioInfo> {
     return openApi.paths.map { (openApiPath, pathItem) ->
         val get = pathItem.get
         var specmaticPath = openApiPath
-        get.parameters.filter { it.`in` == "path" }.map { specmaticPath = specmaticPath.replace("{${it.name}}", "(${it.name}:number)") }
+        get.parameters.filter { it.`in` == "path" }.map { specmaticPath = specmaticPath.replace("{${it.name}}", "(${it.name}:${toSpecmaticPattern(it.schema).typeName})") }
         toHttpResponsePattern(get.responses).map { (response, responseMediaType, httpResponsePattern) ->
             if (!responseMediaType.examples.isNullOrEmpty()) {
                 responseMediaType.examples.map { (exampleName, value) ->
@@ -55,6 +54,7 @@ fun toScenarioInfosWithExamples(openApiFile: String): List<ScenarioInfo> {
     }.flatten()
 }
 
+
 fun toHttpResponsePattern(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
     return responses!!.map { (status, response) ->
         response.content.map { (contentType, mediaType) ->
@@ -66,8 +66,11 @@ fun toHttpResponsePattern(responses: ApiResponses?): List<Triple<ApiResponse, Me
     }.flatten()
 }
 
-fun toSpecmaticPattern(mediaType: MediaType): Pattern = when (mediaType.schema) {
+fun toSpecmaticPattern(mediaType: MediaType): Pattern = toSpecmaticPattern(mediaType.schema)
+
+fun toSpecmaticPattern(schema: Schema<Any>): Pattern = when (schema) {
     is StringSchema -> StringPattern
+    is IntegerSchema -> NumberPattern
     else -> NullPattern
 }
 

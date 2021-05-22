@@ -3,13 +3,14 @@ package `in`.specmatic.conversions
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
@@ -17,9 +18,6 @@ import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import java.io.File
 import java.net.URI
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
-
 
 internal class OpenApiKtTest {
     companion object {
@@ -324,17 +322,19 @@ Background:
 
     @Test
     fun `should throw error when request in Gherkin scenario does not match included OpenAPI spec`() {
-        val (errorMessage, _, _, _) = assertFailsWith<ContractException> {
+        assertThatThrownBy {
             parseGherkinStringToFeature(gherkinScenarioWithPathParameterDataTypeThatDoesNotMatchOpenAPI)
+        }.satisfies {
+            assertThat(it.message).isEqualTo("""Scenario: "sending string instead of number should return not found" request is not as per included wsdl / OpenApi spec""")
         }
-        assertThat(errorMessage).isEqualTo("""Scenario: "sending string instead of number should return not found" request is not as per included wsdl / OpenApi spec""")
     }
 
     @Test
     fun `should throw error when response code in Gherkin scenario does not match included OpenAPI spec`() {
-        val (errorMessage, _, _, _) = assertFailsWith<ContractException> {
+        assertThatThrownBy {
             parseGherkinStringToFeature(gherkinScenarioWithResponseCodeNotDefinedInOpenAPI)
+        }.satisfies {
+            assertThat(it.message).isEqualTo("""Scenario: "zero should return forbidden" response is not as per included wsdl / OpenApi spec""")
         }
-        assertThat(errorMessage).isEqualTo("""Scenario: "zero should return forbidden" response is not as per included wsdl / OpenApi spec""")
     }
 }

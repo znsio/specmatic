@@ -8,7 +8,11 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpEntity
@@ -17,9 +21,6 @@ import org.springframework.http.HttpMethod
 import org.springframework.web.client.RestTemplate
 import java.io.File
 import java.net.URI
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class WsdlKtTest {
 
@@ -229,11 +230,11 @@ Scenario: request not matching wsdl
   Then status 200
         """.trimIndent()
 
-        val (errorMessage, _, _, _) = assertFailsWith<ContractException> {
+        assertThatThrownBy {
             parseGherkinStringToFeature(wsdlSpec)
+        }.satisfies {
+            assertThat(it.message).isEqualTo("""Scenario: "request not matching wsdl" request is not as per included wsdl / OpenApi spec""")
         }
-        Assertions.assertThat(errorMessage)
-            .isEqualTo("""Scenario: "request not matching wsdl" request is not as per included wsdl / OpenApi spec""")
     }
 
     @AfterEach

@@ -2,6 +2,7 @@ package application
 
 import picocli.CommandLine
 import `in`.specmatic.core.APPLICATION_NAME
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import `in`.specmatic.core.pattern.ContractException
@@ -16,7 +17,7 @@ import java.util.concurrent.Callable
 class InstallCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
-        val workingDirectory = userHome.resolve(".$CONTRACT_EXTENSION/repos")
+        val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
 
         val sources = try { loadSources(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
 

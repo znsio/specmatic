@@ -72,7 +72,7 @@ data class Feature(
             when {
                 matchingScenarios.isNotEmpty() -> matchingScenarios
                 firstRealResult != null -> throw ContractException(resultReport(firstRealResult.second))
-                resultsExist -> throw ContractException(PATH_NOT_RECOGNIZED_ERROR)
+                resultsExist -> throw ContractException(pathNotRecognizedMessage(httpRequest))
                 else -> throw ContractException("The contract is empty.")
             }
         } finally {
@@ -147,7 +147,7 @@ data class Feature(
             return results.find {
                 it.first != null
             }?.let { it.first as HttpStubData }
-                ?: throw NoMatchingScenario(failureResults(results).withoutFluff().report())
+                ?: throw NoMatchingScenario(failureResults(results).withoutFluff().report(request))
         } finally {
             serverState = emptyMap()
         }

@@ -504,9 +504,10 @@ Scenario: Square of a number
 
         HttpStub(listOf(feature, feature)).use { stub ->
             val client = HttpClient(stub.endPoint)
-            val squareResponse = client.execute(HttpRequest(method = "POST", path = "/wrong_path", body = NumberValue(10)))
+            val request = HttpRequest(method = "POST", path = "/wrong_path", body = NumberValue(10))
+            val squareResponse = client.execute(request)
             assertThat(squareResponse.status).isEqualTo(400)
-            assertThat(squareResponse.body.toStringValue()).isEqualTo("URL path or SOAPAction not recognised")
+            assertThat(squareResponse.body.toStringValue()).isEqualTo(pathNotRecognizedMessage(request))
         }
     }
 

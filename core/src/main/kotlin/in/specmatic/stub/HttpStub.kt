@@ -203,7 +203,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
         when (result?.first) {
             is Result.Success -> threadSafeHttpStubs.addToStub(result, stub)
-            else -> throw NoMatchingScenario(Results(results.map { it.first }.toMutableList()).report())
+            else -> throw NoMatchingScenario(Results(results.map { it.first }.toMutableList()).report(stub.request))
         }
     }
 
@@ -312,7 +312,7 @@ fun getHttpResponse(httpRequest: HttpRequest, features: List<Feature>, threadSaf
                 passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory)
             } else {
                 if (strictMode)
-                    HttpStubResponse(http400Response(matchResults))
+                    HttpStubResponse(http400Response(httpRequest, matchResults))
                 else
                     HttpStubResponse(fakeHttpResponse(features, httpRequest))
             }
@@ -360,7 +360,7 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
         null -> {
             val (headers, body) = when {
                 responses.all { it.headers.getOrDefault(SPECMATIC_EMPTY_HEADER, "none") == "true" } -> {
-                    Pair(mapOf(SPECMATIC_EMPTY_HEADER to "true"), StringValue(PATH_NOT_RECOGNIZED_ERROR))
+                    Pair(mapOf(SPECMATIC_EMPTY_HEADER to "true"), StringValue(pathNotRecognizedMessage(httpRequest)))
                 }
                 else -> Pair(emptyMap(), StringValue(responses.map {
                     it.body
@@ -373,11 +373,11 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
     }
 }
 
-private fun http400Response(matchResults: List<Pair<Result, HttpStubData>>): HttpResponse {
+private fun http400Response(httpRequest: HttpRequest, matchResults: List<Pair<Result, HttpStubData>>): HttpResponse {
     val failureResults = matchResults.map { it.first }
 
     val results = Results(failureResults.toMutableList()).withoutFluff()
-    return HttpResponse(400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report()}"))
+    return HttpResponse(400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report(httpRequest)}"))
 }
 
 fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>, stubs: StubDataItems): HttpResponse {

@@ -80,7 +80,7 @@ class PushCommand: Callable<Unit> {
             val results = testBackwardCompatibility(oldVersionFeature, newVersionFeature)
 
             if (!results.success()) {
-                println(results.report())
+                println(results.report(PATH_NOT_RECOGNIZED_ERROR))
                 println()
                 exitWithMessage("The new version of ${source.pathDescriptor(contractPath)} is not backward compatible.")
             }

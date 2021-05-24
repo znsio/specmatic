@@ -3,6 +3,13 @@ package `in`.specmatic.core
 import `in`.specmatic.core.FailureReason.SOAPActionMismatch
 import `in`.specmatic.core.FailureReason.URLPathMisMatch
 
+fun pathNotRecognizedMessage(httpRequest: HttpRequest): String {
+    val soapActionHeader = "SOAPAction"
+    if(httpRequest.headers.containsKey(soapActionHeader))
+        return PATH_NOT_RECOGNIZED_ERROR + ": Path=\"" + httpRequest.path + "\", SOAPAction=\"${httpRequest.headers.getValue(soapActionHeader)}\""
+
+    return PATH_NOT_RECOGNIZED_ERROR + ": \"" + httpRequest.path + "\""
+}
 const val PATH_NOT_RECOGNIZED_ERROR = "URL path or SOAPAction not recognised"
 
 data class Results(val results: List<Result> = emptyList()) {
@@ -30,7 +37,11 @@ data class Results(val results: List<Result> = emptyList()) {
             else -> defaultHeaders
         }
 
-        return HttpResponse(400, report(), headers)
+        return HttpResponse(400, report(PATH_NOT_RECOGNIZED_ERROR), headers)
+    }
+
+    fun report(httpRequest: HttpRequest): String {
+        return report(pathNotRecognizedMessage(httpRequest))
     }
 
     fun report(defaultMessage: String = PATH_NOT_RECOGNIZED_ERROR): String {

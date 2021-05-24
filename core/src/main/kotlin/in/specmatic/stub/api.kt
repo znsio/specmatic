@@ -233,7 +233,7 @@ fun testKafkaMessage(contractPath: String, bootstrapServers: String, commit: Boo
     }
 
     if(results.any { it is Result.Failure }) {
-        throw ContractException(Results(results.toMutableList()).report())
+        throw ContractException(Results(results.toMutableList()).report(PATH_NOT_RECOGNIZED_ERROR))
     }
 }
 

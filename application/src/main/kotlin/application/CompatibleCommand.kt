@@ -70,7 +70,7 @@ internal class CompatibleCommand : Callable<Unit> {
 
 internal fun compatibilityReport(results: Results, resultMessage: String): String {
     val countsMessage = "Tests run: ${results.successCount + results.failureCount}, Passed: ${results.successCount}, Failed: ${results.failureCount}\n\n"
-    val resultReport = results.report().trim().let {
+    val resultReport = results.report(PATH_NOT_RECOGNIZED_ERROR).trim().let {
         when {
             it.isNotEmpty() -> "$it\n\n"
             else -> it

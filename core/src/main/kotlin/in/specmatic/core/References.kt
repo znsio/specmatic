@@ -19,7 +19,7 @@ data class References(val valueName: String, val qontractFilePath: QontractFileP
         val results = feature.executeTests(HttpClient(baseURL ?: throw ContractException("Base URL for spec file ${qontractFilePath.path} was not supplied.")))
 
         if(results.hasFailures()) {
-            throw ContractException("There were failures when running ${qontractFilePath.path} as a test against URL $baseURL:\n" + results.report().prependIndent("  "))
+            throw ContractException("There were failures when running ${qontractFilePath.path} as a test against URL $baseURL:\n" + results.report(PATH_NOT_RECOGNIZED_ERROR).prependIndent("  "))
         }
 
         val updatedValues = results.results.filterIsInstance<Result.Success>().fold(mapOf<String, String>()) { acc, result ->

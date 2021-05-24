@@ -39,7 +39,7 @@ fun runTests(contract: ImportedPostmanContracts) {
         val results = feature.executeTests(HttpClient(baseURL = baseURLInfo.originalBaseURL))
 
         println("### Test result for contract \"$name\" ###")
-        val resultReport = "${results.report().trim()}\n\n".trim()
+        val resultReport = "${results.report(PATH_NOT_RECOGNIZED_ERROR).trim()}\n\n".trim()
         val testCounts = "Tests run: ${results.successCount + results.failureCount}, Passed: ${results.successCount}, Failed: ${results.failureCount}\n\n"
         println("$testCounts$resultReport".trim())
         println()

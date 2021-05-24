@@ -203,7 +203,7 @@ class KafkaStubEngine {
         return when {
             validationResults.any { it is Result.Failure } -> {
                 val results = Results(validationResults.toMutableList())
-                consoleLog("Can't load Kafka mocks:\n${results.report()}")
+                consoleLog("Can't load Kafka mocks:\n${results.report(PATH_NOT_RECOGNIZED_ERROR)}")
                 null
             }
             hasKafkaScenarios(features) -> {

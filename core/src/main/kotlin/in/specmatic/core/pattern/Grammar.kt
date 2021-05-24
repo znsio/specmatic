@@ -89,7 +89,7 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
                         LookupRowPattern(pattern, key)
                     }
                     patternString.contains(" in ") -> {
-                        val patternParts = breakIntoParts(withoutPatternDelimiters(patternString), " in ", 2, "$patternString seems incomplete").map { it.trim().lowercase() }
+                        val patternParts = breakIntoParts(withoutPatternDelimiters(patternString), " in ", 2, "$patternString seems incomplete")
 
                         if(patternParts[1] != "string")
                             throw ContractException("""Types can only be declared to be "in string", you probably meant (${patternParts[1]} in string)""")

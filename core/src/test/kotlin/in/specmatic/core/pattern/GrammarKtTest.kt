@@ -3,6 +3,7 @@ package `in`.specmatic.core.pattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.StringValue
+import org.junit.jupiter.api.fail
 
 internal class GrammarKtTest {
     @Test
@@ -30,5 +31,15 @@ internal class GrammarKtTest {
     fun `unknown pattern is parsed as deferred`() {
         val type = parsedPattern("(name string)")
         assertThat(type).isEqualTo(DeferredPattern("(name string)"))
+    }
+
+    @Test
+    fun `The type contained in the string should be used as is as the type name`() {
+        val type: Pattern = getBuiltInPattern("(JSONDataStructure in string)")
+
+        if(type !is PatternInStringPattern)
+            fail("Expected pattern in string")
+
+        assertThat(type.pattern.typeName).isEqualTo("JSONDataStructure")
     }
 }

@@ -44,7 +44,7 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
     }
 
     override fun fileIsInGitDir(newerContractPath: String): Boolean {
-        val parentDir = File(newerContractPath).parentFile.absolutePath
+        val parentDir = File(newerContractPath).absoluteFile.parentFile.absolutePath
         return SystemGit(workingDirectory = parentDir).workingDirectoryIsGitRepo()
     }
 

@@ -289,7 +289,7 @@ class FeatureKtTest {
     And response-header Date (string)
   
     Examples:
-    | RequestBody |
+    | RequestBody | __comment__ |
     | hello world | Tuesday 1st Jan 2020 |""".trim()
 
         assertThat(generatedGherkin).isEqualTo(expectedGherkin)

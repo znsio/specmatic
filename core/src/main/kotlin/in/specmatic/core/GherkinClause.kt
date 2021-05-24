@@ -141,14 +141,44 @@ internal fun toExampleGherkinString(exampleDeclarationsStore: ExampleDeclaration
     return "Examples:\n$heading\n$firstRow"
 }
 
+interface Commenter {
+    fun addCommentHeading(headings: String): String
+    fun fromExample(example: ExampleDeclarations): String
+}
+
+class HasComments : Commenter {
+    override fun addCommentHeading(headings: String): String {
+        return "$headings __comment__ |"
+    }
+
+    override fun fromExample(example: ExampleDeclarations): String {
+        return example.comment?.let { " ${example.comment} |" } ?: ""
+    }
+}
+
+class HasNoComments : Commenter {
+    override fun addCommentHeading(headings: String): String {
+        return headings
+    }
+
+    override fun fromExample(example: ExampleDeclarations): String {
+        return ""
+    }
+}
+
 internal fun toExampleGherkinString(examplesList: List<ExampleDeclarations>): String {
     val keys = examplesList.first().examples.entries.toList().map { it.key }
 
-    val heading = """| ${keys.joinToString(" | ") { it.replace("|", "\\|") }} |"""
+    val commenter: Commenter = if(examplesList.any { it.comment != null })
+        HasComments()
+    else
+        HasNoComments()
+
+    val heading = commenter.addCommentHeading("""| ${keys.joinToString(" | ") { it.replace("|", "\\|") }} |""")
 
     val rows = examplesList.joinToString("\n") { example ->
         val values = keys.map { key -> example.examples.getValue(key) }
-        val comment = example.comment?.let { " ${example.comment} |" } ?: ""
+        val comment = commenter.fromExample(example)
 
         """| ${values.joinToString(" | ") { it.replace("|", "\\|") }} |$comment"""
     }

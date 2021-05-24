@@ -245,8 +245,8 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
     return sources.flatMap {
         it.loadContracts(selector, workingDirectory, configFilePath)
     }.also {
-        println("Contract file paths #######")
-        println(it)
+        println("Contract file paths:")
+        println(it.joinToString(System.lineSeparator()).prependIndent("  "))
     }
 }
 

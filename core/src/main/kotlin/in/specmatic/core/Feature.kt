@@ -1,8 +1,8 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.conversions.toScenarioInfos
-import `in`.specmatic.conversions.toScenarioInfosWithExamples
-import `in`.specmatic.conversions.wsdlToFeatureChildren
+import `in`.specmatic.conversions.IncludedSpecification
+import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.conversions.WsdlSpecification
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
@@ -260,7 +260,7 @@ private fun lexScenario(
     featureTags: List<GherkinDocument.Feature.Tag>,
     backgroundScenarioInfo: ScenarioInfo,
     filePath: String,
-    openApiScenarioInfos: List<ScenarioInfo>?
+    includedSpecifications: List<IncludedSpecification?>
 ): ScenarioInfo {
     val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList, it) }.filterNot { it.isEmpty }
 
@@ -376,25 +376,8 @@ private fun lexScenario(
         else -> false
     }
 
-    if (!openApiScenarioInfos.isNullOrEmpty() && steps.isNotEmpty()) {
-        if (!openApiScenarioInfos.any {
-                it.httpRequestPattern.matches(
-                    parsedScenarioInfo.httpRequestPattern.generate(
-                        Resolver()
-                    ), Resolver()
-                ).isTrue()
-            }) {
-            throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" request is not as per included wsdl / OpenApi spec""")
-        }
-        if (!openApiScenarioInfos.any {
-                it.httpResponsePattern.matches(
-                    parsedScenarioInfo.httpResponsePattern.generateResponse(
-                        Resolver()
-                    ), Resolver()
-                ).isTrue()
-            }) {
-            throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" response is not as per included wsdl / OpenApi spec""")
-        }
+    includedSpecifications.forEach {
+        it?.validateCompliance(parsedScenarioInfo, steps)
     }
 
     return parsedScenarioInfo.copy(
@@ -547,21 +530,7 @@ internal fun lex(gherkinDocument: GherkinDocument, filePath: String = ""): Pair<
     Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.childrenList, filePath))
 
 internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, filePath: String): List<Scenario> {
-    val openApiScenarioInfos: List<ScenarioInfo>? = backgroundOpenApi(featureChildren)?.let {
-        toScenarioInfos(it.text.split(" ")[1])
-    }
-    val openApiScenarioInfosWithExamples: List<ScenarioInfo>? = backgroundOpenApi(featureChildren)?.let {
-        toScenarioInfosWithExamples(it.text.split(" ")[1])
-    }
-    val wsdlScenarioInfos = backgroundWsdl(featureChildren)?.let {
-        scenarioInfos(wsdlToFeatureChildren(it.text.split(" ")[1]), "", listOf())
-    }
-    val specmaticScenarioInfos: List<ScenarioInfo> =
-        scenarioInfos(featureChildren, filePath, openApiScenarioInfos.orEmpty().plus(wsdlScenarioInfos.orEmpty()))
-    return specmaticScenarioInfos
-        .plus(openApiScenarioInfos.orEmpty().filter { it.httpResponsePattern.status in 200..299 })
-        .plus(openApiScenarioInfosWithExamples.orEmpty())
-        .plus(wsdlScenarioInfos.orEmpty())
+    return scenarioInfos(featureChildren, filePath)
         .map { scenarioInfo ->
             Scenario(
                 scenarioInfo.scenarioName,
@@ -579,35 +548,45 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, fi
         }
 }
 
-private fun scenarioInfos(
+fun scenarioInfos(
     featureChildren: List<GherkinDocument.Feature.FeatureChild>,
-    filePath: String,
-    openApiScenarioInfos: List<ScenarioInfo>?
-) = scenarios(featureChildren).map { featureChild ->
-    if (featureChild.scenario.name.isBlank())
-        throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
+    filePath: String
+): List<ScenarioInfo> {
+    val openApiSpecification: IncludedSpecification? = backgroundOpenApi(featureChildren)?.run {
+        OpenApiSpecification(text.split(" ")[1])
+    }
+    val openApiScenarioInfos: List<ScenarioInfo>? = openApiSpecification?.toScenarioInfos()
+    val wsdlSpecification = backgroundWsdl(featureChildren)?.let {
+        WsdlSpecification(it.text.split(" ")[1])
+    }
+    val wsdlScenarioInfos = wsdlSpecification?.toScenarioInfos()
 
-    val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
+    return scenarios(featureChildren).map { featureChild ->
+        if (featureChild.scenario.name.isBlank())
+            throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
+
+        val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
+            lexScenario(
+                feature.background.stepsList
+                    .filter { !it.text.contains("openapi", true) }
+                    .filter { !it.text.contains("wsdl", true) },
+                listOf(),
+                emptyList(),
+                ScenarioInfo(),
+                filePath,
+                listOf(openApiSpecification, wsdlSpecification)
+            )
+        } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
+
         lexScenario(
-            feature.background.stepsList
-                .filter { !it.text.contains("openapi", true) }
-                .filter { !it.text.contains("wsdl", true) },
-            listOf(),
-            emptyList(),
-            ScenarioInfo(),
+            featureChild.scenario.stepsList,
+            featureChild.scenario.examplesList,
+            featureChild.scenario.tagsList,
+            backgroundInfoCopy,
             filePath,
-            listOf()
+            listOf(openApiSpecification, wsdlSpecification)
         )
-    } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
-
-    lexScenario(
-        featureChild.scenario.stepsList,
-        featureChild.scenario.examplesList,
-        featureChild.scenario.tagsList,
-        backgroundInfoCopy,
-        filePath,
-        openApiScenarioInfos
-    )
+    }.plus(openApiScenarioInfos.orEmpty()).plus(wsdlScenarioInfos.orEmpty())
 }
 
 private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =

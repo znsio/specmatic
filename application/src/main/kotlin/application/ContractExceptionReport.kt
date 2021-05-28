@@ -6,4 +6,6 @@ class ContractExceptionReport(private val e: ContractException) : CompatibilityR
     override fun message(): String {
         return e.report()
     }
+
+    override val exitCode: Int = 1
 }

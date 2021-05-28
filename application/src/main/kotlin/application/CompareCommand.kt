@@ -12,22 +12,21 @@ import java.util.concurrent.Callable
 @Command(name = "compare",
         mixinStandardHelpOptions = true,
         description = ["Checks if two contracts are equivalent"])
-class CompareCommand : Callable<Unit> {
+class CompareCommand : Callable<Int> {
     @Parameters(index = "0", description = ["Older contract file path"])
     lateinit var olderContractFilePath: String
 
     @Parameters(index = "1", description = ["Newer contract file path"])
     lateinit var newerContractFilePath: String
 
-    override fun call() {
+    override fun call(): Int {
         val olderContract = olderContractFilePath.loadContract()
         val newerContract = newerContractFilePath.loadContract()
 
         val report = backwardCompatible(olderContract, newerContract)
-
         println(report.message())
+        return report.exitCode
     }
-
 }
 
 private fun String.loadContract(): Feature {

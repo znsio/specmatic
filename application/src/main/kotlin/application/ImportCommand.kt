@@ -6,6 +6,8 @@ import `in`.specmatic.conversions.postmanCollectionToGherkin
 import `in`.specmatic.conversions.runTests
 import `in`.specmatic.conversions.toFragment
 import `in`.specmatic.core.*
+import `in`.specmatic.core.git.Verbose
+import `in`.specmatic.core.git.log
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.toXMLNode
@@ -19,40 +21,93 @@ import java.util.concurrent.Callable
         description = ["Converts a files of various formats into their respective $APPLICATION_NAME equivalents"])
 class ImportCommand : Callable<Unit> {
     @Command(name="stub")
-    fun stub(@Parameters(description = [ "Converts a stub json file to a $APPLICATION_NAME file" ], index = "0") path: String, @Option(names = ["-o", "--output"], description = [ "Write the contract into this file"], required = false) outputFile: String?) {
-        val inputFile = File(path)
-        val stub = mockFromJSON(jsonStringToValueMap(inputFile.readText()))
-        val gherkin = toGherkinFeature(NamedStub("New scenario", stub))
+    fun stub(
+        @Parameters(description = ["Converts a stub json file to a $APPLICATION_NAME file"], index = "0") path: String,
+        @Option(
+            names = ["-o", "--output"],
+            description = ["Write the contract into this file"],
+            required = false
+        ) outputFile: String?,
+        @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean
+    ) {
+        if(verbose)
+            log = Verbose
 
-        writeOut(gherkin, outputFile, inputFile, "")
+        try {
+            val inputFile = File(path)
+            val stub = mockFromJSON(jsonStringToValueMap(inputFile.readText()))
+            val gherkin = toGherkinFeature(NamedStub("New scenario", stub))
+
+            writeOut(gherkin, outputFile, inputFile, "")
+        } catch(e: Throwable) {
+            log.exception(e)
+        }
     }
 
     @Command(name="postman")
-    fun postman(@Parameters(description = [ "Converts a postman collection to a $APPLICATION_NAME file" ], index = "0") path: String, @Option(names = ["-o", "--output"], description = [ "Write the contract into this file"], required = false) outputFile: String?) {
-        val inputFile = File(path)
-        val contracts = postmanCollectionToGherkin(inputFile.readText())
+    fun postman(
+        @Parameters(
+            description = ["Converts a postman collection to a $APPLICATION_NAME file"],
+            index = "0"
+        ) path: String,
+        @Option(
+            names = ["-o", "--output"],
+            description = ["Write the contract into this file"],
+            required = false
+        ) outputFile: String?,
+        @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean
+    ) {
+        if(verbose)
+            log = Verbose
 
-        for(contract in contracts) runTests(contract)
+        try {
+            val inputFile = File(path)
+            val contracts = postmanCollectionToGherkin(inputFile.readText())
 
-        when (contracts.size) {
-            1 -> writeOut(contracts.first().gherkin, outputFile, inputFile, toFragment(contracts.first().baseURLInfo))
-            else -> {
-                for(contract in contracts) {
-                    val (_, gherkin, baseURLInfo, _) = contract
-                    writeOut(gherkin, outputFile, inputFile, toFragment(baseURLInfo))
+            for (contract in contracts) runTests(contract)
+
+            when (contracts.size) {
+                1 -> writeOut(
+                    contracts.first().gherkin,
+                    outputFile,
+                    inputFile,
+                    toFragment(contracts.first().baseURLInfo)
+                )
+                else -> {
+                    for (contract in contracts) {
+                        val (_, gherkin, baseURLInfo, _) = contract
+                        writeOut(gherkin, outputFile, inputFile, toFragment(baseURLInfo))
+                    }
                 }
             }
+        } catch(e: Throwable) {
+            log.exception(e)
         }
     }
 
     @Command(name="wsdl")
-    fun wsdl(@Parameters(description = [ "Converts a WSDL file to a $APPLICATION_NAME file" ], index = "0") path: String, @Option(names = ["-o", "--output"], description = [ "Write the contract into this file"], required = false) outputFile: String?) {
-        val inputFile = File(path)
-        val inputFileContent = inputFile.readText()
-        val wsdlXML = toXMLNode(parseXML(inputFileContent))
-        val contract = WSDL(wsdlXML).convertToGherkin()
+    fun wsdl(
+        @Parameters(description = ["Converts a WSDL file to a $APPLICATION_NAME file"], index = "0") path: String,
+        @Option(
+            names = ["-o", "--output"],
+            description = ["Write the contract into this file"],
+            required = false
+        ) outputFile: String?,
+        @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean
+    ) {
+        if(verbose)
+            log = Verbose
 
-        writeOut(contract, outputFile, inputFile, "")
+        try {
+            val inputFile = File(path)
+            val inputFileContent = inputFile.readText()
+            val wsdlXML = toXMLNode(parseXML(inputFileContent))
+            val contract = WSDL(wsdlXML).convertToGherkin()
+
+            writeOut(contract, outputFile, inputFile, "")
+        } catch(e: Throwable) {
+            log.exception(e)
+        }
     }
 
     private fun writeOut(gherkin: String, outputFile: String?, inputFile: File, hostAndPort: String) {

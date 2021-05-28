@@ -21,7 +21,7 @@ fun wsdlToFeatureChildren(wsdlFile: String): List<Messages.GherkinDocument.Featu
 private fun readContentFromLocation(location: String): String? {
     val adjustedLocation = location.replace("\\\\".toRegex(), "/")
     val fileScheme = "file:"
-    val path = if (adjustedLocation.toLowerCase()
+    val path = if (adjustedLocation.lowercase()
             .startsWith(fileScheme)
     ) Paths.get(URI.create(adjustedLocation)) else Paths.get(adjustedLocation)
     if (Files.exists(path)) {

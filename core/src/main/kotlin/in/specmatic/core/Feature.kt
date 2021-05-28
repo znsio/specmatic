@@ -377,7 +377,7 @@ private fun lexScenario(
     }
 
     if (!openApiScenarioInfos.isNullOrEmpty() && steps.isNotEmpty()) {
-        if (!openApiScenarioInfos!!.any {
+        if (!openApiScenarioInfos.any {
                 it.httpRequestPattern.matches(
                     parsedScenarioInfo.httpRequestPattern.generate(
                         Resolver()
@@ -386,7 +386,7 @@ private fun lexScenario(
             }) {
             throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" request is not as per included wsdl / OpenApi spec""")
         }
-        if (!openApiScenarioInfos!!.any {
+        if (!openApiScenarioInfos.any {
                 it.httpResponsePattern.matches(
                     parsedScenarioInfo.httpResponsePattern.generateResponse(
                         Resolver()

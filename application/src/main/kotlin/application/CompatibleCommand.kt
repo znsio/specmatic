@@ -1,16 +1,13 @@
 package application
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.git.GitCommand
-import `in`.specmatic.core.git.NonZeroExitError
-import `in`.specmatic.core.git.SystemGit
+import `in`.specmatic.core.git.*
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import picocli.CommandLine
-import picocli.CommandLine.Command
-import picocli.CommandLine.Parameters
+import picocli.CommandLine.*
 import java.io.FileNotFoundException
 import java.util.concurrent.Callable
 
@@ -33,23 +30,43 @@ class GitCompatibleCommand : Callable<Int> {
     lateinit var fileOperations: FileOperations
 
     @Command(name = "file", description = ["Compare file in working tree against HEAD"])
-    fun file(@Parameters(paramLabel = "contractPath") contractPath: String): Int {
-        val output = checkCompatibility {
-            backwardCompatibleFile(contractPath, fileOperations, gitCommand)
-        }
+    fun file(@Parameters(paramLabel = "contractPath") contractPath: String,
+             @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
+        if(verbose)
+            log = Verbose
 
-        println(output.message)
-        return output.exitCode
+        return try {
+            val output = checkCompatibility {
+                backwardCompatibleFile(contractPath, fileOperations, gitCommand)
+            }
+
+            println(output.message)
+            output.exitCode
+        } catch(e: Throwable) {
+            log.exception(e)
+            1
+        }
     }
 
     @Command(name = "commits", description = ["Compare file in newer commit against older commit"])
-    fun commits(@Parameters(paramLabel = "contractPath") path: String, @Parameters(paramLabel = "newerCommit") newerCommit: String, @Parameters(paramLabel = "olderCommit") olderCommit: String): Int {
+    fun commits(@Parameters(paramLabel = "contractPath") path: String,
+                @Parameters(paramLabel = "newerCommit") newerCommit: String,
+                @Parameters(paramLabel = "olderCommit") olderCommit: String,
+                @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
+        if(verbose)
+            log = Verbose
+
+        return try {
         val output = checkCompatibility {
             backwardCompatibleCommit(path, newerCommit, olderCommit, gitCommand)
         }
 
         println(output.message)
-        return output.exitCode
+        output.exitCode
+        } catch(e: Throwable) {
+            log.exception(e)
+            1
+        }
     }
 
     override fun call(): Int {

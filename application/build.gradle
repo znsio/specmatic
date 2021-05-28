@@ -36,7 +36,7 @@ repositories {
     }
 }
 
-def ktor_version = "1.5.4"
+def ktor_version = "1.6.0"
 def junit_version = "5.7.2"
 def jgit_version = "5.11.1.202105131744-r"
 

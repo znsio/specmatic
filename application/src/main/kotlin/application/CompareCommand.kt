@@ -1,6 +1,7 @@
 package application
 
 import `in`.specmatic.core.Feature
+import `in`.specmatic.core.git.logException
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.testBackwardCompatibility
@@ -20,12 +21,14 @@ class CompareCommand : Callable<Int> {
     lateinit var newerContractFilePath: String
 
     override fun call(): Int {
-        val olderContract = olderContractFilePath.loadContract()
-        val newerContract = newerContractFilePath.loadContract()
+        return logException {
+            val olderContract = olderContractFilePath.loadContract()
+            val newerContract = newerContractFilePath.loadContract()
 
-        val report = backwardCompatible(olderContract, newerContract)
-        println(report.message())
-        return report.exitCode
+            val report = backwardCompatible(olderContract, newerContract)
+            println(report.message())
+            report.exitCode
+        }
     }
 }
 

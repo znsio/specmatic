@@ -5,7 +5,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.Contract
 import `in`.specmatic.core.SPECMATIC_RESULT_HEADER
+import `in`.specmatic.stub.HttpStub
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
@@ -26,7 +28,10 @@ internal class SamplesCommandKtTest {
     @Test
     fun `samples function should generate sample given the input`() {
         val (data, _) = captureStandardOutput {
-            samples(qontractFile, "localhost", 9000)
+            val gherkin = qontractFile.readText().trim()
+            HttpStub(gherkin, emptyList(), "localhost", 9000).use { fake ->
+                Contract(gherkin).samples(fake)
+            }
         }
 
         validateOutput(data.trimIndent())
@@ -36,9 +41,12 @@ internal class SamplesCommandKtTest {
     fun `command should generate sample given the input`() {
         val (data, _) = captureStandardOutput {
             val command = SamplesCommand()
-            command.qontractFile = qontractFile
+            command.contractFile = qontractFile
 
-            samples(qontractFile, "localhost", 9000)
+            val gherkin = qontractFile.readText().trim()
+            HttpStub(gherkin, emptyList(), "localhost", 9000).use { fake ->
+                Contract(gherkin).samples(fake)
+            }
         }
 
         validateOutput(data)

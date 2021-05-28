@@ -9,27 +9,21 @@ import `in`.specmatic.test.TestExecutor
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
-import java.io.File
 import java.net.URI
 
 internal class OpenApiKtTest {
     companion object {
-        const val OPENAPI_FILE = "openApiTest.yaml"
-        const val OPENAPI_FILE_WITH_EXAMPLES = "openApiWithExamples.yaml"
-
         val openAPISpec = """
 Feature: Hello world
 
 Background:
-  Given openapi openApiTest.yaml            
+  Given openapi openapi/hello.yaml            
 
 Scenario: zero should return not found
   When GET /hello/0
@@ -37,149 +31,6 @@ Scenario: zero should return not found
   And response-header Content-Type application/json
         """.trimIndent()
 
-        val gherkinScenarioWithPathParameterDataTypeThatDoesNotMatchOpenAPI = """
-Feature: Hello world
-
-Background:
-  Given openapi openApiTest.yaml            
-
-Scenario: sending string instead of number should return not found
-  When GET /hello/test
-  Then status 404
-  And response-header Content-Type application/json
-        """.trimIndent()
-
-        val gherkinScenarioWithResponseCodeNotDefinedInOpenAPI = """
-Feature: Hello world
-
-Background:
-  Given openapi openApiTest.yaml            
-
-Scenario: zero should return forbidden
-  When GET /hello/0
-  Then status 403
-  And response-header Content-Type application/json
-        """.trimIndent()
-    }
-
-    @BeforeEach
-    fun `setup`() {
-        val openAPI = """
-openapi: 3.0.0
-info:
-  title: Sample API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-servers:
-  - url: http://api.example.com/v1
-    description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
-    description: Optional server description, e.g. Internal staging server for testing
-paths:
-  /hello/{id}:
-    get:
-      summary: hello world
-      description: Optional extended description in CommonMark or HTML.
-      parameters:
-        - in: path
-          name: id
-          schema:
-            type: integer
-          required: true
-          description: Numeric ID
-      responses:
-        '200':
-          description: Says hello
-          content:
-            application/json:
-              schema:
-                type: string
-        '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                type: string
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-    """.trim()
-
-        val openApiFile = File(OPENAPI_FILE)
-        openApiFile.createNewFile()
-        openApiFile.writeText(openAPI)
-
-        val openAPIWithExamples = """
-openapi: 3.0.0
-info:
-  title: Sample API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-servers:
-  - url: http://api.example.com/v1
-    description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
-    description: Optional server description, e.g. Internal staging server for testing
-paths:
-  /hello/{id}:
-    get:
-      summary: hello world
-      description: Optional extended description in CommonMark or HTML.
-      parameters:
-        - in: path
-          name: id
-          schema:
-            type: integer
-          required: true
-          description: Numeric ID
-          examples:
-            200_OKAY:
-              value: 15
-              summary: value that returns 200
-            404_NOT_FOUND:
-              value: 0
-              summary: value that returns 404
-      responses:
-        '200':
-          description: Says hello
-          content:
-            application/json:
-              schema:
-                type: string
-              examples:
-                200_OKAY:
-                  value: hello15
-                  summary: response that matches 200_OKAY
-        '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                type: string
-              examples:
-                404_NOT_FOUND:
-                  value: zero not found
-                  summary: response that matches 404_NOT_FOUND
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-    """.trim()
-
-        val openApiFileWithExamples = File(OPENAPI_FILE_WITH_EXAMPLES)
-        openApiFileWithExamples.createNewFile()
-        openApiFileWithExamples.writeText(openAPIWithExamples)
-    }
-
-    @AfterEach
-    fun `teardown`() {
-        File(OPENAPI_FILE).delete()
-        File(OPENAPI_FILE_WITH_EXAMPLES).delete()
     }
 
     @Test
@@ -251,7 +102,7 @@ paths:
 Feature: Hello world
 
 Background:
-  Given openapi openApiWithExamples.yaml
+  Given openapi openapi/helloWithExamples.yaml
         """.trimIndent()
         )
 
@@ -333,7 +184,19 @@ Background:
     @Test
     fun `should throw error when request in Gherkin scenario does not match included OpenAPI spec`() {
         assertThatThrownBy {
-            parseGherkinStringToFeature(gherkinScenarioWithPathParameterDataTypeThatDoesNotMatchOpenAPI)
+            parseGherkinStringToFeature(
+                """
+        Feature: Hello world
+        
+        Background:
+          Given openapi openapi/hello.yaml            
+        
+        Scenario: sending string instead of number should return not found
+          When GET /hello/test
+          Then status 404
+          And response-header Content-Type application/json
+                """.trimIndent()
+            )
         }.satisfies {
             assertThat(it.message).isEqualTo("""Scenario: "sending string instead of number should return not found" request is not as per included wsdl / OpenApi spec""")
         }
@@ -342,7 +205,19 @@ Background:
     @Test
     fun `should throw error when response code in Gherkin scenario does not match included OpenAPI spec`() {
         assertThatThrownBy {
-            parseGherkinStringToFeature(gherkinScenarioWithResponseCodeNotDefinedInOpenAPI)
+            parseGherkinStringToFeature(
+                """
+        Feature: Hello world
+        
+        Background:
+          Given openapi openapi/hello.yaml            
+        
+        Scenario: zero should return forbidden
+          When GET /hello/0
+          Then status 403
+          And response-header Content-Type application/json
+                """.trimIndent()
+            )
         }.satisfies {
             assertThat(it.message).isEqualTo("""Scenario: "zero should return forbidden" response is not as per included wsdl / OpenApi spec""")
         }

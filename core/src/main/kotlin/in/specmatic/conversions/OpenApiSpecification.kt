@@ -12,7 +12,7 @@ import io.swagger.v3.parser.OpenAPIV3Parser
 
 class OpenApiSpecification : IncludedSpecification {
     private val openApiFile: String
-    private var openApi: OpenAPI
+    private val openApi: OpenAPI
 
     constructor(openApiFile: String) {
         this.openApiFile = openApiFile

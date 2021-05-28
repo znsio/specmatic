@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 
-class WsdlSpecification(val wsdlFile: String) : IncludedSpecification {
+class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
     override fun validateCompliance(scenarioInfo: ScenarioInfo, steps: List<Messages.GherkinDocument.Feature.Step>) {
         validateScenarioInfoCompliance(toScenarioInfos(), steps, scenarioInfo)
     }

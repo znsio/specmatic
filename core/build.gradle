@@ -103,7 +103,7 @@ publishing {
                 licenses {
                     license {
                         name = 'MIT'
-                        url = 'https://github.com/znsio/specmatic/blob/master/License.md'
+                        url = 'https://github.com/znsio/specmatic/blob/main/License.md'
                     }
                 }
                 developers {

@@ -6,6 +6,7 @@ import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
+import com.fasterxml.jackson.annotation.JsonProperty
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -195,7 +196,12 @@ paths:
         HttpStub(feature).use { mock ->
             val restTemplate = RestTemplate()
             try {
-                restTemplate.exchange(URI.create("http://localhost:9000/hello/0"), HttpMethod.GET, null, String::class.java)
+                restTemplate.exchange(
+                    URI.create("http://localhost:9000/hello/0"),
+                    HttpMethod.GET,
+                    null,
+                    String::class.java
+                )
             } catch (e: HttpClientErrorException) {
                 assertThat(e.statusCode).isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND)
             }
@@ -209,26 +215,26 @@ paths:
         val feature = parseGherkinStringToFeature(openAPISpec)
 
         val results = feature.executeTests(
-                object : TestExecutor {
-                    override fun execute(request: HttpRequest): HttpResponse {
-                        flags["${request.path} executed"] = true
-                        assertThat(request.path).matches("""\/hello\/[0-9]+""")
-                        val headers: HashMap<String, String> = object : HashMap<String, String>() {
-                            init {
-                                put("Content-Type", "application/json")
-                            }
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    assertThat(request.path).matches("""\/hello\/[0-9]+""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
                         }
-                        val id = request.path!!.split('/')[2].toInt()
-                        val status = when (id) {
-                            0 -> 404
-                            else -> 200
-                        }
-                        return HttpResponse(status, "", headers)
                     }
-
-                    override fun setServerState(serverState: Map<String, Value>) {
+                    val id = request.path!!.split('/')[2].toInt()
+                    val status = when (id) {
+                        0 -> 404
+                        else -> 200
                     }
+                    return HttpResponse(status, "", headers)
                 }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
         )
 
         assertThat(flags["/hello/0 executed"]).isTrue
@@ -240,34 +246,36 @@ paths:
     fun `should create tests from OpenAPI examples`() {
         val flags = mutableMapOf<String, Boolean>()
 
-        val feature = parseGherkinStringToFeature("""
+        val feature = parseGherkinStringToFeature(
+            """
 Feature: Hello world
 
 Background:
   Given openapi openApiWithExamples.yaml
-        """.trimIndent())
+        """.trimIndent()
+        )
 
         val results = feature.executeTests(
-                object : TestExecutor {
-                    override fun execute(request: HttpRequest): HttpResponse {
-                        flags["${request.path} executed"] = true
-                        assertThat(request.path).matches("""\/hello\/[0-9]+""")
-                        val headers: HashMap<String, String> = object : HashMap<String, String>() {
-                            init {
-                                put("Content-Type", "application/json")
-                            }
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    assertThat(request.path).matches("""\/hello\/[0-9]+""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
                         }
-                        val id = request.path!!.split('/')[2].toInt()
-                        val status = when (id) {
-                            0 -> 404
-                            else -> 200
-                        }
-                        return HttpResponse(status, "hello world", headers)
                     }
-
-                    override fun setServerState(serverState: Map<String, Value>) {
+                    val id = request.path!!.split('/')[2].toInt()
+                    val status = when (id) {
+                        0 -> 404
+                        else -> 200
                     }
+                    return HttpResponse(status, "hello world", headers)
                 }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
         )
 
         assertThat(flags["/hello/0 executed"]).isTrue
@@ -283,31 +291,32 @@ Background:
         val feature = parseGherkinStringToFeature(openAPISpec)
 
         val results = feature.executeTests(
-                object : TestExecutor {
-                    override fun execute(request: HttpRequest): HttpResponse {
-                        flags["executed"] = true
-                        assertThat(request.path).matches("""\/hello\/[0-9]+""")
-                        val headers: HashMap<String, String> = object : HashMap<String, String>() {
-                            init {
-                                put("Content-Type", "application/json")
-                            }
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["executed"] = true
+                    assertThat(request.path).matches("""\/hello\/[0-9]+""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
                         }
-                        val id = request.path!!.split('/')[2].toInt()
-                        val status = when (id) {
-                            0 -> 403
-                            else -> 202
-                        }
-                        return HttpResponse(status, "", headers)
                     }
-
-                    override fun setServerState(serverState: Map<String, Value>) {
+                    val id = request.path!!.split('/')[2].toInt()
+                    val status = when (id) {
+                        0 -> 403
+                        else -> 202
                     }
+                    return HttpResponse(status, "", headers)
                 }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
         )
 
         assertThat(flags["executed"]).isTrue
         assertFalse(results.success())
-        assertThat(results.report()).isEqualTo("""
+        assertThat(results.report()).isEqualTo(
+            """
             In scenario "zero should return not found"
             >> RESPONSE.STATUS
 
@@ -317,7 +326,8 @@ Background:
             >> RESPONSE.STATUS
 
             Expected status: 200, actual: 202
-        """.trimIndent())
+        """.trimIndent()
+        )
     }
 
     @Test
@@ -337,4 +347,30 @@ Background:
             assertThat(it.message).isEqualTo("""Scenario: "zero should return forbidden" response is not as per included wsdl / OpenApi spec""")
         }
     }
+
+    @Test
+    fun `should generate stub with non primitive open api data types`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val response = HttpStub(feature).use { mock ->
+            val restTemplate = RestTemplate()
+            restTemplate.exchange(URI.create("http://localhost:9000/pets/1"), HttpMethod.GET, null, Pet::class.java)
+        }
+
+        assertThat(response.statusCodeValue).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(Pet::class.java)
+    }
 }
+
+data class Pet(
+    @JsonProperty("name") val name: String,
+    @JsonProperty("tag") val tag: String,
+    @JsonProperty("id") val id: Int
+)

@@ -2,32 +2,37 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.toURLMatcherWithOptionalQueryParams
 import io.cucumber.messages.Messages
+import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
-import io.swagger.v3.oas.models.media.IntegerSchema
-import io.swagger.v3.oas.models.media.MediaType
-import io.swagger.v3.oas.models.media.Schema
-import io.swagger.v3.oas.models.media.StringSchema
+import io.swagger.v3.oas.models.media.*
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.parser.OpenAPIV3Parser
 
-class OpenApiSpecification(val openApiFile: String) : IncludedSpecification {
+class OpenApiSpecification : IncludedSpecification {
+    private val openApiFile: String
+    private var openApi: OpenAPI
+
+    constructor(openApiFile: String) {
+        this.openApiFile = openApiFile
+        openApi = OpenAPIV3Parser().read(openApiFile)
+    }
+
     override fun toScenarioInfos(): List<ScenarioInfo> =
         openApitoScenarioInfos().filter { it.httpResponsePattern.status in 200..299 }
             .plus(toScenarioInfosWithExamples())
 
     private fun openApitoScenarioInfos(): List<ScenarioInfo> {
-        val openApi = OpenAPIV3Parser().read(openApiFile)
         return openApi.paths.map { (openApiPath, pathItem) ->
             val get = pathItem.get
             var specmaticPath = openApiPath
+
             get.parameters.filter { it.`in` == "path" }.map {
                 specmaticPath =
                     specmaticPath.replace("{${it.name}}", "(${it.name}:${toSpecmaticPattern(it.schema).typeName})")
             }
-            toHttpResponsePattern(get.responses).map { (response, responseMediaType, httpResponsePattern) ->
+            toHttpResponsePattern(get.responses).map { (response, _, httpResponsePattern) ->
                 ScenarioInfo(
                     scenarioName = "Request: " + get.summary + " Response: " + response.description,
                     httpRequestPattern = httpRequestPattern(specmaticPath, get),
@@ -38,7 +43,6 @@ class OpenApiSpecification(val openApiFile: String) : IncludedSpecification {
     }
 
     private fun toScenarioInfosWithExamples(): List<ScenarioInfo> {
-        val openApi = OpenAPIV3Parser().read(openApiFile)
         return openApi.paths.map { (openApiPath, pathItem) ->
             val get = pathItem.get
             var specmaticPath = openApiPath
@@ -81,7 +85,10 @@ class OpenApiSpecification(val openApiFile: String) : IncludedSpecification {
                 Triple(
                     response, mediaType, HttpResponsePattern(
                         headersPattern = HttpHeadersPattern(mapOf(toPatternPair("Content-Type", contentType))),
-                        status = status.toInt(),
+                        status = when (status) {
+                            "default" -> 400
+                            else -> status.toInt()
+                        },
                         body = toSpecmaticPattern(mediaType)
                     )
                 )
@@ -94,7 +101,23 @@ class OpenApiSpecification(val openApiFile: String) : IncludedSpecification {
     fun toSpecmaticPattern(schema: Schema<Any>): Pattern = when (schema) {
         is StringSchema -> StringPattern
         is IntegerSchema -> NumberPattern
+        is ObjectSchema -> {
+            val schemaProperties = schema.properties.map { (name, type) ->
+                name to toSpecmaticPattern(type)
+            }.toMap()
+            toJSONObjectPattern(schemaProperties)
+        }
+        is ComposedSchema -> {
+            NullPattern
+        }
+        is Schema -> {
+            resolveReference(schema.`$ref`)
+        }
         else -> NullPattern
+    }
+
+    private fun resolveReference(component: String?): Pattern {
+        return toSpecmaticPattern(openApi.components.schemas[component!!.removePrefix("#/components/schemas/")] as Schema<Any>)
     }
 
     fun httpRequestPattern(path: String, operation: Operation): HttpRequestPattern {

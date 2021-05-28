@@ -1,13 +1,8 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.conversions.toScenarioInfos
-import `in`.specmatic.conversions.toScenarioInfosWithExamples
-import `in`.specmatic.conversions.wsdlToFeatureChildren
-import io.cucumber.gherkin.GherkinDocumentBuilder
-import io.cucumber.gherkin.Parser
-import io.cucumber.messages.IdGenerator
-import io.cucumber.messages.IdGenerator.Incrementing
-import io.cucumber.messages.Messages.GherkinDocument
+import `in`.specmatic.conversions.IncludedSpecification
+import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.conversions.WsdlSpecification
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.jsonStringToValueMap
@@ -16,6 +11,12 @@ import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.test.TestExecutor
+import io.cucumber.gherkin.GherkinDocumentBuilder
+import io.cucumber.gherkin.Parser
+import io.cucumber.messages.IdGenerator
+import io.cucumber.messages.IdGenerator.Incrementing
+import io.cucumber.messages.Messages.GherkinDocument
+import io.cucumber.messages.Messages.GherkinDocument.Feature.Step
 import java.io.File
 import java.net.URI
 
@@ -255,12 +256,12 @@ private fun toFacts(rest: String, fixtures: Map<String, Value>): Map<String, Val
 }
 
 private fun lexScenario(
-    steps: List<GherkinDocument.Feature.Step>,
+    steps: List<Step>,
     examplesList: List<GherkinDocument.Feature.Scenario.Examples>,
     featureTags: List<GherkinDocument.Feature.Tag>,
     backgroundScenarioInfo: ScenarioInfo,
     filePath: String,
-    openApiScenarioInfos: List<ScenarioInfo>?
+    includedSpecifications: List<IncludedSpecification?>
 ): ScenarioInfo {
     val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList, it) }.filterNot { it.isEmpty }
 
@@ -376,25 +377,8 @@ private fun lexScenario(
         else -> false
     }
 
-    if (!openApiScenarioInfos.isNullOrEmpty() && steps.isNotEmpty()) {
-        if (!openApiScenarioInfos.any {
-                it.httpRequestPattern.matches(
-                    parsedScenarioInfo.httpRequestPattern.generate(
-                        Resolver()
-                    ), Resolver()
-                ).isTrue()
-            }) {
-            throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" request is not as per included wsdl / OpenApi spec""")
-        }
-        if (!openApiScenarioInfos.any {
-                it.httpResponsePattern.matches(
-                    parsedScenarioInfo.httpResponsePattern.generateResponse(
-                        Resolver()
-                    ), Resolver()
-                ).isTrue()
-            }) {
-            throw ContractException("""Scenario: "${parsedScenarioInfo.scenarioName}" response is not as per included wsdl / OpenApi spec""")
-        }
+    includedSpecifications.forEach {
+        it?.validateCompliance(parsedScenarioInfo, steps)
     }
 
     return parsedScenarioInfo.copy(
@@ -547,21 +531,7 @@ internal fun lex(gherkinDocument: GherkinDocument, filePath: String = ""): Pair<
     Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.childrenList, filePath))
 
 internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, filePath: String): List<Scenario> {
-    val openApiScenarioInfos: List<ScenarioInfo>? = backgroundOpenApi(featureChildren)?.let {
-        toScenarioInfos(it.text.split(" ")[1])
-    }
-    val openApiScenarioInfosWithExamples: List<ScenarioInfo>? = backgroundOpenApi(featureChildren)?.let {
-        toScenarioInfosWithExamples(it.text.split(" ")[1])
-    }
-    val wsdlScenarioInfos = backgroundWsdl(featureChildren)?.let {
-        scenarioInfos(wsdlToFeatureChildren(it.text.split(" ")[1]), "", listOf())
-    }
-    val specmaticScenarioInfos: List<ScenarioInfo> =
-        scenarioInfos(featureChildren, filePath, openApiScenarioInfos.orEmpty().plus(wsdlScenarioInfos.orEmpty()))
-    return specmaticScenarioInfos
-        .plus(openApiScenarioInfos.orEmpty().filter { it.httpResponsePattern.status in 200..299 })
-        .plus(openApiScenarioInfosWithExamples.orEmpty())
-        .plus(wsdlScenarioInfos.orEmpty())
+    return scenarioInfos(featureChildren, filePath)
         .map { scenarioInfo ->
             Scenario(
                 scenarioInfo.scenarioName,
@@ -579,41 +549,61 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, fi
         }
 }
 
-private fun scenarioInfos(
+fun scenarioInfos(
     featureChildren: List<GherkinDocument.Feature.FeatureChild>,
-    filePath: String,
-    openApiScenarioInfos: List<ScenarioInfo>?
-) = scenarios(featureChildren).map { featureChild ->
-    if (featureChild.scenario.name.isBlank())
-        throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
+    filePath: String
+): List<ScenarioInfo> {
+    val openApiSpecification =
+        toIncludedSpecification(featureChildren, { backgroundOpenApi(it) }) { OpenApiSpecification(it) }
 
-    val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
+    val wsdlSpecification =
+        toIncludedSpecification(featureChildren, { backgroundWsdl(it) }) { WsdlSpecification(it) }
+
+    val includedSpecifications = listOf(openApiSpecification, wsdlSpecification)
+
+    val scenarioInfosBelongingToIncludedSpecifications =
+        includedSpecifications.map { it?.toScenarioInfos().orEmpty() }.flatten()
+
+    val specmaticScenarioInfos = scenarios(featureChildren).map { featureChild ->
+        if (featureChild.scenario.name.isBlank())
+            throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
+
+        val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
+            lexScenario(
+                feature.background.stepsList
+                    .filter { !it.text.contains("openapi", true) }
+                    .filter { !it.text.contains("wsdl", true) },
+                listOf(),
+                emptyList(),
+                ScenarioInfo(),
+                filePath,
+                includedSpecifications
+            )
+        } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
+
         lexScenario(
-            feature.background.stepsList
-                .filter { !it.text.contains("openapi", true) }
-                .filter { !it.text.contains("wsdl", true) },
-            listOf(),
-            emptyList(),
-            ScenarioInfo(),
+            featureChild.scenario.stepsList,
+            featureChild.scenario.examplesList,
+            featureChild.scenario.tagsList,
+            backgroundInfoCopy,
             filePath,
-            listOf()
+            includedSpecifications
         )
-    } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
-
-    lexScenario(
-        featureChild.scenario.stepsList,
-        featureChild.scenario.examplesList,
-        featureChild.scenario.tagsList,
-        backgroundInfoCopy,
-        filePath,
-        openApiScenarioInfos
-    )
+    }
+    return specmaticScenarioInfos.plus(scenarioInfosBelongingToIncludedSpecifications)
 }
+
+private fun toIncludedSpecification(
+    featureChildren: List<GherkinDocument.Feature.FeatureChild>,
+    selector: (List<GherkinDocument.Feature.FeatureChild>) -> Step?,
+    creator: (String) -> IncludedSpecification
+): IncludedSpecification? =
+    selector(featureChildren)?.run { creator(text.split(" ")[1]) }
 
 private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
     featureChildren.firstOrNull { it.valueCase.name == "BACKGROUND" }
 
-private fun backgroundOpenApi(featureChildren: List<GherkinDocument.Feature.FeatureChild>): GherkinDocument.Feature.Step? {
+private fun backgroundOpenApi(featureChildren: List<GherkinDocument.Feature.FeatureChild>): Step? {
     return background(featureChildren)?.let { background ->
         background.background.stepsList.firstOrNull {
             it.keyword.contains("Given", true)
@@ -622,7 +612,7 @@ private fun backgroundOpenApi(featureChildren: List<GherkinDocument.Feature.Feat
     }
 }
 
-private fun backgroundWsdl(featureChildren: List<GherkinDocument.Feature.FeatureChild>): GherkinDocument.Feature.Step? {
+private fun backgroundWsdl(featureChildren: List<GherkinDocument.Feature.FeatureChild>): Step? {
     return background(featureChildren)?.let { background ->
         background.background.stepsList.firstOrNull {
             it.keyword.contains("Given", true)

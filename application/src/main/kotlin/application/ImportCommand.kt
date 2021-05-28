@@ -8,6 +8,7 @@ import `in`.specmatic.conversions.toFragment
 import `in`.specmatic.core.*
 import `in`.specmatic.core.git.Verbose
 import `in`.specmatic.core.git.log
+import `in`.specmatic.core.git.logException
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.toXMLNode
@@ -27,20 +28,20 @@ class ImportCommand : Callable<Unit> {
             names = ["-o", "--output"],
             description = ["Write the contract into this file"],
             required = false
-        ) outputFile: String?,
+        ) userSpecifiedOutFile: String?,
         @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean
     ) {
         if(verbose)
             log = Verbose
 
-        try {
+        logException {
             val inputFile = File(path)
             val stub = mockFromJSON(jsonStringToValueMap(inputFile.readText()))
             val gherkin = toGherkinFeature(NamedStub("New scenario", stub))
 
-            writeOut(gherkin, outputFile, inputFile, "")
-        } catch(e: Throwable) {
-            log.exception(e)
+            val outFile = userSpecifiedOutFile ?: "${inputFile.nameWithoutExtension}.$CONTRACT_EXTENSION"
+
+            writeOut(gherkin, outFile)
         }
     }
 
@@ -54,34 +55,32 @@ class ImportCommand : Callable<Unit> {
             names = ["-o", "--output"],
             description = ["Write the contract into this file"],
             required = false
-        ) outputFile: String?,
+        ) userSpecifiedOutPath: String?,
         @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean
     ) {
         if(verbose)
             log = Verbose
 
-        try {
+        logException {
             val inputFile = File(path)
             val contracts = postmanCollectionToGherkin(inputFile.readText())
 
             for (contract in contracts) runTests(contract)
 
             when (contracts.size) {
-                1 -> writeOut(
-                    contracts.first().gherkin,
-                    outputFile,
-                    inputFile,
-                    toFragment(contracts.first().baseURLInfo)
-                )
+                1 -> {
+                    val outPath = userSpecifiedOutPath ?: "${inputFile.nameWithoutExtension}.${CONTRACT_EXTENSION}"
+
+                    writeOut(contracts.first().gherkin, outPath, toFragment(contracts.first().baseURLInfo))
+                }
                 else -> {
                     for (contract in contracts) {
                         val (_, gherkin, baseURLInfo, _) = contract
-                        writeOut(gherkin, outputFile, inputFile, toFragment(baseURLInfo))
+                        val outFilePath = userSpecifiedOutPath ?: "${inputFile.nameWithoutExtension}.${CONTRACT_EXTENSION}"
+                        writeOut(gherkin, outFilePath, toFragment(baseURLInfo))
                     }
                 }
             }
-        } catch(e: Throwable) {
-            log.exception(e)
         }
     }
 
@@ -92,56 +91,31 @@ class ImportCommand : Callable<Unit> {
             names = ["-o", "--output"],
             description = ["Write the contract into this file"],
             required = false
-        ) outputFile: String?,
+        ) userSpecifiedOutFile: String?,
         @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean
     ) {
         if(verbose)
             log = Verbose
 
-        try {
+        logException {
             val inputFile = File(path)
             val inputFileContent = inputFile.readText()
             val wsdlXML = toXMLNode(parseXML(inputFileContent))
             val contract = WSDL(wsdlXML).convertToGherkin()
 
-            writeOut(contract, outputFile, inputFile, "")
-        } catch(e: Throwable) {
-            log.exception(e)
+            val outFile = userSpecifiedOutFile ?: "${inputFile.nameWithoutExtension}.$CONTRACT_EXTENSION"
+
+            writeOut(contract, outFile)
         }
     }
 
-    private fun writeOut(gherkin: String, outputFile: String?, inputFile: File, hostAndPort: String) {
-        when (outputFile) {
-            null -> {
-                if(inputFile.name.endsWith(".wsdl")) {
-                    val filename = inputFile.nameWithoutExtension + ".$CONTRACT_EXTENSION"
-                    File(filename).writeText(gherkin)
-                    println("Written to file $filename")
-                }
-                else
-                    println(gherkin)
-            }
-            else -> File(outputFile).let {
-                val tag = if(hostAndPort.isNotEmpty()) "-${hostAndPort.replace(":", "-")}" else ""
+    private fun writeOut(gherkin: String, outputFilePath: String, hostAndPort: String? = null) {
+        val outputFile = File(outputFilePath)
 
-                when {
-                    it.isDirectory -> {
-                        val dir = it.absoluteFile.parentFile.path.removeSuffix(File.separator)
-                        val name = inputFile.nameWithoutExtension
-                        val extension = CONTRACT_EXTENSION
+        val tag = if(hostAndPort != null) "-${hostAndPort.replace(":", "-")}" else ""
 
-                        val outputPath = "$dir${File.separator}$name.$extension"
-                        val withTag = fileWithTag(File(outputPath), tag)
-                        withTag.writeText(gherkin)
-                        println("Written to file ${withTag.path}")
-                    }
-                    else -> {
-                        fileWithTag(it, tag).writeText(gherkin)
-                        println("Written to file ${fileWithTag(it, tag).path}")
-                    }
-                }
-            }
-        }
+        fileWithTag(outputFile, tag).writeText(gherkin)
+        log.message("Written to file ${fileWithTag(outputFile, tag).path}")
     }
 
     override fun call() {

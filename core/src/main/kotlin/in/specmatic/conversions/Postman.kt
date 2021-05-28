@@ -1,6 +1,7 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.git.log
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.parseXML
@@ -33,19 +34,19 @@ fun postmanCollectionToGherkin(postmanContent: String): List<ImportedPostmanCont
 
 fun runTests(contract: ImportedPostmanContracts) {
     val (name, gherkin, baseURLInfo, _) = contract
-    println("Testing contract \"$name\" with base URL ${baseURLInfo.originalBaseURL}")
+    log.message("Testing contract \"$name\" with base URL ${baseURLInfo.originalBaseURL}")
     try {
         val feature = parseGherkinStringToFeature(gherkin)
         val results = feature.executeTests(HttpClient(baseURL = baseURLInfo.originalBaseURL))
 
-        println("### Test result for contract \"$name\" ###")
+        log.message("Test result for contract \"$name\" ###")
         val resultReport = "${results.report(PATH_NOT_RECOGNIZED_ERROR).trim()}\n\n".trim()
         val testCounts = "Tests run: ${results.successCount + results.failureCount}, Passed: ${results.successCount}, Failed: ${results.failureCount}\n\n"
-        println("$testCounts$resultReport".trim())
-        println()
-        println()
+        log.message("$testCounts$resultReport".trim())
+        log.emptyLine()
+        log.emptyLine()
     } catch(e: Throwable) {
-        println("Test reported an exception: ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
+        log.exception("Test reported an exception", e)
     }
 }
 
@@ -64,7 +65,7 @@ fun stubsFromPostmanCollection(postmanContent: String): PostmanCollection {
     val schema = info.getString("schema")
 
     if(schema != "https://schema.getpostman.com/json/collection/v2.1.0/collection.json")
-        throw Exception("Schema $schema is not supported :-) Please export this collection in v2.1.0 format. You might have to update to the latest version of Postman.")
+        throw Exception("Schema $schema is not supported. Please export this collection in v2.1.0 format. You might have to update to the latest version of Postman.")
 
     val name = info.getString("name")
 
@@ -83,7 +84,7 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<BaseURLInfo, Na
     val request = item.getJSONObjectValue("request")
     val scenarioName = if (item.jsonObject.contains("name")) item.getString("name") else "New scenario"
 
-    println("Getting response for $scenarioName")
+    log.message("Getting response for $scenarioName")
 
     return try {
         val responses = item.getJSONArray("response")
@@ -91,7 +92,7 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<BaseURLInfo, Na
 
         baseNamedStub(request, scenarioName).plus(namedStubsFromSavedResponses)
     } catch (e: Throwable) {
-        println("  Exception thrown when processing Postman scenario \"$scenarioName\": ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
+        log.exception("  Exception thrown when processing Postman scenario \"$scenarioName\"", e)
         emptyList()
     }
 }
@@ -100,12 +101,12 @@ private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<
     return try {
         val (baseURL, httpRequest) = postmanItemRequest(request)
 
-        println("  Using base url $baseURL")
+        log.message("  Using base url $baseURL")
         val response = HttpClient(baseURL, log = dontPrintToConsole).execute(httpRequest)
 
         listOf(Pair(hostAndPort(baseURL), NamedStub(scenarioName, ScenarioStub(httpRequest, response))))
     } catch (e: Throwable) {
-        println("  Failed to generate a response for the Postman request.")
+        log.exception("  Failed to generate a response for the Postman request", e)
         emptyList()
     }
 }

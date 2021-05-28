@@ -11,7 +11,7 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.HttpStubResponse
 import `in`.specmatic.stub.ThreadSafeListOfStubs
-import junit.framework.Assert.assertFalse
+import org.junit.Assert.assertFalse
 import org.assertj.core.api.Assertions.assertThat
 
 fun optionalPattern(pattern: Pattern): AnyPattern = AnyPattern(listOf(DeferredPattern("(empty)"), pattern))

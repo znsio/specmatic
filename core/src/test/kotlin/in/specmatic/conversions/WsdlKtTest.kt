@@ -102,7 +102,7 @@ Scenario: test request returns test response
         """.trimIndent()
 
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
-        HttpStub(wsdlFeature).use { stub ->
+        HttpStub(wsdlFeature).use {
             val soapRequest =
                 """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleRequest>WKTGM</SimpleRequest></soapenv:Body></soapenv:Envelope>"""
 

@@ -1,15 +1,16 @@
 package `in`.specmatic.core.git
 
 import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.utilities.exceptionMessageStack
 
 var log: Log = Info
 
-fun logException(fn: () -> Unit) {
-    try {
+fun logException(fn: ()-> Unit): Int {
+    return try {
         fn()
+        0
     } catch(e: Throwable) {
         log.exception(e)
+        1
     }
 }
 

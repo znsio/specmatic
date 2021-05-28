@@ -11,7 +11,7 @@ import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
-import junit.framework.Assert.assertFalse
+import org.junit.Assert.assertFalse
 
 internal class JSONArrayPatternTest {
     @Test

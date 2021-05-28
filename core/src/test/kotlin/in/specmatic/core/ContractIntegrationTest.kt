@@ -3,7 +3,7 @@ package `in`.specmatic.core
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import `in`.specmatic.test.HttpClient
-import junit.framework.Assert.assertTrue
+import org.junit.Assert.assertTrue
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test

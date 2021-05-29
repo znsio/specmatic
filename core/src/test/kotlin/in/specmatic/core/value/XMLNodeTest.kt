@@ -143,12 +143,12 @@ internal class XMLNodeTest {
 
     @Test
     fun `strip out the namespace prefix from a name`() {
-        assertThat("ns:name".withoutNamespacePrefix()).isEqualTo("name")
+        assertThat("ns:name".localName()).isEqualTo("name")
     }
 
     @Test
     fun `stripping out the namespace prefix from a name with no prefix returns the name`() {
-        assertThat("name".withoutNamespacePrefix()).isEqualTo("name")
+        assertThat("name".localName()).isEqualTo("name")
     }
 
     @Test

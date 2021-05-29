@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.XMLNode
 import `in`.specmatic.core.value.toXMLNode
-import `in`.specmatic.core.value.withoutNamespacePrefix
+import `in`.specmatic.core.value.localName
 import `in`.specmatic.core.wsdl.parser.message.GetMessageTypeReference
 import `in`.specmatic.core.wsdl.parser.message.MessageTypeProcessingComplete
 import `in`.specmatic.core.wsdl.parser.message.ParseMessageWithElementRef
@@ -21,7 +21,7 @@ internal class GetMessageTypeReferenceTest{
 
         val wsdl: WSDL = mockk()
         every {
-            wsdl.findMessageNode(messageNodeName.withoutNamespacePrefix())
+            wsdl.findMessageNode(messageNodeName.localName())
         }.returns(toXMLNode("<message />"))
 
         val next = GetMessageTypeReference(wsdl, messageTypeNode, SOAPMessageType.Input, emptyMap(), "").execute()
@@ -40,7 +40,7 @@ internal class GetMessageTypeReferenceTest{
 
         val wsdl: WSDL = mockk()
         every {
-            wsdl.findMessageNode(messageNodeName.withoutNamespacePrefix())
+            wsdl.findMessageNode(messageNodeName.localName())
         }.returns(toXMLNode("<tns:message><tns:part element=\"msg:payload\"/></tns:message>"))
 
         val next = GetMessageTypeReference(wsdl, messageTypeNode, SOAPMessageType.Input, emptyMap(), "").execute()

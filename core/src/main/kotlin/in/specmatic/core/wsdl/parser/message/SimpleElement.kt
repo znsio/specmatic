@@ -5,7 +5,7 @@ import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.XMLNode
 import `in`.specmatic.core.value.XMLValue
-import `in`.specmatic.core.value.withoutNamespacePrefix
+import `in`.specmatic.core.value.localName
 import `in`.specmatic.core.wsdl.parser.SOAPMessageType
 import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.core.wsdl.parser.WSDLTypeInfo
@@ -36,7 +36,7 @@ data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, va
 }
 
 internal fun createSimpleType(element: XMLNode): XMLNode {
-    val typeName = element.attributes.getValue("type").toStringValue().withoutNamespacePrefix()
+    val typeName = element.attributes.getValue("type").toStringValue().localName()
     val value = when(typeName) {
         in primitiveStringTypes -> StringValue("(string)")
         in primitiveNumberTypes -> StringValue("(number)")
@@ -49,5 +49,5 @@ internal fun createSimpleType(element: XMLNode): XMLNode {
 
     val qontractAttributes = getQontractAttributes(element)
 
-    return XMLNode(element.getAttributeValue("name").withoutNamespacePrefix(), qontractAttributes, listOf(value))
+    return XMLNode(element.getAttributeValue("name").localName(), qontractAttributes, listOf(value))
 }

@@ -3,7 +3,7 @@ package `in`.specmatic.core.wsdl.parser
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.XMLNode
 import `in`.specmatic.core.value.namespacePrefix
-import `in`.specmatic.core.value.withoutNamespacePrefix
+import `in`.specmatic.core.value.localName
 import `in`.specmatic.core.wsdl.parser.message.*
 
 private fun getXmlnsDefinitions(wsdlNode: XMLNode): Map<String, String> {
@@ -47,7 +47,7 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
     ): XMLNode {
         val fullTypeName = element.attributes.getValue(attributeName).toStringValue()
         val schema = findSchema(namespace(fullTypeName, element))
-        return schema.findByNodeNameAndAttribute("complexType", "name", fullTypeName.withoutNamespacePrefix())
+        return schema.findByNodeNameAndAttribute("complexType", "name", fullTypeName.localName())
     }
 
     fun findTypeFromAttribute(
@@ -55,7 +55,7 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
         attributeName: String
     ): XMLNode {
         val fullTypeName = element.attributes.getValue(attributeName).toStringValue()
-        return findElement(fullTypeName.withoutNamespacePrefix(), namespace(fullTypeName, element))
+        return findElement(fullTypeName.localName(), namespace(fullTypeName, element))
     }
 
     private fun namespace(fullTypeName: String, element: XMLNode): String {
@@ -67,17 +67,6 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
                 ?: throw ContractException("Could not find namespace with prefix $namespacePrefix in xml node $element")
     }
 
-    fun findElement(fullTypeReference: String): XMLNode {
-        val typeName = fullTypeReference.withoutNamespacePrefix()
-        val namespacePrefix = fullTypeReference.namespacePrefix()
-        val namespace = wsdlNode.attributes["xmlns:$namespacePrefix"]?.toStringValue()
-            ?: throw ContractException("Couldn't find the namespace for type reference $fullTypeReference")
-
-        val schema = findSchema(namespace)
-
-        return schema.getXMLNodeByAttributeValue("name", typeName)
-    }
-
     fun findElement(typeName: String, namespace: String): XMLNode {
         val schema = findSchema(namespace)
 
@@ -85,7 +74,7 @@ data class WSDL(private val wsdlNode: XMLNode, private val typesNode: XMLNode, v
     }
 
     fun getSOAPElement(wsdlTypeReference: String): WSDLElement {
-        val typeName = wsdlTypeReference.withoutNamespacePrefix() // TODO might need to do this in a cleaner way
+        val typeName = wsdlTypeReference.localName()
         val namespace = this.resolveNamespace(wsdlTypeReference)
 
         val schema = findSchema(namespace)

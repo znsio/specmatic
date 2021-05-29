@@ -48,7 +48,7 @@ fun toXMLNode(xmlData: String): XMLNode {
     return toXMLNode(document)
 }
 
-fun String.withoutNamespacePrefix(): String = this.substringAfter(':')
+fun String.localName(): String = this.substringAfter(':')
 
 fun String.namespacePrefix(): String {
     val parts = this.split(":")
@@ -62,7 +62,7 @@ fun getNamespaces(attributes: Map<String, StringValue>): Map<String, String> =
     attributes.filterKeys { it.startsWith("xmlns:") }.mapKeys { it.key.removePrefix("xmlns:") }.mapValues { it.value.toString() }
 
 data class XMLNode(val name: String, val realName: String, val attributes: Map<String, StringValue>, val childNodes: List<XMLValue>, val namespacePrefix: String, val namespaces: Map<String, String>) : XMLValue, ListValue {
-    constructor(realName: String, attributes: Map<String, StringValue>, childNodes: List<XMLValue>, parentNamespaces: Map<String, String> = emptyMap()) : this(realName.withoutNamespacePrefix(), realName, attributes, childNodes, realName.namespacePrefix(), parentNamespaces.plus(getNamespaces(attributes)))
+    constructor(realName: String, attributes: Map<String, StringValue>, childNodes: List<XMLValue>, parentNamespaces: Map<String, String> = emptyMap()) : this(realName.localName(), realName, attributes, childNodes, realName.namespacePrefix(), parentNamespaces.plus(getNamespaces(attributes)))
 
     fun createNewNode(realName: String, attributes: Map<String, String> = emptyMap()): XMLNode {
         val namespace = realName.namespacePrefix()

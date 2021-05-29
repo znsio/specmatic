@@ -1,5 +1,6 @@
 package `in`.specmatic.core.wsdl.parser
 
+import `in`.specmatic.core.value.FullyQualifiedName
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
@@ -17,11 +18,11 @@ internal class GetMessageTypeReferenceTest{
     @Test
     fun `message node with no part results in an empty SOAP payload`() {
         val messageNodeName = "tns:messageNodeName"
-        val messageTypeNode: XMLNode = toXMLNode("<tns:message message=\"$messageNodeName\" />")
+        val messageTypeNode: XMLNode = toXMLNode("<tns:message xmlns:tns=\"http://namespace\" message=\"$messageNodeName\" />")
 
         val wsdl: WSDL = mockk()
         every {
-            wsdl.findMessageNode(messageNodeName.localName())
+            wsdl.findMessageNode(ofType<FullyQualifiedName>())
         }.returns(toXMLNode("<message />"))
 
         val next = GetMessageTypeReference(wsdl, messageTypeNode, SOAPMessageType.Input, emptyMap(), "").execute()
@@ -36,12 +37,12 @@ internal class GetMessageTypeReferenceTest{
     @Test
     fun `message node with a part transitions to the step of parsing the payload`() {
         val messageNodeName = "tns:messageNodeName"
-        val messageTypeNode: XMLNode = toXMLNode("<tns:input message=\"$messageNodeName\" />")
+        val messageTypeNode: XMLNode = toXMLNode("<tns:input xmlns:tns=\"http://namespace\" message=\"$messageNodeName\" />")
 
         val wsdl: WSDL = mockk()
         every {
-            wsdl.findMessageNode(messageNodeName.localName())
-        }.returns(toXMLNode("<tns:message><tns:part element=\"msg:payload\"/></tns:message>"))
+            wsdl.findMessageNode(ofType<FullyQualifiedName>())
+        }.returns(toXMLNode("<tns:message xmlns:msg=\"http://localhost:namespace/msg\"><tns:part element=\"msg:payload\"/></tns:message>"))
 
         val next = GetMessageTypeReference(wsdl, messageTypeNode, SOAPMessageType.Input, emptyMap(), "").execute()
 

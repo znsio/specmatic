@@ -61,8 +61,27 @@ fun String.namespacePrefix(): String {
 fun getNamespaces(attributes: Map<String, StringValue>): Map<String, String> =
     attributes.filterKeys { it.startsWith("xmlns:") }.mapKeys { it.key.removePrefix("xmlns:") }.mapValues { it.value.toString() }
 
-data class XMLNode(val name: String, val realName: String, val attributes: Map<String, StringValue>, val childNodes: List<XMLValue>, val namespacePrefix: String, val namespaces: Map<String, String>) : XMLValue, ListValue {
+data class FullyQualifiedName(val prefix: String, val namespace: String, val localName: String) {
+    val qname = "$prefix:$localName"
+}
+
+data class XMLNode(val name: String, val realName: String, val attributes: Map<String, StringValue>, val childNodes: List<XMLValue>, val namespacePrefix: String, val namespaces: Map<String, String>, val schema: XMLNode? = null) : XMLValue, ListValue {
     constructor(realName: String, attributes: Map<String, StringValue>, childNodes: List<XMLValue>, parentNamespaces: Map<String, String> = emptyMap()) : this(realName.localName(), realName, attributes, childNodes, realName.namespacePrefix(), parentNamespaces.plus(getNamespaces(attributes)))
+
+    fun attributeString(): String {
+        return attributes.entries.joinToString(" ") { (name, value) ->
+            "$name=\"$value\""
+        }
+    }
+
+    fun fullyQualifiedNameFromAttribute(attributeName: String): FullyQualifiedName {
+        val attributeValue = getAttributeValue(attributeName)
+        val prefix = attributeValue.namespacePrefix()
+        val namespace = resolveNamespace(attributeValue)
+        val localName = attributeValue.localName()
+
+        return FullyQualifiedName(prefix, namespace, localName)
+    }
 
     fun createNewNode(realName: String, attributes: Map<String, String> = emptyMap()): XMLNode {
         val namespace = realName.namespacePrefix()
@@ -248,10 +267,10 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         } ?: throw ContractException("Couldn't find a node with attribute $attributeName=$typeName")
     }
 
-    fun findByNodeNameAndAttribute(nodeName: String, attributeName: String, typeName: String): XMLNode {
+    fun findByNodeNameAndAttribute(nodeName: String, attributeName: String, typeName: String, errorMessage: String? = null): XMLNode {
         return this.childNodes.filterIsInstance<XMLNode>().find {
             it.name == nodeName && it.attributes[attributeName]?.toStringValue() == typeName
-        } ?: throw ContractException("Couldn't find a node with attribute $attributeName=$typeName")
+        } ?: throw ContractException(errorMessage ?: "Couldn't find a node named $nodeName with attribute $attributeName=\"$typeName\"")
     }
 
     fun firstNode(): XMLNode? =

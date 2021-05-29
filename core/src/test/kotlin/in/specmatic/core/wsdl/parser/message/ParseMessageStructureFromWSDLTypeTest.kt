@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.XMLPattern
+import `in`.specmatic.core.value.FullyQualifiedName
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.core.wsdl.parser.SOAPMessageType
 import `in`.specmatic.core.wsdl.parser.TYPE_NODE_NAME
@@ -17,7 +18,7 @@ internal class ParseMessageStructureFromWSDLTypeTest {
     fun `simple type generation`() {
         val wsdl = WSDL(toXMLNode(readTextResource("wsdl/stockquote.wsdl")))
 
-        val parser = ParseMessageWithElementRef(wsdl, "xsd1:TradePriceRequest", SOAPMessageType.Input, emptyMap(), "GetLastTradePrice")
+        val parser = ParseMessageWithElementRef(wsdl, FullyQualifiedName("xsd1", "http://example.com/stockquote.xsd", "TradePriceRequest"), SOAPMessageType.Input, emptyMap(), "GetLastTradePrice")
         val parsed = parser.execute()
 
         val xmlType = XMLPattern("""

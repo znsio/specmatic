@@ -4,7 +4,6 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.value.XMLNode
 import `in`.specmatic.core.value.namespacePrefix
-import `in`.specmatic.core.value.localName
 import `in`.specmatic.core.wsdl.parser.SOAPMessageType
 import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.core.wsdl.payload.EmptySOAPPayload
@@ -14,9 +13,9 @@ class GetMessageTypeReference(private val wsdl: WSDL, val messageTypeNode: XMLNo
     MessageTypeInfoParser {
 
     override fun execute(): MessageTypeInfoParser {
-        val messageNameWithPrefix = messageTypeNode.getAttributeValue("message")
-        val messageName = messageNameWithPrefix.localName()
-        val messageNode = wsdl.findMessageNode(messageName)
+        val fullyQualifiedMessageName = messageTypeNode.fullyQualifiedNameFromAttribute("message")
+        val messageNode = wsdl.findMessageNode(fullyQualifiedMessageName)
+
         val partNode = messageNode.firstNode()
             ?: return MessageTypeProcessingComplete(
                 SoapPayloadType(
@@ -27,16 +26,15 @@ class GetMessageTypeReference(private val wsdl: WSDL, val messageTypeNode: XMLNo
 
         return when {
             partNode.attributes.containsKey("element") -> {
-                val wsdlTypeReference = partNode.attributes.getValue("element").toStringValue()
-                ParseMessageWithElementRef(wsdl, wsdlTypeReference, soapMessageType, existingTypes, operationName)
+                val fullyQualifiedTypeName = partNode.fullyQualifiedNameFromAttribute("element")
+                ParseMessageWithElementRef(wsdl, fullyQualifiedTypeName, soapMessageType, existingTypes, operationName)
             }
             partNode.attributes.containsKey("type") -> {
-                val messageNamespacePrefix = messageNameWithPrefix.namespacePrefix()
-                val wsdlTypeReference = partNode.attributes.getValue("type").toStringValue()
-                val partName = partNode.getAttributeValue("name", "Part node of message named $messageName does not have a name.")
-                ParseMessageWithoutElementRef(messageName, messageNamespacePrefix, partName, wsdlTypeReference, soapMessageType, existingTypes, operationName, wsdl)
+                val fullyQualifiedTypeName = partNode.fullyQualifiedNameFromAttribute("type")
+                val partName = partNode.getAttributeValue("name", "Part node of message named ${fullyQualifiedMessageName.localName} does not have a name.")
+                ParseMessageWithoutElementRef(fullyQualifiedMessageName, partName, fullyQualifiedTypeName, soapMessageType, existingTypes, operationName, wsdl)
             }
-            else -> throw ContractException("Part node of message named $messageName should contain either an element attribute or a type attribute.")
+            else -> throw ContractException("Part node of message named ${fullyQualifiedMessageName.localName} should contain either an element attribute or a type attribute.")
         }
     }
 }

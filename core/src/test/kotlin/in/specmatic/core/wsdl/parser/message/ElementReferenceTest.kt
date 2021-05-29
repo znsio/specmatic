@@ -1,5 +1,6 @@
 package `in`.specmatic.core.wsdl.parser.message
 
+import `in`.specmatic.core.value.FullyQualifiedName
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
@@ -11,13 +12,13 @@ internal class ElementReferenceTest {
     @Test
     fun `get a reference to another node`() {
         val refValue = "ns0:Person"
-        val element = toXMLNode("<xsd:element ref=\"$refValue\" />")
+        val element = toXMLNode("<xsd:element xmlns:ns0=\"http://localhost/ns0\" ref=\"$refValue\" />")
         val wsdl: WSDL = mockk()
 
         val expectedResolvedElement: WSDLElement = mockk()
         val expectedTypeName = "ns0_Person"
         every {
-            wsdl.getSOAPElement(refValue)
+            wsdl.getSOAPElement(ofType<FullyQualifiedName>())
         } returns expectedResolvedElement
 
         val reference = ElementReference(element, wsdl)

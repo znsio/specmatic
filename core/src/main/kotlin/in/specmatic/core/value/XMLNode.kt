@@ -68,10 +68,18 @@ data class FullyQualifiedName(val prefix: String, val namespace: String, val loc
 data class XMLNode(val name: String, val realName: String, val attributes: Map<String, StringValue>, val childNodes: List<XMLValue>, val namespacePrefix: String, val namespaces: Map<String, String>, val schema: XMLNode? = null) : XMLValue, ListValue {
     constructor(realName: String, attributes: Map<String, StringValue>, childNodes: List<XMLValue>, parentNamespaces: Map<String, String> = emptyMap()) : this(realName.localName(), realName, attributes, childNodes, realName.namespacePrefix(), parentNamespaces.plus(getNamespaces(attributes)))
 
+    val oneLineDescription: String = "<$realName ${attributeString()}>"
+
     fun attributeString(): String {
         return attributes.entries.joinToString(" ") { (name, value) ->
             "$name=\"$value\""
         }
+    }
+
+    override fun addSchema(schema: XMLNode): XMLValue {
+        return copy(schema = schema, childNodes = childNodes.map {
+            it.addSchema(schema)
+        })
     }
 
     fun fullyQualifiedNameFromAttribute(attributeName: String): FullyQualifiedName {

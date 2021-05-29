@@ -34,19 +34,19 @@ fun postmanCollectionToGherkin(postmanContent: String): List<ImportedPostmanCont
 
 fun runTests(contract: ImportedPostmanContracts) {
     val (name, gherkin, baseURLInfo, _) = contract
-    log.message("Testing contract \"$name\" with base URL ${baseURLInfo.originalBaseURL}")
+    log.statusUpdate("Testing contract \"$name\" with base URL ${baseURLInfo.originalBaseURL}")
     try {
         val feature = parseGherkinStringToFeature(gherkin)
         val results = feature.executeTests(HttpClient(baseURL = baseURLInfo.originalBaseURL))
 
-        log.message("Test result for contract \"$name\" ###")
+        log.statusUpdate("Test result for contract \"$name\" ###")
         val resultReport = "${results.report(PATH_NOT_RECOGNIZED_ERROR).trim()}\n\n".trim()
         val testCounts = "Tests run: ${results.successCount + results.failureCount}, Passed: ${results.successCount}, Failed: ${results.failureCount}\n\n"
-        log.message("$testCounts$resultReport".trim())
-        log.emptyLine()
-        log.emptyLine()
+        log.statusUpdate("$testCounts$resultReport".trim())
+        log.statusUpdate()
+        log.statusUpdate()
     } catch(e: Throwable) {
-        log.exception("Test reported an exception", e)
+        log.statusUpdate(e, "Test reported an exception")
     }
 }
 
@@ -84,7 +84,7 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<BaseURLInfo, Na
     val request = item.getJSONObjectValue("request")
     val scenarioName = if (item.jsonObject.contains("name")) item.getString("name") else "New scenario"
 
-    log.message("Getting response for $scenarioName")
+    log.statusUpdate("Getting response for $scenarioName")
 
     return try {
         val responses = item.getJSONArray("response")
@@ -92,7 +92,7 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<BaseURLInfo, Na
 
         baseNamedStub(request, scenarioName).plus(namedStubsFromSavedResponses)
     } catch (e: Throwable) {
-        log.exception("  Exception thrown when processing Postman scenario \"$scenarioName\"", e)
+        log.statusUpdate(e, "  Exception thrown when processing Postman scenario \"$scenarioName\"")
         emptyList()
     }
 }
@@ -101,12 +101,12 @@ private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<
     return try {
         val (baseURL, httpRequest) = postmanItemRequest(request)
 
-        log.message("  Using base url $baseURL")
+        log.statusUpdate("  Using base url $baseURL")
         val response = HttpClient(baseURL, log = dontPrintToConsole).execute(httpRequest)
 
         listOf(Pair(hostAndPort(baseURL), NamedStub(scenarioName, ScenarioStub(httpRequest, response))))
     } catch (e: Throwable) {
-        log.exception("  Failed to generate a response for the Postman request", e)
+        log.statusUpdate(e,"  Failed to generate a response for the Postman request")
         emptyList()
     }
 }

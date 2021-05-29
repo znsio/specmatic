@@ -1,21 +1,18 @@
 package `in`.specmatic.core.wsdl.parser.message
 
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.utilities.capitalizeFirstChar
-import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.value.FullyQualifiedName
 import `in`.specmatic.core.value.XMLNode
-import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.core.value.xmlNode
 import `in`.specmatic.core.wsdl.parser.SOAPMessageType
 import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.core.wsdl.payload.SoapPayloadType
 
 class ParseMessageWithoutElementRef(
-    val messageName: String,
-    val messageNamespacePrefix: String,
+    val fullyQualifiedMessageName: FullyQualifiedName,
     val partName: String,
-    val wsdlTypeReference: String,
+    val fullyQualifiedTypeName: FullyQualifiedName,
     val soapMessageType: SOAPMessageType,
     val existingTypes: Map<String, XMLPattern>,
     val operationName: String,
@@ -25,11 +22,11 @@ class ParseMessageWithoutElementRef(
         val wsdlNamespaces = wsdl.getNamespaces()
 
         val (qualification, qualifiedMessageName) = when {
-            messageNamespacePrefix.isNotBlank() -> {
-                val qualification = QualificationWithoutSchema(listOf(messageNamespacePrefix), "$messageNamespacePrefix:$messageName")
+            fullyQualifiedMessageName.prefix.isNotBlank() -> {
+                val qualification = QualificationWithoutSchema(listOf(fullyQualifiedMessageName.prefix), fullyQualifiedMessageName.qname)
                 Pair(qualification, qualification.nodeName)
             }
-            else -> Pair(null, messageName)
+            else -> Pair(null, fullyQualifiedMessageName.localName)
         }
 
         val topLevelNode = xmlNode("element", mapOf("name" to qualifiedMessageName)) {
@@ -37,12 +34,12 @@ class ParseMessageWithoutElementRef(
 
             xmlNode("complexType") {
                 xmlNode("sequence") {
-                    xmlNode("element", mapOf("name" to partName, "type" to wsdlTypeReference))
+                    xmlNode("element", mapOf("name" to partName, "type" to fullyQualifiedTypeName.qname))
                 }
             }
         }
 
-        val topLevelElement = ComplexElement(wsdlTypeReference, topLevelNode, wsdl, qualification)
+        val topLevelElement = ComplexElement(fullyQualifiedTypeName.qname, topLevelNode, wsdl, qualification)
 
         val qontractTypeName = "${operationName.replace(":", "_")}${soapMessageType.messageTypeName.capitalizeFirstChar()} "
 
@@ -55,5 +52,4 @@ class ParseMessageWithoutElementRef(
 
         return MessageTypeProcessingComplete(SoapPayloadType(typeInfo.types, soapPayload))
     }
-
 }

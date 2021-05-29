@@ -27,6 +27,8 @@ data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
     override fun matchFailure(): Result.Failure =
         Result.Failure("Unexpected child value found: $string")
 
+    override fun addSchema(schema: XMLNode): XMLValue = this
+
     override fun listOf(valueList: List<Value>): Value {
         return JSONArrayValue(valueList)
     }

@@ -43,7 +43,7 @@ class GitCompatibleCommand : Callable<Int> {
             println(output.message)
             output.exitCode
         } catch(e: Throwable) {
-            log.exception(e)
+            log.statusUpdate(e)
             1
         }
     }
@@ -64,7 +64,7 @@ class GitCompatibleCommand : Callable<Int> {
         println(output.message)
         output.exitCode
         } catch(e: Throwable) {
-            log.exception(e)
+            log.statusUpdate(e)
             1
         }
     }

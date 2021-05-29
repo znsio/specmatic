@@ -76,18 +76,9 @@ fun WSDL(rootDefinition: XMLNode): WSDL {
     return WSDL (rootDefinition, definitions, populatedSchemas, typesNode, getXmlnsDefinitions(rootDefinition))
 }
 
-fun addSchemaToNode(schema: XMLNode, node: XMLValue): XMLValue {
-    return when(node) {
-        is StringValue -> node
-        is XMLNode -> {
-            node.copy(schema = schema, childNodes = node.childNodes.map { addSchemaToNode(schema, it) })
-        }
-    }
-}
-
 fun addSchemasToNodes(schemas: Map<String, XMLNode>): Map<String, XMLNode> {
     return schemas.mapValues { (_, schema) ->
-        schema.copy(childNodes = schema.childNodes.map { addSchemaToNode(schema, it) })
+        schema.copy(childNodes = schema.childNodes.map { it.addSchema(schema) })
     }
 }
 
@@ -257,7 +248,7 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         val namespace = element.resolveNamespace(wsdlTypeReference)
 
         val schema: XMLNode = if(namespace.isBlank())
-            element.schema ?: throw ContractException("No type reference to indicate the schema, and the element node <${element.name} ${element.attributeString()}>did not have a schema attached")
+            element.schema ?: throw ContractException("No type reference to indicate the schema, and the element node ${element.oneLineDescription} did not have a schema attached")
         else
             this.findSchema(namespace)
 

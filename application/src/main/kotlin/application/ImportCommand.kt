@@ -98,7 +98,7 @@ private fun writeOut(gherkin: String, outputFilePath: String, hostAndPort: Strin
     val tag = if(hostAndPort != null) "-${hostAndPort.replace(":", "-")}" else ""
 
     fileWithTag(outputFile, tag).writeText(gherkin)
-    log.message("Written to file ${fileWithTag(outputFile, tag).path}")
+    log.statusUpdate("Written to file ${fileWithTag(outputFile, tag).path}")
 }
 
 private fun fileWithTag(file: File, tag: String): File {

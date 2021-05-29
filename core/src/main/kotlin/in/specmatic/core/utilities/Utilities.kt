@@ -38,7 +38,7 @@ import javax.xml.transform.stream.StreamResult
 import kotlin.system.exitProcess
 
 fun exitWithMessage(message: String): Nothing {
-    log.message(message)
+    log.statusUpdate(message)
     exitProcess(1)
 }
 
@@ -240,14 +240,14 @@ fun gitRootDir(): String {
 data class ContractPathData(val baseDir: String, val path: String)
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
-    log.message("Loading config file $configFilePath")
+    log.statusUpdate("Loading config file $configFilePath")
     val sources = loadSources(configFilePath)
 
     return sources.flatMap {
         it.loadContracts(selector, workingDirectory, configFilePath)
     }.also {
-        log.message("Contract file paths:")
-        log.message(it.joinToString(System.lineSeparator()).prependIndent("  "))
+        log.statusUpdate("Contract file paths:")
+        log.statusUpdate(it.joinToString(System.lineSeparator()).prependIndent("  "))
     }
 }
 

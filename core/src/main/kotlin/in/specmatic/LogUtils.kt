@@ -38,7 +38,7 @@ object LogTail {
 
 fun consoleLog(event: String) {
     LogTail.append(event)
-    log.message(event)
+    log.statusUpdate(event)
 }
 
 val dontPrintToConsole = { event: String ->

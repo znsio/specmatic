@@ -2,7 +2,7 @@ package `in`.specmatic.core.wsdl.parser.message
 
 import `in`.specmatic.core.value.XMLNode
 import `in`.specmatic.core.value.namespacePrefix
-import `in`.specmatic.core.value.withoutNamespacePrefix
+import `in`.specmatic.core.value.localName
 import `in`.specmatic.core.wsdl.parser.WSDL
 
 class QualifiedNamespace(val element: XMLNode, val schema: XMLNode, private val wsdlTypeReference: String, val wsdl: WSDL) :
@@ -20,6 +20,6 @@ class QualifiedNamespace(val element: XMLNode, val schema: XMLNode, private val 
     override val nodeName: String
         get() {
             val nodeName = element.getAttributeValue("name")
-            return "${wsdlTypeReference.namespacePrefix()}:${nodeName.withoutNamespacePrefix()}"
+            return "${wsdlTypeReference.namespacePrefix()}:${nodeName.localName()}"
         }
 }

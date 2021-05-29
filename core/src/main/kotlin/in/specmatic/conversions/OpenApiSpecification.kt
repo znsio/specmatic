@@ -32,12 +32,11 @@ class OpenApiSpecification : IncludedSpecification {
                 specmaticPath =
                     specmaticPath.replace("{${it.name}}", "(${it.name}:${toSpecmaticPattern(it.schema).typeName})")
             }
+
             toHttpResponsePattern(get.responses).map { (response, _, httpResponsePattern) ->
-                ScenarioInfo(
-                    scenarioName = "Request: " + get.summary + " Response: " + response.description,
-                    httpRequestPattern = httpRequestPattern(specmaticPath, get),
-                    httpResponsePattern = httpResponsePattern
-                )
+                val httpRequestPattern = httpRequestPattern(specmaticPath, get)
+                val scenarioName = "Request: " + get.summary + " Response: " + response.description
+                scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern)
             }
         }.flatten()
     }
@@ -51,33 +50,41 @@ class OpenApiSpecification : IncludedSpecification {
                     specmaticPath.replace("{${it.name}}", "(${it.name}:${toSpecmaticPattern(it.schema).typeName})")
             }
             toHttpResponsePattern(get.responses).map { (response, responseMediaType, httpResponsePattern) ->
-                if (!responseMediaType.examples.isNullOrEmpty()) {
-                    responseMediaType.examples.map { (exampleName, value) ->
-                        val requestExamples =
-                            get.parameters.filter { parameter -> parameter.examples.any { it.key == exampleName } }
-                                .map { it.name to it.examples[exampleName]!!.value }.toMap()
+                val responseExamples = responseMediaType.examples.orEmpty()
+                val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, value) ->
+                    val requestExamples =
+                        get.parameters.filter { parameter -> parameter.examples.any { it.key == exampleName } }
+                            .map { it.name to it.examples[exampleName]!!.value }.toMap()
 
-                        val httpRequestPattern = if (!requestExamples.isEmpty()) {
-                            httpRequestPattern(specmaticPath, get).newBasedOn(
-                                Row(
-                                    requestExamples.keys.toList(),
-                                    requestExamples.values.toList().map { it.toString() }), Resolver()
-                            )[0]
-                        } else {
-                            httpRequestPattern(specmaticPath, get)
-                        }
-                        ScenarioInfo(
-                            scenarioName = "Request: " + get.summary + " Response: " + response.description,
-                            httpRequestPattern = httpRequestPattern,
-                            httpResponsePattern = httpResponsePattern
-                        )
+                    requestExamples.map { (key, value) -> key to value.toString() }.toList().isNotEmpty()
+
+                    when {
+                        requestExamples.isNotEmpty() -> Row(
+                            requestExamples.keys.toList(),
+                            requestExamples.values.toList().map { it.toString() })
+                        else -> Row()
                     }
-                } else {
-                    listOf()
+                }
+
+                specmaticExampleRows.map {
+                    val httpRequestPattern = httpRequestPattern(specmaticPath, get)
+                    val scenarioName = "Request: " + get.summary + " Response: " + response.description
+                    scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, it)
                 }
             }.flatten()
         }.flatten()
     }
+
+    private fun scenarioInfo(
+        scenarioName: String,
+        httpRequestPattern: HttpRequestPattern,
+        httpResponsePattern: HttpResponsePattern,
+        specmaticExampleRow: Row = Row()
+    ) = ScenarioInfo(
+        scenarioName = scenarioName,
+        httpRequestPattern = httpRequestPattern.newBasedOn(specmaticExampleRow, Resolver())[0],
+        httpResponsePattern = httpResponsePattern.newBasedOn(specmaticExampleRow, Resolver())[0]
+    )
 
     private fun toHttpResponsePattern(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
         return responses!!.map { (status, response) ->

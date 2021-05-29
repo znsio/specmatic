@@ -43,7 +43,7 @@ class ParseMessageWithoutElementRef(
 
         val qontractTypeName = "${operationName.replace(":", "_")}${soapMessageType.messageTypeName.capitalizeFirstChar()} "
 
-        val typeInfo = topLevelElement.getQontractTypes(qontractTypeName, existingTypes, emptySet())
+        val typeInfo = topLevelElement.getGherkinTypes(qontractTypeName, existingTypes, emptySet())
 
         val namespaces: Map<String, String> = wsdl.getNamespaces(typeInfo)
         val nodeNameForSOAPBody = (typeInfo.nodes.first() as XMLNode).realName

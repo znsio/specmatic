@@ -20,7 +20,7 @@ internal class ElementInComplexTypeTest {
         val returned =
             WSDLTypeInfo(listOf(toXMLNode("<node2/>")), data2Type, setOf("ns1"))
         every {
-            complexNameElement.getQontractTypes("Name", emptyMap(), emptySet())
+            complexNameElement.getGherkinTypes("Name", emptyMap(), emptySet())
         } returns returned
 
         val childElementType = mockk<ChildElementType>()

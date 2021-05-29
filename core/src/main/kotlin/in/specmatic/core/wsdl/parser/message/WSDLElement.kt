@@ -6,7 +6,7 @@ import `in`.specmatic.core.wsdl.parser.WSDLTypeInfo
 import `in`.specmatic.core.wsdl.payload.SOAPPayload
 
 interface WSDLElement {
-    fun getQontractTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo
+    fun getGherkinTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo
 
     fun getSOAPPayload(
         soapMessageType: SOAPMessageType,

@@ -10,9 +10,9 @@ data class WSDLTypeInfo(val nodes: List<XMLValue> = emptyList(), val types: Map<
         log.debug(wsdlNamespaces.toString())
         log.debug(namespacePrefixes.toString())
 
-        return namespacePrefixes.toList().map {
-            Pair(it, wsdlNamespaces.getValue(it))
-        }.toMap()
+        return namespacePrefixes.toList().associateWith {
+            wsdlNamespaces.getValue(it)
+        }
     }
 
     val nodeTypeInfo: XMLNode

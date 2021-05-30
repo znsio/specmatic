@@ -35,10 +35,10 @@ class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
         val path = if (adjustedLocation.toLowerCase()
                 .startsWith(fileScheme)
         ) Paths.get(URI.create(adjustedLocation)) else Paths.get(adjustedLocation)
-        if (Files.exists(path)) {
-            return FileUtils.readFileToString(path.toFile(), StandardCharsets.UTF_8.displayName())
+        return if (Files.exists(path)) {
+            FileUtils.readFileToString(path.toFile(), StandardCharsets.UTF_8.displayName())
         } else {
-            return ClasspathHelper.loadFileFromClasspath(adjustedLocation)
+            ClasspathHelper.loadFileFromClasspath(adjustedLocation)
         }
     }
 }

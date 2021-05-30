@@ -154,8 +154,8 @@ data class Feature(
         }
     }
 
-    fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
-        Results(results.map { it.second }.filter { it is Result.Failure }.toMutableList())
+    private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
+        Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> =
         scenarios.map { it.newBasedOn(suggestions) }.flatMap {
@@ -497,7 +497,7 @@ fun plusFormFields(
     formFields.plus(when (rowsList.size) {
         0 -> toQueryParams(rest).map { (key, value) -> key to value }
         else -> rowsList.map { row -> row.cellsList[0].value to row.cellsList[1].value }
-    }.map { (key, value) -> key to parsedPattern(value) }.toMap()
+    }.associate { (key, value) -> key to parsedPattern(value) }
     )
 
 private fun toQueryParams(rest: String) = rest.split("&")
@@ -651,10 +651,9 @@ fun toGherkinFeature(featureName: String, stubs: List<NamedStub>): String {
         val commentedExamples = addCommentsToExamples(examples, stub)
 
         Pair(GherkinScenario(stub.name, clauses), listOf(commentedExamples))
-    }.fold(emptyMap<GherkinScenario, List<ExampleDeclarations>>(),
-        { groups, (scenario, examples) ->
-            groups.plus(scenario to groups.getOrDefault(scenario, emptyList()).plus(examples))
-        })
+    }.fold(emptyMap<GherkinScenario, List<ExampleDeclarations>>()) { groups, (scenario, examples) ->
+        groups.plus(scenario to groups.getOrDefault(scenario, emptyList()).plus(examples))
+    }
 
     val scenarioStrings = groupedStubs.map { (nameAndClauses, examplesList) ->
         val (name, clauses) = nameAndClauses

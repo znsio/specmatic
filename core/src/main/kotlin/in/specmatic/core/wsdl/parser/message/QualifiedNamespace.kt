@@ -1,9 +1,8 @@
 package `in`.specmatic.core.wsdl.parser.message
 
-import `in`.specmatic.core.value.FullyQualifiedName
 import `in`.specmatic.core.value.XMLNode
-import `in`.specmatic.core.value.namespacePrefix
 import `in`.specmatic.core.value.localName
+import `in`.specmatic.core.value.namespacePrefix
 import `in`.specmatic.core.wsdl.parser.WSDL
 
 class QualifiedNamespace(

@@ -23,7 +23,7 @@ class ParseMessageWithoutElementRef(
 
         val (qualification, qualifiedMessageName) = when {
             fullyQualifiedMessageName.prefix.isNotBlank() -> {
-                val qualification = QualificationWithoutSchema(listOf(fullyQualifiedMessageName.prefix), fullyQualifiedMessageName.qname)
+                val qualification = QualificationWithoutSchema(listOf(wsdl.getSchemaNamespacePrefix(fullyQualifiedMessageName.namespace)), fullyQualifiedMessageName.qname)
                 Pair(qualification, qualification.nodeName)
             }
             else -> Pair(null, fullyQualifiedMessageName.localName)

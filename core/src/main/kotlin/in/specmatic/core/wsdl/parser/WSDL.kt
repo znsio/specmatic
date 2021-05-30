@@ -1,7 +1,9 @@
 package `in`.specmatic.core.wsdl.parser
 
 import `in`.specmatic.core.SPECMATIC_GITHUB_ISSUES
+import `in`.specmatic.core.git.log
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.*
 import java.io.File
@@ -73,7 +75,35 @@ fun WSDL(rootDefinition: XMLNode): WSDL {
 
     val typesNode = rootDefinition.findFirstChildByName("types") ?: toXMLNode("<types/>")
 
-    return WSDL (rootDefinition, definitions, populatedSchemas, typesNode, getXmlnsDefinitions(rootDefinition))
+    val schemaPrefixes = schemaPrefixesFrom(schemas)
+    val reversedSchemaPrefixes = schemaPrefixes.entries.map { Pair(it.value, it.key) }.toMap()
+    return WSDL (rootDefinition, definitions, populatedSchemas, typesNode, getXmlnsDefinitions(rootDefinition).plus(schemaPrefixes), reversedSchemaPrefixes)
+}
+
+fun schemaPrefixesFrom(schemas: Map<String, XMLNode>): Map<String, String> {
+    val namespaces = schemas.keys.toSet().toList()
+
+    val normalisedNamespaces = namespaces.map { namespace ->
+        namespace.removeSuffix("/").removePrefix("http://").removePrefix("https://")
+    }
+
+    val minLength = normalisedNamespaces.map {
+        it.split("/").size
+    }.minOrNull() ?: throw ContractException("No schema namespaces found")
+
+    val segmentCount = 1.until(minLength + 1).first { length ->
+        val segments = normalisedNamespaces.map { namespace ->
+            namespace.split("/").takeLast(length).joinToString("_")
+        }
+
+        segments.toSet().size == namespaces.size
+    }
+
+    val prefixes = normalisedNamespaces.map { namespace ->
+        namespace.split("/").takeLast(segmentCount).joinToString("_") { it.capitalizeFirstChar() }
+    }
+
+    return namespaces.zip(prefixes).toMap().also { log.debug(it.toString()) }
 }
 
 fun addSchemasToNodes(schemas: Map<String, XMLNode>): Map<String, XMLNode> {
@@ -82,7 +112,7 @@ fun addSchemasToNodes(schemas: Map<String, XMLNode>): Map<String, XMLNode> {
     }
 }
 
-data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String, XMLNode>, val schemas: Map<String, XMLNode>, private val typesNode: XMLNode, val namespaceToPrefix: Map<String, String>) {
+data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String, XMLNode>, val schemas: Map<String, XMLNode>, private val typesNode: XMLNode, val namespaceToPrefix: Map<String, String>, val reversedPrefixes: Map<String, String>) {
     fun getServiceName() =
         rootDefinition.findFirstChildByName("service")?.attributes?.get("name")
             ?: throw ContractException("Couldn't find attribute name in node service")
@@ -117,7 +147,7 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
     fun getServicePort() = rootDefinition.getXMLNodeByPath("service.port")
 
     fun getNamespaces(typeInfo: WSDLTypeInfo): Map<String, String> {
-        return typeInfo.getNamespaces(rootDefinition.attributes)
+        return typeInfo.getNamespaces(reversedPrefixes)
     }
 
     fun getNamespaces(): Map<String, String> {
@@ -259,5 +289,9 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
             "qualified" -> QualifiedNamespace(element, schema, wsdlTypeReference, this)
             else -> UnqualifiedNamespace(element.getAttributeValue("name"))
         }
+    }
+
+    fun getSchemaNamespacePrefix(namespace: String): String {
+        return namespaceToPrefix[namespace] ?: throw ContractException("Tried to lookup a prefix for the namespace $namespace but could not find one")
     }
 }

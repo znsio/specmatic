@@ -323,7 +323,7 @@ Background:
     }
 
     @Test
-    fun `should create test with non primitive request and response`() {
+    fun `should create petstore tests`() {
         val flags = mutableMapOf<String, Boolean>()
 
         val feature = parseGherkinStringToFeature(
@@ -331,7 +331,7 @@ Background:
 Feature: Hello world
 
 Background:
-  Given openapi openapi/petstore-post.yaml
+  Given openapi openapi/petstore-expanded.yaml
         """.trimIndent()
         )
 
@@ -339,18 +339,50 @@ Background:
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["${request.path} ${request.method} executed"] = true
-                    assertThat(request.path).matches("""/pets""")
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
                             put("Content-Type", "application/json")
                         }
                     }
-                    return when (request.method) {
-                        "POST" -> HttpResponse(
-                            201,
-                            ObjectMapper().writeValueAsString(Pet("scooby", "labrador", 1)),
-                            headers
-                        )
+                    val pet = Pet("scooby", "labrador", 1)
+                    return when {
+                        request.path!!.matches(Regex("""\/pets\/[0-9]+""")) -> when (request.method) {
+                            "GET" -> HttpResponse(
+                                200,
+                                ObjectMapper().writeValueAsString(pet),
+                                headers
+                            )
+                            "DELETE" -> HttpResponse(
+                                204,
+                                headers
+                            )
+                            else -> HttpResponse(400, "", headers)
+                        }
+                        request.path == "/pets" -> {
+                            when (request.method) {
+                                "GET" -> HttpResponse(
+                                    200,
+                                    ObjectMapper().writeValueAsString(listOf(pet)),
+                                    headers
+                                )
+                                "POST" -> HttpResponse(
+                                    201,
+                                    ObjectMapper().writeValueAsString(pet),
+                                    headers
+                                )
+                                else -> HttpResponse(400, "", headers)
+                            }
+                        }
+                        request.path == "/petIds" -> {
+                            when (request.method) {
+                                "GET" -> HttpResponse(
+                                    200,
+                                    ObjectMapper().writeValueAsString(listOf(1)),
+                                    headers
+                                )
+                                else -> HttpResponse(400, "", headers)
+                            }
+                        }
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -361,7 +393,11 @@ Background:
         )
 
         assertThat(flags["/pets POST executed"]).isTrue
-        assertThat(flags.size).isEqualTo(1)
+        assertThat(flags["/pets GET executed"]).isTrue
+        assertThat(flags["/petIds GET executed"]).isTrue
+        assertThat(flags.keys.any { it.matches(Regex("""\/pets\/[0-9]+ GET""")) }).isNotNull()
+        assertThat(flags.keys.any { it.matches(Regex("""\/pets\/[0-9]+ DELETE""")) }).isNotNull()
+        assertThat(flags.size).isEqualTo(5)
         assertTrue(results.success(), results.report())
     }
 }

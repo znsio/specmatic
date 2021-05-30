@@ -96,25 +96,44 @@ class OpenApiSpecification : IncludedSpecification {
     )
 
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
-        return responses!!.map { (status, response) ->
-            response.content.map { (contentType, mediaType) ->
-                Triple(
-                    response, mediaType, HttpResponsePattern(
-                        headersPattern = HttpHeadersPattern(mapOf(toPatternPair("Content-Type", contentType))),
-                        status = when (status) {
-                            "default" -> 400
-                            else -> status.toInt()
-                        },
-                        body = toSpecmaticPattern(mediaType)
+        return responses.orEmpty().map { (status, response) ->
+            when (val content = response.content) {
+                null -> listOf(
+                    Triple(
+                        response, MediaType(), HttpResponsePattern(
+                            headersPattern = HttpHeadersPattern(),
+                            status = when (status) {
+                                "default" -> 400
+                                else -> status.toInt()
+                            }
+                        )
                     )
                 )
+                else -> content.map { (contentType, mediaType) ->
+                    Triple(
+                        response, mediaType, HttpResponsePattern(
+                            headersPattern = HttpHeadersPattern(mapOf(toPatternPair("Content-Type", contentType))),
+                            status = when (status) {
+                                "default" -> 400
+                                else -> status.toInt()
+                            },
+                            body = toSpecmaticPattern(mediaType)
+                        )
+                    )
+                }
             }
         }.flatten()
     }
 
-    fun toHttpRequestPatterns(path: String, httpMethod: String, operation: Operation): List<HttpRequestPattern> {
-        when {
-            operation.requestBody != null -> return operation.requestBody.content.map { (contentType, mediaType) ->
+    fun toHttpRequestPatterns(path: String, httpMethod: String, operation: Operation): List<HttpRequestPattern> =
+        when (operation.requestBody) {
+            null -> listOf(
+                HttpRequestPattern(
+                    urlMatcher = toURLMatcherWithOptionalQueryParams(path),
+                    method = httpMethod,
+                )
+            )
+            else -> operation.requestBody.content.map { (contentType, mediaType) ->
                 HttpRequestPattern(
                     urlMatcher = toURLMatcherWithOptionalQueryParams(path),
                     method = httpMethod,
@@ -122,14 +141,7 @@ class OpenApiSpecification : IncludedSpecification {
                     body = toSpecmaticPattern(mediaType)
                 )
             }
-            else -> return listOf(
-                HttpRequestPattern(
-                    urlMatcher = toURLMatcherWithOptionalQueryParams(path),
-                    method = httpMethod,
-                )
-            )
         }
-    }
 
     fun toSpecmaticPattern(mediaType: MediaType): Pattern = toSpecmaticPattern(mediaType.schema)
 
@@ -177,7 +189,8 @@ class OpenApiSpecification : IncludedSpecification {
     private fun openApiOperations(pathItem: PathItem): Map<String, Operation> =
         mapOf<String, Operation>(
             "GET" to pathItem.get,
-            "POST" to pathItem.post
+            "POST" to pathItem.post,
+            "DELETE" to pathItem.delete
         ).filter { (key, value) -> value != null }
 
 }

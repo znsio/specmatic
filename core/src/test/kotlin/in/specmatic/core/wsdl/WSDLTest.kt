@@ -1,5 +1,6 @@
 package `in`.specmatic.core.wsdl
 
+import `in`.specmatic.Utils.readTextResource
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.CONTRACT_EXTENSION
@@ -14,7 +15,7 @@ class WSDLTest {
     fun `conversion with bare types`() {
         val (wsdlContent, expectedGherkin) = readContracts("stockquote")
 
-        val wsdl = WSDL(toXMLNode(wsdlContent))
+        val wsdl = WSDL(toXMLNode(wsdlContent), "")
 
         val generatedGherkin: String = wsdl.convertToGherkin().trim()
 
@@ -28,7 +29,7 @@ class WSDLTest {
     fun `conversion with simple type bodies`() {
         val (wsdlContent, expectedGherkin) = readContracts("hello")
 
-        val wsdl = WSDL(toXMLNode(wsdlContent))
+        val wsdl = WSDL(toXMLNode(wsdlContent), "")
         val generatedGherkin: String = wsdl.convertToGherkin().trim()
 
         assertThat(parseGherkinStringToFeature(generatedGherkin)).isEqualTo(parseGherkinStringToFeature(expectedGherkin))
@@ -39,10 +40,4 @@ class WSDLTest {
         val expectedGherkin = readTextResource("wsdl/$filename.$CONTRACT_EXTENSION").trimIndent().trim()
         return Pair(wsdlContent, expectedGherkin)
     }
-
-    fun readTextResource(path: String) =
-        File(
-            javaClass.classLoader.getResource(path)?.file
-                ?: throw ContractException("Could not find resource file $path")
-        ).readText()
 }

@@ -1,8 +1,6 @@
 package `in`.specmatic.core.wsdl.parser.message
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
-import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.Utils.readTextResource
 import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.value.FullyQualifiedName
 import `in`.specmatic.core.value.toXMLNode
@@ -11,12 +9,13 @@ import `in`.specmatic.core.wsdl.parser.TYPE_NODE_NAME
 import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.core.wsdl.payload.ComplexTypedSOAPPayload
 import `in`.specmatic.core.wsdl.payload.SoapPayloadType
-import java.io.File
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 internal class ParseMessageStructureFromWSDLTypeTest {
     @Test
     fun `simple type generation`() {
-        val wsdl = WSDL(toXMLNode(readTextResource("wsdl/stockquote.wsdl")))
+        val wsdl = WSDL(toXMLNode(readTextResource("wsdl/stockquote.wsdl")), "")
 
         val parser = ParseMessageWithElementRef(wsdl, FullyQualifiedName("xsd1", "http://example.com/stockquote.xsd", "TradePriceRequest"), SOAPMessageType.Input, emptyMap(), "GetLastTradePrice")
         val parsed = parser.execute()
@@ -31,9 +30,4 @@ internal class ParseMessageStructureFromWSDLTypeTest {
         assertThat(parsed).isEqualTo(expected)
     }
 
-    fun readTextResource(path: String) =
-        File(
-            javaClass.classLoader.getResource(path)?.file
-                ?: throw ContractException("Could not find resource file $path")
-        ).readText()
 }

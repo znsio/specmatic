@@ -290,4 +290,48 @@ internal class XMLNodeTest {
 
         assertThat(dslXML).isEqualTo(expected)
     }
+
+    @Test
+    fun `xml node should derive the fully qualified name for a value from its context`() {
+        val targetNamespace = "http://localhost"
+        val schema = xmlNode("schema", mapOf("targetNamespace" to targetNamespace)) {
+
+        }
+
+        val personNode = xmlNode("Person") {
+            parentNamespaces(mapOf("ns0" to targetNamespace))
+
+            xmlNode("name") {
+                text("Jane Doe")
+            }
+        }.copy(schema = schema)
+
+        val fqn = personNode.fullyQualifiedNameFromQName("ns0:helloworld")
+
+        assertThat(fqn.namespace).isEqualTo(targetNamespace)
+        assertThat(fqn.prefix).isEqualTo("ns0")
+        assertThat(fqn.localName).isEqualTo("helloworld")
+    }
+
+    @Test
+    fun `xml node should derive the fully qualified name for the value of its attribute from its context`() {
+        val targetNamespace = "http://localhost"
+        val schema = xmlNode("schema", mapOf("targetNamespace" to targetNamespace)) {
+
+        }
+
+        val personNode = xmlNode("Person", mapOf("type" to "ns0:helloworld")) {
+            parentNamespaces(mapOf("ns0" to targetNamespace))
+
+            xmlNode("name") {
+                text("Jane Doe")
+            }
+        }.copy(schema = schema)
+
+        val fqn = personNode.fullyQualifiedNameFromAttribute("type")
+
+        assertThat(fqn.namespace).isEqualTo(targetNamespace)
+        assertThat(fqn.prefix).isEqualTo("ns0")
+        assertThat(fqn.localName).isEqualTo("helloworld")
+    }
 }

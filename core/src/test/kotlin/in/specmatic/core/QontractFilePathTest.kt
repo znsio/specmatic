@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.Utils.readTextResource
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -24,10 +25,4 @@ internal class QontractFilePathTest {
     fun pathTo(path: String): String {
         return javaClass.classLoader.getResource(path)?.file ?: throw Exception("Could not find path $path")
     }
-
-    fun readTextResource(path: String) =
-        File(
-            javaClass.classLoader.getResource(path)?.file
-                ?: throw ContractException("Could not find resource file $path")
-        ).readText()
 }

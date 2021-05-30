@@ -85,7 +85,7 @@ fun convertWSDL(path: String, userSpecifiedOutFile: String?) {
     val inputFile = File(path)
     val inputFileContent = inputFile.readText()
     val wsdlXML = toXMLNode(parseXML(inputFileContent))
-    val contract = WSDL(wsdlXML).convertToGherkin()
+    val contract = WSDL(wsdlXML, path).convertToGherkin()
 
     val outFile = userSpecifiedOutFile ?: "${inputFile.nameWithoutExtension}.$CONTRACT_EXTENSION"
 

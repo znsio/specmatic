@@ -1,0 +1,3 @@
+<schema targetNamespace="http://localhost/childSchema">
+    <import schemaLocation="grandChildSchema.xsd" namespace="http://localhost/grandChildSchema"/>
+</schema>

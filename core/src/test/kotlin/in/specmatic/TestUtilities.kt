@@ -1,8 +1,8 @@
 package `in`.specmatic
 
-import org.assertj.core.api.Assertions
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.AnyPattern
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.DeferredPattern
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.utilities.exceptionCauseMessage
@@ -11,8 +11,17 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.HttpStubResponse
 import `in`.specmatic.stub.ThreadSafeListOfStubs
-import org.junit.Assert.assertFalse
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Assert.assertFalse
+import java.io.File
+
+object Utils {
+    fun readTextResource(path: String) =
+        File(
+            javaClass.classLoader.getResource(path)?.file
+                ?: throw ContractException("Could not find resource file $path")
+        ).readText()
+}
 
 fun optionalPattern(pattern: Pattern): AnyPattern = AnyPattern(listOf(DeferredPattern("(empty)"), pattern))
 

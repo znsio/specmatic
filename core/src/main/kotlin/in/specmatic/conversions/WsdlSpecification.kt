@@ -24,7 +24,7 @@ class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
 
     private fun wsdlToFeatureChildren(wsdlFile: String): List<Messages.GherkinDocument.Feature.FeatureChild> {
         val wsdlContent = readContentFromLocation(wsdlFile)
-        val wsdl = WSDL(toXMLNode(wsdlContent!!))
+        val wsdl = WSDL(toXMLNode(wsdlContent!!), wsdlFile)
         val gherkin = wsdl.convertToGherkin().trim()
         return parseGherkinString(gherkin).feature.childrenList
     }
@@ -32,7 +32,7 @@ class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
     private fun readContentFromLocation(location: String): String? {
         val adjustedLocation = location.replace("\\\\".toRegex(), "/")
         val fileScheme = "file:"
-        val path = if (adjustedLocation.toLowerCase()
+        val path = if (adjustedLocation.lowercase()
                 .startsWith(fileScheme)
         ) Paths.get(URI.create(adjustedLocation)) else Paths.get(adjustedLocation)
         return if (Files.exists(path)) {

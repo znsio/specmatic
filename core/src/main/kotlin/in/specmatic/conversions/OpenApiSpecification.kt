@@ -105,7 +105,7 @@ class OpenApiSpecification : IncludedSpecification {
 
     fun toSpecmaticPattern(mediaType: MediaType) = toSpecmaticPattern(mediaType.schema)
 
-    fun toSpecmaticPattern(schema: Schema<Any>): Pattern = when (schema) {
+    fun toSpecmaticPattern(schema: Schema<*>): Pattern = when (schema) {
         is StringSchema -> StringPattern
         is IntegerSchema -> NumberPattern
         is ObjectSchema -> {
@@ -113,6 +113,9 @@ class OpenApiSpecification : IncludedSpecification {
                 name to toSpecmaticPattern(type)
             }.toMap()
             toJSONObjectPattern(schemaProperties)
+        }
+        is ArraySchema -> {
+            JSONArrayPattern(listOf(toSpecmaticPattern(schema.items)))
         }
         is ComposedSchema -> {
             NullPattern

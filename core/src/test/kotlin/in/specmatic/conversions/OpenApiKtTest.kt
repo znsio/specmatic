@@ -12,10 +12,12 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpMethod
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import java.net.URI
+
 
 internal class OpenApiKtTest {
     companion object {
@@ -241,6 +243,58 @@ Background:
 
         assertThat(response.statusCodeValue).isEqualTo(200)
         assertThat(response.body).isInstanceOf(Pet::class.java)
+    }
+
+    @Test
+    fun `should generate stub with non primitive array open api data types`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val response = HttpStub(feature).use { mock ->
+            val restTemplate = RestTemplate()
+            restTemplate.exchange(
+                URI.create("http://localhost:9000/pets"),
+                HttpMethod.GET,
+                null,
+                object : ParameterizedTypeReference<List<Pet>>() {}
+            )
+        }
+
+        assertThat(response.statusCodeValue).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(List::class.java)
+        assertThat(response.body[0]).isInstanceOf(Pet::class.java)
+    }
+
+    @Test
+    fun `should generate stub with primitive array open api data types`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val response = HttpStub(feature).use { mock ->
+            val restTemplate = RestTemplate()
+            restTemplate.exchange(
+                URI.create("http://localhost:9000/petIds"),
+                HttpMethod.GET,
+                null,
+                object : ParameterizedTypeReference<List<Integer>>() {}
+            )
+        }
+
+        assertThat(response.statusCodeValue).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(List::class.java)
+        assertThat(response.body[0]).isInstanceOf(Integer::class.java)
     }
 }
 

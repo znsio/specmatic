@@ -6,7 +6,7 @@ import java.io.IOException
 import java.net.URISyntaxException
 
 object ContractFile {
-    var downloadDirectoryName = "__contract_tests"
+    private var downloadDirectoryName = "__contract_tests"
     var classPath = "classpath:$downloadDirectoryName"
     @Throws(URISyntaxException::class, IOException::class)
     fun writeContractTestFile(classLoader: ClassLoader, downloadPath: String, consumer: String, contractTest: String?) {

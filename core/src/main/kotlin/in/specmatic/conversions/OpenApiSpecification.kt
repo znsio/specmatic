@@ -96,7 +96,7 @@ class OpenApiSpecification : IncludedSpecification {
         }.flatten()
     }
 
-    fun toSpecmaticPattern(mediaType: MediaType): Pattern = toSpecmaticPattern(mediaType.schema)
+    fun toSpecmaticPattern(mediaType: MediaType) = toSpecmaticPattern(mediaType.schema)
 
     fun toSpecmaticPattern(schema: Schema<Any>): Pattern = when (schema) {
         is StringSchema -> StringPattern

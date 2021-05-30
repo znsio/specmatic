@@ -219,9 +219,9 @@ internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {
 }
 
 fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>, typeAlias: String? = null) =
-        toTabularPattern(rows.map { it.cellsList }.map { (key, value) ->
+        toTabularPattern(rows.map { it.cellsList }.associate { (key, value) ->
             key.value to toJSONPattern(value.value)
-        }.toMap(), typeAlias)
+        }, typeAlias)
 
 fun toJSONPattern(value: String): Pattern {
     return value.trim().let {

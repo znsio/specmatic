@@ -21,8 +21,8 @@ object BooleanPattern : Pattern, ScalarType {
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
-    override fun parse(value: String, resolver: Resolver): Value = when {
-        value !in (listOf("true", "false")) -> throw ContractException(resultReport(mismatchResult(BooleanPattern, value)))
+    override fun parse(value: String, resolver: Resolver): Value = when (value) {
+        !in listOf("true", "false") -> throw ContractException(resultReport(mismatchResult(BooleanPattern, value)))
         else -> BooleanValue(value.toBoolean())
     }
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {

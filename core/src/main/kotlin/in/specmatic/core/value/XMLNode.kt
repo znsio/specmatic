@@ -127,15 +127,6 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
     override val list: List<Value>
         get() = childNodes
 
-    private fun build(): Document {
-        val document = newBuilder().newDocument()
-
-        val node = build(document)
-        document.appendChild(node)
-
-        return document
-    }
-
     override fun build(document: Document): Node {
         val newElement = document.createElement(realName)
 
@@ -273,9 +264,6 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     fun getXMLNodeOrNull(path: String): XMLNode? =
         this.findFirstChildByPath(path)
-
-    fun getXMLNodeByName(name: String): XMLNode =
-        this.findFirstChildByName(name) ?: throw ContractException("Couldn't find node named $name")
 
     fun getXMLNodeByAttributeValue(attributeName: String, typeName: String): XMLNode {
         return this.childNodes.filterIsInstance<XMLNode>().find {

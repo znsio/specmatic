@@ -55,15 +55,15 @@ fun loadSchemaImports(schema: XMLNode): List<XMLNode> {
 private fun schemasFrom(definition: XMLNode): Map<String, XMLNode> {
     val schemas = getSchemaNodesFromDefinition(definition)
 
-    return schemas.map { schema ->
-        Pair(schema.getAttributeValue("targetNamespace"), schema)
-    }.toMap()
+    return schemas.associateBy { schema ->
+        schema.getAttributeValue("targetNamespace")
+    }
 }
 
 fun WSDL(rootDefinition: XMLNode): WSDL {
-    val definitions = definitionsFrom(rootDefinition).map { definition ->
-        Pair(definition.getAttributeValue("targetNamespace"), definition)
-    }.toMap()
+    val definitions = definitionsFrom(rootDefinition).associateBy { definition ->
+        definition.getAttributeValue("targetNamespace")
+    }
 
     val schemas: Map<String, XMLNode> = listOf(rootDefinition).plus(definitions.values).map { definition ->
         schemasFrom(definition)
@@ -76,7 +76,7 @@ fun WSDL(rootDefinition: XMLNode): WSDL {
     val typesNode = rootDefinition.findFirstChildByName("types") ?: toXMLNode("<types/>")
 
     val schemaPrefixes = schemaPrefixesFrom(schemas)
-    val reversedSchemaPrefixes = schemaPrefixes.entries.map { Pair(it.value, it.key) }.toMap()
+    val reversedSchemaPrefixes = schemaPrefixes.entries.associate { it.value to it.key }
     return WSDL (rootDefinition, definitions, populatedSchemas, typesNode, getXmlnsDefinitions(rootDefinition).plus(schemaPrefixes), reversedSchemaPrefixes)
 }
 
@@ -151,9 +151,9 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
     }
 
     fun getNamespaces(): Map<String, String> {
-        return namespaceToPrefix.entries.map {
-            Pair(it.value, it.key)
-        }.toMap()
+        return namespaceToPrefix.entries.associate {
+            it.value to it.key
+        }
     }
 
     fun mapNamespaceToPrefix(targetNamespace: String): String {
@@ -252,12 +252,6 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
             fullyQualifiedName.localName,
             "Message node ${fullyQualifiedName.qname} not found"
         )
-    }
-
-    fun mapToNamespacePrefixInDefinitions(namespacePrefix: String, element: XMLNode): String {
-        val namespaceValue = element.namespaces[namespacePrefix]
-            ?: throw ContractException("Can't find namespace prefix $namespacePrefix for element $element")
-        return namespaceToPrefix.getValue(namespaceValue)
     }
 
     fun getWSDLElementType(parentTypeName: String, node: XMLNode): ChildElementType {

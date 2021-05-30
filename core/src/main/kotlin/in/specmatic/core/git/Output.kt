@@ -2,39 +2,44 @@ package `in`.specmatic.core.git
 
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 
-var log: Log = Info
+var output: Output = Info
+
+val log: Output
+    get() {
+        return output
+    }
 
 fun logException(fn: ()-> Unit): Int {
     return try {
         fn()
         0
     } catch(e: Throwable) {
-        log.statusUpdate(e)
+        output.inform(e)
         1
     }
 }
 
-interface Log {
-    fun statusUpdate(e: Throwable, msg: String? = null)
-    fun statusUpdate(msg: String)
-    fun statusUpdate()
+interface Output {
+    fun inform(e: Throwable, msg: String? = null)
+    fun inform(msg: String)
+    fun newLine()
     fun debug(msg: String)
     fun debug(e: Throwable, msg: String? = null)
 }
 
-object Info : Log {
-    override fun statusUpdate(e: Throwable, msg: String?) {
+object Info : Output {
+    override fun inform(e: Throwable, msg: String?) {
         when(msg) {
             null -> println(exceptionCauseMessage(e))
             else -> println("${msg}: ${exceptionCauseMessage(e)}")
         }
     }
 
-    override fun statusUpdate(msg: String) {
+    override fun inform(msg: String) {
         println(msg)
     }
 
-    override fun statusUpdate() {
+    override fun newLine() {
         println()
     }
 
@@ -43,22 +48,22 @@ object Info : Log {
     override fun debug(e: Throwable, msg: String?) { }
 }
 
-object Verbose : Log {
-    override fun statusUpdate(e: Throwable, msg: String?) {
+object Verbose : Output {
+    override fun inform(e: Throwable, msg: String?) {
         when(msg) {
             null -> println(exceptionCauseMessage(e))
             else -> println("${msg}: ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
         }
 
-        statusUpdate()
+        newLine()
         println(e.stackTraceToString())
     }
 
-    override fun statusUpdate(msg: String) {
+    override fun inform(msg: String) {
         println(msg)
     }
 
-    override fun statusUpdate() {
+    override fun newLine() {
         println()
     }
 
@@ -67,6 +72,6 @@ object Verbose : Log {
     }
 
     override fun debug(e: Throwable, msg: String?) {
-        statusUpdate(e, msg)
+        inform(e, msg)
     }
 }

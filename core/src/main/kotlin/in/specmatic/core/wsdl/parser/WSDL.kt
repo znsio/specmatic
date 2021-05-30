@@ -1,7 +1,7 @@
 package `in`.specmatic.core.wsdl.parser
 
 import `in`.specmatic.core.SPECMATIC_GITHUB_ISSUES
-import `in`.specmatic.core.git.log
+import `in`.specmatic.core.git.output
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.*
@@ -118,7 +118,7 @@ fun schemaPrefixesFrom(schemas: Map<String, XMLNode>): Map<String, String> {
         namespace.split("/").takeLast(segmentCount).joinToString("_") { it.capitalizeFirstChar() }
     }
 
-    return namespaces.zip(prefixes).toMap().also { log.debug(it.toString()) }
+    return namespaces.zip(prefixes).toMap().also { output.debug(it.toString()) }
 }
 
 fun addSchemasToNodes(schemas: Map<String, XMLNode>): Map<String, XMLNode> {

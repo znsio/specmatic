@@ -23,7 +23,7 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
         execute("git", "rev-parse", "--is-inside-work-tree").trim() == "true"
     } catch (e: Throwable) {
         false.also {
-            log.debug("This must not be a git dir, got error ${e.javaClass.name}: ${exceptionCauseMessage(e)}")
+            output.debug("This must not be a git dir, got error ${e.javaClass.name}: ${exceptionCauseMessage(e)}")
         }
     }
 
@@ -52,7 +52,7 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
 }
 
 private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory: String, command: Array<String>): String {
-    log.debug("${prefix}Executing: ${command.joinToString(" ")}")
+    output.debug("${prefix}Executing: ${command.joinToString(" ")}")
     val process = Runtime.getRuntime().exec(command, null, File(workingDirectory))
     process.waitFor()
     val out = process.inputStream.bufferedReader().readText()

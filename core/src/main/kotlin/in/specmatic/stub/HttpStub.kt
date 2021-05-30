@@ -23,7 +23,6 @@ import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.asStream
 import io.ktor.util.toMap
 import kotlinx.coroutines.delay
@@ -245,7 +244,6 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
             multiPartFormData = multiPartFormData)
 }
 
-@OptIn(KtorExperimentalAPI::class)
 private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<String, String>, List<MultiPartFormDataValue>> {
     return when {
         call.request.httpMethod == HttpMethod.Get -> Triple(EmptyString, emptyMap(), emptyList())

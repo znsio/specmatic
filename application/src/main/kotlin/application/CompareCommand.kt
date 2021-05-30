@@ -1,11 +1,9 @@
 package application
 
-import `in`.specmatic.core.Feature
+import `in`.specmatic.core.*
+import `in`.specmatic.core.git.output
 import `in`.specmatic.core.git.logException
-import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.testBackwardCompatibility
-import `in`.specmatic.core.utilities.readFile
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import java.util.concurrent.Callable
@@ -21,6 +19,16 @@ class CompareCommand : Callable<Int> {
     lateinit var newerContractFilePath: String
 
     override fun call(): Int {
+        if(!olderContractFilePath.isContractFile()) {
+            output.inform(invalidContractExtensionMessage(olderContractFilePath))
+            return 1
+        }
+
+        if(!newerContractFilePath.isContractFile()) {
+            output.inform(invalidContractExtensionMessage(newerContractFilePath))
+            return 1
+        }
+
         return logException {
             val olderContract = olderContractFilePath.loadContract()
             val newerContract = newerContractFilePath.loadContract()
@@ -30,10 +38,6 @@ class CompareCommand : Callable<Int> {
             report.exitCode
         }
     }
-}
-
-private fun String.loadContract(): Feature {
-    return parseGherkinStringToFeature(readFile(this))
 }
 
 fun backwardCompatible(olderContract: Feature, newerContract: Feature): CompatibilityReport =

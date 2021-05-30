@@ -15,7 +15,7 @@ interface IncludedSpecification {
         scenarioInfo: ScenarioInfo
     ) {
         if (!wsdlScenarioInfos.isNullOrEmpty() && steps.isNotEmpty()) {
-            if (!wsdlScenarioInfos!!.any {
+            if (!wsdlScenarioInfos.any {
                     it.httpRequestPattern.matches(
                         scenarioInfo.httpRequestPattern.generate(
                             Resolver()
@@ -24,7 +24,7 @@ interface IncludedSpecification {
                 }) {
                 throw ContractException("""Scenario: "${scenarioInfo.scenarioName}" request is not as per included wsdl / OpenApi spec""")
             }
-            if (!wsdlScenarioInfos!!.any {
+            if (!wsdlScenarioInfos.any {
                     it.httpResponsePattern.matches(
                         scenarioInfo.httpResponsePattern.generateResponse(
                             Resolver()

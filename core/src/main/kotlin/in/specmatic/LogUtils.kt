@@ -1,6 +1,6 @@
 package `in`.specmatic
 
-import `in`.specmatic.core.git.log
+import `in`.specmatic.core.git.output
 import java.util.*
 
 object LogTail {
@@ -38,7 +38,7 @@ object LogTail {
 
 fun consoleLog(event: String) {
     LogTail.append(event)
-    log.statusUpdate(event)
+    output.inform(event)
 }
 
 val dontPrintToConsole = { event: String ->

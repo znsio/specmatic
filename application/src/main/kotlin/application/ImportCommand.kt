@@ -6,7 +6,7 @@ import `in`.specmatic.conversions.runTests
 import `in`.specmatic.conversions.toFragment
 import `in`.specmatic.core.*
 import `in`.specmatic.core.git.Verbose
-import `in`.specmatic.core.git.log
+import `in`.specmatic.core.git.output
 import `in`.specmatic.core.git.logException
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.parseXML
@@ -31,7 +31,7 @@ class ImportCommand : Callable<Int> {
 
     override fun call(): Int {
         if(verbose)
-            log = Verbose
+            output = Verbose
 
         return logException {
             when {
@@ -98,7 +98,7 @@ private fun writeOut(gherkin: String, outputFilePath: String, hostAndPort: Strin
     val tag = if(hostAndPort != null) "-${hostAndPort.replace(":", "-")}" else ""
 
     fileWithTag(outputFile, tag).writeText(gherkin)
-    log.statusUpdate("Written to file ${fileWithTag(outputFile, tag).path}")
+    output.inform("Written to file ${fileWithTag(outputFile, tag).path}")
 }
 
 private fun fileWithTag(file: File, tag: String): File {

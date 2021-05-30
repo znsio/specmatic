@@ -1,6 +1,6 @@
 package `in`.specmatic.core.wsdl.parser.message
 
-import `in`.specmatic.core.git.log
+import `in`.specmatic.core.git.output
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.TYPE_ATTRIBUTE_NAME
 import `in`.specmatic.core.pattern.XMLPattern
@@ -26,7 +26,7 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
                 typeStack.plus(qontractTypeName)
             )
         } catch(e: ContractException) {
-            log.debug(e, "Error getting types for WSDL type \"$wsdlTypeReference\", ${element.oneLineDescription}")
+            output.debug(e, "Error getting types for WSDL type \"$wsdlTypeReference\", ${element.oneLineDescription}")
             throw e
         }
 

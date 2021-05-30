@@ -33,7 +33,12 @@ class GitCompatibleCommand : Callable<Int> {
     fun file(@Parameters(paramLabel = "contractPath") contractPath: String,
              @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
-            log = Verbose
+            output = Verbose
+
+        if(!contractPath.isContractFile()) {
+            output.inform(invalidContractExtensionMessage(contractPath))
+            return 1
+        }
 
         return try {
             val output = checkCompatibility {
@@ -43,7 +48,7 @@ class GitCompatibleCommand : Callable<Int> {
             println(output.message)
             output.exitCode
         } catch(e: Throwable) {
-            log.statusUpdate(e)
+            output.inform(e)
             1
         }
     }
@@ -54,7 +59,7 @@ class GitCompatibleCommand : Callable<Int> {
                 @Parameters(paramLabel = "olderCommit") olderCommit: String,
                 @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
-            log = Verbose
+            output = Verbose
 
         return try {
         val output = checkCompatibility {
@@ -64,7 +69,7 @@ class GitCompatibleCommand : Callable<Int> {
         println(output.message)
         output.exitCode
         } catch(e: Throwable) {
-            log.statusUpdate(e)
+            output.inform(e)
             1
         }
     }

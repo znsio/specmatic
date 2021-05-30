@@ -55,7 +55,6 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
 }) : TestExecutor {
     private val serverStateURL = "/_$APPLICATION_NAME_LOWER_CASE/state"
 
-    @OptIn(KtorExperimentalAPI::class)
     override fun execute(request: HttpRequest): HttpResponse {
         val url = URL(request.getURL(baseURL))
 
@@ -132,7 +131,6 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
         return request.copy(multiPartFormData = newMultiPartFormData)
     }
 
-    @OptIn(KtorExperimentalAPI::class)
     override fun setServerState(serverState: Map<String, Value>) {
         if (serverState.isEmpty()) return
 

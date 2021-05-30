@@ -5,6 +5,7 @@ import `in`.specmatic.core.pattern.*
 import io.cucumber.messages.Messages
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.media.*
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
@@ -23,54 +24,62 @@ class OpenApiSpecification : IncludedSpecification {
         openApitoScenarioInfos().filter { it.httpResponsePattern.status in 200..299 }
             .plus(toScenarioInfosWithExamples())
 
+    override fun validateCompliance(scenarioInfo: ScenarioInfo, steps: List<Messages.GherkinDocument.Feature.Step>) {
+        validateScenarioInfoCompliance(openApitoScenarioInfos(), steps, scenarioInfo)
+    }
+
     private fun openApitoScenarioInfos(): List<ScenarioInfo> {
         return openApi.paths.map { (openApiPath, pathItem) ->
-            val get = pathItem.get
-            var specmaticPath = openApiPath
+            openApiOperations(pathItem).map { (httpMethod, operation) ->
+                val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
-            get.parameters.filter { it.`in` == "path" }.map {
-                specmaticPath =
-                    specmaticPath.replace("{${it.name}}", "(${it.name}:${toSpecmaticPattern(it.schema).typeName})")
-            }
-
-            toHttpResponsePattern(get.responses).map { (response, _, httpResponsePattern) ->
-                val httpRequestPattern = httpRequestPattern(specmaticPath, get)
-                val scenarioName = "Request: " + get.summary + " Response: " + response.description
-                scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern)
-            }
+                toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
+                    toHttpRequestPatterns(
+                        specmaticPath,
+                        httpMethod,
+                        operation
+                    ).map { httpRequestPattern: HttpRequestPattern ->
+                        val scenarioName = "Request: " + operation.summary + " Response: " + response.description
+                        scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern)
+                    }
+                }.flatten()
+            }.flatten()
         }.flatten()
     }
 
     private fun toScenarioInfosWithExamples(): List<ScenarioInfo> {
         return openApi.paths.map { (openApiPath, pathItem) ->
-            val get = pathItem.get
-            var specmaticPath = openApiPath
-            get.parameters.filter { it.`in` == "path" }.map {
-                specmaticPath =
-                    specmaticPath.replace("{${it.name}}", "(${it.name}:${toSpecmaticPattern(it.schema).typeName})")
-            }
-            toHttpResponsePattern(get.responses).map { (response, responseMediaType, httpResponsePattern) ->
-                val responseExamples = responseMediaType.examples.orEmpty()
-                val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, value) ->
-                    val requestExamples =
-                        get.parameters.filter { parameter -> parameter.examples.any { it.key == exampleName } }
-                            .map { it.name to it.examples[exampleName]!!.value }.toMap()
+            openApiOperations(pathItem).map { (httpMethod, operation) ->
+                val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
-                    requestExamples.map { (key, value) -> key to value.toString() }.toList().isNotEmpty()
+                toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
+                    val responseExamples = responseMediaType.examples.orEmpty()
+                    val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, value) ->
+                        val requestExamples =
+                            operation.parameters.filter { parameter -> parameter.examples.any { it.key == exampleName } }
+                                .map { it.name to it.examples[exampleName]!!.value }.toMap()
 
-                    when {
-                        requestExamples.isNotEmpty() -> Row(
-                            requestExamples.keys.toList(),
-                            requestExamples.values.toList().map { it.toString() })
-                        else -> Row()
+                        requestExamples.map { (key, value) -> key to value.toString() }.toList().isNotEmpty()
+
+                        when {
+                            requestExamples.isNotEmpty() -> Row(
+                                requestExamples.keys.toList(),
+                                requestExamples.values.toList().map { it.toString() })
+                            else -> Row()
+                        }
                     }
-                }
 
-                specmaticExampleRows.map {
-                    val httpRequestPattern = httpRequestPattern(specmaticPath, get)
-                    val scenarioName = "Request: " + get.summary + " Response: " + response.description
-                    scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, it)
-                }
+                    specmaticExampleRows.map { specmaticExampleRow: Row ->
+                        toHttpRequestPatterns(
+                            specmaticPath,
+                            httpMethod,
+                            operation
+                        ).map { httpRequestPattern: HttpRequestPattern ->
+                            val scenarioName = "Request: " + operation.summary + " Response: " + response.description
+                            scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, specmaticExampleRow)
+                        }
+                    }.flatten()
+                }.flatten()
             }.flatten()
         }.flatten()
     }
@@ -86,26 +95,57 @@ class OpenApiSpecification : IncludedSpecification {
         httpResponsePattern = httpResponsePattern.newBasedOn(specmaticExampleRow, Resolver())[0]
     )
 
-    private fun toHttpResponsePattern(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
-        return responses!!.map { (status, response) ->
-            response.content.map { (contentType, mediaType) ->
-                Triple(
-                    response, mediaType, HttpResponsePattern(
-                        headersPattern = HttpHeadersPattern(mapOf(toPatternPair("Content-Type", contentType))),
-                        status = when (status) {
-                            "default" -> 400
-                            else -> status.toInt()
-                        },
-                        body = toSpecmaticPattern(mediaType)
+    private fun toHttpResponsePatterns(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
+        return responses.orEmpty().map { (status, response) ->
+            when (val content = response.content) {
+                null -> listOf(
+                    Triple(
+                        response, MediaType(), HttpResponsePattern(
+                            headersPattern = HttpHeadersPattern(),
+                            status = when (status) {
+                                "default" -> 400
+                                else -> status.toInt()
+                            }
+                        )
                     )
                 )
+                else -> content.map { (contentType, mediaType) ->
+                    Triple(
+                        response, mediaType, HttpResponsePattern(
+                            headersPattern = HttpHeadersPattern(mapOf(toPatternPair("Content-Type", contentType))),
+                            status = when (status) {
+                                "default" -> 400
+                                else -> status.toInt()
+                            },
+                            body = toSpecmaticPattern(mediaType)
+                        )
+                    )
+                }
             }
         }.flatten()
     }
 
-    fun toSpecmaticPattern(mediaType: MediaType) = toSpecmaticPattern(mediaType.schema)
+    fun toHttpRequestPatterns(path: String, httpMethod: String, operation: Operation): List<HttpRequestPattern> =
+        when (operation.requestBody) {
+            null -> listOf(
+                HttpRequestPattern(
+                    urlMatcher = toURLMatcherWithOptionalQueryParams(path),
+                    method = httpMethod,
+                )
+            )
+            else -> operation.requestBody.content.map { (contentType, mediaType) ->
+                HttpRequestPattern(
+                    urlMatcher = toURLMatcherWithOptionalQueryParams(path),
+                    method = httpMethod,
+                    headersPattern = HttpHeadersPattern(mapOf(toPatternPair("Content-Type", contentType))),
+                    body = toSpecmaticPattern(mediaType)
+                )
+            }
+        }
 
-    fun toSpecmaticPattern(schema: Schema<Any>): Pattern = when (schema) {
+    fun toSpecmaticPattern(mediaType: MediaType): Pattern = toSpecmaticPattern(mediaType.schema)
+
+    fun toSpecmaticPattern(schema: Schema<*>): Pattern = when (schema) {
         is StringSchema -> StringPattern
         is IntegerSchema -> NumberPattern
         is ObjectSchema -> {
@@ -113,6 +153,9 @@ class OpenApiSpecification : IncludedSpecification {
                 name to toSpecmaticPattern(type)
             }.toMap()
             toJSONObjectPattern(schemaProperties)
+        }
+        is ArraySchema -> {
+            JSONArrayPattern(listOf(toSpecmaticPattern(schema.items)))
         }
         is ComposedSchema -> {
             NullPattern
@@ -127,12 +170,27 @@ class OpenApiSpecification : IncludedSpecification {
         return toSpecmaticPattern(openApi.components.schemas[component!!.removePrefix("#/components/schemas/")] as Schema<Any>)
     }
 
-    fun httpRequestPattern(path: String, operation: Operation): HttpRequestPattern {
-        return HttpRequestPattern(urlMatcher = toURLMatcherWithOptionalQueryParams(path), method = "GET")
+    private fun toSpecmaticPath(openApiPath: String, operation: Operation): String {
+        var specmaticPath = openApiPath
+
+        operation.parameters?.let {
+            it.filter { it.`in` == "path" }.map {
+                specmaticPath =
+                    specmaticPath.replace(
+                        "{${it.name}}",
+                        "(${it.name}:${toSpecmaticPattern(it.schema).typeName})"
+                    )
+            }
+        }
+
+        return specmaticPath
     }
 
-    override fun validateCompliance(scenarioInfo: ScenarioInfo, steps: List<Messages.GherkinDocument.Feature.Step>) {
-        validateScenarioInfoCompliance(openApitoScenarioInfos(), steps, scenarioInfo)
-    }
+    private fun openApiOperations(pathItem: PathItem): Map<String, Operation> =
+        mapOf<String, Operation>(
+            "GET" to pathItem.get,
+            "POST" to pathItem.post,
+            "DELETE" to pathItem.delete
+        ).filter { (key, value) -> value != null }
 
 }

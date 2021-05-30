@@ -12,10 +12,13 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpMethod
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
 import java.net.URI
+
 
 internal class OpenApiKtTest {
     companion object {
@@ -37,14 +40,14 @@ Scenario: zero should return not found
     fun `should create stub from gherkin that includes OpenAPI spec`() {
         val feature = parseGherkinStringToFeature(openAPISpec)
 
-        val response = HttpStub(feature).use { mock ->
+        val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
             restTemplate.exchange(URI.create("http://localhost:9000/hello/1"), HttpMethod.GET, null, String::class.java)
         }
 
         assertThat(response.statusCodeValue).isEqualTo(200)
 
-        HttpStub(feature).use { mock ->
+        HttpStub(feature).use {
             val restTemplate = RestTemplate()
             try {
                 restTemplate.exchange(
@@ -234,7 +237,7 @@ Background:
         """.trimIndent()
         )
 
-        val response = HttpStub(feature).use { mock ->
+        val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
             restTemplate.exchange(URI.create("http://localhost:9000/pets/1"), HttpMethod.GET, null, Pet::class.java)
         }
@@ -242,10 +245,170 @@ Background:
         assertThat(response.statusCodeValue).isEqualTo(200)
         assertThat(response.body).isInstanceOf(Pet::class.java)
     }
+
+    @Test
+    fun `should generate stub with non primitive array open api data types`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val response = HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            restTemplate.exchange(
+                URI.create("http://localhost:9000/pets"),
+                HttpMethod.GET,
+                null,
+                object : ParameterizedTypeReference<List<Pet>>() {}
+            )
+        }
+
+        assertThat(response.statusCodeValue).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(List::class.java)
+        assertThat(response.body[0]).isInstanceOf(Pet::class.java)
+    }
+
+    @Test
+    fun `should generate stub with primitive array open api data types`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val response = HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            restTemplate.exchange(
+                URI.create("http://localhost:9000/petIds"),
+                HttpMethod.GET,
+                null,
+                object : ParameterizedTypeReference<List<Integer>>() {}
+            )
+        }
+
+        assertThat(response.statusCodeValue).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(List::class.java)
+        assertThat(response.body[0]).isInstanceOf(Integer::class.java)
+    }
+
+    @Test
+    fun `should generate stub with http post and non primitive request and response data types`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val petResponse = HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            restTemplate.postForObject(
+                URI.create("http://localhost:9000/pets"),
+                NewPet("scooby", "labrador"),
+                Pet::class.java
+            )
+        }
+
+        assertThat(petResponse).isInstanceOf(Pet::class.java)
+        assertThat(petResponse).isNotNull
+    }
+
+    @Test
+    fun `should create petstore tests`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} ${request.method} executed"] = true
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    val pet = Pet("scooby", "labrador", 1)
+                    return when {
+                        request.path!!.matches(Regex("""\/pets\/[0-9]+""")) -> when (request.method) {
+                            "GET" -> HttpResponse(
+                                200,
+                                ObjectMapper().writeValueAsString(pet),
+                                headers
+                            )
+                            "DELETE" -> HttpResponse(
+                                204,
+                                headers
+                            )
+                            else -> HttpResponse(400, "", headers)
+                        }
+                        request.path == "/pets" -> {
+                            when (request.method) {
+                                "GET" -> HttpResponse(
+                                    200,
+                                    ObjectMapper().writeValueAsString(listOf(pet)),
+                                    headers
+                                )
+                                "POST" -> HttpResponse(
+                                    201,
+                                    ObjectMapper().writeValueAsString(pet),
+                                    headers
+                                )
+                                else -> HttpResponse(400, "", headers)
+                            }
+                        }
+                        request.path == "/petIds" -> {
+                            when (request.method) {
+                                "GET" -> HttpResponse(
+                                    200,
+                                    ObjectMapper().writeValueAsString(listOf(1)),
+                                    headers
+                                )
+                                else -> HttpResponse(400, "", headers)
+                            }
+                        }
+                        else -> HttpResponse(400, "", headers)
+                    }
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(flags["/pets POST executed"]).isTrue
+        assertThat(flags["/pets GET executed"]).isTrue
+        assertThat(flags["/petIds GET executed"]).isTrue
+        assertThat(flags.keys.any { it.matches(Regex("""\/pets\/[0-9]+ GET""")) }).isNotNull()
+        assertThat(flags.keys.any { it.matches(Regex("""\/pets\/[0-9]+ DELETE""")) }).isNotNull()
+        assertThat(flags.size).isEqualTo(5)
+        assertTrue(results.success(), results.report())
+    }
 }
 
 data class Pet(
     @JsonProperty("name") val name: String,
     @JsonProperty("tag") val tag: String,
     @JsonProperty("id") val id: Int
+)
+
+data class NewPet(
+    @JsonProperty("name") val name: String,
+    @JsonProperty("tag") val tag: String,
 )

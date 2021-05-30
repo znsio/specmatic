@@ -1,0 +1,7 @@
+<definitions targetNamespace="http://localhost/child">
+    <types>
+        <schema targetNamespace="http://localhost/schema">
+            <import schemaLocation="childSchema.xsd" namespace="http://localhost/childSchema"/>
+        </schema>
+    </types>
+</definitions>

@@ -1,10 +1,13 @@
 package `in`.specmatic.conversions
 
+import `in`.specmatic.Utils.readTextResource
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.toXML
+import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions
@@ -25,7 +28,7 @@ import java.net.URI
 class WsdlKtTest {
 
     @BeforeEach
-    fun `setup`() {
+    fun setup() {
         val wsdlContent = """
             <?xml version="1.0"?>
             <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
@@ -114,8 +117,8 @@ Scenario: test request returns test response
                 HttpEntity(soapRequest, headers),
                 String::class.java
             )
-            Assertions.assertThat(response.statusCodeValue).isEqualTo(200)
-            Assertions.assertThat(response.body)
+            assertThat(response.statusCodeValue).isEqualTo(200)
+            assertThat(response.body)
                 .matches("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>[A-Z]*</SimpleResponse></soapenv:Body></soapenv:Envelope>""")
 
             val testRequest =
@@ -126,7 +129,7 @@ Scenario: test request returns test response
                 HttpEntity(testRequest, headers),
                 String::class.java
             )
-            Assertions.assertThat(testResponse.body)
+            assertThat(testResponse.body)
                 .matches("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>""")
         }
     }
@@ -151,8 +154,8 @@ Scenario: test request returns test response
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    Assertions.assertThat(request.path).matches("""/SOAPService/SimpleSOAP""")
-                    Assertions.assertThat(request.headers["SOAPAction"]).isEqualTo(""""http://specmatic.in/SOAPService/SimpleOperation"""")
+                    assertThat(request.path).matches("""/SOAPService/SimpleSOAP""")
+                    assertThat(request.headers["SOAPAction"]).isEqualTo(""""http://specmatic.in/SOAPService/SimpleOperation"""")
                     val responseBody = when {
                         request.bodyString.contains("test request") -> """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                         else -> """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
@@ -197,7 +200,7 @@ Scenario: test request returns test response
         )
 
         assertFalse(results.success(), results.report())
-        Assertions.assertThat(results.report()).isEqualTo("""
+        assertThat(results.report()).isEqualTo("""
             In scenario "test request returns test response"
             >> RESPONSE.BODY.Envelope
 
@@ -237,8 +240,16 @@ Scenario: request not matching wsdl
         }
     }
 
+    @Test
+    fun `should load child wsdl and schema imports`() {
+        val wsdlXML = readTextResource("wsdl/parent.wsdl").toXML()
+        val wsdl = WSDL(wsdlXML, "src/test/resources/wsdl/parent.wsdl")
+
+        println(wsdl)
+    }
+
     @AfterEach
-    fun `teardown`() {
+    fun teardown() {
         File("test.wsdl").delete()
     }
 }

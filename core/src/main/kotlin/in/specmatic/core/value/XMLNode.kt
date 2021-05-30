@@ -321,3 +321,7 @@ class XMLNodeBuilder(parentNamespaces: Map<String, String>) {
         this.parentNamespaces = parentNamespaces.toMutableMap()
     }
 }
+
+fun String.toXML(): XMLNode {
+    return toXMLNode(this)
+}

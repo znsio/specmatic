@@ -1,0 +1,6 @@
+<definitions targetNamespace="http://localhost/parent">
+    <import location="child.wsdl" namespace="http://localhost/child"/>
+    <schema targetNamespace="http://localhost/schema">
+        <import schemaLocation="childSchema.xsd" namespace="http://localhost/childSchema"/>
+    </schema>
+</definitions>

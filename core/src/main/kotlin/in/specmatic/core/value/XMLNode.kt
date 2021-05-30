@@ -91,6 +91,14 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         return FullyQualifiedName(prefix, namespace, localName)
     }
 
+    fun fullyQualifiedNameFromQName(qName: String): FullyQualifiedName {
+        val prefix = qName.namespacePrefix()
+        val namespace = resolveNamespace(qName)
+        val localName = qName.localName()
+
+        return FullyQualifiedName(prefix, namespace, localName)
+    }
+
     fun createNewNode(realName: String, attributes: Map<String, String> = emptyMap()): XMLNode {
         val namespace = realName.namespacePrefix()
 

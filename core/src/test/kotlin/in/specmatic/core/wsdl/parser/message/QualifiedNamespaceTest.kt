@@ -12,8 +12,18 @@ internal class QualifiedNamespaceTest {
     val dummyNode = toXMLNode("<dummy/>")
     @Test
     fun `gets the node name for a qualified element`() {
-        val qualification = QualifiedNamespace(toXMLNode("<xsd:element name=\"ns:Customer\"/>"), dummyNode, "ns0:Person", mockk())
-        assertThat(qualification.nodeName).isEqualTo("ns0:Customer")
+        val wsdl = mockk<WSDL>()
+        every {
+            wsdl.mapNamespaceToPrefix(any())
+        }.returns("ns1000")
+
+        val qualification = QualifiedNamespace(
+            toXMLNode("<xsd:element xmlns:ns0=\"http://localhost\" name=\"ns:Customer\"/>"),
+            dummyNode,
+            "ns0:Person",
+            wsdl
+        )
+        assertThat(qualification.nodeName).isEqualTo("ns1000:Customer")
     }
 
     @Test
@@ -25,7 +35,12 @@ internal class QualifiedNamespaceTest {
             wsdl.mapNamespaceToPrefix(namespace)
         } returns "ns"
 
-        val qualification = QualifiedNamespace(toXMLNode("<xsd:element name=\"ns:Customer\"/>"), schema, "Person", wsdl)
+        val qualification = QualifiedNamespace(
+            toXMLNode("<xsd:element name=\"ns:Customer\"/>"),
+            schema,
+            "Person",
+            wsdl
+        )
         assertThat(qualification.namespacePrefix).isEqualTo(listOf("ns"))
     }
 
@@ -33,12 +48,12 @@ internal class QualifiedNamespaceTest {
     fun `a qualified element with a namespace in the wsdl type reference`() {
         val wsdl: WSDL = mockk()
 
-        val element = toXMLNode("<xsd:element name=\"ns:Customer\"/>")
+        val element = toXMLNode("<xsd:element xmlns:ns0=\"http://localhost\" name=\"ns:Customer\"/>")
         every {
-            wsdl.mapToNamespacePrefixInDefinitions("ns0", element)
+            wsdl.mapNamespaceToPrefix("http://localhost")
         }.returns("ns1")
 
-        val qualification = QualifiedNamespace(element, dummyNode,"ns0:Person", wsdl)
+        val qualification = QualifiedNamespace(element, dummyNode, "ns0:Person", wsdl)
         assertThat(qualification.namespacePrefix).isEqualTo(listOf("ns1"))
     }
 }

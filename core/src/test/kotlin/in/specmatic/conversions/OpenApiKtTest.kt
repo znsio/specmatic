@@ -16,6 +16,7 @@ import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpMethod
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
 import java.net.URI
 
 
@@ -296,10 +297,82 @@ Background:
         assertThat(response.body).isInstanceOf(List::class.java)
         assertThat(response.body[0]).isInstanceOf(Integer::class.java)
     }
+
+    @Test
+    fun `should generate stub with http post and non primitive request and response data types`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val petResponse = HttpStub(feature).use { mock ->
+            val restTemplate = RestTemplate()
+            restTemplate.postForObject(
+                URI.create("http://localhost:9000/pets"),
+                NewPet("scooby", "labrador"),
+                Pet::class.java
+            )
+        }
+
+        assertThat(petResponse).isInstanceOf(Pet::class.java)
+        assertThat(petResponse).isNotNull
+    }
+
+    @Test
+    fun `should create test with non primitive request and response`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-post.yaml
+        """.trimIndent()
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} ${request.method} executed"] = true
+                    assertThat(request.path).matches("""/pets""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    return when (request.method) {
+                        "POST" -> HttpResponse(
+                            201,
+                            ObjectMapper().writeValueAsString(Pet("scooby", "labrador", 1)),
+                            headers
+                        )
+                        else -> HttpResponse(400, "", headers)
+                    }
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(flags["/pets POST executed"]).isTrue
+        assertThat(flags.size).isEqualTo(1)
+        assertTrue(results.success(), results.report())
+    }
 }
 
 data class Pet(
     @JsonProperty("name") val name: String,
     @JsonProperty("tag") val tag: String,
     @JsonProperty("id") val id: Int
+)
+
+data class NewPet(
+    @JsonProperty("name") val name: String,
+    @JsonProperty("tag") val tag: String,
 )

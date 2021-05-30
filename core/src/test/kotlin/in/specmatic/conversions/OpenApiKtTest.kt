@@ -40,14 +40,14 @@ Scenario: zero should return not found
     fun `should create stub from gherkin that includes OpenAPI spec`() {
         val feature = parseGherkinStringToFeature(openAPISpec)
 
-        val response = HttpStub(feature).use { mock ->
+        val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
             restTemplate.exchange(URI.create("http://localhost:9000/hello/1"), HttpMethod.GET, null, String::class.java)
         }
 
         assertThat(response.statusCodeValue).isEqualTo(200)
 
-        HttpStub(feature).use { mock ->
+        HttpStub(feature).use {
             val restTemplate = RestTemplate()
             try {
                 restTemplate.exchange(
@@ -237,7 +237,7 @@ Background:
         """.trimIndent()
         )
 
-        val response = HttpStub(feature).use { mock ->
+        val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
             restTemplate.exchange(URI.create("http://localhost:9000/pets/1"), HttpMethod.GET, null, Pet::class.java)
         }
@@ -257,7 +257,7 @@ Background:
         """.trimIndent()
         )
 
-        val response = HttpStub(feature).use { mock ->
+        val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
             restTemplate.exchange(
                 URI.create("http://localhost:9000/pets"),
@@ -283,7 +283,7 @@ Background:
         """.trimIndent()
         )
 
-        val response = HttpStub(feature).use { mock ->
+        val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
             restTemplate.exchange(
                 URI.create("http://localhost:9000/petIds"),
@@ -309,7 +309,7 @@ Background:
         """.trimIndent()
         )
 
-        val petResponse = HttpStub(feature).use { mock ->
+        val petResponse = HttpStub(feature).use {
             val restTemplate = RestTemplate()
             restTemplate.postForObject(
                 URI.create("http://localhost:9000/pets"),

@@ -181,6 +181,7 @@ class OpenApiSpecification : IncludedSpecification {
         is UUIDSchema -> StringPattern
         is DateTimeSchema -> DateTimePattern
         is DateSchema -> StringPattern
+        is BooleanSchema -> BooleanPattern
         is ObjectSchema -> {
             val requiredFields = schema.required.orEmpty()
             val schemaProperties = schema.properties.map { (propertyName, propertyType) ->

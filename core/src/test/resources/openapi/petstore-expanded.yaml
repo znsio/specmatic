@@ -99,6 +99,9 @@ paths:
               schema:
                 type: string
                 format: date
+            X-Boolean-DataType:
+              schema:
+                type: boolean
         default:
           description: unexpected error
           content:

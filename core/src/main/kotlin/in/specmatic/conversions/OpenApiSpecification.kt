@@ -41,7 +41,8 @@ class OpenApiSpecification : IncludedSpecification {
                         httpMethod,
                         operation
                     ).map { httpRequestPattern: HttpRequestPattern ->
-                        val scenarioName = "Request: " + operation.summary + " Response: " + response.description
+                        val scenarioName =
+                            """Open API - Operation Summary: ${operation.summary}. Response: ${response.description}"""
                         scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern)
                     }
                 }.flatten()
@@ -77,7 +78,8 @@ class OpenApiSpecification : IncludedSpecification {
                             httpMethod,
                             operation
                         ).map { httpRequestPattern: HttpRequestPattern ->
-                            val scenarioName = "Request: " + operation.summary + " Response: " + response.description
+                            val scenarioName =
+                                """Open API - Operation Summary: ${operation.summary}. Response: ${response.description} Examples: $specmaticExampleRow"""
                             scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, specmaticExampleRow)
                         }
                     }.flatten()

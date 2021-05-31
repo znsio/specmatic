@@ -139,6 +139,65 @@ Background:
     }
 
     @Test
+    fun `should report errors in tests created from OpenAPI examples`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/helloWithExamples.yaml
+        """.trimIndent()
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    assertThat(request.path).matches("""\/hello\/[0-9]+""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    val id = request.path!!.split('/')[2].toInt()
+                    val status = when (id) {
+                        0 -> 403
+                        else -> 202
+                    }
+                    return HttpResponse(status, "hello world", headers)
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(flags["/hello/0 executed"]).isTrue
+        assertThat(flags["/hello/15 executed"]).isTrue
+        assertThat(flags.size).isEqualTo(3)
+        assertThat(results.report()).isEqualTo(
+            """
+                In scenario "Open API - Operation Summary: hello world. Response: Says hello"
+                >> RESPONSE.STATUS
+
+                Expected status: 200, actual: 202
+
+                In scenario "Open API - Operation Summary: hello world. Response: Says hello Examples: Row(columnNames=[id], values=[15], variables={}, references={})"
+                >> RESPONSE.STATUS
+
+                Expected status: 200, actual: 202
+
+                In scenario "Open API - Operation Summary: hello world. Response: Not Found Examples: Row(columnNames=[id], values=[0], variables={}, references={})"
+                >> RESPONSE.STATUS
+
+                Expected status: 404, actual: 403
+            """.trimIndent()
+        )
+    }
+
+    @Test
     fun `should report error in test with both OpenAPI and Gherkin scenario names`() {
         val flags = mutableMapOf<String, Boolean>()
 
@@ -171,16 +230,16 @@ Background:
         assertFalse(results.success())
         assertThat(results.report()).isEqualTo(
             """
-            In scenario "zero should return not found"
-            >> RESPONSE.STATUS
+                In scenario "zero should return not found"
+                >> RESPONSE.STATUS
 
-            Expected status: 404, actual: 403
+                Expected status: 404, actual: 403
 
-            In scenario "Request: hello world Response: Says hello"
-            >> RESPONSE.STATUS
+                In scenario "Open API - Operation Summary: hello world. Response: Says hello"
+                >> RESPONSE.STATUS
 
-            Expected status: 200, actual: 202
-        """.trimIndent()
+                Expected status: 200, actual: 202
+            """.trimIndent()
         )
     }
 

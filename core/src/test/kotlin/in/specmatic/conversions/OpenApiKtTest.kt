@@ -273,7 +273,7 @@ Background:
             assertThat(response.body[0]).isInstanceOf(Pet::class.java)
         }
 
-        val response = HttpStub(feature).use {
+        HttpStub(feature).use {
             val restTemplate = RestTemplate()
             try {
                 restTemplate.exchange(
@@ -336,6 +336,82 @@ Background:
 
         assertThat(petResponse).isInstanceOf(Pet::class.java)
         assertThat(petResponse).isNotNull
+    }
+
+    @Test
+    fun `should generate stub with non primitive request which throws error on unexpected fields`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            try {
+                restTemplate.postForObject(
+                    URI.create("http://localhost:9000/pets"),
+                    NewPetWithUnexpectedFields("scooby", "labrador", Integer(4)),
+                    Pet::class.java
+                )
+                throw AssertionError("Should not allow unexpected fields")
+            } catch (e: HttpClientErrorException) {
+                assertThat(e.statusCode).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST)
+            }
+        }
+    }
+
+    @Test
+    fun `should generate stub with non primitive request which allows optional fields`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val petResponse = HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            restTemplate.postForObject(
+                URI.create("http://localhost:9000/pets"),
+                NewPetWithMissingTag("scooby"),
+                Pet::class.java
+            )
+        }
+
+        assertThat(petResponse).isInstanceOf(Pet::class.java)
+        assertThat(petResponse).isNotNull
+    }
+
+    @Test
+    fun `should generate stub with non primitive request which throws error on missing required fields`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            try {
+                restTemplate.postForObject(
+                    URI.create("http://localhost:9000/pets"),
+                    NewPetWithMissingName("labrador"),
+                    Pet::class.java
+                )
+                throw AssertionError("Should not allow empty value on the name field which is required")
+            } catch (e: HttpClientErrorException) {
+                assertThat(e.statusCode).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST)
+            }
+        }
     }
 
     @Test
@@ -426,5 +502,19 @@ data class Pet(
 
 data class NewPet(
     @JsonProperty("name") val name: String,
+    @JsonProperty("tag") val tag: String,
+)
+
+data class NewPetWithUnexpectedFields(
+    @JsonProperty("name") val name: String,
+    @JsonProperty("tag") val tag: String,
+    @JsonProperty("age") val age: Integer,
+)
+
+data class NewPetWithMissingTag(
+    @JsonProperty("name") val name: String,
+)
+
+data class NewPetWithMissingName(
     @JsonProperty("tag") val tag: String,
 )

@@ -157,8 +157,10 @@ class OpenApiSpecification : IncludedSpecification {
         is StringSchema -> StringPattern
         is IntegerSchema -> NumberPattern
         is ObjectSchema -> {
-            val schemaProperties = schema.properties.map { (name, type) ->
-                name to toSpecmaticPattern(type)
+            val requiredFields = schema.required.orEmpty()
+            val schemaProperties = schema.properties.map { (propertyName, propertyType) ->
+                val optional = !requiredFields.contains(propertyName)
+                toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(propertyType)
             }.toMap()
             toJSONObjectPattern(schemaProperties)
         }
@@ -172,6 +174,11 @@ class OpenApiSpecification : IncludedSpecification {
             resolveReference(schema.`$ref`)
         }
         else -> NullPattern
+    }
+
+    private fun toSpecmaticParamName(optional: Boolean, name: String) = when (optional) {
+        true -> "${name}?"
+        false -> name
     }
 
     private fun resolveReference(component: String?): Pattern {

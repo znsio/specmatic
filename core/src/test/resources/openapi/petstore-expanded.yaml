@@ -65,6 +65,12 @@ paths:
           schema:
             type: integer
             format: int32
+        - in: header
+          name: X-Request-ID
+          schema:
+            type: string
+            format: uuid
+          required: true
       responses:
         '200':
           description: pet response

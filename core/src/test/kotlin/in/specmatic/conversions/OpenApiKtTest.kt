@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.core.ParameterizedTypeReference
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
@@ -315,14 +317,16 @@ Background:
   Given openapi openapi/petstore-expanded.yaml
         """.trimIndent()
         )
-
+        val headers = HttpHeaders()
+        headers.set("X-Request-ID", "717e5682-c214-11eb-8529-0242ac130003")
+        val requestEntity: HttpEntity<String> = HttpEntity("", headers)
         listOf("http://localhost:9000/pets", "http://localhost:9000/pets?tag=test&limit=3").forEach { urlString ->
             val response = HttpStub(feature).use {
                 val restTemplate = RestTemplate()
                 restTemplate.exchange(
                     URI.create(urlString),
                     HttpMethod.GET,
-                    null,
+                    requestEntity,
                     object : ParameterizedTypeReference<List<Pet>>() {}
                 )
             }
@@ -338,7 +342,7 @@ Background:
                 restTemplate.exchange(
                     URI.create("http://localhost:9000/pets?tag=test&limit=three"),
                     HttpMethod.GET,
-                    null,
+                    requestEntity,
                     object : ParameterizedTypeReference<List<Pet>>() {}
                 )
             } catch (e: HttpClientErrorException) {
@@ -511,11 +515,14 @@ Background:
                         }
                         request.path == "/pets" -> {
                             when (request.method) {
-                                "GET" -> HttpResponse(
-                                    200,
-                                    ObjectMapper().writeValueAsString(listOf(pet)),
-                                    headers
-                                )
+                                "GET" -> {
+                                    assertThat(request.headers.keys).contains("X-Request-ID")
+                                    HttpResponse(
+                                        200,
+                                        ObjectMapper().writeValueAsString(listOf(pet)),
+                                        headers
+                                    )
+                                }
                                 "POST" -> HttpResponse(
                                     201,
                                     ObjectMapper().writeValueAsString(pet),

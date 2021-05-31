@@ -7,6 +7,8 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.media.*
+import io.swagger.v3.oas.models.parameters.HeaderParameter
+import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.parameters.PathParameter
 import io.swagger.v3.oas.models.parameters.QueryParameter
 import io.swagger.v3.oas.models.responses.ApiResponse
@@ -135,29 +137,42 @@ class OpenApiSpecification : IncludedSpecification {
         }.flatten()
     }
 
-    fun toHttpRequestPatterns(path: String, httpMethod: String, operation: Operation): List<HttpRequestPattern> =
-        when (operation.requestBody) {
+    fun toHttpRequestPatterns(path: String, httpMethod: String, operation: Operation): List<HttpRequestPattern> {
+
+        val parameters = operation.parameters
+
+        val headersMap = toSpecmaticHeadersMap(parameters)
+
+        return when (operation.requestBody) {
             null -> listOf(
                 HttpRequestPattern(
                     urlMatcher = toURLMatcherWithOptionalQueryParams(path),
                     method = httpMethod,
+                    headersPattern = HttpHeadersPattern(headersMap)
                 )
             )
             else -> operation.requestBody.content.map { (contentType, mediaType) ->
                 HttpRequestPattern(
                     urlMatcher = toURLMatcherWithOptionalQueryParams(path),
                     method = httpMethod,
-                    headersPattern = HttpHeadersPattern(mapOf(toPatternPair("Content-Type", contentType))),
+                    headersPattern = HttpHeadersPattern(headersMap.plus(toPatternPair("Content-Type", contentType))),
                     body = toSpecmaticPattern(mediaType)
                 )
             }
         }
+    }
+
+    private fun OpenApiSpecification.toSpecmaticHeadersMap(parameters: List<Parameter>?) =
+        parameters.orEmpty().filterIsInstance(HeaderParameter::class.java).map {
+            toSpecmaticParamName(!it.required, it.name) to toSpecmaticPattern(it.schema)
+        }.toMap()
 
     fun toSpecmaticPattern(mediaType: MediaType): Pattern = toSpecmaticPattern(mediaType.schema)
 
     fun toSpecmaticPattern(schema: Schema<*>): Pattern = when (schema) {
         is StringSchema -> StringPattern
         is IntegerSchema -> NumberPattern
+        is UUIDSchema -> StringPattern
         is ObjectSchema -> {
             val requiredFields = schema.required.orEmpty()
             val schemaProperties = schema.properties.map { (propertyName, propertyType) ->

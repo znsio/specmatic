@@ -95,6 +95,10 @@ paths:
                 format: date-time
               description: The UTC date/time at which the current rate limit window resets.
               required: true
+            X-Date-DataType:
+              schema:
+                type: string
+                format: date
         default:
           description: unexpected error
           content:

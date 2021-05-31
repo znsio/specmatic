@@ -3,7 +3,10 @@ package `in`.specmatic.core
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.StringValue
 
-data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), val ancestorHeaders: Map<String, Pattern>? = null) {
+data class HttpHeadersPattern(
+    val pattern: Map<String, Pattern> = emptyMap(),
+    val ancestorHeaders: Map<String, Pattern>? = null
+) {
     fun matches(headers: Map<String, String>, resolver: Resolver): Result {
         val result = headers to resolver to
                 ::matchEach otherwise
@@ -24,8 +27,12 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
             else -> withoutContentTypeGeneratedByQontract(headers, pattern)
         }
 
-        val missingKey = resolver.findMissingKey(pattern, headersWithRelevantKeys.mapValues { StringValue(it.value) }, ignoreUnexpectedKeys)
-        if(missingKey != null) {
+        val missingKey = resolver.findMissingKey(
+            pattern,
+            headersWithRelevantKeys.mapValues { StringValue(it.value) },
+            ignoreUnexpectedKeys
+        )
+        if (missingKey != null) {
             val failureReason: FailureReason? = highlightIfSOAPActionMismatch(missingKey.name)
             return MatchFailure(missingKeyToResult(missingKey, "header").copy(failureReason = failureReason))
         }
@@ -36,17 +43,29 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
 
             when {
                 sampleValue != null -> try {
-                    val result = resolver.matchesPattern(keyWithoutOptionality, pattern, attempt(breadCrumb = keyWithoutOptionality) { parseOrString(pattern, sampleValue, resolver) } )
+                    val result = resolver.matchesPattern(
+                        keyWithoutOptionality,
+                        pattern,
+                        attempt(breadCrumb = keyWithoutOptionality) { parseOrString(pattern, sampleValue, resolver) })
                     if (result is Result.Failure) {
-                        return MatchFailure(result.breadCrumb(keyWithoutOptionality).copy(failureReason = highlightIfSOAPActionMismatch(key)))
+                        return MatchFailure(
+                            result.breadCrumb(keyWithoutOptionality)
+                                .copy(failureReason = highlightIfSOAPActionMismatch(key))
+                        )
                     }
-                } catch(e: ContractException) {
+                } catch (e: ContractException) {
                     return MatchFailure(e.failure().copy(failureReason = highlightIfSOAPActionMismatch(key)))
-                } catch(e: Throwable) {
-                    return MatchFailure(Result.Failure(e.localizedMessage, breadCrumb = keyWithoutOptionality).copy(failureReason = highlightIfSOAPActionMismatch(key)))
+                } catch (e: Throwable) {
+                    return MatchFailure(
+                        Result.Failure(e.localizedMessage, breadCrumb = keyWithoutOptionality)
+                            .copy(failureReason = highlightIfSOAPActionMismatch(key))
+                    )
                 }
                 !key.endsWith("?") ->
-                    return MatchFailure(missingKeyToResult(MissingKeyError(key), "header").breadCrumb(key).copy(failureReason = highlightIfSOAPActionMismatch(key)))
+                    return MatchFailure(
+                        missingKeyToResult(MissingKeyError(key), "header").breadCrumb(key)
+                            .copy(failureReason = highlightIfSOAPActionMismatch(key))
+                    )
             }
         }
 
@@ -58,17 +77,25 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
         else -> null
     }
 
-    private fun withoutIgnorableHeaders(headers: Map<String, String>, ancestorHeaders: Map<String, Pattern>): Map<String, String> {
+    private fun withoutIgnorableHeaders(
+        headers: Map<String, String>,
+        ancestorHeaders: Map<String, Pattern>
+    ): Map<String, String> {
         return headers.filterKeys { key ->
             val keyWithoutOptionality = withoutOptionality(key)
             ancestorHeaders.containsKey(keyWithoutOptionality) || ancestorHeaders.containsKey("$keyWithoutOptionality?")
         }
     }
 
-    private fun withoutContentTypeGeneratedByQontract(headers: Map<String, String>, pattern: Map<String, Pattern>): Map<String, String> {
+    private fun withoutContentTypeGeneratedByQontract(
+        headers: Map<String, String>,
+        pattern: Map<String, Pattern>
+    ): Map<String, String> {
         val contentTypeHeader = "Content-Type"
         return when {
-            contentTypeHeader in headers && contentTypeHeader !in pattern && "$contentTypeHeader?" !in pattern -> headers.minus(contentTypeHeader)
+            contentTypeHeader in headers && contentTypeHeader !in pattern && "$contentTypeHeader?" !in pattern -> headers.minus(
+                contentTypeHeader
+            )
             else -> headers
         }
     }
@@ -80,18 +107,18 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
                     resolver.generate(key, pattern).toStringValue()
                 }
             }
-        }
+        }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> =
-            forEachKeyCombinationIn(pattern, row) { pattern ->
+        forEachKeyCombinationIn(pattern, row) { pattern ->
             newBasedOn(pattern, row, resolver)
         }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
 
     fun newBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
-            allOrNothingCombinationIn(pattern) { pattern ->
-                newBasedOn(pattern, resolver)
-            }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+        allOrNothingCombinationIn(pattern) { pattern ->
+            newBasedOn(pattern, resolver)
+        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
 
     fun encompasses(other: HttpHeadersPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
@@ -99,12 +126,20 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
 
         return checkMissingHeaders(myRequiredKeys, otherRequiredKeys).ifSuccess {
             val otherWithoutOptionality = other.pattern.mapKeys { withoutOptionality(it.key) }
-            val thisWithoutOptionality = pattern.filterKeys { withoutOptionality(it) in otherWithoutOptionality }.mapKeys { withoutOptionality(it.key) }
+            val thisWithoutOptionality = pattern.filterKeys { withoutOptionality(it) in otherWithoutOptionality }
+                .mapKeys { withoutOptionality(it.key) }
 
             val valueResults =
-                    thisWithoutOptionality.keys.asSequence().map { key ->
-                        Pair(key, thisWithoutOptionality.getValue(key).encompasses(resolvedHop(otherWithoutOptionality.getValue(key), otherResolver), thisResolver, otherResolver))
-                    }
+                thisWithoutOptionality.keys.asSequence().map { key ->
+                    Pair(
+                        key,
+                        thisWithoutOptionality.getValue(key).encompasses(
+                            resolvedHop(otherWithoutOptionality.getValue(key), otherResolver),
+                            thisResolver,
+                            otherResolver
+                        )
+                    )
+                }
 
             valueResults.find { it.second is Result.Failure }.let { result ->
                 result?.second?.breadCrumb(result.first) ?: Result.Success()
@@ -113,15 +148,15 @@ data class HttpHeadersPattern(val pattern: Map<String, Pattern> = emptyMap(), va
     }
 
     private fun checkMissingHeaders(myRequiredKeys: List<String>, otherRequiredKeys: List<String>): Result =
-            when(val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }) {
-                null -> Result.Success()
-                else -> missingKeyToResult(MissingKeyError(missingFixedKey), "header").breadCrumb(missingFixedKey)
-            }
+        when (val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }) {
+            null -> Result.Success()
+            else -> missingKeyToResult(MissingKeyError(missingFixedKey), "header").breadCrumb(missingFixedKey)
+        }
 }
 
 private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resolver) =
-        try {
-            pattern.parse(sampleValue, resolver)
-        } catch (e: Throwable) {
-            StringValue(sampleValue)
-        }
+    try {
+        pattern.parse(sampleValue, resolver)
+    } catch (e: Throwable) {
+        StringValue(sampleValue)
+    }

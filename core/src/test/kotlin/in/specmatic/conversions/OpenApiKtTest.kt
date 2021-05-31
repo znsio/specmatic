@@ -334,6 +334,14 @@ Background:
             assertThat(response.statusCodeValue).isEqualTo(200)
             assertThat(response.body).isInstanceOf(List::class.java)
             assertThat(response.body[0]).isInstanceOf(Pet::class.java)
+            assertThat(response.headers.keys).containsAll(
+                listOf(
+                    "Content-Type",
+                    "X-RateLimit-Limit",
+                    "X-RateLimit-Remaining",
+                    "X-RateLimit-Reset"
+                )
+            )
         }
 
         HttpStub(feature).use {
@@ -520,7 +528,12 @@ Background:
                                     HttpResponse(
                                         200,
                                         ObjectMapper().writeValueAsString(listOf(pet)),
-                                        headers
+                                        object : HashMap<String, String>() {
+                                            init {
+                                                put("Content-Type", "application/json")
+                                                put("X-RateLimit-Reset", "2021-05-31T17:32:28Z")
+                                            }
+                                        }
                                     )
                                 }
                                 "POST" -> HttpResponse(

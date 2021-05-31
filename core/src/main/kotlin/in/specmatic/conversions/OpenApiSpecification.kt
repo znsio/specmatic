@@ -8,7 +8,6 @@ import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.media.*
 import io.swagger.v3.oas.models.parameters.HeaderParameter
-import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.parameters.PathParameter
 import io.swagger.v3.oas.models.parameters.QueryParameter
 import io.swagger.v3.oas.models.responses.ApiResponse
@@ -109,11 +108,14 @@ class OpenApiSpecification : IncludedSpecification {
 
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
         return responses.orEmpty().map { (status, response) ->
+            val headersMap = response.headers.orEmpty().map { (headerName, header) ->
+                toSpecmaticParamName(header.required != true, headerName) to toSpecmaticPattern(header.schema)
+            }.toMap()
             when (val content = response.content) {
                 null -> listOf(
                     Triple(
                         response, MediaType(), HttpResponsePattern(
-                            headersPattern = HttpHeadersPattern(),
+                            headersPattern = HttpHeadersPattern(headersMap),
                             status = when (status) {
                                 "default" -> 400
                                 else -> status.toInt()
@@ -124,7 +126,14 @@ class OpenApiSpecification : IncludedSpecification {
                 else -> content.map { (contentType, mediaType) ->
                     Triple(
                         response, mediaType, HttpResponsePattern(
-                            headersPattern = HttpHeadersPattern(mapOf(toPatternPair("Content-Type", contentType))),
+                            headersPattern = HttpHeadersPattern(
+                                headersMap.plus(
+                                    toPatternPair(
+                                        "Content-Type",
+                                        contentType
+                                    )
+                                )
+                            ),
                             status = when (status) {
                                 "default" -> 400
                                 else -> status.toInt()
@@ -141,7 +150,9 @@ class OpenApiSpecification : IncludedSpecification {
 
         val parameters = operation.parameters
 
-        val headersMap = toSpecmaticHeadersMap(parameters)
+        val headersMap = parameters.orEmpty().filterIsInstance(HeaderParameter::class.java).map {
+            toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema)
+        }.toMap()
 
         return when (operation.requestBody) {
             null -> listOf(
@@ -162,17 +173,13 @@ class OpenApiSpecification : IncludedSpecification {
         }
     }
 
-    private fun OpenApiSpecification.toSpecmaticHeadersMap(parameters: List<Parameter>?) =
-        parameters.orEmpty().filterIsInstance(HeaderParameter::class.java).map {
-            toSpecmaticParamName(!it.required, it.name) to toSpecmaticPattern(it.schema)
-        }.toMap()
-
     fun toSpecmaticPattern(mediaType: MediaType): Pattern = toSpecmaticPattern(mediaType.schema)
 
     fun toSpecmaticPattern(schema: Schema<*>): Pattern = when (schema) {
         is StringSchema -> StringPattern
         is IntegerSchema -> NumberPattern
         is UUIDSchema -> StringPattern
+        is DateTimeSchema -> DateTimePattern
         is ObjectSchema -> {
             val requiredFields = schema.required.orEmpty()
             val schemaProperties = schema.properties.map { (propertyName, propertyType) ->

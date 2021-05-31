@@ -178,6 +178,7 @@ class OpenApiSpecification : IncludedSpecification {
     fun toSpecmaticPattern(schema: Schema<*>): Pattern = when (schema) {
         is StringSchema -> StringPattern
         is IntegerSchema -> NumberPattern
+        is NumberSchema -> NumberPattern
         is UUIDSchema -> StringPattern
         is DateTimeSchema -> DateTimePattern
         is DateSchema -> StringPattern

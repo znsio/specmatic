@@ -534,6 +534,7 @@ Background:
                                                 put("X-RateLimit-Reset", "2021-05-31T17:32:28Z")
                                                 put("X-Date-DataType", "2021-05-31")
                                                 put("X-Boolean-DataType", "true")
+                                                put("X-Number-DataType", "123123.123123")
                                             }
                                         }
                                     )

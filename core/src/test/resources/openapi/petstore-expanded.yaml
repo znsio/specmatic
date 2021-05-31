@@ -102,6 +102,10 @@ paths:
             X-Boolean-DataType:
               schema:
                 type: boolean
+            X-Number-DataType:
+              schema:
+                type: number
+                format: double
         default:
           description: unexpected error
           content:

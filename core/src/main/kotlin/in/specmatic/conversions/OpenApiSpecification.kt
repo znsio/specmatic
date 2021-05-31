@@ -7,6 +7,8 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.media.*
+import io.swagger.v3.oas.models.parameters.PathParameter
+import io.swagger.v3.oas.models.parameters.QueryParameter
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.parser.OpenAPIV3Parser
@@ -91,8 +93,14 @@ class OpenApiSpecification : IncludedSpecification {
         specmaticExampleRow: Row = Row()
     ) = ScenarioInfo(
         scenarioName = scenarioName,
-        httpRequestPattern = httpRequestPattern.newBasedOn(specmaticExampleRow, Resolver())[0],
-        httpResponsePattern = httpResponsePattern.newBasedOn(specmaticExampleRow, Resolver())[0]
+        httpRequestPattern = when (specmaticExampleRow.columnNames.isEmpty()) {
+            true -> httpRequestPattern
+            else -> httpRequestPattern.newBasedOn(specmaticExampleRow, Resolver())[0]
+        },
+        httpResponsePattern = when (specmaticExampleRow.columnNames.isEmpty()) {
+            true -> httpResponsePattern
+            else -> httpResponsePattern.newBasedOn(specmaticExampleRow, Resolver())[0]
+        }
     )
 
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
@@ -173,14 +181,21 @@ class OpenApiSpecification : IncludedSpecification {
     private fun toSpecmaticPath(openApiPath: String, operation: Operation): String {
         var specmaticPath = openApiPath
 
-        operation.parameters?.let {
-            it.filter { it.`in` == "path" }.map {
-                specmaticPath =
-                    specmaticPath.replace(
-                        "{${it.name}}",
-                        "(${it.name}:${toSpecmaticPattern(it.schema).typeName})"
-                    )
+        val parameters = operation.parameters
+
+        parameters?.run {
+            filterIsInstance(PathParameter::class.java).map {
+                specmaticPath = specmaticPath.replace(
+                    "{${it.name}}",
+                    "(${it.name}:${toSpecmaticPattern(it.schema).typeName})"
+                )
             }
+
+            val queryParameters = parameters.filterIsInstance(QueryParameter::class.java).joinToString("&") {
+                "${it.name}=${toSpecmaticPattern(it.schema)}"
+            }
+
+            if (queryParameters.isNotEmpty()) specmaticPath = "${specmaticPath}?${queryParameters}"
         }
 
         return specmaticPath

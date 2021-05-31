@@ -20,15 +20,12 @@ paths:
         Returns all petIds from the system that the user has access to
       operationId: findPetIds
       parameters:
-        - name: tags
+        - name: tag
           in: query
           description: tags to filter by
           required: false
-          style: form
           schema:
-            type: array
-            items:
-              type: string
+            type: string
         - name: limit
           in: query
           description: maximum number of results to return
@@ -53,15 +50,12 @@ paths:
         Sed tempus felis lobortis leo pulvinar rutrum. Nam mattis velit nisl, eu condimentum ligula luctus nec. Phasellus semper velit eget aliquet faucibus. In a mattis elit. Phasellus vel urna viverra, condimentum lorem id, rhoncus nibh. Ut pellentesque posuere elementum. Sed a varius odio. Morbi rhoncus ligula libero, vel eleifend nunc tristique vitae. Fusce et sem dui. Aenean nec scelerisque tortor. Fusce malesuada accumsan magna vel tempus. Quisque mollis felis eu dolor tristique, sit amet auctor felis gravida. Sed libero lorem, molestie sed nisl in, accumsan tempor nisi. Fusce sollicitudin massa ut lacinia mattis. Sed vel eleifend lorem. Pellentesque vitae felis pretium, pulvinar elit eu, euismod sapien.
       operationId: findPets
       parameters:
-        - name: tags
+        - name: tag
           in: query
           description: tags to filter by
           required: false
-          style: form
           schema:
-            type: array
-            items:
-              type: string
+            type: string
         - name: limit
           in: query
           description: maximum number of results to return

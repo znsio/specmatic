@@ -257,19 +257,35 @@ Background:
         """.trimIndent()
         )
 
-        val response = HttpStub(feature).use {
-            val restTemplate = RestTemplate()
-            restTemplate.exchange(
-                URI.create("http://localhost:9000/pets"),
-                HttpMethod.GET,
-                null,
-                object : ParameterizedTypeReference<List<Pet>>() {}
-            )
+        listOf("http://localhost:9000/pets", "http://localhost:9000/pets?tag=test&limit=3").forEach { urlString ->
+            val response = HttpStub(feature).use {
+                val restTemplate = RestTemplate()
+                restTemplate.exchange(
+                    URI.create(urlString),
+                    HttpMethod.GET,
+                    null,
+                    object : ParameterizedTypeReference<List<Pet>>() {}
+                )
+            }
+
+            assertThat(response.statusCodeValue).isEqualTo(200)
+            assertThat(response.body).isInstanceOf(List::class.java)
+            assertThat(response.body[0]).isInstanceOf(Pet::class.java)
         }
 
-        assertThat(response.statusCodeValue).isEqualTo(200)
-        assertThat(response.body).isInstanceOf(List::class.java)
-        assertThat(response.body[0]).isInstanceOf(Pet::class.java)
+        val response = HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            try {
+                restTemplate.exchange(
+                    URI.create("http://localhost:9000/pets?tag=test&limit=three"),
+                    HttpMethod.GET,
+                    null,
+                    object : ParameterizedTypeReference<List<Pet>>() {}
+                )
+            } catch (e: HttpClientErrorException) {
+                assertThat(e.statusCode).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST)
+            }
+        }
     }
 
     @Test

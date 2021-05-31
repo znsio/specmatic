@@ -23,7 +23,7 @@ import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.utilities.valueMapToPlainJsonString
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.stub.JSONHTTPLog
+import `in`.specmatic.core.JSONHTTPLog
 import `in`.specmatic.stub.getDateStringValue
 import `in`.specmatic.stub.toParams
 import java.io.File

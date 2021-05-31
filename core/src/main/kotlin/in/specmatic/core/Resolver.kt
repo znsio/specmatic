@@ -37,14 +37,6 @@ data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boole
 
             Result.Success()
         }
-
-//        val result = pattern.matches(sampleValue, this)
-//        if(result is Result.Failure) {
-//            return result
-//        }
-
-
-//        return Result.Success()
     }
 
     fun getPattern(patternValue: String): Pattern =

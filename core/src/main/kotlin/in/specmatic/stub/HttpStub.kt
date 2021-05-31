@@ -8,8 +8,10 @@ import `in`.specmatic.core.pattern.withoutOptionality
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.toMap
-import `in`.specmatic.core.utilities.valueMapToPlainJsonString
-import `in`.specmatic.core.value.*
+import `in`.specmatic.core.value.EmptyString
+import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.dontPrintToConsole
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
@@ -33,39 +35,6 @@ import kotlin.text.toCharArray
 
 data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null)
 
-data class JSONHTTPLog(var requestTime: String = "", var httpRequest: HttpRequest = HttpRequest(), var responseTime: String = "", var response: HttpResponse = HttpResponse.OK) {
-    fun addRequest(httpRequest: HttpRequest) {
-        requestTime = getDateStringValue()
-        this.httpRequest = httpRequest
-    }
-
-    fun addRequest(httpRequest: HttpRequest, requestTime: String) {
-        this.requestTime = requestTime
-        this.httpRequest = httpRequest
-    }
-
-    fun addResponse(httpResponse: HttpResponse, requestTime: String) {
-        this.requestTime = requestTime
-        this.response = httpResponse
-    }
-
-    fun addResponse(httpResponse: HttpResponse) {
-        requestTime = getDateStringValue()
-        this.response = httpResponse
-    }
-
-    fun toLogString(): String {
-        val log = mutableMapOf<String, Value>()
-
-        log["requestTime"] = StringValue(getDateStringValue())
-        log["http-request"] = httpRequest.toJSON()
-        log["http-response"] = response.toJSON()
-        log["responseTime"] = StringValue(getDateStringValue())
-
-        return JSONObjectValue(log.toMap()).displayableValue() + ","
-    }
-}
-
 class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
         synchronized(this) {
@@ -76,10 +45,8 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
     fun addToStub(result: Pair<Result, HttpStubData?>, stub: ScenarioStub) {
         synchronized(this) {
             result.second.let {
-                when (it) {
-                    null -> Unit
-                    else -> httpStubs.add(0, it.copy(delayInSeconds = stub.delayInSeconds))
-                }
+                if(it != null)
+                    httpStubs.add(0, it.copy(delayInSeconds = stub.delayInSeconds))
             }
         }
     }

@@ -31,9 +31,39 @@ import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.text.toCharArray
 
-data class HttpStubResponse(val response: HttpResponse, val responseLog: String, val delayInSeconds: Int? = null) {
-    constructor(httpResponse: HttpResponse): this (httpResponse, httpResponseLog(httpResponse))
-    constructor(httpResponse: HttpResponse, delay: Int?): this(httpResponse, httpResponseLog(httpResponse), delay)
+data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null)
+
+data class JSONHTTPLog(var requestTime: String = "", var httpRequest: HttpRequest = HttpRequest(), var responseTime: String = "", var response: HttpResponse = HttpResponse.OK) {
+    fun addRequest(httpRequest: HttpRequest) {
+        requestTime = getDateStringValue()
+        this.httpRequest = httpRequest
+    }
+
+    fun addRequest(httpRequest: HttpRequest, requestTime: String) {
+        this.requestTime = requestTime
+        this.httpRequest = httpRequest
+    }
+
+    fun addResponse(httpResponse: HttpResponse, requestTime: String) {
+        this.requestTime = requestTime
+        this.response = httpResponse
+    }
+
+    fun addResponse(httpResponse: HttpResponse) {
+        requestTime = getDateStringValue()
+        this.response = httpResponse
+    }
+
+    fun toLogString(): String {
+        val log = mutableMapOf<String, Value>()
+
+        log["requestTime"] = StringValue(getDateStringValue())
+        log["http-request"] = httpRequest.toJSON()
+        log["http-response"] = response.toJSON()
+        log["responseTime"] = StringValue(getDateStringValue())
+
+        return JSONObjectValue(log.toMap()).displayableValue() + ","
+    }
 }
 
 class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
@@ -55,7 +85,7 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
     }
 }
 
-fun getDateStringValue(): StringValue {
+fun getDateStringValue(): String {
     val date = Calendar.getInstance()
     val year = date.get(Calendar.YEAR)
     val month = date.get(Calendar.MONTH)
@@ -65,7 +95,7 @@ fun getDateStringValue(): StringValue {
     val second = date.get(Calendar.SECOND)
     val millisecond = date.get(Calendar.MILLISECOND)
 
-    return StringValue("$year-$month-$day $hour:$minute:$second.$millisecond")
+    return "$year-$month-$day $hour:$minute:$second.$millisecond"
 }
 
 class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = dontPrintToConsole, private val strictMode: Boolean = false, keyData: KeyData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory()) : ContractStub {
@@ -98,12 +128,11 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             }
 
             intercept(ApplicationCallPipeline.Call) {
-                val logs = mutableMapOf<String, Value>()
+                val httpLog = JSONHTTPLog()
 
                 try {
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
-                    logs["requestTime"] = getDateStringValue()
-                    logs["http-request"] = httpRequest.toJSON()
+                    httpLog.addRequest(httpRequest)
 
                     val httpStubResponse: HttpStubResponse = when {
                         isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
@@ -115,22 +144,20 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                     }
 
                     respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
-                    logs["http-response"] = httpStubResponse.response.toJSON()
+                    httpLog.addResponse(httpStubResponse.response)
                 }
                 catch(e: ContractException) {
                     val response = badRequest(e.report())
-                    logs["http-response"] = response.toJSON()
+                    httpLog.addResponse(response)
                     respondToKtorHttpResponse(call, response)
                 }
                 catch(e: Throwable) {
                     val response = badRequest(exceptionCauseMessage(e))
-                    logs["http-response"] = response.toJSON()
+                    httpLog.addResponse(response)
                     respondToKtorHttpResponse(call, response)
                 }
 
-                logs["responseTime"] = getDateStringValue()
-
-                log(JSONObjectValue(logs.toMap()).displayableValue() + ",")
+                log(httpLog.toLogString())
             }
         }
 
@@ -151,13 +178,13 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
     })
 
     private fun handleFetchLoadLogRequest(): HttpStubResponse =
-            HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getSnapshot())), "")
+            HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getSnapshot())))
 
     private fun handleFetchContractsRequest(): HttpStubResponse =
             HttpStubResponse(HttpResponse.OK(StringValue(features.joinToString("\n") { it.name })))
 
     private fun handleFetchLogRequest(): HttpStubResponse =
-            HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getString())), "")
+            HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getString())))
 
     private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse =
             getHttpResponse(httpRequest, features, threadSafeHttpStubs, strictMode, passThroughTargetBase, httpClientFactory)
@@ -214,15 +241,11 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         val body = httpRequest.body
         val serverState = toMap(body)
 
-        val stateRequestLog = "# >> Request Sent At ${Date()}\n${startLinesWith(valueMapToPlainJsonString(serverState), "# ")}"
-
         features.forEach { feature ->
             feature.setServerState(serverState)
         }
 
-        val completeLog = "$stateRequestLog\n# << Complete At ${Date()}"
-
-        return HttpStubResponse(HttpResponse.OK, completeLog)
+        return HttpStubResponse(HttpResponse.OK)
     }
 
     init {

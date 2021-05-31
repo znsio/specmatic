@@ -23,6 +23,8 @@ import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.utilities.valueMapToPlainJsonString
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.stub.JSONHTTPLog
+import `in`.specmatic.stub.getDateStringValue
 import `in`.specmatic.stub.toParams
 import java.io.File
 import java.net.URL
@@ -58,7 +60,7 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
     override fun execute(request: HttpRequest): HttpResponse {
         val url = URL(request.getURL(baseURL))
 
-        val startTime = Date()
+        val startTime = getDateStringValue()
 
         val requestWithFileContent = loadFileContentIntoParts(request)
 
@@ -96,15 +98,16 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
                 }
             }
 
-            val endTime = Date()
+            val endTime = getDateStringValue()
+
+            val httpLog = JSONHTTPLog()
 
             val outboundRequest: HttpRequest = ktorHttpRequestToHttpRequest(ktorResponse.request, requestWithFileContent)
-            log(">> Request Start At $startTime")
-            log(outboundRequest.toLogString("-> "))
+            httpLog.addRequest(outboundRequest, startTime)
 
             ktorResponseToHttpResponse(ktorResponse).also {
-                log(it.toLogString("<- "))
-                log("<< Response At $endTime == ")
+                httpLog.addResponse(it, endTime)
+                log(httpLog.toLogString())
                 log(System.lineSeparator())
             }
         }

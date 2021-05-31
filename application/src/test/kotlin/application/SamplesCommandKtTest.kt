@@ -7,6 +7,10 @@ import org.junit.jupiter.api.io.TempDir
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Contract
 import `in`.specmatic.core.SPECMATIC_RESULT_HEADER
+import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.NumberValue
+import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.stub.HttpStub
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -53,15 +57,16 @@ internal class SamplesCommandKtTest {
     }
 
     private fun validateOutput(data: String) {
-        assertThat(data).startsWith(""">> Request Start At """)
+        val json = parsedJSON(data.removeSuffix(",")) as JSONObjectValue
 
-        assertThat(data).contains("""-> POST /square
--> Accept-Charset: UTF-8
--> Accept: */*
-->""".trimIndent())
+        assertThat(json.findFirstChildByPath("http-request.path")?.toStringValue()).isEqualTo("/square")
+        assertThat(json.findFirstChildByPath("http-request.method")?.toStringValue()).isEqualTo("POST")
+        assertThat(json.findFirstChildByPath("http-request.body")).isInstanceOf(NumberValue::class.java)
+        assertThat(json.findFirstChildByPath("requestTime")).isInstanceOf(StringValue::class.java)
 
-        assertThat(data).contains("<- 200 OK")
-        assertThat(data).contains("<- $SPECMATIC_RESULT_HEADER: success")
+        assertThat(json.findFirstChildByPath("http-response.status")?.toStringValue()).isEqualTo("200")
+        assertThat(json.findFirstChildByPath("http-request.body")).isInstanceOf(NumberValue::class.java)
+        assertThat(json.findFirstChildByPath("responseTime")).isInstanceOf(StringValue::class.java)
     }
 
     @BeforeEach

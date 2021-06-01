@@ -20,6 +20,7 @@ fun logException(fn: ()-> Unit): Int {
 }
 
 interface Output {
+    fun exceptionString(e: Throwable, msg: String? = null): String
     fun inform(e: Throwable, msg: String? = null)
     fun inform(msg: String)
     fun newLine()
@@ -28,11 +29,15 @@ interface Output {
 }
 
 object Info : Output {
-    override fun inform(e: Throwable, msg: String?) {
-        when(msg) {
-            null -> println(exceptionCauseMessage(e))
-            else -> println("${msg}: ${exceptionCauseMessage(e)}")
+    override fun exceptionString(e: Throwable, msg: String?): String {
+        return when(msg) {
+            null -> exceptionCauseMessage(e)
+            else -> "${msg}: ${exceptionCauseMessage(e)}"
         }
+    }
+
+    override fun inform(e: Throwable, msg: String?) {
+        println(exceptionString(e, msg))
     }
 
     override fun inform(msg: String) {
@@ -49,14 +54,17 @@ object Info : Output {
 }
 
 object Verbose : Output {
-    override fun inform(e: Throwable, msg: String?) {
-        when(msg) {
-            null -> println(exceptionCauseMessage(e))
-            else -> println("${msg}: ${e.localizedMessage ?: e.message ?: e.javaClass.name}")
+    override fun exceptionString(e: Throwable, msg: String?): String {
+        val message = when(msg) {
+            null -> exceptionCauseMessage(e)
+            else -> "${msg}: ${e.localizedMessage ?: e.message ?: e.javaClass.name}"
         }
 
-        newLine()
-        println(e.stackTraceToString())
+        return "$message${System.lineSeparator()}${e.stackTraceToString()}"
+    }
+
+    override fun inform(e: Throwable, msg: String?) {
+        println(exceptionString(e, msg))
     }
 
     override fun inform(msg: String) {

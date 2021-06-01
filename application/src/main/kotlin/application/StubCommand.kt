@@ -10,6 +10,9 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Constants.Companion.DEFAULT_HTTP_STUB_HOST
 import `in`.specmatic.core.Constants.Companion.DEFAULT_HTTP_STUB_PORT
 import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import `in`.specmatic.core.git.Verbose
+import `in`.specmatic.core.git.log
+import `in`.specmatic.core.git.output
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.exitWithMessage
@@ -82,6 +85,9 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--httpsPassword"], description = ["Key password if any"])
     var keyPassword = "forgotten"
 
+    @Option(names = ["--verbose"], description = ["Verbose mode"])
+    var verbose = false
+
     @Autowired
     val watchMaker = WatchMaker()
 
@@ -92,6 +98,9 @@ class StubCommand : Callable<Unit> {
     val httpClientFactory = HttpClientFactory()
 
     override fun call() {
+        if(verbose)
+            output = Verbose
+
         try {
             contractPaths = loadConfig()
             validateQontractFileExtensions(contractPaths, fileOperations)
@@ -105,12 +114,8 @@ class StubCommand : Callable<Unit> {
                     restartServer()
                 }
             }
-        } catch (e: NoMatchingScenario) {
-            consoleLog(e.localizedMessage)
-        } catch (e:ContractException) {
-            consoleLog(e.report())
         } catch (e: Throwable) {
-            consoleLog(exceptionCauseMessage(e))
+            consoleLog(e)
         }
     }
 
@@ -136,11 +141,11 @@ class StubCommand : Callable<Unit> {
             stopServer()
             consoleLog("Stopped.")
         } catch (e: Throwable) {
-            consoleLog("Error stopping server: ${e.localizedMessage}")
+            consoleLog(e,"Error stopping server")
         }
 
         try { startServer() } catch (e: Throwable) {
-            consoleLog("Error starting server: ${e.localizedMessage}")
+            consoleLog(e, "Error starting server")
         }
     }
 

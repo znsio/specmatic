@@ -196,12 +196,12 @@ class OpenApiSpecification : IncludedSpecification {
                 JSONArrayPattern(listOf(toSpecmaticPattern(schema.items)))
             }
             is ComposedSchema -> {
-                NullPattern
+                throw UnsupportedOperationException("Specmatic does not support oneOf, allOf and anyOf")
             }
             is Schema -> {
                 resolveReference(schema.`$ref`)
             }
-            else -> NullPattern
+            else -> throw UnsupportedOperationException("Specmatic is unable parse: ${schema}")
         }
         return when (schema.nullable != true) {
             true -> pattern
@@ -214,7 +214,8 @@ class OpenApiSpecification : IncludedSpecification {
         false -> name
     }
 
-    private fun resolveReference(component: String?): Pattern {
+    private fun resolveReference(component: String): Pattern {
+        if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
         return toSpecmaticPattern(openApi.components.schemas[component!!.removePrefix("#/components/schemas/")] as Schema<Any>)
     }
 

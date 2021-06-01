@@ -175,32 +175,38 @@ class OpenApiSpecification : IncludedSpecification {
 
     fun toSpecmaticPattern(mediaType: MediaType): Pattern = toSpecmaticPattern(mediaType.schema)
 
-    fun toSpecmaticPattern(schema: Schema<*>): Pattern = when (schema) {
-        is StringSchema -> StringPattern
-        is IntegerSchema -> NumberPattern
-        is NumberSchema -> NumberPattern
-        is UUIDSchema -> StringPattern
-        is DateTimeSchema -> DateTimePattern
-        is DateSchema -> StringPattern
-        is BooleanSchema -> BooleanPattern
-        is ObjectSchema -> {
-            val requiredFields = schema.required.orEmpty()
-            val schemaProperties = schema.properties.map { (propertyName, propertyType) ->
-                val optional = !requiredFields.contains(propertyName)
-                toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(propertyType)
-            }.toMap()
-            toJSONObjectPattern(schemaProperties)
+    fun toSpecmaticPattern(schema: Schema<*>): Pattern {
+        val pattern = when (schema) {
+            is StringSchema -> StringPattern
+            is IntegerSchema -> NumberPattern
+            is NumberSchema -> NumberPattern
+            is UUIDSchema -> StringPattern
+            is DateTimeSchema -> DateTimePattern
+            is DateSchema -> StringPattern
+            is BooleanSchema -> BooleanPattern
+            is ObjectSchema -> {
+                val requiredFields = schema.required.orEmpty()
+                val schemaProperties = schema.properties.map { (propertyName, propertyType) ->
+                    val optional = !requiredFields.contains(propertyName)
+                    toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(propertyType)
+                }.toMap()
+                toJSONObjectPattern(schemaProperties)
+            }
+            is ArraySchema -> {
+                JSONArrayPattern(listOf(toSpecmaticPattern(schema.items)))
+            }
+            is ComposedSchema -> {
+                NullPattern
+            }
+            is Schema -> {
+                resolveReference(schema.`$ref`)
+            }
+            else -> NullPattern
         }
-        is ArraySchema -> {
-            JSONArrayPattern(listOf(toSpecmaticPattern(schema.items)))
+        return when (schema.nullable != true) {
+            true -> pattern
+            else -> AnyPattern(listOf(NullPattern, pattern))
         }
-        is ComposedSchema -> {
-            NullPattern
-        }
-        is Schema -> {
-            resolveReference(schema.`$ref`)
-        }
-        else -> NullPattern
     }
 
     private fun toSpecmaticParamName(optional: Boolean, name: String) = when (optional) {

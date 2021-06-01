@@ -202,6 +202,7 @@ components:
           type: string
         tag:
           type: string
+          nullable: true
 
     Error:
       type: object

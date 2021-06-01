@@ -410,6 +410,30 @@ Background:
     }
 
     @Test
+    fun `should parse nullable fields`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val petResponse = HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            restTemplate.postForObject(
+                URI.create("http://localhost:9000/pets"),
+                NewPet("scooby", null),
+                Pet::class.java
+            )
+        }
+
+        assertThat(petResponse).isInstanceOf(Pet::class.java)
+        assertThat(petResponse).isNotNull
+    }
+
+    @Test
     fun `should generate stub with non primitive request which throws error on unexpected fields`() {
         val feature = parseGherkinStringToFeature(
             """
@@ -584,7 +608,7 @@ data class Pet(
 
 data class NewPet(
     @JsonProperty("name") val name: String,
-    @JsonProperty("tag") val tag: String,
+    @JsonProperty("tag") val tag: String?,
 )
 
 data class NewPetWithUnexpectedFields(

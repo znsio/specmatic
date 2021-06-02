@@ -15,7 +15,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         return matches(httpRequest, resolver)
     }
 
-    private fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
+    fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
         return httpRequest to resolver to
                 ::matchesPath then
                 ::matchesQuery otherwise

@@ -31,6 +31,13 @@ class OpenApiSpecification : IncludedSpecification {
         validateScenarioInfoCompliance(openApitoScenarioInfos(), steps, scenarioInfo)
     }
 
+    override fun identifyMatchingScenarioInfo(
+        scenarioInfo: ScenarioInfo,
+        steps: List<Messages.GherkinDocument.Feature.Step>
+    ): List<ScenarioInfo> {
+        return identifyMatchingScenarioInfos(openApitoScenarioInfos(), steps, scenarioInfo)
+    }
+
     private fun openApitoScenarioInfos(): List<ScenarioInfo> {
         return openApi.paths.map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->

@@ -381,11 +381,38 @@ private fun lexScenario(
         it?.validateCompliance(parsedScenarioInfo, steps)
     }
 
-    return parsedScenarioInfo.copy(
-        examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)),
-        ignoreFailure = ignoreFailure
-    )
+    val matchingScenarios: List<ScenarioInfo> = includedSpecifications.map {
+        it?.identifyMatchingScenarioInfo(parsedScenarioInfo, steps).orEmpty()
+    }.flatten()
+
+    return when {
+        matchingScenarios.isEmpty() -> scenarioInfoWithExamples(
+            parsedScenarioInfo,
+            backgroundScenarioInfo,
+            examplesList,
+            ignoreFailure
+        )
+        else -> {
+            scenarioInfoWithExamples(
+                matchingScenarios[0].copy(
+                    httpRequestPattern = matchingScenarios[0].httpRequestPattern.copy(
+                        urlMatcher = parsedScenarioInfo.httpRequestPattern.urlMatcher
+                    )
+                ), backgroundScenarioInfo, examplesList, ignoreFailure
+            )
+        }
+    }
 }
+
+private fun scenarioInfoWithExamples(
+    parsedScenarioInfo: ScenarioInfo,
+    backgroundScenarioInfo: ScenarioInfo,
+    examplesList: List<GherkinDocument.Feature.Scenario.Examples>,
+    ignoreFailure: Boolean
+) = parsedScenarioInfo.copy(
+    examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)),
+    ignoreFailure = ignoreFailure
+)
 
 fun setters(
     rest: String,
@@ -590,7 +617,12 @@ fun scenarioInfos(
             includedSpecifications
         )
     }
-    return specmaticScenarioInfos.plus(scenarioInfosBelongingToIncludedSpecifications)
+
+    return specmaticScenarioInfos.plus(scenarioInfosBelongingToIncludedSpecifications.filter { scenarioInfo ->
+        !specmaticScenarioInfos.any {
+            it.httpResponsePattern.status == scenarioInfo.httpResponsePattern.status
+        }
+    })
 }
 
 private fun toIncludedSpecification(

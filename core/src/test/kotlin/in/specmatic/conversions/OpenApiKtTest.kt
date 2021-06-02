@@ -232,7 +232,7 @@ Background:
         assertFalse(results.success())
         assertThat(results.report()).isEqualTo(
             """
-                In scenario "zero should return not found"
+                In scenario "Open API - Operation Summary: hello world. Response: Not Found"
                 >> RESPONSE.STATUS
 
                 Expected status: 404, actual: 403
@@ -262,7 +262,7 @@ Background:
                 """.trimIndent()
             )
         }.satisfies {
-            assertThat(it.message).isEqualTo("""Scenario: "sending string instead of number should return not found" request is not as per included wsdl / OpenApi spec""")
+            assertThat(it.message).isEqualTo("""Scenario: "sending string instead of number should return not found" PATH: "/hello/test" is not as per included wsdl / OpenApi spec""")
         }
     }
 
@@ -283,7 +283,7 @@ Background:
                 """.trimIndent()
             )
         }.satisfies {
-            assertThat(it.message).isEqualTo("""Scenario: "zero should return forbidden" response is not as per included wsdl / OpenApi spec""")
+            assertThat(it.message).isEqualTo("""Scenario: "zero should return forbidden" RESPONSE STATUS: "403" is not as per included wsdl / OpenApi spec""")
         }
     }
 
@@ -519,6 +519,13 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
+  
+  Scenario: get by tag
+    When POST /pets
+    Then status 201
+    Examples:
+      | tag     | name |
+      | testing | test |
         """.trimIndent()
         )
 
@@ -548,7 +555,6 @@ Background:
                         request.path == "/pets" -> {
                             when (request.method) {
                                 "GET" -> {
-                                    assertThat(request.headers.keys).contains("X-Request-ID")
                                     HttpResponse(
                                         200,
                                         ObjectMapper().writeValueAsString(listOf(pet)),
@@ -563,11 +569,19 @@ Background:
                                         }
                                     )
                                 }
-                                "POST" -> HttpResponse(
-                                    201,
-                                    ObjectMapper().writeValueAsString(pet),
-                                    headers
-                                )
+                                "POST" -> {
+                                    assertThat(request.bodyString).isEqualTo("""
+                                        {
+                                            "tag": "testing",
+                                            "name": "test"
+                                        }
+                                    """.trimIndent())
+                                    HttpResponse(
+                                        201,
+                                        ObjectMapper().writeValueAsString(pet),
+                                        headers
+                                    )
+                                }
                                 else -> HttpResponse(400, "", headers)
                             }
                         }

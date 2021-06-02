@@ -18,6 +18,13 @@ class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
         validateScenarioInfoCompliance(toScenarioInfos(), steps, scenarioInfo)
     }
 
+    override fun identifyMatchingScenarioInfo(
+        scenarioInfo: ScenarioInfo,
+        steps: List<Messages.GherkinDocument.Feature.Step>
+    ): List<ScenarioInfo> {
+        return identifyMatchingScenarioInfos(toScenarioInfos(), steps, scenarioInfo)
+    }
+
     override fun toScenarioInfos(): List<ScenarioInfo> {
         return scenarioInfos(wsdlToFeatureChildren(wsdlFile), "")
     }

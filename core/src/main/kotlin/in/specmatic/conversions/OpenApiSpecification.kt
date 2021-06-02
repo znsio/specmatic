@@ -28,14 +28,67 @@ class OpenApiSpecification : IncludedSpecification {
             .plus(toScenarioInfosWithExamples())
 
     override fun validateCompliance(scenarioInfo: ScenarioInfo, steps: List<Messages.GherkinDocument.Feature.Step>) {
-        validateScenarioInfoCompliance(openApitoScenarioInfos(), steps, scenarioInfo)
+        val wsdlScenarioInfos = openApitoScenarioInfos()
+        if (!wsdlScenarioInfos.isNullOrEmpty() && steps.isNotEmpty()) {
+            val scenariosWithMatchingPath = wsdlScenarioInfos.filter {
+                it.httpRequestPattern.urlMatcher!!.matches(
+                    scenarioInfo.httpRequestPattern.generate(
+                        Resolver()
+                    ), Resolver()
+                ).isTrue()
+            }
+            if (scenariosWithMatchingPath.isEmpty()) {
+                throw ContractException(
+                    """Scenario: "${scenarioInfo.scenarioName}" PATH: "${
+                        scenarioInfo.httpRequestPattern.urlMatcher!!.generatePath(
+                            Resolver()
+                        )
+                    }" is not as per included wsdl / OpenApi spec"""
+                )
+            }
+            val scenariosWithMatchingPathAndMethod = scenariosWithMatchingPath.filter {
+                it.httpRequestPattern.method == scenarioInfo.httpRequestPattern.method
+            }
+            if (scenariosWithMatchingPathAndMethod.isEmpty()) {
+                throw ContractException(
+                    """Scenario: "${scenarioInfo.scenarioName}" METHOD: "${
+                        scenarioInfo.httpRequestPattern.method
+                    }" is not as per included wsdl / OpenApi spec"""
+                )
+            }
+            val scenarioWithMatchingPathMethodAndStatus = scenariosWithMatchingPathAndMethod.filter {
+                it.httpResponsePattern.status == scenarioInfo.httpResponsePattern.status
+            }
+            if (scenarioWithMatchingPathMethodAndStatus.isEmpty()) {
+                throw ContractException(
+                    """Scenario: "${scenarioInfo.scenarioName}" RESPONSE STATUS: "${
+                        scenarioInfo.httpResponsePattern.status
+                    }" is not as per included wsdl / OpenApi spec"""
+                )
+            }
+        }
     }
 
     override fun identifyMatchingScenarioInfo(
         scenarioInfo: ScenarioInfo,
         steps: List<Messages.GherkinDocument.Feature.Step>
     ): List<ScenarioInfo> {
-        return identifyMatchingScenarioInfos(openApitoScenarioInfos(), steps, scenarioInfo)
+        val wsdlScenarioInfos = openApitoScenarioInfos()
+        return if (!wsdlScenarioInfos.isNullOrEmpty() && steps.isNotEmpty()) {
+            return wsdlScenarioInfos.filter {
+                it.httpRequestPattern.urlMatcher!!.matches(
+                    scenarioInfo.httpRequestPattern.generate(Resolver()), Resolver()
+                ).isTrue() &&
+                        it.httpRequestPattern.method == scenarioInfo.httpRequestPattern.method &&
+                        it.httpResponsePattern.status == scenarioInfo.httpResponsePattern.status
+            }.map {
+                it.copy(
+                    httpRequestPattern = it.httpRequestPattern.copy(
+                        urlMatcher = scenarioInfo.httpRequestPattern.urlMatcher
+                    )
+                )
+            }
+        } else return listOf(scenarioInfo)
     }
 
     private fun openApitoScenarioInfos(): List<ScenarioInfo> {

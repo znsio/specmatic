@@ -172,7 +172,6 @@ Scenario: test request returns test response
         assertTrue(results.success(), results.report())
     }
 
-    @Ignore
     fun `should report error in test with both OpenAPI and Gherkin scenario names`() {
         val wsdlSpec = """
 Feature: Hello world
@@ -237,7 +236,7 @@ Scenario: request not matching wsdl
         assertThatThrownBy {
             parseGherkinStringToFeature(wsdlSpec)
         }.satisfies {
-            assertThat(it.message).isEqualTo("""Scenario: "request not matching wsdl" PATH: "/SOAPService/SimpleSOAP2" is not as per included wsdl / OpenApi spec""")
+            assertThat(it.message).isEqualTo("""Scenario: "request not matching wsdl" request is not as per included wsdl / OpenApi spec""")
         }
     }
 

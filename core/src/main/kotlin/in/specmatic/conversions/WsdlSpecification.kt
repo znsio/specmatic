@@ -1,7 +1,9 @@
 package `in`.specmatic.conversions
 
+import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.ScenarioInfo
 import `in`.specmatic.core.parseGherkinString
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.scenarioInfos
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.core.wsdl.parser.WSDL
@@ -15,14 +17,34 @@ import java.nio.file.Paths
 
 class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
     override fun validateCompliance(scenarioInfo: ScenarioInfo, steps: List<Messages.GherkinDocument.Feature.Step>) {
-        validateScenarioInfoCompliance(toScenarioInfos(), steps, scenarioInfo)
+        val wsdlScenarioInfos = toScenarioInfos()
+        if (!wsdlScenarioInfos.isNullOrEmpty() && steps.isNotEmpty()) {
+            if (!wsdlScenarioInfos.any {
+                    it.httpRequestPattern.matches(
+                        scenarioInfo.httpRequestPattern.generate(
+                            Resolver()
+                        ), Resolver()
+                    ).isTrue()
+                }) {
+                throw ContractException("""Scenario: "${scenarioInfo.scenarioName}" request is not as per included wsdl / OpenApi spec""")
+            }
+            if (!wsdlScenarioInfos.any {
+                    it.httpResponsePattern.matches(
+                        scenarioInfo.httpResponsePattern.generateResponse(
+                            Resolver()
+                        ), Resolver()
+                    ).isTrue()
+                }) {
+                throw ContractException("""Scenario: "${scenarioInfo.scenarioName}" response is not as per included wsdl / OpenApi spec""")
+            }
+        }
     }
 
     override fun identifyMatchingScenarioInfo(
         scenarioInfo: ScenarioInfo,
         steps: List<Messages.GherkinDocument.Feature.Step>
     ): List<ScenarioInfo> {
-        return identifyMatchingScenarioInfos(toScenarioInfos(), steps, scenarioInfo)
+        return listOf(scenarioInfo)
     }
 
     override fun toScenarioInfos(): List<ScenarioInfo> {

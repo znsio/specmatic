@@ -380,12 +380,8 @@ private fun lexScenario(
     return if (includedSpecifications.isEmpty()) {
         scenarioInfoWithExamples(parsedScenarioInfo, backgroundScenarioInfo, examplesList, ignoreFailure)
     } else {
-        includedSpecifications.forEach {
-            it?.validateCompliance(parsedScenarioInfo, steps)
-        }
-
-        val matchingScenarios: List<ScenarioInfo> = includedSpecifications.map {
-            it?.identifyMatchingScenarioInfo(parsedScenarioInfo, steps).orEmpty()
+        val matchingScenarios: List<ScenarioInfo> = includedSpecifications.mapNotNull {
+            it?.matches(parsedScenarioInfo, steps).orEmpty()
         }.flatten()
 
         if (matchingScenarios.size > 1) throw ContractException("Scenario: ${parsedScenarioInfo.scenarioName} is not specific, it matches ${matchingScenarios.size} in the included Wsdl / OpenApi")
@@ -579,7 +575,7 @@ fun scenarioInfos(
     val includedSpecifications = listOfNotNull(openApiSpecification, wsdlSpecification)
 
     val scenarioInfosBelongingToIncludedSpecifications =
-        includedSpecifications.map { it?.toScenarioInfos().orEmpty() }.flatten()
+        includedSpecifications.mapNotNull { it.toScenarioInfos() }.flatten()
 
     val specmaticScenarioInfos = scenarios(featureChildren).map { featureChild ->
         if (featureChild.scenario.name.isBlank())

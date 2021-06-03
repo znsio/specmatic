@@ -508,7 +508,7 @@ Background:
 
     @Test
     fun `should create petstore tests`() {
-        val flags = mutableMapOf<String, Boolean>()
+        val flags = mutableMapOf<String, Int>().withDefault { 0 }
 
         val feature = parseGherkinStringToFeature(
             """
@@ -533,7 +533,8 @@ Background:
         val results = feature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    flags["${request.path} ${request.method} executed"] = true
+                    val flagKey = "${request.path} ${request.method} executed"
+                    flags[flagKey] = flags.getValue(flagKey) + 1
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
                             put("Content-Type", "application/json")
@@ -616,10 +617,10 @@ Background:
             }
         )
 
-        assertThat(flags["/pets POST executed"]).isTrue
-        assertThat(flags["/pets GET executed"]).isTrue
-        assertThat(flags["/petIds GET executed"]).isTrue
-        assertThat(flags["/pets/0 GET executed"]).isTrue
+        assertThat(flags["/pets POST executed"]).isEqualTo(1)
+        assertThat(flags["/pets GET executed"]).isEqualTo(4)
+        assertThat(flags["/petIds GET executed"]).isEqualTo(4)
+        assertThat(flags["/pets/0 GET executed"]).isEqualTo(1)
         assertThat(flags.keys.filter { it.matches(Regex("""\/pets\/[0-9]+ GET executed""")) }.size).isEqualTo(2)
         assertThat(flags.keys.any { it.matches(Regex("""\/pets\/[0-9]+ DELETE executed""")) }).isNotNull
         assertThat(flags.size).isEqualTo(6)

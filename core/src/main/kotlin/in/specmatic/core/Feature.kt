@@ -377,15 +377,28 @@ private fun lexScenario(
         else -> false
     }
 
-    includedSpecifications.forEach {
-        it?.validateCompliance(parsedScenarioInfo, steps)
-    }
+    return if (includedSpecifications.isEmpty()) {
+        scenarioInfoWithExamples(parsedScenarioInfo, backgroundScenarioInfo, examplesList, ignoreFailure)
+    } else {
+        val matchingScenarios: List<ScenarioInfo> = includedSpecifications.mapNotNull {
+            it?.matches(parsedScenarioInfo, steps).orEmpty()
+        }.flatten()
 
-    return parsedScenarioInfo.copy(
-        examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)),
-        ignoreFailure = ignoreFailure
-    )
+        if (matchingScenarios.size > 1) throw ContractException("Scenario: ${parsedScenarioInfo.scenarioName} is not specific, it matches ${matchingScenarios.size} in the included Wsdl / OpenApi")
+
+        scenarioInfoWithExamples(matchingScenarios.first(), backgroundScenarioInfo, examplesList, ignoreFailure)
+    }
 }
+
+private fun scenarioInfoWithExamples(
+    parsedScenarioInfo: ScenarioInfo,
+    backgroundScenarioInfo: ScenarioInfo,
+    examplesList: List<GherkinDocument.Feature.Scenario.Examples>,
+    ignoreFailure: Boolean
+) = parsedScenarioInfo.copy(
+    examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)),
+    ignoreFailure = ignoreFailure
+)
 
 fun setters(
     rest: String,
@@ -559,10 +572,10 @@ fun scenarioInfos(
     val wsdlSpecification =
         toIncludedSpecification(featureChildren, { backgroundWsdl(it) }) { WsdlSpecification(it) }
 
-    val includedSpecifications = listOf(openApiSpecification, wsdlSpecification)
+    val includedSpecifications = listOfNotNull(openApiSpecification, wsdlSpecification)
 
     val scenarioInfosBelongingToIncludedSpecifications =
-        includedSpecifications.map { it?.toScenarioInfos().orEmpty() }.flatten()
+        includedSpecifications.mapNotNull { it.toScenarioInfos() }.flatten()
 
     val specmaticScenarioInfos = scenarios(featureChildren).map { featureChild ->
         if (featureChild.scenario.name.isBlank())
@@ -590,7 +603,12 @@ fun scenarioInfos(
             includedSpecifications
         )
     }
-    return specmaticScenarioInfos.plus(scenarioInfosBelongingToIncludedSpecifications)
+
+    return specmaticScenarioInfos.plus(scenarioInfosBelongingToIncludedSpecifications.filter { scenarioInfo ->
+        !specmaticScenarioInfos.any {
+            it.httpResponsePattern.status == scenarioInfo.httpResponsePattern.status
+        }
+    })
 }
 
 private fun toIncludedSpecification(

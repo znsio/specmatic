@@ -1,6 +1,7 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.pattern.*
 import io.cucumber.messages.Messages
 import io.swagger.v3.oas.models.OpenAPI
@@ -27,8 +28,90 @@ class OpenApiSpecification : IncludedSpecification {
         openApitoScenarioInfos().filter { it.httpResponsePattern.status in 200..299 }
             .plus(toScenarioInfosWithExamples())
 
-    override fun validateCompliance(scenarioInfo: ScenarioInfo, steps: List<Messages.GherkinDocument.Feature.Step>) {
-        validateScenarioInfoCompliance(openApitoScenarioInfos(), steps, scenarioInfo)
+    override fun matches(
+        specmaticScenarioInfo: ScenarioInfo,
+        steps: List<Messages.GherkinDocument.Feature.Step>
+    ): List<ScenarioInfo> {
+        val openApiScenarioInfos = openApitoScenarioInfos()
+        if (openApiScenarioInfos.isNullOrEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)
+        val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
+            specmaticScenarioInfo to openApiScenarioInfos to
+                    ::matchesPath then
+                    ::matchesMethod then
+                    ::matchesStatus then
+                    ::updateUrlMatcher otherwise
+                    ::handleError
+        when (result) {
+            is MatchFailure -> throw ContractException(result.error.message)
+            is MatchSuccess -> return result.value.second
+        }
+    }
+
+    private fun matchesPath(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
+        val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
+
+        val matchingScenarioInfos = openApiScenarioInfos.filter {
+            it.httpRequestPattern.urlMatcher!!.matches(
+                specmaticScenarioInfo.httpRequestPattern.generate(
+                    Resolver()
+                ), Resolver()
+            ).isTrue()
+        }
+
+        return when {
+            matchingScenarioInfos.isEmpty() -> MatchFailure(
+                Failure(
+                    """Scenario: "${specmaticScenarioInfo.scenarioName}" PATH: "${
+                        specmaticScenarioInfo.httpRequestPattern.urlMatcher!!.generatePath(Resolver())
+                    }" is not as per included wsdl / OpenApi spec"""
+                )
+            )
+            else -> MatchSuccess(specmaticScenarioInfo to matchingScenarioInfos)
+        }
+    }
+
+    private fun matchesMethod(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
+        val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
+
+        val matchingScenarioInfos =
+            openApiScenarioInfos.filter { it.httpRequestPattern.method == specmaticScenarioInfo.httpRequestPattern.method }
+
+        return when {
+            matchingScenarioInfos.isEmpty() -> MatchFailure(
+                Failure(
+                    """Scenario: "${specmaticScenarioInfo.scenarioName}" METHOD: "${
+                        specmaticScenarioInfo.httpRequestPattern.method
+                    }" is not as per included wsdl / OpenApi spec"""
+                )
+            )
+            else -> MatchSuccess(specmaticScenarioInfo to matchingScenarioInfos)
+        }
+    }
+
+    private fun matchesStatus(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
+        val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
+
+        val matchingScenarioInfos =
+            openApiScenarioInfos.filter { it.httpResponsePattern.status == specmaticScenarioInfo.httpResponsePattern.status }
+
+        return when {
+            matchingScenarioInfos.isEmpty() -> MatchFailure(
+                Failure(
+                    """Scenario: "${specmaticScenarioInfo.scenarioName}" RESPONSE STATUS: "${
+                        specmaticScenarioInfo.httpResponsePattern.status
+                    }" is not as per included wsdl / OpenApi spec"""
+                )
+            )
+            else -> MatchSuccess(specmaticScenarioInfo to matchingScenarioInfos)
+        }
+    }
+
+    private fun updateUrlMatcher(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
+        val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
+
+        return MatchSuccess(specmaticScenarioInfo to openApiScenarioInfos.map {
+            it.copy(httpRequestPattern = it.httpRequestPattern.copy(urlMatcher = specmaticScenarioInfo.httpRequestPattern.urlMatcher))
+        })
     }
 
     private fun openApitoScenarioInfos(): List<ScenarioInfo> {
@@ -220,24 +303,21 @@ class OpenApiSpecification : IncludedSpecification {
     }
 
     private fun toSpecmaticPath(openApiPath: String, operation: Operation): String {
+        val parameters = operation.parameters ?: return openApiPath
+
         var specmaticPath = openApiPath
-
-        val parameters = operation.parameters
-
-        parameters?.run {
-            filterIsInstance(PathParameter::class.java).map {
-                specmaticPath = specmaticPath.replace(
-                    "{${it.name}}",
-                    "(${it.name}:${toSpecmaticPattern(it.schema).typeName})"
-                )
-            }
-
-            val queryParameters = parameters.filterIsInstance(QueryParameter::class.java).joinToString("&") {
-                "${it.name}=${toSpecmaticPattern(it.schema)}"
-            }
-
-            if (queryParameters.isNotEmpty()) specmaticPath = "${specmaticPath}?${queryParameters}"
+        parameters.filterIsInstance(PathParameter::class.java).map {
+            specmaticPath = specmaticPath.replace(
+                "{${it.name}}",
+                "(${it.name}:${toSpecmaticPattern(it.schema).typeName})"
+            )
         }
+
+        val queryParameters = parameters.filterIsInstance(QueryParameter::class.java).joinToString("&") {
+            "${it.name}=${toSpecmaticPattern(it.schema)}"
+        }
+
+        if (queryParameters.isNotEmpty()) specmaticPath = "${specmaticPath}?${queryParameters}"
 
         return specmaticPath
     }

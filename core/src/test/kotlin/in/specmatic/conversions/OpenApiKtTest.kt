@@ -33,7 +33,6 @@ Background:
 Scenario: zero should return not found
   When GET /hello/0
   Then status 404
-  And response-header Content-Type application/json
         """.trimIndent()
 
     }
@@ -258,7 +257,6 @@ Background:
         Scenario: sending string instead of number should return not found
           When GET /hello/test
           Then status 404
-          And response-header Content-Type application/json
                 """.trimIndent()
             )
         }.satisfies {
@@ -279,7 +277,6 @@ Background:
         Scenario: zero should return forbidden
           When GET /hello/0
           Then status 403
-          And response-header Content-Type application/json
                 """.trimIndent()
             )
         }.satisfies {
@@ -526,6 +523,10 @@ Background:
     Examples:
       | tag     | name |
       | testing | test |
+      
+  Scenario: zero return bad request
+    When GET /pets/0
+    Then status 400
         """.trimIndent()
         )
 
@@ -541,11 +542,20 @@ Background:
                     val pet = Pet("scooby", "labrador", 1)
                     return when {
                         request.path!!.matches(Regex("""\/pets\/[0-9]+""")) -> when (request.method) {
-                            "GET" -> HttpResponse(
-                                200,
-                                ObjectMapper().writeValueAsString(pet),
-                                headers
-                            )
+                            "GET" -> {
+                                when (request.path) {
+                                    "/pets/0" -> HttpResponse(
+                                        400,
+                                        ObjectMapper().writeValueAsString(Error(1, "zero is not allowed")),
+                                        headers
+                                    )
+                                    else -> HttpResponse(
+                                        200,
+                                        ObjectMapper().writeValueAsString(pet),
+                                        headers
+                                    )
+                                }
+                            }
                             "DELETE" -> HttpResponse(
                                 204,
                                 headers
@@ -570,12 +580,14 @@ Background:
                                     )
                                 }
                                 "POST" -> {
-                                    assertThat(request.bodyString).isEqualTo("""
+                                    assertThat(request.bodyString).isEqualTo(
+                                        """
                                         {
                                             "tag": "testing",
                                             "name": "test"
                                         }
-                                    """.trimIndent())
+                                    """.trimIndent()
+                                    )
                                     HttpResponse(
                                         201,
                                         ObjectMapper().writeValueAsString(pet),
@@ -607,9 +619,10 @@ Background:
         assertThat(flags["/pets POST executed"]).isTrue
         assertThat(flags["/pets GET executed"]).isTrue
         assertThat(flags["/petIds GET executed"]).isTrue
-        assertThat(flags.keys.any { it.matches(Regex("""\/pets\/[0-9]+ GET""")) }).isNotNull()
-        assertThat(flags.keys.any { it.matches(Regex("""\/pets\/[0-9]+ DELETE""")) }).isNotNull()
-        assertThat(flags.size).isEqualTo(5)
+        assertThat(flags["/pets/0 GET executed"]).isTrue
+        assertThat(flags.keys.filter { it.matches(Regex("""\/pets\/[0-9]+ GET executed""")) }.size).isEqualTo(2)
+        assertThat(flags.keys.any { it.matches(Regex("""\/pets\/[0-9]+ DELETE executed""")) }).isNotNull
+        assertThat(flags.size).isEqualTo(6)
         assertTrue(results.success(), results.report())
     }
 }
@@ -637,4 +650,9 @@ data class NewPetWithMissingTag(
 
 data class NewPetWithMissingName(
     @JsonProperty("tag") val tag: String,
+)
+
+data class Error(
+    @JsonProperty("code") val code: Int,
+    @JsonProperty("message") val message: String
 )

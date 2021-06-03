@@ -70,7 +70,7 @@ paths:
 
     @Test
     fun `should generate 200 OK scenarioInfos from openAPI`() {
-        val openApiSpecification = OpenApiSpecification(OPENAPI_FILE)
+        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
         val scenarioInfos = openApiSpecification.toScenarioInfos()
         assertThat(scenarioInfos.size).isEqualTo(1)
     }

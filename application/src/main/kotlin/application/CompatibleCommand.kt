@@ -1,13 +1,16 @@
 package application
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.git.*
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import picocli.CommandLine
 import picocli.CommandLine.*
+import java.io.File
 import java.io.FileNotFoundException
 import java.util.concurrent.Callable
 
@@ -35,7 +38,7 @@ class GitCompatibleCommand : Callable<Int> {
         if(verbose)
             output = Verbose
 
-        if(!contractPath.isContractFile()) {
+        if(!contractPath.isContractFile() && !contractPath.endsWith(".yaml")) {
             output.inform(invalidContractExtensionMessage(contractPath))
             return 1
         }
@@ -108,7 +111,7 @@ internal fun backwardCompatibleFile(
     git: GitCommand
 ): Outcome<Results> {
     return try {
-        val newerFeature = parseGherkinStringToFeature(fileOperations.read(newerContractPath))
+        val newerFeature = parseContract(fileOperations.read(newerContractPath), newerContractPath)
         val result = getOlderFeature(newerContractPath, git)
 
         result.onSuccess {
@@ -133,8 +136,16 @@ internal fun backwardCompatibleCommit(
 
     return partial(newerCommit).onSuccess { newerGherkin ->
         partial(olderCommit).onSuccess { olderGherkin ->
-            Outcome(testBackwardCompatibility(parseGherkinStringToFeature(olderGherkin), parseGherkinStringToFeature(newerGherkin)))
+            Outcome(testBackwardCompatibility(parseContract(olderGherkin, contractPath), parseContract(newerGherkin, contractPath)))
         }
+    }
+}
+
+internal fun parseContract(content: String, path: String): Feature {
+    return when(val extension = File(path).extension) {
+        in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(content, path)
+        "yaml" -> OpenApiSpecification.fromYAML(content, path).toFeature()
+        else -> throw ContractException("Current file extension is $extension, but supported extensions are ${CONTRACT_EXTENSIONS.joinToString(", ")}")
     }
 }
 
@@ -143,7 +154,7 @@ internal fun getOlderFeature(newerContractPath: String, git: GitCommand): Outcom
         return Outcome(null, "Older contract file must be provided, or the file must be in a git directory")
 
     val(contractGit, relativeContractPath) = git.relativeGitPath(newerContractPath)
-    return Outcome(parseGherkinStringToFeature(contractGit.show("HEAD", relativeContractPath)))
+    return Outcome(parseContract(contractGit.show("HEAD", relativeContractPath), newerContractPath))
 }
 
 internal data class CompatibilityOutput(val exitCode: Int, val message: String)

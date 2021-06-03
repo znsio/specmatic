@@ -22,6 +22,19 @@ data class Scenario(
     val references: Map<String, References> = emptyMap(),
     val bindings: Map<String, String> = emptyMap()
 ) {
+    constructor(scenarioInfo: ScenarioInfo): this(
+        scenarioInfo.scenarioName,
+        scenarioInfo.httpRequestPattern,
+        scenarioInfo.httpResponsePattern,
+        scenarioInfo.expectedServerState,
+        scenarioInfo.examples,
+        scenarioInfo.patterns,
+        scenarioInfo.fixtures,
+        scenarioInfo.kafkaMessage,
+        scenarioInfo.ignoreFailure,
+        scenarioInfo.references,
+        scenarioInfo.bindings)
+
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
             expectedFacts.keys == actualState.keys &&
                     mapZip(expectedFacts, actualState).all { (key, expectedStateValue, actualStateValue) ->

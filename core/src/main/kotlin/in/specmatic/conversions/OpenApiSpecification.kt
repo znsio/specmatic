@@ -14,14 +14,24 @@ import io.swagger.v3.oas.models.parameters.QueryParameter
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.parser.OpenAPIV3Parser
+import java.io.File
 
-class OpenApiSpecification : IncludedSpecification {
-    private val openApiFile: String
-    private val openApi: OpenAPI
+class OpenApiSpecification(private val openApiFile: String, private val openApi: OpenAPI) : IncludedSpecification {
+    companion object {
+        fun fromFile(openApiFile: String): OpenApiSpecification {
+            val openApi = OpenAPIV3Parser().read(openApiFile)
+            return OpenApiSpecification(openApiFile, openApi)
+        }
 
-    constructor(openApiFile: String) {
-        this.openApiFile = openApiFile
-        openApi = OpenAPIV3Parser().read(openApiFile)
+        fun fromYAML(yamlContent: String, filePath: String): OpenApiSpecification {
+            val openApi = OpenAPIV3Parser().readContents(yamlContent).openAPI
+            return OpenApiSpecification(filePath, openApi)
+        }
+    }
+
+    fun toFeature(): Feature {
+        val name = File(openApiFile).name
+        return Feature(toScenarioInfos().map { Scenario(it) }, name = name)
     }
 
     override fun toScenarioInfos(): List<ScenarioInfo> =

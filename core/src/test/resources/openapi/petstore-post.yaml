@@ -39,6 +39,8 @@ components:
       required:
         - id
         - name
+        - id
+        - parent
       properties:
         name:
           type: string
@@ -47,6 +49,8 @@ components:
         id:
           type: integer
           format: int64
+        parent:
+          $ref: '#/components/schemas/Pet'
 
     NewPet:
       type: object

@@ -29,6 +29,8 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         }
     }
 
+    val patterns = mutableMapOf<String, Pattern>()
+
     fun toFeature(): Feature {
         val name = File(openApiFile).name
         return Feature(toScenarioInfos().map { Scenario(it) }, name = name)
@@ -137,7 +139,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                     ).map { httpRequestPattern: HttpRequestPattern ->
                         val scenarioName =
                             """Open API - Operation Summary: ${operation.summary}. Response: ${response.description}"""
-                        scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern)
+                        scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, patterns = this.patterns)
                     }
                 }.flatten()
             }.flatten()
@@ -174,7 +176,13 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                         ).map { httpRequestPattern: HttpRequestPattern ->
                             val scenarioName =
                                 """Open API - Operation Summary: ${operation.summary}. Response: ${response.description} Examples: $specmaticExampleRow"""
-                            scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, specmaticExampleRow)
+                            scenarioInfo(
+                                scenarioName,
+                                httpRequestPattern,
+                                httpResponsePattern,
+                                specmaticExampleRow,
+                                emptyMap()
+                            )
                         }
                     }.flatten()
                 }.flatten()
@@ -186,9 +194,11 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         scenarioName: String,
         httpRequestPattern: HttpRequestPattern,
         httpResponsePattern: HttpResponsePattern,
-        specmaticExampleRow: Row = Row()
+        specmaticExampleRow: Row = Row(),
+        patterns: Map<String, Pattern>
     ) = ScenarioInfo(
         scenarioName = scenarioName,
+        patterns = patterns,
         httpRequestPattern = when (specmaticExampleRow.columnNames.isEmpty()) {
             true -> httpRequestPattern
             else -> httpRequestPattern.newBasedOn(specmaticExampleRow, Resolver())[0]
@@ -268,7 +278,11 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
 
     fun toSpecmaticPattern(mediaType: MediaType): Pattern = toSpecmaticPattern(mediaType.schema)
 
-    fun toSpecmaticPattern(schema: Schema<*>): Pattern {
+    fun toSpecmaticPattern(
+        schema: Schema<*>,
+        typeStack: List<String> = emptyList(),
+        patternName: String = ""
+    ): Pattern {
         val pattern = when (schema) {
             is StringSchema -> StringPattern
             is IntegerSchema -> NumberPattern
@@ -281,9 +295,29 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 val requiredFields = schema.required.orEmpty()
                 val schemaProperties = schema.properties.map { (propertyName, propertyType) ->
                     val optional = !requiredFields.contains(propertyName)
-                    toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(propertyType)
+                    if (patternName.isNotEmpty()) {
+                        if (typeStack.contains(patternName)) toSpecmaticParamName(
+                            optional,
+                            propertyName
+                        ) to DeferredPattern("(${patternName})")
+                        else {
+                            val specmaticPattern = toSpecmaticPattern(
+                                propertyType,
+                                typeStack.plus(patternName),
+                                patternName
+                            )
+                            toSpecmaticParamName(optional, propertyName) to specmaticPattern
+                        }
+                    } else {
+                        toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(
+                            propertyType,
+                            typeStack
+                        )
+                    }
                 }.toMap()
-                toJSONObjectPattern(schemaProperties)
+                val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
+                patterns["(${patternName})"] = jsonObjectPattern
+                jsonObjectPattern
             }
             is ArraySchema -> {
                 JSONArrayPattern(listOf(toSpecmaticPattern(schema.items)))
@@ -292,7 +326,8 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 throw UnsupportedOperationException("Specmatic does not support oneOf, allOf and anyOf")
             }
             is Schema -> {
-                resolveReference(schema.`$ref`)
+                if (patternName.isNotEmpty() && typeStack.contains(patternName)) DeferredPattern("(${patternName})")
+                else resolveReference(schema.`$ref`)
             }
             else -> throw UnsupportedOperationException("Specmatic is unable parse: ${schema}")
         }
@@ -309,7 +344,8 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
 
     private fun resolveReference(component: String): Pattern {
         if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
-        return toSpecmaticPattern(openApi.components.schemas[component!!.removePrefix("#/components/schemas/")] as Schema<Any>)
+        val componentName = component!!.removePrefix("#/components/schemas/")
+        return toSpecmaticPattern(openApi.components.schemas[componentName] as Schema<Any>, patternName = componentName)
     }
 
     private fun toSpecmaticPath(openApiPath: String, operation: Operation): String {

@@ -42,6 +42,8 @@ internal class CompatibleCommandTest {
 
         setupHEADcompatibilityCheck(trivialContract, trivialContract)
 
+        every { fileOperations.isFile(any()) }.returns(true)
+        every { fileOperations.isDirectory(any()) }.returns(false)
         val exitCode = CommandLine(compatibleCommand, factory).execute("git", "file", contractPath)
         assertThat(exitCode).isZero()
     }
@@ -94,6 +96,8 @@ internal class CompatibleCommandTest {
         every { contractGitCommand.show("HEAD", relativeContractPath) }.answers { throw NonZeroExitError("ERROR") }
         every { gitCommand.fileIsInGitDir(contractPath) }.returns(true)
         every { gitCommand.relativeGitPath(contractPath) }.returns(Pair(contractGitCommand, relativeContractPath))
+        every { fileOperations.isFile(any()) }.returns(true)
+        every { fileOperations.isDirectory(any()) }.returns(false)
         every { fileOperations.read(contractPath) }.returns(newContract)
 
         val exitCode = CommandLine(compatibleCommand, factory).execute("git", "file", contractPath)
@@ -114,6 +118,8 @@ internal class CompatibleCommandTest {
         every { contractGitCommand.show("HEAD", relativeContractPath) }.returns(newContract)
         every { gitCommand.fileIsInGitDir(contractPath) }.returns(true)
         every { gitCommand.relativeGitPath(contractPath) }.returns(Pair(contractGitCommand, relativeContractPath))
+        every { fileOperations.isFile(any()) }.returns(true)
+        every { fileOperations.isDirectory(any()) }.returns(false)
         every { fileOperations.read(contractPath) }.answers { throw FileNotFoundException() }
 
         val exitCode = CommandLine(compatibleCommand, factory).execute("git", "file", contractPath)
@@ -139,6 +145,8 @@ internal class CompatibleCommandTest {
         val gitRoot = mockk<GitCommand>()
 
         every { gitCommand.relativeGitPath(contractPath) }.returns(Pair(gitRoot, relativeContractPath))
+        every { fileOperations.isFile(any()) }.returns(true)
+        every { fileOperations.isDirectory(any()) }.returns(false)
         every { gitRoot.show(oldCommitHash, relativeContractPath) }.returns(contract)
         every { gitRoot.show(newCommitHash, relativeContractPath) }.returns(contract)
 

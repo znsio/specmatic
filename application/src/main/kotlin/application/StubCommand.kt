@@ -11,12 +11,8 @@ import `in`.specmatic.core.Constants.Companion.DEFAULT_HTTP_STUB_HOST
 import `in`.specmatic.core.Constants.Companion.DEFAULT_HTTP_STUB_PORT
 import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import `in`.specmatic.core.git.Verbose
-import `in`.specmatic.core.git.log
-import `in`.specmatic.core.git.output
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.git.information
 import `in`.specmatic.core.utilities.exitWithMessage
-import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.*
 import java.util.concurrent.Callable
@@ -99,7 +95,7 @@ class StubCommand : Callable<Unit> {
 
     override fun call() {
         if(verbose)
-            output = Verbose
+            information = Verbose
 
         try {
             contractPaths = loadConfig()

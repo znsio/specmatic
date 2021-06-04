@@ -33,46 +33,40 @@ class GitCompatibleCommand : Callable<Int> {
     lateinit var fileOperations: FileOperations
 
     @Command(name = "file", description = ["Compare file in working tree against HEAD"])
-    fun file(@Parameters(paramLabel = "contractPath") contractPath: String,
+    fun file(@Parameters(paramLabel = "contractPath", defaultValue = ".") contractPath: String,
              @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
-            output = Verbose
+            information = Verbose
 
-        if(!contractPath.isContractFile() && !contractPath.endsWith(".yaml")) {
-            output.inform(invalidContractExtensionMessage(contractPath))
+        if(!contractPath.isContractFile() && !contractPath.endsWith(".yaml") && !File(contractPath).isDirectory) {
+            information.forTheUser(invalidContractExtensionMessage(contractPath))
             return 1
         }
 
         return try {
-            val output = checkCompatibility {
-                backwardCompatibleFile(contractPath, fileOperations, gitCommand)
+            backwardCompatibleOnFileOrDirectory(contractPath, fileOperations) {
+                backwardCompatibleFile(it, fileOperations, gitCommand)
             }
-
-            println(output.message)
-            output.exitCode
         } catch(e: Throwable) {
-            output.inform(e)
+            information.forTheUser(e)
             1
         }
     }
 
     @Command(name = "commits", description = ["Compare file in newer commit against older commit"])
-    fun commits(@Parameters(paramLabel = "contractPath") path: String,
+    fun commits(@Parameters(paramLabel = "contractPath", defaultValue = ".") path: String,
                 @Parameters(paramLabel = "newerCommit") newerCommit: String,
                 @Parameters(paramLabel = "olderCommit") olderCommit: String,
                 @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
-            output = Verbose
+            information = Verbose
 
         return try {
-        val output = checkCompatibility {
-            backwardCompatibleCommit(path, newerCommit, olderCommit, gitCommand)
-        }
-
-        println(output.message)
-        output.exitCode
+            backwardCompatibleOnFileOrDirectory(path, fileOperations) {
+                backwardCompatibleCommit(it, newerCommit, olderCommit, gitCommand)
+            }
         } catch(e: Throwable) {
-            output.inform(e)
+            information.forTheUser(e)
             1
         }
     }
@@ -90,6 +84,47 @@ class GitCompatibleCommand : Callable<Int> {
 internal class CompatibleCommand : Callable<Unit> {
     override fun call() {
         CommandLine(CompatibleCommand()).usage(System.out)
+    }
+}
+
+private fun backwardCompatibleOnFileOrDirectory(
+    path: String,
+    fileOperations: FileOperations,
+    fn: (String) -> Outcome<Results>
+): Int {
+    return when {
+        fileOperations.isFile(path) -> {
+            val output = checkCompatibility {
+                fn(path)
+            }
+
+            println(output.message)
+            output.exitCode
+        }
+        fileOperations.isDirectory(path) -> {
+            val file = File(path)
+            val outputs = file.walkTopDown().filter {
+                it.extension in CONTRACT_EXTENSIONS || it.extension == "yaml"
+            }.map {
+                Pair(it.path, checkCompatibility {
+                    fn(it.path)
+                })
+            }.toList()
+
+            if(outputs.isEmpty()) {
+                information.forTheUser("No contract files were found")
+                0
+            } else {
+                information.forTheUser(outputs.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (path, output) ->
+                    """$path:${System.lineSeparator()}${output.message.prependIndent("  ")}"""
+                })
+
+                outputs.map { (_, output) -> output.exitCode }.find { it != 0 } ?: 0
+            }
+        }
+        else -> {
+            throw ContractException("$path was of an unexpected file type.")
+        }
     }
 }
 

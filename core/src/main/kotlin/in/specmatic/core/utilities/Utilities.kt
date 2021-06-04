@@ -14,7 +14,7 @@ import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.git.output
+import `in`.specmatic.core.git.information
 import `in`.specmatic.core.nativeString
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.NullPattern
@@ -38,7 +38,7 @@ import javax.xml.transform.stream.StreamResult
 import kotlin.system.exitProcess
 
 fun exitWithMessage(message: String): Nothing {
-    output.inform(message)
+    information.forTheUser(message)
     exitProcess(1)
 }
 
@@ -135,7 +135,7 @@ fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCal
         if (transport is SshTransport) {
             transport.sshSessionFactory = SshdSessionFactory()
         } else if(bearerToken != null && transport is TransportHttp) {
-            output.debug("Setting Authorization header")
+            information.forDebugging("Setting Authorization header")
             transport.setAdditionalHeaders(mapOf("Authorization" to "Bearer $bearerToken"))
         }
     }
@@ -240,14 +240,14 @@ fun gitRootDir(): String {
 data class ContractPathData(val baseDir: String, val path: String)
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
-    output.inform("Loading config file $configFilePath")
+    information.forTheUser("Loading config file $configFilePath")
     val sources = loadSources(configFilePath)
 
     return sources.flatMap {
         it.loadContracts(selector, workingDirectory, configFilePath)
     }.also {
-        output.inform("Contract file paths:")
-        output.inform(it.joinToString(System.lineSeparator()).prependIndent("  "))
+        information.forTheUser("Contract file paths:")
+        information.forTheUser(it.joinToString(System.lineSeparator()).prependIndent("  "))
     }
 }
 

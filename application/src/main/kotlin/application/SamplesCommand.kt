@@ -2,9 +2,8 @@ package application
 
 import picocli.CommandLine.*
 import `in`.specmatic.core.Contract
-import `in`.specmatic.core.git.log
 import `in`.specmatic.core.git.logException
-import `in`.specmatic.core.git.output
+import `in`.specmatic.core.git.information
 import `in`.specmatic.stub.HttpStub
 import java.io.File
 import java.util.concurrent.Callable
@@ -28,7 +27,7 @@ class SamplesCommand : Callable<Unit> {
                     Contract(gherkin).samples(fake)
                 }
             } catch(e: StackOverflowError) {
-                output.inform("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
+                information.forTheUser("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
             }
         }
     }

@@ -18,6 +18,7 @@ class FileOperations {
     }
 
     fun isFile(fileName: String): Boolean = File(fileName).isFile
+    fun isDirectory(fileName: String): Boolean = File(fileName).isDirectory
 
     fun isJSONFile(file: File): Boolean =
         file.isFile && file.extension.equals("json", ignoreCase = true)

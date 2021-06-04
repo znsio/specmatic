@@ -1,15 +1,22 @@
 package `in`.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import `in`.specmatic.core.*
-import `in`.specmatic.core.value.*
+import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.NullValue
+import `in`.specmatic.core.value.NumberValue
+import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
+import `in`.specmatic.stub.HttpStub
+import com.fasterxml.jackson.annotation.JsonProperty
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.fail
+import org.springframework.web.client.RestTemplate
+import java.net.URI
 
 class TabularPatternTest {
     @Test
@@ -170,7 +177,7 @@ Given pattern User
         val newPattern = pattern.newBasedOn(Row(listOf("id"), listOf("10")), Resolver()).first()
 
         val value = newPattern.generate(Resolver())
-        if(value !is JSONObjectValue)
+        if (value !is JSONObjectValue)
             fail("Expected $value to be JSON")
         value.jsonObject.getValue("id").let { assertEquals(10, (it as NumberValue).number) }
     }
@@ -200,13 +207,13 @@ And pattern Address
         val resolver = Resolver(newPatterns = mapOf("(User)" to userPattern, "(Address)" to addressPattern))
 
         val value = userPattern.newBasedOn(row, resolver).first().generate(resolver)
-        if(value !is JSONObjectValue)
+        if (value !is JSONObjectValue)
             fail("Expected $value to be JSON")
         val id = value.jsonObject["id"] as NumberValue
         assertEquals(10, id.number)
 
         val address = value.jsonObject["address"]
-        if(address !is JSONObjectValue)
+        if (address !is JSONObjectValue)
             fail("Expected $address to be JSON")
         address.jsonObject.getValue("flat").let { assertEquals(100, (it as NumberValue).number) }
     }
@@ -266,7 +273,7 @@ Given request-body
 
         val value = newPatterns[0].generate(Resolver())
 
-        if(value !is JSONObjectValue) fail("Expected JSON object")
+        if (value !is JSONObjectValue) fail("Expected JSON object")
 
         assertTrue(value.jsonObject.getValue("nothing") is NullValue)
     }
@@ -290,7 +297,8 @@ Given request-body
 
     @Test
     fun `error message when a json object does not match nullable primitive such as string in the contract`() {
-        val feature = parseGherkinStringToFeature("""
+        val feature = parseGherkinStringToFeature(
+            """
 Feature: test feature
   Scenario: api call
     Given type Request
@@ -298,19 +306,23 @@ Feature: test feature
     When POST /
     And request-body (Request)
     Then status 200
-""".trim())
+""".trim()
+        )
 
-        val request = HttpRequest("POST", "/", body = parsedValue("""{"name": {"firstname": "Jane", "lastname": "Doe"}}"""))
+        val request =
+            HttpRequest("POST", "/", body = parsedValue("""{"name": {"firstname": "Jane", "lastname": "Doe"}}"""))
 
         val resolver = feature.scenarios.single().resolver
         val result = feature.scenarios.single().httpRequestPattern.matches(request, resolver)
 
-        assertThat(resultReport(result)).isEqualTo(""">> REQUEST.BODY.name
+        assertThat(resultReport(result)).isEqualTo(
+            """>> REQUEST.BODY.name
 
 Expected string, actual was json object: {
     "firstname": "Jane",
     "lastname": "Doe"
-}""")
+}"""
+        )
     }
 
     @Test
@@ -330,6 +342,33 @@ Feature: Recursive test
         val feature = parseGherkinStringToFeature(gherkin)
         val result = testBackwardCompatibility(feature, feature)
         assertThat(result.success()).isTrue()
+    }
+
+    @Test
+    fun `tabular type with recursive type definition should generate response with infinite loop`() {
+        val gherkin = """
+Feature: Recursive test
+
+  Scenario: Recursive scenario
+    Given type Data
+    | id   | (number) |
+    | data | (Data)   |
+    When GET /
+    Then status 200
+    And response-body (Data)
+""".trim()
+
+        val feature = parseGherkinStringToFeature(gherkin)
+
+        val response = HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            restTemplate.getForObject(
+                URI.create("http://localhost:9000/"),
+                Data::class.java
+            )
+        }
+
+        assertThat(response).isNotNull
     }
 
     @Test
@@ -371,7 +410,13 @@ Feature: Recursive test
         val smallerWithNumber = toTabularPattern(mapOf("number" to NumberPattern))
         val smallerWithNull = toTabularPattern(mapOf("number" to NullPattern))
 
-        assertThat(bigger.encompasses(smallerWithNumber, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(
+            bigger.encompasses(
+                smallerWithNumber,
+                Resolver(),
+                Resolver()
+            )
+        ).isInstanceOf(Result.Success::class.java)
         assertThat(bigger.encompasses(smallerWithNull, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
@@ -414,3 +459,8 @@ Feature: Recursive test
 internal fun getRows(gherkin: String) = getScenario(gherkin).stepsList[0].dataTable.rowsList
 
 internal fun getScenario(gherkin: String) = parseGherkinString(gherkin).feature.childrenList[0].scenario
+
+data class Data(
+    @JsonProperty("id") val name: Int,
+    @JsonProperty("data") val data: Data
+)

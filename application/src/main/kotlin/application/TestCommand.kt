@@ -10,6 +10,7 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import `in`.specmatic.core.Constants
+import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.test.SpecmaticJUnitSupport
@@ -144,7 +145,7 @@ class TestCommand : Callable<Unit> {
     private fun loadContractPaths(): List<String> {
         return when {
             contractPaths.isEmpty() -> {
-                println("No contractPaths specified. Falling back to ${Constants.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY}")
+                information.forDebugging("No contractPaths specified. Falling back to ${Constants.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY}")
                 qontractConfig.contractTestPaths()
             }
             else -> contractPaths

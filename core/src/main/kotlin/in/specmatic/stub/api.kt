@@ -3,7 +3,7 @@ package `in`.specmatic.stub
 
 import `in`.specmatic.consoleLog
 import `in`.specmatic.core.*
-import `in`.specmatic.core.git.output
+import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.contractStubPaths
 import `in`.specmatic.core.utilities.jsonStringToValueMap
@@ -193,7 +193,7 @@ private fun filesInDir(implicitDataDir: File): List<File>? {
                 listOf(it)
             }
             else -> {
-                output.debug("Could not recognise ${it.absolutePath}, ignoring it.")
+                information.forDebugging("Could not recognise ${it.absolutePath}, ignoring it.")
                 emptyList()
             }
         }

@@ -2,30 +2,25 @@ package `in`.specmatic.core.git
 
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 
-var output: Output = Info
-
-val log: Output
-    get() {
-        return output
-    }
+var information: Output = Info
 
 fun logException(fn: ()-> Unit): Int {
     return try {
         fn()
         0
     } catch(e: Throwable) {
-        output.inform(e)
+        information.forTheUser(e)
         1
     }
 }
 
 interface Output {
     fun exceptionString(e: Throwable, msg: String? = null): String
-    fun inform(e: Throwable, msg: String? = null)
-    fun inform(msg: String)
+    fun forTheUser(e: Throwable, msg: String? = null)
+    fun forTheUser(msg: String)
     fun newLine()
-    fun debug(msg: String)
-    fun debug(e: Throwable, msg: String? = null)
+    fun forDebugging(msg: String)
+    fun forDebugging(e: Throwable, msg: String? = null)
 }
 
 object Info : Output {
@@ -36,11 +31,11 @@ object Info : Output {
         }
     }
 
-    override fun inform(e: Throwable, msg: String?) {
+    override fun forTheUser(e: Throwable, msg: String?) {
         println(exceptionString(e, msg))
     }
 
-    override fun inform(msg: String) {
+    override fun forTheUser(msg: String) {
         println(msg)
     }
 
@@ -48,9 +43,9 @@ object Info : Output {
         println()
     }
 
-    override fun debug(msg: String) { }
+    override fun forDebugging(msg: String) { }
 
-    override fun debug(e: Throwable, msg: String?) { }
+    override fun forDebugging(e: Throwable, msg: String?) { }
 }
 
 object Verbose : Output {
@@ -63,11 +58,11 @@ object Verbose : Output {
         return "$message${System.lineSeparator()}${e.stackTraceToString()}"
     }
 
-    override fun inform(e: Throwable, msg: String?) {
+    override fun forTheUser(e: Throwable, msg: String?) {
         println(exceptionString(e, msg))
     }
 
-    override fun inform(msg: String) {
+    override fun forTheUser(msg: String) {
         println(msg)
     }
 
@@ -75,11 +70,11 @@ object Verbose : Output {
         println()
     }
 
-    override fun debug(msg: String) {
+    override fun forDebugging(msg: String) {
         println(msg)
     }
 
-    override fun debug(e: Throwable, msg: String?) {
-        inform(e, msg)
+    override fun forDebugging(e: Throwable, msg: String?) {
+        forTheUser(e, msg)
     }
 }

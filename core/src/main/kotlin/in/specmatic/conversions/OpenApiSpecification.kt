@@ -2,6 +2,7 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
+import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.*
 import io.cucumber.messages.Messages
 import io.swagger.v3.oas.models.OpenAPI
@@ -153,7 +154,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
 
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
                     val responseExamples = responseMediaType.examples.orEmpty()
-                    val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, value) ->
+                    val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, _) ->
                         val requestExamples =
                             operation.parameters.filter { parameter -> parameter.examples.any { it.key == exampleName } }
                                 .map { it.name to it.examples[exampleName]!!.value }.toMap()
@@ -327,9 +328,14 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
             }
             is Schema -> {
                 if (patternName.isNotEmpty() && typeStack.contains(patternName)) DeferredPattern("(${patternName})")
-                else resolveReference(schema.`$ref`)
+                else resolveReference(
+                    schema.`$ref`
+                        ?: throw ContractException("Found null \$ref property in schema ${schema.name ?: "which had no name"}").also {
+                            information.forDebugging("Schema:")
+                            information.forDebugging(schema.toString().prependIndent("  "))
+                        })
             }
-            else -> throw UnsupportedOperationException("Specmatic is unable parse: ${schema}")
+            else -> throw UnsupportedOperationException("Specmatic is unable parse: $schema")
         }
         return when (schema.nullable != true) {
             true -> pattern
@@ -373,6 +379,6 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
             "GET" to pathItem.get,
             "POST" to pathItem.post,
             "DELETE" to pathItem.delete
-        ).filter { (key, value) -> value != null }
+        )
 
 }

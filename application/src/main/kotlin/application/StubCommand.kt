@@ -116,7 +116,7 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun loadConfig() = contractPaths.ifEmpty {
-        println("No contractPaths specified. Falling back to $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
+        information.forDebugging("No contractPaths specified. Falling back to $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
         qontractConfig.contractStubPaths()
     }
 

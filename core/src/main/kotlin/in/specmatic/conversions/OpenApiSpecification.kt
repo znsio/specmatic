@@ -2,6 +2,7 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
+import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.*
 import io.cucumber.messages.Messages
 import io.swagger.v3.oas.models.OpenAPI
@@ -292,9 +293,12 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 throw UnsupportedOperationException("Specmatic does not support oneOf, allOf and anyOf")
             }
             is Schema -> {
-                resolveReference(schema.`$ref`)
+                resolveReference(schema.`$ref` ?: throw ContractException("Found null \$ref property in schema ${schema.name ?: "which had no name"}").also {
+                    information.forDebugging("Schema:")
+                    information.forDebugging(schema.toString().prependIndent("  "))
+                })
             }
-            else -> throw UnsupportedOperationException("Specmatic is unable parse: ${schema}")
+            else -> throw UnsupportedOperationException("Specmatic is unable parse: $schema")
         }
         return when (schema.nullable != true) {
             true -> pattern

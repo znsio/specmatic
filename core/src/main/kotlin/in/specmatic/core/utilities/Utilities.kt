@@ -10,6 +10,7 @@ import org.w3c.dom.Document
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import `in`.specmatic.consoleLog
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
 import `in`.specmatic.core.Resolver
@@ -243,12 +244,14 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
     information.forTheUser("Loading config file $configFilePath")
     val sources = loadSources(configFilePath)
 
-    return sources.flatMap {
+    val contractPathData = sources.flatMap {
         it.loadContracts(selector, workingDirectory, configFilePath)
-    }.also {
-        information.forTheUser("Contract file paths:")
-        information.forTheUser(it.joinToString(System.lineSeparator()).prependIndent("  "))
     }
+
+    information.forDebugging("Contract file paths in $APPLICATION_NAME_LOWER_CASE.json:")
+    information.forDebugging(contractPathData.joinToString(System.lineSeparator()) { it.path }.prependIndent("  "))
+
+    return contractPathData
 }
 
 class UncaughtExceptionHandler: Thread.UncaughtExceptionHandler {

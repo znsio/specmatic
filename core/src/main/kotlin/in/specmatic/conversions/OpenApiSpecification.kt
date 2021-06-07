@@ -375,10 +375,10 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
     }
 
     private fun openApiOperations(pathItem: PathItem): Map<String, Operation> =
-        mapOf<String, Operation>(
+        mapOf<String, Operation?>(
             "GET" to pathItem.get,
             "POST" to pathItem.post,
             "DELETE" to pathItem.delete
-        )
+        ).filter { (_, value) -> value != null }.map { (key, value) -> key to value!! }.toMap()
 
 }

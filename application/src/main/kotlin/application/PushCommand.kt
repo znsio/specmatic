@@ -2,7 +2,7 @@ package application
 
 import picocli.CommandLine
 import `in`.specmatic.core.*
-import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import `in`.specmatic.core.Configuration.Companion.configFileName
 import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.loadFromPath
@@ -23,7 +23,7 @@ class PushCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".$CONTRACT_EXTENSION/repos")
-        val manifestFile = File(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
+        val manifestFile = File(configFileName)
         val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
 

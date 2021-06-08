@@ -4,8 +4,8 @@ import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import `in`.specmatic.core.*
-import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_FILE_NAME
-import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
+import `in`.specmatic.core.Configuration.Companion.configFileName
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
@@ -33,7 +33,7 @@ open class SpecmaticJUnitSupport {
         if(envName == null || envName.isBlank())
             return JSONObjectValue()
 
-        val config = loadConfigJSON(File(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY))
+        val config = loadConfigJSON(File(configFileName))
         val envConfig = config.findFirstChildByPath("environments.$envName").also { println("First child: $it") } ?: return JSONObjectValue()
 
         if(envConfig !is JSONObjectValue)
@@ -65,7 +65,7 @@ open class SpecmaticJUnitSupport {
                     contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig) }
                 }
                 else -> {
-                    val configFile = valueOrDefault(givenConfigFile, DEFAULT_QONTRACT_CONFIG_FILE_NAME, "Neither contract nor config were specified")
+                    val configFile = valueOrDefault(givenConfigFile, DEFAULT_CONFIG_FILE_NAME, "Neither contract nor config were specified")
 
                     exitIfDoesNotExist("config file", configFile)
 

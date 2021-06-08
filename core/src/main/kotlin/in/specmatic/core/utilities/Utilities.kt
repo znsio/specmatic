@@ -10,13 +10,10 @@ import org.w3c.dom.Document
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import `in`.specmatic.consoleLog
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
-import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.*
+import `in`.specmatic.core.Configuration.Companion.configFileName
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.information
-import `in`.specmatic.core.nativeString
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.NumberPattern
@@ -159,11 +156,11 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
         parsedJSON(configFile.readText())
     } catch (e: Throwable) {
-        throw ContractException("Error reading the $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY: ${exceptionCauseMessage(e)}")
+        throw ContractException("Error reading the $configFileName: ${exceptionCauseMessage(e)}")
     }
 
     if (configJson !is JSONObjectValue)
-        throw ContractException("The contents of $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY must be a json object")
+        throw ContractException("The contents of $configFileName must be a json object")
 
     return configJson
 }
@@ -191,7 +188,7 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
                     else -> GitRepo(repositoryURL, testPaths, stubPaths)
                 }
             }
-            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
+            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $configFileName")
         }
     }
 }
@@ -223,7 +220,7 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
 
 // Used by SpecmaticJUnitSupport users for loading contracts to stub or mock
 fun contractStubPaths(): List<ContractPathData> =
-        contractFilePathsFrom(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY, ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+        contractFilePathsFrom(configFileName, ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
 
 fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>
@@ -248,7 +245,7 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
         it.loadContracts(selector, workingDirectory, configFilePath)
     }
 
-    information.forDebugging("Contract file paths in $APPLICATION_NAME_LOWER_CASE.json:")
+    information.forDebugging("Contract file paths in $configFilePath:")
     information.forDebugging(contractPathData.joinToString(System.lineSeparator()) { it.path }.prependIndent("  "))
 
     return contractPathData

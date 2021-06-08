@@ -3,11 +3,12 @@
 package `in`.specmatic.core.git
 
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import `in`.specmatic.core.Configuration
 import io.ktor.http.*
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
-import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import `in`.specmatic.core.Configuration.Companion.configFileName
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.GitRepo
 import `in`.specmatic.core.utilities.getTransportCallingCallback
@@ -77,7 +78,7 @@ fun loadFromPath(json: Value?, path: List<String>): Value? {
 }
 
 fun getBearerToken(): String? {
-    val qontractConfigFile = File(DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY)
+    val qontractConfigFile = File(configFileName)
 
     return when {
         qontractConfigFile.exists() ->
@@ -85,7 +86,7 @@ fun getBearerToken(): String? {
                 readBearerFromEnvVariable(qontractConfig) ?: readBearerFromFile(qontractConfig)
             }
         else -> null.also {
-            println("$DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY not found")
+            println("$configFileName not found")
             println("Current working directory is ${File(".").absolutePath}")
         }
     }
@@ -117,7 +118,7 @@ fun getPersonalAccessToken(): String? {
     val homeDir = File(System.getProperty("user.home"))
 
     if(homeDir.exists()) {
-        val configFile = homeDir.resolve("$APPLICATION_NAME_LOWER_CASE.json")
+        val configFile = homeDir.resolve(Configuration.configFileName)
 
         if(configFile.exists()) {
             val qontractConfig = readQontractConfig(configFile)

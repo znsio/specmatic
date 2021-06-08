@@ -1,20 +1,19 @@
 package application
 
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.ApplicationContext
-import org.springframework.stereotype.Component
-import picocli.CommandLine.*
 import `in`.specmatic.LogTail
 import `in`.specmatic.consoleLog
 import `in`.specmatic.core.*
-import `in`.specmatic.core.Constants.Companion.DEFAULT_HTTP_STUB_HOST
-import `in`.specmatic.core.Constants.Companion.DEFAULT_HTTP_STUB_PORT
-import `in`.specmatic.core.Constants.Companion.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY
+import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
+import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import `in`.specmatic.core.git.Verbose
 import `in`.specmatic.core.git.information
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.*
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationContext
+import org.springframework.stereotype.Component
+import picocli.CommandLine.*
 import java.util.concurrent.Callable
 
 @Command(name = "stub",
@@ -84,6 +83,9 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--verbose"], description = ["Verbose mode"])
     var verbose = false
 
+    @Option(names = ["--config"], description = ["Configuration file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
+    var configFileName: String? = null
+
     @Autowired
     val watchMaker = WatchMaker()
 
@@ -96,6 +98,10 @@ class StubCommand : Callable<Unit> {
     override fun call() {
         if(verbose)
             information = Verbose
+
+        configFileName?.let {
+            Configuration.configFileName = it
+        }
 
         try {
             contractPaths = loadConfig()
@@ -116,7 +122,7 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun loadConfig() = contractPaths.ifEmpty {
-        information.forDebugging("No contractPaths specified. Falling back to $DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY")
+        information.forDebugging("No contractPaths specified. Using configuration file named $configFileName")
         qontractConfig.contractStubPaths()
     }
 

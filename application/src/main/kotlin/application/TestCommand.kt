@@ -1,5 +1,6 @@
 package application
 
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import application.test.ContractExecutionListener
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
@@ -9,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
-import `in`.specmatic.core.Constants
+import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
@@ -75,6 +76,9 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--junitReportDir"], description = ["Create junit xml reports in this directory"])
     var junitReportDirName: String? = null
 
+    @Option(names = ["--config"], description = ["Configuration file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
+    var configFileName: String? = null
+
     override fun call() = try {
         contractPaths = loadContractPaths()
 
@@ -105,6 +109,10 @@ class TestCommand : Callable<Unit> {
         System.setProperty("kafkaHost", kafkaHost)
         System.setProperty("kafkaPort", kafkaPort.toString())
         System.setProperty("commit", commit.toString())
+
+        configFileName?.let {
+            Configuration.configFileName = it
+        }
 
         if(kafkaPort != 0)
             System.setProperty("kafkaPort", kafkaPort.toString())
@@ -145,7 +153,7 @@ class TestCommand : Callable<Unit> {
     private fun loadContractPaths(): List<String> {
         return when {
             contractPaths.isEmpty() -> {
-                information.forDebugging("No contractPaths specified. Falling back to ${Constants.DEFAULT_QONTRACT_CONFIG_IN_CURRENT_DIRECTORY}")
+                information.forDebugging("No contractPaths specified. Using configuration file named ${Configuration.configFileName}")
                 qontractConfig.contractTestPaths()
             }
             else -> contractPaths

@@ -152,7 +152,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
 
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
                     val responseExamples = responseMediaType.examples.orEmpty()
-                    val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, _) ->
+                    val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, value) ->
                         val requestExamples =
                             operation.parameters.filter { parameter -> parameter.examples.any { it.key == exampleName } }
                                 .map { it.name to it.examples[exampleName]!!.value }.toMap()
@@ -313,7 +313,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
 
     private fun resolveReference(component: String): Pattern {
         if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
-        return toSpecmaticPattern(openApi.components.schemas[component.removePrefix("#/components/schemas/")] as Schema<Any>)
+        return toSpecmaticPattern(openApi.components.schemas[component!!.removePrefix("#/components/schemas/")] as Schema<Any>)
     }
 
     private fun toSpecmaticPath(openApiPath: String, operation: Operation): String {
@@ -341,6 +341,6 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
             "GET" to pathItem.get,
             "POST" to pathItem.post,
             "DELETE" to pathItem.delete
-        )
+        ).filter { (key, value) -> value != null }
 
 }

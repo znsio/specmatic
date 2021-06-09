@@ -327,7 +327,6 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 throw UnsupportedOperationException("Specmatic does not support oneOf, allOf and anyOf")
             }
             is Schema -> {
-<<<<<<< HEAD
                 if (patternName.isNotEmpty() && typeStack.contains(patternName))
                     DeferredPattern("(${patternName})")
                 else
@@ -335,15 +334,6 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                         information.forDebugging("Schema:")
                         information.forDebugging(schema.toString().prependIndent("  "))
                     })
-=======
-                if (patternName.isNotEmpty() && typeStack.contains(patternName)) DeferredPattern("(${patternName})")
-                else resolveReference(
-                    schema.`$ref`
-                        ?: throw ContractException("Found null \$ref property in schema ${schema.name ?: "which had no name"}").also {
-                            information.forDebugging("Schema:")
-                            information.forDebugging(schema.toString().prependIndent("  "))
-                        })
->>>>>>> 38c0825b987cd1da194b19decb05309cc4e87b2e
             }
             else -> throw UnsupportedOperationException("Specmatic is unable parse: $schema")
         }

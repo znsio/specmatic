@@ -19,6 +19,15 @@ fun toJSONObjectPattern(map: Map<String, Pattern>): JSONObjectPattern {
     return JSONObjectPattern(map.minus("..."), missingKeyStrategy)
 }
 
+fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String?): JSONObjectPattern {
+    val missingKeyStrategy = when ("...") {
+        in map -> ignoreUnexpectedKeys
+        else -> ::validateUnexpectedKeys
+    }
+
+    return JSONObjectPattern(map.minus("..."), missingKeyStrategy, typeAlias)
+}
+
 val ignoreUnexpectedKeys = { _: Map<String, Any>, _: Map<String, Any> -> null }
 
 data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap(), private val unexpectedKeyCheck: UnexpectedKeyCheck = ::validateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
@@ -34,7 +43,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         return when (otherPattern) {
             is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
             !is JSONObjectPattern -> Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
-            else -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType)
+            else -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
         }
     }
 

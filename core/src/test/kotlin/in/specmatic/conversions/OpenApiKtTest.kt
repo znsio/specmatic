@@ -3,12 +3,14 @@ package `in`.specmatic.conversions
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Ignore
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -407,6 +409,46 @@ Background:
     }
 
     @Test
+    fun `should validate with cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-post.yaml
+        """.trimIndent()
+        )
+
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
+    }
+
+    //TODO:
+    @Ignore
+    fun `should generate stub with cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-post.yaml
+        """.trimIndent()
+        )
+
+        val petResponse = HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            restTemplate.postForObject(
+                URI.create("http://localhost:9000/pets"),
+                NewPet("scooby", "labrador"),
+                Pet::class.java
+            )
+        }
+
+        assertThat(petResponse).isInstanceOf(CyclicPet::class.java)
+        assertThat(petResponse).isNotNull
+    }
+
+        @Test
     fun `should parse nullable fields`() {
         val feature = parseGherkinStringToFeature(
             """
@@ -632,6 +674,13 @@ data class Pet(
     @JsonProperty("name") val name: String,
     @JsonProperty("tag") val tag: String,
     @JsonProperty("id") val id: Int
+)
+
+data class CyclicPet(
+    @JsonProperty("name") val name: String,
+    @JsonProperty("tag") val tag: String,
+    @JsonProperty("id") val id: Int,
+    @JsonProperty("parent") val parent: CyclicPet
 )
 
 data class NewPet(

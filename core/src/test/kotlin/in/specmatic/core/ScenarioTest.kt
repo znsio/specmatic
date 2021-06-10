@@ -447,9 +447,14 @@ And response-body (number)
 
         val feature = parseGherkinStringToFeature(gherkin, "original.spec").copy(testVariables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl"))
 
+        val mockCache = mockk<ContractCache>()
+        every {
+            mockCache.lookup(any())
+        }.returns(mapOf("token" to "20"))
+
         val testScenarios = feature.scenarios.map { scenario ->
             val updatedReferences = scenario.references.mapValues {
-                it.value.copy(valuesCache = mapOf("token" to "20"))
+                it.value.copy(contractCache = mockCache)
             }
 
             scenario.copy(references = updatedReferences).generateTestScenarios(variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl"))

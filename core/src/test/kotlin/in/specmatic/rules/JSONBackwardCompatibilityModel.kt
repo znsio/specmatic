@@ -144,26 +144,6 @@ Feature: User API
         newContract notBackwardCompatibleWith oldContract
     }
 
-    @Disabled
-    @Test
-    fun `adding a key to the response body is backward compatible`() {
-        val newContract = """
-Feature: User API
-  Scenario: Add user
-    Given json User
-    | name | (string) |
-    And json Status
-    | status | (string) |
-    | data   | (string) |
-    When POST /user
-    And request-body (User)
-    Then status 200
-    And response-body (Status)
-""".trimIndent()
-
-        newContract backwardCompatibleWith oldContract
-    }
-
     @Test
     fun `adding an optional key to the response body is backward compatible`() {
         val newContract = """

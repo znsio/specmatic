@@ -4,7 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.QontractFilePath
+import `in`.specmatic.core.ContractCache
+import `in`.specmatic.core.ContractFileWithExports
 import `in`.specmatic.core.References
 
 internal class RowTest {
@@ -22,7 +23,7 @@ internal class RowTest {
 
     @Test
     fun `returns the value returned from another contract`() {
-        val references = References("user", QontractFilePath("user.$CONTRACT_EXTENSION"), valuesCache = mapOf("name" to "Jane"))
+        val references = References("user", ContractFileWithExports("user.$CONTRACT_EXTENSION"), valuesCache = mapOf("name" to "Jane"), contractCache = ContractCache())
         val row = Row(listOf("name"), listOf("(${DEREFERENCE_PREFIX}user.name)"), references = mapOf("user" to references))
         assertThat(row.getField("name")).isEqualTo("Jane")
     }

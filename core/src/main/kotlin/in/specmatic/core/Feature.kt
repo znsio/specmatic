@@ -430,15 +430,18 @@ fun values(
     val valueStoreName = parts[0]
     val qontractFileName = parts[2]
 
-    val qontractFilePath = QontractFilePath(qontractFileName, filePath)
+    val qontractFilePath = ContractFileWithExports(qontractFileName, filePath)
 
     return backgroundReferences.plus(scenarioReferences).plus(
         valueStoreName to References(
             valueStoreName,
-            qontractFilePath
+            qontractFilePath,
+            contractCache = contractCache
         )
     )
 }
+
+private val contractCache = ContractCache()
 
 fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
     val parts = breakIntoPartsMaxLength(step.rest, 3)

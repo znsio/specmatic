@@ -11,7 +11,6 @@ import `in`.specmatic.mock.mockFromJSON
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.fail
-import java.lang.ref.Reference
 
 class FeatureKtTest {
     @Test
@@ -447,8 +446,8 @@ class FeatureKtTest {
             assertThat(it.references).containsKey("data")
             assertThat(it.references["data"]).isInstanceOf(References::class.java)
             assertThat(it.references["data"]?.valueName).isEqualTo("data")
-            assertThat(it.references["data"]?.qontractFilePath?.path).isEqualTo("data.$CONTRACT_EXTENSION")
-            assertThat(it.references["data"]?.qontractFilePath?.relativeTo).isEqualTo("original.$CONTRACT_EXTENSION")
+            assertThat(it.references["data"]?.contractFile?.path).isEqualTo("data.$CONTRACT_EXTENSION")
+            assertThat(it.references["data"]?.contractFile?.relativeTo).isEqualTo("original.$CONTRACT_EXTENSION")
         }
     }
 

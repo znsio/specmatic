@@ -5,12 +5,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.ContractException
-import java.io.File
 
-internal class QontractFilePathTest {
+internal class ContractFilePathTest {
     @Test
     fun `reads a qontract file and instantiates a feature file from it`() {
-        val actualFeature = QontractFilePath(pathTo("random.$CONTRACT_EXTENSION")).readFeatureForValue("")
+        val actualFeature = ContractFileWithExports(pathTo("random.$CONTRACT_EXTENSION")).readFeatureForValue("")
         val expectedFeature = parseGherkinStringToFeature(readTextResource("random.$CONTRACT_EXTENSION"))
         assertThat(actualFeature).isEqualTo(expectedFeature)
     }
@@ -18,7 +17,7 @@ internal class QontractFilePathTest {
     @Test
     fun `throws an exception when the given path does not exist`() {
         assertThatThrownBy {
-            QontractFilePath("doesnotexist.$CONTRACT_EXTENSION").readFeatureForValue("")
+            ContractFileWithExports("doesnotexist.$CONTRACT_EXTENSION").readFeatureForValue("")
         }.isInstanceOf(ContractException::class.java)
     }
 

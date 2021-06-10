@@ -7,53 +7,104 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.test.HttpClient
+import io.mockk.verify
 
 internal class ReferencesTest {
+    private val absoluteContractPath = "/contract.spec"
+
     @Test
     fun `returns cached value`() {
-        val references = References("cookie", QontractFilePath(""), valuesCache = mapOf("cookie" to "abc123"))
+        val mockContractFile = mockContractFile()
+
+        val references = References("cookie", mockContractFile, contractCache = contractCache(mapOf("cookie" to "abc123")))
         assertThat(references.lookup("cookie")).isEqualTo("abc123")
     }
 
-    @Test
-    fun `executes qontract as test to fetch values if the cache is empty`() {
-        val results = Results(listOf(Result.Success(mapOf("name" to "Jack")), Result.Failure("Failed")))
-        val baseURL = "http://service"
+    private fun contractCache(values: Map<String, String>) = ContractCache(mutableMapOf(absoluteContractPath to values))
 
-        val feature = mockFeature(baseURL, results)
-        val qontractFile = mockQontractFilePath(feature)
+    private fun mockContractFile(): ContractFileWithExports {
+        val mockContractFile = mockk<ContractFileWithExports>()
 
-        val references = References("person", qontractFile, baseURLs = mapOf("person.$CONTRACT_EXTENSION" to baseURL))
+        every {
+            mockContractFile.absolutePath
+        }.returns(absoluteContractPath)
 
-        assertThatThrownBy { references.lookup("name") }.isInstanceOf(ContractException::class.java)
+        return mockContractFile
     }
 
+    private val baseURL = "http://service"
+
     @Test
-    fun `fails if the executed qontract return errors`() {
+    fun `executes qontract as test to fetch values if the cache is empty`() {
         val results = Results(listOf(Result.Success(mapOf("name" to "Jack")), Result.Success(mapOf("address" to "Baker Street"))))
-        val baseURL = "http://service"
 
-        val feature = mockFeature(baseURL, results)
-        val qontractFile = mockQontractFilePath(feature)
+        val feature = mockFeature(results)
+        val contractFileWithExports = mockContractFileWithExports(feature)
+        every {
+            contractFileWithExports.runContractAndExtractExports(any(), any(), any())
+        }.returns(mapOf("name" to "Jack", "address" to "Baker Street"))
 
-        val references = References("person", qontractFile, baseURLs = mapOf("person.$CONTRACT_EXTENSION" to baseURL))
+        val references = References("person", contractFileWithExports, baseURLs = mapOf("person.$CONTRACT_EXTENSION" to baseURL), contractCache = ContractCache())
 
         assertThat(references.lookup("name")).isEqualTo("Jack")
         assertThat(references.lookup("address")).isEqualTo("Baker Street")
     }
 
-    private fun mockQontractFilePath(mockFeature: Feature): QontractFilePath {
-        val qontractFileMock = mockk<QontractFilePath>()
+    @Test
+    fun `second feature looks up the contract cache and finds the values from the old feature`() {
+        val results = Results(listOf(Result.Success(mapOf("name" to "Jack")), Result.Success(mapOf("address" to "Baker Street"))))
+
+        val feature = mockFeature(results)
+        val contractFileWithExports = mockContractFileWithExports(feature)
+        every {
+            contractFileWithExports.runContractAndExtractExports(any(), any(), any())
+        }.returns(mapOf("name" to "Jack", "address" to "Baker Street"))
+
+        val contractCache = ContractCache()
+
+        val references1 = References("person", contractFileWithExports, baseURLs = mapOf("person.$CONTRACT_EXTENSION" to baseURL), contractCache = contractCache)
+        assertThat(references1.lookup("name")).isEqualTo("Jack")
+        assertThat(references1.lookup("address")).isEqualTo("Baker Street")
+
+        val references2 = References("person", contractFileWithExports, baseURLs = mapOf("person.$CONTRACT_EXTENSION" to baseURL), contractCache = contractCache)
+        assertThat(references2.lookup("name")).isEqualTo("Jack")
+        assertThat(references2.lookup("address")).isEqualTo("Baker Street")
+
+        verify(exactly = 1) {
+            contractFileWithExports.runContractAndExtractExports(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `fails if the executed qontract return errors`() {
+        val results = Results(listOf(Result.Success(mapOf("name" to "Jack")), Result.Failure("Failed")))
+
+        val feature = mockFeature(results)
+        val contractFileWithExports = mockContractFileWithExports(feature)
+        every {
+            contractFileWithExports.runContractAndExtractExports(any(), any(), any())
+        }.throws(ContractException("Failure"))
+
+        val references = References("person", contractFileWithExports, baseURLs = mapOf("person.$CONTRACT_EXTENSION" to baseURL), contractCache = ContractCache())
+
+        assertThatThrownBy { references.lookup("name") }.isInstanceOf(ContractException::class.java)
+    }
+
+    private fun mockContractFileWithExports(mockFeature: Feature): ContractFileWithExports {
+        val qontractFileMock = mockk<ContractFileWithExports>()
         every {
             qontractFileMock.readFeatureForValue(any())
         }.returns(mockFeature)
         every {
             qontractFileMock.path
         }.returns("person.$CONTRACT_EXTENSION")
+        every {
+            qontractFileMock.absolutePath
+        }.returns("/path/to/file")
         return qontractFileMock
     }
 
-    private fun mockFeature(baseURL: String, results: Results): Feature {
+    private fun mockFeature(results: Results): Feature {
         val mockFeature = mockk<Feature>()
         every {
             mockFeature.executeTests(match { (it as HttpClient).baseURL == baseURL }, any())
@@ -66,7 +117,19 @@ internal class ReferencesTest {
 
     @Test
     fun `throws exception if specified key is not found`() {
-        val references = References("cookie", QontractFilePath(""), valuesCache = mapOf("cookie" to "abc123"))
+        val references = References("cookie", ContractFileWithExports(""), valuesCache = mapOf("cookie" to "abc123"), contractCache = ContractCache())
         assertThatThrownBy { references.lookup("non-existent") }.isInstanceOf(ContractException::class.java)
+    }
+
+    @Test
+    fun `runs the reference test only once across all contracts`() {
+        val contractFile = ContractFileWithExports("test.spec")
+        val contractCache = ContractCache()
+        val references = References("cookie", contractFile, contractCache = contractCache)
+        contractCache.update(contractFile.absolutePath) {
+            mapOf("key" to "value")
+        }
+
+        assertThat(references.lookup("key")).isEqualTo("value")
     }
 }

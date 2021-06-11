@@ -189,6 +189,11 @@ components:
           type: string
         tag:
           type: string
+        breed:
+          type: string
+          enum:
+            - labrador
+            - retreiver
         id:
           type: integer
           format: int64

@@ -582,7 +582,7 @@ Background:
                             put("Content-Type", "application/json")
                         }
                     }
-                    val pet = Pet("scooby", "labrador", 1)
+                    val pet = Pet("scooby", "labrador", 1, "retriever")
                     return when {
                         request.path!!.matches(Regex("""\/pets\/[0-9]+""")) -> when (request.method) {
                             "GET" -> {
@@ -673,7 +673,8 @@ Background:
 data class Pet(
     @JsonProperty("name") val name: String,
     @JsonProperty("tag") val tag: String,
-    @JsonProperty("id") val id: Int
+    @JsonProperty("id") val id: Int,
+    @JsonProperty("breed") val breed: String
 )
 
 data class CyclicPet(

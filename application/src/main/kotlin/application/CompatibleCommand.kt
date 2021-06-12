@@ -141,21 +141,23 @@ internal fun compatibilityReport(results: Results, resultMessage: String): Strin
 }
 
 internal fun backwardCompatibleFile(
-    newerContractPath: String,
+    contractPath: String,
     fileOperations: FileOperations,
     git: GitCommand
 ): Outcome<Results> {
     return try {
-        val newerFeature = parseContract(fileOperations.read(newerContractPath), newerContractPath)
-        val result = getOlderFeature(newerContractPath, git)
+        information.forDebugging("Newer version of $contractPath")
+
+        val newerFeature = parseContract(information.forDebugging(fileOperations.read(contractPath)), contractPath)
+        val result = getOlderFeature(contractPath, git)
 
         result.onSuccess {
             Outcome(testBackwardCompatibility(it, newerFeature))
         }
     } catch(e: NonZeroExitError) {
-        Outcome(Results(mutableListOf(Result.Success())), "Could not find $newerContractPath at HEAD")
+        Outcome(Results(mutableListOf(Result.Success())), "Could not find $contractPath at HEAD")
     } catch(e: FileNotFoundException) {
-        Outcome(Results(mutableListOf(Result.Success())), "Could not find $newerContractPath on the file system")
+        Outcome(Results(mutableListOf(Result.Success())), "Could not find $contractPath on the file system")
     }
 }
 
@@ -184,12 +186,13 @@ internal fun parseContract(content: String, path: String): Feature {
     }
 }
 
-internal fun getOlderFeature(newerContractPath: String, git: GitCommand): Outcome<Feature> {
-    if(!git.fileIsInGitDir(newerContractPath))
+internal fun getOlderFeature(contractPath: String, git: GitCommand): Outcome<Feature> {
+    if(!git.fileIsInGitDir(contractPath))
         return Outcome(null, "Older contract file must be provided, or the file must be in a git directory")
 
-    val(contractGit, relativeContractPath) = git.relativeGitPath(newerContractPath)
-    return Outcome(parseContract(contractGit.show("HEAD", relativeContractPath), newerContractPath))
+    val(contractGit, relativeContractPath) = git.relativeGitPath(contractPath)
+    information.forDebugging("Older version of $contractPath")
+    return Outcome(parseContract(information.forDebugging(contractGit.show("HEAD", relativeContractPath)), contractPath))
 }
 
 internal data class CompatibilityOutput(val exitCode: Int, val message: String)

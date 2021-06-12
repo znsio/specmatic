@@ -2,6 +2,8 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
+import `in`.specmatic.core.git.Verbose
+import `in`.specmatic.core.git.information
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.value.Value
@@ -13,6 +15,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpEntity
@@ -37,6 +40,11 @@ Scenario: zero should return not found
   Then status 404
         """.trimIndent()
 
+        @BeforeAll
+        @JvmStatic
+        fun setup() {
+            information = Verbose
+        }
     }
 
     @Test

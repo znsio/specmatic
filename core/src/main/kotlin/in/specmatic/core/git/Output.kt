@@ -19,7 +19,7 @@ interface Output {
     fun forTheUser(e: Throwable, msg: String? = null)
     fun forTheUser(msg: String)
     fun newLine()
-    fun forDebugging(msg: String)
+    fun forDebugging(msg: String): String
     fun forDebugging(e: Throwable, msg: String? = null)
 }
 
@@ -43,7 +43,7 @@ object Info : Output {
         println()
     }
 
-    override fun forDebugging(msg: String) { }
+    override fun forDebugging(msg: String): String { return msg }
 
     override fun forDebugging(e: Throwable, msg: String?) { }
 }
@@ -70,8 +70,9 @@ object Verbose : Output {
         println()
     }
 
-    override fun forDebugging(msg: String) {
+    override fun forDebugging(msg: String): String {
         println(msg)
+        return msg
     }
 
     override fun forDebugging(e: Throwable, msg: String?) {

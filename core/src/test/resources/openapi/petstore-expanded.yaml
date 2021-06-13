@@ -196,6 +196,9 @@ components:
             - labrador
             - retriever
             - null
+        rating:
+          type: integer
+          enum: [1, 2]
         id:
           type: integer
           format: int64

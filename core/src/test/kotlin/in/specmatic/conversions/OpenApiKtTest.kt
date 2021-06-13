@@ -589,7 +589,7 @@ Background:
                             put("Content-Type", "application/json")
                         }
                     }
-                    val pet = Pet("scooby", "golden", 1, "retriever")
+                    val pet = Pet("scooby", "golden", 1, "retriever", 2)
                     return when {
                         request.path!!.matches(Regex("""\/pets\/[0-9]+""")) -> when (request.method) {
                             "GET" -> {
@@ -677,7 +677,7 @@ Background:
     }
 
     @Test
-    fun `should report errors when a value other than enum is returned`() {
+    fun `should report errors when a value other than string enum is returned`() {
         val flags = mutableMapOf<String, Int>().withDefault { 0 }
 
         val feature = parseGherkinStringToFeature(
@@ -699,7 +699,7 @@ Background:
                             put("Content-Type", "application/json")
                         }
                     }
-                    val pet = Pet("scooby", "golden", 1, "malinois")
+                    val pet = Pet("scooby", "golden", 1, "malinois", 2)
                     return when {
                         request.path == "/pets" -> {
                             when (request.method) {
@@ -752,13 +752,88 @@ Background:
             """.trimIndent()
         )
     }
+
+    @Test
+    fun `should report errors when a value other than numeric enum is returned`() {
+        val flags = mutableMapOf<String, Int>().withDefault { 0 }
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val flagKey = "${request.path} ${request.method} executed"
+                    flags[flagKey] = flags.getValue(flagKey) + 1
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    val pet = Pet("scooby", "golden", 1, "retriever", 3)
+                    return when {
+                        request.path == "/pets" -> {
+                            when (request.method) {
+                                "POST" -> {
+                                    HttpResponse(
+                                        201,
+                                        ObjectMapper().writeValueAsString(pet),
+                                        headers
+                                    )
+                                }
+                                else -> HttpResponse(400, "", headers)
+                            }
+                        }
+                        else -> HttpResponse(400, "", headers)
+                    }
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            },
+            scenarioNames = listOf("Open API - Operation Summary: create a pet. Response: pet response")
+        )
+
+        assertFalse(results.success())
+        assertThat(results.report()).isEqualTo(
+            """
+                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+                >> RESPONSE.BODY.rating
+
+                Expected (1 or 2), 
+                    Expected number: 1, actual was number: 3
+                Expected number: 2, actual was number: 3
+
+                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+                >> RESPONSE.BODY.rating
+
+                Expected (1 or 2), 
+                    Expected number: 1, actual was number: 3
+                Expected number: 2, actual was number: 3
+
+                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+                >> RESPONSE.BODY.rating
+
+                Expected (1 or 2), 
+                    Expected number: 1, actual was number: 3
+                Expected number: 2, actual was number: 3
+            """.trimIndent()
+        )
+    }
 }
 
 data class Pet(
     @JsonProperty("name") val name: String,
     @JsonProperty("tag") val tag: String,
     @JsonProperty("id") val id: Int,
-    @JsonProperty("breed") val breed: String?
+    @JsonProperty("breed") val breed: String?,
+    @JsonProperty("rating") val rating: Int
 )
 
 data class CyclicPet(

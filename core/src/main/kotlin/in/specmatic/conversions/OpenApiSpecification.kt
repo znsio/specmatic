@@ -4,7 +4,9 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.value.Value
 import io.cucumber.messages.Messages
 import io.ktor.util.reflect.*
 import io.swagger.v3.oas.models.OpenAPI
@@ -289,9 +291,12 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         val pattern = when (schema) {
             is StringSchema -> when (schema.enum) {
                 null -> StringPattern
-                else -> toEnum(schema.enum)
+                else -> toEnum(schema) { enumValue -> StringValue(enumValue.toString()) }
             }
-            is IntegerSchema -> NumberPattern
+            is IntegerSchema -> when (schema.enum) {
+                null -> NumberPattern
+                else -> toEnum(schema) { enumValue -> NumberValue(enumValue.toString().toInt()) }
+            }
             is NumberSchema -> NumberPattern
             is UUIDSchema -> StringPattern
             is DateTimeSchema -> DateTimePattern
@@ -359,12 +364,13 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         }
     }
 
-    private fun toEnum(enum: MutableList<String>) = AnyPattern(enum.map { enumValue ->
-        when (enumValue) {
-            null -> NullPattern
-            else -> ExactValuePattern(StringValue(enumValue))
-        }
-    }.toList())
+    private fun toEnum(schema: Schema<*>, toSpecmaticValue: (Any) -> Value) =
+        AnyPattern(schema.enum.map<Any, Pattern> { enumValue ->
+            when (enumValue) {
+                null -> NullPattern
+                else -> ExactValuePattern(toSpecmaticValue(enumValue))
+            }
+        }.toList())
 
     private fun toSpecmaticParamName(optional: Boolean, name: String) = when (optional) {
         true -> "${name}?"

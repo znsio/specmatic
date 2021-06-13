@@ -191,9 +191,11 @@ components:
           $ref: '#/components/schemas/Tag'
         breed:
           type: string
+          nullable: true
           enum:
             - labrador
-            - retreiver
+            - retriever
+            - null
         id:
           type: integer
           format: int64

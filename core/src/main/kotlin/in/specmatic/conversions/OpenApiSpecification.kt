@@ -4,6 +4,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.StringValue
 import io.cucumber.messages.Messages
 import io.ktor.util.reflect.*
 import io.swagger.v3.oas.models.OpenAPI
@@ -286,7 +287,10 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         patternName: String = ""
     ): Pattern {
         val pattern = when (schema) {
-            is StringSchema -> StringPattern
+            is StringSchema -> when (schema.enum) {
+                null -> StringPattern
+                else -> toEnum(schema.enum)
+            }
             is IntegerSchema -> NumberPattern
             is NumberSchema -> NumberPattern
             is UUIDSchema -> StringPattern
@@ -348,9 +352,19 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         }
         return when (schema.nullable != true) {
             true -> pattern
-            else -> AnyPattern(listOf(NullPattern, pattern))
+            else -> when (pattern) {
+                is AnyPattern -> pattern
+                else -> AnyPattern(listOf(NullPattern, pattern))
+            }
         }
     }
+
+    private fun toEnum(enum: MutableList<String>) = AnyPattern(enum.map { enumValue ->
+        when (enumValue) {
+            null -> NullPattern
+            else -> ExactValuePattern(StringValue(enumValue))
+        }
+    }.toList())
 
     private fun toSpecmaticParamName(optional: Boolean, name: String) = when (optional) {
         true -> "${name}?"

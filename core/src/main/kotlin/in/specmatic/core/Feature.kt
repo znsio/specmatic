@@ -106,6 +106,13 @@ data class Feature(
             Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
         }
 
+    fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList(), scenarioNames: List<String>): Results =
+        generateContractTestScenarios(suggestions)
+            .filter { scenarioNames.contains(it.name) }
+            .fold(Results()) { results, scenario ->
+            Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
+        }
+
     fun setServerState(serverState: Map<String, Value>) {
         this.serverState = this.serverState.plus(serverState)
     }

@@ -406,7 +406,7 @@ Background:
             val restTemplate = RestTemplate()
             restTemplate.postForObject(
                 URI.create("http://localhost:9000/pets"),
-                NewPet("scooby", "labrador"),
+                NewPet("scooby", "golden"),
                 Pet::class.java
             )
         }
@@ -446,7 +446,7 @@ Background:
             val restTemplate = RestTemplate()
             restTemplate.postForObject(
                 URI.create("http://localhost:9000/pets"),
-                NewPet("scooby", "labrador"),
+                NewPet("scooby", "golden"),
                 Pet::class.java
             )
         }
@@ -495,7 +495,7 @@ Background:
             try {
                 restTemplate.postForObject(
                     URI.create("http://localhost:9000/pets"),
-                    NewPetWithUnexpectedFields("scooby", "labrador", Integer(4)),
+                    NewPetWithUnexpectedFields("scooby", "golden", Integer(4)),
                     Pet::class.java
                 )
                 throw AssertionError("Should not allow unexpected fields")
@@ -545,7 +545,7 @@ Background:
             try {
                 restTemplate.postForObject(
                     URI.create("http://localhost:9000/pets"),
-                    NewPetWithMissingName("labrador"),
+                    NewPetWithMissingName("golden"),
                     Pet::class.java
                 )
                 throw AssertionError("Should not allow empty value on the name field which is required")
@@ -589,7 +589,7 @@ Background:
                             put("Content-Type", "application/json")
                         }
                     }
-                    val pet = Pet("scooby", "labrador", 1, "retriever")
+                    val pet = Pet("scooby", "golden", 1, "retriever")
                     return when {
                         request.path!!.matches(Regex("""\/pets\/[0-9]+""")) -> when (request.method) {
                             "GET" -> {
@@ -675,13 +675,90 @@ Background:
         assertThat(flags.size).isEqualTo(6)
         assertTrue(results.success(), results.report())
     }
+
+    @Test
+    fun `should report errors when a value other than enum is returned`() {
+        val flags = mutableMapOf<String, Int>().withDefault { 0 }
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val flagKey = "${request.path} ${request.method} executed"
+                    flags[flagKey] = flags.getValue(flagKey) + 1
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    val pet = Pet("scooby", "golden", 1, "malinois")
+                    return when {
+                        request.path == "/pets" -> {
+                            when (request.method) {
+                                "POST" -> {
+                                    HttpResponse(
+                                        201,
+                                        ObjectMapper().writeValueAsString(pet),
+                                        headers
+                                    )
+                                }
+                                else -> HttpResponse(400, "", headers)
+                            }
+                        }
+                        else -> HttpResponse(400, "", headers)
+                    }
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            },
+            scenarioNames = listOf("Open API - Operation Summary: create a pet. Response: pet response")
+        )
+
+        assertFalse(results.success())
+        assertThat(results.report()).isEqualTo(
+            """
+                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+                >> RESPONSE.BODY.breed
+
+                Expected ("labrador" or "retriever" or null), 
+                    Expected string: "labrador", actual was string: "malinois"
+                Expected string: "retriever", actual was string: "malinois"
+                Expected null, actual was string: "malinois"
+
+                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+                >> RESPONSE.BODY.breed
+
+                Expected ("labrador" or "retriever" or null), 
+                    Expected string: "labrador", actual was string: "malinois"
+                Expected string: "retriever", actual was string: "malinois"
+                Expected null, actual was string: "malinois"
+
+                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+                >> RESPONSE.BODY.breed
+
+                Expected ("labrador" or "retriever" or null), 
+                    Expected string: "labrador", actual was string: "malinois"
+                Expected string: "retriever", actual was string: "malinois"
+                Expected null, actual was string: "malinois"
+            """.trimIndent()
+        )
+    }
 }
 
 data class Pet(
     @JsonProperty("name") val name: String,
     @JsonProperty("tag") val tag: String,
     @JsonProperty("id") val id: Int,
-    @JsonProperty("breed") val breed: String
+    @JsonProperty("breed") val breed: String?
 )
 
 data class CyclicPet(

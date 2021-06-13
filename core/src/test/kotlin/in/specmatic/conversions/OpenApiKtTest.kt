@@ -26,7 +26,6 @@ import org.springframework.web.client.RestTemplate
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
 import java.net.URI
 
-
 internal class OpenApiKtTest {
     companion object {
         val openAPISpec = """

@@ -188,7 +188,7 @@ components:
         name:
           type: string
         tag:
-          type: string
+          $ref: '#/components/schemas/Tag'
         breed:
           type: string
           enum:
@@ -208,6 +208,9 @@ components:
         tag:
           type: string
           nullable: true
+
+    Tag:
+      type: string
 
     Error:
       type: object

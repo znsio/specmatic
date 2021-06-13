@@ -5,6 +5,7 @@ import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.*
 import io.cucumber.messages.Messages
+import io.ktor.util.reflect.*
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
@@ -327,13 +328,21 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 throw UnsupportedOperationException("Specmatic does not support oneOf, allOf and anyOf")
             }
             is Schema -> {
-                if (patternName.isNotEmpty() && typeStack.contains(patternName))
-                    DeferredPattern("(${patternName})")
-                else
-                    resolveReference(schema.`$ref` ?: throw ContractException("Found null \$ref property in schema ${schema.name ?: "which had no name"}").also {
+                val component = schema.`$ref`
+                    ?: throw ContractException("Found null \$ref property in schema ${schema.name ?: "which had no name"}").also {
                         information.forDebugging("Schema:")
                         information.forDebugging(schema.toString().prependIndent("  "))
-                    })
+                    }
+                val (componentName, referredSchema) = resolveReferenceToSchema(component)
+                if (patternName.isNotEmpty()
+                    && patternName == componentName
+                    && typeStack.contains(patternName)
+                    && referredSchema.instanceOf(ObjectSchema::class)
+                )
+                    DeferredPattern("(${patternName})")
+                else {
+                    resolveReference(component)
+                }
             }
             else -> throw UnsupportedOperationException("Specmatic is unable parse: $schema")
         }
@@ -349,9 +358,14 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
     }
 
     private fun resolveReference(component: String): Pattern {
+        val (componentName, referredSchema) = resolveReferenceToSchema(component)
+        return toSpecmaticPattern(referredSchema, patternName = componentName)
+    }
+
+    private fun resolveReferenceToSchema(component: String): Pair<String, Schema<Any>> {
         if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
         val componentName = component!!.removePrefix("#/components/schemas/")
-        return toSpecmaticPattern(openApi.components.schemas[componentName] as Schema<Any>, patternName = componentName)
+        return componentName to openApi.components.schemas[componentName] as Schema<Any>
     }
 
     private fun toSpecmaticPath(openApiPath: String, operation: Operation): String {

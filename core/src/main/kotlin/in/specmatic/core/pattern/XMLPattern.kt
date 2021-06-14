@@ -475,9 +475,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
                 val results =
                         these.runningFold(ConsumeResult<Pattern, Pattern>(adaptedOthers)) { consumeResult, thisOne ->
-                            val unmatched = consumeResult.remainder.dropWhile { otherOne ->
-                                val result = encompassResult(thisOne, otherOne, thisResolver, otherResolver, typeStack)
-                                result is Success
+                            val unmatched = dropOneIfMatching(consumeResult.remainder) { otherOne ->
+                                encompassResult(thisOne, otherOne, thisResolver, otherResolver, typeStack)
                             }
 
                             if (unmatched.size == consumeResult.remainder.size) {
@@ -490,37 +489,55 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                                 ) as Failure
                                 ConsumeResult(failure, unmatched)
                             } else {
-                                val provisionalError: ProvisionalError<Pattern>? =
-                                        unmatched.firstOrNull()?.let { unmatchedPattern ->
-                                            val failure = encompassResult(
-                                                    thisOne,
-                                                    unmatchedPattern,
-                                                    thisResolver,
-                                                    otherResolver,
-                                                    typeStack
-                                            ) as Failure
-                                            ProvisionalError(failure, thisOne, unmatchedPattern)
-                                        }
-
-                                ConsumeResult(Success(), unmatched, provisionalError)
+                                ConsumeResult(Success(), unmatched)
                             }
                         }
 
                 val failureResult = results.find { it.result is Failure }?.result
 
-                val provisionalFailure = lazy {
-                    if (results.isNotEmpty() && results.last().remainder.isNotEmpty()) {
-                        println(results.last())
-                        results.mapNotNull { it.provisionalError }.first().result
-                    } else {
-                        null
-                    }
-                }
-
-                failureResult ?: provisionalFailure.value ?: Success()
+                failureResult ?: provisionalFailure(results) ?: Success()
             }
             else -> mismatchResult(this, otherResolvedPattern)
         }.breadCrumb(this.pattern.name)
+    }
+
+    private fun provisionalFailure(results: List<ConsumeResult<Pattern, Pattern>>): Failure? {
+        if (results.isEmpty() || results.last().remainder.isEmpty())
+            return null
+
+        val provisionalError = results.map { it.provisionalError?.result }.filterIsInstance<Failure>().firstOrNull()
+
+        return provisionalError ?: genericProvisionalFailure(results)
+    }
+
+    private fun genericProvisionalFailure(results: List<ConsumeResult<Pattern, Pattern>>): Failure {
+        val unmatched = results.last().remainder
+
+        val nodeDescriptor = when (unmatched.size) {
+            1 -> "Node"
+            else -> "Nodes"
+        }
+
+        val names = unmatched.joinToString(", ") {
+            when (it) {
+                is XMLPattern -> it.pattern.name
+                else -> it.typeName
+            }
+        }
+
+        return Failure("$nodeDescriptor named $names were not matched")
+    }
+
+    private fun dropOneIfMatching(remainder: List<Pattern>, test: (Pattern) -> Result): List<Pattern> {
+        if(remainder.isEmpty())
+            return remainder
+
+        val first = remainder.first()
+
+        return when(test(first)) {
+            is Success -> remainder.drop(1)
+            is Failure -> remainder
+        }
     }
 
     private fun encompassResult(

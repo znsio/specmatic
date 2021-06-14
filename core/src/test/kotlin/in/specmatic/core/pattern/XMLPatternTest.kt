@@ -468,6 +468,12 @@ internal class XMLPatternTest {
             val nodeContainingString = XMLPattern("<data>(string)</data>")
             assertThat(nodeContainingAnything.encompasses(nodeContainingString, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
         }
+
+        @Test
+        fun `edge case - two nodes with the same content followed by a different third node`() {
+            val node = XMLPattern("<content><data>(string)</data><data>(string)</data><should_not_break>(string)</should_not_break></content>")
+            assertThat(node.encompasses(node, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
     }
 
     @Nested

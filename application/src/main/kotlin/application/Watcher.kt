@@ -33,6 +33,8 @@ class Watcher(private val contractPaths: List<String>) {
             when {
                 it.isFile && it.extension.lowercase() in CONTRACT_EXTENSIONS ->
                     listOf(it.absoluteFile.parentFile.path).plus(getPaths(listOf(dataDirOf(it))))
+                it.isFile && it.extension.equals("yaml", ignoreCase = true) ->
+                    listOf(it.absolutePath)
                 it.isFile && it.extension.equals("json", ignoreCase = true) ->
                     listOf(it.absoluteFile.parentFile.path)
                 it.isDirectory ->

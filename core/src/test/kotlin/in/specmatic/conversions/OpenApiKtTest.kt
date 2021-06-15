@@ -729,26 +729,17 @@ Background:
                 In scenario "Open API - Operation Summary: create a pet. Response: pet response"
                 >> RESPONSE.BODY.breed
 
-                Expected ("labrador" or "retriever" or null), 
-                    Expected string: "labrador", actual was string: "malinois"
-                Expected string: "retriever", actual was string: "malinois"
-                Expected null, actual was string: "malinois"
+                Expected ("labrador" or "retriever" or null), Actual was string: "malinois"
 
                 In scenario "Open API - Operation Summary: create a pet. Response: pet response"
                 >> RESPONSE.BODY.breed
 
-                Expected ("labrador" or "retriever" or null), 
-                    Expected string: "labrador", actual was string: "malinois"
-                Expected string: "retriever", actual was string: "malinois"
-                Expected null, actual was string: "malinois"
+                Expected ("labrador" or "retriever" or null), Actual was string: "malinois"
 
                 In scenario "Open API - Operation Summary: create a pet. Response: pet response"
                 >> RESPONSE.BODY.breed
 
-                Expected ("labrador" or "retriever" or null), 
-                    Expected string: "labrador", actual was string: "malinois"
-                Expected string: "retriever", actual was string: "malinois"
-                Expected null, actual was string: "malinois"
+                Expected ("labrador" or "retriever" or null), Actual was string: "malinois"
             """.trimIndent()
         )
     }
@@ -806,23 +797,17 @@ Background:
                 In scenario "Open API - Operation Summary: create a pet. Response: pet response"
                 >> RESPONSE.BODY.rating
 
-                Expected (1 or 2), 
-                    Expected number: 1, actual was number: 3
-                Expected number: 2, actual was number: 3
+                Expected (1 or 2), Actual was number: 3
 
                 In scenario "Open API - Operation Summary: create a pet. Response: pet response"
                 >> RESPONSE.BODY.rating
 
-                Expected (1 or 2), 
-                    Expected number: 1, actual was number: 3
-                Expected number: 2, actual was number: 3
+                Expected (1 or 2), Actual was number: 3
 
                 In scenario "Open API - Operation Summary: create a pet. Response: pet response"
                 >> RESPONSE.BODY.rating
 
-                Expected (1 or 2), 
-                    Expected number: 1, actual was number: 3
-                Expected number: 2, actual was number: 3
+                Expected (1 or 2), Actual was number: 3
             """.trimIndent()
         )
     }

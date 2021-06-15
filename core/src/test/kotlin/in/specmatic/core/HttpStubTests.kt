@@ -341,19 +341,44 @@ Scenario: JSON API to get account details with fact check
 
         HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/tech/employees?empType=contract")
+            val expectedResponse = HttpResponse(200, """[{name: "emp1", id: 1, type: "contract", rating: 3}]""")
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
+        }
+    }
+
+    @Test
+    fun `contract mock should generate error messages on enum in request and response bodies`() {
+        val contractGherkin = """
+          Feature: Contract for /number API
+            Scenario: api call
+              Given enum EmployeeType (string) values contract,permanent,trainee
+              And enum Rating (number) values 1,2,3
+              And enum Organisation (string) values hr,tech,admin
+              And pattern Employee
+              | name   | (string)       |
+              | id     | (number)       |
+              | type   | (EmployeeType) |
+              | rating | (Rating)       |
+              When GET /(organisation:Organisation)/employees/?empType=(EmployeeType)
+              Then status 200
+              And response-body (Employee*)
+""".trimIndent()
+
+        HttpStub(contractGherkin).use { mock ->
+            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/tech/employees?empType=contract")
             val expectedResponse = HttpResponse(200, """[{name: "emp1", id: 1, type: "contract", rating: 4}]""")
             try {
                 mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
+                throw AssertionError("Should not allow unexpected values in enums")
             } catch (e: Exception) {
-                assertThat(e.toString()).isEqualTo("""
+                assertThat(e.toString()).isEqualTo(
+                    """
                     in.specmatic.mock.NoMatchingScenario: In scenario "api call"
                     >> RESPONSE.BODY.[0].rating
 
-                    Expected (1 or 2 or 3), 
-                        Expected number: 1, actual was number: 4
-                    Expected number: 2, actual was number: 4
-                    Expected number: 3, actual was number: 4
-                """.trimIndent())
+                    Expected (1 or 2 or 3), Actual was number: 4
+                """.trimIndent()
+                )
             }
         }
     }

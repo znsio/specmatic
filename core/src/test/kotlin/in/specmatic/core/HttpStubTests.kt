@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.pattern.parsedValue
@@ -24,7 +25,6 @@ import org.springframework.web.client.postForEntity
 import org.w3c.dom.Node
 import java.net.URI
 import java.util.*
-
 
 class HttpStubTests {
     private val contractGherkin = """
@@ -333,7 +333,7 @@ Scenario: JSON API to get account details with fact check
               | name   | (string)       |
               | id     | (number)       |
               | type   | (EmployeeType) |
-              | rating | (Rating)       |
+              | rating | (Rating?)       |
               When GET /(organisation:Organisation)/employees/?empType=(EmployeeType)
               Then status 200
               And response-body (Employee*)
@@ -341,9 +341,27 @@ Scenario: JSON API to get account details with fact check
 
         HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/tech/employees?empType=contract")
-            val expectedResponse = HttpResponse(200, """[{name: "emp1", id: 1, type: "contract", rating: 3}]""")
+            val expectedResponse = HttpResponse(200, """[{name: "emp1", id: 1, type: "contract", rating: null}]""")
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
+    }
+
+    @Test
+    fun `contract mock should not allow nullable enum datatype`() {
+        val contractGherkin = """
+          Feature: Contract for /number API
+            Scenario: api call
+              And enum NumberType (string?) values real,imaginary
+              And pattern Number
+              | numberType | (NumberType) |
+              When GET /numbers
+              Then status 200
+""".trimIndent()
+
+        val exception = assertThrows<ContractException>({ "Should throw Contract Exception" }) {
+            HttpStub(contractGherkin)
+        }
+        assertThat(exception.message).isEqualTo("Enums NumberType type (string?) cannot be nullable. To mark the enum nullable please use it with nullable syntax. Suggested Usage: (NumberType?)")
     }
 
     @Test

@@ -407,10 +407,12 @@ fun parseEnum(step: StepInfo): Pair<String, Pattern> {
     val tokens = step.text.split(" ")
     val enumName = tokens[1]
     val enumValues = tokens[4].split(",")
+    val enumType = tokens[2]
     val exactValuePatterns = enumValues.map { enumValue ->
-        val enumPattern = parsedPattern(tokens[2]).run {
+        val enumPattern = parsedPattern(enumType).run {
             when (this) {
                 is DeferredPattern -> this.resolvePattern(Resolver())
+                is AnyPattern -> throw ContractException("Enums ${enumName} type $enumType cannot be nullable. To mark the enum nullable please use it with nullable syntax. Suggested Usage: (${enumName}?)")
                 else -> this
             }
         }

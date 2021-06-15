@@ -1,5 +1,16 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.pattern.NumberPattern
+import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.utilities.parseXML
+import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.NullValue
+import `in`.specmatic.core.value.NumberValue
+import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.mock.NoMatchingScenario
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.HttpStub
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.*
@@ -11,17 +22,6 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
 import org.w3c.dom.Node
-import `in`.specmatic.core.pattern.NumberPattern
-import `in`.specmatic.core.pattern.parsedJSON
-import `in`.specmatic.core.pattern.parsedValue
-import `in`.specmatic.core.utilities.parseXML
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.NullValue
-import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.mock.NoMatchingScenario
-import `in`.specmatic.stub.HttpStub
 import java.net.URI
 import java.util.*
 
@@ -98,8 +98,9 @@ Scenario: JSON API to get account details with fact check
 
     @TestFactory
     fun `mock should validate expectations and serve json`() = listOf(
-            queryParamJsonContract to HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10"),
-            pathParametersJsonContract to HttpRequest().updateMethod("GET").updatePath("/balance_json/10")
+        queryParamJsonContract to HttpRequest().updateMethod("GET").updatePath("/balance_json")
+            .updateQueryParam("userid", "10"),
+        pathParametersJsonContract to HttpRequest().updateMethod("GET").updatePath("/balance_json/10")
     ).map { (contractGherkinString, httpRequest) ->
         DynamicTest.dynamicTest("when url is ${httpRequest.getURL("")}") {
             val httpResponse = HttpResponse.jsonResponse("{call-mins-left: 100, sms-messages-left: 200}")
@@ -113,11 +114,13 @@ Scenario: JSON API to get account details with fact check
 
     @TestFactory
     fun `mock should validate expectations and serve xml`() = listOf(
-            queryParameterXmlContract to HttpRequest().updateMethod("GET").updatePath("/balance_xml").updateQueryParam("userid", "10"),
-            pathParametersXmlContract to HttpRequest().updateMethod("GET").updatePath("/balance_xml/10")
+        queryParameterXmlContract to HttpRequest().updateMethod("GET").updatePath("/balance_xml")
+            .updateQueryParam("userid", "10"),
+        pathParametersXmlContract to HttpRequest().updateMethod("GET").updatePath("/balance_xml/10")
     ).map { (contractGherkinString, httpRequest) ->
         DynamicTest.dynamicTest("when url is ${httpRequest.getURL("")}") {
-            val expectedResponse = HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>200</sms_messages_left></balance>")
+            val expectedResponse =
+                HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>200</sms_messages_left></balance>")
             val response = validateAndRespond(contractGherkinString, httpRequest, expectedResponse)
 
             response.body?.let {
@@ -134,16 +137,25 @@ Scenario: JSON API to get account details with fact check
     @Throws(Throwable::class)
     fun `contract mock should fail to match invalid body`() {
         HttpStub(queryParamJsonContract).use { stub ->
-            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
+            val expectedRequest =
+                HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
             val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: 100, smses-left: 200}")
-            Assertions.assertThrows(NoMatchingScenario::class.java) { stub.createStub(ScenarioStub(expectedRequest, expectedResponse)) }
+            Assertions.assertThrows(NoMatchingScenario::class.java) {
+                stub.createStub(
+                    ScenarioStub(
+                        expectedRequest,
+                        expectedResponse
+                    )
+                )
+            }
         }
     }
 
     @Test
     @Throws(Throwable::class)
     fun `contract mock should validate expectations and serve generated json`() {
-        val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
+        val expectedRequest =
+            HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: \"(number)\", sms-messages-left: 200}")
         val response = validateAndRespond(queryParamJsonContract, expectedRequest, expectedResponse)
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
@@ -155,9 +167,12 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract mock should validate and serve response headers`() {
-        val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
-        val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: \"(number)\", sms-messages-left: 200}").let { it.copy(headers = it.headers.plus("token" to "test"))}
-        val response = validateAndRespond("""
+        val expectedRequest =
+            HttpRequest().updateMethod("GET").updatePath("/balance_json").updateQueryParam("userid", "10")
+        val expectedResponse = HttpResponse.jsonResponse("{call-mins-left: \"(number)\", sms-messages-left: 200}")
+            .let { it.copy(headers = it.headers.plus("token" to "test")) }
+        val response = validateAndRespond(
+            """
                 Feature: Contract for the balance service
                   Scenario: JSON API to get the balance for an individual
                     When GET /balance_json?userid=(number)
@@ -165,7 +180,8 @@ Scenario: JSON API to get account details with fact check
                     And response-body {"call-mins-left": "(number)", "sms-messages-left": "(number)"}
                     And response-header token test
                     And response-header Content-Type application/json
-        """, expectedRequest, expectedResponse)
+        """, expectedRequest, expectedResponse
+        )
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
         assertThat(response.statusCodeValue).isEqualTo(200)
         assertThat(jsonResponse.get("call-mins-left")).isInstanceOf(Number::class.java)
@@ -176,8 +192,10 @@ Scenario: JSON API to get account details with fact check
     @Test
     @Throws(Throwable::class)
     fun `contract mock should validate expectations and serve generated xml`() {
-        val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/balance_xml").updateQueryParam("userid", "10")
-        val expectedResponse = HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>10</sms_messages_left></balance>")
+        val expectedRequest =
+            HttpRequest().updateMethod("GET").updatePath("/balance_xml").updateQueryParam("userid", "10")
+        val expectedResponse =
+            HttpResponse.xmlResponse("<balance><calls_left>100</calls_left><sms_messages_left>10</sms_messages_left></balance>")
         val response = validateAndRespond(queryParameterXmlContract, expectedRequest, expectedResponse)
 
         response.body?.let {
@@ -185,14 +203,20 @@ Scenario: JSON API to get account details with fact check
             val root: Node = xmlResponse.documentElement
             Assertions.assertEquals("balance", root.nodeName)
             Assertions.assertEquals("sms_messages_left", root.lastChild.nodeName)
-            Assertions.assertTrue(NumberPattern.matches(NumberValue(root.firstChild.lastChild.nodeValue.toInt()), Resolver()) is Result.Success)
+            Assertions.assertTrue(
+                NumberPattern.matches(
+                    NumberValue(root.firstChild.lastChild.nodeValue.toInt()),
+                    Resolver()
+                ) is Result.Success
+            )
         } ?: fail("Expected body in the response")
     }
 
     @Test
     @Throws(Throwable::class)
     fun `contract should mock server state`() {
-        val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/account_json").updateQueryParam("userid", "10")
+        val expectedRequest =
+            HttpRequest().updateMethod("GET").updatePath("/account_json").updateQueryParam("userid", "10")
         val expectedResponse = HttpResponse.jsonResponse("{\"name\": \"John Doe\"}")
         val response = validateAndRespond(contractGherkin, expectedRequest, expectedResponse)
         val jsonResponse = JSONObject(Objects.requireNonNull(response.body))
@@ -205,7 +229,8 @@ Scenario: JSON API to get account details with fact check
     fun `contract should mock multi valued arrays in request body`() {
         HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
-            val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
+            val responseBody =
+                "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
@@ -216,7 +241,8 @@ Scenario: JSON API to get account details with fact check
     fun `contract should mock multi valued arrays using pattern in request body`() {
         HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/special_locations")
-            val responseBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
+            val responseBody =
+                "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedResponse = HttpResponse.jsonResponse(responseBody)
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
@@ -226,9 +252,11 @@ Scenario: JSON API to get account details with fact check
     @Throws(Throwable::class)
     fun `contract should mock multi valued arrays using pattern in response body`() {
         HttpStub(contractGherkin).use { mock ->
-            val requestBody = "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
+            val requestBody =
+                "{\"locations\": [{\"id\": 123, \"name\": \"Mumbai\"}, {\"id\": 123, \"name\": \"Mumbai\"}]}"
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/locations").updateBody(requestBody)
-            val expectedResponse = HttpResponse.OK.let { it.copy(headers = it.headers.plus("Content-Type" to "application/json"))}
+            val expectedResponse =
+                HttpResponse.OK.let { it.copy(headers = it.headers.plus("Content-Type" to "application/json")) }
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
@@ -252,17 +280,27 @@ Scenario: JSON API to get account details with fact check
     """
         HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/locations")
-            val expectedResponse = HttpResponse(200, "{\"cities\":[{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}] }")
+            val expectedResponse =
+                HttpResponse(200, "{\"cities\":[{\"city\": \"Mumbai\"}, {\"city\": \"Bangalore\"}] }")
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }
 
     @Throws(Throwable::class)
-    private fun validateAndRespond(contractGherkinString: String, httpRequest: HttpRequest, httpResponse: HttpResponse): ResponseEntity<String> {
+    private fun validateAndRespond(
+        contractGherkinString: String,
+        httpRequest: HttpRequest,
+        httpResponse: HttpResponse
+    ): ResponseEntity<String> {
         HttpStub(contractGherkinString).use { mock ->
             mock.createStub(ScenarioStub(httpRequest, httpResponse))
             val restTemplate = RestTemplate()
-            return restTemplate.exchange(URI.create(httpRequest.getURL("http://localhost:9000")), HttpMethod.GET, null, String::class.java)
+            return restTemplate.exchange(
+                URI.create(httpRequest.getURL("http://localhost:9000")),
+                HttpMethod.GET,
+                null,
+                String::class.java
+            )
         }
     }
 
@@ -280,6 +318,43 @@ Scenario: JSON API to get account details with fact check
             val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/number").updateBody("10")
             val expectedResponse = HttpResponse(200, "10")
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
+        }
+    }
+
+    @Test
+    fun `contract mock should be able to match enum in request and response bodies`() {
+        val contractGherkin = """
+          Feature: Contract for /number API
+            Scenario: api call
+              Given enum EmployeeType (string) values contract,permanent,trainee
+              And enum Rating (number) values 1,2,3
+              And enum Organisation (string) values hr,tech,admin
+              And pattern Employee
+              | name   | (string)       |
+              | id     | (number)       |
+              | type   | (EmployeeType) |
+              | rating | (Rating)       |
+              When GET /(organisation:Organisation)/employees/?empType=(EmployeeType)
+              Then status 200
+              And response-body (Employee*)
+""".trimIndent()
+
+        HttpStub(contractGherkin).use { mock ->
+            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/tech/employees?empType=contract")
+            val expectedResponse = HttpResponse(200, """[{name: "emp1", id: 1, type: "contract", rating: 4}]""")
+            try {
+                mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
+            } catch (e: Exception) {
+                assertThat(e.toString()).isEqualTo("""
+                    in.specmatic.mock.NoMatchingScenario: In scenario "api call"
+                    >> RESPONSE.BODY.[0].rating
+
+                    Expected (1 or 2 or 3), 
+                        Expected number: 1, actual was number: 4
+                    Expected number: 2, actual was number: 4
+                    Expected number: 3, actual was number: 4
+                """.trimIndent())
+            }
         }
     }
 
@@ -357,12 +432,16 @@ Scenario: JSON API to get account details with fact check
 """.trimIndent()
 
         HttpStub(contractGherkin).use { mock ->
-            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").updateBody(JSONObjectValue(mapOf("one" to NumberValue(1), "two" to NumberValue(2))))
+            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables")
+                .updateBody(JSONObjectValue(mapOf("one" to NumberValue(1), "two" to NumberValue(2))))
             val expectedResponse = HttpResponse.OK
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
             val restTemplate = RestTemplate()
             try {
-                val response = restTemplate.postForEntity<String>(URI.create("${mock.endPoint}/variables"), """{"one": 1, "two": 2}""")
+                val response = restTemplate.postForEntity<String>(
+                    URI.create("${mock.endPoint}/variables"),
+                    """{"one": 1, "two": 2}"""
+                )
                 assertThat(response.statusCode.value()).isEqualTo(200)
             } catch (e: HttpClientErrorException) {
                 fail("Throw exception: ${e.localizedMessage}")
@@ -388,7 +467,7 @@ Scenario: JSON API to get account details with fact check
                 val response = restTemplate.getForEntity<String>(URI.create("${mock.endPoint}/variables"))
                 assertThat(response.statusCode.value()).isEqualTo(200)
                 val responseBody = parsedJSON(response.body ?: "")
-                if(responseBody !is JSONObjectValue) fail("Expected JSONObjectValue")
+                if (responseBody !is JSONObjectValue) fail("Expected JSONObjectValue")
 
                 assertThat(responseBody.jsonObject.getValue("one")).isEqualTo(NumberValue(1))
                 assertThat(responseBody.jsonObject.getValue("two")).isEqualTo(NumberValue(2))
@@ -412,15 +491,17 @@ Scenario: JSON API to get account details with fact check
 """.trimIndent()
 
         HttpStub(contractGherkin).use { mock ->
-            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").updateBody("""{"number": "10"}""")
+            val expectedRequest =
+                HttpRequest().updateMethod("POST").updatePath("/variables").updateBody("""{"number": "10"}""")
             val expectedResponse = HttpResponse(200, """{"number": "20"}""")
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
             val restTemplate = RestTemplate()
             try {
-                val response = restTemplate.postForEntity<String>(URI.create("${mock.endPoint}/variables"), """{"number": "10"}""")
+                val response =
+                    restTemplate.postForEntity<String>(URI.create("${mock.endPoint}/variables"), """{"number": "10"}""")
                 assertThat(response.statusCode.value()).isEqualTo(200)
                 val responseBody = parsedJSON(response.body ?: "")
-                if(responseBody !is JSONObjectValue) fail("Expected json object")
+                if (responseBody !is JSONObjectValue) fail("Expected json object")
 
                 assertThat(responseBody.jsonObject.getValue("number")).isEqualTo(StringValue("20"))
             } catch (e: HttpClientErrorException) {
@@ -439,7 +520,8 @@ Scenario: JSON API to get account details with fact check
 """.trimIndent()
 
         HttpStub(contractGherkin).use { mock ->
-            val expectedRequest = HttpRequest().updateMethod("POST").updatePath("/variables").copy(formFields = mapOf("Data" to "10"))
+            val expectedRequest =
+                HttpRequest().updateMethod("POST").updatePath("/variables").copy(formFields = mapOf("Data" to "10"))
 
             val expectedResponse = HttpResponse.OK
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
@@ -473,7 +555,11 @@ Scenario: JSON API to get account details with fact check
 """.trimIndent()
 
         HttpStub(contractGherkin).use { mock ->
-            val expectedRequest = HttpRequest(method = "POST", path = "/variables", body = parsedValue("""{"name": "John Doe", "age": 10}"""))
+            val expectedRequest = HttpRequest(
+                method = "POST",
+                path = "/variables",
+                body = parsedValue("""{"name": "John Doe", "age": 10}""")
+            )
 
             val expectedResponse = HttpResponse.OK
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))

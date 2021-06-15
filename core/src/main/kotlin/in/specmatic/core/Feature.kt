@@ -106,12 +106,16 @@ data class Feature(
             Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
         }
 
-    fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList(), scenarioNames: List<String>): Results =
+    fun executeTests(
+        testExecutorFn: TestExecutor,
+        suggestions: List<Scenario> = emptyList(),
+        scenarioNames: List<String>
+    ): Results =
         generateContractTestScenarios(suggestions)
             .filter { scenarioNames.contains(it.name) }
             .fold(Results()) { results, scenario ->
-            Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
-        }
+                Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
+            }
 
     fun setServerState(serverState: Map<String, Value>) {
         this.serverState = this.serverState.plus(serverState)
@@ -334,6 +338,8 @@ private fun lexScenario(
                 )
             "TYPE", "PATTERN", "JSON" ->
                 scenarioInfo.copy(patterns = scenarioInfo.patterns.plus(toPatternInfo(step, step.rowsList)))
+            "ENUM" ->
+                scenarioInfo.copy(patterns = scenarioInfo.patterns.plus(parseEnum(step)))
             "FIXTURE" ->
                 scenarioInfo.copy(fixtures = scenarioInfo.fixtures.plus(toFixtureInfo(step.rest)))
             "FORM-FIELD" ->
@@ -395,6 +401,28 @@ private fun lexScenario(
 
         scenarioInfoWithExamples(matchingScenarios.first(), backgroundScenarioInfo, examplesList, ignoreFailure)
     }
+}
+
+fun parseEnum(step: StepInfo): Pair<String, Pattern> {
+    val tokens = step.text.split(" ")
+    val enumName = tokens[1]
+    val enumValues = tokens[4].split(",")
+    val exactValuePatterns = enumValues.map { enumValue ->
+        val enumPattern = parsedPattern(tokens[2]).run {
+            when (this) {
+                is DeferredPattern -> this.resolvePattern(Resolver())
+                else -> this
+            }
+        }
+        ExactValuePattern(
+            when (enumPattern) {
+                is StringPattern -> StringValue(enumValue)
+                is NumberPattern -> NumberValue(enumValue.toInt())
+                else -> throw ContractException("Enums can only be of type String or Number")
+            }
+        )
+    }
+    return Pair("($enumName)", AnyPattern(exactValuePatterns))
 }
 
 private fun scenarioInfoWithExamples(

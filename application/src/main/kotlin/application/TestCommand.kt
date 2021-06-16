@@ -111,7 +111,7 @@ class TestCommand : Callable<Unit> {
         System.setProperty("commit", commit.toString())
 
         configFileName?.let {
-            Configuration.configFileName = it
+            Configuration.globalConfigFileName = it
         }
 
         if(kafkaPort != 0)
@@ -153,7 +153,7 @@ class TestCommand : Callable<Unit> {
     private fun loadContractPaths(): List<String> {
         return when {
             contractPaths.isEmpty() -> {
-                information.forDebugging("No contractPaths specified. Using configuration file named ${Configuration.configFileName}")
+                information.forDebugging("No contractPaths specified. Using configuration file named ${Configuration.globalConfigFileName}")
                 qontractConfig.contractTestPaths()
             }
             else -> contractPaths

@@ -100,7 +100,7 @@ class StubCommand : Callable<Unit> {
             information = Verbose
 
         configFileName?.let {
-            Configuration.configFileName = it
+            Configuration.globalConfigFileName = it
         }
 
         try {

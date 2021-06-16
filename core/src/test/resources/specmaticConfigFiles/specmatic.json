@@ -1,0 +1,37 @@
+{
+  "sources": [
+    {
+      "provider": "git",
+      "repository": "https://contracts",
+      "test": [
+        "com/petstore/1.spec"
+      ],
+      "stub": [
+        "com/petstore/payment.spec"
+      ]
+    }
+  ],
+
+  "auth": {
+    "bearer-file": "bearer.txt"
+  },
+
+  "pipeline": {
+    "provider": "azure",
+    "organization": "xnsio",
+    "project": "XNSIO",
+    "definitionId": 1
+  },
+
+  "environments": {
+    "staging": {
+      "baseurls": {
+        "auth.spec": "http://localhost:8080"
+      },
+      "variables": {
+        "username": "jackie",
+        "password": "PaSsWoRd"
+      }
+    }
+  }
+}

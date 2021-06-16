@@ -5,7 +5,7 @@ import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
-import `in`.specmatic.core.Configuration.Companion.configFileName
+import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
@@ -33,7 +33,7 @@ open class SpecmaticJUnitSupport {
         if(envName == null || envName.isBlank())
             return JSONObjectValue()
 
-        val config = loadConfigJSON(File(configFileName))
+        val config = loadConfigJSON(File(globalConfigFileName))
         val envConfig = config.findFirstChildByPath("environments.$envName").also { println("First child: $it") } ?: return JSONObjectValue()
 
         if(envConfig !is JSONObjectValue)

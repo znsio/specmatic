@@ -1,8 +1,13 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.readFile
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import java.io.File
+import kotlinx.serialization.Serializable
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
@@ -26,4 +31,49 @@ fun String.loadContract(): Feature {
         throw ContractException(invalidContractExtensionMessage(this))
 
     return parseGherkinStringToFeature(readFile(this))
+}
+
+@Serializable
+data class Auth(@SerialName("bearer-file") val bearerFile: String = "bearer.txt")
+
+enum class PipelineProvider { azure }
+
+@Serializable
+data class Pipeline(
+    val provider: PipelineProvider,
+    val organization: String,
+    val project: String,
+    val definitionId: Int
+)
+
+@Serializable
+data class Environment(
+    val baseurls: Map<String, String>? = null,
+    val variables: Map<String, String>? = null
+)
+
+enum class SourceProvider { git }
+
+@Serializable
+data class Source(
+    val provider: SourceProvider,
+    val repository: String? = null,
+    val test: List<String>? = null,
+    val stub: List<String>? = null
+)
+
+@Serializable
+data class SpecmaticConfigJson(
+    val sources: List<Source>,
+    val auth: Auth? = null,
+    val pipeline: Pipeline? = null,
+    val environments: Map<String, Environment>? = null
+)
+
+val SpecmaticJsonFormat = Json {
+    prettyPrint = true
+}
+
+fun loadSpecmaticJsonConfig(configFileName: String?): SpecmaticConfigJson {
+    return SpecmaticJsonFormat.decodeFromString(File(configFileName ?: globalConfigFileName).readText())
 }

@@ -11,7 +11,7 @@ import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import `in`.specmatic.consoleLog
 import `in`.specmatic.core.*
-import `in`.specmatic.core.Configuration.Companion.configFileName
+import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.ContractException
@@ -148,23 +148,36 @@ fun strings(list: List<Value>): List<String> {
     }
 }
 
-fun loadSources(configFilePath: String): List<ContractSource> = loadSources(File(configFilePath))
-
-fun loadSources(configFile: File): List<ContractSource> = loadSources(loadConfigJSON(configFile))
+fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticJsonConfig(configFilePath))
 
 fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
         parsedJSON(configFile.readText())
     } catch (e: Throwable) {
-        throw ContractException("Error reading the $configFileName: ${exceptionCauseMessage(e)}")
+        throw ContractException("Error reading the $globalConfigFileName: ${exceptionCauseMessage(e)}")
     }
 
     if (configJson !is JSONObjectValue)
-        throw ContractException("The contents of $configFileName must be a json object")
+        throw ContractException("The contents of $globalConfigFileName must be a json object")
 
     return configJson
 }
 
+fun loadSources(specmaticConfigJson: SpecmaticConfigJson): List<ContractSource> {
+    return specmaticConfigJson.sources.map { source ->
+        when(source.provider) {
+            SourceProvider.git -> {
+                val stubPaths = source.stub ?: emptyList()
+                val testPaths = source.test ?: emptyList()
+
+                when (source.repository) {
+                    null -> GitMonoRepo(testPaths, stubPaths)
+                    else -> GitRepo(source.repository, testPaths, stubPaths)
+                }
+            }
+        }
+    }
+}
 
 fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
     val sources = configJson.jsonObject.getOrDefault("sources", null)
@@ -188,7 +201,7 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
                     else -> GitRepo(repositoryURL, testPaths, stubPaths)
                 }
             }
-            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $configFileName")
+            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $globalConfigFileName")
         }
     }
 }
@@ -220,7 +233,7 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
 
 // Used by SpecmaticJUnitSupport users for loading contracts to stub or mock
 fun contractStubPaths(): List<ContractPathData> =
-        contractFilePathsFrom(configFileName, ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+        contractFilePathsFrom(globalConfigFileName, ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
 
 fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>

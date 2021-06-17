@@ -10,9 +10,11 @@ import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.value.Value
 import `in`.specmatic.emptyPattern
 import `in`.specmatic.shouldMatch
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Nested
 
 internal class AnyPatternTest {
     @Test
@@ -132,5 +134,30 @@ internal class AnyPatternTest {
     fun `typeName should show nullable when one of the types is null`() {
         val type = AnyPattern(listOf(NullPattern, NumberPattern))
         assertThat(type.typeName).isEqualTo("(number?)")
+    }
+
+    private fun toEnum(items: List<Value>): AnyPattern {
+        return AnyPattern(items.map { ExactValuePattern(it) })
+    }
+
+    private fun toStringEnum(vararg items: String): AnyPattern {
+        return toEnum(items.map { StringValue(it) })
+    }
+
+    @Nested
+    inner class EnumBackwardComaptibility {
+        private val enum = toStringEnum("sold", "available")
+
+        @Test
+        fun `enums with more are backward compatible than enums with less`() {
+            val enumWithMore = toStringEnum("sold", "available", "reserved")
+            assertThat(enum.encompasses(enumWithMore, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        }
+
+        @Test
+        fun `enums with less are not backward compatible than enums with more`() {
+            val enumWithLess = toStringEnum("sold")
+            assertThat(enum.encompasses(enumWithLess, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        }
     }
 }

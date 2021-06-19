@@ -407,6 +407,9 @@ private fun listOfDatatableRows(it: Step) = it.dataTable?.rows ?: mutableListOf(
 
 fun parseEnum(step: StepInfo): Pair<String, Pattern> {
     val tokens = step.text.split(" ")
+
+    if(tokens.size < 5)
+        throw ContractException("Enum syntax error in step at line ${step.raw.location.line}. Syntax should be Given(/When/Then) enum EnumName <TypeName> values choice1,choice2,choice3")
     val enumName = tokens[1]
     val enumValues = tokens[4].split(",")
     val enumType = tokens[2]

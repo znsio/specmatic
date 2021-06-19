@@ -1,7 +1,7 @@
 package `in`.specmatic.core.pattern
 
-import io.cucumber.messages.Messages
-import io.cucumber.messages.Messages.GherkinDocument.Feature.Scenario.Examples
+import io.cucumber.messages.types.Examples
+import io.cucumber.messages.types.TableRow
 import java.util.*
 
 data class Examples(val columnNames: List<String> = emptyList(), val rows: List<Row> = listOf()) {
@@ -13,14 +13,14 @@ data class Examples(val columnNames: List<String> = emptyList(), val rows: List<
 
         fun examplesFrom(examples: Examples): `in`.specmatic.core.pattern.Examples {
             val columns = getColumnNames(examples)
-            val rows = examples.tableBodyList.map { Row(columns, getValues(it)) }
+            val rows = examples.tableBody.map { Row(columns, getValues(it)) }
 
             return Examples(columns, rows)
         }
 
         private fun getColumnNames(examples: Examples) = getValues(examples.tableHeader)
 
-        private fun getValues(row: Messages.GherkinDocument.Feature.TableRow): ArrayList<String> = ArrayList(row.cellsList.map { it.value })
+        private fun getValues(row: TableRow): ArrayList<String> = ArrayList(row.cells.map { it.value })
 
     }
 

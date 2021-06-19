@@ -15,8 +15,8 @@ import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
-import io.cucumber.messages.Messages.GherkinDocument
-import io.cucumber.messages.Messages.GherkinDocument.Feature.Step
+import io.cucumber.messages.types.*
+import io.cucumber.messages.types.Examples
 import java.io.File
 import java.net.URI
 
@@ -239,7 +239,7 @@ internal fun stringOrDocString(string: String?, step: StepInfo): String {
     return trimmed.ifEmpty { step.docString }
 }
 
-private fun toPatternInfo(step: StepInfo, rowsList: List<GherkinDocument.Feature.TableRow>): Pair<String, Pattern> {
+private fun toPatternInfo(step: StepInfo, rowsList: List<TableRow>): Pair<String, Pattern> {
     val tokens = breakIntoPartsMaxLength(step.rest, 2)
 
     val patternName = withPatternDelimiters(tokens[0])
@@ -268,13 +268,13 @@ private fun toFacts(rest: String, fixtures: Map<String, Value>): Map<String, Val
 
 private fun lexScenario(
     steps: List<Step>,
-    examplesList: List<GherkinDocument.Feature.Scenario.Examples>,
-    featureTags: List<GherkinDocument.Feature.Tag>,
+    examplesList: List<Examples>,
+    featureTags: List<Tag>,
     backgroundScenarioInfo: ScenarioInfo,
     filePath: String,
     includedSpecifications: List<IncludedSpecification?>
 ): ScenarioInfo {
-    val filteredSteps = steps.map { StepInfo(it.text, it.dataTable.rowsList, it) }.filterNot { it.isEmpty }
+    val filteredSteps = steps.map { step -> StepInfo(step.text, listOfDatatableRows(step), step) }.filterNot { it.isEmpty }
 
     val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo) { scenarioInfo, step ->
         when (step.keyword) {
@@ -374,9 +374,9 @@ private fun lexScenario(
             "EXPORT" ->
                 scenarioInfo.copy(bindings = setters(step.rest, backgroundScenarioInfo.bindings, scenarioInfo.bindings))
             else -> {
-                val location = when {
-                    step.raw.hasLocation() -> " at line ${step.raw.location.line}"
-                    else -> ""
+                val location = when(step.raw.location) {
+                    null -> ""
+                    else -> " at line ${step.raw.location.line}"
                 }
 
                 throw ContractException("""Invalid syntax$location: ${step.raw.keyword.trim()} ${step.raw.text} -> keyword "${step.originalKeyword}" not recognised.""")
@@ -402,6 +402,8 @@ private fun lexScenario(
         scenarioInfoWithExamples(matchingScenarios.first(), backgroundScenarioInfo, examplesList, ignoreFailure)
     }
 }
+
+private fun listOfDatatableRows(it: Step) = it.dataTable?.rows ?: mutableListOf()
 
 fun parseEnum(step: StepInfo): Pair<String, Pattern> {
     val tokens = step.text.split(" ")
@@ -430,7 +432,7 @@ fun parseEnum(step: StepInfo): Pair<String, Pattern> {
 private fun scenarioInfoWithExamples(
     parsedScenarioInfo: ScenarioInfo,
     backgroundScenarioInfo: ScenarioInfo,
-    examplesList: List<GherkinDocument.Feature.Scenario.Examples>,
+    examplesList: List<Examples>,
     ignoreFailure: Boolean
 ) = parsedScenarioInfo.copy(
     examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)),
@@ -545,11 +547,11 @@ fun toPattern(step: StepInfo): Pattern {
 fun plusFormFields(
     formFields: Map<String, Pattern>,
     rest: String,
-    rowsList: List<GherkinDocument.Feature.TableRow>
+    rowsList: List<TableRow>
 ): Map<String, Pattern> =
     formFields.plus(when (rowsList.size) {
         0 -> toQueryParams(rest).map { (key, value) -> key to value }
-        else -> rowsList.map { row -> row.cellsList[0].value to row.cellsList[1].value }
+        else -> rowsList.map { row -> row.cells[0].value to row.cells[1].value }
     }.associate { (key, value) -> key to parsedPattern(value) }
     )
 
@@ -577,13 +579,13 @@ private val HTTP_METHODS = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD
 internal fun parseGherkinString(gherkinData: String): GherkinDocument {
     val idGenerator: IdGenerator = Incrementing()
     val parser = Parser(GherkinDocumentBuilder(idGenerator))
-    return parser.parse(gherkinData).build()
+    return parser.parse(gherkinData)
 }
 
 internal fun lex(gherkinDocument: GherkinDocument, filePath: String = ""): Pair<String, List<Scenario>> =
-    Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.childrenList, filePath))
+    Pair(gherkinDocument.feature.name, lex(gherkinDocument.feature.children, filePath))
 
-internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, filePath: String): List<Scenario> {
+internal fun lex(featureChildren: List<FeatureChild>, filePath: String): List<Scenario> {
     return scenarioInfos(featureChildren, filePath)
         .map { scenarioInfo ->
             Scenario(
@@ -603,7 +605,7 @@ internal fun lex(featureChildren: List<GherkinDocument.Feature.FeatureChild>, fi
 }
 
 fun scenarioInfos(
-    featureChildren: List<GherkinDocument.Feature.FeatureChild>,
+    featureChildren: List<FeatureChild>,
     filePath: String
 ): List<ScenarioInfo> {
     val openApiSpecification =
@@ -623,7 +625,7 @@ fun scenarioInfos(
 
         val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
             lexScenario(
-                feature.background.stepsList
+                feature.background.steps
                     .filter { !it.text.contains("openapi", true) }
                     .filter { !it.text.contains("wsdl", true) },
                 listOf(),
@@ -635,9 +637,9 @@ fun scenarioInfos(
         } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
 
         lexScenario(
-            featureChild.scenario.stepsList,
-            featureChild.scenario.examplesList,
-            featureChild.scenario.tagsList,
+            featureChild.scenario.steps,
+            featureChild.scenario.examples,
+            featureChild.scenario.tags,
             backgroundInfoCopy,
             filePath,
             includedSpecifications
@@ -652,35 +654,35 @@ fun scenarioInfos(
 }
 
 private fun toIncludedSpecification(
-    featureChildren: List<GherkinDocument.Feature.FeatureChild>,
-    selector: (List<GherkinDocument.Feature.FeatureChild>) -> Step?,
+    featureChildren: List<FeatureChild>,
+    selector: (List<FeatureChild>) -> Step?,
     creator: (String) -> IncludedSpecification
 ): IncludedSpecification? =
     selector(featureChildren)?.run { creator(text.split(" ")[1]) }
 
-private fun background(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
-    featureChildren.firstOrNull { it.valueCase.name == "BACKGROUND" }
+private fun background(featureChildren: List<FeatureChild>) =
+    featureChildren.firstOrNull { it.background != null }
 
-private fun backgroundOpenApi(featureChildren: List<GherkinDocument.Feature.FeatureChild>): Step? {
+private fun backgroundOpenApi(featureChildren: List<FeatureChild>): Step? {
     return background(featureChildren)?.let { background ->
-        background.background.stepsList.firstOrNull {
+        background.background.steps.firstOrNull {
             it.keyword.contains("Given", true)
                     && it.text.contains("openapi", true)
         }
     }
 }
 
-private fun backgroundWsdl(featureChildren: List<GherkinDocument.Feature.FeatureChild>): Step? {
+private fun backgroundWsdl(featureChildren: List<FeatureChild>): Step? {
     return background(featureChildren)?.let { background ->
-        background.background.stepsList.firstOrNull {
+        background.background.steps.firstOrNull {
             it.keyword.contains("Given", true)
                     && it.text.contains("wsdl", true)
         }
     }
 }
 
-private fun scenarios(featureChildren: List<GherkinDocument.Feature.FeatureChild>) =
-    featureChildren.filter { it.valueCase.name != "BACKGROUND" }
+private fun scenarios(featureChildren: List<FeatureChild>) =
+    featureChildren.filter { it.background == null }
 
 fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature("New Feature", listOf(stub))
 

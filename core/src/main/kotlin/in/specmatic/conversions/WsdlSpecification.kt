@@ -4,7 +4,8 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.core.wsdl.parser.WSDL
-import io.cucumber.messages.Messages
+import io.cucumber.messages.types.FeatureChild
+import io.cucumber.messages.types.Step
 import io.swagger.v3.parser.util.ClasspathHelper
 import org.apache.commons.io.FileUtils
 import java.net.URI
@@ -16,7 +17,7 @@ class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
 
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo,
-        steps: List<Messages.GherkinDocument.Feature.Step>
+        steps: List<Step>
     ): List<ScenarioInfo> {
         val openApiScenarioInfos = toScenarioInfos()
         if (openApiScenarioInfos.isNullOrEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)
@@ -77,11 +78,11 @@ class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
         return scenarioInfos(wsdlToFeatureChildren(wsdlFile), "")
     }
 
-    private fun wsdlToFeatureChildren(wsdlFile: String): List<Messages.GherkinDocument.Feature.FeatureChild> {
+    private fun wsdlToFeatureChildren(wsdlFile: String): List<FeatureChild> {
         val wsdlContent = readContentFromLocation(wsdlFile)
         val wsdl = WSDL(toXMLNode(wsdlContent!!), wsdlFile)
         val gherkin = wsdl.convertToGherkin().trim()
-        return parseGherkinString(gherkin).feature.childrenList
+        return parseGherkinString(gherkin).feature.children
     }
 
     private fun readContentFromLocation(location: String): String? {

@@ -7,7 +7,7 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import io.cucumber.messages.Messages
+import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
@@ -47,7 +47,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
 
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo,
-        steps: List<Messages.GherkinDocument.Feature.Step>
+        steps: List<Step>
     ): List<ScenarioInfo> {
         val openApiScenarioInfos = openApitoScenarioInfos()
         if (openApiScenarioInfos.isNullOrEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)

@@ -1,11 +1,11 @@
 package `in`.specmatic.core.pattern
 
-import io.cucumber.messages.Messages
 import `in`.specmatic.core.*
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.utilities.stringToPatternMap
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.*
+import io.cucumber.messages.types.TableRow
 
 fun toTabularPattern(jsonContent: String, typeAlias: String? = null): TabularPattern = toTabularPattern(stringToPatternMap(jsonContent), typeAlias)
 
@@ -218,8 +218,8 @@ internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {
     }
 }
 
-fun rowsToTabularPattern(rows: List<Messages.GherkinDocument.Feature.TableRow>, typeAlias: String? = null) =
-        toTabularPattern(rows.map { it.cellsList }.associate { (key, value) ->
+fun rowsToTabularPattern(rows: List<TableRow>, typeAlias: String? = null) =
+        toTabularPattern(rows.map { it.cells }.associate { (key, value) ->
             key.value to toJSONPattern(value.value)
         }, typeAlias)
 

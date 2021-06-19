@@ -117,8 +117,8 @@ Given pattern Id
         val value = parsedValue("""{"ids": [{"id": 12345}, {"id": 12345}]}""")
         val scenario = getScenario(gherkin)
 
-        val idsPattern = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
-        val idPattern = rowsToTabularPattern(scenario.stepsList[1].dataTable.rowsList)
+        val idsPattern = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
+        val idPattern = rowsToTabularPattern(scenario.steps[1].dataTable.rows)
 
         val resolver = Resolver(emptyMap(), false, mapOf("(Ids)" to idsPattern, "(Id)" to idPattern))
 
@@ -139,7 +139,7 @@ Given pattern Ids
         val value = parsedValue("""{"ids": [12345, 98765]}""")
         val scenario = getScenario(gherkin)
 
-        val idsPattern = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val idsPattern = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
 
         val resolver = Resolver(emptyMap(), false, mapOf("(Ids)" to idsPattern))
 
@@ -200,8 +200,8 @@ And pattern Address
 """.trim()
 
         val scenario = getScenario(gherkin)
-        val userPattern = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
-        val addressPattern = rowsToTabularPattern(scenario.stepsList[1].dataTable.rowsList)
+        val userPattern = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
+        val addressPattern = rowsToTabularPattern(scenario.steps[1].dataTable.rows)
 
         val row = Row(listOf("id", "flat"), listOf("10", "100"))
 
@@ -231,7 +231,7 @@ Given request-body
 
         val scenario = getScenario(gherkin)
 
-        val patternWithNullValue = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val patternWithNullValue = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
         val value = parsedValue("""{"nothing": null}""")
         value shouldMatch patternWithNullValue
     }
@@ -248,7 +248,7 @@ Given request-body
 
         val scenario = getScenario(gherkin)
 
-        val patternWithNullValue = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val patternWithNullValue = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
         val value = patternWithNullValue.generate(Resolver())
 
         assertTrue(value.jsonObject.getValue("nothing") is NullValue)
@@ -266,7 +266,7 @@ Given request-body
 
         val scenario = getScenario(gherkin)
 
-        val patternWithNullValue = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val patternWithNullValue = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
         val example = Row(listOf("nothing"), listOf("(null)"))
         val newPatterns = patternWithNullValue.newBasedOn(example, Resolver())
 
@@ -291,7 +291,7 @@ Given request-body
 
         val scenario = getScenario(gherkin)
 
-        val patternWithNullValue = rowsToTabularPattern(scenario.stepsList[0].dataTable.rowsList)
+        val patternWithNullValue = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
         val example = Row(listOf("nothing"), listOf("(null)"))
         assertThrows<ContractException> { patternWithNullValue.newBasedOn(example, Resolver()) }
     }
@@ -458,9 +458,9 @@ Feature: Recursive test
     }
 }
 
-internal fun getRows(gherkin: String) = getScenario(gherkin).stepsList[0].dataTable.rowsList
+internal fun getRows(gherkin: String) = getScenario(gherkin).steps[0].dataTable.rows
 
-internal fun getScenario(gherkin: String) = parseGherkinString(gherkin).feature.childrenList[0].scenario
+internal fun getScenario(gherkin: String) = parseGherkinString(gherkin).feature.children[0].scenario
 
 data class Data(
     @JsonProperty("id") val name: Int,

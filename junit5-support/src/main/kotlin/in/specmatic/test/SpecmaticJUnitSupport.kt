@@ -1,19 +1,20 @@
 package `in`.specmatic.test
 
-import org.junit.jupiter.api.DynamicTest
-import org.junit.jupiter.api.TestFactory
-import org.opentest4j.TestAbortedException
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
-import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.Examples
+import `in`.specmatic.core.pattern.Row
+import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.stub.testKafkaMessages
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.TestFactory
+import org.opentest4j.TestAbortedException
 import java.io.File
-import kotlin.system.exitProcess
 
 open class SpecmaticJUnitSupport {
     companion object {
@@ -88,12 +89,7 @@ open class SpecmaticJUnitSupport {
 
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {
-                val kafkaMessagePattern = testScenario.kafkaMessagePattern
-
-                val result = when {
-                    kafkaMessagePattern != null -> runKafkaTest(testScenario)
-                    else -> runHttpTest(timeout, testScenario)
-                }.updateScenario(testScenario)
+                val result: Result = testScenario.runTest(System.getProperty(HOST), System.getProperty(PORT), timeout)
 
                 when {
                     shouldBeIgnored(result) -> {
@@ -113,36 +109,12 @@ open class SpecmaticJUnitSupport {
         }
     }
 
-    private fun runKafkaTest(testScenario: Scenario): Result {
-        if (System.getProperty("kafkaPort") == null) {
-            println("The contract has a kafka message. Please specify the port of the Kafka instance to connect to.")
-            exitProcess(1)
-        }
-
-        val commit = "true" == System.getProperty("commit")
-
-        return testKafkaMessages(testScenario, getBootstrapKafkaServers(), commit)
-    }
-
-    private fun runHttpTest(timeout: Int, testScenario: Scenario): Result {
-        val host = System.getProperty(HOST)
-        val port = System.getProperty(PORT)
-        val protocol = System.getProperty("protocol") ?: "http"
-
-        return executeTest(protocol, host, port, timeout, testScenario)
-    }
-
-    private fun executeTest(protocol: String, host: String?, port: String?, timeout: Int, testScenario: Scenario): Result {
-        val httpClient = HttpClient("$protocol://$host:$port", timeout = timeout)
-        return executeTest(testScenario, httpClient)
-    }
-
     private fun loadTestScenarios(
         path: String,
         suggestionsPath: String,
         suggestionsData: String,
         config: TestConfig
-    ): List<Scenario> {
+    ): List<ContractTest> {
         val feature = parseGherkinStringToFeature(readFile(path), File(path).absolutePath).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
 
         val suggestions = when {
@@ -151,7 +123,7 @@ open class SpecmaticJUnitSupport {
             else -> emptyList()
         }
 
-        return feature.generateContractTestScenarios(suggestions)
+        return feature.generateContractTests(suggestions)
     }
 
     private fun suggestionsFromFile(suggestionsPath: String): List<Scenario> {

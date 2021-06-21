@@ -10,7 +10,7 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
-import `in`.specmatic.test.TestExecutor
+import `in`.specmatic.test.*
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
@@ -167,6 +167,18 @@ data class Feature(
 
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
+
+    fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> {
+        return scenarios.map {
+            try {
+                ScenarioTest(it.newBasedOn(suggestions))
+            } catch(e: Throwable) {
+                ScenarioTestGenerationFailure(it, e)
+            }
+        }.flatMap {
+            it.generateTestScenarios(testVariables, testBaseURLs)
+        }
+    }
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> =
         scenarios.map { it.newBasedOn(suggestions) }.flatMap {

@@ -17,6 +17,7 @@ const val LEGACY_CONTRACT_EXTENSION = "qontract"
 val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, LEGACY_CONTRACT_EXTENSION)
 const val DATA_DIR_SUFFIX = "_data"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
+const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
 fun invalidContractExtensionMessage(filename: String): String {
     return "The file $filename does not seem like a contract file. Valid extensions for contract files are ${CONTRACT_EXTENSIONS.joinToString(", ")}"

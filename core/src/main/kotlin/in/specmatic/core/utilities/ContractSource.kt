@@ -51,7 +51,7 @@ data class GitRepo(
                 defaultRepoDir
             }
             else -> {
-                val reposBaseDir = File(workingDirectory).resolve("repos")
+                val reposBaseDir = localRepoDir(workingDirectory)
                 println("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
                 if (!reposBaseDir.exists())
                     reposBaseDir.mkdirs()
@@ -63,6 +63,8 @@ data class GitRepo(
             ContractPathData(repoDir.path, repoDir.resolve(it).path)
         }
     }
+
+    private fun localRepoDir(workingDirectory: String): File = File(workingDirectory).resolve("repos")
 
     override fun install(workingDirectory: File) {
         val sourceDir = workingDirectory.resolve(repoName)

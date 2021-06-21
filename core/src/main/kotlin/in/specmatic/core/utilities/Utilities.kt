@@ -233,7 +233,7 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
 
 // Used by SpecmaticJUnitSupport users for loading contracts to stub or mock
 fun contractStubPaths(): List<ContractPathData> =
-        contractFilePathsFrom(globalConfigFileName, ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+        contractFilePathsFrom(globalConfigFileName, DEFAULT_WORKING_DIRECTORY) { source -> source.stubContracts }
 
 fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>

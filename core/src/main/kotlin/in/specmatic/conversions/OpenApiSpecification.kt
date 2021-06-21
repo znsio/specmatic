@@ -290,7 +290,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
     ): Pattern {
         val pattern = when (schema) {
             is StringSchema -> when (schema.enum) {
-                null -> StringPattern()
+                null -> StringPattern(minLength = schema.minLength, maxLength = schema.maxLength)
                 else -> toEnum(schema) { enumValue -> StringValue(enumValue.toString()) }
             }
             is IntegerSchema -> when (schema.enum) {

@@ -811,6 +811,74 @@ Background:
             """.trimIndent()
         )
     }
+
+    @Test
+    fun `should report errors when a string is not as per restrictions`() {
+        val flags = mutableMapOf<String, Int>().withDefault { 0 }
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent()
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val flagKey = "${request.path} ${request.method} executed"
+                    flags[flagKey] = flags.getValue(flagKey) + 1
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    val pet = Pet("small", "golden", 1, "retriever", 2)
+                    return when {
+                        request.path == "/pets" -> {
+                            when (request.method) {
+                                "POST" -> {
+                                    HttpResponse(
+                                        201,
+                                        ObjectMapper().writeValueAsString(pet),
+                                        headers
+                                    )
+                                }
+                                else -> HttpResponse(400, "", headers)
+                            }
+                        }
+                        else -> HttpResponse(400, "", headers)
+                    }
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            },
+            scenarioNames = listOf("Open API - Operation Summary: create a pet. Response: pet response")
+        )
+
+        assertFalse(results.success())
+        assertThat(results.report()).isEqualTo(
+            """
+                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+                >> RESPONSE.BODY.name
+
+                Expected string with minLength 6, actual was string: "small"
+
+                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+                >> RESPONSE.BODY.name
+
+                Expected string with minLength 6, actual was string: "small"
+
+                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+                >> RESPONSE.BODY.name
+
+                Expected string with minLength 6, actual was string: "small"
+            """.trimIndent()
+        )
+    }
 }
 
 data class Pet(

@@ -187,6 +187,8 @@ components:
       properties:
         name:
           type: string
+          minLength: 6
+          maxLength: 12
         tag:
           $ref: '#/components/schemas/Tag'
         breed:

@@ -412,6 +412,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         mapOf<String, Operation?>(
             "GET" to pathItem.get,
             "POST" to pathItem.post,
-            "DELETE" to pathItem.delete
+            "DELETE" to pathItem.delete,
+            "PUT" to pathItem.put
         ).filter { (_, value) -> value != null }.map { (key, value) -> key to value!! }.toMap()
 }

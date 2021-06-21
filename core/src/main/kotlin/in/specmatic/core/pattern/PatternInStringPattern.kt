@@ -6,7 +6,7 @@ import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 
-data class PatternInStringPattern(override val pattern: Pattern = StringPattern, override val typeAlias: String? = null): Pattern {
+data class PatternInStringPattern(override val pattern: Pattern = StringPattern(), override val typeAlias: String? = null): Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is StringValue)
             return mismatchResult(pattern, sampleData)

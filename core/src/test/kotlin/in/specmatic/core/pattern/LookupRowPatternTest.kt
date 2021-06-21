@@ -28,7 +28,7 @@ internal class LookupRowPatternTest {
 
     @Test
     fun `should encompass itself`() {
-        val lookupRowPattern = LookupRowPattern(StringPattern, "name")
+        val lookupRowPattern = LookupRowPattern(StringPattern(), "name")
         val result = lookupRowPattern.encompasses(lookupRowPattern, Resolver(), Resolver())
 
         println(resultReport(result))
@@ -38,19 +38,19 @@ internal class LookupRowPatternTest {
     @Test
     fun `should resolve deferreds that it has to lookup when testing encompassment`() {
         val lookupRowPattern = LookupRowPattern(DeferredPattern("(string)"), "name")
-        assertThat(lookupRowPattern.encompasses(StringPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(lookupRowPattern.encompasses(StringPattern(), Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should encompass enclosed pattern`() {
-        val lookupRowPattern = LookupRowPattern(StringPattern, "name")
-        assertThat(lookupRowPattern.encompasses(StringPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+        val lookupRowPattern = LookupRowPattern(StringPattern(), "name")
+        assertThat(lookupRowPattern.encompasses(StringPattern(), Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `should be encompassed by wider non lookup type`() {
-        val anyType = AnyPattern(listOf(StringPattern, NumberPattern))
-        val lookupRowType = LookupRowPattern(StringPattern, "name")
+        val anyType = AnyPattern(listOf(StringPattern(), NumberPattern))
+        val lookupRowType = LookupRowPattern(StringPattern(), "name")
         assertThat(anyType.encompasses(lookupRowType, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

@@ -124,7 +124,7 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
                     val binaryContent = if(partFile.exists()) {
                         MultiPartContent(partFile)
                     } else {
-                        MultiPartContent(StringPattern.generate(Resolver()).toStringValue())
+                        MultiPartContent(StringPattern().generate(Resolver()).toStringValue())
                     }
                     part.copy(content = binaryContent)
                 }

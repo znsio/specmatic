@@ -10,15 +10,34 @@ import `in`.specmatic.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-object StringPattern : Pattern, ScalarType {
+data class StringPattern(
+    override val typeAlias: String? = null,
+    val minLength: Int? = null,
+    val maxLength: Int? = null
+) : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        return when(sampleData) {
-            is StringValue, EmptyString -> Result.Success()
+        return when (sampleData) {
+            is StringValue, EmptyString -> {
+                if (minLength != null && sampleData.toStringValue().length < minLength) return mismatchResult(
+                    "string with minLength $minLength",
+                    sampleData
+                )
+                if (maxLength != null && sampleData.toStringValue().length > maxLength) return mismatchResult(
+                    "string with maxLength $maxLength",
+                    sampleData
+                )
+                return Result.Success()
+            }
             else -> mismatchResult("string", sampleData)
         }
     }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+    override fun encompasses(
+        otherPattern: Pattern,
+        thisResolver: Resolver,
+        otherResolver: Resolver,
+        typeStack: TypeStack
+    ): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver, typeStack)
     }
 
@@ -26,10 +45,7 @@ object StringPattern : Pattern, ScalarType {
         return JSONArrayValue(valueList)
     }
 
-    override val typeAlias: String?
-        get() = null
-
-    override fun generate(resolver: Resolver): Value = StringValue(randomString())
+    override fun generate(resolver: Resolver): Value = StringValue(randomString(minLength ?: 5))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)

@@ -86,7 +86,7 @@ internal class HttpRequestPatternTest {
     fun `a request with an optional header should result in 2 options for newBasedOn`() {
         val requests = HttpRequestPattern(method = "GET",
                 urlMatcher = toURLMatcherWithOptionalQueryParams(URI("/")),
-                headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern))).newBasedOn(Row(), Resolver())
+                headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver())
 
         assertThat(requests).hasSize(2)
 
@@ -134,7 +134,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `request with multiple parts and no optional values should result in just one test for the whole`() {
-        val parts = listOf(MultiPartContentPattern("data1", StringPattern), MultiPartContentPattern("data2", StringPattern))
+        val parts = listOf(MultiPartContentPattern("data1", StringPattern()), MultiPartContentPattern("data2", StringPattern()))
         val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = parts)
         val patterns = requestPattern.newBasedOn(Row(), Resolver())
 
@@ -145,7 +145,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `request with an optional part should result in two requests`() {
-        val part = MultiPartContentPattern("data?", StringPattern)
+        val part = MultiPartContentPattern("data?", StringPattern())
 
         val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
         val patterns = requestPattern.newBasedOn(Row(), Resolver())
@@ -172,7 +172,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `request having a part name the same as a key in a row should result in a request with a part having the specified value`() {
-        val part = MultiPartContentPattern("name", StringPattern)
+        val part = MultiPartContentPattern("name", StringPattern())
         val example = Row(listOf("name"), listOf("John Doe"))
 
         val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
@@ -186,7 +186,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `request having an optional part name the same as a key in a row should result in a request with a part having the specified value`() {
-        val part = MultiPartContentPattern("name?", StringPattern)
+        val part = MultiPartContentPattern("name?", StringPattern())
         val example = Row(listOf("name"), listOf("John Doe"))
 
         val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
@@ -200,7 +200,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `request type having an optional part name should match a request in which the part is missing`() {
-        val part = MultiPartContentPattern("name?", StringPattern)
+        val part = MultiPartContentPattern("name?", StringPattern())
 
         val requestType = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
 
@@ -269,7 +269,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `should generate a stub request pattern from an http request in which the query params are not optional`() {
-        val requestType = HttpRequestPattern(method = "GET", urlMatcher = URLMatcher(mapOf("status" to StringPattern), pathToPattern("/"), "/"))
+        val requestType = HttpRequestPattern(method = "GET", urlMatcher = URLMatcher(mapOf("status" to StringPattern()), pathToPattern("/"), "/"))
         val newRequestType = requestType.generate(HttpRequest("GET", "/", queryParams = mapOf("status" to "available")), Resolver())
 
         assertThat(newRequestType.urlMatcher?.queryPattern?.keys?.sorted()).isEqualTo(listOf("status"))

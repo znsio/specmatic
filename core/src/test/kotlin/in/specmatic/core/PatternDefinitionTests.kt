@@ -29,7 +29,7 @@ class PatternDefinitionTests {
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body.displayableValue())
-        Assertions.assertTrue(StringPattern.matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
+        Assertions.assertTrue(StringPattern().matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
     }
 
     @Test
@@ -174,7 +174,7 @@ class PatternDefinitionTests {
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body.displayableValue())
-        Assertions.assertTrue(StringPattern.matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
+        Assertions.assertTrue(StringPattern().matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
     }
 
     @Test

@@ -165,7 +165,7 @@ internal class JSONObjectPatternTest {
 
     @Test
     fun `should fail to match nulls gracefully`() {
-        NullValue shouldNotMatch toJSONObjectPattern(mapOf("name" to StringPattern))
+        NullValue shouldNotMatch toJSONObjectPattern(mapOf("name" to StringPattern()))
     }
 
     @Test
@@ -213,14 +213,14 @@ internal class JSONObjectPatternTest {
 
     @Test
     fun `it should encompass itself when ellipsis is present`() {
-        val bigger = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern))
+        val bigger = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern()))
         assertThat(bigger.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `type with ellipsis is equivalent to a type with the same keys except the ellipsis`() {
         val theOne = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern))
-        val theOther = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern))
+        val theOther = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern()))
 
         assertThat(theOne.encompasses(theOther, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(theOther.encompasses(theOne, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -236,11 +236,11 @@ internal class JSONObjectPatternTest {
 
         assertThat(combinations.size).isEqualTo(3)
 
-        val addressPatternWithStreet = toJSONObjectPattern(mapOf("number" to StringPattern, "street?" to StringPattern))
-        val addressPatternWithoutStreet = toJSONObjectPattern(mapOf("number" to StringPattern))
-        val personWithAddressWithStreet = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to addressPatternWithStreet))
-        val personWithAddressWithoutStreet = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to addressPatternWithoutStreet))
-        val personWithoutAddress = toJSONObjectPattern(mapOf("name" to StringPattern))
+        val addressPatternWithStreet = toJSONObjectPattern(mapOf("number" to StringPattern(), "street?" to StringPattern()))
+        val addressPatternWithoutStreet = toJSONObjectPattern(mapOf("number" to StringPattern()))
+        val personWithAddressWithStreet = toJSONObjectPattern(mapOf("name" to StringPattern(), "address?" to addressPatternWithStreet))
+        val personWithAddressWithoutStreet = toJSONObjectPattern(mapOf("name" to StringPattern(), "address?" to addressPatternWithoutStreet))
+        val personWithoutAddress = toJSONObjectPattern(mapOf("name" to StringPattern()))
 
         assertThat(combinations).contains(personWithAddressWithStreet)
         assertThat(combinations).contains(personWithAddressWithoutStreet)
@@ -257,13 +257,13 @@ internal class JSONObjectPatternTest {
 
         assertThat(combinations.size).isEqualTo(4)
 
-        val addressPatternWithStreet = toJSONObjectPattern(mapOf("number" to StringPattern, "street?" to StringPattern))
-        val addressPatternWithStreetSetToNull = toJSONObjectPattern(mapOf("number" to StringPattern, "street?" to NullPattern))
-        val addressPatternWithoutStreet = toJSONObjectPattern(mapOf("number" to StringPattern))
-        val personWithAddressWithStreet = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to addressPatternWithStreet))
-        val personWithAddressWithStreetSetToNull = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to addressPatternWithStreetSetToNull))
-        val personWithAddressWithoutStreet = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to addressPatternWithoutStreet))
-        val personWithoutAddress = toJSONObjectPattern(mapOf("name" to StringPattern))
+        val addressPatternWithStreet = toJSONObjectPattern(mapOf("number" to StringPattern(), "street?" to StringPattern()))
+        val addressPatternWithStreetSetToNull = toJSONObjectPattern(mapOf("number" to StringPattern(), "street?" to NullPattern))
+        val addressPatternWithoutStreet = toJSONObjectPattern(mapOf("number" to StringPattern()))
+        val personWithAddressWithStreet = toJSONObjectPattern(mapOf("name" to StringPattern(), "address?" to addressPatternWithStreet))
+        val personWithAddressWithStreetSetToNull = toJSONObjectPattern(mapOf("name" to StringPattern(), "address?" to addressPatternWithStreetSetToNull))
+        val personWithAddressWithoutStreet = toJSONObjectPattern(mapOf("name" to StringPattern(), "address?" to addressPatternWithoutStreet))
+        val personWithoutAddress = toJSONObjectPattern(mapOf("name" to StringPattern()))
 
         assertThat(combinations).contains(personWithAddressWithStreet)
         assertThat(combinations).contains(personWithAddressWithStreetSetToNull)
@@ -281,14 +281,14 @@ internal class JSONObjectPatternTest {
 
         assertThat(combinations.size).isEqualTo(5)
 
-        val addressPatternWithStreet = toJSONObjectPattern(mapOf("number" to StringPattern, "street?" to StringPattern))
-        val addressPatternWithStreetSetToNull = toJSONObjectPattern(mapOf("number" to StringPattern, "street?" to NullPattern))
-        val addressPatternWithoutStreet = toJSONObjectPattern(mapOf("number" to StringPattern))
-        val personWithAddressWithStreet = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to addressPatternWithStreet))
-        val personWithAddressWithStreetSetToNull = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to addressPatternWithStreetSetToNull))
-        val personWithAddressWithoutStreet = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to addressPatternWithoutStreet))
-        val personWithAddressSetToNull = toJSONObjectPattern(mapOf("name" to StringPattern, "address?" to NullPattern))
-        val personWithoutAddress = toJSONObjectPattern(mapOf("name" to StringPattern))
+        val addressPatternWithStreet = toJSONObjectPattern(mapOf("number" to StringPattern(), "street?" to StringPattern()))
+        val addressPatternWithStreetSetToNull = toJSONObjectPattern(mapOf("number" to StringPattern(), "street?" to NullPattern))
+        val addressPatternWithoutStreet = toJSONObjectPattern(mapOf("number" to StringPattern()))
+        val personWithAddressWithStreet = toJSONObjectPattern(mapOf("name" to StringPattern(), "address?" to addressPatternWithStreet))
+        val personWithAddressWithStreetSetToNull = toJSONObjectPattern(mapOf("name" to StringPattern(), "address?" to addressPatternWithStreetSetToNull))
+        val personWithAddressWithoutStreet = toJSONObjectPattern(mapOf("name" to StringPattern(), "address?" to addressPatternWithoutStreet))
+        val personWithAddressSetToNull = toJSONObjectPattern(mapOf("name" to StringPattern(), "address?" to NullPattern))
+        val personWithoutAddress = toJSONObjectPattern(mapOf("name" to StringPattern()))
 
         assertThat(combinations).contains(personWithAddressWithStreet)
         assertThat(combinations).contains(personWithAddressWithStreetSetToNull)

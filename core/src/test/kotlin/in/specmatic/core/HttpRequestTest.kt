@@ -70,7 +70,7 @@ internal class HttpRequestTest {
         if (body !is JSONObjectPattern) fail("Expected json object pattern")
 
         val dataPattern = body.pattern.getValue("data") as DeferredPattern
-        val nullableStringPattern = optionalPattern(StringPattern)
+        val nullableStringPattern = optionalPattern(StringPattern())
 
         assertThat(dataPattern.resolvePattern(Resolver())).isEqualTo(nullableStringPattern)
     }
@@ -83,7 +83,7 @@ internal class HttpRequestTest {
         if (body !is JSONObjectPattern) fail("Expected json object pattern")
 
         val dataPattern = body.pattern.getValue("data") as DeferredPattern
-        val listOfStringsPattern = ListPattern(StringPattern)
+        val listOfStringsPattern = ListPattern(StringPattern())
 
         assertThat(dataPattern.resolvePattern(Resolver())).isEqualTo(listOfStringsPattern)
     }
@@ -98,7 +98,7 @@ internal class HttpRequestTest {
 
         val dataPattern = body.pattern.getValue("data") as JSONArrayPattern
         val deferredPattern = dataPattern.pattern.first() as DeferredPattern
-        assertThat(deferredPattern.resolvePattern(Resolver())).isEqualTo(RestPattern(StringPattern))
+        assertThat(deferredPattern.resolvePattern(Resolver())).isEqualTo(RestPattern(StringPattern()))
     }
 
     @Test
@@ -106,7 +106,7 @@ internal class HttpRequestTest {
         val request = HttpRequest("POST", "/", emptyMap(), parsedValue("(string?)"))
         val requestPattern = request.toPattern()
         val deferredBodyPattern = requestPattern.body as DeferredPattern
-        assertThat(deferredBodyPattern.resolvePattern(Resolver())).isEqualTo(optionalPattern(StringPattern))
+        assertThat(deferredBodyPattern.resolvePattern(Resolver())).isEqualTo(optionalPattern(StringPattern()))
     }
 
     @Test

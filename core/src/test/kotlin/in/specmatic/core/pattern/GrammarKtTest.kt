@@ -24,7 +24,7 @@ internal class GrammarKtTest {
     @Test
     fun `pattern in string is parsed as such`() {
         val type = parsedPattern("(name:string)")
-        assertThat(type).isEqualTo(LookupRowPattern(StringPattern, "name"))
+        assertThat(type).isEqualTo(LookupRowPattern(StringPattern(), "name"))
     }
 
     @Test

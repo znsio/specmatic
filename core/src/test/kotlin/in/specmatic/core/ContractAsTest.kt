@@ -40,8 +40,8 @@ class ContractAsTest {
                 val requestBody = jsonObject(request.body)
                 val name = requestBody["name"]
                 val address = requestBody["address"]
-                assertTrue(StringPattern.matches(name, Resolver()) is Result.Success)
-                assertTrue(StringPattern.matches(address, Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(address, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -301,8 +301,8 @@ Expected number, actual was string: "abc"""")
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 val address = jsonBody["address"]
-                assertTrue(StringPattern.matches(name, Resolver()) is Result.Success)
-                assertTrue(StringPattern.matches(address, Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(address, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -335,8 +335,8 @@ Expected number, actual was string: "abc"""")
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
                 val address = jsonBody["address"]
-                assertTrue(StringPattern.matches(name, Resolver()) is Result.Success)
-                assertTrue(StringPattern.matches(address, Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(address, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -365,7 +365,7 @@ Expected number, actual was string: "abc"""")
                 assertEquals("/accounts", request.path)
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
-                assertTrue(StringPattern.matches(name, Resolver()) is Result.Success)
+                assertTrue(StringPattern().matches(name, Resolver()) is Result.Success)
                 val expectedLinkedIds = arrayOf(1, 2, 3)
                 val actualLinkedIds = jsonBody["linked_ids"] as JSONArrayValue
                 for (i in expectedLinkedIds.indices) {
@@ -395,7 +395,7 @@ Expected number, actual was string: "abc"""")
                 assertEquals("/accounts", request.path)
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
-                assertThat(StringPattern.matches(name, Resolver())).isInstanceOf(Result.Success::class.java)
+                assertThat(StringPattern().matches(name, Resolver())).isInstanceOf(Result.Success::class.java)
                 val expectedLinkedIds = arrayOf(1, 2, 3)
                 val actualLinkedIds = jsonBody["linked_ids"] as JSONArrayValue
                 for (i in expectedLinkedIds.indices) {

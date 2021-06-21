@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Nested
 internal class AnyPatternTest {
     @Test
     fun `should match multiple patterns`() {
-        val pattern = AnyPattern(listOf(NumberPattern, StringPattern))
+        val pattern = AnyPattern(listOf(NumberPattern, StringPattern()))
         val string = StringValue("hello")
         val number = NumberValue(10)
 
@@ -29,8 +29,8 @@ internal class AnyPatternTest {
 
     @Test
     fun `error message when a json object does not match nullable primitive such as string in the contract`() {
-        val pattern1 = AnyPattern(listOf(NullPattern, StringPattern))
-        val pattern2 = AnyPattern(listOf(DeferredPattern("(empty)"), StringPattern))
+        val pattern1 = AnyPattern(listOf(NullPattern, StringPattern()))
+        val pattern2 = AnyPattern(listOf(DeferredPattern("(empty)"), StringPattern()))
 
         val value = parsedValue("""{"firstname": "Jane", "lastname": "Doe"}""")
 
@@ -52,8 +52,8 @@ internal class AnyPatternTest {
 
     @Test
     fun `typename of a nullable type`() {
-        val pattern1 = AnyPattern(listOf(NullPattern, StringPattern))
-        val pattern2 = AnyPattern(listOf(DeferredPattern("(empty)"), StringPattern))
+        val pattern1 = AnyPattern(listOf(NullPattern, StringPattern()))
+        val pattern2 = AnyPattern(listOf(DeferredPattern("(empty)"), StringPattern()))
 
         assertThat(pattern1.typeName).isEqualTo("(string?)")
         assertThat(pattern2.typeName).isEqualTo("(string?)")
@@ -82,14 +82,14 @@ internal class AnyPatternTest {
 
     @Test
     fun `AnyPattern of null and string patterns should encompass null pattern`() {
-        assertThat(AnyPattern(listOf(NullPattern, StringPattern)).encompasses(NullPattern, Resolver(), Resolver())).isInstanceOf(
+        assertThat(AnyPattern(listOf(NullPattern, StringPattern())).encompasses(NullPattern, Resolver(), Resolver())).isInstanceOf(
             Result.Success::class.java)
     }
 
     @Test
     fun `should encompass any of the specified types`() {
         val bigger = parsedPattern("""(string?)""")
-        val smallerString = StringPattern
+        val smallerString = StringPattern()
         val smallerNull = emptyPattern()
 
         assertThat(bigger.encompasses(smallerString, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
@@ -105,7 +105,7 @@ internal class AnyPatternTest {
     @Test
     fun `should encompass another any with fewer types`() {
         val bigger = parsedPattern("""(string?)""")
-        val anyOfString = AnyPattern(listOf(StringPattern))
+        val anyOfString = AnyPattern(listOf(StringPattern()))
 
         assertThat(bigger.encompasses(anyOfString, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }

@@ -115,7 +115,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `given ancestor headers from the creators header set the pattern should skip past all headers in the value map not in the ancestors list`() {
-        val pattern = HttpHeadersPattern(mapOf("X-Required-Header" to StringPattern), mapOf("X-Required-Header" to StringPattern))
+        val pattern = HttpHeadersPattern(mapOf("X-Required-Header" to StringPattern()), mapOf("X-Required-Header" to StringPattern()))
         val headers = mapOf("X-Required-Header" to "some value", "X-Extraneous-Header" to "some other value")
 
         assertThat(pattern.matches(headers, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -123,7 +123,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `should match if optional headers are present`() {
-        val pattern = HttpHeadersPattern(mapOf("X-Optional-Header?" to StringPattern))
+        val pattern = HttpHeadersPattern(mapOf("X-Optional-Header?" to StringPattern()))
         val headers = mapOf("X-Optional-Header?" to "some value")
 
         assertThat(pattern.matches(headers, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -131,7 +131,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `should match if optional headers are absent`() {
-        val pattern = HttpHeadersPattern(mapOf("X-Optional-Header?" to StringPattern))
+        val pattern = HttpHeadersPattern(mapOf("X-Optional-Header?" to StringPattern()))
         val headers = emptyMap<String, String>()
 
         assertThat(pattern.matches(headers, Resolver())).isInstanceOf(Result.Success::class.java)
@@ -139,7 +139,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `an optional header should result in 2 new header patterns for newBasedOn`() {
-        val pattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern))
+        val pattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))
         val list = pattern.newBasedOn(Row(), Resolver())
 
         assertThat(list).hasSize(2)
@@ -156,29 +156,29 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `it should encompass itself`() {
-        val headersType = HttpHeadersPattern(mapOf("X-Required" to StringPattern))
+        val headersType = HttpHeadersPattern(mapOf("X-Required" to StringPattern()))
         assertThat(headersType.encompasses(headersType, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `a header pattern with required headers should encompass one with extra headers`() {
-        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern))
-        val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Extra" to StringPattern))
+        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern()))
+        val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern(), "X-Extra" to StringPattern()))
         assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `a header pattern with an optional header should match one without that header`() {
-        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional?" to NumberPattern))
-        val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern))
+        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern(), "X-Optional?" to NumberPattern))
+        val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern()))
         val result = bigger.encompasses(smaller, Resolver(), Resolver())
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `a header pattern with an optional header should match one with that header if present`() {
-        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional?" to NumberPattern))
-        val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern, "X-Optional" to StringPattern))
+        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern(), "X-Optional?" to NumberPattern))
+        val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern(), "X-Optional" to StringPattern()))
         val result = bigger.encompasses(smaller, Resolver(), Resolver())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
     }

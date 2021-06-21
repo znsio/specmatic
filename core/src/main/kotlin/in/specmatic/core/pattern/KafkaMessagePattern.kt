@@ -9,7 +9,7 @@ import `in`.specmatic.core.value.StringValue
 
 const val KAFKA_MESSAGE_BREADCRUMB = "KAFKA-MESSAGE"
 
-data class KafkaMessagePattern(val topic: String = "", val key: Pattern = EmptyStringPattern, val value: Pattern = StringPattern) {
+data class KafkaMessagePattern(val topic: String = "", val key: Pattern = EmptyStringPattern, val value: Pattern = StringPattern()) {
     fun matches(message: KafkaMessage, resolver: Resolver): Result = attempt(KAFKA_MESSAGE_BREADCRUMB) {
         try {
             matchTopics(message).ifSuccess {

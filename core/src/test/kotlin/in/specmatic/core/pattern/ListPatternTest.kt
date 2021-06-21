@@ -22,7 +22,7 @@ internal class ListPatternTest {
 
     @Test
     fun `should fail to match nulls gracefully`() {
-        NullValue shouldNotMatch ListPattern(StringPattern)
+        NullValue shouldNotMatch ListPattern(StringPattern())
     }
 
     @Test

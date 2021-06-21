@@ -49,9 +49,9 @@ Feature: Unit test
             val name = root.childNodes.item(0).childNodes.item(0).nodeValue
             val address = root.childNodes.item(1).childNodes.item(0).nodeValue
             val age = root.childNodes.item(2).childNodes.item(0).nodeValue
-            Assertions.assertTrue(StringPattern.matches(StringValue(type), Resolver()) is Result.Success)
-            Assertions.assertTrue(StringPattern.matches(StringValue(name), Resolver()) is Result.Success)
-            Assertions.assertTrue(StringPattern.matches(StringValue(address), Resolver()) is Result.Success)
+            Assertions.assertTrue(StringPattern().matches(StringValue(type), Resolver()) is Result.Success)
+            Assertions.assertTrue(StringPattern().matches(StringValue(name), Resolver()) is Result.Success)
+            Assertions.assertTrue(StringPattern().matches(StringValue(address), Resolver()) is Result.Success)
             Assertions.assertTrue(NumberPattern.matches(NumberValue(age.toInt()), Resolver()) is Result.Success)
         }
         catch(e: ContractException) {

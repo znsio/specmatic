@@ -33,7 +33,7 @@ data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
         return JSONArrayValue(valueList)
     }
 
-    override fun type(): Pattern = StringPattern
+    override fun type(): Pattern = StringPattern()
 
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
             primitiveTypeDeclarationWithKey(key, types, exampleDeclarations, displayableType(), string)

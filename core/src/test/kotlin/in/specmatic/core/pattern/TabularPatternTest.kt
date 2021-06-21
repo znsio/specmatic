@@ -375,21 +375,21 @@ Feature: Recursive test
 
     @Test
     fun `should fail to match nulls gracefully`() {
-        NullValue shouldNotMatch toTabularPattern(mapOf("name" to StringPattern))
+        NullValue shouldNotMatch toTabularPattern(mapOf("name" to StringPattern()))
     }
 
     @Test
     fun `structure with fewer keys encompasses one with same keys plus more`() {
-        val smaller = toTabularPattern(mapOf("key1" to StringPattern, "key2" to StringPattern))
-        val bigger = toTabularPattern(mapOf("key1" to StringPattern))
+        val smaller = toTabularPattern(mapOf("key1" to StringPattern(), "key2" to StringPattern()))
+        val bigger = toTabularPattern(mapOf("key1" to StringPattern()))
 
         assertThat(bigger.encompasses(smaller, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `structure does not encompass one with missing keys`() {
-        val smaller = toTabularPattern(mapOf("key1" to StringPattern, "key2" to StringPattern))
-        val bigger = toTabularPattern(mapOf("key1" to StringPattern))
+        val smaller = toTabularPattern(mapOf("key1" to StringPattern(), "key2" to StringPattern()))
+        val bigger = toTabularPattern(mapOf("key1" to StringPattern()))
 
         assertThat(smaller.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
@@ -444,14 +444,14 @@ Feature: Recursive test
 
     @Test
     fun `it should encompass itself when ellipsis is present`() {
-        val bigger = toTabularPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern))
+        val bigger = toTabularPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern()))
         assertThat(bigger.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `type with ellipsis is equivalent to a type with the same keys except the ellipsis`() {
         val theOne = toTabularPattern(mapOf<String, Pattern>("data" to NumberPattern))
-        val theOther = toTabularPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern))
+        val theOther = toTabularPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern()))
 
         assertThat(theOne.encompasses(theOther, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(theOther.encompasses(theOne, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)

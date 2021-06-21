@@ -14,7 +14,7 @@ internal class StringValueTest {
     fun `should generate pattern matching an empty string from pattern with question suffix`() {
         val pattern = DeferredPattern("(string?)").resolvePattern(Resolver())
 
-        val constructedPattern = optionalPattern(StringPattern)
+        val constructedPattern = optionalPattern(StringPattern())
 
         assertThat(pattern.encompasses(constructedPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
 

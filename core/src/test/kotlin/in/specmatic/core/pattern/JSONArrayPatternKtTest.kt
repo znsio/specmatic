@@ -23,7 +23,7 @@ internal class JSONArrayPatternKtTest {
     @Nested
     @DisplayName("Given [optional, required]")
     inner class FirstCompulsorySecondRequired {
-        private val combinations = allOrNothingListCombinations(listOf(listOf(StringPattern, null), listOf(NumberPattern)))
+        private val combinations = allOrNothingListCombinations(listOf(listOf(StringPattern(), null), listOf(NumberPattern)))
 
         @Test
         fun `two results should be generated`() {
@@ -37,14 +37,14 @@ internal class JSONArrayPatternKtTest {
 
         @Test
         fun `the other result should have both types with order preserved`() {
-            assertThat(combinations).contains(listOf(StringPattern, NumberPattern))
+            assertThat(combinations).contains(listOf(StringPattern(), NumberPattern))
         }
     }
 
     @Nested
     @DisplayName("Given [optional, required, optional, required]")
     inner class OneCompulsoryAndOneRequired {
-        private val combinations = allOrNothingListCombinations(listOf(listOf(StringPattern, null), listOf(NumberPattern), listOf(BooleanPattern, null), listOf(DateTimePattern)))
+        private val combinations = allOrNothingListCombinations(listOf(listOf(StringPattern(), null), listOf(NumberPattern), listOf(BooleanPattern, null), listOf(DateTimePattern)))
 
         @Test
         fun `two results should be generated`() {
@@ -58,7 +58,7 @@ internal class JSONArrayPatternKtTest {
 
         @Test
         fun `the other result should have all the types with order preserved`() {
-            assertThat(combinations).contains(listOf(StringPattern, NumberPattern, BooleanPattern, DateTimePattern))
+            assertThat(combinations).contains(listOf(StringPattern(), NumberPattern, BooleanPattern, DateTimePattern))
         }
     }
 }

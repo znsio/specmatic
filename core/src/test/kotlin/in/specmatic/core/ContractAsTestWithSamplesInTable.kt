@@ -133,7 +133,7 @@ Feature: Contract for /balance API
                 val name = requestJSON["name"] as StringValue
                 val city = (requestJSON["address"] as JSONObjectValue).jsonObject["city"] as StringValue
                 Assertions.assertEquals("POST", request.method)
-                Assertions.assertTrue(StringPattern.matches(city, Resolver()) is Result.Success)
+                Assertions.assertTrue(StringPattern().matches(city, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")

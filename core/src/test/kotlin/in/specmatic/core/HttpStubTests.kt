@@ -324,7 +324,7 @@ Scenario: JSON API to get account details with fact check
     @Test
     fun `contract mock should be able to match enum in request and response bodies`() {
         val contractGherkin = """
-          Feature: Contract for /number API
+          Feature: Contract for employees API
             Scenario: api call
               Given enum EmployeeType (string) values contract,permanent,trainee
               And enum Rating (number) values 1,2,3
@@ -342,6 +342,26 @@ Scenario: JSON API to get account details with fact check
         HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/tech/employees?empType=contract")
             val expectedResponse = HttpResponse(200, """[{name: "emp1", id: 1, type: "contract", rating: null}]""")
+            mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
+        }
+    }
+
+    @Test
+    fun `contract mock should be able to match strings with restrictions`() {
+        val contractGherkin = """
+          Feature: Contract for /employees API
+            Scenario: api call
+              Given type EmployeeName (string) minLength 6 maxLength 12
+              And type Employee
+              | name   | (EmployeeName) |
+              When GET /employees
+              Then status 200
+              And response-body (Employee*)
+""".trimIndent()
+
+        HttpStub(contractGherkin).use { mock ->
+            val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/employees")
+            val expectedResponse = HttpResponse(200, """[{name: "123123123"}]""")
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }

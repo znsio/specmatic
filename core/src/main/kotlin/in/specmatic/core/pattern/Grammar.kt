@@ -14,23 +14,25 @@ internal fun withoutOptionality(key: String): String {
         else -> key
     }
 }
-internal fun isOptional(key: String): Boolean = key.endsWith(DEFAULT_OPTIONAL_SUFFIX) || key.endsWith(XML_ATTR_OPTIONAL_SUFFIX)
+
+internal fun isOptional(key: String): Boolean =
+    key.endsWith(DEFAULT_OPTIONAL_SUFFIX) || key.endsWith(XML_ATTR_OPTIONAL_SUFFIX)
 
 internal fun isMissingKey(jsonObject: Map<String, Any?>, key: String) =
-        when {
-            isOptional(key) -> false
-            else -> key !in jsonObject && "$key?" !in jsonObject && "$key:" !in jsonObject
-        }
+    when {
+        isOptional(key) -> false
+        else -> key !in jsonObject && "$key?" !in jsonObject && "$key:" !in jsonObject
+    }
 
 internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
-        when {
-            isOptional(key) -> withoutOptionality(key) in jsonObject
-            else -> key in jsonObject
-        }
+    when {
+        isOptional(key) -> withoutOptionality(key) in jsonObject
+        else -> key in jsonObject
+    }
 
 internal val builtInPatterns = mapOf(
     "(number)" to NumberPattern,
-    "(string)" to StringPattern,
+    "(string)" to StringPattern(),
     "(boolean)" to BooleanPattern,
     "(null)" to NullPattern,
     "(empty)" to EmptyStringPattern,
@@ -39,10 +41,11 @@ internal val builtInPatterns = mapOf(
     "(url-http)" to URLPattern(URLScheme.HTTP),
     "(url-https)" to URLPattern(URLScheme.HTTPS),
     "(url-path)" to URLPattern(URLScheme.PATH),
-    "(anything)" to AnythingPattern)
+    "(anything)" to AnythingPattern
+)
 
 fun isBuiltInPattern(pattern: Any): Boolean =
-    when(pattern) {
+    when (pattern) {
         is String -> when {
             pattern in builtInPatterns -> true
             isPatternToken(pattern) -> when {
@@ -57,61 +60,81 @@ fun isBuiltInPattern(pattern: Any): Boolean =
 fun isDictionaryPattern(pattern: String): Boolean {
     val pieces = withoutPatternDelimiters(pattern).trim().split("\\s+".toRegex())
 
-    return when(pieces[0]) {
+    return when (pieces[0]) {
         "dictionary" -> pieces.size == 3
         else -> false
     }
 }
 
+fun isStringPatternWithRestrictions(patternValue: String): Boolean {
+    val tokens = patternValue.split(" ")
+    return tokens[0] == "(string)" && listOf("minLength", "maxLength").any { it in tokens }
+}
+
 fun isPatternToken(patternValue: Any?) =
-    when(patternValue) {
+    when (patternValue) {
         is String -> patternValue.startsWith("(") && patternValue.endsWith(")")
         is StringValue -> patternValue.string.startsWith("(") && patternValue.string.endsWith(")")
         else -> false
     }
 
 internal fun getBuiltInPattern(patternString: String): Pattern =
-        when {
-            isPatternToken(patternString) -> builtInPatterns.getOrElse(patternString) {
-                when {
-                    isDictionaryPattern(patternString) ->  {
-                        val pieces = breakIntoParts(withoutPatternDelimiters(patternString), "\\s+".toRegex(), 3, "Dictionary type must have 3 parts: type name, key and value")
+    when {
+        isPatternToken(patternString) -> builtInPatterns.getOrElse(patternString) {
+            when {
+                isDictionaryPattern(patternString) -> {
+                    val pieces = breakIntoParts(
+                        withoutPatternDelimiters(patternString),
+                        "\\s+".toRegex(),
+                        3,
+                        "Dictionary type must have 3 parts: type name, key and value"
+                    )
 
-                        val patterns = pieces.slice(1..2).map { parsedPattern(withPatternDelimiters(it.trim())) }
-                        DictionaryPattern(patterns[0], patterns[1])
-                    }
-                    isLookupRowPattern(patternString) -> {
-                        val patternParts = breakIntoParts(withoutPatternDelimiters(patternString), ":", 2, "Type with key must have the key before the colon and the type specification after it. Got $patternString")
-
-                        val (key, patternSpec) = patternParts
-                        val pattern = parsedPattern(withPatternDelimiters(patternSpec))
-
-                        LookupRowPattern(pattern, key)
-                    }
-                    patternString.contains(" in ") -> {
-                        val patternParts = breakIntoParts(withoutPatternDelimiters(patternString), " in ", 2, "$patternString seems incomplete")
-
-                        if(patternParts[1] != "string")
-                            throw ContractException("""Types can only be declared to be "in string", you probably meant (${patternParts[1]} in string)""")
-
-                        PatternInStringPattern(parsedPattern(withPatternDelimiters(patternParts[0])))
-                    }
-                    else -> throw ContractException("Type $patternString does not exist.")
+                    val patterns = pieces.slice(1..2).map { parsedPattern(withPatternDelimiters(it.trim())) }
+                    DictionaryPattern(patterns[0], patterns[1])
                 }
+                isLookupRowPattern(patternString) -> {
+                    val patternParts = breakIntoParts(
+                        withoutPatternDelimiters(patternString),
+                        ":",
+                        2,
+                        "Type with key must have the key before the colon and the type specification after it. Got $patternString"
+                    )
+
+                    val (key, patternSpec) = patternParts
+                    val pattern = parsedPattern(withPatternDelimiters(patternSpec))
+
+                    LookupRowPattern(pattern, key)
+                }
+                patternString.contains(" in ") -> {
+                    val patternParts = breakIntoParts(
+                        withoutPatternDelimiters(patternString),
+                        " in ",
+                        2,
+                        "$patternString seems incomplete"
+                    )
+
+                    if (patternParts[1] != "string")
+                        throw ContractException("""Types can only be declared to be "in string", you probably meant (${patternParts[1]} in string)""")
+
+                    PatternInStringPattern(parsedPattern(withPatternDelimiters(patternParts[0])))
+                }
+                else -> throw ContractException("Type $patternString does not exist.")
             }
-            else -> throw ContractException("Type $patternString is not a type specifier.")
         }
+        else -> throw ContractException("Type $patternString is not a type specifier.")
+    }
 
 fun breakIntoParts(text: String, delimiter: Regex, count: Int, errorMessage: String): List<String> {
     val pieces = text.split(delimiter)
-    if(pieces.size != count)
+    if (pieces.size != count)
         throw ContractException(errorMessage)
     return pieces
 }
 
 fun breakIntoParts(text: String, delimiter: String, count: Int, errorMessage: String): List<String> {
     val pieces = text.split(delimiter)
-    if(pieces.size != count)
+    if (pieces.size != count)
         throw ContractException(errorMessage)
     return pieces
 }
@@ -125,13 +148,13 @@ fun withoutListToken(patternValue: Any): String {
 }
 
 fun isRepeatingPattern(patternValue: Any?): Boolean =
-        patternValue != null && isPatternToken(patternValue) && (patternValue as String).endsWith("*)")
+    patternValue != null && isPatternToken(patternValue) && (patternValue as String).endsWith("*)")
 
 fun stringToPattern(patternValue: String, key: String?): Pattern =
-        when {
-            isPatternToken(patternValue) -> DeferredPattern(patternValue, key)
-            else -> ExactValuePattern(StringValue(patternValue))
-        }
+    when {
+        isPatternToken(patternValue) -> DeferredPattern(patternValue, key)
+        else -> ExactValuePattern(StringValue(patternValue))
+    }
 
 fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = null): Pattern {
     return rawContent.trim().let {
@@ -140,12 +163,27 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
             it.startsWith("{") -> toJSONObjectPattern(it, typeAlias = typeAlias)
             it.startsWith("[") -> JSONArrayPattern(it, typeAlias = typeAlias)
             it.startsWith("<") -> XMLPattern(it, typeAlias = typeAlias)
+            isStringPatternWithRestrictions(it) -> {
+                val tokens = it.split(" ")
+
+                val restrictions = tokens.drop(1).zipWithNext().toMap()
+                StringPattern(
+                    typeAlias = typeAlias,
+                    minLength = restrictions["minLength"]?.toIntOrNull(),
+                    maxLength = restrictions["maxLength"]?.toIntOrNull()
+                )
+            }
             isPatternToken(it) -> when {
                 isLookupRowPattern(it) -> {
                     val (pattern, lookupKey) = parseLookupRowPattern(it)
                     LookupRowPattern(parsedPattern(pattern, typeAlias = typeAlias), lookupKey)
                 }
-                isOptionalValuePattern(it) -> AnyPattern(listOf(DeferredPattern("(empty)", key), parsedPattern(withoutNullToken(it), typeAlias = typeAlias)))
+                isOptionalValuePattern(it) -> AnyPattern(
+                    listOf(
+                        DeferredPattern("(empty)", key),
+                        parsedPattern(withoutNullToken(it), typeAlias = typeAlias)
+                    )
+                )
                 isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it), typeAlias = typeAlias))
                 isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutListToken(it), typeAlias = typeAlias))
                 it == "(number)" -> DeferredPattern(it, null)
@@ -178,8 +216,16 @@ fun isLookupRowPattern(token: String): Boolean {
 fun parsedJSON(content: String): Value {
     return content.trim().let {
         when {
-            it.startsWith("{") -> try { JSONObjectValue(jsonStringToValueMap(it)) } catch(e: Throwable) { throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}") }
-            it.startsWith("[") -> try { JSONArrayValue(jsonStringToValueArray(it)) } catch(e: Throwable) { throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}") }
+            it.startsWith("{") -> try {
+                JSONObjectValue(jsonStringToValueMap(it))
+            } catch (e: Throwable) {
+                throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}")
+            }
+            it.startsWith("[") -> try {
+                JSONArrayValue(jsonStringToValueArray(it))
+            } catch (e: Throwable) {
+                throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}")
+            }
             else -> throw ContractException("Expected json, actual $content.")
         }
     }
@@ -194,7 +240,7 @@ fun parsedValue(content: String?): Value {
                 it.startsWith("<") -> toXMLNode(it)
                 else -> StringValue(it)
             }
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             StringValue(it)
         }
     } ?: EmptyString

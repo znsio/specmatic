@@ -290,7 +290,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
     ): Pattern {
         val pattern = when (schema) {
             is StringSchema -> when (schema.enum) {
-                null -> StringPattern
+                null -> StringPattern()
                 else -> toEnum(schema) { enumValue -> StringValue(enumValue.toString()) }
             }
             is IntegerSchema -> when (schema.enum) {
@@ -298,9 +298,9 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 else -> toEnum(schema) { enumValue -> NumberValue(enumValue.toString().toInt()) }
             }
             is NumberSchema -> NumberPattern
-            is UUIDSchema -> StringPattern
+            is UUIDSchema -> StringPattern()
             is DateTimeSchema -> DateTimePattern
-            is DateSchema -> StringPattern
+            is DateSchema -> StringPattern()
             is BooleanSchema -> BooleanPattern
             is ObjectSchema -> {
                 val requiredFields = schema.required.orEmpty()

@@ -224,7 +224,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `url matcher with a non optional query param should not match empty query params`() {
-        val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern), pathToPattern("/"), "/")
+        val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern()), pathToPattern("/"), "/")
 
         val result = matcher.matches(URI("/"), emptyMap(), Resolver())
         assertThat(result.isTrue()).isFalse()
@@ -232,7 +232,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `url matcher with 2 non optional query params should not match a url with just one of the specified query params`() {
-        val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern, "string" to StringPattern), pathToPattern("/"), "/")
+        val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern(), "string" to StringPattern()), pathToPattern("/"), "/")
 
         val result = matcher.matches(URI("/"), mapOf("name" to "Archie"), Resolver())
         assertThat(result.isTrue()).isFalse()

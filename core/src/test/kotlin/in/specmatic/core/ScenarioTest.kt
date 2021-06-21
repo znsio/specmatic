@@ -105,7 +105,7 @@ internal class ScenarioTest {
 
     @Test
     fun `scenario will match a kafka mock message`() {
-        val kafkaMessagePattern = KafkaMessagePattern("customers", StringPattern, StringPattern)
+        val kafkaMessagePattern = KafkaMessagePattern("customers", StringPattern(), StringPattern())
         val scenario = Scenario(
             "Test",
             HttpRequestPattern(),
@@ -125,7 +125,7 @@ internal class ScenarioTest {
     fun `will not match a mock http request with unexpected request headers`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="GET", urlMatcher = URLMatcher(emptyMap(), emptyList(), "/"), headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern))),
+            HttpRequestPattern(method="GET", urlMatcher = URLMatcher(emptyMap(), emptyList(), "/"), headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern()))),
             HttpResponsePattern(status = 200),
             emptyMap(),
             emptyList(),
@@ -144,7 +144,7 @@ internal class ScenarioTest {
         val scenario = Scenario(
             "Test",
             HttpRequestPattern(method="GET", urlMatcher = URLMatcher(emptyMap(), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap())),
-            HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern))),
+            HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern()))),
             emptyMap(),
             emptyList(),
             emptyMap(),
@@ -161,7 +161,7 @@ internal class ScenarioTest {
     fun `will not match a mock http request with unexpected query params`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="GET", urlMatcher = URLMatcher(mapOf("expected" to StringPattern), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap(), null)),
+            HttpRequestPattern(method="GET", urlMatcher = URLMatcher(mapOf("expected" to StringPattern()), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap(), null)),
             HttpResponsePattern(status = 200),
             emptyMap(),
             emptyList(),
@@ -179,7 +179,7 @@ internal class ScenarioTest {
     fun `will not match a mock json body with unexpected keys`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="POST", urlMatcher = URLMatcher(mapOf("expected" to StringPattern), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap(), null), body = parsedPattern("""{"expected": "value"}""")),
+            HttpRequestPattern(method="POST", urlMatcher = URLMatcher(mapOf("expected" to StringPattern()), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap(), null), body = parsedPattern("""{"expected": "value"}""")),
             HttpResponsePattern(status = 200),
             emptyMap(),
             emptyList(),

@@ -166,12 +166,17 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
             isStringPatternWithRestrictions(it) -> {
                 val tokens = it.split(" ")
 
-                val restrictions = tokens.drop(1).zipWithNext().toMap()
-                StringPattern(
-                    typeAlias = typeAlias,
-                    minLength = restrictions["minLength"]?.toIntOrNull(),
-                    maxLength = restrictions["maxLength"]?.toIntOrNull()
-                )
+                val restrictions =
+                    tokens.drop(1).chunked(2).map { restriction -> restriction[0] to restriction[1] }.toMap()
+                try {
+                    StringPattern(
+                        typeAlias = typeAlias,
+                        minLength = restrictions["minLength"]?.toIntOrNull(),
+                        maxLength = restrictions["maxLength"]?.toIntOrNull()
+                    )
+                } catch (e: IllegalArgumentException) {
+                    throw ContractException(e.message?:"")
+                }
             }
             isPatternToken(it) -> when {
                 isLookupRowPattern(it) -> {

@@ -304,28 +304,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
             is BooleanSchema -> BooleanPattern
             is ObjectSchema -> {
                 val requiredFields = schema.required.orEmpty()
-                val schemaProperties = schema.properties.map { (propertyName, propertyType) ->
-                    val optional = !requiredFields.contains(propertyName)
-                    if (patternName.isNotEmpty()) {
-                        if (typeStack.contains(patternName)) toSpecmaticParamName(
-                            optional,
-                            propertyName
-                        ) to DeferredPattern("(${patternName})")
-                        else {
-                            val specmaticPattern = toSpecmaticPattern(
-                                propertyType,
-                                typeStack.plus(patternName),
-                                patternName
-                            )
-                            toSpecmaticParamName(optional, propertyName) to specmaticPattern
-                        }
-                    } else {
-                        toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(
-                            propertyType,
-                            typeStack
-                        )
-                    }
-                }.toMap()
+                val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack)
                 val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
                 patterns["(${patternName})"] = jsonObjectPattern
                 jsonObjectPattern
@@ -334,7 +313,22 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 JSONArrayPattern(listOf(toSpecmaticPattern(schema.items)))
             }
             is ComposedSchema -> {
-                throw UnsupportedOperationException("Specmatic does not support oneOf, allOf and anyOf")
+                if (schema.allOf == null) {
+                    throw UnsupportedOperationException("Specmatic does not support oneOf and anyOf. Only allOf is supported.")
+                }
+
+                val schemaProperties = schema.allOf.map { constituentSchema ->
+                    val schemaToProcess = if (constituentSchema.`$ref` != null) {
+                        val (_, referredSchema) = resolveReferenceToSchema(constituentSchema.`$ref`)
+                        referredSchema
+                    } else constituentSchema
+
+                    val requiredFields = schemaToProcess.required.orEmpty()
+                    toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
+                }.fold(emptyMap<String, Pattern>()) { acc, entry -> acc.plus(entry) }
+                val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
+                patterns["(${patternName})"] = jsonObjectPattern
+                jsonObjectPattern
             }
             is Schema -> {
                 val component = schema.`$ref`
@@ -363,6 +357,34 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
             }
         }
     }
+
+    private fun toSchemaProperties(
+        schema: Schema<*>,
+        requiredFields: List<String>,
+        patternName: String,
+        typeStack: List<String>
+    ) = schema.properties.map { (propertyName, propertyType) ->
+        val optional = !requiredFields.contains(propertyName)
+        if (patternName.isNotEmpty()) {
+            if (typeStack.contains(patternName)) toSpecmaticParamName(
+                optional,
+                propertyName
+            ) to DeferredPattern("(${patternName})")
+            else {
+                val specmaticPattern = toSpecmaticPattern(
+                    propertyType,
+                    typeStack.plus(patternName),
+                    patternName
+                )
+                toSpecmaticParamName(optional, propertyName) to specmaticPattern
+            }
+        } else {
+            toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(
+                propertyType,
+                typeStack
+            )
+        }
+    }.toMap()
 
     private fun toEnum(schema: Schema<*>, toSpecmaticValue: (Any) -> Value) =
         AnyPattern(schema.enum.map<Any, Pattern> { enumValue ->

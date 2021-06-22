@@ -180,17 +180,26 @@ paths:
 components:
   schemas:
     Pet:
+      allOf:
+        - type: object
+          required:
+            - id
+            - name
+          properties:
+            name:
+              type: string
+              minLength: 6
+              maxLength: 12
+            tag:
+              $ref: '#/components/schemas/Tag'
+            id:
+              type: integer
+              format: int64
+        - $ref: '#/components/schemas/Others'
+
+    Others:
       type: object
-      required:
-        - id
-        - name
       properties:
-        name:
-          type: string
-          minLength: 6
-          maxLength: 12
-        tag:
-          $ref: '#/components/schemas/Tag'
         breed:
           type: string
           nullable: true
@@ -201,9 +210,6 @@ components:
         rating:
           type: integer
           enum: [1, 2]
-        id:
-          type: integer
-          format: int64
 
     NewPet:
       type: object

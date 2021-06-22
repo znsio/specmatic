@@ -14,8 +14,9 @@ data class NumberPattern(
     val maxLength: Int? = null
 ) : Pattern, ScalarType {
     init {
+        require(minLength?.let { minLength > 0 } ?: true) {"minLength cannot be less than 1"}
         require(minLength?.let { maxLength?.let { minLength <= maxLength } }
-            ?: true) { """maxLength cannot be less than minLength""" }
+            ?: true) { "maxLength cannot be less than minLength" }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -37,7 +38,7 @@ data class NumberPattern(
 
     override fun generate(resolver: Resolver): Value = NumberValue(randomNumber(minLength ?: 3))
 
-    private fun randomNumber(minLength: Int) = RandomStringUtils.randomNumeric(minLength).toInt()
+    private fun randomNumber(minLength: Int) = RandomStringUtils.randomNumeric(minLength, minLength + 1).toInt()
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value {

@@ -27,6 +27,12 @@ internal class NumberPatternTest {
     }
 
     @Test
+    fun `should not allow minLength to be less than 1`() {
+        val exception = assertThrows<IllegalArgumentException> { NumberPattern(minLength = 0) }
+        assertThat(exception.message).isEqualTo("minLength cannot be less than 1")
+    }
+
+    @Test
     fun `should generate 3 digit long random number when min and max length are not specified`() {
         assertThat(NumberPattern().generate(Resolver()).toStringValue().length).isEqualTo(3)
     }

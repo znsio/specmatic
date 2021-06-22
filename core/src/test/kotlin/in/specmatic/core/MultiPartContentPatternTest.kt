@@ -35,7 +35,7 @@ internal class MultiPartContentPatternTest {
 
     @Test
     fun `should generate a new pattern based on row values when the row has a column with the part name`() {
-        val pattern = MultiPartContentPattern("id", NumberPattern)
+        val pattern = MultiPartContentPattern("id", NumberPattern())
         val row = Row(listOf("id"), listOf("10"))
         val patterns = pattern.newBasedOn(row, Resolver()).map { it as MultiPartContentPattern }
 
@@ -47,7 +47,7 @@ internal class MultiPartContentPatternTest {
 
     @Test
     fun `content pattern should match value with pattern content in mock mode`() {
-        val pattern = MultiPartContentPattern("id", NumberPattern)
+        val pattern = MultiPartContentPattern("id", NumberPattern())
         val value = MultiPartContentValue("id", StringValue("(number)"))
 
         val mockModeResolver = Resolver(mockMode = true)

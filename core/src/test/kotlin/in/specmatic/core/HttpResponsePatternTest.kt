@@ -38,7 +38,7 @@ internal class HttpResponsePatternTest {
     @Test
     fun `when validating a response string against a response type number, should return an error`() {
         val response = HttpResponse(200, emptyMap(), StringValue("not a number"))
-        val pattern = HttpResponsePattern(status = 200, body = NumberPattern)
+        val pattern = HttpResponsePattern(status = 200, body = NumberPattern())
 
         assertThat(pattern.matches(response, Resolver())).isInstanceOf(Result.Failure::class.java)
     }

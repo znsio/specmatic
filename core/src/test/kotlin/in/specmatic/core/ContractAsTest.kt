@@ -1,11 +1,5 @@
 package `in`.specmatic.core
 
-import org.assertj.core.api.Assertions.assertThat
-import org.json.JSONObject
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
-import org.xml.sax.SAXException
 import `in`.specmatic.core.HttpResponse.Companion.jsonResponse
 import `in`.specmatic.core.HttpResponse.Companion.xmlResponse
 import `in`.specmatic.core.pattern.NumberPattern
@@ -14,6 +8,12 @@ import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.*
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
+import org.assertj.core.api.Assertions.assertThat
+import org.json.JSONObject
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
+import org.xml.sax.SAXException
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
 
@@ -74,18 +74,20 @@ class ContractAsTest {
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val headers: HashMap<String, String> = hashMapOf(
-                        "token" to "test",
-                        "length" to "abc"
+                    "token" to "test",
+                    "length" to "abc"
                 )
                 return HttpResponse(200, "{calls_left: 10, messages_left: 30}", headers)
             }
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
-        assertThat(results.report()).isEqualTo("""In scenario "Get balance"
+        assertThat(results.report()).isEqualTo(
+            """In scenario "Get balance"
 >> RESPONSE.HEADERS.length
 
-Expected number, actual was string: "abc"""")
+Expected number, actual was string: "abc""""
+        )
     }
 
     @Test
@@ -266,7 +268,12 @@ Expected number, actual was string: "abc"""")
                 assertEquals("/accounts", request.path)
                 if (request.queryParams.contains("account_id")) {
                     flags.add("with")
-                    assertTrue(NumberPattern.matches(NumberValue(request.queryParams.getValue("account_id").toInt()), Resolver()) is Result.Success)
+                    assertTrue(
+                        NumberPattern().matches(
+                            NumberValue(request.queryParams.getValue("account_id").toInt()),
+                            Resolver()
+                        ) is Result.Success
+                    )
                 } else flags.add("without")
 
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
@@ -967,7 +974,7 @@ And response-body
         val results = parseGherkinStringToFeature(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val body = request.body
-                if(body !is JSONObjectValue)
+                if (body !is JSONObjectValue)
                     fail("Expected json object")
 
                 val id = body.jsonObject.getValue("id")
@@ -1011,7 +1018,7 @@ Feature: Contract
         val results = parseGherkinStringToFeature(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val body = request.body
-                if(body !is JSONObjectValue)
+                if (body !is JSONObjectValue)
                     fail("Expected json object")
 
                 val data = body.jsonObject.getValue("data")

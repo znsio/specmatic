@@ -56,7 +56,7 @@ internal class AnythingPatternTest {
     @Test
     fun `should not encompass anything else`() {
         assertThat(AnythingPattern.encompasses(
-            NumberPattern,
+            NumberPattern(),
             Resolver(),
             Resolver()
         )).isInstanceOf(Result.Failure::class.java)

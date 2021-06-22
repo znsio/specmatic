@@ -136,9 +136,9 @@ Feature: Contract for /balance API
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertTrue(NumberPattern.matches(serverStateForValidation["id"], Resolver()) is Result.Success)
+                assertTrue( NumberPattern().matches(serverStateForValidation["id"], Resolver()) is Result.Success)
                 val jsonBody = jsonObject(request.body)
-                assertTrue(NumberPattern.matches(jsonBody["id"], Resolver()) is Result.Success)
+                assertTrue( NumberPattern().matches(jsonBody["id"], Resolver()) is Result.Success)
                 return HttpResponse(200, null, HashMap())
             }
 

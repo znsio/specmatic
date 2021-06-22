@@ -102,7 +102,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `number bodies should match numerical strings`() {
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = NumberPattern)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = NumberPattern())
         val request = HttpRequest("GET", path = "/", body = StringValue("10"))
 
         assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Success::class.java)
@@ -126,7 +126,7 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `integer bodies should not match non-integer strings`() {
-        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = NumberPattern)
+        val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = NumberPattern())
         val request = HttpRequest("GET", path = "/", body = StringValue("not a number"))
 
         assertThat(requestPattern.matches(request, Resolver())).isInstanceOf(Failure::class.java)
@@ -228,7 +228,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("data"), listOf("""{"one": 1}"""))
 
         val type = parsedPattern("""{"data": "(Data)"}""")
-        val newTypes = type.newBasedOn(example, Resolver(newPatterns = mapOf("(Data)" to toTabularPattern(mapOf("one" to NumberPattern)))))
+        val newTypes = type.newBasedOn(example, Resolver(newPatterns = mapOf("(Data)" to toTabularPattern(mapOf("one" to NumberPattern())))))
 
         assertThat(newTypes).hasSize(1)
 
@@ -257,7 +257,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("body"), listOf("""{"one": 1}"""))
 
         val requestType = HttpRequestPattern(urlMatcher = toURLMatcherWithOptionalQueryParams("/"), body = parsedPattern("(body: RequestBody)"))
-        val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to toTabularPattern(mapOf("one" to NumberPattern)))))
+        val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to toTabularPattern(mapOf("one" to NumberPattern())))))
 
         assertThat(newRequestTypes).hasSize(1)
 

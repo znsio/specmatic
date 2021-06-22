@@ -172,7 +172,7 @@ Then status 200
 
         val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertTrue(NumberPattern.parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
+                assertTrue( NumberPattern().parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
                 flags["parsed number"] = true
                 return HttpResponse(200, "100")
             }
@@ -203,7 +203,7 @@ Then status 200
 
         val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertTrue(NumberPattern.parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
+                assertTrue( NumberPattern().parse(request.formFields.getValue("number"), Resolver()) is NumberValue)
                 flags["parsed number"] = true
                 return HttpResponse(200, "100")
             }

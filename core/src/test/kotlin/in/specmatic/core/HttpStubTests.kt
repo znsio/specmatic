@@ -204,7 +204,7 @@ Scenario: JSON API to get account details with fact check
             Assertions.assertEquals("balance", root.nodeName)
             Assertions.assertEquals("sms_messages_left", root.lastChild.nodeName)
             Assertions.assertTrue(
-                NumberPattern.matches(
+                NumberPattern().matches(
                     NumberValue(root.firstChild.lastChild.nodeValue.toInt()),
                     Resolver()
                 ) is Result.Success
@@ -347,13 +347,15 @@ Scenario: JSON API to get account details with fact check
     }
 
     @Test
-    fun `contract mock should be able to match strings with restrictions`() {
+    fun `contract mock should be able to match strings and numbers with restrictions`() {
         val contractGherkin = """
           Feature: Contract for /employees API
             Scenario: api call
               Given type EmployeeName (string) minLength 6 maxLength 12
+              And type EmployeeId (number) minLength 8 maxLength 11
               And type Employee
               | name   | (EmployeeName) |
+              | id     | (EmployeeId)   |
               When GET /employees
               Then status 200
               And response-body (Employee*)
@@ -361,7 +363,7 @@ Scenario: JSON API to get account details with fact check
 
         HttpStub(contractGherkin).use { mock ->
             val expectedRequest = HttpRequest().updateMethod("GET").updatePath("/employees")
-            val expectedResponse = HttpResponse(200, """[{name: "123123123"}]""")
+            val expectedResponse = HttpResponse(200, """[{name: "123123123", id: 123123123}]""")
             mock.createStub(ScenarioStub(expectedRequest, expectedResponse))
         }
     }

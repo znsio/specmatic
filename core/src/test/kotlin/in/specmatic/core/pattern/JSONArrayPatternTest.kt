@@ -33,7 +33,7 @@ internal class JSONArrayPatternTest {
 
     @Test
     fun `should match the rest even if there are no more elements`() {
-        val pattern = JSONArrayPattern(listOf(StringPattern(), RestPattern(NumberPattern)))
+        val pattern = JSONArrayPattern(listOf(StringPattern(), RestPattern(NumberPattern())))
         val value = JSONArrayValue(listOf(StringValue("hello")))
 
         value shouldMatch pattern
@@ -63,7 +63,7 @@ internal class JSONArrayPatternTest {
     @Test
     fun `finite array should not encompass a list`() {
         val smaller = parsedPattern("""["(number)", "(number)"]""")
-        val bigger = ListPattern(NumberPattern)
+        val bigger = ListPattern(NumberPattern())
 
         assertThat(smaller.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
@@ -72,7 +72,7 @@ internal class JSONArrayPatternTest {
     fun `should encompass a list containing a subtype of all elements`() {
         val bigger = parsedPattern("""["(number)", "(number...)"]""")
         val alsoBigger = parsedPattern("""["(number...)"]""")
-        val matching = ListPattern(NumberPattern)
+        val matching = ListPattern(NumberPattern())
 
         assertThat(bigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(alsoBigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)

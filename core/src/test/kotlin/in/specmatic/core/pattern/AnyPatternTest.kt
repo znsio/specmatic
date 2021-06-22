@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Nested
 internal class AnyPatternTest {
     @Test
     fun `should match multiple patterns`() {
-        val pattern = AnyPattern(listOf(NumberPattern, StringPattern()))
+        val pattern = AnyPattern(listOf(NumberPattern(), StringPattern()))
         val string = StringValue("hello")
         val number = NumberValue(10)
 
@@ -132,7 +132,7 @@ internal class AnyPatternTest {
 
     @Test
     fun `typeName should show nullable when one of the types is null`() {
-        val type = AnyPattern(listOf(NullPattern, NumberPattern))
+        val type = AnyPattern(listOf(NullPattern, NumberPattern()))
         assertThat(type.typeName).isEqualTo("(number?)")
     }
 

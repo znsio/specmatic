@@ -31,7 +31,7 @@ internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
     }
 
 internal val builtInPatterns = mapOf(
-    "(number)" to NumberPattern,
+    "(number)" to NumberPattern(),
     "(string)" to StringPattern(),
     "(boolean)" to BooleanPattern,
     "(null)" to NullPattern,
@@ -69,6 +69,11 @@ fun isDictionaryPattern(pattern: String): Boolean {
 fun isStringPatternWithRestrictions(patternValue: String): Boolean {
     val tokens = patternValue.split(" ")
     return tokens[0] == "(string)" && listOf("minLength", "maxLength").any { it in tokens }
+}
+
+fun isNumberPatternWithRestrictions(patternValue: String): Boolean {
+    val tokens = patternValue.split(" ")
+    return tokens[0] == "(number)" && listOf("minLength", "maxLength").any { it in tokens }
 }
 
 fun isPatternToken(patternValue: Any?) =
@@ -170,6 +175,21 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                     tokens.drop(1).chunked(2).map { restriction -> restriction[0] to restriction[1] }.toMap()
                 try {
                     StringPattern(
+                        typeAlias = typeAlias,
+                        minLength = restrictions["minLength"]?.toIntOrNull(),
+                        maxLength = restrictions["maxLength"]?.toIntOrNull()
+                    )
+                } catch (e: IllegalArgumentException) {
+                    throw ContractException(e.message?:"")
+                }
+            }
+            isNumberPatternWithRestrictions(it) -> {
+                val tokens = it.split(" ")
+
+                val restrictions =
+                    tokens.drop(1).chunked(2).map { restriction -> restriction[0] to restriction[1] }.toMap()
+                try {
+                    NumberPattern(
                         typeAlias = typeAlias,
                         minLength = restrictions["minLength"]?.toIntOrNull(),
                         maxLength = restrictions["maxLength"]?.toIntOrNull()

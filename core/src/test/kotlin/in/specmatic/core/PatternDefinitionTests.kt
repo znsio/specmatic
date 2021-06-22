@@ -230,7 +230,7 @@ class PatternDefinitionTests {
     @Test
     fun `(number) should match a decimal value`() {
         val value = 10.5
-        val pattern = NumberPattern
+        val pattern = NumberPattern()
 
         NumberValue(value) shouldMatch pattern
     }

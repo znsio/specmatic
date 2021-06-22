@@ -169,7 +169,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `a header pattern with an optional header should match one without that header`() {
-        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern(), "X-Optional?" to NumberPattern))
+        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern(), "X-Optional?" to NumberPattern()))
         val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern()))
         val result = bigger.encompasses(smaller, Resolver(), Resolver())
         assertThat(result).isInstanceOf(Result.Success::class.java)
@@ -177,7 +177,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `a header pattern with an optional header should match one with that header if present`() {
-        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern(), "X-Optional?" to NumberPattern))
+        val bigger = HttpHeadersPattern(mapOf("X-Required" to StringPattern(), "X-Optional?" to NumberPattern()))
         val smaller = HttpHeadersPattern(mapOf("X-Required" to StringPattern(), "X-Optional" to StringPattern()))
         val result = bigger.encompasses(smaller, Resolver(), Resolver())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
@@ -185,7 +185,7 @@ internal class HttpHeadersPatternTest {
 
     @Test
     fun `should match a pattern only when resolver has mock matching on`() {
-        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern))
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()))
         assertThat(headersPattern.matches(mapOf("X-Data" to "10"), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(headersPattern.matches(mapOf("X-Data" to "(number)"), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
         assertThat(headersPattern.matches(mapOf("X-Data" to "(number)"), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)

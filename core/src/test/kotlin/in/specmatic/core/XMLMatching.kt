@@ -52,7 +52,7 @@ Feature: Unit test
             Assertions.assertTrue(StringPattern().matches(StringValue(type), Resolver()) is Result.Success)
             Assertions.assertTrue(StringPattern().matches(StringValue(name), Resolver()) is Result.Success)
             Assertions.assertTrue(StringPattern().matches(StringValue(address), Resolver()) is Result.Success)
-            Assertions.assertTrue(NumberPattern.matches(NumberValue(age.toInt()), Resolver()) is Result.Success)
+            Assertions.assertTrue( NumberPattern().matches(NumberValue(age.toInt()), Resolver()) is Result.Success)
         }
         catch(e: ContractException) {
             println(e.report())

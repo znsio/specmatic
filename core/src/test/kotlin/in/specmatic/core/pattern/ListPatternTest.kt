@@ -13,7 +13,7 @@ import `in`.specmatic.shouldNotMatch
 internal class ListPatternTest {
     @Test
     fun `should generate a list of patterns each of which is a list pattern`() {
-        val patterns = ListPattern(NumberPattern).newBasedOn(Row(), Resolver())
+        val patterns = ListPattern(NumberPattern()).newBasedOn(Row(), Resolver())
 
         for(pattern in patterns) {
             assertTrue(pattern is ListPattern)
@@ -27,7 +27,7 @@ internal class ListPatternTest {
 
     @Test
     fun `should encompass itself`() {
-        val type = ListPattern(NumberPattern)
+        val type = ListPattern(NumberPattern())
         assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
@@ -42,14 +42,14 @@ internal class ListPatternTest {
 
     @Test
     fun `should not encompass another list with different type`() {
-        val numberPattern = ListPattern(parsedPattern("""(number?)"""))
+        val NumberPattern = ListPattern(parsedPattern("""(number?)"""))
         val stringPattern = ListPattern(parsedPattern("""(string)"""))
-        assertThat(numberPattern.encompasses(stringPattern, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat( NumberPattern().encompasses(stringPattern, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
     fun `a list should encompass a json array with items matching the list`() {
-        val bigger = ListPattern(AnyPattern(listOf(NumberPattern, NullPattern)))
+        val bigger = ListPattern(AnyPattern(listOf(NumberPattern(), NullPattern)))
         val smaller1Element = parsedPattern("""["(number)"]""")
         val smaller1ElementAndRest = parsedPattern("""["(number)", "(number...)"]""")
 
@@ -59,7 +59,7 @@ internal class ListPatternTest {
 
     @Test
     fun `should fail if there are any match failures at all`() {
-        val bigger = ListPattern(NumberPattern)
+        val bigger = ListPattern(NumberPattern())
         val matching = parsedPattern("""["(number)", "(string...)"]""")
 
         assertThat(bigger.encompasses(matching, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)

@@ -213,14 +213,14 @@ internal class JSONObjectPatternTest {
 
     @Test
     fun `it should encompass itself when ellipsis is present`() {
-        val bigger = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern()))
+        val bigger = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern(), "..." to StringPattern()))
         assertThat(bigger.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `type with ellipsis is equivalent to a type with the same keys except the ellipsis`() {
-        val theOne = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern))
-        val theOther = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern, "..." to StringPattern()))
+        val theOne = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern()))
+        val theOther = toJSONObjectPattern(mapOf<String, Pattern>("data" to NumberPattern(), "..." to StringPattern()))
 
         assertThat(theOne.encompasses(theOther, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(theOther.encompasses(theOne, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)

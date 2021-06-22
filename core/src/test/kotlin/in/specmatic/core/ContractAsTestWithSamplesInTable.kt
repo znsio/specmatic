@@ -41,7 +41,7 @@ class ContractAsTestWithSamplesInTable {
                     pathParts[pathParts.size - 1]
                 }
                 Assertions.assertEquals("GET", request.method)
-                Assertions.assertTrue(NumberPattern.matches(NumberValue(accountId.toInt()), Resolver()) is Result.Success)
+                Assertions.assertTrue( NumberPattern().matches(NumberValue(accountId.toInt()), Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")

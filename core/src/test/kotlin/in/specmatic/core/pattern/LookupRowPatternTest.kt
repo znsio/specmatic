@@ -10,7 +10,7 @@ import `in`.specmatic.core.value.NumberValue
 internal class LookupRowPatternTest {
     @Test
     fun `it should return a new exact value pattern when generating pattern from row with a matching key`() {
-        val pattern = LookupRowPattern(NumberPattern, "customerId")
+        val pattern = LookupRowPattern(NumberPattern(), "customerId")
         val row = Row(listOf("customerId"), listOf("10"))
 
         val newPattern = pattern.newBasedOn(row, Resolver())
@@ -19,11 +19,11 @@ internal class LookupRowPatternTest {
 
     @Test
     fun `it should return a new exact value pattern when generating pattern from row with no matching key`() {
-        val pattern = LookupRowPattern(NumberPattern, "customerId")
+        val pattern = LookupRowPattern(NumberPattern(), "customerId")
         val row = Row(emptyList(), emptyList())
 
         val newPattern = pattern.newBasedOn(row, Resolver())
-        assertThat(newPattern.single()).isEqualTo(NumberPattern)
+        assertThat(newPattern.single()).isEqualTo(NumberPattern())
     }
 
     @Test
@@ -49,7 +49,7 @@ internal class LookupRowPatternTest {
 
     @Test
     fun `should be encompassed by wider non lookup type`() {
-        val anyType = AnyPattern(listOf(StringPattern(), NumberPattern))
+        val anyType = AnyPattern(listOf(StringPattern(), NumberPattern()))
         val lookupRowType = LookupRowPattern(StringPattern(), "name")
         assertThat(anyType.encompasses(lookupRowType, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }

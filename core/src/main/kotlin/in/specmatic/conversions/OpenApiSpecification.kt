@@ -294,10 +294,10 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 else -> toEnum(schema) { enumValue -> StringValue(enumValue.toString()) }
             }
             is IntegerSchema -> when (schema.enum) {
-                null -> NumberPattern
+                null -> NumberPattern()
                 else -> toEnum(schema) { enumValue -> NumberValue(enumValue.toString().toInt()) }
             }
-            is NumberSchema -> NumberPattern
+            is NumberSchema -> NumberPattern()
             is UUIDSchema -> StringPattern()
             is DateTimeSchema -> DateTimePattern
             is DateSchema -> StringPattern()

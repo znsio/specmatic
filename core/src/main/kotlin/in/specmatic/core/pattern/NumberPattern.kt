@@ -7,7 +7,6 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.Value
 import org.apache.commons.lang3.RandomStringUtils
-import java.util.*
 
 data class NumberPattern(
     override val typeAlias: String? = null,
@@ -31,13 +30,12 @@ data class NumberPattern(
                     sampleData
                 )
                 return Result.Success()
-                Result.Success()
             }
             false -> mismatchResult("number", sampleData)
         }
     }
 
-    override fun generate(resolver: Resolver): Value = NumberValue(randomNumber(minLength?:3))
+    override fun generate(resolver: Resolver): Value = NumberValue(randomNumber(minLength ?: 3))
 
     private fun randomNumber(minLength: Int) = RandomStringUtils.randomNumeric(minLength).toInt()
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)

@@ -26,7 +26,6 @@ Systems interact with each other through several means. Specmatic hopes to addre
 * Libraries, SDK 
 * OS Level Pipes
 
----
 ### Key Features
 
 * [**Contract First**](https://specmatic.in/faqs.html#what-is-contract-first) - With an API-first approach, you can use Consumer or Provider driven contracts, whatever suits your needs the best.
@@ -43,4 +42,11 @@ Systems interact with each other through several means. Specmatic hopes to addre
 * Already have a lot of APIs? Don't worry, we can take your **Postman Collection** and easily generate contracts from it
 
 [Get started now](https://specmatic.in/getting_started.html)
----
+
+### Sample Projects
+
+To see how to use Specmatic in a Java application, take a look at the following sample projects.
+
+1. [Order API](https://github.com/znsio/specmatic-order-api): This is a simple API that takes manages products and orders. It uses contract tests to guarantee successful integration with it's UI, described next.
+2. [Order UI](https://github.com/znsio/specmatic-order-ui): This is a tiny UI project that uses the Order API project. It uses intelligent service virtualisation in it's tests to stay in sync with the specmatic-order-api contract, guaranteeing successful integration with order-api.
+3. [Contracts](https://github.com/znsio/specmatic-order-contracts): This repository contains the contracts that specmatic-order-api and specmatic-order-ui use to stay in sync with eachother.

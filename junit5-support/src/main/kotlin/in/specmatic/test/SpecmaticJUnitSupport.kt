@@ -103,10 +103,7 @@ open class SpecmaticJUnitSupport {
     }
 
     private fun valueOrDefault(givenConfigFilePath: String?, default: String, reason: String): String {
-        return when (givenConfigFilePath) {
-            null -> default.also { println("$reason, defaulting to $it") }
-            else -> givenConfigFilePath
-        }
+        return givenConfigFilePath ?: default.also { println("$reason, defaulting to $it") }
     }
 
     private fun loadTestScenarios(
@@ -166,17 +163,6 @@ open class SpecmaticJUnitSupport {
         }
     }
 
-    private fun getBootstrapKafkaServers(): String {
-        return when {
-            System.getProperty("kafkaBootstrapServers") != null && System.getProperty("kafkaBootstrapServers").isNotEmpty() ->
-                System.getProperty("kafkaBootstrapServers")
-            else -> {
-                val kafkaPort = System.getProperty("kafkaPort")?.toInt() ?: 9093
-                val kafkaHost = System.getProperty("kafkaHost") ?: "localhost"
-                """PLAINTEXT://$kafkaHost:$kafkaPort"""
-            }
-        }
-    }
 }
 
 private fun columnsFromExamples(exampleData: JSONArrayValue): List<String> {

@@ -54,8 +54,7 @@ open class SpecmaticJUnitSupport {
         val suggestionsData = System.getProperty(INLINE_SUGGESTIONS) ?: ""
         val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""
 
-        val workingDirectory = File(valueOrDefault(givenWorkingDirectory, DEFAULT_WORKING_DIRECTORY, "Working was not specified specified"))
-        val workingDirectoryWasCreated = workingDirectory.exists()
+        val workingDirectory = WorkingDirectory(valueOrDefault(givenWorkingDirectory, DEFAULT_WORKING_DIRECTORY, "Working was not specified specified"))
 
         val envConfig = getEnvConfig(System.getProperty(ENV_NAME))
         val testConfig = loadTestConfig(envConfig)
@@ -83,8 +82,7 @@ open class SpecmaticJUnitSupport {
             println(exceptionCauseMessage(e))
             throw e
         } finally {
-            if(workingDirectoryWasCreated)
-                workingDirectory.deleteRecursively()
+            workingDirectory.delete()
         }
 
         return testScenarios.map { testScenario ->

@@ -38,8 +38,7 @@ internal class NumberPatternTest {
         assertThat(NumberPattern().generate(Resolver()).toStringValue().length).isEqualTo(3)
     }
 
-    @Ignore
-    //TODO:
+    @Test
     fun `should generate random number when minLength`() {
         assertThat(
             NumberPattern(minLength = 8, maxLength = 12).generate(Resolver()).toStringValue().length

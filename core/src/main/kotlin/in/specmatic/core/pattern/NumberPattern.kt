@@ -38,7 +38,15 @@ data class NumberPattern(
 
     override fun generate(resolver: Resolver): Value = NumberValue(randomNumber(minLength ?: 3))
 
-    private fun randomNumber(minLength: Int) = RandomStringUtils.randomNumeric(minLength, minLength + 1).toInt()
+    private fun randomNumber(minLength: Int): Int {
+        val randomNumberString = RandomStringUtils.randomNumeric(minLength, minLength + 1)
+
+        return when(randomNumberString[0]) {
+            '0' -> "1${randomNumberString.dropLast(1)}"
+            else -> randomNumberString
+        }.toInt()
+    }
+
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value {

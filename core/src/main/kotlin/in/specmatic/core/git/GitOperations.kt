@@ -2,17 +2,16 @@
 
 package `in`.specmatic.core.git
 
-import `in`.specmatic.core.Configuration
-import io.ktor.http.*
-import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.transport.CredentialsProvider
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.GitRepo
 import `in`.specmatic.core.utilities.getTransportCallingCallback
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
+import io.ktor.http.*
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import java.io.File
 
 fun clone(workingDirectory: File, gitRepo: GitRepo): File {

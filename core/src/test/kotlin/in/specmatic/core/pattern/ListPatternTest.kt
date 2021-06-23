@@ -44,7 +44,7 @@ internal class ListPatternTest {
     fun `should not encompass another list with different type`() {
         val NumberPattern = ListPattern(parsedPattern("""(number?)"""))
         val stringPattern = ListPattern(parsedPattern("""(string)"""))
-        assertThat( NumberPattern().encompasses(stringPattern, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(NumberPattern.encompasses(stringPattern, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test

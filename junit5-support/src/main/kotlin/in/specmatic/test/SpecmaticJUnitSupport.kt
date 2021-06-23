@@ -35,7 +35,7 @@ open class SpecmaticJUnitSupport {
             return JSONObjectValue()
 
         val config = loadConfigJSON(File(globalConfigFileName))
-        val envConfig = config.findFirstChildByPath("environments.$envName").also { println("First child: $it") } ?: return JSONObjectValue()
+        val envConfig = config.findFirstChildByPath("environments.$envName") ?: return JSONObjectValue()
 
         if(envConfig !is JSONObjectValue)
             throw ContractException("The environment config must be a JSON object.")

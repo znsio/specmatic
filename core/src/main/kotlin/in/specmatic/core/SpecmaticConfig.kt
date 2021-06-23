@@ -21,7 +21,7 @@ const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
 class WorkingDirectory(private val filePath: File, private val existsBefore: Boolean) {
     constructor(path: File): this(path, path.exists())
-    constructor(path: String): this(File(path))
+    constructor(path: String = DEFAULT_WORKING_DIRECTORY): this(File(path))
 
     val path: String
         get() {

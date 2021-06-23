@@ -127,11 +127,12 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun startServer() {
+        val workingDirectory = WorkingDirectory()
         val stubData = stubLoaderEngine.loadStubs(contractPaths, dataDirs)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
-        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, httpClientFactory)
+        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, httpClientFactory, workingDirectory)
         kafkaStub = kafkaStubEngine.runKafkaStub(stubData, kafkaHost, kafkaPort.toInt(), startKafka)
 
         LogTail.storeSnapshot()
@@ -236,7 +237,7 @@ class KafkaStubEngine {
 
 @Component
 class HTTPStubEngine {
-    fun runHTTPStub(stubs: List<Pair<Feature, List<ScenarioStub>>>, host: String, port: Int, certInfo: CertInfo, strictMode: Boolean, passThroughTargetBase: String = "", httpClientFactory: HttpClientFactory): HttpStub? {
+    fun runHTTPStub(stubs: List<Pair<Feature, List<ScenarioStub>>>, host: String, port: Int, certInfo: CertInfo, strictMode: Boolean, passThroughTargetBase: String = "", httpClientFactory: HttpClientFactory, workingDirectory: WorkingDirectory): HttpStub? {
         val features = stubs.map { it.first }
 
         return when {
@@ -252,7 +253,7 @@ class HTTPStubEngine {
                 }
 
                 val keyStoreData = certInfo.getHttpsCert()
-                HttpStub(httpFeatures, httpExpectations, host, port, ::consoleLog, strictMode, keyStoreData, passThroughTargetBase = passThroughTargetBase, httpClientFactory = httpClientFactory).also {
+                HttpStub(httpFeatures, httpExpectations, host, port, ::consoleLog, strictMode, keyStoreData, passThroughTargetBase = passThroughTargetBase, httpClientFactory = httpClientFactory, workingDirectory = workingDirectory).also {
                     val protocol = if (keyStoreData != null) "https" else "http"
                     consoleLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop.")
                 }

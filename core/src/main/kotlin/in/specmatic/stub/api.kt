@@ -35,12 +35,13 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStub(host: String = "localhost", port: Int = 9000): HttpStub {
+    val workingDirectory = WorkingDirectory()
     val contractPaths = contractStubPaths().map { it.path }
     val stubs = loadContractStubsFromImplicitPaths(contractPaths)
     val features = stubs.map { it.first }
     val expectations = contractInfoToHttpExpectations(stubs)
 
-    return HttpStub(features, expectations, host, port, log = ::consoleLog)
+    return HttpStub(features, expectations, host, port, log = ::consoleLog, workingDirectory = workingDirectory)
 }
 
 // Used by stub client code

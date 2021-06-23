@@ -7,6 +7,9 @@ import `in`.specmatic.core.value.KafkaMessage
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.True
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.test.ContractTest
+import `in`.specmatic.test.ScenarioTest
+import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 
 data class Scenario(
@@ -229,6 +232,29 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 newBasedOn(row)
+            }
+        }
+    }
+
+    fun generateContractTests(variables: Map<String, String> = emptyMap(), testBaseURLs: Map<String, String> = emptyMap()): List<ContractTest> {
+        val referencesWithBaseURLs = references.mapValues { (_, reference) ->
+            reference.copy(variables = variables, baseURLs = testBaseURLs)
+        }
+
+        return scenarioBreadCrumb(this) {
+            when (examples.size) {
+                0 -> listOf(Row())
+                else -> examples.flatMap {
+                    it.rows.map { row ->
+                        row.copy(variables = variables, references = referencesWithBaseURLs)
+                    }
+                }
+            }.flatMap { row ->
+                try {
+                    newBasedOn(row).map { ScenarioTest(it) }
+                } catch(e: Throwable) {
+                    listOf(ScenarioTestGenerationFailure(this, e))
+                }
             }
         }
     }

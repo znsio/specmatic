@@ -11,13 +11,7 @@ class ScenarioTest(val scenario: Scenario) : ContractTest {
         testVariables: Map<String, String>,
         testBaseURLs: Map<String, String>
     ): List<ContractTest> {
-        return try {
-            scenario.generateTestScenarios(testVariables, testBaseURLs).map {
-                ScenarioTest(it)
-            }
-        } catch(e: Throwable) {
-            listOf(ScenarioTestGenerationFailure(scenario, e))
-        }
+        return scenario.generateContractTests(testVariables, testBaseURLs)
     }
 
     override fun testDescription(): String {

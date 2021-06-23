@@ -25,13 +25,13 @@ fun clone(workingDirectory: File, gitRepo: GitRepo): File {
 
 private fun clone(gitRepositoryURI: String, cloneDirectory: File) {
     jgitClone(gitRepositoryURI, cloneDirectory) { exception ->
-        println("""Falling back to git command after getting error from jgit (${exception.javaClass.name}: ${exception.message})""")
+        information.forDebugging("""Falling back to git command after getting error from jgit (${exception.javaClass.name}: ${exception.message})""")
         SystemGit(cloneDirectory.parent, "-").clone(gitRepositoryURI, cloneDirectory)
     }
 }
 
 private fun resetCloneDirectory(cloneDirectory: File) {
-    println("Resetting ${cloneDirectory.absolutePath}")
+    information.forTheUser("Resetting ${cloneDirectory.absolutePath}")
     if (cloneDirectory.exists())
         cloneDirectory.deleteRecursively()
     cloneDirectory.mkdirs()
@@ -84,34 +84,41 @@ fun getBearerToken(): String? {
                 readBearerFromEnvVariable(qontractConfig) ?: readBearerFromFile(qontractConfig)
             }
         else -> null.also {
-            println("$globalConfigFileName not found")
-            println("Current working directory is ${File(".").absolutePath}")
+            information.forTheUser("$globalConfigFileName not found")
+            information.forTheUser("Current working directory is ${File(".").absolutePath}")
         }
     }
 }
 
 private fun readBearerFromEnvVariable(qontractConfig: Value): String? {
     return loadFromPath(qontractConfig, listOf("auth", "bearer-environment-variable"))?.toStringValue()?.let { bearerName ->
-        println("Found bearer name $bearerName")
+        information.forTheUser("Found bearer name $bearerName")
 
         System.getenv(bearerName).also {
-            if(it != null) println("$bearerName is not empty")
+            if(it != null) information.forTheUser("$bearerName is not empty")
         }
     }
 }
 
 private fun readBearerFromFile(qontractConfig: Value): String? {
     return loadFromPath(qontractConfig, listOf("auth", "bearer-file"))?.toStringValue()?.let { bearerFileName ->
-        println("Found bearer file name $bearerFileName")
+        information.forTheUser("Found bearer file name $bearerFileName")
 
-        File("./$bearerFileName").takeIf { it.exists() }?.let {
-            println("Found bearer file")
-            it.readText().trim()
+        val bearerFile = File(bearerFileName).absoluteFile
+
+        when {
+            bearerFile.exists() -> {
+                information.forTheUser("Found bearer file ${bearerFile.absolutePath}")
+                bearerFile.readText().trim()
+            }
+            else -> {
+                information.forTheUser("Could not find bearer file ${bearerFile.absolutePath}")
+                null
+            }
         }
     }
 }
 
-//TODO: Why do we have a qontract.json in home dir, it should be in project root
 fun getPersonalAccessToken(): String? {
     val homeDir = File(System.getProperty("user.home"))
 

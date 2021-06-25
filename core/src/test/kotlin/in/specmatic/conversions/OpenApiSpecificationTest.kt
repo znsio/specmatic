@@ -1,5 +1,6 @@
 package `in`.specmatic.conversions
 
+import `in`.specmatic.core.HttpHeadersPattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -73,5 +74,20 @@ paths:
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
         val scenarioInfos = openApiSpecification.toScenarioInfos()
         assertThat(scenarioInfos.size).isEqualTo(1)
+    }
+
+    @Test
+    fun `none of the scenarios should expect the Content-Type header`() {
+        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
+        val scenarioInfos = openApiSpecification.toScenarioInfos()
+
+        for(scenarioInfo in scenarioInfos) {
+            assertNotFoundInHeaders("Content-Type", scenarioInfo.httpRequestPattern.headersPattern)
+            assertNotFoundInHeaders("Content-Type", scenarioInfo.httpResponsePattern.headersPattern)
+        }
+    }
+
+    fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {
+        assertThat(headersPattern.pattern.keys.map { it.lowercase() }).doesNotContain(header.lowercase())
     }
 }

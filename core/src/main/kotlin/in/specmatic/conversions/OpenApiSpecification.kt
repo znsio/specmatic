@@ -180,7 +180,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                             operation
                         ).map { httpRequestPattern: HttpRequestPattern ->
                             val scenarioName =
-                                """Open API - Operation Summary: ${operation.summary}. Response: ${response.description} Examples: $specmaticExampleRow"""
+                                """Open API - Operation Summary: ${operation.summary}. Response: ${response.description} Examples: ${specmaticExampleRow.stringForOpenAPIError()}"""
                             scenarioInfo(
                                 scenarioName,
                                 httpRequestPattern,
@@ -235,12 +235,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                     Triple(
                         response, mediaType, HttpResponsePattern(
                             headersPattern = HttpHeadersPattern(
-                                headersMap.plus(
-                                    toPatternPair(
-                                        "Content-Type",
-                                        contentType
-                                    )
-                                )
+                                headersMap
                             ),
                             status = when (status) {
                                 "default" -> 400

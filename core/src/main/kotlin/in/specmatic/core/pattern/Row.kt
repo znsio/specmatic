@@ -7,6 +7,12 @@ const val DEREFERENCE_PREFIX = "$"
 data class Row(val columnNames: List<String> = emptyList(), val values: List<String> = emptyList(), val variables: Map<String, String> = emptyMap(), val references: Map<String, References> = emptyMap()) {
     private val cells = columnNames.zip(values.map { it }).toMap().toMutableMap()
 
+    fun stringForOpenAPIError(): String {
+        return columnNames.zip(values).joinToString(", ") { (key, value) ->
+            "$key=$value"
+        }
+    }
+
     fun getField(columnName: String): String {
         return getValue(columnName).fetch()
     }

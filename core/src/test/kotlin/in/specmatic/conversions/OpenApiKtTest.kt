@@ -194,12 +194,12 @@ Background:
 
                 Expected status: 200, actual: 202
 
-                In scenario "Open API - Operation Summary: hello world. Response: Says hello Examples: Row(columnNames=[id], values=[15], variables={}, references={})"
+                In scenario "Open API - Operation Summary: hello world. Response: Says hello Examples: id=15"
                 >> RESPONSE.STATUS
 
                 Expected status: 200, actual: 202
 
-                In scenario "Open API - Operation Summary: hello world. Response: Not Found Examples: Row(columnNames=[id], values=[0], variables={}, references={})"
+                In scenario "Open API - Operation Summary: hello world. Response: Not Found Examples: id=0"
                 >> RESPONSE.STATUS
 
                 Expected status: 404, actual: 403

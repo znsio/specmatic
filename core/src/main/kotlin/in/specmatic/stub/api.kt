@@ -67,7 +67,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
         when {
             contractPath.isFile && contractPath.extension in CONTRACT_EXTENSIONS -> {
                 consoleLog("Loading $contractPath")
-                val feature = parseGherkinStringToFeature(contractPath.readText().trim())
+                val feature = parseContractFileToFeature(contractPath)
                 val implicitDataDir = implicitContractDataDir(contractPath.path)
 
                 val stubData = when {
@@ -112,7 +112,7 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
     val dataDirFileList = allDirsInTree(dataDirPaths)
 
     val features = contractPaths.map { path ->
-        Pair(path, parseGherkinStringToFeature(readFile(path)))
+        Pair(path, parseContractFileToFeature(path))
     }
 
     val dataFiles = dataDirFileList.flatMap {

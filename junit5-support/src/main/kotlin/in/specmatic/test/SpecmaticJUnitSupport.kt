@@ -110,7 +110,8 @@ open class SpecmaticJUnitSupport {
         suggestionsData: String,
         config: TestConfig
     ): List<ContractTest> {
-        val feature = parseGherkinStringToFeature(readFile(path), File(path).absolutePath).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
+        val contractFile = File(path)
+        val feature = parseContractFileToFeature(contractFile.path).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)

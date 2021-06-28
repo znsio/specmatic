@@ -104,7 +104,7 @@ private fun backwardCompatibleOnFileOrDirectory(
         fileOperations.isDirectory(path) -> {
             val file = File(path)
             val outputs = file.walkTopDown().filter {
-                it.extension in CONTRACT_EXTENSIONS || it.extension == "yaml"
+                it.extension in CONTRACT_EXTENSIONS
             }.map {
                 Pair(it.path, checkCompatibility {
                     fn(it.path)

@@ -105,7 +105,7 @@ class StubCommand : Callable<Unit> {
 
         try {
             contractPaths = loadConfig()
-            validateQontractFileExtensions(contractPaths, fileOperations)
+            validateContractFileExtensions(contractPaths, fileOperations)
             startServer()
 
             if(httpStub != null || kafkaStub != null) {
@@ -175,11 +175,11 @@ class StubCommand : Callable<Unit> {
     }
 }
 
-internal fun validateQontractFileExtensions(contractPaths: List<String>, fileOperations: FileOperations) {
+internal fun validateContractFileExtensions(contractPaths: List<String>, fileOperations: FileOperations) {
     contractPaths.filter { fileOperations.isFile(it) && fileOperations.extensionIsNot(it, CONTRACT_EXTENSIONS) }.let {
         if (it.isNotEmpty()) {
             val files = it.joinToString("\n")
-            exitWithMessage("The following files do not end with $CONTRACT_EXTENSION and cannot be used:\n$files")
+            exitWithMessage("The following files do not end with ${CONTRACT_EXTENSION.plus("yaml")} and cannot be used:\n$files")
         }
     }
 }

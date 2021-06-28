@@ -20,6 +20,18 @@ import io.cucumber.messages.types.Examples
 import java.io.File
 import java.net.URI
 
+fun parseContractFileToFeature(contractPath: String): Feature {
+    return parseContractFileToFeature(File(contractPath))
+}
+
+fun parseContractFileToFeature(file: File): Feature {
+    return when(file.extension) {
+        "yaml" -> OpenApiSpecification.fromFile(file.path).toFeature()
+        in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(file.readText().trim(), file.absolutePath)
+        else -> throw ContractException("File extension of ${file.path} not recognized")
+    }
+}
+
 fun parseGherkinStringToFeature(gherkinData: String, filePath: String = ""): Feature {
     val gherkinDocument = parseGherkinString(gherkinData)
     return parseGherkinDocumentToFeature(gherkinDocument, filePath)

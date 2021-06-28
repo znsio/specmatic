@@ -65,6 +65,15 @@ paths:
           schema:
             type: integer
             format: int32
+        - name: breed
+          in: query
+          description: breeds to filter by
+          required: false
+          schema:
+            type: string
+            enum:
+              - labrador
+              - retriever
         - in: header
           name: X-Request-ID
           schema:
@@ -209,7 +218,7 @@ components:
             - null
         rating:
           type: integer
-          enum: [1, 2]
+          enum: [ 1, 2 ]
 
     NewPet:
       type: object

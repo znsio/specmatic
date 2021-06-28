@@ -286,11 +286,11 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         val pattern = when (schema) {
             is StringSchema -> when (schema.enum) {
                 null -> StringPattern(minLength = schema.minLength, maxLength = schema.maxLength)
-                else -> toEnum(schema) { enumValue -> StringValue(enumValue.toString()) }
+                else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }
             }
             is IntegerSchema -> when (schema.enum) {
                 null -> NumberPattern()
-                else -> toEnum(schema) { enumValue -> NumberValue(enumValue.toString().toInt()) }
+                else -> toEnum(schema, patternName) { enumValue -> NumberValue(enumValue.toString().toInt()) }
             }
             is NumberSchema -> NumberPattern()
             is UUIDSchema -> StringPattern()
@@ -381,13 +381,13 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         }
     }.toMap()
 
-    private fun toEnum(schema: Schema<*>, toSpecmaticValue: (Any) -> Value) =
+    private fun toEnum(schema: Schema<*>, patternName: String, toSpecmaticValue: (Any) -> Value) =
         AnyPattern(schema.enum.map<Any, Pattern> { enumValue ->
             when (enumValue) {
                 null -> NullPattern
                 else -> ExactValuePattern(toSpecmaticValue(enumValue))
             }
-        }.toList())
+        }.toList(), typeAlias = patternName).also { if (patternName.isNotEmpty()) patterns["(${patternName})"] = it }
 
     private fun toSpecmaticParamName(optional: Boolean, name: String) = when (optional) {
         true -> "${name}?"
@@ -417,7 +417,12 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         }
 
         val queryParameters = parameters.filterIsInstance(QueryParameter::class.java).joinToString("&") {
-            "${it.name}=${toSpecmaticPattern(it.schema)}"
+            val specmaticPattern = toSpecmaticPattern(schema = it.schema, patternName = it.name)
+            val patternName = when {
+                it.schema.enum != null -> specmaticPattern.run { "($typeAlias)" }
+                else -> specmaticPattern
+            }
+            "${it.name}=$patternName"
         }
 
         if (queryParameters.isNotEmpty()) specmaticPath = "${specmaticPath}?${queryParameters}"

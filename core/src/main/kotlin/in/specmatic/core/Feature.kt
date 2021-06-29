@@ -245,6 +245,18 @@ data class Feature(
             serverState = emptyMap()
         }
     }
+
+    fun addCache(contractCache: ContractCache): Feature {
+        val scenarios = scenarios.map { scenario ->
+            val referencesWithCache = scenario.references.mapValues {
+                it.value.copy(contractCache = contractCache)
+            }
+
+            scenario.copy(references = referencesWithCache)
+        }
+
+        return copy(scenarios = scenarios)
+    }
 }
 
 private fun toFixtureInfo(rest: String): Pair<String, Value> {
@@ -496,7 +508,7 @@ fun values(
     val valueStoreName = parts[0]
     val qontractFileName = parts[2]
 
-    val qontractFilePath = ContractFileWithExports(qontractFileName, filePath)
+    val qontractFilePath = ContractFileWithExports(qontractFileName, SiblingAnchor(filePath))
 
     return backgroundReferences.plus(scenarioReferences).plus(
         valueStoreName to References(

@@ -3,11 +3,9 @@ package `in`.specmatic.core.pattern
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.ContractCache
 import `in`.specmatic.core.ContractFileWithExports
 import `in`.specmatic.core.References
-import com.github.tomakehurst.wiremock.client.WireMock.any
 import io.mockk.every
 import io.mockk.mockk
 
@@ -30,15 +28,16 @@ internal class RowTest {
 
         val contractFile = mockk<ContractFileWithExports>()
         every {
-            contractFile.runContractAndExtractExports(any(), any(), any())
+            contractFile.runContractAndExtractExports(any(), any(), any(), any())
         }.returns(data)
+        val contractFileName = "path.spec"
         every {
             contractFile.absolutePath
-        }.returns("path.spec")
+        }.returns(contractFileName)
 
-        val contractCache = ContractCache(mutableMapOf("apth.spec" to data))
+        val contractCache = ContractCache(mutableMapOf(contractFileName to data))
 
-        val references = References("user", contractFile, valuesCache = mapOf("name" to "Jane"), contractCache = contractCache)
+        val references = References("user", contractFile, contractCache = contractCache)
         val row = Row(listOf("name"), listOf("(${DEREFERENCE_PREFIX}user.name)"), references = mapOf("user" to references))
 
         assertThat(row.getField("name")).isEqualTo("Jane")

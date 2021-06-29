@@ -4,45 +4,57 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.test.HttpClient
 import java.io.File
 
-data class ContractFileWithExports(val path: String, val relativeTo: String = "") {
+interface AnchorFile {
+    fun resolve(path: String): File
+}
+
+data class SiblingAnchor(val siblingPath: String): AnchorFile {
+    override fun resolve(path: String): File {
+        return File(siblingPath).absoluteFile.parentFile.resolve(path).canonicalFile
+    }
+}
+
+object NoAnchorFile: AnchorFile {
+    override fun resolve(path: String): File {
+        return File(path)
+    }
+
+}
+
+data class ContractFileWithExports(val path: String, val relativeTo: AnchorFile = NoAnchorFile) {
     fun readFeatureForValue(valueName: String): Feature {
         return file().let {
             if(!it.exists())
                 throw ContractException("$APPLICATION_NAME file $path does not exist, but is used as the source of variables in value $valueName")
 
-            parseGherkinStringToFeature(it.readText(), it.absolutePath)
+            parseGherkinStringToFeature(it.readText(), it.canonicalPath)
         }
     }
 
-    fun file(): File {
-        return when {
-            relativeTo.isNotBlank() -> File(relativeTo).absoluteFile.parentFile.resolve(path)
-            else -> File(path)
-        }
-    }
+    fun file(): File = relativeTo.resolve(path)
 
-    val absolutePath: String = file().absolutePath
+    val absolutePath: String = file().canonicalPath
 
-    fun runContractAndExtractExports(valueName: String, baseURLs: Map<String, String>, variables: Map<String, String>): Map<String, String> {
-        val feature =
-            readFeatureForValue(valueName).copy(testVariables = variables, testBaseURLs = baseURLs)
-        val baseURL = baseURLs[path]
-        val results = feature.executeTests(
-            HttpClient(
-                baseURL
-                    ?: throw ContractException("Base URL for spec file ${path} was not supplied.")
-            )
+    fun runContractAndExtractExports(valueName: String, baseURLs: Map<String, String>, variables: Map<String, String>, contractCache: ContractCache): Map<String, String> {
+        val feature = readFeatureForValue(valueName)
+            .copy(testVariables = variables, testBaseURLs = baseURLs)
+            .addCache(contractCache)
+
+        val client = HttpClient(
+            baseURLs[path] ?: throw ContractException("Base URL for spec file $path was not supplied.")
         )
+
+        val results = feature.executeTests(client)
 
         if (results.hasFailures()) {
             throw ContractException(
-                "There were failures when running ${path} as a test against URL $baseURL:\n" + results.report(
+                "There were failures when running $path as a test against URL ${baseURLs[path]}:\n" + results.report(
                     PATH_NOT_RECOGNIZED_ERROR
                 ).prependIndent("  ")
             )
         }
 
-        return results.results.filterIsInstance<Result.Success>().fold(mapOf<String, String>()) { acc, result ->
+        return results.results.filterIsInstance<Result.Success>().fold(mapOf()) { acc, result ->
             acc.plus(result.variables)
         }
     }

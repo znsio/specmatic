@@ -23,7 +23,7 @@ object NoAnchorFile: AnchorFile {
 
 data class ContractFileWithExports(val path: String, val relativeTo: AnchorFile = NoAnchorFile) {
     fun readFeatureForValue(valueName: String): Feature {
-        return file().let {
+        return file.let {
             if(!it.exists())
                 throw ContractException("$APPLICATION_NAME file $path does not exist, but is used as the source of variables in value $valueName")
 
@@ -31,9 +31,12 @@ data class ContractFileWithExports(val path: String, val relativeTo: AnchorFile 
         }
     }
 
-    fun file(): File = relativeTo.resolve(path)
+    val file: File
+        get() {
+            return relativeTo.resolve(path)
+        }
 
-    val absolutePath: String = file().canonicalPath
+    val absolutePath: String = file.canonicalPath
 
     fun runContractAndExtractExports(valueName: String, baseURLs: Map<String, String>, variables: Map<String, String>, contractCache: ContractCache): Map<String, String> {
         val feature = readFeatureForValue(valueName)

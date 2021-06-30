@@ -362,7 +362,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         requiredFields: List<String>,
         patternName: String,
         typeStack: List<String>
-    ) = schema.properties.map { (propertyName, propertyType) ->
+    ) = schema.properties.orEmpty().map { (propertyName, propertyType) ->
         val optional = !requiredFields.contains(propertyName)
         if (patternName.isNotEmpty()) {
             if (typeStack.contains(patternName)) toSpecmaticParamName(

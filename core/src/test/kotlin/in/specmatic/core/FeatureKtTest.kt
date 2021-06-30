@@ -447,7 +447,7 @@ class FeatureKtTest {
             assertThat(it.references["data"]).isInstanceOf(References::class.java)
             assertThat(it.references["data"]?.valueName).isEqualTo("data")
             assertThat(it.references["data"]?.contractFile?.path).isEqualTo("data.$CONTRACT_EXTENSION")
-            assertThat(it.references["data"]?.contractFile?.relativeTo).isEqualTo(SiblingAnchor("original.$CONTRACT_EXTENSION"))
+            assertThat(it.references["data"]?.contractFile?.relativeTo).isEqualTo(AnchorFile("original.$CONTRACT_EXTENSION"))
         }
     }
 

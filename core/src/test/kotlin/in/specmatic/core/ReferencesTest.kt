@@ -41,7 +41,7 @@ internal class ReferencesTest {
         val feature = mockFeature(results)
         val contractFileWithExports = mockContractFileWithExports(feature)
         every {
-            contractFileWithExports.runContractAndExtractExports(any(), any(), any(), any())
+            contractFileWithExports.runContractAndExtractExports(any(), any(), any())
         }.returns(mapOf("name" to "Jack", "address" to "Baker Street"))
 
         val references = References("person", contractFileWithExports, baseURLs = mapOf("person.$CONTRACT_EXTENSION" to baseURL), contractCache = ContractCache())
@@ -57,7 +57,7 @@ internal class ReferencesTest {
         val feature = mockFeature(results)
         val contractFileWithExports = mockContractFileWithExports(feature)
         every {
-            contractFileWithExports.runContractAndExtractExports(any(), any(), any(), any())
+            contractFileWithExports.runContractAndExtractExports(any(), any(), any())
         }.returns(mapOf("name" to "Jack", "address" to "Baker Street"))
 
         val contractCache = ContractCache()
@@ -71,7 +71,7 @@ internal class ReferencesTest {
         assertThat(references2.lookup("address")).isEqualTo("Baker Street")
 
         verify(exactly = 1) {
-            contractFileWithExports.runContractAndExtractExports(any(), any(), any(), any())
+            contractFileWithExports.runContractAndExtractExports(any(), any(), any())
         }
     }
 
@@ -82,7 +82,7 @@ internal class ReferencesTest {
         val feature = mockFeature(results)
         val contractFileWithExports = mockContractFileWithExports(feature)
         every {
-            contractFileWithExports.runContractAndExtractExports(any(), any(), any(), any())
+            contractFileWithExports.runContractAndExtractExports(any(), any(), any())
         }.throws(ContractException("Failure"))
 
         val references = References("person", contractFileWithExports, baseURLs = mapOf("person.$CONTRACT_EXTENSION" to baseURL), contractCache = ContractCache())

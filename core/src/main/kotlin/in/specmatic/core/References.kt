@@ -25,6 +25,6 @@ data class References(val valueName: String, val contractFile: ContractFileWithE
         contractCache.lookup(contractFile.absolutePath) ?: fetchAndUpdateContractCache()
 
     private fun fetchAndUpdateContractCache(): Map<String, String> = contractCache.update(contractFile.absolutePath) {
-            contractFile.runContractAndExtractExports(valueName, baseURLs, variables, contractCache)
+            contractFile.runContractAndExtractExports(valueName, baseURLs, variables)
         }
 }

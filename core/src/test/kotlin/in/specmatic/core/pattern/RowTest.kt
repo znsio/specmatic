@@ -28,7 +28,7 @@ internal class RowTest {
 
         val contractFile = mockk<ContractFileWithExports>()
         every {
-            contractFile.runContractAndExtractExports(any(), any(), any(), any())
+            contractFile.runContractAndExtractExports(any(), any(), any())
         }.returns(data)
         val contractFileName = "path.spec"
         every {

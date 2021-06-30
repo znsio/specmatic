@@ -88,7 +88,29 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Pet'
+                  required:
+                    - id
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      minLength: 6
+                      maxLength: 12
+                    tag:
+                      $ref: '#/components/schemas/Tag'
+                    id:
+                      type: integer
+                      format: int6
+                    breed:
+                      type: string
+                      nullable: true
+                      enum:
+                        - labrador
+                        - retriever
+                        - null
+                    rating:
+                      type: integer
+                      enum: [ 1, 2 ]
           headers:
             X-RateLimit-Limit:
               schema:

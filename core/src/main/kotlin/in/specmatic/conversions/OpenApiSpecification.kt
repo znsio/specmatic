@@ -2,7 +2,6 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
-import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -158,9 +157,10 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
 
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
                     val responseExamples = responseMediaType.examples.orEmpty()
-                    val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, value) ->
+                    val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, _) ->
                         val requestExamples =
-                            operation.parameters.filter { parameter -> parameter.examples.any { it.key == exampleName } }
+                            operation.parameters.orEmpty()
+                                .filter { parameter -> parameter.examples.any { it.key == exampleName } }
                                 .map { it.name to it.examples[exampleName]!!.value }.toMap()
 
                         requestExamples.map { (key, value) -> key to value.toString() }.toList().isNotEmpty()
@@ -297,16 +297,8 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
             is DateTimeSchema -> DateTimePattern
             is DateSchema -> StringPattern()
             is BooleanSchema -> BooleanPattern
-            is ObjectSchema -> {
-                val requiredFields = schema.required.orEmpty()
-                val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack)
-                val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
-                patterns["(${patternName})"] = jsonObjectPattern
-                jsonObjectPattern
-            }
-            is ArraySchema -> {
-                JSONArrayPattern(listOf(toSpecmaticPattern(schema.items)))
-            }
+            is ObjectSchema -> toJsonObjectPattern(schema, patternName, typeStack)
+            is ArraySchema -> JSONArrayPattern(listOf(toSpecmaticPattern(schema.items)))
             is ComposedSchema -> {
                 if (schema.allOf == null) {
                     throw UnsupportedOperationException("Specmatic does not support oneOf and anyOf. Only allOf is supported.")
@@ -327,22 +319,22 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
             }
             is Schema -> {
                 val component = schema.`$ref`
-                    ?: throw ContractException("Found null \$ref property in schema ${schema.name ?: "which had no name"}").also {
-                        information.forDebugging("Schema:")
-                        information.forDebugging(schema.toString().prependIndent("  "))
+                when {
+                    component != null -> {
+                        val (componentName, referredSchema) = resolveReferenceToSchema(component)
+                        val cyclicReference = patternName.isNotEmpty()
+                                && patternName == componentName
+                                && typeStack.contains(patternName)
+                                && referredSchema.instanceOf(ObjectSchema::class)
+                        when {
+                            cyclicReference -> DeferredPattern("(${patternName})")
+                            else -> resolveReference(component)
+                        }
                     }
-                val (componentName, referredSchema) = resolveReferenceToSchema(component)
-                if (patternName.isNotEmpty()
-                    && patternName == componentName
-                    && typeStack.contains(patternName)
-                    && referredSchema.instanceOf(ObjectSchema::class)
-                )
-                    DeferredPattern("(${patternName})")
-                else {
-                    resolveReference(component)
+                    else -> toJsonObjectPattern(schema, patternName, typeStack)
                 }
             }
-            else -> throw UnsupportedOperationException("Specmatic is unable parse: $schema")
+            else -> throw UnsupportedOperationException("Specmatic is unable to parse: $schema")
         }
         return when (schema.nullable != true) {
             true -> pattern
@@ -351,6 +343,18 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 else -> AnyPattern(listOf(NullPattern, pattern))
             }
         }
+    }
+
+    private fun toJsonObjectPattern(
+        schema: Schema<*>,
+        patternName: String,
+        typeStack: List<String>
+    ): JSONObjectPattern {
+        val requiredFields = schema.required.orEmpty()
+        val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack)
+        val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
+        patterns["(${patternName})"] = jsonObjectPattern
+        return jsonObjectPattern
     }
 
     private fun toSchemaProperties(
@@ -401,7 +405,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
 
     private fun resolveReferenceToSchema(component: String): Pair<String, Schema<Any>> {
         if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
-        val componentName = component!!.removePrefix("#/components/schemas/")
+        val componentName = component.removePrefix("#/components/schemas/")
         return componentName to openApi.components.schemas[componentName] as Schema<Any>
     }
 

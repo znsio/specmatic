@@ -269,7 +269,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 HttpRequestPattern(
                     urlMatcher = toURLMatcherWithOptionalQueryParams(path),
                     method = httpMethod,
-                    headersPattern = HttpHeadersPattern(headersMap.plus(toPatternPair("Content-Type", contentType))),
+                    headersPattern = HttpHeadersPattern(headersMap),
                     body = toSpecmaticPattern(mediaType)
                 )
             }

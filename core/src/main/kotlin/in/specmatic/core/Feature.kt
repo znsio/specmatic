@@ -294,13 +294,13 @@ private fun lexScenario(
     steps: List<Step>,
     examplesList: List<Examples>,
     featureTags: List<Tag>,
-    backgroundScenarioInfo: ScenarioInfo,
+    backgroundScenarioInfo: ScenarioInfo?,
     filePath: String,
     includedSpecifications: List<IncludedSpecification?>
 ): ScenarioInfo {
     val filteredSteps = steps.map { step -> StepInfo(step.text, listOfDatatableRows(step), step) }.filterNot { it.isEmpty }
 
-    val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo) { scenarioInfo, step ->
+    val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo ?: ScenarioInfo()) { scenarioInfo, step ->
         when (step.keyword) {
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
@@ -391,12 +391,12 @@ private fun lexScenario(
                     references = values(
                         step.rest,
                         scenarioInfo.references,
-                        backgroundScenarioInfo.references,
+                        backgroundScenarioInfo?.references ?: emptyMap(),
                         filePath
                     )
                 )
             "EXPORT" ->
-                scenarioInfo.copy(bindings = setters(step.rest, backgroundScenarioInfo.bindings, scenarioInfo.bindings))
+                scenarioInfo.copy(bindings = setters(step.rest, backgroundScenarioInfo?.bindings ?: emptyMap(), scenarioInfo.bindings))
             else -> {
                 val location = when(step.raw.location) {
                     null -> ""
@@ -414,8 +414,8 @@ private fun lexScenario(
         else -> false
     }
 
-    return if (includedSpecifications.isEmpty()) {
-        scenarioInfoWithExamples(parsedScenarioInfo, backgroundScenarioInfo, examplesList, ignoreFailure)
+    return if (includedSpecifications.isEmpty() || backgroundScenarioInfo == null) {
+        scenarioInfoWithExamples(parsedScenarioInfo, backgroundScenarioInfo ?: ScenarioInfo(), examplesList, ignoreFailure)
     } else {
         val matchingScenarios: List<ScenarioInfo> = includedSpecifications.mapNotNull {
             it?.matches(parsedScenarioInfo, steps).orEmpty()
@@ -463,6 +463,8 @@ private fun scenarioInfoWithExamples(
     ignoreFailure: Boolean
 ) = parsedScenarioInfo.copy(
     examples = backgroundScenarioInfo.examples.plus(examplesFrom(examplesList)),
+    bindings = backgroundScenarioInfo.bindings.plus(parsedScenarioInfo.bindings),
+    references = backgroundScenarioInfo.references.plus(parsedScenarioInfo.references),
     ignoreFailure = ignoreFailure
 )
 
@@ -646,22 +648,24 @@ fun scenarioInfos(
     val scenarioInfosBelongingToIncludedSpecifications =
         includedSpecifications.mapNotNull { it.toScenarioInfos() }.flatten()
 
+    val backgroundInfo = backgroundScenario(featureChildren)?.let { feature ->
+        lexScenario(
+            feature.background.steps
+                .filter { !it.text.contains("openapi", true) }
+                .filter { !it.text.contains("wsdl", true) },
+            listOf(),
+            emptyList(),
+            null,
+            filePath,
+            includedSpecifications
+        )
+    } ?: ScenarioInfo()
+
     val specmaticScenarioInfos = scenarios(featureChildren).map { featureChild ->
         if (featureChild.scenario.name.isBlank())
             throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
 
-        val backgroundInfoCopy = (background(featureChildren)?.let { feature ->
-            lexScenario(
-                feature.background.steps
-                    .filter { !it.text.contains("openapi", true) }
-                    .filter { !it.text.contains("wsdl", true) },
-                listOf(),
-                emptyList(),
-                ScenarioInfo(),
-                filePath,
-                includedSpecifications
-            )
-        } ?: ScenarioInfo()).copy(scenarioName = featureChild.scenario.name)
+        val backgroundInfoCopy = backgroundInfo.copy(scenarioName = featureChild.scenario.name)
 
         lexScenario(
             featureChild.scenario.steps,
@@ -687,11 +691,11 @@ private fun toIncludedSpecification(
 ): IncludedSpecification? =
     selector(featureChildren)?.run { creator(text.split(" ")[1]) }
 
-private fun background(featureChildren: List<FeatureChild>) =
+private fun backgroundScenario(featureChildren: List<FeatureChild>) =
     featureChildren.firstOrNull { it.background != null }
 
 private fun backgroundOpenApi(featureChildren: List<FeatureChild>): Step? {
-    return background(featureChildren)?.let { background ->
+    return backgroundScenario(featureChildren)?.let { background ->
         background.background.steps.firstOrNull {
             it.keyword.contains("Given", true)
                     && it.text.contains("openapi", true)
@@ -700,7 +704,7 @@ private fun backgroundOpenApi(featureChildren: List<FeatureChild>): Step? {
 }
 
 private fun backgroundWsdl(featureChildren: List<FeatureChild>): Step? {
-    return background(featureChildren)?.let { background ->
+    return backgroundScenario(featureChildren)?.let { background ->
         background.background.steps.firstOrNull {
             it.keyword.contains("Given", true)
                     && it.text.contains("wsdl", true)

@@ -1,16 +1,16 @@
 package `in`.specmatic.core
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.fail
+import java.io.File
 
 class FeatureKtTest {
     @Test
@@ -448,6 +448,93 @@ class FeatureKtTest {
             assertThat(it.references["data"]?.valueName).isEqualTo("data")
             assertThat(it.references["data"]?.contractFile?.path).isEqualTo("data.$CONTRACT_EXTENSION")
             assertThat(it.references["data"]?.contractFile?.relativeTo).isEqualTo(AnchorFile("original.$CONTRACT_EXTENSION"))
+        }
+    }
+
+    companion object {
+        private const val OPENAPI_FILE = "openApiTest.yaml"
+
+        @BeforeAll
+        @JvmStatic
+        fun `setup`() {
+            val openAPI = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /hello/{id}:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Numeric ID
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: string
+    """.trim()
+
+            val openApiFile = File(OPENAPI_FILE)
+            openApiFile.createNewFile()
+            openApiFile.writeText(openAPI)
+        }
+
+        @AfterAll
+        @JvmStatic
+        fun `teardown`() {
+            File(OPENAPI_FILE).delete()
+        }
+    }
+
+    @Nested
+    inner class LoadOpenAPIFromGherkin {
+        val feature = parseGherkinStringToFeature("""
+                Feature: OpenAPI test
+                    Background:
+                        Given openapi $OPENAPI_FILE
+                        And value auth from auth.spec
+                        
+                    Scenario: OpenAPI test
+                        When GET /hello/10
+                        Then status 200
+                        And export data = response-body
+            """.trimIndent())
+
+        @Test
+        fun `parsing OpenAPI spec should preserve the references declared in the gherkin spec`() {
+            assertThat(feature.scenarios.first().references.contains("auth"))
+        }
+
+        @Test
+        fun `parsing OpenAPI spec should preserve the bindings declared in the gherkin spec`() {
+            assertThat(feature.scenarios.first().bindings.contains("data"))
         }
     }
 

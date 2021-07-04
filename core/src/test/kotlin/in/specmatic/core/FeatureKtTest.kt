@@ -452,7 +452,9 @@ class FeatureKtTest {
     }
 
     companion object {
-        private const val OPENAPI_FILE = "openApiTest.yaml"
+        private const val openApiFileName = "openApiTest.yaml"
+        private const val resourcesRoot = "src/test/resources/"
+        private const val openApiFilePathRelativeToProjectRoot = "$resourcesRoot$openApiFileName"
 
         @BeforeAll
         @JvmStatic
@@ -504,7 +506,7 @@ paths:
                 type: string
     """.trim()
 
-            val openApiFile = File("src/test/resources/$OPENAPI_FILE")
+            val openApiFile = File(openApiFilePathRelativeToProjectRoot)
             openApiFile.createNewFile()
             openApiFile.writeText(openAPI)
         }
@@ -512,7 +514,7 @@ paths:
         @AfterAll
         @JvmStatic
         fun `teardown`() {
-            File(OPENAPI_FILE).delete()
+            File(openApiFilePathRelativeToProjectRoot).delete()
         }
     }
 
@@ -521,14 +523,14 @@ paths:
         val feature = parseGherkinStringToFeature("""
                 Feature: OpenAPI test
                     Background:
-                        Given openapi $OPENAPI_FILE
+                        Given openapi $openApiFileName
                         And value auth from auth.spec
                         
                     Scenario: OpenAPI test
                         When GET /hello/10
                         Then status 200
                         And export data = response-body
-            """.trimIndent(), File("src/test/resources/dummy.spec").canonicalPath)
+            """.trimIndent(), File("${resourcesRoot}dummy.spec").canonicalPath)
 
         @Test
         fun `parsing OpenAPI spec should preserve the references declared in the gherkin spec`() {

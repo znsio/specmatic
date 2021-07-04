@@ -92,7 +92,7 @@ class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
                 .startsWith(fileScheme)
         ) Paths.get(URI.create(adjustedLocation)) else Paths.get(adjustedLocation)
         return if (Files.exists(path)) {
-            FileUtils.readFileToString(path.toFile(), StandardCharsets.UTF_8.displayName())
+            path.toFile().readText()
         } else {
             ClasspathHelper.loadFileFromClasspath(adjustedLocation)
         }

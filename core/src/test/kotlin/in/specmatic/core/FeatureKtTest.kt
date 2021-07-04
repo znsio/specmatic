@@ -457,6 +457,9 @@ class FeatureKtTest {
         @BeforeAll
         @JvmStatic
         fun `setup`() {
+            File(".").canonicalFile.let {
+                println(it.path)
+            }
             val openAPI = """
 openapi: 3.0.0
 info:
@@ -501,7 +504,7 @@ paths:
                 type: string
     """.trim()
 
-            val openApiFile = File(OPENAPI_FILE)
+            val openApiFile = File("src/test/resources/$OPENAPI_FILE")
             openApiFile.createNewFile()
             openApiFile.writeText(openAPI)
         }
@@ -525,7 +528,7 @@ paths:
                         When GET /hello/10
                         Then status 200
                         And export data = response-body
-            """.trimIndent())
+            """.trimIndent(), File("src/test/resources/dummy.spec").canonicalPath)
 
         @Test
         fun `parsing OpenAPI spec should preserve the references declared in the gherkin spec`() {

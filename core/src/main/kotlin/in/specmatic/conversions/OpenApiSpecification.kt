@@ -22,6 +22,20 @@ import java.io.File
 
 class OpenApiSpecification(private val openApiFile: String, private val openApi: OpenAPI) : IncludedSpecification {
     companion object {
+        fun fromFile(openApiFilePath: String, relativeTo: String): OpenApiSpecification {
+            val openApiFile = File(openApiFilePath).let { openApiFile ->
+                if(openApiFile.isAbsolute) {
+                    openApiFile
+                } else {
+                    File(relativeTo).canonicalFile.parentFile.resolve(openApiFile)
+                }
+            }
+
+            val openApiYAMLContent = openApiFile.readText()
+
+            return OpenApiSpecification(openApiFile.canonicalPath, OpenAPIV3Parser().readContents(openApiYAMLContent).openAPI)
+        }
+
         fun fromFile(openApiFile: String): OpenApiSpecification {
             val openApi = OpenAPIV3Parser().read(openApiFile)
             return OpenApiSpecification(openApiFile, openApi)

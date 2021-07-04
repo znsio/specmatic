@@ -638,7 +638,7 @@ fun scenarioInfos(
     filePath: String
 ): List<ScenarioInfo> {
     val openApiSpecification =
-        toIncludedSpecification(featureChildren, { backgroundOpenApi(it) }) { OpenApiSpecification.fromFile(it) }
+        toIncludedSpecification(featureChildren, { backgroundOpenApi(it) }) { OpenApiSpecification.fromFile(it, filePath) }
 
     val wsdlSpecification =
         toIncludedSpecification(featureChildren, { backgroundWsdl(it) }) { WsdlSpecification(it) }

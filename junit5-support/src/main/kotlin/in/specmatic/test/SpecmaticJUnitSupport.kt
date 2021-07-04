@@ -54,7 +54,7 @@ open class SpecmaticJUnitSupport {
         val suggestionsData = System.getProperty(INLINE_SUGGESTIONS) ?: ""
         val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""
 
-        val workingDirectory = WorkingDirectory(valueOrDefault(givenWorkingDirectory, DEFAULT_WORKING_DIRECTORY, "Working was not specified specified"))
+        val workingDirectory = WorkingDirectory(givenWorkingDirectory ?: DEFAULT_WORKING_DIRECTORY)
 
         val envConfig = getEnvConfig(System.getProperty(ENV_NAME))
         val testConfig = loadTestConfig(envConfig)

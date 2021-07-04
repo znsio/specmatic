@@ -24,6 +24,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
+import java.io.File
 import java.net.URI
 
 internal class OpenApiKtTest {
@@ -39,6 +40,8 @@ Scenario: zero should return not found
   Then status 404
         """.trimIndent()
 
+        private val sourceSpecPath = File("src/test/resources/hello.spec").canonicalPath
+
         @BeforeAll
         @JvmStatic
         fun setup() {
@@ -48,7 +51,7 @@ Scenario: zero should return not found
 
     @Test
     fun `should create stub from gherkin that includes OpenAPI spec`() {
-        val feature = parseGherkinStringToFeature(openAPISpec)
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
 
         val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -76,7 +79,7 @@ Scenario: zero should return not found
     fun `should create test from gherkin that includes OpenAPI spec`() {
         val flags = mutableMapOf<String, Boolean>()
 
-        val feature = parseGherkinStringToFeature(openAPISpec)
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -116,8 +119,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/helloWithExamples.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -158,8 +160,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/helloWithExamples.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -211,7 +212,7 @@ Background:
     fun `should report error in test with both OpenAPI and Gherkin scenario names`() {
         val flags = mutableMapOf<String, Boolean>()
 
-        val feature = parseGherkinStringToFeature(openAPISpec)
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -266,8 +267,7 @@ Background:
         Scenario: sending string instead of number should return not found
           When GET /hello/test
           Then status 404
-                """.trimIndent()
-            )
+                """.trimIndent(), sourceSpecPath)
         }.satisfies {
             assertThat(it.message).isEqualTo("""Scenario: "sending string instead of number should return not found" PATH: "/hello/test" is not as per included wsdl / OpenApi spec""")
         }
@@ -286,8 +286,7 @@ Background:
         Scenario: zero should return forbidden
           When GET /hello/0
           Then status 403
-                """.trimIndent()
-            )
+                """.trimIndent(), sourceSpecPath)
         }.satisfies {
             assertThat(it.message).isEqualTo("""Scenario: "zero should return forbidden" RESPONSE STATUS: "403" is not as per included wsdl / OpenApi spec""")
         }
@@ -301,8 +300,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -321,8 +319,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
         val headers = HttpHeaders()
         headers.set("X-Request-ID", "717e5682-c214-11eb-8529-0242ac130003")
         val requestEntity: HttpEntity<String> = HttpEntity("", headers)
@@ -373,8 +370,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -399,8 +395,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val petResponse = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -423,8 +418,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-post.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val result = testBackwardCompatibility(feature, feature)
         assertThat(result.success()).isTrue()
@@ -439,8 +433,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-post.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val petResponse = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -463,8 +456,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val petResponse = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -487,8 +479,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -513,8 +504,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val petResponse = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -537,8 +527,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -576,8 +565,7 @@ Background:
   Scenario: zero return bad request
     When GET /pets/0
     Then status 400
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -686,8 +674,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -754,8 +741,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -822,8 +808,7 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent()
-        )
+        """.trimIndent(), sourceSpecPath)
 
         val results = feature.executeTests(
             object : TestExecutor {

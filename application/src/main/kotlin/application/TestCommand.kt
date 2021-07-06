@@ -15,6 +15,7 @@ import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.test.SpecmaticJUnitSupport
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
@@ -80,6 +81,11 @@ class TestCommand : Callable<Unit> {
     var configFileName: String? = null
 
     override fun call() = try {
+        configFileName?.let {
+            Configuration.globalConfigFileName = it
+            System.setProperty(CONFIG_FILE_NAME, it)
+        }
+
         contractPaths = loadContractPaths()
 
         if(port == 0) {
@@ -109,10 +115,6 @@ class TestCommand : Callable<Unit> {
         System.setProperty("kafkaHost", kafkaHost)
         System.setProperty("kafkaPort", kafkaPort.toString())
         System.setProperty("commit", commit.toString())
-
-        configFileName?.let {
-            Configuration.globalConfigFileName = it
-        }
 
         if(kafkaPort != 0)
             System.setProperty("kafkaPort", kafkaPort.toString())

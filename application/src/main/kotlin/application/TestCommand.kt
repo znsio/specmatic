@@ -11,8 +11,8 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import `in`.specmatic.core.Configuration
-import `in`.specmatic.core.git.Verbose
-import `in`.specmatic.core.git.information
+import `in`.specmatic.core.Verbose
+import `in`.specmatic.core.information
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.test.SpecmaticJUnitSupport

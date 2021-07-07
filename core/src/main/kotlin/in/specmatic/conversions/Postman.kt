@@ -1,7 +1,7 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.git.information
+import `in`.specmatic.core.information
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.parseXML

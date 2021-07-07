@@ -1,6 +1,6 @@
 package `in`.specmatic
 
-import `in`.specmatic.core.git.information
+import `in`.specmatic.core.information
 import java.util.*
 
 object LogTail {

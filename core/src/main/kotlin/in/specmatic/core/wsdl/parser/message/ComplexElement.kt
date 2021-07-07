@@ -1,6 +1,6 @@
 package `in`.specmatic.core.wsdl.parser.message
 
-import `in`.specmatic.core.git.information
+import `in`.specmatic.core.information
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.TYPE_ATTRIBUTE_NAME
 import `in`.specmatic.core.pattern.XMLPattern

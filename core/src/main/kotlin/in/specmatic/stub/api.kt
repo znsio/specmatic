@@ -3,7 +3,7 @@ package `in`.specmatic.stub
 
 import `in`.specmatic.consoleLog
 import `in`.specmatic.core.*
-import `in`.specmatic.core.git.information
+import `in`.specmatic.core.information
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.contractStubPaths
 import `in`.specmatic.core.utilities.jsonStringToValueMap

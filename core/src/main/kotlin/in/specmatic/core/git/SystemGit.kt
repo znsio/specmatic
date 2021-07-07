@@ -1,5 +1,6 @@
 package `in`.specmatic.core.git
 
+import `in`.specmatic.core.information
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
 

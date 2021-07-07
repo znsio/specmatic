@@ -2,8 +2,8 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
-import `in`.specmatic.core.git.Verbose
-import `in`.specmatic.core.git.information
+import `in`.specmatic.core.Verbose
+import `in`.specmatic.core.information
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.value.Value

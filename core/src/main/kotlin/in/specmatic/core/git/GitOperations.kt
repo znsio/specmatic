@@ -3,6 +3,7 @@
 package `in`.specmatic.core.git
 
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.information
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.GitRepo
 import `in`.specmatic.core.utilities.getTransportCallingCallback

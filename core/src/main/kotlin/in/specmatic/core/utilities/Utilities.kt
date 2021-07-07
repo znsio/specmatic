@@ -13,7 +13,7 @@ import `in`.specmatic.consoleLog
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.git.information
+import `in`.specmatic.core.information
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.NumberPattern

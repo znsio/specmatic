@@ -1,4 +1,4 @@
-package `in`.specmatic.core.git
+package `in`.specmatic.core
 
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 

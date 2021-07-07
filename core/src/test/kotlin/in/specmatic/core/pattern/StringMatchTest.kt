@@ -31,7 +31,7 @@ class StringMatchTest {
             | id   | (number) |
             | name | (string?) |
         """.trimIndent()
-        val pattern = rowsToTabularPattern(parseGherkinString(gherkin).feature.children[0].scenario.steps[0].dataTable.rows)
+        val pattern = rowsToTabularPattern(parseGherkinString(gherkin)!!.feature.children[0].scenario.steps[0].dataTable.rows)
         val value = parsedValue("""{"id": 10, "name": null}""")
 
         value shouldMatch pattern

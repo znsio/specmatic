@@ -25,20 +25,21 @@ fun parseContractFileToFeature(contractPath: String): Feature {
 }
 
 fun parseContractFileToFeature(file: File): Feature {
+    information.forDebugging("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
+
+    if(!file.exists())
+        throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
+
     return when(file.extension) {
         "yaml" -> OpenApiSpecification.fromFile(file.path).toFeature()
-        in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(file.readText().trim(), file.absolutePath)
+        in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(file.readText().trim(), file.canonicalPath)
         else -> throw ContractException("File extension of ${file.path} not recognized")
     }
 }
 
-fun parseGherkinStringToFeature(gherkinData: String, filePath: String = ""): Feature {
-    val gherkinDocument = parseGherkinString(gherkinData)
-    return parseGherkinDocumentToFeature(gherkinDocument, filePath)
-}
-
-fun parseGherkinDocumentToFeature(contractGherkinDocument: GherkinDocument, filePath: String): Feature {
-    val (name, scenarios) = lex(contractGherkinDocument, filePath)
+fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""): Feature {
+    val gherkinDocument = parseGherkinString(gherkinData, sourceFilePath)
+    val (name, scenarios) = lex(gherkinDocument, sourceFilePath)
     return Feature(scenarios = scenarios, name = name)
 }
 
@@ -605,7 +606,11 @@ fun breakIntoPartsMaxLength(whole: String, separator: String, partCount: Int) =
 
 private val HTTP_METHODS = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
 
-internal fun parseGherkinString(gherkinData: String): GherkinDocument {
+fun parseGherkinString(gherkinData: String, sourceFilePath: String): GherkinDocument {
+    return parseGherkinString(gherkinData)  ?: throw ContractException("There was no contract in the file $sourceFilePath.")
+}
+
+internal fun parseGherkinString(gherkinData: String): GherkinDocument? {
     val idGenerator: IdGenerator = Incrementing()
     val parser = Parser(GherkinDocumentBuilder(idGenerator))
     return parser.parse(gherkinData)
@@ -723,7 +728,7 @@ private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, Examp
             val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
 
             for (message in examples.messages) {
-                println(message)
+                information.forTheUser(message)
             }
 
             val (responseClauses, allTypes, _) = toGherkinClauses(namedStub.stub.response, typesFromRequest)

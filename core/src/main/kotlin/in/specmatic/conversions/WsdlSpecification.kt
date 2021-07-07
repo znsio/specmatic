@@ -82,7 +82,7 @@ class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
         val wsdlContent = readContentFromLocation(wsdlFile)
         val wsdl = WSDL(toXMLNode(wsdlContent!!), wsdlFile)
         val gherkin = wsdl.convertToGherkin().trim()
-        return parseGherkinString(gherkin).feature.children
+        return parseGherkinString(gherkin, wsdlFile).feature.children
     }
 
     private fun readContentFromLocation(location: String): String? {

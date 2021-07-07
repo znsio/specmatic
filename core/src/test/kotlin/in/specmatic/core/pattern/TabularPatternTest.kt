@@ -460,7 +460,7 @@ Feature: Recursive test
 
 internal fun getRows(gherkin: String) = getScenario(gherkin).steps[0].dataTable.rows
 
-internal fun getScenario(gherkin: String) = parseGherkinString(gherkin).feature.children[0].scenario
+internal fun getScenario(gherkin: String) = parseGherkinString(gherkin)!!.feature.children[0].scenario
 
 data class Data(
     @JsonProperty("id") val name: Int,

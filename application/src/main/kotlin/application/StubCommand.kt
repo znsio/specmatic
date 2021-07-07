@@ -80,7 +80,7 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--httpsPassword"], description = ["Key password if any"])
     var keyPassword = "forgotten"
 
-    @Option(names = ["--verbose"], description = ["Verbose mode"])
+    @Option(names = ["--verbose", "--debug"], description = ["Verbose mode"])
     var verbose = false
 
     @Option(names = ["--config"], description = ["Configuration file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])

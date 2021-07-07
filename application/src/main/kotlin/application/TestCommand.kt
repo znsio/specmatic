@@ -11,6 +11,7 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import `in`.specmatic.core.Configuration
+import `in`.specmatic.core.git.Verbose
 import `in`.specmatic.core.git.information
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
@@ -80,7 +81,14 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--config"], description = ["Configuration file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
     var configFileName: String? = null
 
+    @Option(names = ["--verbose", "--debug"], description = ["Display debug logs"])
+    var verboseMode: Boolean = false
+
     override fun call() = try {
+        if(verboseMode) {
+            information = Verbose
+        }
+
         configFileName?.let {
             Configuration.globalConfigFileName = it
             System.setProperty(CONFIG_FILE_NAME, it)
@@ -149,7 +157,7 @@ class TestCommand : Callable<Unit> {
         contractExecutionListener.exitProcess()
     }
     catch (e: Throwable) {
-        println(exceptionCauseMessage(e))
+        information.forTheUser(e)
     }
 
     private fun loadContractPaths(): List<String> {

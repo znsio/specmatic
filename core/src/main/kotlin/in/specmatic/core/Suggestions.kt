@@ -1,8 +1,15 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.utilities.readFile
 import io.cucumber.messages.types.GherkinDocument
 
-class Suggestions(contractGherkinDocument: GherkinDocument) {
-    val scenarios: List<Scenario> = lex(contractGherkinDocument, "").second
-    constructor(gherkinData: String) : this(parseGherkinString(gherkinData))
+class Suggestions(val scenarios: List<Scenario>) {
+    constructor(contractGherkinDocument: GherkinDocument) : this(lex(contractGherkinDocument, "").second)
+
+    companion object {
+        fun fromFile(suggestionsPath: String): Suggestions {
+            val suggestionsGherkin = readFile(suggestionsPath)
+            return Suggestions(parseGherkinString(suggestionsGherkin, suggestionsPath))
+        }
+    }
 }

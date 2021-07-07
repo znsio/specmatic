@@ -79,7 +79,7 @@ open class SpecmaticJUnitSupport {
             println(e.report())
             throw e
         } catch(e: Throwable) {
-            println(exceptionCauseMessage(e))
+            information.forTheUser(e)
             throw e
         } finally {
             workingDirectory.delete()
@@ -123,8 +123,7 @@ open class SpecmaticJUnitSupport {
     }
 
     private fun suggestionsFromFile(suggestionsPath: String): List<Scenario> {
-        val suggestionsGherkin = readFile(suggestionsPath)
-        return Suggestions(suggestionsGherkin).scenarios
+        return Suggestions.fromFile(suggestionsPath).scenarios
     }
 
     private fun suggestionsFromCommandLine(suggestions: String): List<Scenario> {

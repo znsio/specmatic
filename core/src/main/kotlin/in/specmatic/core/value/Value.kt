@@ -7,7 +7,12 @@ interface Value {
     val httpContentType: String
 
     fun displayableValue(): String
-    fun toStringValue(): String
+    fun toStringLiteral(): String
+
+    fun toStringValue(): StringValue {
+        return StringValue(toStringLiteral())
+    }
+
     fun displayableType(): String
     fun exactMatchElseType(): Pattern
     fun type(): Pattern

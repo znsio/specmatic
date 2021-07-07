@@ -141,7 +141,7 @@ open class SpecmaticJUnitSupport {
                     val rows = exampleData.list.map { row ->
                         asJSONObjectValue(row, "Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
                     }.map { row ->
-                        Row(columns, columns.map { row.getValue(it).toStringValue() })
+                        Row(columns, columns.map { row.getValue(it).toStringLiteral() })
                     }.toMutableList()
 
                     Examples(columns, rows)

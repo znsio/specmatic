@@ -70,10 +70,10 @@ class SetupFacts {
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertEquals("jack", serverStateForValidation.getValue("user").toStringValue())
+                assertEquals("jack", serverStateForValidation.getValue("user").toStringLiteral())
                 val jsonBody = jsonObject(request.body)
                 val name = jsonBody["name"]
-                assertEquals("jack", name?.toStringValue())
+                assertEquals("jack", name?.toStringLiteral())
                 return HttpResponse(409, null, HashMap())
             }
 

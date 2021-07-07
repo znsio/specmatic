@@ -13,7 +13,6 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import java.util.*
-import kotlin.math.exp
 import org.junit.jupiter.api.Assertions.assertEquals
 
 internal class HttpResponseTest {
@@ -39,7 +38,7 @@ internal class HttpResponseTest {
             if(responseBody !is JSONObjectValue)
                 throw AssertionError("Expected responseBody to be a JSON object, but got ${responseBody.javaClass.name}")
 
-            assertEquals("John Doe", responseBody.jsonObject.getValue("name").toStringValue())
+            assertEquals("John Doe", responseBody.jsonObject.getValue("name").toStringLiteral())
             assertEquals("application/json", it.headers.getOrDefault("Content-Type", ""))
         }
     }

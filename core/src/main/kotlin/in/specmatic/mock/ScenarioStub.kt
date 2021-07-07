@@ -62,7 +62,7 @@ fun kafkaMessageFromJSON(json: Map<String, Value>): KafkaMessage {
     val key = json[KAFKA_KEY_KEY]
     val value = json.getValue(KAFKA_VALUE_KEY)
 
-    return KafkaMessage(target.toStringValue(), key?.let { StringValue(it.toStringValue()) }, value)
+    return KafkaMessage(target.toStringLiteral(), key?.let { StringValue(it.toStringLiteral()) }, value)
 }
 
 fun getJSONObjectValue(keys: List<String>, mapData: Map<String, Value>): Map<String, Value> {

@@ -8,7 +8,7 @@ object NullValue : Value, ScalarValue {
     override val httpContentType: String = "text/pain"
 
     override fun displayableValue(): String = "null"
-    override fun toStringValue() = ""
+    override fun toStringLiteral() = ""
     override fun displayableType(): String = "null"
     override fun exactMatchElseType(): Pattern = NullPattern
     override fun type(): Pattern = NullPattern

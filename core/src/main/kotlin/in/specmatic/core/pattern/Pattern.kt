@@ -22,6 +22,10 @@ interface Pattern {
 
     fun patternSet(resolver: Resolver): List<Pattern> = listOf(this)
 
+    fun parseToType(valueString: String, resolver: Resolver): Pattern {
+        return parse(valueString, resolver).exactMatchElseType()
+    }
+
     fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack = emptySet()): Result
     fun encompasses(others: List<Pattern>, thisResolver: Resolver, otherResolver: Resolver, lengthError: String, typeStack: TypeStack = emptySet()): ConsumeResult<Pattern, Pattern> {
         val otherOne = others.firstOrNull()

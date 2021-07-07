@@ -32,7 +32,7 @@ internal class HttpRequestKtTest {
 
         val valueOfA = body.getValue("a")
         assertThat(valueOfA).isInstanceOf(NumberValue::class.java)
-        assertThat(valueOfA.toStringValue()).isEqualTo("1")
+        assertThat(valueOfA.toStringLiteral()).isEqualTo("1")
     }
 
     @Test

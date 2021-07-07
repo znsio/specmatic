@@ -205,7 +205,7 @@ internal fun urlFromPostmanValue(urlValue: Value): URL {
     return when(urlValue) {
         is JSONObjectValue -> urlValue.jsonObject.getValue("raw")
         else -> urlValue
-    }.toStringValue().trim().let {
+    }.toStringLiteral().trim().let {
         if(it.startsWith("http://") || it.startsWith("https://"))
             it
         else

@@ -9,7 +9,7 @@ import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 
 data class XMLTypeData(val name: String = "", val realName: String, val attributes: Map<String, Pattern> = emptyMap(), val nodes: List<Pattern> = emptyList()) {
     fun getAttributeValue(name: String): String? =
-        (attributes[name] as ExactValuePattern?)?.pattern?.toStringValue()
+        (attributes[name] as ExactValuePattern?)?.pattern?.toStringLiteral()
 
     fun isEmpty(): Boolean {
         return name.isEmpty() && attributes.isEmpty() && nodes.isEmpty()
@@ -52,20 +52,20 @@ data class XMLTypeData(val name: String = "", val realName: String, val attribut
 
     fun isOptionalNode(): Boolean {
         return attributes[OCCURS_ATTRIBUTE_NAME].let {
-            it is ExactValuePattern && it.pattern.toStringValue() == OPTIONAL_ATTRIBUTE_VALUE
+            it is ExactValuePattern && it.pattern.toStringLiteral() == OPTIONAL_ATTRIBUTE_VALUE
         }
     }
 
     fun isMultipleNode(): Boolean {
         return attributes[OCCURS_ATTRIBUTE_NAME].let {
-            it is ExactValuePattern && it.pattern.toStringValue() == MULTIPLE_ATTRIBUTE_VALUE
+            it is ExactValuePattern && it.pattern.toStringLiteral() == MULTIPLE_ATTRIBUTE_VALUE
         }
     }
 
     fun getNodeOccurrence(): NodeOccurrence {
         val attributeType = (attributes[OCCURS_ATTRIBUTE_NAME] ?: attributes[OCCURS_ATTRIBUTE_NAME_LEGACY]) as ExactValuePattern?
 
-        return when(attributeType?.pattern?.toStringValue()) {
+        return when(attributeType?.pattern?.toStringLiteral()) {
             "optional" -> NodeOccurrence.Optional
             "multiple" -> NodeOccurrence.Multiple
             else -> NodeOccurrence.Once

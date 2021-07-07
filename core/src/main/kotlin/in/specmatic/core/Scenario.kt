@@ -47,7 +47,7 @@ data class Scenario(
                                 val pattern = resolver.getPattern(expectedStateValue.string)
                                 try { resolver.matchesPattern(key, pattern, pattern.parse(actualStateValue.toString(), resolver)).isTrue() } catch (e: Exception) { false }
                             }
-                            else -> expectedStateValue.toStringValue() == actualStateValue.toStringValue()
+                            else -> expectedStateValue.toStringLiteral() == actualStateValue.toStringLiteral()
                         }
                     }
 
@@ -372,7 +372,7 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
         val response = testExecutor.execute(request)
 
         val result = when (response.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "success")) {
-            "failure" -> Result.Failure(response.body.toStringValue()).updateScenario(testScenario)
+            "failure" -> Result.Failure(response.body.toStringLiteral()).updateScenario(testScenario)
             else -> testScenario.matches(response)
         }
 

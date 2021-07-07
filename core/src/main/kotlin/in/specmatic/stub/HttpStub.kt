@@ -158,7 +158,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
     private fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {
-            if(httpRequest.body.toStringValue().isEmpty())
+            if(httpRequest.body.toStringLiteral().isEmpty())
                 throw ContractException("Expectation payload was empty")
 
             val mock = stringToMockScenario(httpRequest.body)
@@ -276,7 +276,7 @@ internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().map
 
 internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Int? = null) {
     val headerString = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
-    val textContent = TextContent(httpResponse.body.toStringValue(), ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
+    val textContent = TextContent(httpResponse.body.toStringLiteral(), ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
 
     val headersControlledByEngine = HttpHeaders.UnsafeHeadersList.map { it.lowercase() }
     for ((name, value) in httpResponse.headers.filterNot { it.key.lowercase() in headersControlledByEngine }) {
@@ -461,7 +461,7 @@ fun softCastValueToXML(body: Value): Value {
 
 fun stringToMockScenario(text: Value): ScenarioStub {
     val mockSpec =
-            jsonStringToValueMap(text.toStringValue()).also {
+            jsonStringToValueMap(text.toStringLiteral()).also {
                 validateMock(it)
             }
 

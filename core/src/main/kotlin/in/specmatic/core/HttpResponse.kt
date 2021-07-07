@@ -39,7 +39,7 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
 
         val firstPart = listOf(statusLine, headerString).joinToString("\n").trim()
 
-        val formattedBody = body.toStringValue()
+        val formattedBody = body.toStringLiteral()
 
         val responseString = listOf(firstPart, "", formattedBody).joinToString("\n")
         return startLinesWith(responseString, prefix)
@@ -54,13 +54,13 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
             selector.startsWith("response-body") -> {
                 val bodySelector = selector.removePrefix("response-body").trim()
                 if(bodySelector.isBlank())
-                    this.body.toStringValue()
+                    this.body.toStringLiteral()
                 else {
                     if(this.body !is JSONObjectValue)
                         throw ContractException("JSON selector can only be used for JSON body")
 
                     val jsonBodySelector = bodySelector.removePrefix(".")
-                    this.body.findFirstChildByPath(jsonBodySelector)?.toStringValue() ?: throw ContractException("JSON selector $selector was not found")
+                    this.body.findFirstChildByPath(jsonBodySelector)?.toStringLiteral() ?: throw ContractException("JSON selector $selector was not found")
                 }
             }
             else -> throw ContractException("Selector $selector is unexpected. It must either start with response-header or response-body.")

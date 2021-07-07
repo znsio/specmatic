@@ -507,7 +507,7 @@ Scenario: Square of a number
             val request = HttpRequest(method = "POST", path = "/wrong_path", body = NumberValue(10))
             val squareResponse = client.execute(request)
             assertThat(squareResponse.status).isEqualTo(400)
-            assertThat(squareResponse.body.toStringValue()).isEqualTo(pathNotRecognizedMessage(request))
+            assertThat(squareResponse.body.toStringLiteral()).isEqualTo(pathNotRecognizedMessage(request))
         }
     }
 
@@ -534,7 +534,7 @@ Scenario: Square of a number
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
             assertThat(response.status).isEqualTo(200)
-            assertThat(response.body.toStringValue()).isEqualTo("it worked")
+            assertThat(response.body.toStringLiteral()).isEqualTo("it worked")
             assertThat(response.headers[QONTRACT_SOURCE_HEADER]).isEqualTo("proxy")
         }
     }
@@ -589,7 +589,7 @@ Scenario: Square of a number
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
             assertThat(response.status).isEqualTo(200)
-            assertThat(response.body.toStringValue()).isEqualTo("success")
+            assertThat(response.body.toStringLiteral()).isEqualTo("success")
         }
     }
 }

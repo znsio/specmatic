@@ -36,7 +36,7 @@ data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, va
 }
 
 internal fun createSimpleType(element: XMLNode): XMLNode {
-    val typeName = element.attributes.getValue("type").toStringValue().localName()
+    val typeName = element.attributes.getValue("type").toStringLiteral().localName()
     val value = when(typeName) {
         in primitiveStringTypes -> StringValue("(string)")
         in primitiveNumberTypes -> StringValue("(number)")

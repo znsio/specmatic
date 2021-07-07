@@ -92,7 +92,7 @@ internal class ScenarioStubKtTest {
         assertThat(mock.request.multiPartFormData.first().name).isEqualTo("employeeid")
 
         val part = mock.request.multiPartFormData.first() as MultiPartContentValue
-        assertThat(part.content.toStringValue()).isEqualTo("10")
+        assertThat(part.content.toStringLiteral()).isEqualTo("10")
     }
 
     @Test

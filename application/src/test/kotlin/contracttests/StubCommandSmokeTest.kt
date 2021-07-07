@@ -53,7 +53,7 @@ class StubCommandSmokeTest {
         outcome.handleSuccess { response ->
             assertThat(response.status).isEqualTo(200)
             assertThatCode {
-                response.body.toStringValue().toInt()
+                response.body.toStringLiteral().toInt()
             }.doesNotThrowAnyException()
         }
     }

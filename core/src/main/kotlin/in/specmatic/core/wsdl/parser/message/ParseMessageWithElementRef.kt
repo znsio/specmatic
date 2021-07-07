@@ -36,16 +36,16 @@ fun getQontractAttributes(element: XMLNode): Map<String, StringValue> {
 
 private fun multipleElementsCanExist(element: XMLNode): Boolean {
     return element.attributes.containsKey("maxOccurs")
-            && (element.attributes["maxOccurs"]?.toStringValue() == "unbounded"
-            || element.attributes.getValue("maxOccurs").toStringValue().toInt() > 1)
+            && (element.attributes["maxOccurs"]?.toStringLiteral() == "unbounded"
+            || element.attributes.getValue("maxOccurs").toStringLiteral().toInt() > 1)
 }
 
 private fun elementIsOptional(element: XMLNode): Boolean {
-    return element.attributes["minOccurs"]?.toStringValue() == "0" && !element.attributes.containsKey("maxOccurs")
+    return element.attributes["minOccurs"]?.toStringLiteral() == "0" && !element.attributes.containsKey("maxOccurs")
 }
 
 fun isPrimitiveType(node: XMLNode): Boolean {
-    val type = node.attributes.getValue("type").toStringValue()
+    val type = node.attributes.getValue("type").toStringLiteral()
     val namespace = node.resolveNamespace(type)
 
     if(namespace.isBlank())

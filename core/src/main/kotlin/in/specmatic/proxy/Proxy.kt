@@ -131,7 +131,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
             stubs.mapIndexed { index, namedStub ->
                 val fileName = "stub$index.json"
                 println("Writing stub data to $fileName")
-                proxyQontractDataDir.writeText(fileName, namedStub.stub.toJSON().toStringValue())
+                proxyQontractDataDir.writeText(fileName, namedStub.stub.toJSON().toStringLiteral())
             }
         }
     }

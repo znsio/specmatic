@@ -980,7 +980,7 @@ And response-body
                 val id = body.jsonObject.getValue("id")
                 assertThat(id).isInstanceOf(StringValue::class.java)
                 assertDoesNotThrow {
-                    id.toStringValue().toInt()
+                    id.toStringLiteral().toInt()
                 }
 
                 val response = """{"id": "10"}"""
@@ -1023,7 +1023,7 @@ Feature: Contract
 
                 val data = body.jsonObject.getValue("data")
                 assertThat(data).isInstanceOf(StringValue::class.java)
-                assertThat(data.toStringValue()).isEqualTo("1|2|3")
+                assertThat(data.toStringLiteral()).isEqualTo("1|2|3")
 
                 flags.add("ran")
 

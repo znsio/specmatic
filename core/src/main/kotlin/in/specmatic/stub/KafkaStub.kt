@@ -20,8 +20,8 @@ fun stubKafkaContracts(kafkaStubs: List<KafkaStubData>, bootstrapServers: String
 
 fun producerRecord(kafkaMessage: KafkaMessage): ProducerRecord<String, String> {
     return when(val key = kafkaMessage.key) {
-        null -> ProducerRecord(kafkaMessage.topic, kafkaMessage.value.toStringValue())
-        else -> ProducerRecord(kafkaMessage.topic, key.toStringValue(), kafkaMessage.value.toStringValue())
+        null -> ProducerRecord(kafkaMessage.topic, kafkaMessage.value.toStringLiteral())
+        else -> ProducerRecord(kafkaMessage.topic, key.toStringLiteral(), kafkaMessage.value.toStringLiteral())
     }
 }
 

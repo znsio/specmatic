@@ -114,7 +114,7 @@ fun subscribeToContract(manifestData: Value, contractPath: String, sourceGit: Sy
 fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: String, sourceGit: SystemGit) {
     println("Manifest has pipeline credentials, checking if they are already registered")
 
-    val provider = loadFromPath(manifestData, listOf(pipelineKeyInQontracConfig, "provider"))?.toStringValue()
+    val provider = loadFromPath(manifestData, listOf(pipelineKeyInQontracConfig, "provider"))?.toStringLiteral()
     val pipelineInfo = manifestData.getJSONObject(pipelineKeyInQontracConfig)
 
     if (provider == "azure" && hasAzureData(pipelineInfo)) {
@@ -147,7 +147,7 @@ fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: Str
             val newPipelines = JSONArrayValue(pipelines.list.plus(JSONObjectValue(pipelineInfo)))
             val newMetaData = qontractMetaData.jsonObject.plus(pipelinesKeyInContractMetaData to newPipelines)
 
-            qontractMetaDataFile.writeText(JSONObjectValue(newMetaData).toStringValue())
+            qontractMetaDataFile.writeText(JSONObjectValue(newMetaData).toStringLiteral())
 
             sourceGit.add()
         }

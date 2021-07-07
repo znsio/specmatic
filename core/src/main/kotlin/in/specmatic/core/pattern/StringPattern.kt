@@ -23,11 +23,11 @@ data class StringPattern(
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (sampleData) {
             is StringValue, EmptyString -> {
-                if (minLength != null && sampleData.toStringValue().length < minLength) return mismatchResult(
+                if (minLength != null && sampleData.toStringLiteral().length < minLength) return mismatchResult(
                     "string with minLength $minLength",
                     sampleData
                 )
-                if (maxLength != null && sampleData.toStringValue().length > maxLength) return mismatchResult(
+                if (maxLength != null && sampleData.toStringLiteral().length > maxLength) return mismatchResult(
                     "string with maxLength $maxLength",
                     sampleData
                 )

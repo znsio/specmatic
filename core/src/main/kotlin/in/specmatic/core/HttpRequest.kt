@@ -194,7 +194,7 @@ fun requestFromJSON(json: Map<String, Value>) =
 private fun parsePartType(multiPartSpec: Map<String, Value>, name: String): MultiPartFormDataValue {
     return when {
         multiPartSpec.containsKey("content") -> MultiPartContentValue(name, multiPartSpec.getValue("content"))
-        multiPartSpec.containsKey("filename") -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringValue().removePrefix("@"), multiPartSpec["contentType"]?.toStringValue(), multiPartSpec["contentEncoding"]?.toStringValue())
+        multiPartSpec.containsKey("filename") -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringLiteral().removePrefix("@"), multiPartSpec["contentType"]?.toStringLiteral(), multiPartSpec["contentEncoding"]?.toStringLiteral())
         else -> throw ContractException("Multipart entry $name must have either a content key or a filename key")
     }
 }

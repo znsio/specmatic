@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Contract
-import `in`.specmatic.core.SPECMATIC_RESULT_HEADER
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
@@ -59,12 +58,12 @@ internal class SamplesCommandKtTest {
     private fun validateOutput(data: String) {
         val json = parsedJSON(data.removeSuffix(",")) as JSONObjectValue
 
-        assertThat(json.findFirstChildByPath("http-request.path")?.toStringValue()).isEqualTo("/square")
-        assertThat(json.findFirstChildByPath("http-request.method")?.toStringValue()).isEqualTo("POST")
+        assertThat(json.findFirstChildByPath("http-request.path")?.toStringLiteral()).isEqualTo("/square")
+        assertThat(json.findFirstChildByPath("http-request.method")?.toStringLiteral()).isEqualTo("POST")
         assertThat(json.findFirstChildByPath("http-request.body")).isInstanceOf(NumberValue::class.java)
         assertThat(json.findFirstChildByPath("requestTime")).isInstanceOf(StringValue::class.java)
 
-        assertThat(json.findFirstChildByPath("http-response.status")?.toStringValue()).isEqualTo("200")
+        assertThat(json.findFirstChildByPath("http-response.status")?.toStringLiteral()).isEqualTo("200")
         assertThat(json.findFirstChildByPath("http-request.body")).isInstanceOf(NumberValue::class.java)
         assertThat(json.findFirstChildByPath("responseTime")).isInstanceOf(StringValue::class.java)
     }

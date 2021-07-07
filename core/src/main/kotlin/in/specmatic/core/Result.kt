@@ -73,7 +73,7 @@ fun mismatchResult(expected: String, actual: String): Failure = Failure("Expecte
 fun mismatchResult(expected: String, actual: Value?): Failure = mismatchResult(expected, valueError(actual) ?: "null")
 fun mismatchResult(expected: Value, actual: Value?): Result = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "nothing")
 fun mismatchResult(expected: Pattern, actual: String): Failure = mismatchResult(expected.typeName, actual)
-fun mismatchResult(pattern: Pattern, sampleData: Value?): Failure = mismatchResult(pattern, sampleData?.toStringValue() ?: "null")
+fun mismatchResult(pattern: Pattern, sampleData: Value?): Failure = mismatchResult(pattern, sampleData?.toStringLiteral() ?: "null")
 fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern): Failure {
     return mismatchResult(thisPattern.typeName, otherPattern.typeName)
 }

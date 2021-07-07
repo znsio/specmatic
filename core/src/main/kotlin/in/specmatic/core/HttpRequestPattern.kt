@@ -227,7 +227,7 @@ data class HttpRequestPattern(val headersPattern: HttpHeadersPattern = HttpHeade
                     else -> throw ContractException(resultReport(result))
                 }
             }
-            else -> type.parse(valueString, resolver).exactMatchElseType()
+            else -> type.parseToType(valueString, resolver)
         }
     }
 

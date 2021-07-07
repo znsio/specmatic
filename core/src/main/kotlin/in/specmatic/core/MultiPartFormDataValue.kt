@@ -42,10 +42,10 @@ $content
 """.trim()
 
     override fun toJSONObject(): JSONObjectValue =
-            JSONObjectValue(mapOf("name" to StringValue(name), "content" to StringValue(content.toStringValue()), "contentType" to StringValue(content.httpContentType)))
+            JSONObjectValue(mapOf("name" to StringValue(name), "content" to StringValue(content.toStringLiteral()), "contentType" to StringValue(content.httpContentType)))
 
     override fun addTo(formBuilder: FormBuilder) {
-        formBuilder.append(name, content.toStringValue(), Headers.build {
+        formBuilder.append(name, content.toStringLiteral(), Headers.build {
             append(HttpHeaders.ContentType, ContentType.parse(content.httpContentType))
             append(CONTENT_DISPOSITION, "form-data; name=${name}")
         })

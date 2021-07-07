@@ -20,7 +20,7 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern(
         return pattern.matches(value, resolver)
     }
 
-    override fun generate(resolver: Resolver): Value = StringValue(pattern.generate(resolver).toStringValue())
+    override fun generate(resolver: Resolver): Value = StringValue(pattern.generate(resolver).toStringLiteral())
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
             pattern.newBasedOn(row, resolver).map { PatternInStringPattern(it) }
@@ -28,7 +28,7 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern(
     override fun newBasedOn(resolver: Resolver): List<Pattern> =
             pattern.newBasedOn(resolver).map { PatternInStringPattern(it) }
 
-    override fun parse(value: String, resolver: Resolver): Value = StringValue(pattern.parse(value, resolver).toStringValue())
+    override fun parse(value: String, resolver: Resolver): Value = StringValue(pattern.parse(value, resolver).toStringLiteral())
 
     override fun patternSet(resolver: Resolver): List<PatternInStringPattern> =
             pattern.patternSet(resolver).map { PatternInStringPattern(it) }
@@ -42,6 +42,10 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern(
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return pattern.listOf(valueList, resolver)
+    }
+
+    override fun parseToType(valueString: String, resolver: Resolver): Pattern {
+        return PatternInStringPattern(pattern.parse(valueString, resolver).exactMatchElseType())
     }
 
     override val typeName: String = "${pattern.typeName} in string"

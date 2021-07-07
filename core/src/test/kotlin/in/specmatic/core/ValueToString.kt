@@ -37,6 +37,6 @@ class ValueToString {
         val body2 = toXMLNode(xmlData2)
         val root = body2
         Assertions.assertEquals("node", root.name)
-        Assertions.assertEquals("1", root.childNodes[0].toStringValue())
+        Assertions.assertEquals("1", root.childNodes[0].toStringLiteral())
     }
 }

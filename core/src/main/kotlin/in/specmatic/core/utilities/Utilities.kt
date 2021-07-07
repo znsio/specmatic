@@ -143,7 +143,7 @@ fun strings(list: List<Value>): List<String> {
     return list.map {
         when(it) {
             is StringValue -> it.string
-            else -> exitWithMessage("All members of the paths array must be strings, but found one (${it.toStringValue()}) which was not")
+            else -> exitWithMessage("All members of the paths array must be strings, but found one (${it.toStringLiteral()}) which was not")
         }
     }
 }
@@ -187,7 +187,7 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
 
     return sources.list.map { source ->
         if (source !is JSONObjectValue)
-            throw ContractException("Every element of the sources json array must be a json object, but got this: ${source.toStringValue()}")
+            throw ContractException("Every element of the sources json array must be a json object, but got this: ${source.toStringLiteral()}")
 
         when(nativeString(source.jsonObject, "provider")) {
             "git" -> {
@@ -208,7 +208,7 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
 
 internal fun jsonArray(source: JSONObjectValue, key: String): List<String> {
     return when(val value = source.jsonObject[key]) {
-        is JSONArrayValue -> value.list.map { it.toStringValue() }
+        is JSONArrayValue -> value.list.map { it.toStringLiteral() }
         null -> emptyList()
         else -> throw ContractException("Expected $key to be an array")
     }

@@ -36,5 +36,5 @@ data class ExactValuePattern(override val pattern: Value, override val typeAlias
 
     override val typeName: String = pattern.displayableValue()
 
-    override fun toString(): String = pattern.toStringValue()
+    override fun toString(): String = pattern.toStringLiteral()
 }

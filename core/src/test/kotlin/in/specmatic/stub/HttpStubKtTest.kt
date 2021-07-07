@@ -44,7 +44,7 @@ Expected number, actual was "Hello"""")
     private fun assertResponseFailure(stubResponse: HttpStubResponse, errorMessage: String) {
         assertThat(stubResponse.response.status).isEqualTo(400)
         assertThat(stubResponse.response.headers).containsEntry(SPECMATIC_RESULT_HEADER, "failure")
-        assertThat(stubResponse.response.body.toStringValue()).isEqualTo(errorMessage)
+        assertThat(stubResponse.response.body.toStringLiteral()).isEqualTo(errorMessage)
     }
 
     @Test
@@ -268,7 +268,7 @@ Feature: POST API
                 return "Creating expectation $stubNumber:\n $error"
 
             val response = invokeStub(stubNumber, stub)
-            println(response.body.toStringValue())
+            println(response.body.toStringLiteral())
 
             val json = try {
                 response.body as JSONObjectValue
@@ -278,7 +278,7 @@ Feature: POST API
 
             val numberInResponse = try {
 
-                json.jsonObject.getValue("number").toStringValue().toInt()
+                json.jsonObject.getValue("number").toStringLiteral().toInt()
             } catch (e: Throwable) {
                 return exceptionCauseMessage(e)
             }
@@ -296,14 +296,14 @@ Feature: POST API
     fun `soft casting xml value to xml`() {
         val value = softCastValueToXML(StringValue("<xml>data</xml"))
         assertThat(value).isInstanceOf(XMLValue::class.java)
-        assertThat(value.toStringValue()).isEqualTo("<xml>data</xml")
+        assertThat(value.toStringLiteral()).isEqualTo("<xml>data</xml")
     }
 
     @Test
     fun `soft casting non xml value to xml`() {
         val value = softCastValueToXML(StringValue("not xml"))
         assertThat(value).isInstanceOf(StringValue::class.java)
-        assertThat(value.toStringValue()).isEqualTo("not xml")
+        assertThat(value.toStringLiteral()).isEqualTo("not xml")
     }
 
     @Test

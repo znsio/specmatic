@@ -12,7 +12,7 @@ private fun getXmlnsDefinitions(wsdlNode: XMLNode): Map<String, String> {
     return wsdlNode.attributes.filterKeys {
         it.startsWith("xmlns:")
     }.mapValues {
-        it.value.toStringValue()
+        it.value.toStringLiteral()
     }.map {
         Pair(it.value, it.key.removePrefix("xmlns:"))
     }.toMap()
@@ -197,7 +197,7 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         element: XMLNode,
         attributeName: String
     ): XMLNode {
-        val fullTypeName = element.attributes.getValue(attributeName).toStringValue()
+        val fullTypeName = element.attributes.getValue(attributeName).toStringLiteral()
         val schema = findSchema(namespace(fullTypeName, element))
         return schema.findByNodeNameAndAttribute("complexType", "name", fullTypeName.localName())
     }
@@ -206,7 +206,7 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         element: XMLNode,
         attributeName: String
     ): XMLNode {
-        val fullTypeName = element.attributes.getValue(attributeName).toStringValue()
+        val fullTypeName = element.attributes.getValue(attributeName).toStringLiteral()
         return findElement(fullTypeName.localName(), namespace(fullTypeName, element))
     }
 
@@ -291,8 +291,8 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         else
             this.findSchema(namespace)
 
-        val schemaElementFormDefault = schema.attributes["elementFormDefault"]?.toStringValue()
-        val elementForm = element.attributes["form"]?.toStringValue()
+        val schemaElementFormDefault = schema.attributes["elementFormDefault"]?.toStringLiteral()
+        val elementForm = element.attributes["form"]?.toStringLiteral()
 
         return when(elementForm ?: schemaElementFormDefault) {
             "qualified" -> QualifiedNamespace(element, schema, wsdlTypeReference, this)

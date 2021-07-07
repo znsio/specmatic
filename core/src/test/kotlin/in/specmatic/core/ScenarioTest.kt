@@ -6,10 +6,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.utilities.readFile
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
-import java.io.File
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -75,8 +73,8 @@ internal class ScenarioTest {
 
         val newState = newExpectedServerStateBasedOn(row, mapOf("id" to True), HashMap(), Resolver())
 
-        assertThat(newState.getValue("id").toStringValue()).isNotEqualTo("(string)")
-        assertThat(newState.getValue("id").toStringValue().trim().length).isGreaterThan(0)
+        assertThat(newState.getValue("id").toStringLiteral()).isNotEqualTo("(string)")
+        assertThat(newState.getValue("id").toStringLiteral().trim().length).isGreaterThan(0)
     }
 
     @Test
@@ -99,8 +97,8 @@ internal class ScenarioTest {
         val testScenarios = scenario.generateTestScenarios()
         val newState = testScenarios.first().expectedFacts
 
-        assertThat(newState.getValue("id").toStringValue()).isNotEqualTo("(string)")
-        assertThat(newState.getValue("id").toStringValue().trim().length).isGreaterThan(0)
+        assertThat(newState.getValue("id").toStringLiteral()).isNotEqualTo("(string)")
+        assertThat(newState.getValue("id").toStringLiteral().trim().length).isGreaterThan(0)
     }
 
     @Test
@@ -423,7 +421,7 @@ And response-body (number)
         assertThat(requestPattern.matches(HttpRequest("POST", "/resource", body = StringValue("10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
-        assertDoesNotThrow { matchingResponse.response.body.toStringValue().toInt() }
+        assertDoesNotThrow { matchingResponse.response.body.toStringLiteral().toInt() }
     }
 
     @Test
@@ -463,8 +461,8 @@ And response-body (number)
         assertThat(testScenarios).allSatisfy {
             assertThat(it.bindings).isEqualTo(mapOf("data" to "response-header.X-Data"))
 
-            assertThat((it.httpRequestPattern.headersPattern.pattern["X-Header1"] as ExactValuePattern).pattern.toStringValue()).isEqualTo("10")
-            assertThat((it.httpRequestPattern.headersPattern.pattern["X-Header2"] as ExactValuePattern).pattern.toStringValue()).isEqualTo("20")
+            assertThat((it.httpRequestPattern.headersPattern.pattern["X-Header1"] as ExactValuePattern).pattern.toStringLiteral()).isEqualTo("10")
+            assertThat((it.httpRequestPattern.headersPattern.pattern["X-Header2"] as ExactValuePattern).pattern.toStringLiteral()).isEqualTo("20")
         }
     }
 }

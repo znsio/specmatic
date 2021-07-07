@@ -23,7 +23,7 @@ private fun nodeTypes(node: XMLNode): List<Pattern> {
 private fun attributeTypeMap(node: XMLNode): Map<String, Pattern> {
     return node.attributes.mapValues { (key, value) ->
         when {
-            value.isPatternToken() -> DeferredPattern(value.trimmed().toStringValue(), key)
+            value.isPatternToken() -> DeferredPattern(value.trimmed().toStringLiteral(), key)
             else -> ExactValuePattern(value)
         }
     }
@@ -203,14 +203,14 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                     pattern.attributes.entries.filter { it.key == "xmlns" || it.key.startsWith("xmlns:") }
                             .map { (_, attributePattern) ->
                                 when (attributePattern) {
-                                    is ExactValuePattern -> attributePattern.pattern.toStringValue()
+                                    is ExactValuePattern -> attributePattern.pattern.toStringLiteral()
                                     else -> attributePattern.pattern.toString()
                                 }
                             }.toSet()
             val sampleXmlnsValues =
                     sampleData.attributes.entries.filter { it.key == "xmlns" || it.key.startsWith("xmlns:") }
                             .map { (_, attributeValue) ->
-                                attributeValue.toStringValue()
+                                attributeValue.toStringLiteral()
                             }.toSet()
 
             val missing = patternXmlnsValues - sampleXmlnsValues
@@ -297,7 +297,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         }.mapValues { (key, pattern) ->
             attempt(breadCrumb = "$name.$key") { resolver.generate(key, pattern) }
         }.mapValues {
-            StringValue(it.value.toStringValue())
+            StringValue(it.value.toStringLiteral())
         }
 
         val nodes = pattern.nodes.asSequence().map {
@@ -316,7 +316,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         }.flatten().map {
             when (it) {
                 is XMLValue -> it
-                else -> StringValue(it.toStringValue())
+                else -> StringValue(it.toStringLiteral())
             }
         }.toList()
 

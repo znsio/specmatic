@@ -92,7 +92,7 @@ fun getBearerToken(): String? {
 }
 
 private fun readBearerFromEnvVariable(qontractConfig: Value): String? {
-    return loadFromPath(qontractConfig, listOf("auth", "bearer-environment-variable"))?.toStringValue()?.let { bearerName ->
+    return loadFromPath(qontractConfig, listOf("auth", "bearer-environment-variable"))?.toStringLiteral()?.let { bearerName ->
         information.forTheUser("Found bearer name $bearerName")
 
         System.getenv(bearerName).also {
@@ -102,7 +102,7 @@ private fun readBearerFromEnvVariable(qontractConfig: Value): String? {
 }
 
 private fun readBearerFromFile(qontractConfig: Value): String? {
-    return loadFromPath(qontractConfig, listOf("auth", "bearer-file"))?.toStringValue()?.let { bearerFileName ->
+    return loadFromPath(qontractConfig, listOf("auth", "bearer-file"))?.toStringLiteral()?.let { bearerFileName ->
         information.forTheUser("Found bearer file name $bearerFileName")
 
         val bearerFile = File(bearerFileName).absoluteFile

@@ -28,12 +28,12 @@ internal class StringPatternTest {
 
     @Test
     fun `should generate 5 character long random string when min and max length are not specified`() {
-        assertThat(StringPattern().generate(Resolver()).toStringValue().length).isEqualTo(5)
+        assertThat(StringPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(5)
     }
 
     @Test
     fun `should generate random string when minLength`() {
-        assertThat(StringPattern(minLength = 8).generate(Resolver()).toStringValue().length).isEqualTo(8)
+        assertThat(StringPattern(minLength = 8).generate(Resolver()).toStringLiteral().length).isEqualTo(8)
     }
 
     @Test

@@ -275,4 +275,25 @@ internal class HttpRequestPatternTest {
         assertThat(newRequestType.urlMatcher?.queryPattern?.keys?.sorted()).isEqualTo(listOf("status"))
 
     }
+
+    @Test
+    fun `form field of type json in string should match a form field value of type json in string`() {
+        val customerType: Pattern = TabularPattern(mapOf("id" to NumberPattern()))
+        val request = HttpRequest(method = "POST", path = "/", formFields = mapOf("Customer" to """{"id": 10}"""))
+
+        HttpRequestPattern(
+            method = "POST",
+            urlMatcher = URLMatcher(emptyMap(), emptyList(), "/"),
+            formFieldsPattern = mapOf("Customer" to PatternInStringPattern(customerType, "(customer)"))
+        ).generate(request, Resolver()).let { requestType ->
+            val customerFieldType = requestType.formFieldsPattern.getValue("Customer")
+            assertThat(customerFieldType).isInstanceOf(PatternInStringPattern::class.java)
+
+            val patternInStringPattern = customerFieldType as PatternInStringPattern
+            assertThat(patternInStringPattern.pattern).isInstanceOf(JSONObjectPattern::class.java)
+
+            assertThat(patternInStringPattern.matches(parsedJSON("""{"id": 10}""").toStringValue(), Resolver())).isInstanceOf(
+                Success::class.java)
+        }
+    }
 }

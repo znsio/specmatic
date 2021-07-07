@@ -11,7 +11,7 @@ internal class XMLNodeTest {
         val node = toXMLNode("<data>data</data>")
 
         assertThat(node).isEqualTo(XMLNode("data", "data", emptyMap(), listOf(StringValue("data")), "", emptyMap()))
-        assertThat(node.toStringValue()).isEqualTo("<data>data</data>")
+        assertThat(node.toStringLiteral()).isEqualTo("<data>data</data>")
     }
 
     @Test
@@ -81,7 +81,7 @@ internal class XMLNodeTest {
         val personDetailsXmlNode = toXMLNode("<data><person><name>Jack</name></person><person><name>Jill</name></person></data>")
 
         val nameNode = personDetailsXmlNode.findFirstChildByPath("person.name")
-        val name = nameNode?.childNodes?.get(0)?.toStringValue()
+        val name = nameNode?.childNodes?.get(0)?.toStringLiteral()
 
         assertThat(name).isEqualTo("Jack")
     }

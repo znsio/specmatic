@@ -33,12 +33,12 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
             value !is MultiPartContentValue -> Failure("The contract expected content, but got a file.")
             value.content is StringValue -> {
                 try {
-                    val parsedContent = try { content.parse(value.content.toStringValue(), resolver) } catch (e: Throwable) { StringValue(value.content.toStringValue()) }
+                    val parsedContent = try { content.parse(value.content.toStringLiteral(), resolver) } catch (e: Throwable) { StringValue(value.content.toStringLiteral()) }
                     resolver.matchesPattern(name, content, parsedContent)
                 } catch (e: ContractException) {
                     Failure(e.report(), breadCrumb = "content")
                 } catch (e: Throwable) {
-                    Failure("Expected a ${content.typeName} but got ${value.content.toStringValue()}", breadCrumb = "content")
+                    Failure("Expected a ${content.typeName} but got ${value.content.toStringLiteral()}", breadCrumb = "content")
                 }
             }
             else -> {
@@ -59,7 +59,7 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
     }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
-            MultiPartFileValue(name, filename.generate(resolver).toStringValue(), contentType, contentEncoding)
+            MultiPartFileValue(name, filename.generate(resolver).toStringLiteral(), contentType, contentEncoding)
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
         return when {
@@ -100,7 +100,7 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
         resolver: Resolver
     ) = when(filename) {
         is ExactValuePattern -> {
-            val patternFilePath = filename.pattern.toStringValue()
+            val patternFilePath = filename.pattern.toStringLiteral()
             fileNameFromPath(patternFilePath) != fileNameFromPath(value.filename)
         }
         else ->

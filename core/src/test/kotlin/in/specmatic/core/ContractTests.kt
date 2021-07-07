@@ -594,7 +594,7 @@ Then status 200
 
                 val part = request.multiPartFormData.single() as MultiPartContentValue
                 assertThat(part.name).isEqualTo("number")
-                assertDoesNotThrow { part.content.toStringValue().toInt() }
+                assertDoesNotThrow { part.content.toStringLiteral().toInt() }
 
                 return HttpResponse.OK
             }

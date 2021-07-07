@@ -53,7 +53,7 @@ internal class XMLPatternTest {
         @Test
         fun `anything value becomes a random string`() {
             val xmlNode = XMLPattern("<data>(anything)</data>").generate(Resolver())
-            assertThat(xmlNode.childNodes.first().toStringValue()).isNotBlank()
+            assertThat(xmlNode.childNodes.first().toStringLiteral()).isNotBlank()
         }
 
         @Test
@@ -502,7 +502,7 @@ internal class XMLPatternTest {
             val pattern = XMLPattern("<data><empty/><value>10</value></data>")
             val value = pattern.generate(Resolver())
 
-            assertThat(value.toStringValue()).isEqualTo("<data><empty/><value>10</value></data>")
+            assertThat(value.toStringLiteral()).isEqualTo("<data><empty/><value>10</value></data>")
         }
 
         @Test
@@ -513,7 +513,7 @@ internal class XMLPatternTest {
             val newTypes = xmlType.newBasedOn(example, Resolver())
 
             val xmlNode = newTypes[0].generate(Resolver())
-            assertThat(xmlNode.toStringValue()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
+            assertThat(xmlNode.toStringLiteral()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
         }
 
         @Test
@@ -559,7 +559,7 @@ internal class XMLPatternTest {
             assertThat(newTypes.size).isOne()
 
             val xmlNode = newTypes[0].generate(Resolver())
-            assertThat(xmlNode.toStringValue()).isEqualTo("""<number val="10"/>""")
+            assertThat(xmlNode.toStringLiteral()).isEqualTo("""<number val="10"/>""")
         }
 
         @Test
@@ -615,7 +615,7 @@ internal class XMLPatternTest {
             val newTypes = xmlType.newBasedOn(example, Resolver())
 
             val xmlNode = newTypes[0].generate(Resolver())
-            assertThat(xmlNode.toStringValue()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
+            assertThat(xmlNode.toStringLiteral()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
         }
 
         @Test
@@ -789,7 +789,7 @@ internal class XMLPatternTest {
 
             val name = newValues.first()
             val nameId = name.childNodes.first() as XMLNode
-            assertThat(nameId.childNodes.first().toStringValue()).isEqualTo("10")
+            assertThat(nameId.childNodes.first().toStringLiteral()).isEqualTo("10")
         }
 
         @Test
@@ -872,7 +872,7 @@ internal class XMLPatternTest {
 
             val name = newValues.first()
             val nameId = name.childNodes.first() as XMLNode
-            assertThat(nameId.childNodes.first().toStringValue()).isEqualTo("10")
+            assertThat(nameId.childNodes.first().toStringLiteral()).isEqualTo("10")
         }
 
         @Test

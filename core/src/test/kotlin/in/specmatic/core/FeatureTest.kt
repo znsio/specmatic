@@ -45,7 +45,7 @@ class FeatureTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance2").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringValue()).isEqualTo("URL path or SOAPAction not recognised")
+        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("URL path or SOAPAction not recognised")
     }
 
     @Test
@@ -63,7 +63,7 @@ class FeatureTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateHeader("y-loginId", "abc123")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringValue()).isEqualTo("""In scenario "Get balance info"
+        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("""In scenario "Get balance info"
 >> REQUEST.HEADERS
 
 Expected header named "x-loginId" was missing""".trimIndent())
@@ -136,7 +136,7 @@ Expected header named "x-loginId" was missing""".trimIndent())
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringValue()).isEqualTo("""In scenario "Update balance"
+        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("""In scenario "Update balance"
 >> REQUEST.BODY.calls_made
 
 Expected an array of length 3, actual length 2""")
@@ -156,7 +156,7 @@ Expected an array of length 3, actual length 2""")
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10, \"test\"]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringValue()).isEqualTo("""In scenario "Update balance"
+        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("""In scenario "Update balance"
 >> REQUEST.BODY.calls_made.[2]
 
 Expected number, actual was string: "test"""")
@@ -194,7 +194,7 @@ Expected number, actual was string: "test"""")
         val httpRequest = HttpRequest().updatePath("/balance").updateQueryParam("account-id", "abc").updateMethod("GET")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringValue()).isEqualTo("""In scenario "Get account balance"
+        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("""In scenario "Get account balance"
 >> REQUEST.URL.QUERY-PARAMS.account-id
 
 Expected number, actual was string: "abc"""")
@@ -267,7 +267,7 @@ Feature: Contract for /balance API
         httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        assertTrue(httpResponse.body.toStringValue().isEmpty())
+        assertTrue(httpResponse.body.toStringLiteral().isEmpty())
     }
 
     @Test
@@ -434,7 +434,7 @@ Feature: Contract for /balance API
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
-        assertTrue( NumberPattern().matches(NumberValue(httpResponse.body.toStringValue().toInt()), Resolver()) is Result.Success)
+        assertTrue( NumberPattern().matches(NumberValue(httpResponse.body.toStringLiteral().toInt()), Resolver()) is Result.Success)
     }
 
     @Test
@@ -845,7 +845,7 @@ And response-body
 
         assertThat(json.jsonObject.getValue("number")).isInstanceOf(StringValue::class.java)
         assertDoesNotThrow {
-            json.jsonObject.getValue("number").toStringValue().toInt()
+            json.jsonObject.getValue("number").toStringLiteral().toInt()
         }
     }
 

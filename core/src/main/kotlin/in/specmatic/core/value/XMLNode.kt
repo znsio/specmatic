@@ -9,7 +9,6 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.utilities.capitalizeFirstChar
-import `in`.specmatic.core.utilities.newBuilder
 import `in`.specmatic.core.utilities.parseXML
 
 fun toXMLNode(document: Document): XMLNode = nonTextXMLNode(document.documentElement)
@@ -131,7 +130,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         val newElement = document.createElement(realName)
 
         for(entry in attributes) {
-            newElement.setAttribute(entry.key, entry.value.toStringValue())
+            newElement.setAttribute(entry.key, entry.value.toStringLiteral())
         }
 
         val newNodes = childNodes.map {
@@ -148,9 +147,9 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
     override fun matchFailure(): Result.Failure =
         Result.Failure("Found unexpected child node named \"${realName}\"")
 
-    override fun displayableValue(): String = toStringValue()
+    override fun displayableValue(): String = toStringLiteral()
 
-    override fun toStringValue(): String = this.nodeToString("", "")
+    override fun toStringLiteral(): String = this.nodeToString("", "")
 
     fun toPrettyStringValue(): String {
         return this.nodeToString("  ", System.lineSeparator())
@@ -193,7 +192,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         }
     }
 
-    private fun quoted(value: StringValue): String = "\"${value.toStringValue()}\""
+    private fun quoted(value: StringValue): String = "\"${value.toStringLiteral()}\""
 
     override fun displayableType(): String = "xml"
     override fun exactMatchElseType(): XMLPattern {
@@ -220,7 +219,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         return XMLNode("", "", emptyMap(), valueList.map { it as XMLNode }, "", emptyMap())
     }
 
-    override fun toString(): String = toStringValue()
+    override fun toString(): String = toStringLiteral()
 
     fun findFirstChildByName(name: String, errorMessage: String): XMLNode =
         childNodes.filterIsInstance<XMLNode>().find { it.name == name } ?: throw ContractException(errorMessage)
@@ -252,11 +251,11 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     fun getAttributeValueAtPath(path: String, attributeName: String): String {
         val childNode = getXMLNodeByPath(path)
-        return childNode.attributes[attributeName]?.toStringValue() ?: throw ContractException("Couldn't find attribute $attributeName at path $path")
+        return childNode.attributes[attributeName]?.toStringLiteral() ?: throw ContractException("Couldn't find attribute $attributeName at path $path")
     }
 
     fun getAttributeValue(attributeName: String, errorMessage: String = "Couldn't find attribute $attributeName in node ${this.realName}"): String {
-        return this.attributes[attributeName]?.toStringValue() ?: throw ContractException(errorMessage)
+        return this.attributes[attributeName]?.toStringLiteral() ?: throw ContractException(errorMessage)
     }
 
     fun getXMLNodeByPath(path: String): XMLNode =
@@ -267,13 +266,13 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     fun getXMLNodeByAttributeValue(attributeName: String, typeName: String): XMLNode {
         return this.childNodes.filterIsInstance<XMLNode>().find {
-            it.attributes[attributeName]?.toStringValue() == typeName
+            it.attributes[attributeName]?.toStringLiteral() == typeName
         } ?: throw ContractException("Couldn't find a node with attribute $attributeName=$typeName")
     }
 
     fun findByNodeNameAndAttribute(nodeName: String, attributeName: String, typeName: String, errorMessage: String? = null): XMLNode {
         return this.childNodes.filterIsInstance<XMLNode>().find {
-            it.name == nodeName && it.attributes[attributeName]?.toStringValue() == typeName
+            it.name == nodeName && it.attributes[attributeName]?.toStringLiteral() == typeName
         } ?: throw ContractException(errorMessage ?: "Couldn't find a node named $nodeName with attribute $attributeName=\"$typeName\"")
     }
 
@@ -282,7 +281,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     fun findNodeByNameAttribute(valueOfNameAttribute: String): XMLNode {
         return this.childNodes.filterIsInstance<XMLNode>().find {
-            it.attributes["name"]?.toStringValue() == valueOfNameAttribute
+            it.attributes["name"]?.toStringLiteral() == valueOfNameAttribute
         } ?: throw ContractException("Couldn't find name attribute")
     }
 }

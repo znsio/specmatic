@@ -12,8 +12,8 @@ data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
     override val httpContentType = "text/plain"
 
     @OptIn(InternalAPI::class)
-    override fun displayableValue(): String = toStringValue().quote()
-    override fun toStringValue() = string
+    override fun displayableValue(): String = toStringLiteral().quote()
+    override fun toStringLiteral() = string
     override fun displayableType(): String = "string"
     override fun exactMatchElseType(): Pattern {
         return when {

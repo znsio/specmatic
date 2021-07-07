@@ -8,8 +8,8 @@ import `in`.specmatic.core.pattern.Pattern
 data class NumberValue(val number: Number) : Value, ScalarValue {
     override val httpContentType = "text/plain"
 
-    override fun displayableValue(): String = toStringValue()
-    override fun toStringValue() = number.toString()
+    override fun displayableValue(): String = toStringLiteral()
+    override fun toStringLiteral() = number.toString()
     override fun displayableType(): String = "number"
     override fun exactMatchElseType(): Pattern = ExactValuePattern(this)
     override fun type(): Pattern = NumberPattern()

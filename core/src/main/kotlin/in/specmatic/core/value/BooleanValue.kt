@@ -8,8 +8,8 @@ import `in`.specmatic.core.pattern.Pattern
 data class BooleanValue(val booleanValue: Boolean) : Value, ScalarValue {
     override val httpContentType = "text/plain"
 
-    override fun displayableValue(): String = toStringValue()
-    override fun toStringValue() = booleanValue.toString()
+    override fun displayableValue(): String = toStringLiteral()
+    override fun toStringLiteral() = booleanValue.toString()
     override fun displayableType(): String = "boolean"
     override fun exactMatchElseType(): Pattern = ExactValuePattern(this)
     override fun type(): Pattern = BooleanPattern

@@ -249,10 +249,10 @@ Feature: Contract for /balance API
                     }
                 }
 
-                val xmlResponseString: String = when(name.toStringValue()) {
+                val xmlResponseString: String = when(name.toStringLiteral()) {
                     "John Doe" -> "<account><account_id>10</account_id></account>"
                     "Jane Doe" -> "<account><account_id>20</account_id></account>"
-                    else -> fail("Expected name to be either \"John Doe\" or \"Jane Doe\", got ${name.toStringValue()}")
+                    else -> fail("Expected name to be either \"John Doe\" or \"Jane Doe\", got ${name.toStringLiteral()}")
                 }
 
                 return HttpResponse(200, xmlResponseString, headers)

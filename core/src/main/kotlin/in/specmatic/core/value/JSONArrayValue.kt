@@ -11,8 +11,8 @@ typealias TypeDeclarationsCallType = (Value, String, Map<String, Pattern>, Examp
 data class JSONArrayValue(override val list: List<Value>) : Value, ListValue {
     override val httpContentType: String = "application/json"
 
-    override fun displayableValue(): String = toStringValue()
-    override fun toStringValue() = valueArrayToJsonString(list)
+    override fun displayableValue(): String = toStringLiteral()
+    override fun toStringLiteral() = valueArrayToJsonString(list)
     override fun displayableType(): String = "json array"
     override fun exactMatchElseType(): Pattern = JSONArrayPattern(list.map { it.exactMatchElseType() })
     override fun type(): Pattern = JSONArrayPattern()

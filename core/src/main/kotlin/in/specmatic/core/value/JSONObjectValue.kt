@@ -8,8 +8,8 @@ import `in`.specmatic.core.utilities.valueMapToPrettyJsonString
 data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Value {
     override val httpContentType = "application/json"
 
-    override fun displayableValue() = toStringValue()
-    override fun toStringValue() = valueMapToPrettyJsonString(jsonObject)
+    override fun displayableValue() = toStringLiteral()
+    override fun toStringLiteral() = valueMapToPrettyJsonString(jsonObject)
     override fun displayableType(): String = "json object"
     override fun exactMatchElseType(): Pattern = toJSONObjectPattern(jsonObject.mapValues { it.value.exactMatchElseType() })
     override fun type(): Pattern = JSONObjectPattern()

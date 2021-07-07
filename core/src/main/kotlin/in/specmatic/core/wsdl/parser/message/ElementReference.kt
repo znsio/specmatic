@@ -5,7 +5,7 @@ import `in`.specmatic.core.wsdl.parser.WSDL
 
 data class ElementReference(val child: XMLNode, val wsdl: WSDL) : ChildElementType {
     override fun getWSDLElement(): Pair<String, WSDLElement> {
-        val wsdlTypeReference = child.attributes.getValue("ref").toStringValue()
+        val wsdlTypeReference = child.attributes.getValue("ref").toStringLiteral()
         val fullyQualifiedName = child.fullyQualifiedNameFromAttribute("ref")
         val qontractTypeName = wsdlTypeReference.replace(':', '_')
 

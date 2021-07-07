@@ -24,7 +24,7 @@ internal class UtilitiesTest {
         val xmlValue = toXMLNode(xml)
 
         assertThat(xmlValue.childNodes.size).isOne
-        assertThat(xmlValue.toStringValue().trim()).isEqualTo("""<line1><line2>data</line2></line1>""".trimIndent())
+        assertThat(xmlValue.toStringLiteral().trim()).isEqualTo("""<line1><line2>data</line2></line1>""".trimIndent())
     }
 
     @Test

@@ -6,7 +6,6 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.shouldNotMatch
 import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -35,13 +34,13 @@ internal class NumberPatternTest {
 
     @Test
     fun `should generate 3 digit long random number when min and max length are not specified`() {
-        assertThat(NumberPattern().generate(Resolver()).toStringValue().length).isEqualTo(3)
+        assertThat(NumberPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(3)
     }
 
     @Test
     fun `should generate random number when minLength`() {
         assertThat(
-            NumberPattern(minLength = 8, maxLength = 12).generate(Resolver()).toStringValue().length
+            NumberPattern(minLength = 8, maxLength = 12).generate(Resolver()).toStringLiteral().length
         ).isEqualTo(8)
     }
 

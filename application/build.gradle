@@ -58,7 +58,7 @@ dependencies {
     implementation 'org.slf4j:slf4j-nop:1.7.31'
     implementation 'org.apache.kafka:kafka-clients:2.8.0'
 
-    implementation 'org.apache.ant:ant-junit:1.10.10'
+    implementation 'org.apache.ant:ant-junit:1.10.11'
 
     implementation(project(':core'))
     implementation(project(':junit5-support'))

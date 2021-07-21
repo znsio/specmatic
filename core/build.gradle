@@ -27,7 +27,7 @@ def karate_version = "0.9.6"
 def jgit_version = "5.12.0.202106070339-r"
 
 def junit_version = "5.7.2"
-def testcontainers_version = "1.15.3"
+def testcontainers_version = "1.16.0"
 
 dependencies {
     implementation 'io.cucumber:gherkin:20.0.1'

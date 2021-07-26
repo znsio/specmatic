@@ -7,7 +7,7 @@ externalDocs:
 servers:
   - url: https://hooks.slack.com
 paths:
-  /services/test:
+  /services/jsonAndNonJsonPayload:
     post:
       summary: Post a message to Slack
       requestBody:
@@ -18,9 +18,44 @@ paths:
               properties:
                 payload:     # <--- form field that contains the JSON message
                   $ref: '#/components/schemas/Message'
+                nonJsonPayload:
+                  type: string
             encoding:
               payload:
                 contentType: application/json
+      responses:
+        '200':
+          description: OK
+          /services/test:
+            post:
+              summary: Post a message to Slack
+              requestBody:
+                content:
+                  application/x-www-form-urlencoded:
+                    schema:
+                      type: object
+                      properties:
+                        payload: # <--- form field that contains the JSON message
+                          $ref: '#/components/schemas/Message'
+                        nonJsonPayload:
+                          type: string
+                    encoding:
+                      payload:
+                        contentType: application/json
+              responses:
+                '200':
+                  description: OK
+  /services/nonJsonPayloadOnly:
+    post:
+      summary: Post a message to Slack
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                nonJsonPayload:
+                  type: string
       responses:
         '200':
           description: OK

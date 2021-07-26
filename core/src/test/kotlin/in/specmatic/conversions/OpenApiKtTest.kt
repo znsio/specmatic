@@ -908,7 +908,7 @@ Background:
         assertThat(response.statusCodeValue).isEqualTo(200)
     }
 
-    @Ignore
+    @Test
     fun `should generate tests with json in form data`() {
         val flags = mutableMapOf<String, Int>().withDefault { 0 }
 
@@ -931,32 +931,32 @@ Background:
                             put("Content-Type", "application/json")
                         }
                     }
-                    return when {
-                        request.path == "/services/test" -> {
-                            //TODO: headers should include application/x-www-form-urlencoded
-                            when (request.method) {
-                                "POST" -> {
-                                    //TODO: Form should include payload
-                                    HttpResponse(
-                                        200,
-                                        "",
-                                        headers
-                                    )
-                                }
-                                else -> HttpResponse(400, "", headers)
-                            }
+                    return when (request.path) {
+                        "/services/test" -> {
+                            if (request.method == "POST" &&
+                                request.headers["Content-Type"] == "application/x-www-form-urlencoded" &&
+                                readFormField(request, "payload")["text"] != null
+                            ) HttpResponse(
+                                200,
+                                "",
+                                headers
+                            ) else return HttpResponse(400, "", headers)
+
                         }
-                        else -> HttpResponse(400, "", headers)
+                        else -> return HttpResponse(400, "", headers)
                     }
                 }
+
+                private fun readFormField(request: HttpRequest, fieldName: String) =
+                    ObjectMapper().readValue(request.formFields[fieldName], Map::class.java)
 
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             }
         )
 
-        assertThat(flags["/pets POST executed"]).isEqualTo(1)
-        assertFalse(results.success())
+        assertThat(flags["/services/test POST executed"]).isEqualTo(1)
+        assertThat(results.success()).isTrue
     }
 }
 

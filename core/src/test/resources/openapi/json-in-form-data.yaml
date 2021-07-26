@@ -12,9 +12,6 @@ paths:
       summary: Post a message to Slack
       requestBody:
         content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Message'
           application/x-www-form-urlencoded:
             schema:
               type: object

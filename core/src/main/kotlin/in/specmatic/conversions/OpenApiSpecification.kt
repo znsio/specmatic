@@ -310,9 +310,15 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         mediaType.schema.properties.map { (formFieldName, formFieldValue) ->
             formFieldName to toSpecmaticPattern(
                 formFieldValue,
-                jsonInFormData = mediaType.encoding[formFieldName]?.contentType == "application/json"
+                jsonInFormData = isJsonInString(mediaType, formFieldName)
             )
         }.toMap()
+
+    private fun isJsonInString(
+        mediaType: MediaType,
+        formFieldName: String?
+    ) = if (mediaType.encoding.isNullOrEmpty()) false
+    else mediaType.encoding[formFieldName]?.contentType == "application/json"
 
     fun toSpecmaticPattern(mediaType: MediaType, jsonInFormData: Boolean = false): Pattern =
         toSpecmaticPattern(mediaType.schema, jsonInFormData = jsonInFormData)

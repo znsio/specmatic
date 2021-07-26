@@ -894,14 +894,15 @@ Background:
         val headers = HttpHeaders()
         headers.set("Content-Type", "application/x-www-form-urlencoded")
 
-        val map: MultiValueMap<String, String> = LinkedMultiValueMap<String, String>()
+        val map: MultiValueMap<String, String> = LinkedMultiValueMap()
         map.add("payload", """{"text":"json inside form data"}""")
+        map.add("nonJsonPayload", "test")
 
         val request: HttpEntity<MultiValueMap<String, String>> = HttpEntity<MultiValueMap<String, String>>(map, headers)
 
         val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
-            restTemplate.postForEntity(URI.create("http://localhost:9000/services/test"), request, String::class.java)
+            restTemplate.postForEntity(URI.create("http://localhost:9000/services/jsonAndNonJsonPayload"), request, String::class.java)
         }
 
         assertThat(response).isNotNull
@@ -932,10 +933,21 @@ Background:
                         }
                     }
                     return when (request.path) {
-                        "/services/test" -> {
+                        "/services/jsonAndNonJsonPayload" -> {
                             if (request.method == "POST" &&
                                 request.headers["Content-Type"] == "application/x-www-form-urlencoded" &&
                                 readFormField(request, "payload")["text"] != null
+                            ) HttpResponse(
+                                200,
+                                "",
+                                headers
+                            ) else return HttpResponse(400, "", headers)
+
+                        }
+                        "/services/nonJsonPayloadOnly" -> {
+                            if (request.method == "POST" &&
+                                request.headers["Content-Type"] == "application/x-www-form-urlencoded" &&
+                                request.formFields["nonJsonPayload"] != null
                             ) HttpResponse(
                                 200,
                                 "",
@@ -955,7 +967,8 @@ Background:
             }
         )
 
-        assertThat(flags["/services/test POST executed"]).isEqualTo(1)
+        assertThat(flags["/services/jsonAndNonJsonPayload POST executed"]).isEqualTo(1)
+        assertThat(flags["/services/nonJsonPayloadOnly POST executed"]).isEqualTo(1)
         assertThat(results.success()).isTrue
     }
 }

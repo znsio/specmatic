@@ -1,0 +1,40 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Slack Incoming Webhook
+externalDocs:
+  url: https://api.slack.com/incoming-webhooks
+servers:
+  - url: https://hooks.slack.com
+paths:
+  /services/test:
+    post:
+      summary: Post a message to Slack
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                payload:     # <--- form field that contains the JSON message
+                  $ref: '#/components/schemas/Message'
+            encoding:
+              payload:
+                contentType: application/json
+      responses:
+        '200':
+          description: OK
+components:
+  schemas:
+    Message:
+      title: A Slack message
+      type: object
+      properties:
+        text:
+          type: string
+          description: Message text
+      required:
+        - text

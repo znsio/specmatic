@@ -24,7 +24,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
     companion object {
         fun fromFile(openApiFilePath: String, relativeTo: String): OpenApiSpecification {
             val openApiFile = File(openApiFilePath).let { openApiFile ->
-                if(openApiFile.isAbsolute) {
+                if (openApiFile.isAbsolute) {
                     openApiFile
                 } else {
                     File(relativeTo).canonicalFile.parentFile.resolve(openApiFile)
@@ -33,7 +33,10 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
 
             val openApiYAMLContent = openApiFile.readText()
 
-            return OpenApiSpecification(openApiFile.canonicalPath, OpenAPIV3Parser().readContents(openApiYAMLContent).openAPI)
+            return OpenApiSpecification(
+                openApiFile.canonicalPath,
+                OpenAPIV3Parser().readContents(openApiYAMLContent).openAPI
+            )
         }
 
         fun fromFile(openApiFile: String): OpenApiSpecification {
@@ -280,22 +283,45 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 )
             )
             else -> operation.requestBody.content.map { (contentType, mediaType) ->
-                HttpRequestPattern(
-                    urlMatcher = toURLMatcherWithOptionalQueryParams(path),
-                    method = httpMethod,
-                    headersPattern = HttpHeadersPattern(headersMap),
-                    body = toSpecmaticPattern(mediaType)
-                )
+                val formData = contentType == "application/x-www-form-urlencoded"
+                when {
+                    formData -> {
+                        HttpRequestPattern(
+                            urlMatcher = toURLMatcherWithOptionalQueryParams(path),
+                            method = httpMethod,
+                            headersPattern = HttpHeadersPattern(headersMap),
+                            formFieldsPattern = toFormFields(mediaType)
+                        )
+                    }
+                    else -> {
+                        HttpRequestPattern(
+                            urlMatcher = toURLMatcherWithOptionalQueryParams(path),
+                            method = httpMethod,
+                            headersPattern = HttpHeadersPattern(headersMap),
+                            body = toSpecmaticPattern(mediaType)
+                        )
+                    }
+                }
             }
         }
     }
 
-    fun toSpecmaticPattern(mediaType: MediaType): Pattern = toSpecmaticPattern(mediaType.schema)
+    private fun toFormFields(mediaType: MediaType) =
+        mediaType.schema.properties.map { (formFieldName, formFieldValue) ->
+            formFieldName to toSpecmaticPattern(
+                formFieldValue,
+                jsonInFormData = mediaType.encoding[formFieldName]?.contentType == "application/json"
+            )
+        }.toMap()
+
+    fun toSpecmaticPattern(mediaType: MediaType, jsonInFormData: Boolean = false): Pattern =
+        toSpecmaticPattern(mediaType.schema, jsonInFormData = jsonInFormData)
 
     fun toSpecmaticPattern(
         schema: Schema<*>,
         typeStack: List<String> = emptyList(),
-        patternName: String = ""
+        patternName: String = "",
+        jsonInFormData: Boolean = false
     ): Pattern {
         val pattern = when (schema) {
             is StringSchema -> when (schema.enum) {
@@ -349,6 +375,16 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 }
             }
             else -> throw UnsupportedOperationException("Specmatic is unable to parse: $schema")
+        }.also {
+            when {
+                it.instanceOf(JSONObjectPattern::class) && jsonInFormData -> {
+                    PatternInStringPattern(
+                        patterns.getOrDefault("($patternName)", StringPattern()),
+                        "($patternName)"
+                    )
+                }
+                else -> it
+            }
         }
         return when (schema.nullable != true) {
             true -> pattern

@@ -1,11 +1,6 @@
 package `in`.specmatic.conversions
 
-import `in`.specmatic.core.HttpRequest
-import `in`.specmatic.core.HttpResponse
-import `in`.specmatic.core.Verbose
-import `in`.specmatic.core.information
-import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.testBackwardCompatibility
+import `in`.specmatic.core.*
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
@@ -21,6 +16,8 @@ import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.util.LinkedMultiValueMap
+import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
@@ -119,7 +116,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/helloWithExamples.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -160,7 +158,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/helloWithExamples.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -267,7 +266,8 @@ Background:
         Scenario: sending string instead of number should return not found
           When GET /hello/test
           Then status 404
-                """.trimIndent(), sourceSpecPath)
+                """.trimIndent(), sourceSpecPath
+            )
         }.satisfies {
             assertThat(it.message).isEqualTo("""Scenario: "sending string instead of number should return not found" PATH: "/hello/test" is not as per included wsdl / OpenApi spec""")
         }
@@ -286,7 +286,8 @@ Background:
         Scenario: zero should return forbidden
           When GET /hello/0
           Then status 403
-                """.trimIndent(), sourceSpecPath)
+                """.trimIndent(), sourceSpecPath
+            )
         }.satisfies {
             assertThat(it.message).isEqualTo("""Scenario: "zero should return forbidden" RESPONSE STATUS: "403" is not as per included wsdl / OpenApi spec""")
         }
@@ -300,7 +301,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -319,7 +321,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
         val headers = HttpHeaders()
         headers.set("X-Request-ID", "717e5682-c214-11eb-8529-0242ac130003")
         val requestEntity: HttpEntity<String> = HttpEntity("", headers)
@@ -370,7 +373,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -395,7 +399,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val petResponse = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -418,7 +423,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-post.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val result = testBackwardCompatibility(feature, feature)
         assertThat(result.success()).isTrue()
@@ -433,7 +439,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-post.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val petResponse = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -448,7 +455,7 @@ Background:
         assertThat(petResponse).isNotNull
     }
 
-        @Test
+    @Test
     fun `should parse nullable fields`() {
         val feature = parseGherkinStringToFeature(
             """
@@ -456,7 +463,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val petResponse = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -479,7 +487,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -504,7 +513,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val petResponse = HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -527,7 +537,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         HttpStub(feature).use {
             val restTemplate = RestTemplate()
@@ -565,7 +576,8 @@ Background:
   Scenario: zero return bad request
     When GET /pets/0
     Then status 400
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -674,7 +686,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -741,7 +754,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -808,7 +822,8 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-expanded.yaml
-        """.trimIndent(), sourceSpecPath)
+        """.trimIndent(), sourceSpecPath
+        )
 
         val results = feature.executeTests(
             object : TestExecutor {
@@ -863,6 +878,85 @@ Background:
                 Expected string with minLength 6, actual was string: "small"
             """.trimIndent()
         )
+    }
+
+    @Test
+    fun `should generate stub with json in form data`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/json-in-form-data.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val headers = HttpHeaders()
+        headers.set("Content-Type", "application/x-www-form-urlencoded")
+
+        val map: MultiValueMap<String, String> = LinkedMultiValueMap<String, String>()
+        map.add("payload", """{"text":"json inside form data"}""")
+
+        val request: HttpEntity<MultiValueMap<String, String>> = HttpEntity<MultiValueMap<String, String>>(map, headers)
+
+        val response = HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            restTemplate.postForEntity(URI.create("http://localhost:9000/services/test"), request, String::class.java)
+        }
+
+        assertThat(response).isNotNull
+        assertThat(response.statusCodeValue).isEqualTo(200)
+    }
+
+    @Ignore
+    fun `should generate tests with json in form data`() {
+        val flags = mutableMapOf<String, Int>().withDefault { 0 }
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/json-in-form-data.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val flagKey = "${request.path} ${request.method} executed"
+                    flags[flagKey] = flags.getValue(flagKey) + 1
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    return when {
+                        request.path == "/services/test" -> {
+                            //TODO: headers should include application/x-www-form-urlencoded
+                            when (request.method) {
+                                "POST" -> {
+                                    //TODO: Form should include payload
+                                    HttpResponse(
+                                        200,
+                                        "",
+                                        headers
+                                    )
+                                }
+                                else -> HttpResponse(400, "", headers)
+                            }
+                        }
+                        else -> HttpResponse(400, "", headers)
+                    }
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(flags["/pets POST executed"]).isEqualTo(1)
+        assertFalse(results.success())
     }
 }
 

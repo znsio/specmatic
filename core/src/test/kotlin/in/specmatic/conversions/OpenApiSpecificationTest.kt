@@ -1,6 +1,10 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.HttpHeadersPattern
+import `in`.specmatic.core.pattern.DeferredPattern
+import `in`.specmatic.core.pattern.NullPattern
+import `in`.specmatic.core.pattern.Pattern
+import io.ktor.util.reflect.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -56,6 +60,55 @@ paths:
             application/json:
               schema:
                 type: string
+  /nested/types/without/ref/to/parent:
+    get:
+      summary: Nested Types
+      description: Optional extended description in CommonMark or HTML.
+      responses:
+        '200':
+          description: Returns nested type
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/NestedTypeWithoutRef'
+  /nested/types/with/ref/to/parent:
+    get:
+      summary: Nested Types
+      description: Optional extended description in CommonMark or HTML.
+      responses:
+        '200':
+          description: Returns nested type
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/NestedTypeWithRef'
+
+components:
+  schemas:
+    NestedTypeWithoutRef:
+      description: ''
+      type: object
+      properties:
+        Parent:
+          type: object
+          properties:
+            Child:
+              type: object
+              properties:
+                Parent:
+                  type: object
+                  properties:
+                    Child:
+                      type: string
+    NestedTypeWithRef:
+      description: ''
+      type: object
+      properties:
+        Parent:
+          type: object
+          properties:
+            Child:
+              ${"$"}ref: '#/components/schemas/NestedTypeWithRef'
     """.trim()
 
         val openApiFile = File(OPENAPI_FILE)
@@ -73,7 +126,30 @@ paths:
     fun `should generate 200 OK scenarioInfos from openAPI`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
         val scenarioInfos = openApiSpecification.toScenarioInfos()
-        assertThat(scenarioInfos.size).isEqualTo(1)
+        assertThat(scenarioInfos.size).isEqualTo(3)
+    }
+
+    @Test
+    fun `should not resolve non ref nested types to Deferred Pattern`() {
+        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
+        val scenarioInfos = openApiSpecification.toScenarioInfos()
+        val nestedTypeWithoutRef = scenarioInfos.first().patterns.getOrDefault("(NestedTypeWithoutRef)", NullPattern)
+        assertThat(containsDeferredPattern(nestedTypeWithoutRef)).isFalse
+    }
+
+    @Test
+    fun `should resolve ref nested types to Deferred Pattern`() {
+        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
+        val scenarioInfos = openApiSpecification.toScenarioInfos()
+        val nestedTypeWithRef = scenarioInfos.first().patterns["(NestedTypeWithRef)"]
+        assertThat(containsDeferredPattern(nestedTypeWithRef!!)).isTrue
+    }
+
+    private fun containsDeferredPattern(pattern: Pattern): Boolean {
+        if (!pattern.pattern.instanceOf(Map::class)) return false
+        val childPattern = (pattern.pattern as Map<String, Pattern?>).values.firstOrNull() ?: return false
+        return if (childPattern.instanceOf(DeferredPattern::class)) true
+        else containsDeferredPattern(childPattern)
     }
 
     @Test
@@ -81,7 +157,7 @@ paths:
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
         val scenarioInfos = openApiSpecification.toScenarioInfos()
 
-        for(scenarioInfo in scenarioInfos) {
+        for (scenarioInfo in scenarioInfos) {
             assertNotFoundInHeaders("Content-Type", scenarioInfo.httpRequestPattern.headersPattern)
             assertNotFoundInHeaders("Content-Type", scenarioInfo.httpResponsePattern.headersPattern)
         }

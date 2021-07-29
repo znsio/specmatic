@@ -421,7 +421,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
     ) = schema.properties.orEmpty().map { (propertyName, propertyType) ->
         val optional = !requiredFields.contains(propertyName)
         if (patternName.isNotEmpty()) {
-            if (typeStack.contains(patternName)) toSpecmaticParamName(
+            if (typeStack.contains(patternName) && propertyType.`$ref`.orEmpty().endsWith(patternName)) toSpecmaticParamName(
                 optional,
                 propertyName
             ) to DeferredPattern("(${patternName})")

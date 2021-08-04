@@ -7,7 +7,11 @@ import `in`.specmatic.shouldNotMatch
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.testcontainers.shaded.org.apache.commons.lang.RandomStringUtils
+import java.util.stream.Stream
 
 internal class StringPatternTest {
     @Test
@@ -59,5 +63,31 @@ internal class StringPatternTest {
         val result = StringPattern(maxLength = 3).matches(StringValue("test"), Resolver())
         assertThat(result.isTrue()).isFalse
         assertThat(result.reportString()).isEqualTo("""Expected string with maxLength 3, actual was string: "test"""")
+    }
+
+    companion object {
+        @JvmStatic
+        fun lengthTestValues(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(null, 10, 5),
+                Arguments.of(null, 4, 4),
+                Arguments.of(1, 10, 5),
+                Arguments.of(1, 4, 4),
+                Arguments.of(1, 5, 5),
+                Arguments.of(5, 10, 5),
+                Arguments.of(6, 10, 6),
+                Arguments.of(6, null, 6),
+                Arguments.of(3, null, 5),
+                Arguments.of(null, null, 5)
+            )
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("lengthTestValues")
+    fun `generate string value of appropriate length matching minLength and maxLength parameters`(min: Int?, max: Int?, length: Int) {
+        val result = StringPattern(minLength = min, maxLength = max).generate(Resolver()) as StringValue
+
+        assertThat(result.string.length).isEqualTo(length)
     }
 }

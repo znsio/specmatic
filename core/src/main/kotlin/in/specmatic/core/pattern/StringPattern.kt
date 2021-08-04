@@ -10,6 +10,8 @@ import `in`.specmatic.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
 
+private const val INFINITY = 999999999
+
 data class StringPattern(
     override val typeAlias: String? = null,
     val minLength: Int? = null,
@@ -50,7 +52,14 @@ data class StringPattern(
         return JSONArrayValue(valueList)
     }
 
-    override fun generate(resolver: Resolver): Value = StringValue(randomString(minLength ?: 5))
+    private val randomStringLength: Int =
+        when {
+            minLength != null && 5 < minLength -> minLength
+            maxLength != null && 5 > maxLength -> maxLength
+            else -> 5
+        }
+    
+    override fun generate(resolver: Resolver): Value = StringValue(randomString(randomStringLength))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)

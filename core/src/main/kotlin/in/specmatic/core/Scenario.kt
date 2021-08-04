@@ -304,11 +304,11 @@ data class Scenario(
         return kafkaMessagePattern?.matches(kafkaMessage, resolver.copy(findMissingKey = checkAllKeys)) ?: Result.Failure("This scenario does not have a Kafka mock")
     }
 
-    fun resolverAndResponseFrom(response: HttpResponse?): Pair<Resolver, HttpResponse> =
+    fun resolverAndResponseFrom(response: HttpResponse): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
                 val resolver = Resolver(expectedFacts, false, patterns)
-                Pair(resolver, HttpResponsePattern(response!!).generateResponse(resolver))
+                Pair(resolver, HttpResponsePattern(response).generateResponse(resolver))
             }
         }
 

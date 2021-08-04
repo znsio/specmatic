@@ -13,6 +13,7 @@ import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
+import org.junit.jupiter.api.assertDoesNotThrow
 
 private const val isOptional: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
 private const val occursMultipleTimes: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTIPLE_ATTRIBUTE_VALUE\""
@@ -20,6 +21,25 @@ private const val occursMultipleTimes: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTI
 internal class XMLPatternTest {
     @Nested
     inner class GenerateValues {
+        @Test
+        fun `generate a number`() {
+            val type = parsedPattern("<data>(number)</data>")
+            val node = type.generate(Resolver()) as XMLNode
+
+            val textChild = node.childNodes.first() as StringValue
+            assertDoesNotThrow { textChild.string.toInt() }
+        }
+
+        @Test
+        fun `generate a number in a nested node`() {
+            val type = parsedPattern("<parent><child1><child2>(number)</child2></child1></parent>")
+            val parent = type.generate(Resolver()) as XMLNode
+
+            val child2 = parent.getXMLNodeByPath("child1.child2")
+            val textChild = child2.childNodes.first() as StringValue
+            assertDoesNotThrow { textChild.string.toInt() }
+        }
+
         @Test
         fun `generate a value with a list of types`() {
             val itemsType = parsedPattern("<items>(Item*)</items>")

@@ -55,9 +55,9 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
 private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory: String, command: Array<String>): String {
     information.forDebugging("${prefix}Executing: ${command.joinToString(" ")}")
     val process = Runtime.getRuntime().exec(command, null, File(workingDirectory))
-    process.waitFor()
     val out = process.inputStream.bufferedReader().readText()
     val err = process.errorStream.bufferedReader().readText()
+    process.waitFor()
 
     if (process.exitValue() != 0) throw NonZeroExitError(err.ifEmpty { out })
 

@@ -172,7 +172,8 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
     }
 
     fun mapNamespaceToPrefix(targetNamespace: String): String {
-        return namespaceToPrefix[targetNamespace] ?: throw ContractException("The target namespace $targetNamespace was not found in the WSDL definitions tag.")
+        return namespaceToPrefix[targetNamespace]
+                ?: throw ContractException("The target namespace $targetNamespace was not found in the WSDL definitions tag.")
     }
 
     val operations: List<XMLNode>

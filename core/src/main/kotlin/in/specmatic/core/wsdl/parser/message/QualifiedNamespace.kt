@@ -29,7 +29,14 @@ class QualifiedNamespace(
     override val nodeName: String
         get() {
             val nodeName = element.getAttributeValue("name")
-            val fullyQualifiedName = element.fullyQualifiedNameFromQName(wsdlTypeReference)
+
+            val fullyQualifiedName = if(wsdlTypeReference.isNotBlank()) {
+                element.fullyQualifiedNameFromQName(wsdlTypeReference)
+            }
+            else {
+                element.fullyQualifiedName()
+            }
+
             val mappedPrefix = wsdl.mapNamespaceToPrefix(fullyQualifiedName.namespace)
 
             return "${mappedPrefix}:${nodeName.localName()}"

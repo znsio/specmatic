@@ -98,6 +98,14 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         return FullyQualifiedName(prefix, namespace, localName)
     }
 
+    fun fullyQualifiedName(): FullyQualifiedName {
+        val namespace = schema?.getAttributeValue("targetNamespace") ?: throw ContractException("Could not find targetNamespace attribute in schema node $oneLineDescription")
+        val prefix = this.namespaces.asSequence().filter { it.value == namespace }.first().key.removePrefix("xmlns:")
+        val localName = getAttributeValue("name")
+
+        return FullyQualifiedName(prefix, namespace, localName)
+    }
+
     fun createNewNode(realName: String, attributes: Map<String, String> = emptyMap()): XMLNode {
         val namespace = realName.namespacePrefix()
 

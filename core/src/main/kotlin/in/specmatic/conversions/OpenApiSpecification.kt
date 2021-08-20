@@ -57,9 +57,14 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
         return Feature(toScenarioInfos().map { Scenario(it) }, name = name)
     }
 
-    override fun toScenarioInfos(): List<ScenarioInfo> =
-        openApitoScenarioInfos().filter { it.httpResponsePattern.status in 200..299 }
-            .plus(toScenarioInfosWithExamples())
+    override fun toScenarioInfos(): List<ScenarioInfo> {
+        val scenarioInfosWithExamples = toScenarioInfosWithExamples()
+        return openApitoScenarioInfos().filter { scenarioInfo ->
+            scenarioInfosWithExamples.none { scenarioInfoWithExample ->
+                scenarioInfoWithExample.matchesSignature(scenarioInfo)
+            }
+        }.plus(scenarioInfosWithExamples)
+    }
 
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo,
@@ -421,7 +426,9 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
     ) = schema.properties.orEmpty().map { (propertyName, propertyType) ->
         val optional = !requiredFields.contains(propertyName)
         if (patternName.isNotEmpty()) {
-            if (typeStack.contains(patternName) && propertyType.`$ref`.orEmpty().endsWith(patternName)) toSpecmaticParamName(
+            if (typeStack.contains(patternName) && propertyType.`$ref`.orEmpty()
+                    .endsWith(patternName)
+            ) toSpecmaticParamName(
                 optional,
                 propertyName
             ) to DeferredPattern("(${patternName})")

@@ -6,6 +6,7 @@ import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.Pattern
 import io.ktor.util.reflect.*
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -122,7 +123,7 @@ components:
         File(OPENAPI_FILE).delete()
     }
 
-    @Test
+    @Ignore
     fun `should generate 200 OK scenarioInfos from openAPI`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
         val scenarioInfos = openApiSpecification.toScenarioInfos()

@@ -102,8 +102,15 @@ Scenario: zero should return not found
         )
 
         assertThat(flags["/hello/0 executed"]).isTrue
-        assertThat(flags.size).isEqualTo(2)
-        assertTrue(results.success(), results.report())
+        assertThat(flags.size).isEqualTo(3)
+        assertThat(results.report()).isEqualTo(
+            """
+                In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+                >> RESPONSE.STATUS
+
+                Expected status: 400, actual: 200
+            """.trimIndent()
+        )
     }
 
     @Test
@@ -145,7 +152,14 @@ Background:
         assertThat(flags["/hello/0 executed"]).isTrue
         assertThat(flags["/hello/15 executed"]).isTrue
         assertThat(flags.size).isEqualTo(3)
-        assertTrue(results.success(), results.report())
+        assertThat(results.report()).isEqualTo(
+            """
+                In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+                >> RESPONSE.STATUS
+
+                Expected status: 400, actual: 200
+            """.trimIndent()
+        )
     }
 
     @Test
@@ -189,10 +203,10 @@ Background:
         assertThat(flags.size).isEqualTo(3)
         assertThat(results.report()).isEqualTo(
             """
-                In scenario "Open API - Operation Summary: hello world. Response: Says hello"
+                In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
                 >> RESPONSE.STATUS
 
-                Expected status: 200, actual: 202
+                Expected status: 400, actual: 202
 
                 In scenario "Open API - Operation Summary: hello world. Response: Says hello Examples: id=15"
                 >> RESPONSE.STATUS
@@ -249,6 +263,11 @@ Background:
                 >> RESPONSE.STATUS
 
                 Expected status: 200, actual: 202
+
+                In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+                >> RESPONSE.STATUS
+
+                Expected status: 400, actual: 202
             """.trimIndent()
         )
     }

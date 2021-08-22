@@ -14,8 +14,12 @@ import `in`.specmatic.core.wsdl.payload.SimpleTypedSOAPPayload
 
 data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL) : WSDLElement {
     override fun getGherkinTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
-        return createSimpleType(element, existingTypes).let {
-            WSDLTypeInfo(it.first, it.second)
+        return createSimpleType(element).let { (nodes, prefix) ->
+            if(prefix != null) {
+                WSDLTypeInfo(nodes = nodes, existingTypes, setOf(prefix))
+            } else {
+                WSDLTypeInfo(nodes, existingTypes)
+            }
         }
     }
 
@@ -29,25 +33,25 @@ data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, va
         return SimpleTypedSOAPPayload(soapMessageType, typeInfo.nodes.first() as XMLNode, namespaces)
     }
 
-    private fun createSimpleType(element: XMLNode, types: Map<String, XMLPattern>): Pair<List<XMLValue>, Map<String, XMLPattern>> {
-        val node = createSimpleType(element)
-        return Pair(listOf(node), types)
+    private fun createSimpleType(element: XMLNode): Pair<List<XMLValue>, String?> {
+        val value = when (val typeName = element.attributes.getValue("type").toStringLiteral().localName()) {
+            in primitiveStringTypes -> StringValue("(string)")
+            in primitiveNumberTypes -> StringValue("(number)")
+            in primitiveDateTypes -> StringValue("(datetime)")
+            in primitiveBooleanType -> StringValue("(boolean)")
+            "anyType" -> StringValue("(anything)")
+
+            else -> throw ContractException("""Primitive type "$typeName" not recognized""")
+        }
+
+        val qontractAttributes = getQontractAttributes(element)
+        val fqname = element.fullyQualifiedName(wsdl)
+        val prefix = if (fqname.prefix.isNotBlank()) {
+            fqname.prefix
+        } else
+            null
+
+        return Pair(listOf(XMLNode(fqname.qname, qontractAttributes, listOf(value))), prefix)
     }
 }
 
-internal fun createSimpleType(element: XMLNode): XMLNode {
-    val typeName = element.attributes.getValue("type").toStringLiteral().localName()
-    val value = when(typeName) {
-        in primitiveStringTypes -> StringValue("(string)")
-        in primitiveNumberTypes -> StringValue("(number)")
-        in primitiveDateTypes -> StringValue("(datetime)")
-        in primitiveBooleanType -> StringValue("(boolean)")
-        "anyType" -> StringValue("(anything)")
-
-        else -> throw ContractException("""Primitive type "$typeName" not recognized""")
-    }
-
-    val qontractAttributes = getQontractAttributes(element)
-
-    return XMLNode(element.getAttributeValue("name").localName(), qontractAttributes, listOf(value))
-}

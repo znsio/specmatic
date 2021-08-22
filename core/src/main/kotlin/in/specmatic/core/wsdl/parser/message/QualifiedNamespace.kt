@@ -34,7 +34,7 @@ class QualifiedNamespace(
                 element.fullyQualifiedNameFromQName(wsdlTypeReference)
             }
             else {
-                element.fullyQualifiedName()
+                element.fullyQualifiedName(wsdl)
             }
 
             val mappedPrefix = wsdl.mapNamespaceToPrefix(fullyQualifiedName.namespace)

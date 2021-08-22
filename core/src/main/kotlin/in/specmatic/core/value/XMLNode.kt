@@ -10,6 +10,7 @@ import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.parseXML
+import `in`.specmatic.core.wsdl.parser.WSDL
 
 fun toXMLNode(document: Document): XMLNode = nonTextXMLNode(document.documentElement)
 
@@ -61,7 +62,13 @@ fun getNamespaces(attributes: Map<String, StringValue>): Map<String, String> =
     attributes.filterKeys { it.startsWith("xmlns:") }.mapKeys { it.key.removePrefix("xmlns:") }.mapValues { it.value.toString() }
 
 data class FullyQualifiedName(val prefix: String, val namespace: String, val localName: String) {
-    val qname = "$prefix:$localName"
+    val qname: String
+        get() {
+            return if(prefix.isNotBlank())
+                "$prefix:$localName"
+            else
+                localName
+        }
 }
 
 data class XMLNode(val name: String, val realName: String, val attributes: Map<String, StringValue>, val childNodes: List<XMLValue>, val namespacePrefix: String, val namespaces: Map<String, String>, val schema: XMLNode? = null) : XMLValue, ListValue {
@@ -98,12 +105,17 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         return FullyQualifiedName(prefix, namespace, localName)
     }
 
-    fun fullyQualifiedName(): FullyQualifiedName {
-        val namespace = schema?.getAttributeValue("targetNamespace") ?: throw ContractException("Could not find targetNamespace attribute in schema node $oneLineDescription")
-        val prefix = this.namespaces.asSequence().filter { it.value == namespace }.first().key.removePrefix("xmlns:")
+    fun fullyQualifiedName(wsdl: WSDL): FullyQualifiedName {
         val localName = getAttributeValue("name")
 
-        return FullyQualifiedName(prefix, namespace, localName)
+        return if(this.schema?.attributes?.get("elementFormDefault")?.toStringLiteral() == "qualified") {
+            val namespace = schema.getAttributeValue("targetNamespace", "Could not find targetNamespace attribute in schema node $oneLineDescription")
+            val prefix = wsdl.prefixToNamespace.asSequence().filter { it.value == namespace }.first().key.removePrefix("xmlns:")
+
+            FullyQualifiedName(prefix, namespace, localName)
+        } else {
+            FullyQualifiedName("", "", localName)
+        }
     }
 
     fun createNewNode(realName: String, attributes: Map<String, String> = emptyMap()): XMLNode {

@@ -127,7 +127,7 @@ fun addSchemasToNodes(schemas: Map<String, XMLNode>): Map<String, XMLNode> {
     }
 }
 
-data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String, XMLNode>, val schemas: Map<String, XMLNode>, private val typesNode: XMLNode, val namespaceToPrefix: Map<String, String>, val reversedPrefixes: Map<String, String>) {
+data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String, XMLNode>, val schemas: Map<String, XMLNode>, private val typesNode: XMLNode, val namespaceToPrefix: Map<String, String>, val prefixToNamespace: Map<String, String>) {
     fun getServiceName() =
         rootDefinition.findFirstChildByName("service")?.attributes?.get("name")
             ?: throw ContractException("Couldn't find attribute name in node service")
@@ -162,7 +162,7 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
     fun getServicePort() = rootDefinition.getXMLNodeByPath("service.port")
 
     fun getNamespaces(typeInfo: WSDLTypeInfo): Map<String, String> {
-        return typeInfo.getNamespaces(reversedPrefixes)
+        return typeInfo.getNamespaces(prefixToNamespace)
     }
 
     fun getNamespaces(): Map<String, String> {

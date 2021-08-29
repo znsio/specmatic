@@ -7,10 +7,7 @@ import `in`.specmatic.core.wsdl.parser.WSDL
 import io.cucumber.messages.types.FeatureChild
 import io.cucumber.messages.types.Step
 import io.swagger.v3.parser.util.ClasspathHelper
-import org.apache.commons.io.FileUtils
-import java.io.File
 import java.net.URI
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -104,9 +101,20 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
     }
 
     private fun wsdlToFeatureChildren(wsdlFile: WSDLContent): List<FeatureChild> {
-        val wsdlContent = wsdlFile.read()
-        val wsdl = WSDL(toXMLNode(wsdlContent!!), wsdlFile.path)
+        val wsdlContent = wsdlFile.read() ?: throw ContractException("Could not read WSDL file $wsdlFile")
+        val wsdl = WSDL(toXMLNode(wsdlContent), wsdlFile.path)
         val gherkin = wsdl.convertToGherkin().trim()
-        return parseGherkinString(gherkin, wsdlFile.path).feature.children
+        val feature = parseGherkinString(gherkin, wsdlFile.path).feature
+        return feature.children
     }
+
+}
+
+fun wsdlContentToFeature(
+    wsdlContent: String,
+    path: String
+): Feature {
+    val wsdl = WSDL(toXMLNode(wsdlContent), path)
+    val gherkin = wsdl.convertToGherkin().trim()
+    return parseGherkinStringToFeature(gherkin, path)
 }

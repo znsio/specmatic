@@ -1,6 +1,7 @@
 package application
 
 import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.conversions.wsdlContentToFeature
 import `in`.specmatic.core.*
 import `in`.specmatic.core.git.*
 import `in`.specmatic.core.pattern.ContractException
@@ -182,6 +183,7 @@ internal fun parseContract(content: String, path: String): Feature {
     return when(val extension = File(path).extension) {
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(content, path)
         "yaml" -> OpenApiSpecification.fromYAML(content, path).toFeature()
+        "wsdl" -> wsdlContentToFeature(content, path)
         else -> throw ContractException("Current file extension is $extension, but supported extensions are ${CONTRACT_EXTENSIONS.joinToString(", ")}")
     }
 }

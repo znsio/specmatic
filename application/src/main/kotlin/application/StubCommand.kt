@@ -179,7 +179,7 @@ internal fun validateContractFileExtensions(contractPaths: List<String>, fileOpe
     contractPaths.filter { fileOperations.isFile(it) && fileOperations.extensionIsNot(it, CONTRACT_EXTENSIONS) }.let {
         if (it.isNotEmpty()) {
             val files = it.joinToString("\n")
-            exitWithMessage("The following files do not end with ${CONTRACT_EXTENSION.plus("yaml")} and cannot be used:\n$files")
+            exitWithMessage("The following files do not end with ${CONTRACT_EXTENSIONS} and cannot be used:\n$files")
         }
     }
 }

@@ -1,9 +1,6 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.conversions.IncludedSpecification
-import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.conversions.WSDLFile
-import `in`.specmatic.conversions.WsdlSpecification
+import `in`.specmatic.conversions.*
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.jsonStringToValueMap
@@ -33,6 +30,7 @@ fun parseContractFileToFeature(file: File): Feature {
 
     return when(file.extension) {
         "yaml" -> OpenApiSpecification.fromFile(file.path).toFeature()
+        "wsdl" -> wsdlContentToFeature(file.readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(file.readText().trim(), file.canonicalPath)
         else -> throw ContractException("File extension of ${file.path} not recognized")
     }

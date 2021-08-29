@@ -19,8 +19,6 @@ class ParseMessageWithoutElementRef(
     val wsdl: WSDL,
 ) : MessageTypeInfoParser {
     override fun execute(): MessageTypeInfoParser {
-        val wsdlNamespaces = wsdl.getNamespaces()
-
         val (qualification, qualifiedMessageName) = when {
             fullyQualifiedMessageName.prefix.isNotBlank() -> {
                 val qualification = QualificationWithoutSchema(listOf(wsdl.getSchemaNamespacePrefix(fullyQualifiedMessageName.namespace)), fullyQualifiedMessageName.qname)
@@ -30,7 +28,7 @@ class ParseMessageWithoutElementRef(
         }
 
         val topLevelNode = xmlNode("element", mapOf("name" to qualifiedMessageName)) {
-            parentNamespaces(wsdlNamespaces)
+            parentNamespaces(wsdl.allNamespaces())
 
             xmlNode("complexType") {
                 xmlNode("sequence") {

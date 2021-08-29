@@ -2,6 +2,7 @@ package `in`.specmatic.core
 
 import `in`.specmatic.conversions.IncludedSpecification
 import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.conversions.WSDLFile
 import `in`.specmatic.conversions.WsdlSpecification
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
@@ -646,7 +647,7 @@ fun scenarioInfos(
         toIncludedSpecification(featureChildren, { backgroundOpenApi(it) }) { OpenApiSpecification.fromFile(it, filePath) }
 
     val wsdlSpecification =
-        toIncludedSpecification(featureChildren, { backgroundWsdl(it) }) { WsdlSpecification(it) }
+        toIncludedSpecification(featureChildren, { backgroundWsdl(it) }) { WsdlSpecification(WSDLFile(it)) }
 
     val includedSpecifications = listOfNotNull(openApiSpecification, wsdlSpecification)
 

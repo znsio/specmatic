@@ -8,18 +8,43 @@ import io.cucumber.messages.types.FeatureChild
 import io.cucumber.messages.types.Step
 import io.swagger.v3.parser.util.ClasspathHelper
 import org.apache.commons.io.FileUtils
+import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 
-class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
+interface WSDLContent {
+    val path: String
+
+    fun read(): String?
+}
+
+class WSDLFile(private val location: String) : WSDLContent {
+    override val path: String
+        get() = location
+
+    override fun read(): String? {
+        val adjustedLocation = location.replace("\\\\".toRegex(), "/")
+        val fileScheme = "file:"
+        val path = if (adjustedLocation.lowercase()
+                .startsWith(fileScheme)
+        ) Paths.get(URI.create(adjustedLocation)) else Paths.get(adjustedLocation)
+        return if (Files.exists(path)) {
+            path.toFile().readText()
+        } else {
+            ClasspathHelper.loadFileFromClasspath(adjustedLocation)
+        }
+    }
+}
+
+class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecification {
+    private val openApiScenarioInfos = toScenarioInfos()
 
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo,
         steps: List<Step>
     ): List<ScenarioInfo> {
-        val openApiScenarioInfos = toScenarioInfos()
         if (openApiScenarioInfos.isNullOrEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to
@@ -78,23 +103,10 @@ class WsdlSpecification(private val wsdlFile: String) : IncludedSpecification {
         return scenarioInfos(wsdlToFeatureChildren(wsdlFile), "")
     }
 
-    private fun wsdlToFeatureChildren(wsdlFile: String): List<FeatureChild> {
-        val wsdlContent = readContentFromLocation(wsdlFile)
-        val wsdl = WSDL(toXMLNode(wsdlContent!!), wsdlFile)
+    private fun wsdlToFeatureChildren(wsdlFile: WSDLContent): List<FeatureChild> {
+        val wsdlContent = wsdlFile.read()
+        val wsdl = WSDL(toXMLNode(wsdlContent!!), wsdlFile.path)
         val gherkin = wsdl.convertToGherkin().trim()
-        return parseGherkinString(gherkin, wsdlFile).feature.children
-    }
-
-    private fun readContentFromLocation(location: String): String? {
-        val adjustedLocation = location.replace("\\\\".toRegex(), "/")
-        val fileScheme = "file:"
-        val path = if (adjustedLocation.lowercase()
-                .startsWith(fileScheme)
-        ) Paths.get(URI.create(adjustedLocation)) else Paths.get(adjustedLocation)
-        return if (Files.exists(path)) {
-            path.toFile().readText()
-        } else {
-            ClasspathHelper.loadFileFromClasspath(adjustedLocation)
-        }
+        return parseGherkinString(gherkin, wsdlFile.path).feature.children
     }
 }

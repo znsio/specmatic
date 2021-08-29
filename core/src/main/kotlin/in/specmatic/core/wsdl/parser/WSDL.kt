@@ -8,7 +8,7 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.*
 import java.io.File
 
-private fun getXmlnsDefinitions(wsdlNode: XMLNode): Map<String, String> {
+private fun namespaceToPrefixMap(wsdlNode: XMLNode): Map<String, String> {
     return wsdlNode.attributes.filterKeys {
         it.startsWith("xmlns:")
     }.mapValues {
@@ -16,6 +16,16 @@ private fun getXmlnsDefinitions(wsdlNode: XMLNode): Map<String, String> {
     }.map {
         Pair(it.value, it.key.removePrefix("xmlns:"))
     }.toMap()
+}
+
+private fun prefixToNamespaceMap(wsdlNode: XMLNode): Map<String, String> {
+    return wsdlNode.attributes.filterKeys {
+        it.startsWith("xmlns:")
+    }.mapValues {
+        it.value.toStringLiteral()
+    }.mapKeys {
+        it.key.removePrefix("xmlns:")
+    }
 }
 
 private fun definitionsFrom(rootDefinitionXML: XMLNode, parentWSDL: File): List<XMLNode> {
@@ -92,7 +102,7 @@ fun WSDL(rootDefinition: XMLNode, wsdlPath: String): WSDL {
 
     val schemaPrefixes = schemaPrefixesFrom(schemas)
     val reversedSchemaPrefixes = schemaPrefixes.entries.associate { it.value to it.key }
-    return WSDL (rootDefinition, definitions, populatedSchemas, typesNode, getXmlnsDefinitions(rootDefinition).plus(schemaPrefixes), reversedSchemaPrefixes)
+    return WSDL(rootDefinition, definitions, populatedSchemas, typesNode, namespaceToPrefixMap(rootDefinition).plus(schemaPrefixes), reversedSchemaPrefixes, prefixToNamespaceMap(rootDefinition))
 }
 
 fun schemaPrefixesFrom(schemas: Map<String, XMLNode>): Map<String, String> {
@@ -127,7 +137,10 @@ fun addSchemasToNodes(schemas: Map<String, XMLNode>): Map<String, XMLNode> {
     }
 }
 
-data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String, XMLNode>, val schemas: Map<String, XMLNode>, private val typesNode: XMLNode, val namespaceToPrefix: Map<String, String>, val prefixToNamespace: Map<String, String>) {
+data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String, XMLNode>, val schemas: Map<String, XMLNode>, private val typesNode: XMLNode, val namespaceToPrefix: Map<String, String>, val prefixToNamespace: Map<String, String>, val rootPrefixesToNamespace: Map<String, String>) {
+    fun allNamespaces(): Map<String, String> {
+        return prefixToNamespace.plus(rootPrefixesToNamespace)
+    }
     fun getServiceName() =
         rootDefinition.findFirstChildByName("service")?.attributes?.get("name")
             ?: throw ContractException("Couldn't find attribute name in node service")

@@ -108,8 +108,10 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
     fun fullyQualifiedName(wsdl: WSDL): FullyQualifiedName {
         val localName = getAttributeValue("name")
 
-        return if(this.schema?.attributes?.get("elementFormDefault")?.toStringLiteral() == "qualified") {
-            val namespace = schema.getAttributeValue("targetNamespace", "Could not find targetNamespace attribute in schema node $oneLineDescription")
+        val qualification: String = this.attributes["form"]?.toStringLiteral() ?: (this.schema?.attributes?.get("elementFormDefault")?.toStringLiteral()) ?: "unqualified"
+
+        return if(qualification == "qualified") {
+            val namespace = schema?.getAttributeValue("targetNamespace", "Could not find targetNamespace attribute in schema node $oneLineDescription") ?: throw ContractException("Could not find schema for qualified node $oneLineDescription")
             val prefix = wsdl.prefixToNamespace.asSequence().filter { it.value == namespace }.first().key.removePrefix("xmlns:")
 
             FullyQualifiedName(prefix, namespace, localName)
@@ -265,7 +267,8 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
         return when {
             namespacePrefix.isBlank() -> ""
-            else -> namespaces[name.namespacePrefix()] ?: throw ContractException("Namespace ${name.namespacePrefix()} not found in node $this\nAvailable namespaces: $namespaces")
+            else -> namespaces[name.namespacePrefix()] ?:
+                throw ContractException("Namespace ${name.namespacePrefix()} not found in node $this\nAvailable namespaces: $namespaces")
         }
     }
 

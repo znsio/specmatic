@@ -41,7 +41,8 @@ private fun multipleElementsCanExist(element: XMLNode): Boolean {
 }
 
 private fun elementIsOptional(element: XMLNode): Boolean {
-    return element.attributes["minOccurs"]?.toStringLiteral() == "0" && !element.attributes.containsKey("maxOccurs")
+    return element.attributes["minOccurs"]?.toStringLiteral() == "0"
+            && (!element.attributes.containsKey("maxOccurs") || element.attributes.getValue("maxOccurs").toStringLiteral() == "1")
 }
 
 fun isPrimitiveType(node: XMLNode): Boolean {

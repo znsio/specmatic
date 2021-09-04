@@ -74,7 +74,7 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
                         .map {Triple(it.key.trim(), it.key.trim().lowercase(), it.value.trim())}
                         .filter { (_, loweredKey, _) -> loweredKey !in listOfExcludedHeaders }
                         .forEach { (key, _, value) ->
-                            this.headers[key] = value
+                            this.header(key, value)
                 }
 
                 this.body = when {

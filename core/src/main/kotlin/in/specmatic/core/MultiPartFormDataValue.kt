@@ -47,7 +47,6 @@ $content
     override fun addTo(formBuilder: FormBuilder) {
         formBuilder.append(name, content.toStringLiteral(), Headers.build {
             append(HttpHeaders.ContentType, ContentType.parse(content.httpContentType))
-            append(CONTENT_DISPOSITION, "form-data; name=${name}")
         })
     }
 
@@ -147,7 +146,7 @@ $headerString
 
             val partFilePath = filename.removePrefix("@")
             val partFileName = File(partFilePath).name
-            append(CONTENT_DISPOSITION, "form-data; name=${name}; filename=$partFileName")
+            append(CONTENT_DISPOSITION, "filename=$partFileName")
         }, content.length) {
             content.input
         }

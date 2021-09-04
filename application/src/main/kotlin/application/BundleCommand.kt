@@ -13,12 +13,68 @@ import java.util.concurrent.Callable
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
+interface Bundle {
+    fun contractPathData(): List<ContractPathData>
+    fun ancillaryEntries(pathData: ContractPathData): List<ZipperEntry>
+    fun configEntry(): List<ZipperEntry>
+}
+
+class StubBundle(private val config: QontractConfig, private val fileOperations: FileOperations) : Bundle {
+    override fun contractPathData(): List<ContractPathData> {
+        return config.contractStubPathData()
+    }
+
+    override fun ancillaryEntries(pathData: ContractPathData): List<ZipperEntry> {
+        val base = File(pathData.baseDir)
+
+        val stubDataDir = stubDataDir(File(pathData.path))
+        val stubFiles = stubFilesIn(stubDataDir, fileOperations)
+
+        return stubFiles.map {
+            val relativeEntryPath = File(it).relativeTo(base)
+            ZipperEntry("${base.name}/${relativeEntryPath.path}", fileOperations.readBytes(it))
+        }
+    }
+
+    override fun configEntry(): List<ZipperEntry> = emptyList()
+}
+
+class TestBundle(private val config: QontractConfig, private val fileOperations: FileOperations) : Bundle {
+    override fun contractPathData(): List<ContractPathData> {
+        return config.contractTestPathData()
+    }
+
+    override fun ancillaryEntries(pathData: ContractPathData): List<ZipperEntry> {
+        val base = File(pathData.baseDir)
+
+        return if(yamlExists(pathData.path)) {
+            val yamlFilePath = File(yamlFileName(pathData.path))
+            val yamlRelativePath = yamlFilePath.relativeTo(base).path
+            val yamlEntryName = "${base.name}/$yamlRelativePath"
+            val yamlEntry = ZipperEntry(yamlEntryName, fileOperations.readBytes(yamlFilePath.path))
+
+            listOf(yamlEntry)
+        } else {
+            emptyList()
+        }
+    }
+
+    override fun configEntry(): List<ZipperEntry> {
+        val configEntryName = File(config.configFilePath).name
+        val configContent = fileOperations.readBytes(config.configFilePath)
+        return listOf(ZipperEntry(configEntryName, configContent))
+    }
+}
+
 @CommandLine.Command(name = "bundle",
         mixinStandardHelpOptions = true,
         description = ["Generate a zip file of all stub contracts in $CONTRACT_EXTENSION.json"])
 class BundleCommand : Callable<Unit> {
     @CommandLine.Option(names = ["--bundlePath"], description = ["path in which to write the contract"], required = false, defaultValue = "./bundle.zip")
     lateinit var bundlePath: String
+
+    @CommandLine.Option(names = ["--test"], description = ["Create a bundle from of the test components"], required = false)
+    var testBundle: Boolean = false
 
     @Autowired
     lateinit var qontractConfig: QontractConfig
@@ -30,29 +86,37 @@ class BundleCommand : Callable<Unit> {
     lateinit var fileOperations: FileOperations
 
     override fun call() {
-        val zipperEntries = qontractConfig.contractStubPathData().flatMap { pathDataToEntryPath(it, fileOperations) }
+        val bundle = when {
+            testBundle -> TestBundle(qontractConfig, fileOperations)
+            else -> StubBundle(qontractConfig, fileOperations)
+        }
+
+        val pathData = bundle.contractPathData()
+
+        val zipperEntries = pathData.flatMap { contractPathData ->
+            pathDataToZipperEntry(bundle, contractPathData, fileOperations)
+        }.plus(bundle.configEntry())
+
         zipper.compress(bundlePath, zipperEntries)
     }
 }
 
-fun pathDataToEntryPath(pathData: ContractPathData, fileOperations: FileOperations): List<ZipperEntry> {
+private fun yamlFileName(path: String): String = path.removeSuffix(".spec") + ".yaml"
+
+private fun yamlExists(pathData: String): Boolean =
+        File(yamlFileName(pathData)).exists()
+
+fun pathDataToZipperEntry(bundle: Bundle, pathData: ContractPathData, fileOperations: FileOperations): List<ZipperEntry> {
     val base = File(pathData.baseDir)
     val contractFile = File(pathData.path)
 
     val relativePath = contractFile.relativeTo(base).path
     val zipEntryName = "${base.name}/$relativePath"
 
-    val stubDataDir = stubDataDir(File(pathData.path))
-    val stubFiles = stubFilesIn(stubDataDir, fileOperations)
-
-    val stubEntries = stubFiles.map {
-        val relativeEntryPath = File(it).relativeTo(base)
-        ZipperEntry("${base.name}/${relativeEntryPath.path}", fileOperations.readBytes(it))
-    }
-
     val contractEntry = ZipperEntry(zipEntryName, fileOperations.readBytes(pathData.path))
+    val ancillaryEntries = bundle.ancillaryEntries(pathData)
 
-    return listOf(contractEntry).plus(stubEntries)
+    return listOf(contractEntry).plus(ancillaryEntries)
 }
 
 fun stubFilesIn(stubDataDir: String, fileOperations: FileOperations): List<String> =

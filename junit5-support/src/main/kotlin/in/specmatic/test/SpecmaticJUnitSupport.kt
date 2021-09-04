@@ -1,13 +1,15 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.Examples
 import `in`.specmatic.core.pattern.Row
 import `in`.specmatic.core.pattern.parsedValue
-import `in`.specmatic.core.utilities.*
+import `in`.specmatic.core.utilities.contractTestPathsFrom
+import `in`.specmatic.core.utilities.createIfDoesNotExist
+import `in`.specmatic.core.utilities.exitIfDoesNotExist
+import `in`.specmatic.core.utilities.loadConfigJSON
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
@@ -65,7 +67,7 @@ open class SpecmaticJUnitSupport {
                     contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig) }
                 }
                 else -> {
-                    val configFile = valueOrDefault(givenConfigFile, DEFAULT_CONFIG_FILE_NAME, "Neither contract nor config were specified")
+                    val configFile = valueOrDefault(givenConfigFile, globalConfigFileName, "Neither contract nor config were specified")
 
                     exitIfDoesNotExist("config file", configFile)
 

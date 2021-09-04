@@ -140,12 +140,12 @@ internal class BundleCommandTest {
         every { qontractConfig.contractStubPathData() }.returns(contractPaths)
 
         mockkStatic("application.BundleCommand_Jvm")
-        every { pathDataToEntryPath(any(), any()) }.returns(emptyList())
+        every { pathDataToZipperEntry(any(), any(), any()) }.returns(emptyList())
 
         CommandLine(bundleCommand, factory).execute()
 
-        verify(exactly = 1) {pathDataToEntryPath(ContractPathData("cloneDir", "cloneDir/a/1.$CONTRACT_EXTENSION"), fileOperations)}
-        verify(exactly = 1) {pathDataToEntryPath(ContractPathData("cloneDir", "cloneDir/b/1.$CONTRACT_EXTENSION"), fileOperations)}
-        verify(exactly = 1) {pathDataToEntryPath(ContractPathData(".", "./c/1.$CONTRACT_EXTENSION"), fileOperations)}
+        verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData("cloneDir", "cloneDir/a/1.$CONTRACT_EXTENSION"), fileOperations)}
+        verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData("cloneDir", "cloneDir/b/1.$CONTRACT_EXTENSION"), fileOperations)}
+        verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData(".", "./c/1.$CONTRACT_EXTENSION"), fileOperations)}
     }
 }

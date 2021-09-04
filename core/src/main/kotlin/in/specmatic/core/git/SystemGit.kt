@@ -7,6 +7,18 @@ import java.io.File
 class SystemGit(private val workingDirectory: String = ".", private val prefix: String = "- ") : GitCommand {
     private fun execute(vararg command: String): String = executeCommandWithWorkingDirectory(prefix, workingDirectory, command.toList().toTypedArray())
 
+    private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory: String, command: Array<String>): String {
+        information.forDebugging("${prefix}Executing: ${command.joinToString(" ")}")
+        val process = Runtime.getRuntime().exec(command, listOf("GIT_SSL_NO_VERIFY=true").toTypedArray(), File(workingDirectory))
+        val out = process.inputStream.bufferedReader().readText()
+        val err = process.errorStream.bufferedReader().readText()
+        process.waitFor()
+
+        if (process.exitValue() != 0) throw NonZeroExitError(err.ifEmpty { out })
+
+        return out
+    }
+
     override fun add(): SystemGit = this.also { execute("git", "add", ".") }
     override fun add(relativePath: String): SystemGit = this.also { execute("git", "add", relativePath) }
     override fun commit(): SystemGit = this.also { execute("git", "commit", "-m", "Updated contract") }
@@ -50,18 +62,6 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
     }
 
     override fun inGitRootOf(contractPath: String): GitCommand = SystemGit(File(contractPath).parentFile.absolutePath)
-}
-
-private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory: String, command: Array<String>): String {
-    information.forDebugging("${prefix}Executing: ${command.joinToString(" ")}")
-    val process = Runtime.getRuntime().exec(command, null, File(workingDirectory))
-    val out = process.inputStream.bufferedReader().readText()
-    val err = process.errorStream.bufferedReader().readText()
-    process.waitFor()
-
-    if (process.exitValue() != 0) throw NonZeroExitError(err.ifEmpty { out })
-
-    return out
 }
 
 fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>): Boolean {

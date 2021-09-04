@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import picocli.CommandLine
 import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.information
 import `in`.specmatic.core.utilities.ContractPathData
 import java.io.File
 import java.io.FileOutputStream
@@ -17,9 +18,12 @@ interface Bundle {
     fun contractPathData(): List<ContractPathData>
     fun ancillaryEntries(pathData: ContractPathData): List<ZipperEntry>
     fun configEntry(): List<ZipperEntry>
+    val bundlePath: String
 }
 
-class StubBundle(private val config: QontractConfig, private val fileOperations: FileOperations) : Bundle {
+class StubBundle(private val _bundlePath: String?, private val config: QontractConfig, private val fileOperations: FileOperations) : Bundle {
+    override val bundlePath = _bundlePath ?: "./bundle.zip"
+
     override fun contractPathData(): List<ContractPathData> {
         return config.contractStubPathData()
     }
@@ -39,7 +43,9 @@ class StubBundle(private val config: QontractConfig, private val fileOperations:
     override fun configEntry(): List<ZipperEntry> = emptyList()
 }
 
-class TestBundle(private val config: QontractConfig, private val fileOperations: FileOperations) : Bundle {
+class TestBundle(private val _bundlePath: String?, private val config: QontractConfig, private val fileOperations: FileOperations) : Bundle {
+    override val bundlePath: String = _bundlePath ?: "./test-bundle.zip"
+
     override fun contractPathData(): List<ContractPathData> {
         return config.contractTestPathData()
     }
@@ -70,8 +76,8 @@ class TestBundle(private val config: QontractConfig, private val fileOperations:
         mixinStandardHelpOptions = true,
         description = ["Generate a zip file of all stub contracts in $CONTRACT_EXTENSION.json"])
 class BundleCommand : Callable<Unit> {
-    @CommandLine.Option(names = ["--bundlePath"], description = ["path in which to write the contract"], required = false, defaultValue = "./bundle.zip")
-    lateinit var bundlePath: String
+    @CommandLine.Option(names = ["--bundlePath"], description = ["Path in which to create the bundle"], required = false)
+    var bundlePath: String? = null
 
     @CommandLine.Option(names = ["--test"], description = ["Create a bundle from of the test components"], required = false)
     var testBundle: Boolean = false
@@ -87,8 +93,8 @@ class BundleCommand : Callable<Unit> {
 
     override fun call() {
         val bundle = when {
-            testBundle -> TestBundle(qontractConfig, fileOperations)
-            else -> StubBundle(qontractConfig, fileOperations)
+            testBundle -> TestBundle(bundlePath, qontractConfig, fileOperations)
+            else -> StubBundle(bundlePath, qontractConfig, fileOperations)
         }
 
         val pathData = bundle.contractPathData()
@@ -97,7 +103,7 @@ class BundleCommand : Callable<Unit> {
             pathDataToZipperEntry(bundle, contractPathData, fileOperations)
         }.plus(bundle.configEntry())
 
-        zipper.compress(bundlePath, zipperEntries)
+        zipper.compress(bundle.bundlePath, zipperEntries)
     }
 }
 
@@ -135,6 +141,8 @@ fun stubDataDir(path: File): String {
 @Component
 class Zipper {
     fun compress(zipFilePath: String, zipperEntries: List<ZipperEntry>) {
+        information.forTheUser("Writing contracts to $zipFilePath")
+
         FileOutputStream(zipFilePath).use { zipFile ->
             ZipOutputStream(zipFile).use { zipOut ->
                 for (zipperEntry in zipperEntries) {

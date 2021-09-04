@@ -192,8 +192,8 @@ class TestCommand : Callable<Unit> {
             System.clearProperty(CONTRACT_PATHS)
 
             val bundledConfigFile = tempDir.resolve(DEFAULT_CONFIG_FILE_NAME)
-            if(bundledConfigFile.exists())
-                System.setProperty(CONFIG_FILE_NAME, bundledConfigFile.canonicalPath)
+            if(!bundledConfigFile.exists())
+                throw ContractException("${`in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME} must be included in the test bundle.")
 
             tempDir
         } else {

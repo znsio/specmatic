@@ -11,10 +11,10 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import `in`.specmatic.core.Configuration
+import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
 import `in`.specmatic.core.Verbose
 import `in`.specmatic.core.information
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.test.SpecmaticJUnitSupport
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
@@ -25,10 +25,14 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.WORKING_DIRECTORY
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintWriter
 import java.nio.file.Paths
 import java.util.concurrent.Callable
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import kotlin.io.path.createTempDirectory
 
 @Command(name = "test",
         mixinStandardHelpOptions = true,
@@ -113,8 +117,6 @@ class TestCommand : Callable<Unit> {
             else -> "http"
         }
 
-        System.setProperty(CONTRACT_PATHS, contractPaths.joinToString(","))
-
         System.setProperty(HOST, host)
         System.setProperty(PORT, port.toString())
         System.setProperty(TIMEOUT, timeout.toString())
@@ -134,6 +136,9 @@ class TestCommand : Callable<Unit> {
         if(kafkaPort != 0)
             System.setProperty("kafkaPort", kafkaPort.toString())
 
+
+        System.setProperty(CONTRACT_PATHS, contractPaths.joinToString(","))
+
         val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
                 .selectors(selectClass(SpecmaticJUnitSupport::class.java))
                 .build()
@@ -146,7 +151,58 @@ class TestCommand : Callable<Unit> {
             junitLauncher.registerTestExecutionListeners(reportListener)
         }
 
+        val tempDir: File? = if(contractPaths.size == 1 && contractPaths.first().lowercase().endsWith("zip")) {
+            val zipFilePath = contractPaths.first()
+            val prefix = File(zipFilePath).nameWithoutExtension
+            val path = createTempDirectory(File(".").toPath(), prefix)
+
+            val tempDir = path.toFile()
+            tempDir.createNewFile()
+
+            File(zipFilePath).inputStream().use {
+                val zipFile = ZipInputStream(it)
+
+                var entry: ZipEntry? = zipFile.nextEntry
+
+                while(entry != null) {
+                    val buffer = ByteArrayOutputStream()
+
+                    while(zipFile.available() == 1) {
+                        val bytes = ByteArray(1024)
+                        val readCount = zipFile.read(bytes)
+                        if(readCount > 0)
+                            buffer.write(bytes, 0, readCount)
+                    }
+
+                    val rawData = buffer.toByteArray()
+
+                    val content = String(rawData)
+
+                    tempDir.resolve(entry.name).apply {
+                        parentFile.mkdirs()
+                        createNewFile()
+                        writeText(content)
+                    }
+
+                    entry = zipFile.nextEntry
+                }
+            }
+
+            System.setProperty(WORKING_DIRECTORY, tempDir.canonicalPath)
+            System.clearProperty(CONTRACT_PATHS)
+
+            val bundledConfigFile = tempDir.resolve(DEFAULT_CONFIG_FILE_NAME)
+            if(bundledConfigFile.exists())
+                System.setProperty(CONFIG_FILE_NAME, bundledConfigFile.canonicalPath)
+
+            tempDir
+        } else {
+            null
+        }
+
         junitLauncher.execute(request)
+
+        tempDir?.deleteRecursively()
 
         junitReportDirName?.let {
             val reportDirectory = File(it)

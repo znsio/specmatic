@@ -32,7 +32,7 @@ import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
-import kotlin.io.path.createTempDirectory
+import kotlin.io.path.Path
 
 @Command(name = "test",
         mixinStandardHelpOptions = true,
@@ -151,58 +151,38 @@ class TestCommand : Callable<Unit> {
             junitLauncher.registerTestExecutionListeners(reportListener)
         }
 
-        val tempDir: File? = if(contractPaths.size == 1 && contractPaths.first().lowercase().endsWith("zip")) {
+        val bundleDir: File? = if(contractPaths.size == 1 && contractPaths.first().lowercase().endsWith("zip")) {
             val zipFilePath = contractPaths.first()
-            val prefix = File(zipFilePath).nameWithoutExtension
-            val path = createTempDirectory(File(".").toPath(), prefix)
+            val path = Path(".${APPLICATION_NAME_LOWER_CASE}_test_bundle")
 
-            val tempDir = path.toFile()
-            tempDir.createNewFile()
+            val bundleDir = path.toFile()
+            bundleDir.mkdirs()
 
-            File(zipFilePath).inputStream().use {
-                val zipFile = ZipInputStream(it)
-
-                var entry: ZipEntry? = zipFile.nextEntry
-
-                while(entry != null) {
-                    val buffer = ByteArrayOutputStream()
-
-                    while(zipFile.available() == 1) {
-                        val bytes = ByteArray(1024)
-                        val readCount = zipFile.read(bytes)
-                        if(readCount > 0)
-                            buffer.write(bytes, 0, readCount)
-                    }
-
-                    val rawData = buffer.toByteArray()
-
-                    val content = String(rawData)
-
-                    tempDir.resolve(entry.name).apply {
-                        parentFile.mkdirs()
-                        createNewFile()
-                        writeText(content)
-                    }
-
-                    entry = zipFile.nextEntry
+            zipFileEntries(zipFilePath) { name, content ->
+                bundleDir.resolve(name).apply {
+                    parentFile.mkdirs()
+                    createNewFile()
+                    writeText(content)
                 }
             }
 
-            System.setProperty(WORKING_DIRECTORY, tempDir.canonicalPath)
+            System.setProperty(WORKING_DIRECTORY, bundleDir.canonicalPath)
             System.clearProperty(CONTRACT_PATHS)
 
-            val bundledConfigFile = tempDir.resolve(DEFAULT_CONFIG_FILE_NAME)
+            val bundledConfigFile = bundleDir.resolve(DEFAULT_CONFIG_FILE_NAME)
             if(!bundledConfigFile.exists())
-                throw ContractException("${`in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME} must be included in the test bundle.")
+                throw ContractException("$DEFAULT_CONFIG_FILE_NAME must be included in the test bundle.")
 
-            tempDir
+            System.setProperty(CONFIG_FILE_NAME, bundledConfigFile.canonicalPath)
+
+            bundleDir
         } else {
             null
         }
 
         junitLauncher.execute(request)
 
-        tempDir?.deleteRecursively()
+        bundleDir?.deleteRecursively()
 
         junitReportDirName?.let {
             val reportDirectory = File(it)
@@ -230,6 +210,33 @@ class TestCommand : Callable<Unit> {
                 qontractConfig.contractTestPaths()
             }
             else -> contractPaths
+        }
+    }
+}
+
+fun zipFileEntries(zipFilePath: String, fn: (String, String) -> Unit) {
+    File(zipFilePath).inputStream().use {
+        val zipFile = ZipInputStream(it)
+
+        var entry: ZipEntry? = zipFile.nextEntry
+
+        while(entry != null) {
+            val buffer = ByteArrayOutputStream()
+
+            while(zipFile.available() == 1) {
+                val bytes = ByteArray(1024)
+                val readCount = zipFile.read(bytes)
+                if(readCount > 0)
+                    buffer.write(bytes, 0, readCount)
+            }
+
+            val rawData = buffer.toByteArray()
+
+            val content = String(rawData)
+
+            fn(entry.name, content)
+
+            entry = zipFile.nextEntry
         }
     }
 }

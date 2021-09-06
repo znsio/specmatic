@@ -1,10 +1,12 @@
 package `in`.specmatic.core.utilities
 
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.clone
 import `in`.specmatic.core.git.exitErrorMessageContains
+import `in`.specmatic.core.information
 import java.io.File
 
 sealed class ContractSource {
@@ -45,14 +47,20 @@ data class GitRepo(
         val defaultQontractWorkingDir = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
         val defaultRepoDir = directoryRelativeTo(defaultQontractWorkingDir)
 
+        val bundleDir = File(Configuration.TEST_BUNDLE_RELATIVE_PATH).resolve(repoName)
+
         val repoDir = when {
-            (defaultRepoDir.exists() && SystemGit(defaultRepoDir.path).workingDirectoryIsGitRepo()) -> {
-                println("Using local contracts")
+            bundleDir.exists() -> {
+                information.forTheUser("Using contracts from ${bundleDir.path}")
+                bundleDir
+            }
+            defaultRepoDir.exists() -> {
+                information.forTheUser("Using contracts in home dir")
                 defaultRepoDir
             }
             else -> {
                 val reposBaseDir = localRepoDir(workingDirectory)
-                println("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
+                information.forTheUser("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
                 if (!reposBaseDir.exists())
                     reposBaseDir.mkdirs()
                 clone(reposBaseDir, this)

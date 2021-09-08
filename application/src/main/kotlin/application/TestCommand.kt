@@ -155,11 +155,14 @@ class TestCommand : Callable<Unit> {
             val zipFilePath = contractPaths.first()
             val path = Path(".${APPLICATION_NAME_LOWER_CASE}_test_bundle")
 
+            information.forDebugging("Unzipping bundle into ${path.toFile().canonicalPath}")
+
             val bundleDir = path.toFile()
             bundleDir.mkdirs()
 
             zipFileEntries(zipFilePath) { name, content ->
                 bundleDir.resolve(name).apply {
+                    information.forDebugging("Creating file ${this.canonicalPath}")
                     parentFile.mkdirs()
                     createNewFile()
                     writeText(content)
@@ -170,8 +173,11 @@ class TestCommand : Callable<Unit> {
             System.clearProperty(CONTRACT_PATHS)
 
             val bundledConfigFile = bundleDir.resolve(DEFAULT_CONFIG_FILE_NAME)
+
+            information.forDebugging("Checking for the existence of bundled config file ${bundledConfigFile.canonicalPath}")
             if(!bundledConfigFile.exists())
                 throw ContractException("$DEFAULT_CONFIG_FILE_NAME must be included in the test bundle.")
+            information.forDebugging("Found bundled config file")
 
             System.setProperty(CONFIG_FILE_NAME, bundledConfigFile.canonicalPath)
 

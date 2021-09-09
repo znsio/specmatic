@@ -2,10 +2,7 @@ package `in`.specmatic.test
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.Examples
-import `in`.specmatic.core.pattern.Row
-import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.contractTestPathsFrom
 import `in`.specmatic.core.utilities.createIfDoesNotExist
 import `in`.specmatic.core.utilities.exitIfDoesNotExist
@@ -30,6 +27,7 @@ open class SpecmaticJUnitSupport {
         const val HOST = "host"
         const val PORT = "port"
         const val ENV_NAME = "environment"
+        const val VARIABLES_FILE_NAME = "variablesFileName"
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -59,7 +57,12 @@ open class SpecmaticJUnitSupport {
         val workingDirectory = WorkingDirectory(givenWorkingDirectory ?: DEFAULT_WORKING_DIRECTORY)
 
         val envConfig = getEnvConfig(System.getProperty(ENV_NAME))
-        val testConfig = loadTestConfig(envConfig)
+        val testConfig = try {
+            loadTestConfig(envConfig).withVariablesFromFilePath(System.getProperty(VARIABLES_FILE_NAME))
+        } catch (e: Exception) {
+            information.forTheUser(e)
+            throw e
+        }
 
         val testScenarios = try {
             when {

@@ -24,6 +24,7 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.WORKING_DIRECTORY
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -86,6 +87,9 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--config"], description = ["Configuration file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
     var configFileName: String? = null
 
+    @Option(names = ["--variables"], description = ["Variables file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
+    var variablesFileName: String? = null
+
     @Option(names = ["--verbose", "--debug"], description = ["Display debug logs"])
     var verboseMode: Boolean = false
 
@@ -126,6 +130,9 @@ class TestCommand : Callable<Unit> {
         System.setProperty("kafkaHost", kafkaHost)
         System.setProperty("kafkaPort", kafkaPort.toString())
         System.setProperty("commit", commit.toString())
+
+        if(variablesFileName != null)
+            System.setProperty(VARIABLES_FILE_NAME, variablesFileName)
 
         if(kafkaPort != 0)
             System.setProperty("kafkaPort", kafkaPort.toString())

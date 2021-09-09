@@ -86,9 +86,6 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--config"], description = ["Configuration file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
     var configFileName: String? = null
 
-    @Option(names = ["--workingDirectory"], description = ["Working directory containing contracts"])
-    var workingDirectory: String? = null
-
     @Option(names = ["--verbose", "--debug"], description = ["Display debug logs"])
     var verboseMode: Boolean = false
 
@@ -129,9 +126,6 @@ class TestCommand : Callable<Unit> {
         System.setProperty("kafkaHost", kafkaHost)
         System.setProperty("kafkaPort", kafkaPort.toString())
         System.setProperty("commit", commit.toString())
-
-        if(workingDirectory != null)
-            System.setProperty(WORKING_DIRECTORY, workingDirectory)
 
         if(kafkaPort != 0)
             System.setProperty("kafkaPort", kafkaPort.toString())

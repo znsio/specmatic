@@ -31,7 +31,7 @@ class Watcher(private val contractPaths: List<String>) {
     private fun getPaths(contractPaths: List<String>): List<String> {
         return contractPaths.map { File(it) }.flatMap {
             when {
-Fixe                it.isFile && it.extension.equals("yaml", ignoreCase = true) ->
+                it.isFile && it.extension.equals("yaml", ignoreCase = true) ->
                     listOf(it.absolutePath)
                 it.isFile && it.extension.equals("json", ignoreCase = true) ->
                     listOf(it.absoluteFile.parentFile.path)

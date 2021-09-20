@@ -8,7 +8,10 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
-import `in`.specmatic.test.*
+import `in`.specmatic.test.ContractTest
+import `in`.specmatic.test.ScenarioTest
+import `in`.specmatic.test.ScenarioTestGenerationFailure
+import `in`.specmatic.test.TestExecutor
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
@@ -25,10 +28,10 @@ fun parseContractFileToFeature(contractPath: String): Feature {
 fun parseContractFileToFeature(file: File): Feature {
     information.forDebugging("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
-    if(!file.exists())
+    if (!file.exists())
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
 
-    return when(file.extension) {
+    return when (file.extension) {
         "yaml" -> OpenApiSpecification.fromFile(file.path).toFeature()
         "wsdl" -> wsdlContentToFeature(file.readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(file.readText().trim(), file.canonicalPath)
@@ -144,7 +147,7 @@ data class Feature(
                 try {
                     when (val matchResult = scenario.matchesMock(request, response)) {
                         is Result.Success -> Pair(
-                            scenario.resolverAndResponseFrom(response).let { (resolver, response) ->
+                            scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
                                 val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
                                 val requestTypeWithAncestors =
                                     newRequestType.copy(
@@ -153,7 +156,7 @@ data class Feature(
                                         )
                                     )
                                 HttpStubData(
-                                    response = response,
+                                    response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
                                     resolver = resolver,
                                     requestType = requestTypeWithAncestors
                                 )
@@ -184,7 +187,7 @@ data class Feature(
         return scenarios.map {
             try {
                 ScenarioTest(it.newBasedOn(suggestions))
-            } catch(e: Throwable) {
+            } catch (e: Throwable) {
                 ScenarioTestGenerationFailure(it, e)
             }
         }.flatMap {
@@ -298,7 +301,8 @@ private fun lexScenario(
     filePath: String,
     includedSpecifications: List<IncludedSpecification?>
 ): ScenarioInfo {
-    val filteredSteps = steps.map { step -> StepInfo(step.text, listOfDatatableRows(step), step) }.filterNot { it.isEmpty }
+    val filteredSteps =
+        steps.map { step -> StepInfo(step.text, listOfDatatableRows(step), step) }.filterNot { it.isEmpty }
 
     val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo ?: ScenarioInfo()) { scenarioInfo, step ->
         when (step.keyword) {
@@ -396,9 +400,15 @@ private fun lexScenario(
                     )
                 )
             "EXPORT" ->
-                scenarioInfo.copy(bindings = setters(step.rest, backgroundScenarioInfo?.bindings ?: emptyMap(), scenarioInfo.bindings))
+                scenarioInfo.copy(
+                    bindings = setters(
+                        step.rest,
+                        backgroundScenarioInfo?.bindings ?: emptyMap(),
+                        scenarioInfo.bindings
+                    )
+                )
             else -> {
-                val location = when(step.raw.location) {
+                val location = when (step.raw.location) {
                     null -> ""
                     else -> " at line ${step.raw.location.line}"
                 }
@@ -415,7 +425,12 @@ private fun lexScenario(
     }
 
     return if (includedSpecifications.isEmpty() || backgroundScenarioInfo == null) {
-        scenarioInfoWithExamples(parsedScenarioInfo, backgroundScenarioInfo ?: ScenarioInfo(), examplesList, ignoreFailure)
+        scenarioInfoWithExamples(
+            parsedScenarioInfo,
+            backgroundScenarioInfo ?: ScenarioInfo(),
+            examplesList,
+            ignoreFailure
+        )
     } else {
         val matchingScenarios: List<ScenarioInfo> = includedSpecifications.mapNotNull {
             it?.matches(parsedScenarioInfo, steps).orEmpty()
@@ -432,7 +447,7 @@ private fun listOfDatatableRows(it: Step) = it.dataTable?.rows ?: mutableListOf(
 fun parseEnum(step: StepInfo): Pair<String, Pattern> {
     val tokens = step.text.split(" ")
 
-    if(tokens.size < 5)
+    if (tokens.size < 5)
         throw ContractException("Enum syntax error in step at line ${step.raw.location.line}. Syntax should be Given(/When/Then) enum EnumName <TypeName> values choice1,choice2,choice3")
     val enumName = tokens[1]
     val enumValues = tokens[4].split(",")
@@ -606,7 +621,8 @@ fun breakIntoPartsMaxLength(whole: String, separator: String, partCount: Int) =
 private val HTTP_METHODS = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
 
 fun parseGherkinString(gherkinData: String, sourceFilePath: String): GherkinDocument {
-    return parseGherkinString(gherkinData)  ?: throw ContractException("There was no contract in the file $sourceFilePath.")
+    return parseGherkinString(gherkinData)
+        ?: throw ContractException("There was no contract in the file $sourceFilePath.")
 }
 
 internal fun parseGherkinString(gherkinData: String): GherkinDocument? {
@@ -642,7 +658,12 @@ fun scenarioInfos(
     filePath: String
 ): List<ScenarioInfo> {
     val openApiSpecification =
-        toIncludedSpecification(featureChildren, { backgroundOpenApi(it) }) { OpenApiSpecification.fromFile(it, filePath) }
+        toIncludedSpecification(featureChildren, { backgroundOpenApi(it) }) {
+            OpenApiSpecification.fromFile(
+                it,
+                filePath
+            )
+        }
 
     val wsdlSpecification =
         toIncludedSpecification(featureChildren, { backgroundWsdl(it) }) { WsdlSpecification(WSDLFile(it)) }

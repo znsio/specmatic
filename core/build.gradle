@@ -13,13 +13,7 @@ jacoco {
 
 repositories {
     mavenLocal()
-    maven {
-        url = 'https://jcenter.bintray.com'
-    }
-
-    maven {
-        url = 'https://repo.maven.apache.org/maven2'
-    }
+    mavenCentral()
 }
 
 def ktor_version = "1.6.3"

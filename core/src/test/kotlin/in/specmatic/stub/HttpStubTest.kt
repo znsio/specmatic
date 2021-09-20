@@ -96,7 +96,7 @@ Scenario: Multiply a number by 3
         val testResourcesDir = Paths.get("src", "test", "resources")
 
         HttpStub(gherkin).use { fake ->
-            val mockData = """{"http-request": {"method": "GET", "path": "/multiply/(value:number)"}, "http-response": {"status": 200, "body": 10, "externalisedResponseCommand": "ruby path/to/script.rb"}}"""
+            val mockData = """{"http-request": {"method": "GET", "path": "/multiply/(value:number)"}, "http-response": {"status": 200, "body": 10, "externalisedResponseCommand": "${testResourcesDir.absolutePathString()}/response.sh"}}"""
             val stubSetupURL = "${fake.endPoint}/_specmatic/expectations"
             val headers = HttpHeaders()
             headers.contentType = MediaType.APPLICATION_JSON

@@ -140,7 +140,12 @@ Scenario: Square of a number
 
         val stubRequest = HttpRequest(method = "GET", path = "/count", queryParams = mapOf("status" to "available"))
         val stubResponse = HttpResponse.OK("data")
-        val stubData = HttpStubData(stubRequest.toPattern(), stubResponse, Resolver())
+        val stubData = HttpStubData(
+            stubRequest.toPattern(),
+            stubResponse,
+            Resolver(),
+            responsePattern = HttpResponsePattern()
+        )
 
         val request = HttpRequest(method = "GET", path = "/count")
         val response = stubResponse(request, listOf(feature), listOf(stubData), false)
@@ -196,7 +201,12 @@ Scenario: Square of a number
 
         val stubSetupRequest = HttpRequest(method = "GET", path = "/number", formFields = mapOf("Data" to """{"id": 10, "data": {"info": 20} }"""))
         val actualRequest = HttpRequest(method = "GET", path = "/number", formFields = mapOf("NotData" to """{"id": 10, "data": {"info": 20} }"""))
-        val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(stubSetupRequest.toPattern(), HttpResponse(status = 200, body = parsedJSON("""{"10": 10}""")), feature.scenarios.single().resolver)), false)
+        val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(
+            stubSetupRequest.toPattern(),
+            HttpResponse(status = 200, body = parsedJSON("""{"10": 10}""")),
+            feature.scenarios.single().resolver,
+            responsePattern = HttpResponsePattern()
+        )), false)
         assertThat(response.response.status).isEqualTo(400)
     }
 
@@ -212,7 +222,12 @@ Feature: XML namespace prefix
 
         val stubSetupRequest = HttpRequest().updateMethod("POST").updatePath("/")
         val actualRequest = HttpRequest(method = "POST", path = "/", body = toXMLNode("""<ns2:customer xmlns:ns2="http://example.com/customer"><name>John Doe</name></ns2:customer>"""))
-        val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(stubSetupRequest.toPattern(), HttpResponse.OK, feature.scenarios.single().resolver)), false)
+        val response = stubResponse(actualRequest, listOf(feature), listOf(HttpStubData(
+            stubSetupRequest.toPattern(),
+            HttpResponse.OK,
+            feature.scenarios.single().resolver,
+            responsePattern = HttpResponsePattern()
+        )), false)
         assertThat(response.response.status).isEqualTo(200)
     }
 

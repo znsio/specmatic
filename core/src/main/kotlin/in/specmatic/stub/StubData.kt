@@ -2,6 +2,7 @@ package `in`.specmatic.stub
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.git.NonZeroExitError
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.KafkaMessage
 import java.io.File
@@ -12,7 +13,8 @@ data class HttpStubData(
     val requestType: HttpRequestPattern,
     val response: HttpResponse,
     val resolver: Resolver,
-    val delayInSeconds: Int? = null
+    val delayInSeconds: Int? = null,
+    val responsePattern: HttpResponsePattern
 ) : StubData {
     fun softCastResponseToXML(httpRequest: HttpRequest): HttpStubData = when {
         !response.externalisedResponseCommand.isNullOrEmpty() -> {
@@ -25,11 +27,21 @@ data class HttpStubData(
         val result = executeCommandWithWorkingDirectory(
             arrayOf(
                 response.externalisedResponseCommand.toString(),
+                //TODO: removing new lines with JSON library
                 """'${httpRequest.toJSON().toString().replace("\n", "", true)}'"""
             )
         )
         val responseMap = jsonStringToValueMap(result)
-        return this.copy(response = HttpResponse.fromJSON(responseMap))
+        val externalCommandResponse = HttpResponse.fromJSON(responseMap)
+        val externalCommandResponsePattern = HttpResponsePattern(externalCommandResponse)
+        val responseMatches = responsePattern.encompasses(externalCommandResponsePattern, resolver, resolver)
+        if (!responseMatches.isTrue()) {
+            val errorMessage =
+                """Response returned by ${response.externalisedResponseCommand} not in line with specification for ${httpRequest.method} ${httpRequest.path}:\n${responseMatches.reportString()}"""
+            information.forTheUser(errorMessage)
+            throw ContractException(errorMessage)
+        }
+        return this.copy(response = externalCommandResponse)
     }
 
     private fun executeCommandWithWorkingDirectory(command: Array<String>): String {

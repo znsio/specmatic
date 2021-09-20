@@ -158,7 +158,8 @@ data class Feature(
                                 HttpStubData(
                                     response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
                                     resolver = resolver,
-                                    requestType = requestTypeWithAncestors
+                                    requestType = requestTypeWithAncestors,
+                                    responsePattern = scenario.httpResponsePattern
                                 )
                             }, Result.Success()
                         )

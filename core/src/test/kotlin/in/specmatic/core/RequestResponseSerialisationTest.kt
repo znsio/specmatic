@@ -21,7 +21,7 @@ class RequestResponseSerialisationTest {
                     .updateBody("hello world")
         val jsonRequest = request.toJSON()
         val requestDeserialised = requestFromJSON(jsonRequest.jsonObject)
-        Assertions.assertEquals(request, requestDeserialised)
+        assertEquals(request, requestDeserialised)
     }
 
     @Test
@@ -37,7 +37,7 @@ class RequestResponseSerialisationTest {
                     .updateBody("{\"one\": 1}")
         val jsonRequest = request.toJSON()
         val requestDeserialised = requestFromJSON(jsonRequest.jsonObject)
-        Assertions.assertEquals(request, requestDeserialised)
+        assertEquals(request, requestDeserialised)
     }
 
     @Test
@@ -56,7 +56,7 @@ class RequestResponseSerialisationTest {
         assertEquals("GET", s(json, "method"))
         assertEquals("/test", s(json, "path"))
         val requestDeserialised = requestFromJSON(json)
-        Assertions.assertEquals(request, requestDeserialised)
+        assertEquals(request, requestDeserialised)
     }
 
     fun s(json: Map<String, Value>, key: String): String = (json.getValue(key) as StringValue).string
@@ -66,6 +66,6 @@ class RequestResponseSerialisationTest {
         val response = HttpResponse(200, "hello world", mutableMapOf("Content-Type" to "text/plain"))
         val json = response.toJSON().jsonObject
         val responseDeserialised = HttpResponse.fromJSON(json.toMap())
-        Assertions.assertEquals(response, responseDeserialised)
+        assertEquals(response, responseDeserialised)
     }
 }

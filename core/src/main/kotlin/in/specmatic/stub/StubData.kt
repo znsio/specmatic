@@ -17,9 +17,7 @@ data class HttpStubData(
     val responsePattern: HttpResponsePattern
 ) : StubData {
     fun softCastResponseToXML(httpRequest: HttpRequest): HttpStubData = when {
-        !response.externalisedResponseCommand.isNullOrEmpty() -> {
-            invokeExternalCommand(httpRequest)
-        }
+        response.externalisedResponseCommand.isNotEmpty() -> invokeExternalCommand(httpRequest)
         else -> this.copy(response = response.copy(body = softCastValueToXML(response.body)))
     }
 

@@ -1,10 +1,20 @@
 package `in`.specmatic.stub
 
+import `in`.specmatic.core.*
+import `in`.specmatic.core.pattern.XML_ATTR_OPTIONAL_SUFFIX
+import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.value.NumberValue
+import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.mock.DELAY_IN_SECONDS
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.test.HttpClient
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.DisabledOnOs
+import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.fail
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -14,18 +24,6 @@ import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
-import `in`.specmatic.core.*
-import `in`.specmatic.core.pattern.XML_ATTR_OPTIONAL_SUFFIX
-import `in`.specmatic.core.pattern.parsedValue
-import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.mock.DELAY_IN_SECONDS
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.test.HttpClient
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.condition.DisabledOnOs
-import org.junit.jupiter.api.condition.EnabledOnOs
-import org.junit.jupiter.api.condition.OS
 import java.net.URI
 import java.nio.file.Paths
 import java.util.*
@@ -82,7 +80,7 @@ Scenario: Get a number
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
+    @DisabledOnOs(OS.WINDOWS, OS.LINUX)
     fun `should accept mocks with externalised response command dynamically over http`() {
         val gherkin = """
 Feature: Math API

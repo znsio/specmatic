@@ -15,7 +15,7 @@ data class HttpResponse(
     val status: Int = 0,
     val headers: Map<String, String> = mapOf(CONTENT_TYPE to "text/plain"),
     val body: Value = EmptyString,
-    val externalisedResponseCommand: String? = null
+    val externalisedResponseCommand: String = ""
 ) {
     constructor(
         status: Int = 0,

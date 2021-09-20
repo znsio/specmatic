@@ -22,8 +22,14 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.DELAY_IN_SECONDS
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.test.HttpClient
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.condition.DisabledOnOs
+import org.junit.jupiter.api.condition.EnabledOnOs
+import org.junit.jupiter.api.condition.OS
 import java.net.URI
+import java.nio.file.Paths
 import java.util.*
+import kotlin.io.path.absolutePathString
 import kotlin.time.DurationUnit
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
@@ -72,6 +78,34 @@ Scenario: Get a number
 
             val postResponse = RestTemplate().getForEntity<String>(fake.endPoint + "/number")
             assertThat(postResponse.body).isEqualTo("10")
+        }
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun `should accept mocks with externalised response command dynamically over http`() {
+        val gherkin = """
+Feature: Math API
+
+Scenario: Multiply a number by 3
+  When GET /multiply/(value:number)
+  Then status 200
+  And response-body (number)
+""".trim()
+
+        val testResourcesDir = Paths.get("src", "test", "resources")
+
+        HttpStub(gherkin).use { fake ->
+            val mockData = """{"http-request": {"method": "GET", "path": "/multiply/(value:number)"}, "http-response": {"status": 200, "body": 10, "externalisedResponseCommand": "${testResourcesDir.absolutePathString()}/response.sh"}}"""
+            val stubSetupURL = "${fake.endPoint}/_specmatic/expectations"
+            val headers = HttpHeaders()
+            headers.contentType = MediaType.APPLICATION_JSON
+            val stubRequest = RequestEntity(mockData, headers, HttpMethod.POST, URI.create(stubSetupURL))
+            val stubResponse = RestTemplate().postForEntity<String>(stubSetupURL, stubRequest)
+            assertThat(stubResponse.statusCodeValue).isEqualTo(200)
+
+            val postResponse = RestTemplate().getForEntity<String>(fake.endPoint + "/multiply/5")
+            assertThat(postResponse.body).isEqualTo("15")
         }
     }
 

@@ -333,7 +333,7 @@ private fun stubbedResponse(
     val mock = matchResults.find { (result, _) -> result is Result.Success }?.second
 
     val stubResponse = mock?.let {
-        val softCastResponse = it.softCastResponseToXML().response
+        val softCastResponse = it.softCastResponseToXML(httpRequest).response
         HttpStubResponse(softCastResponse, it.delayInSeconds)
     }
 

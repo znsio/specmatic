@@ -1,22 +1,31 @@
 package `in`.specmatic.core
 
-import io.ktor.http.*
 import `in`.specmatic.conversions.guessType
 import `in`.specmatic.core.GherkinSection.Then
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.value.*
+import io.ktor.http.*
 
 const val SPECMATIC_RESULT_HEADER = "X-$APPLICATION_NAME-Result"
 internal const val SPECMATIC_EMPTY_HEADER = "X-$APPLICATION_NAME-Empty"
 
-data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = mapOf(CONTENT_TYPE to "text/plain"), val body: Value = EmptyString) {
-    constructor(status: Int = 0, body: String? = "", headers: Map<String, String> = mapOf(CONTENT_TYPE to "text/plain")) : this(status, headers, body?.let { parsedValue(it) } ?: EmptyString)
+data class HttpResponse(
+    val status: Int = 0,
+    val headers: Map<String, String> = mapOf(CONTENT_TYPE to "text/plain"),
+    val body: Value = EmptyString,
+    val externalisedResponseCommand: String? = null
+) {
+    constructor(
+        status: Int = 0,
+        body: String? = "",
+        headers: Map<String, String> = mapOf(CONTENT_TYPE to "text/plain")
+    ) : this(status, headers, body?.let { parsedValue(it) } ?: EmptyString)
 
     private val statusText: String
         get() =
-            when(status) {
+            when (status) {
                 0 -> ""
                 else -> HttpStatusCode.fromValue(status).description
             }
@@ -49,18 +58,20 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
         return when {
             selector.startsWith("response-header.") -> {
                 val headerName = selector.removePrefix("response-header.").trim()
-                this.headers[headerName] ?: throw ContractException("Couldn't find header name $headerName specified in $selector")
+                this.headers[headerName]
+                    ?: throw ContractException("Couldn't find header name $headerName specified in $selector")
             }
             selector.startsWith("response-body") -> {
                 val bodySelector = selector.removePrefix("response-body").trim()
-                if(bodySelector.isBlank())
+                if (bodySelector.isBlank())
                     this.body.toStringLiteral()
                 else {
-                    if(this.body !is JSONObjectValue)
+                    if (this.body !is JSONObjectValue)
                         throw ContractException("JSON selector can only be used for JSON body")
 
                     val jsonBodySelector = bodySelector.removePrefix(".")
-                    this.body.findFirstChildByPath(jsonBodySelector)?.toStringLiteral() ?: throw ContractException("JSON selector $selector was not found")
+                    this.body.findFirstChildByPath(jsonBodySelector)?.toStringLiteral()
+                        ?: throw ContractException("JSON selector $selector was not found")
                 }
             }
             else -> throw ContractException("Selector $selector is unexpected. It must either start with response-header or response-body.")
@@ -80,10 +91,12 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
             val bodyValue = NumberValue(body)
             return HttpResponse(200, mapOf(CONTENT_TYPE to bodyValue.httpContentType), bodyValue)
         }
+
         fun OK(body: String): HttpResponse {
             val bodyValue = StringValue(body)
             return HttpResponse(200, mapOf(CONTENT_TYPE to bodyValue.httpContentType), bodyValue)
         }
+
         fun OK(body: Value) = HttpResponse(200, mapOf(CONTENT_TYPE to body.httpContentType), body)
         val EMPTY = HttpResponse(0, emptyMap())
 
@@ -104,13 +117,16 @@ data class HttpResponse(val status: Int = 0, val headers: Map<String, String> = 
 
         fun fromJSON(jsonObject: Map<String, Value>): HttpResponse {
             val body = jsonObject["body"]
-            if(body is NullValue)
+            if (body is NullValue)
                 throw ContractException("Either body should have a value or the key should be absent from http-request")
 
             return HttpResponse(
-                    nativeInteger(jsonObject, "status") ?: throw ContractException("http-response must contain a key named status, whose value is the http status in the response"),
-                    nativeStringStringMap(jsonObject, "headers").toMutableMap(),
-                    jsonObject.getOrDefault("body", StringValue()))
+                nativeInteger(jsonObject, "status")
+                    ?: throw ContractException("http-response must contain a key named status, whose value is the http status in the response"),
+                nativeStringStringMap(jsonObject, "headers").toMutableMap(),
+                jsonObject.getOrDefault("body", StringValue()),
+                jsonObject.getOrDefault("externalisedResponseCommand", "").toString()
+            )
         }
     }
 }
@@ -119,30 +135,51 @@ fun nativeInteger(json: Map<String, Value>, key: String): Int? {
     val keyValue = json[key] ?: return null
 
     val errorMessage = "$key must be an integer"
-    if(keyValue is StringValue)
-        return try { keyValue.string.toInt() } catch(e: Throwable) { throw ContractException(errorMessage) }
+    if (keyValue is StringValue)
+        return try {
+            keyValue.string.toInt()
+        } catch (e: Throwable) {
+            throw ContractException(errorMessage)
+        }
 
-    if(keyValue !is NumberValue)
+    if (keyValue !is NumberValue)
         throw ContractException("Expected $key to be a string value")
 
-    return try { keyValue.number.toInt() } catch(e: Throwable) { throw ContractException(errorMessage) }
+    return try {
+        keyValue.number.toInt()
+    } catch (e: Throwable) {
+        throw ContractException(errorMessage)
+    }
 }
 
 
 val responseHeadersToExcludeFromConversion = listOf("Vary", SPECMATIC_RESULT_HEADER)
 
-fun toGherkinClauses(response: HttpResponse, types: Map<String, Pattern> = emptyMap()): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+fun toGherkinClauses(
+    response: HttpResponse,
+    types: Map<String, Pattern> = emptyMap()
+): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
     return try {
         val cleanedUpResponse = dropContentAndCORSResponseHeaders(response)
 
-        return Triple(emptyList<GherkinClause>(), types, DiscardExampleDeclarations()).let { (clauses, types, examples) ->
+        return Triple(
+            emptyList<GherkinClause>(),
+            types,
+            DiscardExampleDeclarations()
+        ).let { (clauses, types, examples) ->
             val status = when {
                 cleanedUpResponse.status > 0 -> cleanedUpResponse.status
                 else -> throw ContractException("Can't generate a contract without a response status")
             }
             Triple(clauses.plus(GherkinClause("status $status", Then)), types, examples)
         }.let { (clauses, types, _) ->
-            val (newClauses, newTypes, _) = headersToGherkin(cleanedUpResponse.headers, "response-header", types, DiscardExampleDeclarations(), Then)
+            val (newClauses, newTypes, _) = headersToGherkin(
+                cleanedUpResponse.headers,
+                "response-header",
+                types,
+                DiscardExampleDeclarations(),
+                Then
+            )
             Triple(clauses.plus(newClauses), newTypes, DiscardExampleDeclarations())
         }.let { (clauses, types, examples) ->
             when (val result = responseBodyToGherkinClauses("ResponseBody", guessType(cleanedUpResponse.body), types)) {
@@ -153,10 +190,14 @@ fun toGherkinClauses(response: HttpResponse, types: Map<String, Pattern> = empty
                 }
             }
         }
-    } catch(e: NotImplementedError) {
+    } catch (e: NotImplementedError) {
         Triple(emptyList(), types, DiscardExampleDeclarations())
     }
 }
 
 fun dropContentAndCORSResponseHeaders(response: HttpResponse) =
-        response.copy(headers = response.headers.filterNot { it.key in responseHeadersToExcludeFromConversion || it.key.startsWith("Content-") || it.key.startsWith("Access-Control-") })
+    response.copy(headers = response.headers.filterNot {
+        it.key in responseHeadersToExcludeFromConversion || it.key.startsWith(
+            "Content-"
+        ) || it.key.startsWith("Access-Control-")
+    })

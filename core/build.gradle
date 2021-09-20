@@ -32,7 +32,7 @@ dependencies {
     implementation "io.ktor:ktor-client-features:$ktor_version"
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.2.2"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.5.30"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.5.31"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 

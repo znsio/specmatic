@@ -10,6 +10,10 @@ val indentedJson = Json {
     prettyPrint = true
 }
 
+val unformattedJson = Json {
+    prettyPrint = false
+}
+
 val lenientJson = Json {
     isLenient = true
 }
@@ -94,6 +98,11 @@ fun convertToArrayPattern(data: List<JsonElement>): List<Pattern> =
 fun valueMapToPrettyJsonString(value: Map<String, Value>): String {
     val data = mapToStringElement(value)
     return indentedJson.encodeToString(data)
+}
+
+fun valueMapToUnintendedJsonString(value: Map<String, Value>): String {
+    val data = mapToStringElement(value)
+    return unformattedJson.encodeToString(data)
 }
 
 fun valueMapToPlainJsonString(value: Map<String, Value>): String {

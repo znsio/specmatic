@@ -1,6 +1,6 @@
 #!/bin/bash
 
-value=${SPECMATIC_REQUEST:25:1}
+value=${SPECMATIC_REQUEST:20:1}
 
 cat << EOF
 {

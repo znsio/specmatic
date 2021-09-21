@@ -49,6 +49,10 @@ paths:
             application/json:
               schema:
                 type: string
+              examples:
+                200_OKAY:
+                  value: hello
+                  summary: response example without any matching parameters with examples
         '404':
           description: Not Found
           content:

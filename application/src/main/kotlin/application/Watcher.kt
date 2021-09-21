@@ -31,12 +31,12 @@ class Watcher(private val contractPaths: List<String>) {
     private fun getPaths(contractPaths: List<String>): List<String> {
         return contractPaths.map { File(it) }.flatMap {
             when {
-                it.isFile && it.extension.lowercase() in CONTRACT_EXTENSIONS ->
-                    listOf(it.absoluteFile.parentFile.path).plus(getPaths(listOf(dataDirOf(it))))
                 it.isFile && it.extension.equals("yaml", ignoreCase = true) ->
                     listOf(it.absolutePath)
                 it.isFile && it.extension.equals("json", ignoreCase = true) ->
                     listOf(it.absoluteFile.parentFile.path)
+                it.isFile && it.extension.lowercase() in CONTRACT_EXTENSIONS ->
+                    listOf(it.absoluteFile.parentFile.path).plus(getPaths(listOf(dataDirOf(it))))
                 it.isDirectory ->
                     listOf(it.absolutePath).plus(getPaths(it.listFiles()?.toList()?.map { file -> file.absolutePath } ?: emptyList()))
                 else -> emptyList()

@@ -18,9 +18,9 @@ repositories {
 
 def ktor_version = "1.6.3"
 def karate_version = "0.9.6"
-def jgit_version = "5.12.0.202106070339-r"
+def jgit_version = "5.13.0.202109080827-r"
 
-def junit_version = "5.7.2"
+def junit_version = "5.8.0"
 def testcontainers_version = "1.16.0"
 
 dependencies {
@@ -54,7 +54,7 @@ dependencies {
     testImplementation "com.intuit.karate:karate-core:$karate_version"
     testImplementation "com.intuit.karate:karate-apache:$karate_version"
     testImplementation "com.intuit.karate:karate-junit5:$karate_version"
-    testImplementation 'org.springframework:spring-web:5.3.9'
+    testImplementation 'org.springframework:spring-web:5.3.10'
     testImplementation 'io.mockk:mockk:1.12.0'
     testImplementation 'org.assertj:assertj-core:3.20.2'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"

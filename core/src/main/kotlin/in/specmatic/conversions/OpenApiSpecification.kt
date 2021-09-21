@@ -182,7 +182,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                     val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, _) ->
                         val requestExamples =
                             operation.parameters.orEmpty()
-                                .filter { parameter -> parameter.examples.any { it.key == exampleName } }
+                                .filter { parameter -> parameter.examples.orEmpty().any { it.key == exampleName } }
                                 .map { it.name to it.examples[exampleName]!!.value }.toMap()
 
                         requestExamples.map { (key, value) -> key to value.toString() }.toList().isNotEmpty()

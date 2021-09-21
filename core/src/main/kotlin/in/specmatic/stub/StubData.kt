@@ -23,11 +23,9 @@ data class HttpStubData(
 
     private fun invokeExternalCommand(httpRequest: HttpRequest): HttpStubData {
         val result = executeCommandWithWorkingDirectory(
-            arrayOf(
-                response.externalisedResponseCommand.toString(),
-                //TODO: removing new lines with JSON library
-                """'${httpRequest.toJSON().toString().replace("\n", "", true)}'"""
-            )
+            response.externalisedResponseCommand,
+            //TODO: removing new lines with JSON library
+            """SPECMATIC_REQUEST='${httpRequest.toJSON().toString().replace("\n", "", true)}'"""
         )
         val responseMap = jsonStringToValueMap(result)
         val externalCommandResponse = HttpResponse.fromJSON(responseMap)
@@ -42,9 +40,10 @@ data class HttpStubData(
         return this.copy(response = externalCommandResponse)
     }
 
-    private fun executeCommandWithWorkingDirectory(command: Array<String>): String {
-        information.forDebugging("Executing: ${command.joinToString(" ")}")
-        val process = Runtime.getRuntime().exec(command, listOf("GIT_SSL_NO_VERIFY=true").toTypedArray(), File("."))
+    private fun executeCommandWithWorkingDirectory(command: String, envParam: String): String {
+        information.forDebugging("Executing: $command")
+        val process =
+            Runtime.getRuntime().exec(command, listOf("GIT_SSL_NO_VERIFY=true", envParam).toTypedArray(), File("."))
         val out = process.inputStream.bufferedReader().readText()
         val err = process.errorStream.bufferedReader().readText()
         process.waitFor()

@@ -80,7 +80,7 @@ Scenario: Get a number
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS, OS.LINUX)
+    @DisabledOnOs(OS.WINDOWS)
     fun `should accept mocks with externalised response command dynamically over http`() {
         val gherkin = """
 Feature: Math API

@@ -1,7 +1,6 @@
 package `in`.specmatic.stub
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.KafkaMessage
@@ -22,7 +21,7 @@ data class HttpStubData(
     }
 
     private fun invokeExternalCommand(httpRequest: HttpRequest): HttpStubData {
-        val result = executeCommandWithWorkingDirectory(
+        val result = executeExternalCommand(
             response.externalisedResponseCommand,
             """SPECMATIC_REQUEST='${httpRequest.toJSON().toUnformattedStringLiteral()}'"""
         )
@@ -39,17 +38,24 @@ data class HttpStubData(
         return this.copy(response = externalCommandResponse)
     }
 
-    private fun executeCommandWithWorkingDirectory(command: String, envParam: String): String {
-        information.forDebugging("Executing: $command")
-        val process =
-            Runtime.getRuntime().exec(command, listOf("GIT_SSL_NO_VERIFY=true", envParam).toTypedArray(), File("."))
-        val out = process.inputStream.bufferedReader().readText()
-        val err = process.errorStream.bufferedReader().readText()
-        process.waitFor()
+    private fun executeExternalCommand(command: String, envParam: String): String {
+        information.forDebugging("Executing: $command with EnvParam: $envParam")
 
-        if (process.exitValue() != 0) throw NonZeroExitError(err.ifEmpty { out })
+        return try {
+            val process =
+                Runtime.getRuntime().exec(command, listOf("GIT_SSL_NO_VERIFY=true", envParam).toTypedArray(), File("."))
+            val out = process.inputStream.bufferedReader().readText()
+            val err = process.errorStream.bufferedReader().readText()
+            process.waitFor()
 
-        return out
+            if (process.exitValue() != 0) throw ContractException("""Error executing $command: ${err.ifEmpty { out }}""")
+
+            out
+        } catch (contractException: ContractException) {
+            throw contractException
+        } catch (otherExceptions: Exception) {
+            throw ContractException("""Error running $command: ${otherExceptions.message}""")
+        }
     }
 }
 

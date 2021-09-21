@@ -24,8 +24,7 @@ data class HttpStubData(
     private fun invokeExternalCommand(httpRequest: HttpRequest): HttpStubData {
         val result = executeCommandWithWorkingDirectory(
             response.externalisedResponseCommand,
-            //TODO: removing new lines with JSON library
-            """SPECMATIC_REQUEST='${httpRequest.toJSON().toString().replace("\n", "", true)}'"""
+            """SPECMATIC_REQUEST='${httpRequest.toJSON().toUnformattedStringLiteral()}'"""
         )
         val responseMap = jsonStringToValueMap(result)
         val externalCommandResponse = HttpResponse.fromJSON(responseMap)

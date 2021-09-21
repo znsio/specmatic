@@ -66,7 +66,8 @@ Scenario: Get a number
 """.trim()
 
         HttpStub(gherkin).use { fake ->
-            val mockData = """{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 10}}"""
+            val mockData =
+                """{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 10}}"""
             val stubSetupURL = "${fake.endPoint}/_specmatic/expectations"
             val headers = HttpHeaders()
             headers.contentType = MediaType.APPLICATION_JSON
@@ -94,7 +95,8 @@ Scenario: Multiply a number by 3
         val testResourcesDir = Paths.get("src", "test", "resources")
 
         HttpStub(gherkin).use { fake ->
-            val mockData = """{"http-request": {"method": "GET", "path": "/multiply/(value:number)"}, "http-response": {"status": 200, "body": 10, "externalisedResponseCommand": "${testResourcesDir.absolutePathString()}/response.sh"}}"""
+            val mockData =
+                """{"http-request": {"method": "GET", "path": "/multiply/(value:number)"}, "http-response": {"status": 200, "body": 10, "externalisedResponseCommand": "${testResourcesDir.absolutePathString()}/response.sh"}}"""
             val stubSetupURL = "${fake.endPoint}/_specmatic/expectations"
             val headers = HttpHeaders()
             headers.contentType = MediaType.APPLICATION_JSON
@@ -104,6 +106,72 @@ Scenario: Multiply a number by 3
 
             val postResponse = RestTemplate().getForEntity<String>(fake.endPoint + "/multiply/5")
             assertThat(postResponse.body).isEqualTo("15")
+        }
+    }
+
+    @Test
+    fun `should throw contract exception when externalised response command does not exist`() {
+        val gherkin = """
+Feature: Math API
+
+Scenario: Multiply a number by 3
+  When GET /multiply/(value:number)
+  Then status 200
+  And response-body (number)
+""".trim()
+
+        Paths.get("src", "test", "resources")
+
+        HttpStub(gherkin).use { fake ->
+            val headers = HttpHeaders()
+            headers.contentType = MediaType.APPLICATION_JSON
+
+            val client = HttpClient(fake.endPoint)
+            val dynamicStubSetupRequest = HttpRequest(
+                method = "POST",
+                path = "/_specmatic/expectations",
+                body = StringValue("""{"http-request": {"method": "GET", "path": "/multiply/(value:number)"}, "http-response": {"status": 200, "body": 10, "externalisedResponseCommand": "missing.sh"}}""")
+            )
+            val dynamicStubSetupResponse = client.execute(dynamicStubSetupRequest)
+            assertThat(dynamicStubSetupResponse.status).isEqualTo(200)
+            val multiplyRequest = HttpRequest(method = "GET", path = "/multiply/5")
+            val multiplyResponse = client.execute(multiplyRequest)
+            assertThat(multiplyResponse.status).isEqualTo(400)
+            assertThat(multiplyResponse.body.toStringLiteral()).isEqualTo("""Error running missing.sh: Cannot run program "missing.sh" (in directory "."): error=2, No such file or directory""")
+        }
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun `should throw contract exception when externalised response command returns non zero exit code`() {
+        val gherkin = """
+Feature: Math API
+
+Scenario: Multiply a number by 3
+  When GET /multiply/(value:number)
+  Then status 200
+  And response-body (number)
+""".trim()
+
+        Paths.get("src", "test", "resources")
+
+        HttpStub(gherkin).use { fake ->
+            val headers = HttpHeaders()
+            headers.contentType = MediaType.APPLICATION_JSON
+
+            val client = HttpClient(fake.endPoint)
+            val testResourcesDir = Paths.get("src", "test", "resources")
+            val dynamicStubSetupRequest = HttpRequest(
+                method = "POST",
+                path = "/_specmatic/expectations",
+                body = StringValue("""{"http-request": {"method": "GET", "path": "/multiply/(value:number)"}, "http-response": {"status": 200, "body": 10, "externalisedResponseCommand": "${testResourcesDir.absolutePathString()}/response_non_zero_exit.sh"}}""")
+            )
+            val dynamicStubSetupResponse = client.execute(dynamicStubSetupRequest)
+            assertThat(dynamicStubSetupResponse.status).isEqualTo(200)
+            val multiplyRequest = HttpRequest(method = "GET", path = "/multiply/0")
+            val multiplyResponse = client.execute(multiplyRequest)
+            assertThat(multiplyResponse.status).isEqualTo(400)
+            assertThat(multiplyResponse.body.toStringLiteral()).isEqualTo("""Error executing ${testResourcesDir.absolutePathString()}/response_non_zero_exit.sh:""")
         }
     }
 
@@ -119,8 +187,16 @@ Scenario: Get a number
 """.trim()
 
         HttpStub(gherkin).use { fake ->
-            testMock("""{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 10}}""", "10", fake)
-            testMock("""{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 20}}""", "20", fake)
+            testMock(
+                """{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 10}}""",
+                "10",
+                fake
+            )
+            testMock(
+                """{"http-request": {"method": "GET", "path": "/number"}, "http-response": {"status": 200, "body": 20}}""",
+                "20",
+                fake
+            )
         }
     }
 
@@ -172,7 +248,8 @@ And response-body (string)
         val mock = ScenarioStub(request, HttpResponse(200, "done"))
 
         HttpStub(gherkin, listOf(mock)).use { fake ->
-            val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/date", """{"date": "2020-04-12T00:00:00"}""")
+            val postResponse =
+                RestTemplate().postForEntity<String>(fake.endPoint + "/date", """{"date": "2020-04-12T00:00:00"}""")
             assertThat(postResponse.statusCode.value()).isEqualTo(200)
             assertThat(postResponse.body).isEqualTo("done")
         }
@@ -194,11 +271,12 @@ And response-body (string)
 
         try {
             HttpStub(gherkin, listOf(mock)).use { fake ->
-                val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/date", """2020-04-12T00:00:00""")
+                val postResponse =
+                    RestTemplate().postForEntity<String>(fake.endPoint + "/date", """2020-04-12T00:00:00""")
                 assertThat(postResponse.statusCode.value()).isEqualTo(200)
                 assertThat(postResponse.body).isEqualTo("done")
             }
-        } catch(e: HttpClientErrorException) {
+        } catch (e: HttpClientErrorException) {
             return
         }
 
@@ -229,7 +307,8 @@ And response-body (string)
 "$DELAY_IN_SECONDS": 1
 }""".trimIndent()
 
-                val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_specmatic/expectations", expectation)
+                val stubResponse =
+                    RestTemplate().postForEntity<String>(fake.endPoint + "/_specmatic/expectations", expectation)
                 assertThat(stubResponse.statusCode.value()).isEqualTo(200)
 
                 val duration = measureTime {
@@ -240,7 +319,7 @@ And response-body (string)
 
                 assertThat(duration.toLong(DurationUnit.MILLISECONDS)).isGreaterThanOrEqualTo(1000L)
             }
-        } catch(e: HttpClientErrorException) {
+        } catch (e: HttpClientErrorException) {
             fail("Threw an exception: ${e.message}")
         }
     }
@@ -272,7 +351,8 @@ And response-body (string)
 "$DELAY_IN_SECONDS": $delayInSeconds
 }""".trimIndent()
 
-                val stubResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/_specmatic/expectations", expectation)
+                val stubResponse =
+                    RestTemplate().postForEntity<String>(fake.endPoint + "/_specmatic/expectations", expectation)
                 assertThat(stubResponse.statusCode.value()).isEqualTo(200)
 
                 data class TimedResponse(val id: Int, val duration: Long, val body: String)
@@ -284,7 +364,8 @@ And response-body (string)
                         var response: String
 
                         val duration = measureTime {
-                            val postResponse = RestTemplate().getForEntity<String>(URI.create(fake.endPoint + "/data/${it}"))
+                            val postResponse =
+                                RestTemplate().getForEntity<String>(URI.create(fake.endPoint + "/data/${it}"))
                             assertThat(postResponse.statusCode.value()).isEqualTo(200)
                             response = postResponse.body ?: ""
                         }
@@ -311,7 +392,7 @@ And response-body (string)
                     assertThat(response.body).isEqualTo("123")
                 }
             }
-        } catch(e: HttpClientErrorException) {
+        } catch (e: HttpClientErrorException) {
             fail("Threw an exception: ${e.message}")
         }
     }
@@ -518,13 +599,18 @@ Then status 200
 
     @Test
     fun `generate a bad request from an error message`() {
-        val expectedResponse = HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue("error occurred"))
+        val expectedResponse = HttpResponse(
+            status = 400,
+            headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
+            body = StringValue("error occurred")
+        )
         assertThat(badRequest("error occurred")).isEqualTo(expectedResponse)
     }
 
     @Test
     fun `should be able to query stub logs`() {
-        val feature = parseGherkinStringToFeature("""
+        val feature = parseGherkinStringToFeature(
+            """
 Feature: Math API
 
 Scenario: Square of a number
@@ -532,7 +618,8 @@ Scenario: Square of a number
   And request-body (number)
   Then status 200
   And response-body (number)
-""".trim())
+""".trim()
+        )
 
         HttpStub(listOf(feature, feature)).use { stub ->
             val client = HttpClient(stub.endPoint)
@@ -545,7 +632,8 @@ Scenario: Square of a number
 
     @Test
     fun `it should proxy all unstubbed requests to the specified end point`() {
-        val feature = parseGherkinStringToFeature("""
+        val feature = parseGherkinStringToFeature(
+            """
 Feature: Math API
 
 Scenario: Square of a number
@@ -553,15 +641,20 @@ Scenario: Square of a number
   And request-body (number)
   Then status 200
   And response-body (string)
-""".trim())
+""".trim()
+        )
 
         val httpClient = mockk<HttpClient>()
-        every { httpClient.execute(any()) } returns(HttpResponse.OK("it worked"))
+        every { httpClient.execute(any()) } returns (HttpResponse.OK("it worked"))
 
         val httpClientFactory = mockk<HttpClientFactory>()
-        every { httpClientFactory.client(any()) } returns(httpClient)
+        every { httpClientFactory.client(any()) } returns (httpClient)
 
-        HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
+        HttpStub(
+            listOf(feature),
+            passThroughTargetBase = "http://example.com",
+            httpClientFactory = httpClientFactory
+        ).use { stub ->
             val client = HttpClient(stub.endPoint)
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
@@ -573,7 +666,8 @@ Scenario: Square of a number
 
     @Test
     fun `a proxied response should contain the header X-Qontract-Source`() {
-        val feature = parseGherkinStringToFeature("""
+        val feature = parseGherkinStringToFeature(
+            """
 Feature: Math API
 
 Scenario: Square of a number
@@ -581,15 +675,20 @@ Scenario: Square of a number
   And request-body (number)
   Then status 200
   And response-body (string)
-""".trim())
+""".trim()
+        )
 
         val httpClient = mockk<HttpClient>()
-        every { httpClient.execute(any()) } returns(HttpResponse.OK("it worked"))
+        every { httpClient.execute(any()) } returns (HttpResponse.OK("it worked"))
 
         val httpClientFactory = mockk<HttpClientFactory>()
-        every { httpClientFactory.client(any()) } returns(httpClient)
+        every { httpClientFactory.client(any()) } returns (httpClient)
 
-        HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
+        HttpStub(
+            listOf(feature),
+            passThroughTargetBase = "http://example.com",
+            httpClientFactory = httpClientFactory
+        ).use { stub ->
             val client = HttpClient(stub.endPoint)
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
@@ -599,7 +698,8 @@ Scenario: Square of a number
 
     @Test
     fun `it should not proxy stubbed requests`() {
-        val feature = parseGherkinStringToFeature("""
+        val feature = parseGherkinStringToFeature(
+            """
 Feature: Math API
 
 Scenario: Square of a number
@@ -607,15 +707,20 @@ Scenario: Square of a number
   And request-body (number)
   Then status 200
   And response-body (string)
-""".trim())
+""".trim()
+        )
 
         val httpClient = mockk<HttpClient>()
-        every { httpClient.execute(any()) } returns(HttpResponse.OK("should not get here"))
+        every { httpClient.execute(any()) } returns (HttpResponse.OK("should not get here"))
 
         val httpClientFactory = mockk<HttpClientFactory>()
-        every { httpClientFactory.client(any()) } returns(httpClient)
+        every { httpClientFactory.client(any()) } returns (httpClient)
 
-        HttpStub(listOf(feature), passThroughTargetBase = "http://example.com", httpClientFactory = httpClientFactory).use { stub ->
+        HttpStub(
+            listOf(feature),
+            passThroughTargetBase = "http://example.com",
+            httpClientFactory = httpClientFactory
+        ).use { stub ->
             stub.createStub(ScenarioStub(HttpRequest("POST", "/", body = NumberValue(10)), HttpResponse.OK("success")))
             val client = HttpClient(stub.endPoint)
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))

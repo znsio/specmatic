@@ -42,7 +42,7 @@ data class HttpStubData(
 
         return try {
             val process =
-                Runtime.getRuntime().exec(command, listOf("GIT_SSL_NO_VERIFY=true", envParam).toTypedArray(), File("."))
+                Runtime.getRuntime().exec(command, listOf(envParam).toTypedArray(), File("."))
             val out = process.inputStream.bufferedReader().readText()
             val err = process.errorStream.bufferedReader().readText()
             process.waitFor()

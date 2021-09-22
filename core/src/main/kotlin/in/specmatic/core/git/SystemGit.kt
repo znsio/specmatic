@@ -1,22 +1,25 @@
 package `in`.specmatic.core.git
 
 import `in`.specmatic.core.information
+import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
 
 class SystemGit(private val workingDirectory: String = ".", private val prefix: String = "- ") : GitCommand {
-    private fun execute(vararg command: String): String = executeCommandWithWorkingDirectory(prefix, workingDirectory, command.toList().toTypedArray())
+    private fun execute(vararg command: String): String =
+        executeCommandWithWorkingDirectory(prefix, workingDirectory, command.toList().toTypedArray())
 
-    private fun executeCommandWithWorkingDirectory(prefix: String, workingDirectory: String, command: Array<String>): String {
+    private fun executeCommandWithWorkingDirectory(
+        prefix: String,
+        workingDirectory: String,
+        command: Array<String>
+    ): String {
         information.forDebugging("${prefix}Executing: ${command.joinToString(" ")}")
-        val process = Runtime.getRuntime().exec(command, listOf("GIT_SSL_NO_VERIFY=true").toTypedArray(), File(workingDirectory))
-        val out = process.inputStream.bufferedReader().readText()
-        val err = process.errorStream.bufferedReader().readText()
-        process.waitFor()
-
-        if (process.exitValue() != 0) throw NonZeroExitError(err.ifEmpty { out })
-
-        return out
+        return ExternalCommand(
+            command,
+            workingDirectory,
+            listOf("GIT_SSL_NO_VERIFY=true").toTypedArray()
+        ).executeAsSeparateProcess()
     }
 
     override fun add(): SystemGit = this.also { execute("git", "add", ".") }
@@ -29,14 +32,24 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
     override fun mergeAbort(): SystemGit = this.also { execute("git", "merge", "--aborg") }
     override fun checkout(branchName: String): SystemGit = this.also { execute("git", "checkout", branchName) }
     override fun merge(branchName: String): SystemGit = this.also { execute("git", "merge", branchName) }
-    override fun clone(gitRepositoryURI: String, cloneDirectory: File): SystemGit = this.also { execute("git", "clone", gitRepositoryURI, cloneDirectory.absolutePath) }
+    override fun clone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
+        this.also { execute("git", "clone", gitRepositoryURI, cloneDirectory.absolutePath) }
+
     override fun gitRoot(): String = execute("git", "rev-parse", "--show-toplevel").trim()
-    override fun show(treeish: String, relativePath: String): String = execute("git", "show", "${treeish}:${relativePath}")
+    override fun show(treeish: String, relativePath: String): String =
+        execute("git", "show", "${treeish}:${relativePath}")
+
     override fun workingDirectoryIsGitRepo(): Boolean = try {
         execute("git", "rev-parse", "--is-inside-work-tree").trim() == "true"
     } catch (e: Throwable) {
         false.also {
-            information.forDebugging("This must not be a git dir, got error ${e.javaClass.name}: ${exceptionCauseMessage(e)}")
+            information.forDebugging(
+                "This must not be a git dir, got error ${e.javaClass.name}: ${
+                    exceptionCauseMessage(
+                        e
+                    )
+                }"
+            )
         }
     }
 

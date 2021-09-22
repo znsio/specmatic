@@ -2,9 +2,9 @@ package `in`.specmatic.stub
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.KafkaMessage
-import java.io.File
 
 interface StubData
 
@@ -28,33 +28,22 @@ data class HttpStubData(
         val responseMap = jsonStringToValueMap(result)
         val externalCommandResponse = HttpResponse.fromJSON(responseMap)
         val responseMatches = responsePattern.matches(externalCommandResponse, resolver)
-        if (!responseMatches.isTrue()) {
-            val errorMessage =
-                """Response returned by ${response.externalisedResponseCommand} not in line with specification for ${httpRequest.method} ${httpRequest.path}:\n${responseMatches.reportString()}"""
-            information.forTheUser(errorMessage)
-            throw ContractException(errorMessage)
+        return when {
+            !responseMatches.isTrue() -> {
+                val errorMessage =
+                    """Response returned by ${response.externalisedResponseCommand} not in line with specification for ${httpRequest.method} ${httpRequest.path}:\n${responseMatches.reportString()}"""
+                information.forTheUser(errorMessage)
+                throw ContractException(errorMessage)
+            }
+            else -> {
+                this.copy(response = externalCommandResponse)
+            }
         }
-        return this.copy(response = externalCommandResponse)
     }
 
     private fun executeExternalCommand(command: String, envParam: String): String {
         information.forDebugging("Executing: $command with EnvParam: $envParam")
-
-        return try {
-            val process =
-                Runtime.getRuntime().exec(command, listOf(envParam).toTypedArray(), File("."))
-            val out = process.inputStream.bufferedReader().readText()
-            val err = process.errorStream.bufferedReader().readText()
-            process.waitFor()
-
-            if (process.exitValue() != 0) throw ContractException("""Error executing $command: ${err.ifEmpty { out }}""")
-
-            out
-        } catch (contractException: ContractException) {
-            throw contractException
-        } catch (otherExceptions: Exception) {
-            throw ContractException("""Error running $command: ${otherExceptions.message}""")
-        }
+        return ExternalCommand(arrayOf(command), ".", arrayOf(envParam)).executeAsSeparateProcess()
     }
 }
 

@@ -23,6 +23,7 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.WORKING_DIRECTORY
@@ -53,6 +54,9 @@ class TestCommand : Callable<Unit> {
 
     @Option(names = ["--port"], description = ["The port to bind to"])
     var port: Int = 0
+
+    @Option(names = ["--testBaseURL"], description = ["The base URL, use this instead of host and port"], defaultValue = "")
+    lateinit var testBaseURL: String
 
     @Option(names = ["--suggestionsPath"], description = ["Location of the suggestions file"], defaultValue = "")
     lateinit var suggestionsPath: String
@@ -133,6 +137,9 @@ class TestCommand : Callable<Unit> {
 
         if(variablesFileName != null)
             System.setProperty(VARIABLES_FILE_NAME, variablesFileName)
+
+        if(testBaseURL.isNotEmpty())
+            System.setProperty(TEST_BASE_URL, testBaseURL)
 
         if(kafkaPort != 0)
             System.setProperty("kafkaPort", kafkaPort.toString())

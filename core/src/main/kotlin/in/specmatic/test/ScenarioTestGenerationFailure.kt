@@ -16,4 +16,8 @@ class ScenarioTestGenerationFailure(val scenario: Scenario, val e: Throwable) : 
     override fun runTest(host: String?, port: String?, timeout: Int): Result {
         return Result.Failure(exceptionCauseMessage(e)).updateScenario(scenario)
     }
+
+    override fun runTest(testBaseURL: String?, timeOut: Int): Result {
+        return Result.Failure(exceptionCauseMessage(e)).updateScenario(scenario)
+    }
 }

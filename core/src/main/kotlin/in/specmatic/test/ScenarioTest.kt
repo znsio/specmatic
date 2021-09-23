@@ -27,6 +27,18 @@ class ScenarioTest(val scenario: Scenario) : ContractTest {
         }
     }
 
+    override fun runTest(testBaseURL: String?, timeOut: Int): Result {
+        val kafkaMessagePattern = scenario.kafkaMessagePattern
+
+        return when {
+            kafkaMessagePattern != null -> runKafkaTest(scenario)
+            else -> {
+                val httpClient = HttpClient(testBaseURL!!, timeout = timeOut)
+                executeTest(scenario, httpClient).updateScenario(scenario)
+            }
+        }
+    }
+
     private fun runKafkaTest(testScenario: Scenario): Result {
         if (System.getProperty("kafkaPort") == null) {
             println("The contract has a kafka message. Please specify the port of the Kafka instance to connect to.")

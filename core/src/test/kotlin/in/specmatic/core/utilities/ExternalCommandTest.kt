@@ -1,5 +1,6 @@
 package `in`.specmatic.core.utilities
 
+import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.pattern.ContractException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -21,10 +22,10 @@ internal class ExternalCommandTest {
     @Test
     @DisabledOnOs(OS.WINDOWS)
     fun `should throw contract exception when external command returns non zero exit code`() {
-        val exception = assertThrows(ContractException::class.java) {
+        val exception = assertThrows(NonZeroExitError::class.java) {
             ExternalCommand(arrayOf("cat", "missing_file"), ".", emptyArray()).executeAsSeparateProcess()
         }
-        assertThat(exception.report()).isEqualTo(
+        assertThat(exception.message?.trim()).isEqualTo(
             """Error executing cat missing_file: cat: missing_file: No such file or directory"""
         )
     }

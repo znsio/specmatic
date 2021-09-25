@@ -1,5 +1,6 @@
 package `in`.specmatic.core.utilities
 
+import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.pattern.ContractException
 import java.io.File
 
@@ -17,11 +18,9 @@ class ExternalCommand(
             val err = process.errorStream.bufferedReader().readText()
             process.waitFor()
 
-            if (process.exitValue() != 0) throw ContractException("""Error executing $commandWithParameters: ${err.ifEmpty { out }}""")
+            if (process.exitValue() != 0) throw NonZeroExitError("""Error executing $commandWithParameters: ${err.ifEmpty { out }}""")
 
             out
-        } catch (contractException: ContractException) {
-            throw contractException
         } catch (otherExceptions: Exception) {
             throw ContractException("""Error running $commandWithParameters: ${otherExceptions.message}""")
         }

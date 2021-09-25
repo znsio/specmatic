@@ -20,7 +20,7 @@ def ktor_version = "1.6.3"
 def karate_version = "0.9.6"
 def jgit_version = "5.13.0.202109080827-r"
 
-def junit_version = "5.8.0"
+def junit_version = "5.8.1"
 def testcontainers_version = "1.16.0"
 
 dependencies {

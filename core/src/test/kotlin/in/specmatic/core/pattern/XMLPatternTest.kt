@@ -14,6 +14,7 @@ import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.assertDoesNotThrow
+import java.util.function.Consumer
 
 private const val isOptional: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
 private const val occursMultipleTimes: String = "$OCCURS_ATTRIBUTE_NAME=\"$MULTIPLE_ATTRIBUTE_VALUE\""
@@ -739,19 +740,19 @@ internal class XMLPatternTest {
                 it.generate(Resolver())
             }
 
-            assertThat(newValues).anySatisfy {
+            assertThat(newValues).anySatisfy(Consumer {
                 assertThat(it.name).isEqualTo("name")
 
                 val first = it.childNodes.first() as XMLNode
 
                 assertThat(first.name).isEqualTo("nameid")
                 assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
-            }
+            })
 
-            assertThat(newValues).anySatisfy {
+            assertThat(newValues).anySatisfy(Consumer {
                 assertThat(it.name).isEqualTo("name")
                 assertThat(it.childNodes).isEmpty()
-            }
+            })
         }
 
         @Test
@@ -759,19 +760,19 @@ internal class XMLPatternTest {
             val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid></name>")
             val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver()) }
 
-            assertThat(newValues).anySatisfy {
+            assertThat(newValues).anySatisfy(Consumer {
                 assertThat(it.name).isEqualTo("name")
 
                 val first = it.childNodes.first() as XMLNode
 
                 assertThat(first.name).isEqualTo("nameid")
                 assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
-            }
+            })
 
-            assertThat(newValues).anySatisfy {
+            assertThat(newValues).anySatisfy(Consumer {
                 assertThat(it.name).isEqualTo("name")
                 assertThat(it.childNodes).isEmpty()
-            }
+            })
         }
 
         @Test
@@ -782,19 +783,19 @@ internal class XMLPatternTest {
 
             val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver) }
 
-            assertThat(newValues).anySatisfy {
+            assertThat(newValues).anySatisfy(Consumer {
                 assertThat(it.name).isEqualTo("name")
 
                 val first = it.childNodes.first() as XMLNode
 
                 assertThat(first.name).isEqualTo("nameid")
                 assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
-            }
+            })
 
-            assertThat(newValues).anySatisfy {
+            assertThat(newValues).anySatisfy(Consumer {
                 assertThat(it.name).isEqualTo("name")
                 assertThat(it.childNodes).isEmpty()
-            }
+            })
         }
 
         @Test
@@ -851,14 +852,14 @@ internal class XMLPatternTest {
 
             assertThat(newValues.isNotEmpty())
 
-            assertThat(newValues).allSatisfy {
+            assertThat(newValues).allSatisfy(Consumer {
                 assertThat(it.name).isEqualTo("name")
 
                 val first = it.childNodes.first() as XMLNode
 
                 assertThat(first.name).isEqualTo("title")
                 assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
-            }
+            })
         }
 
         @Test
@@ -870,14 +871,14 @@ internal class XMLPatternTest {
 
             assertThat(newValues.isNotEmpty())
 
-            assertThat(newValues).allSatisfy {
+            assertThat(newValues).allSatisfy(Consumer {
                 assertThat(it.name).isEqualTo("name")
 
                 val first = it.childNodes.first() as XMLNode
 
                 assertThat(first.name).isEqualTo("nameid")
                 assertThat(first.attributes).doesNotContainKey(OCCURS_ATTRIBUTE_NAME)
-            }
+            })
         }
 
         @Test

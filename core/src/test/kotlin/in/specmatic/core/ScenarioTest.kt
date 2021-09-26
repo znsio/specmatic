@@ -9,6 +9,7 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
 import java.util.*
+import java.util.function.Consumer
 import kotlin.collections.HashMap
 
 internal class ScenarioTest {
@@ -458,11 +459,11 @@ And response-body (number)
             scenario.copy(references = updatedReferences).generateTestScenarios(variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl"))
         }.flatten()
 
-        assertThat(testScenarios).allSatisfy {
+        assertThat(testScenarios).allSatisfy(Consumer {
             assertThat(it.bindings).isEqualTo(mapOf("data" to "response-header.X-Data"))
 
             assertThat((it.httpRequestPattern.headersPattern.pattern["X-Header1"] as ExactValuePattern).pattern.toStringLiteral()).isEqualTo("10")
             assertThat((it.httpRequestPattern.headersPattern.pattern["X-Header2"] as ExactValuePattern).pattern.toStringLiteral()).isEqualTo("20")
-        }
+        })
     }
 }

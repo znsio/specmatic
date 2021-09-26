@@ -23,6 +23,7 @@ import org.springframework.web.client.RestTemplate
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
 import java.io.File
 import java.net.URI
+import java.util.function.Consumer
 
 internal class OpenApiKtTest {
     companion object {
@@ -287,9 +288,9 @@ Background:
           Then status 404
                 """.trimIndent(), sourceSpecPath
             )
-        }.satisfies {
+        }.satisfies(Consumer {
             assertThat(it.message).isEqualTo("""Scenario: "sending string instead of number should return not found" PATH: "/hello/test" is not as per included wsdl / OpenApi spec""")
-        }
+        })
     }
 
     @Test
@@ -307,9 +308,9 @@ Background:
           Then status 403
                 """.trimIndent(), sourceSpecPath
             )
-        }.satisfies {
+        }.satisfies(Consumer {
             assertThat(it.message).isEqualTo("""Scenario: "zero should return forbidden" RESPONSE STATUS: "403" is not as per included wsdl / OpenApi spec""")
-        }
+        })
     }
 
     @Test

@@ -25,6 +25,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.web.client.RestTemplate
 import java.io.File
 import java.net.URI
+import java.util.function.Consumer
 
 class WsdlKtTest {
 
@@ -235,9 +236,9 @@ Scenario: request not matching wsdl
 
         assertThatThrownBy {
             parseGherkinStringToFeature(wsdlSpec)
-        }.satisfies {
+        }.satisfies(Consumer {
             assertThat(it.message).isEqualTo("""Scenario: "request not matching wsdl" request is not as per included wsdl / OpenApi spec""")
-        }
+        })
     }
 
     @Test

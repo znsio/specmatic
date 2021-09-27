@@ -44,7 +44,7 @@ dependencies {
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"
 
     implementation 'org.junit.platform:junit-platform-launcher:1.8.1'
-    implementation 'org.junit.platform:junit-platform-reporting:1.8.0'
+    implementation 'org.junit.platform:junit-platform-reporting:1.8.1'
 
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"

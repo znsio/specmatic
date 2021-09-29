@@ -43,7 +43,7 @@ data class HttpStubData(
 
     private fun executeExternalCommand(command: String, envParam: String): String {
         information.forDebugging("Executing: $command with EnvParam: $envParam")
-        return ExternalCommand(arrayOf(command), ".", arrayOf(envParam)).executeAsSeparateProcess()
+        return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf(envParam)).executeAsSeparateProcess()
     }
 }
 

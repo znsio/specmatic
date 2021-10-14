@@ -81,15 +81,13 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                 method(HttpMethod.Put)
                 method(HttpMethod.Delete)
                 method(HttpMethod.Patch)
-                header(HttpHeaders.Authorization)
+
+                allowHeaders {
+                    true
+                }
+
                 allowCredentials = true
                 allowNonSimpleContentTypes = true
-
-                features.flatMap { feature ->
-                    feature.scenarios.flatMap { scenario ->
-                        scenario.httpRequestPattern.headersPattern.pattern.keys.map { withoutOptionality(it) }
-                    }
-                }.forEach { header(it) }
 
                 anyHost()
             }

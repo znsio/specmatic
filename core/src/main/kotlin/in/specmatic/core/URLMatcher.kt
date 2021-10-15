@@ -5,6 +5,7 @@ import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.URIUtils
 import `in`.specmatic.core.value.StringValue
+import io.ktor.util.reflect.*
 import java.net.URI
 
 const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"
@@ -43,7 +44,10 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         val pathParts = uri.path.split("/".toRegex()).filter { it.isNotEmpty() }.toTypedArray()
 
         if (pathPattern.size != pathParts.size)
-            return Failure("Expected $uri (having ${pathParts.size} path segments) to match $path (which has ${pathPattern.size} path segments).", breadCrumb = "PATH")
+            return Failure(
+                "Expected $uri (having ${pathParts.size} path segments) to match $path (which has ${pathPattern.size} path segments).",
+                breadCrumb = "PATH"
+            )
 
         pathPattern.zip(pathParts).forEach { (urlPathPattern, token) ->
             try {
@@ -73,7 +77,10 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
             "/" + pathPattern.mapIndexed { index, urlPathPattern ->
                 attempt(breadCrumb = "[$index]") {
                     val key = urlPathPattern.key
-                    if (key != null) resolver.generate(key, urlPathPattern.pattern) else urlPathPattern.pattern.generate(resolver)
+                    if (key != null) resolver.generate(
+                        key,
+                        urlPathPattern.pattern
+                    ) else urlPathPattern.pattern.generate(resolver)
                 }
             }.joinToString("/")
         }
@@ -103,7 +110,13 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                                     else -> throw ContractException(resultReport(result))
                                 }
                             }
-                            else -> attempt("Format error in example of \"$key\"") { URLPathPattern(ExactValuePattern(urlPathPattern.parse(rowValue, resolver))) }
+                            else -> attempt("Format error in example of \"$key\"") {
+                                URLPathPattern(
+                                    ExactValuePattern(
+                                        urlPathPattern.parse(rowValue, resolver)
+                                    )
+                                )
+                            }
                         }
                     }
                     else -> urlPathPattern
@@ -161,9 +174,20 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         }.toList().joinToString(separator = "&"))
         return url.toString()
     }
+
+    fun toOpenApiPath(): String {
+        val pathParamsWithPattern =
+            this.path.split("/").filter { it.startsWith("(") }.map { it.replace("(", "").replace(")", "").split(":") }
+        return this.path.replace("(", "{").replace(""":.*\)""".toRegex(), "}")
+    }
+
+    fun pathParameters(): List<URLPathPattern> {
+        return pathPattern.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
+    }
 }
 
-internal fun toURLMatcherWithOptionalQueryParams(url: String): URLMatcher = toURLMatcherWithOptionalQueryParams(URI.create(url))
+internal fun toURLMatcherWithOptionalQueryParams(url: String): URLMatcher =
+    toURLMatcherWithOptionalQueryParams(URI.create(url))
 
 internal fun toURLMatcherWithOptionalQueryParams(urlPattern: URI): URLMatcher {
     val path = urlPattern.path
@@ -183,24 +207,29 @@ internal fun toURLMatcherWithOptionalQueryParams(urlPattern: URI): URLMatcher {
 }
 
 internal fun pathToPattern(rawPath: String): List<URLPathPattern> =
-        rawPath.trim('/').split("/").filter { it.isNotEmpty() }.map { part ->
-            when {
-                isPatternToken(part) -> {
-                    val pieces = withoutPatternDelimiters(part).split(":").map { it.trim() }
-                    if (pieces.size != 2) {
-                        throw ContractException("In path ${rawPath}, $part must be of the format (param_name:type), e.g. (id:number)")
-                    }
-
-                    val (name, type) = pieces
-
-                    URLPathPattern(DeferredPattern(withPatternDelimiters(type)), name)
+    rawPath.trim('/').split("/").filter { it.isNotEmpty() }.map { part ->
+        when {
+            isPatternToken(part) -> {
+                val pieces = withoutPatternDelimiters(part).split(":").map { it.trim() }
+                if (pieces.size != 2) {
+                    throw ContractException("In path ${rawPath}, $part must be of the format (param_name:type), e.g. (id:number)")
                 }
-                else -> URLPathPattern(ExactValuePattern(StringValue(part)))
-            }
-        }
 
-internal fun matchesQuery(queryPattern: Map<String, Pattern>, sampleQuery: Map<String, String>, resolver: Resolver): Result {
-    val missingKey = resolver.findMissingKey(queryPattern, sampleQuery.mapValues { StringValue(it.value) }, ::validateUnexpectedKeys)
+                val (name, type) = pieces
+
+                URLPathPattern(DeferredPattern(withPatternDelimiters(type)), name)
+            }
+            else -> URLPathPattern(ExactValuePattern(StringValue(part)))
+        }
+    }
+
+internal fun matchesQuery(
+    queryPattern: Map<String, Pattern>,
+    sampleQuery: Map<String, String>,
+    resolver: Resolver
+): Result {
+    val missingKey =
+        resolver.findMissingKey(queryPattern, sampleQuery.mapValues { StringValue(it.value) }, ::validateUnexpectedKeys)
     if (missingKey != null)
         return missingKeyToResult(missingKey, "query param")
 

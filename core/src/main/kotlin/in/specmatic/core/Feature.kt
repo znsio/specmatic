@@ -18,6 +18,16 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.PathItem
+import io.swagger.v3.oas.models.Paths
+import io.swagger.v3.oas.models.info.Info
+import io.swagger.v3.oas.models.media.*
+import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.parameters.PathParameter
+import io.swagger.v3.oas.models.responses.ApiResponse
+import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
 import java.net.URI
 
@@ -248,6 +258,60 @@ data class Feature(
         } finally {
             serverState = emptyMap()
         }
+    }
+
+    fun toOpenApi(): OpenAPI {
+        val openAPI = OpenAPI()
+        openAPI.info = Info().also {
+            it.title = "Title"
+            it.version = "1"
+        }
+        val paths = scenarios.map { scenario ->
+            val path = PathItem()
+            val operation = Operation()
+            val pathParameters = scenario.httpRequestPattern.urlMatcher!!.pathParameters()
+            val openApiPathParameters = pathParameters.map {
+                val pathParameter: Parameter = PathParameter()
+                pathParameter.name = it.key
+                pathParameter.schema = toOpenApiSchema(it.pattern)
+                pathParameter
+            }
+            //TODO: Query Parameters
+            //TODO: Request Headers
+            //TODO: Body
+            operation.parameters = openApiPathParameters
+            val responses = ApiResponses()
+            val apiResponse = ApiResponse()
+            apiResponse.content =
+                Content().also {
+                    it.addMediaType("application/json", MediaType().also {
+                        it.schema = toOpenApiSchema(scenario.httpResponsePattern.body)
+                    })
+                }
+            apiResponse.description = "Response Description"
+            //TODO: Response Headers
+            //TODO: Response Content Type
+            when (scenario.httpResponsePattern.status) {
+                200 -> responses.addApiResponse("200", apiResponse)
+            }
+            operation.responses = responses
+            when (scenario.httpRequestPattern.method) {
+                "GET" -> path.get = operation
+                "POST" -> path.post = operation
+            }
+            val pathName = scenario.httpRequestPattern.urlMatcher!!.toOpenApiPath()
+            pathName to path
+        }
+        openAPI.paths = Paths().also { paths.forEach { (pathName, path) -> it.addPathItem(pathName, path) } }
+        return openAPI
+    }
+
+    private fun toOpenApiSchema(pattern: Pattern): Schema<Any> {
+        val schema = when (pattern) {
+            is NumberPattern -> NumberSchema()
+            else -> StringSchema()
+        }
+        return schema as Schema<Any>;
     }
 }
 

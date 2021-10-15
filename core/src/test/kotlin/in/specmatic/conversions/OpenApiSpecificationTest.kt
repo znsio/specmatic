@@ -1,12 +1,12 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.HttpHeadersPattern
+import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.DeferredPattern
 import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.Pattern
 import io.ktor.util.reflect.*
 import io.swagger.util.Yaml
-import io.swagger.v3.core.util.Json
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
@@ -19,7 +19,6 @@ import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.parameters.PathParameter
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
-import kotlinx.serialization.json.JsonNull.content
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.jupiter.api.AfterEach
@@ -185,52 +184,42 @@ components:
 
     @Test
     fun `programmatically construct OpenAPI YAML`() {
-        val openAPI = OpenAPI()
-        val paths = Paths()
-        val pathName = "/prducts/{id}"
-        val path = PathItem()
-        val getOperation = Operation()
-        val pathParameter: Parameter = PathParameter()
-        pathParameter.name = "id"
-        val parameterSchema = IntegerSchema()
-        pathParameter.schema = parameterSchema
-        val parameters = listOf(pathParameter)
-        getOperation.parameters = parameters
-        val responses = ApiResponses()
-        val okResponse = ApiResponse()
-        val response = Content()
-        val mediaType = MediaType()
-        mediaType.schema = StringSchema()
-        response.addMediaType("product", mediaType)
-        okResponse.content = response
-        responses.addApiResponse("200", okResponse)
-        getOperation.responses = responses
-        path.get=getOperation
-        paths.addPathItem(pathName, path)
-        openAPI.paths=paths
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Products API
+
+Scenario: Get product by id
+  When GET /products/(id:number)
+  Then status 200
+  And response-body (string)
+""".trim()
+        )
+        val openAPI = feature.toOpenApi()
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml).isEqualTo("""---
+        assertThat(openAPIYaml).isEqualTo(
+            """---
 openapi: "3.0.1"
+info:
+  title: "Title"
+  version: "1"
 paths:
-  /prducts/{id}:
+  /products/{id}:
     get:
       parameters:
       - name: "id"
         in: "path"
         required: true
         schema:
-          type: "integer"
-          format: "int32"
-          exampleSetFlag: false
+          type: "string"
       responses:
         "200":
+          description: "Response Description"
           content:
-            product:
+            application/json:
               schema:
                 type: "string"
-                exampleSetFlag: false
-              exampleSetFlag: false
-""")
+"""
+        )
     }
 
     fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {

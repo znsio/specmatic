@@ -24,6 +24,7 @@ import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.Paths
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.media.*
+import io.swagger.v3.oas.models.parameters.HeaderParameter
 import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.parameters.PathParameter
 import io.swagger.v3.oas.models.parameters.QueryParameter
@@ -284,9 +285,15 @@ data class Feature(
                 queryParameter.schema = toOpenApiSchema(pattern)
                 queryParameter
             }
-            //TODO: Request Headers
+            val openApiRequestHeaders = scenario.httpRequestPattern.headersPattern.pattern.map { (key, pattern) ->
+                val headerParameter = HeaderParameter()
+                headerParameter.name = key.removeSuffix("?")
+                headerParameter.schema = toOpenApiSchema(pattern)
+                headerParameter.required = key.contains("?").not()
+                headerParameter
+            }
             //TODO: Body
-            operation.parameters = openApiPathParameters + openApiQueryParameters
+            operation.parameters = openApiPathParameters + openApiQueryParameters + openApiRequestHeaders
             val responses = ApiResponses()
             val apiResponse = ApiResponse()
             apiResponse.content =

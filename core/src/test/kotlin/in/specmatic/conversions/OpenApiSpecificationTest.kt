@@ -190,6 +190,8 @@ Feature: Products API
 
 Scenario: Get product by id
   When GET /products/(id:number)/variants/(variantId:number)?tag=(string)
+  And request-header Authentication (string)
+  And request-header OptionalHeader? (string)
   Then status 200
   And response-body (string)
 """.trim()
@@ -218,6 +220,16 @@ paths:
           type: "string"
       - name: "tag"
         in: "query"
+        schema:
+          type: "string"
+      - name: "Authentication"
+        in: "header"
+        required: true
+        schema:
+          type: "string"
+      - name: "OptionalHeader"
+        in: "header"
+        required: false
         schema:
           type: "string"
       responses:

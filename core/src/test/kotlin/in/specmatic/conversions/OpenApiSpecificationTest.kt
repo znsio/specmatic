@@ -189,7 +189,7 @@ components:
 Feature: Products API
 
 Scenario: Get product by id
-  When GET /products/(id:number)
+  When GET /products/(id:number)/variants/(variantId:number)?tag=(string)
   Then status 200
   And response-body (string)
 """.trim()
@@ -203,12 +203,21 @@ info:
   title: "Title"
   version: "1"
 paths:
-  /products/{id}:
+  /products/{id}/variants/{variantId}:
     get:
       parameters:
       - name: "id"
         in: "path"
         required: true
+        schema:
+          type: "string"
+      - name: "variantId"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+      - name: "tag"
+        in: "query"
         schema:
           type: "string"
       responses:

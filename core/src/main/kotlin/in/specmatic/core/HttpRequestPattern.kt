@@ -285,7 +285,7 @@ data class HttpRequestPattern(
 
     private fun encompassedType(valueString: String, key: String?, type: Pattern, resolver: Resolver): Pattern {
         return when {
-            isPatternToken(valueString) -> parsedPattern(valueString, key).let { parsedType ->
+            isPatternToken(valueString) -> resolvedHop(parsedPattern(valueString, key), resolver).let { parsedType ->
                 when (val result = type.encompasses(parsedType, resolver, resolver)) {
                     is Success -> parsedType
                     else -> throw ContractException(resultReport(result))

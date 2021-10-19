@@ -177,10 +177,10 @@ components:
     fun `programmatically construct OpenAPI YAML for GET with request headers and path and query params`() {
         val feature = parseGherkinStringToFeature(
             """
-Feature: Products API
+Feature: Product API
 
 Scenario: Get product by id
-  When GET /products/(id:number)/variants/(variantId:number)?tag=(string)
+  When GET /product/(id:number)/variants/(variantId:number)?tag=(string)
   And request-header Authentication (string)
   And request-header OptionalHeader? (string)
   Then status 200
@@ -193,10 +193,10 @@ Scenario: Get product by id
             """---
 openapi: "3.0.1"
 info:
-  title: "Products API"
+  title: "Product API"
   version: "1"
 paths:
-  /products/{id}/variants/{variantId}:
+  /product/{id}/variants/{variantId}:
     get:
       parameters:
       - name: "id"
@@ -226,8 +226,17 @@ paths:
       responses:
         "200":
           description: "Response Description"
+          headers:
+            Authentication:
+              required: true
+              schema:
+                type: "string"
+            OptionalHeader:
+              required: false
+              schema:
+                type: "string"
           content:
-            application/json:
+            text/plain:
               schema:
                 type: "string"
 """
@@ -238,10 +247,10 @@ paths:
     fun `programmatically construct OpenAPI YAML for POST with JSON request body`() {
         val feature = parseGherkinStringToFeature(
             """
-            Feature: Products API
+            Feature: Person API
             
-            Scenario: Get product by id
-              When POST /products
+            Scenario: Get person by id
+              When POST /person
               And request-body
               | id | (string) |
               Then status 200
@@ -255,10 +264,10 @@ paths:
                 ---
                 openapi: "3.0.1"
                 info:
-                  title: "Products API"
+                  title: "Person API"
                   version: "1"
                 paths:
-                  /products:
+                  /person:
                     post:
                       parameters: []
                       requestBody:
@@ -274,7 +283,7 @@ paths:
                         "200":
                           description: "Response Description"
                           content:
-                            application/json:
+                            text/plain:
                               schema:
                                 type: "string"
             """.trimIndent()
@@ -285,13 +294,13 @@ paths:
     fun `programmatically construct OpenAPI YAML for POST with JSON request body that includes external type definitions`() {
         val feature = parseGherkinStringToFeature(
             """
-            Feature: Products API
+            Feature: Person API
             
-            Scenario: Get product by id
+            Scenario: Add person by id
               Given type Address
               | street | (string) |
               | locality | (string) |
-              When POST /products
+              When POST /person
               And request-body
               | id | (string) |
               | address | (Address) |
@@ -306,10 +315,10 @@ paths:
             ---
             openapi: "3.0.1"
             info:
-              title: "Products API"
+              title: "Person API"
               version: "1"
             paths:
-              /products:
+              /person:
                 post:
                   parameters: []
                   requestBody:
@@ -328,7 +337,7 @@ paths:
                     "200":
                       description: "Response Description"
                       content:
-                        application/json:
+                        text/plain:
                           schema:
                             type: "string"
             components:
@@ -350,13 +359,13 @@ paths:
     fun `programmatically construct OpenAPI YAML for POST with JSON request body containing array of objects`() {
         val feature = parseGherkinStringToFeature(
             """
-            Feature: Products API
+            Feature: Person API
             
-            Scenario: Get product by id
+            Scenario: Get person by id
               Given type Address
               | street | (string) |
               | locality | (string) |
-              When POST /products
+              When POST /person
               And request-body
               | id | (string) |
               | address | (Address*) |
@@ -370,7 +379,7 @@ paths:
             assertThat(this.matches(
                 HttpRequest(
                     "POST",
-                    "/products",
+                    "/person",
                     body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}]}""")
                 ), HttpResponse.OK("success")
             )).isTrue
@@ -382,10 +391,10 @@ paths:
             ---
             openapi: "3.0.1"
             info:
-              title: "Products API"
+              title: "Person API"
               version: "1"
             paths:
-              /products:
+              /person:
                 post:
                   parameters: []
                   requestBody:
@@ -406,7 +415,7 @@ paths:
                     "200":
                       description: "Response Description"
                       content:
-                        application/json:
+                        text/plain:
                           schema:
                             type: "string"
             components:
@@ -428,13 +437,13 @@ paths:
     fun `programmatically construct OpenAPI YAML for POST with JSON request body containing a nullable object`() {
         val feature = parseGherkinStringToFeature(
             """
-            Feature: Products API
+            Feature: Person API
             
-            Scenario: Get product by id
+            Scenario: Get person by id
               Given type Address
               | street | (string) |
               | locality | (string) |
-              When POST /products
+              When POST /person
               And request-body
               | id | (string) |
               | address | (Address?) |
@@ -448,7 +457,7 @@ paths:
             assertThat(this.matches(
                 HttpRequest(
                     "POST",
-                    "/products",
+                    "/person",
                     body = parsedJSON("""{"id": "123", "address": null}""")
                 ), HttpResponse.OK("success")
             )).isTrue
@@ -460,10 +469,10 @@ paths:
             ---
             openapi: "3.0.1"
             info:
-              title: "Products API"
+              title: "Person API"
               version: "1"
             paths:
-              /products:
+              /person:
                 post:
                   parameters: []
                   requestBody:
@@ -483,7 +492,7 @@ paths:
                     "200":
                       description: "Response Description"
                       content:
-                        application/json:
+                        text/plain:
                           schema:
                             type: "string"
             components:
@@ -505,13 +514,13 @@ paths:
     fun `programmatically construct OpenAPI YAML for POST with JSON request body containing a nullable array`() {
         val feature = parseGherkinStringToFeature(
             """
-            Feature: Products API
+            Feature: Person API
             
-            Scenario: Get product by id
+            Scenario: Get person by id
               Given type Address
               | street | (string) |
               | locality | (string) |
-              When POST /products
+              When POST /person
               And request-body
               | id | (string) |
               | address | (Address*?) |
@@ -525,7 +534,7 @@ paths:
             assertThat(this.matches(
                 HttpRequest(
                     "POST",
-                    "/products",
+                    "/person",
                     body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
                 ), HttpResponse.OK("success")
             )).isTrue
@@ -537,10 +546,10 @@ paths:
             ---
             openapi: "3.0.1"
             info:
-              title: "Products API"
+              title: "Person API"
               version: "1"
             paths:
-              /products:
+              /person:
                 post:
                   parameters: []
                   requestBody:
@@ -562,7 +571,7 @@ paths:
                     "200":
                       description: "Response Description"
                       content:
-                        application/json:
+                        text/plain:
                           schema:
                             type: "string"
             components:
@@ -584,13 +593,13 @@ paths:
     fun `programmatically construct OpenAPI YAML for POST with JSON request body containing an array of nullable values`() {
         val feature = parseGherkinStringToFeature(
             """
-            Feature: Products API
+            Feature: Person API
             
-            Scenario: Get product by id
+            Scenario: Get person by id
               Given type Address
               | street | (string) |
               | locality | (string) |
-              When POST /products
+              When POST /person
               And request-body
               | id | (string) |
               | address | (Address?*) |
@@ -604,7 +613,7 @@ paths:
             assertThat(this.matches(
                 HttpRequest(
                     "POST",
-                    "/products",
+                    "/person",
                     body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
                 ), HttpResponse.OK("success")
             )).isTrue
@@ -616,10 +625,10 @@ paths:
             ---
             openapi: "3.0.1"
             info:
-              title: "Products API"
+              title: "Person API"
               version: "1"
             paths:
-              /products:
+              /person:
                 post:
                   parameters: []
                   requestBody:
@@ -641,7 +650,7 @@ paths:
                     "200":
                       description: "Response Description"
                       content:
-                        application/json:
+                        text/plain:
                           schema:
                             type: "string"
             components:
@@ -664,31 +673,30 @@ paths:
         val feature = parseGherkinStringToFeature(
             """
             Feature: Person API
-            
-            Scenario: Add Person
-              Given type Address
-              | street | (string) |
-              | locality | (string) |
-              And type Person
-              | id | (string) |
-              | address | (Address) |
-              When POST /person
-              And form-field person (Person)
-              Then status 200
-              And response-body (string)
+                Scenario: Add Person
+                  Given type Address
+                  | street | (string) |
+                  | locality | (string) |
+                  And type Person
+                  | id | (string) |
+                  | address | (Address) |
+                  When POST /person
+                  And form-field person (Person)
+                  Then status 200
+                  And response-body (string)
             """.trimIndent()
         )
         val openAPI = feature.toOpenApi()
 
-//        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-//            assertThat(this.matches(
-//                HttpRequest(
-//                    "POST",
-//                    "/person",
-//                    formFields = mapOf("person" to """{"id": "123", "address": {"street": "baker street", "locality": "London"}}""")
-//                ), HttpResponse.OK("success")
-//            )).isTrue
-//        }
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            this.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    formFields = mapOf("person" to """{"id": "123", "address": {"street": "baker street", "locality": "London"}}""")
+                ), HttpResponse.OK("success")
+            )
+        }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
         assertThat(openAPIYaml.trim()).isEqualTo(
@@ -696,7 +704,7 @@ paths:
             ---
             openapi: "3.0.1"
             info:
-              title: "Products API"
+              title: "Person API"
               version: "1"
             paths:
               /person:
@@ -718,7 +726,7 @@ paths:
                     "200":
                       description: "Response Description"
                       content:
-                        application/json:
+                        text/plain:
                           schema:
                             type: "string"
             components:
@@ -787,7 +795,7 @@ paths:
             ---
             openapi: "3.0.1"
             info:
-              title: "Products API"
+              title: "Person API"
               version: "1"
             paths:
               /person:
@@ -802,7 +810,7 @@ paths:
                     "200":
                       description: "Response Description"
                       content:
-                        application/json:
+                        text/plain:
                           schema:
                             type: "string"
             components:

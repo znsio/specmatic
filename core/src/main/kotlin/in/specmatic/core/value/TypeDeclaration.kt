@@ -21,15 +21,14 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
     val json2 = newPattern.pattern
 
     val missingIn2 = json1.filterKeys { withoutOptionality(it) !in json2 }.mapKeys { "${withoutOptionality(it.key)}?" }
-
     val json1KeysWithoutOptionality = json1.keys.map { withoutOptionality(it) }
     val json2KeysWithoutOptionality = json2.keys.map { withoutOptionality(it) }
-
-    val missingIn1 = json2.filterKeys { withoutOptionality(it) !in json1KeysWithoutOptionality }.mapKeys { "${withoutOptionality(it.key)}?" }
-
+    val missingIn1 = json2.filterKeys { withoutOptionality(it) !in json1KeysWithoutOptionality }
+        .mapKeys { "${withoutOptionality(it.key)}?" }
     val common = json1.filterKeys { withoutOptionality(it) in json2KeysWithoutOptionality }.mapValues {
         val val1 = json1.getValue(it.key) as DeferredPattern
-        val val2 = (json2[it.key] ?: json2[withoutOptionality(it.key)] ?: json2.getValue("${it.key}?")) as DeferredPattern
+        val val2 =
+            (json2[it.key] ?: json2[withoutOptionality(it.key)] ?: json2.getValue("${it.key}?")) as DeferredPattern
 
         when {
             isNull(val1.pattern) && isNull(val2.pattern) -> val1
@@ -39,26 +38,26 @@ fun converge(accumulator: TabularPattern, newPattern: TabularPattern): TabularPa
             }
             isNull(val1.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val2.pattern.trim()))}?)")
             isNull(val2.pattern) -> DeferredPattern("(${withoutOptionality(withoutPatternDelimiters(val1.pattern.trim()))}?)")
-            isEmptyArrayAndRepeatingType(val1.pattern, val2.pattern) -> selectConcreteArrayType(val1.pattern, val2.pattern)
+            isEmptyArrayAndRepeatingType(val1.pattern, val2.pattern) -> selectConcreteArrayType(
+                val1.pattern,
+                val2.pattern
+            )
             else -> {
                 println("Found two different types (${val1.pattern} and ${val2.pattern}) in one of the lists, can't converge on a common type for it. Choosing ${val1.pattern} for now.")
                 val1
             }
         }
     }
-
     val converged = common.plus(missingIn1).plus(missingIn2).mapKeys {
         val optionalKey = "${withoutOptionality(it.key)}?"
-        if(optionalKey in json1 || optionalKey in json2)
+        if (optionalKey in json1 || optionalKey in json2)
             optionalKey
         else
             it.key
     }
-
-    if(converged.any { it.key.contains("??") }) {
+    if (converged.any { it.key.contains("??") }) {
         println(converged.keys)
     }
-
     return toTabularPattern(converged)
 }
 

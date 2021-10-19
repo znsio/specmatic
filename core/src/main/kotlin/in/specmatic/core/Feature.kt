@@ -5,6 +5,7 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.*
+import `in`.specmatic.core.wsdl.parser.message.primitiveTypes
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
@@ -18,18 +19,14 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
-import io.swagger.v3.oas.models.OpenAPI
-import io.swagger.v3.oas.models.Operation
-import io.swagger.v3.oas.models.PathItem
-import io.swagger.v3.oas.models.Paths
+import io.swagger.v3.oas.models.*
+import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.media.*
-import io.swagger.v3.oas.models.parameters.HeaderParameter
-import io.swagger.v3.oas.models.parameters.Parameter
-import io.swagger.v3.oas.models.parameters.PathParameter
-import io.swagger.v3.oas.models.parameters.QueryParameter
+import io.swagger.v3.oas.models.parameters.*
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
+import kotlinx.coroutines.Deferred
 import java.io.File
 import java.net.URI
 
@@ -265,7 +262,7 @@ data class Feature(
     fun toOpenApi(): OpenAPI {
         val openAPI = OpenAPI()
         openAPI.info = Info().also {
-            it.title = "Title"
+            it.title = this.name
             it.version = "1"
         }
         val paths = scenarios.map { scenario ->
@@ -292,7 +289,65 @@ data class Feature(
                 headerParameter.required = key.contains("?").not()
                 headerParameter
             }
-            //TODO: Body
+
+            val requestBodyType = scenario.httpRequestPattern.body
+
+            val requestBodySchema: Pair<String, MediaType>? = when {
+                isJSONPayload(requestBodyType) || requestBodyType is DeferredPattern && isJSONPayload(requestBodyType.resolvePattern(scenario.resolver))-> {
+                    jsonMediaType(requestBodyType)
+                }
+                requestBodyType is XMLPattern || requestBodyType is DeferredPattern && requestBodyType.resolvePattern(scenario.resolver) is XMLPattern -> {
+                    throw ContractException("XML not supported yet")
+                }
+                else -> {
+                    if(scenario.httpRequestPattern.formFieldsPattern.isNotEmpty()) {
+                        val mediaType = MediaType()
+                        mediaType.schema = Schema<Any>().apply {
+                            this.required = scenario.httpRequestPattern.formFieldsPattern.keys.toList()
+                            this.properties = scenario.httpRequestPattern.formFieldsPattern.map { (key, type) ->
+                                val schema = toOpenApiSchema(type)
+                                Pair(withoutOptionality(key), schema)
+                            }.toMap()
+                        }
+
+                        val encoding: MutableMap<String, Encoding> = scenario.httpRequestPattern.formFieldsPattern.map { (key, type) ->
+                            when {
+                                isJSONPayload(type) || (type is DeferredPattern && isJSONPayload(type.resolvePattern(scenario.resolver))) -> {
+                                    val encoding = Encoding().apply {
+                                        this.contentType = "application/json"
+                                    }
+
+                                    Pair(withoutOptionality(key), encoding)
+                                }
+                                type is XMLPattern ->
+                                    throw NotImplementedError("XML encoding not supported for form fields")
+                                else -> {
+                                    null
+                                }
+                            }
+                        }.filterNotNull().toMap().toMutableMap()
+
+                        if(encoding.isNotEmpty())
+                            mediaType.encoding = encoding
+
+                        Pair("application/x-www-form-urlencoded", mediaType)
+                    }
+                    else if(scenario.httpRequestPattern.multiPartFormDataPattern.isNotEmpty()) {
+                        throw NotImplementedError("mulitpart form data not yet supported")
+                    } else {
+                        null
+                    }
+                }
+            }
+
+            if(requestBodySchema != null) {
+                operation.requestBody = RequestBody().apply {
+                    this.content = Content().apply {
+                        this[requestBodySchema.first] = requestBodySchema.second
+                    }
+                }
+            }
+
             operation.parameters = openApiPathParameters + openApiQueryParameters + openApiRequestHeaders
             val responses = ApiResponses()
             val apiResponse = ApiResponse()
@@ -303,29 +358,249 @@ data class Feature(
                     })
                 }
             apiResponse.description = "Response Description"
-            //TODO: Response Headers
-            //TODO: Response Content Type
-            when (scenario.httpResponsePattern.status) {
-                200 -> responses.addApiResponse("200", apiResponse)
+            val openApiResponseHeaders = scenario.httpRequestPattern.headersPattern.pattern.map { (key, pattern) ->
+                val header = Header()
+                header.schema = toOpenApiSchema(pattern)
+                header.required = !key.endsWith("?")
+
+                Pair(withoutOptionality(key), header)
+            }.toMap()
+
+            if(openApiResponseHeaders.isNotEmpty()) {
+                apiResponse.headers = openApiResponseHeaders
             }
+
+            if(scenario.httpResponsePattern.body !is EmptyStringPattern) {
+                apiResponse.content = Content().apply {
+                    val responseBodyType = scenario.httpResponsePattern.body
+
+                    val responseBodySchema: Pair<String, MediaType>? = when {
+                        isJSONPayload(responseBodyType) || responseBodyType is DeferredPattern && isJSONPayload(responseBodyType.resolvePattern(scenario.resolver))-> {
+                            jsonMediaType(responseBodyType)
+                        }
+                        responseBodyType is XMLPattern || responseBodyType is DeferredPattern && responseBodyType.resolvePattern(scenario.resolver) is XMLPattern -> {
+                            throw ContractException("XML not supported yet")
+                        }
+                        else ->
+                            null
+                    }
+
+                    if(responseBodySchema != null)
+                        this.addMediaType(responseBodySchema.first, responseBodySchema.second)
+                }
+            }
+
+            responses.addApiResponse(scenario.httpResponsePattern.status.toString(), apiResponse)
+
             operation.responses = responses
+
             when (scenario.httpRequestPattern.method) {
                 "GET" -> path.get = operation
                 "POST" -> path.post = operation
+                "DELETE" -> path.delete = operation
             }
             val pathName = scenario.httpRequestPattern.urlMatcher!!.toOpenApiPath()
             pathName to path
         }
-        openAPI.paths = Paths().also { paths.forEach { (pathName, path) -> it.addPathItem(pathName, path) } }
+
+        val schemas: Map<String, Pattern> = this.scenarios.map {
+            it.patterns.entries
+        }.flatten().fold(emptyMap<String, Pattern>()) { acc, entry ->
+            if(acc.contains(entry.key) && isObjectType(acc.getValue(entry.key))) {
+                val converged: Map<String, Pattern> = objectStructure(acc.getValue(entry.key))
+                val new: Map<String, Pattern> = objectStructure(entry.value)
+
+                acc.plus(entry.key to TabularPattern(converge(converged, new)))
+            }
+            else {
+                acc.plus(entry.key to entry.value)
+            }
+        }.mapKeys {
+            withoutPatternDelimiters(it.key)
+        }
+
+        if(schemas.isNotEmpty()) {
+            openAPI.components = Components()
+            openAPI.components.schemas = schemas.mapValues {
+                toOpenApiSchema(it.value)
+            }
+        }
+
+        openAPI.paths = Paths().also {
+            paths.forEach { (pathName, newPath) ->
+                it.addPathItem(pathName, newPath)
+            }
+        }
+
+//        openAPI.paths = Paths().also {
+//            paths.forEach { (pathName, newPath) ->
+//                if(it.contains(pathName)) {
+//                    val existingPath = it.getValue(pathName)
+//                    if(existingPath.get == null)
+//                        existingPath.get = newPath.get
+//                    else {
+//                        existingPath.get.requestBody = newPath.get.requestBody
+//
+//                        newPath.get.responses.forEach { (responseType, response) ->
+//                            existingPath.get.responses[responseType] = response
+//                        }
+//                    }
+//                } else {
+//                    it.addPathItem(pathName, newPath)
+//                }
+//            }
+//        }
+
         return openAPI
     }
 
-    private fun toOpenApiSchema(pattern: Pattern): Schema<Any> {
-        val schema = when (pattern) {
-            is NumberPattern -> NumberSchema()
-            else -> StringSchema()
+    private fun jsonMediaType(requestBodyType: Pattern): Pair<String, MediaType> {
+        val mediaType = MediaType()
+        mediaType.schema = toOpenApiSchema(requestBodyType)
+        return Pair("application/json", mediaType)
+    }
+
+    private fun converge(map1: Map<String, Pattern>, map2: Map<String, Pattern>): Map<String, Pattern> {
+        val common = map1.filter { entry ->
+            val cleanedKey = withoutOptionality(entry.key)
+            cleanedKey in map2 || "${cleanedKey}?" in map2
+        }.mapKeys { entry ->
+            val cleanedKey = withoutOptionality(entry.key)
+            if(isOptional(entry.key) || "${cleanedKey}?" in map2) {
+                "${cleanedKey}?"
+            } else
+                cleanedKey
+        }.toMap()
+
+        val onlyInMap1 = map1.filter { entry ->
+            val cleanedKey = withoutOptionality(entry.key)
+            (cleanedKey !in common && "${cleanedKey}?" !in common)
+        }.mapKeys { entry ->
+            val cleanedKey = withoutOptionality(entry.key)
+            "${cleanedKey}?"
         }
+
+        val onlyInMap2 = map2.filter { entry ->
+            val cleanedKey = withoutOptionality(entry.key)
+            (cleanedKey !in common && "${cleanedKey}?" !in common)
+        }.mapKeys { entry ->
+            val cleanedKey = withoutOptionality(entry.key)
+            "${cleanedKey}?"
+        }
+
+        return common.plus(onlyInMap1).plus(onlyInMap2)
+    }
+
+    private fun objectStructure(objectType: Pattern): Map<String, Pattern> {
+        return when (objectType) {
+            is TabularPattern -> objectType.pattern
+            is JSONObjectPattern -> objectType.pattern
+            else -> throw ContractException("Unrecognized type ${objectType.typeName}")
+        }
+    }
+
+    private fun isObjectType(type: Pattern): Boolean = type is TabularPattern || type is JSONObjectPattern
+
+    private fun isJSONPayload(type: Pattern) =
+        type is TabularPattern || type is JSONObjectPattern || type is JSONArrayPattern
+
+    private fun toOpenApiSchema(pattern: Pattern): Schema<Any> {
+        val schema = when {
+            pattern is TabularPattern -> tabularToSchema(pattern)
+            pattern is JSONObjectPattern -> jsonObjectToSchema(pattern)
+            isArrayOfNullables(pattern) -> {
+                ArraySchema().apply {
+                    this.items = Schema<Any>().apply {
+                        val typeAlias = ((pattern as ListPattern).pattern as AnyPattern).pattern.first { it.typeAlias != "(empty)" }.let {
+                            if(it.pattern is String && primitiveTypes.contains(withoutPatternDelimiters(it.pattern.toString())))
+                                withoutPatternDelimiters(it.pattern as String)
+                            else
+                                it.typeAlias ?: throw ContractException("Unknown type: $it")
+                        }
+
+                        setSchemaType(withoutPatternDelimiters(typeAlias), this)
+                        this.nullable = true
+                    }
+                }
+            }
+            isNullableArray(pattern) -> {
+                ArraySchema().apply {
+                    pattern as AnyPattern
+
+                    this.items = Schema<Any>().apply {
+                        setSchemaType(withoutPatternDelimiters(pattern.pattern.first { it.typeAlias != "(empty)" }.let {
+                            it as ListPattern
+                            it.pattern.typeAlias!!
+                        }), this)
+                    }
+                    this.nullable = true
+                }
+            }
+            isNullable(pattern) -> {
+                pattern as AnyPattern
+
+                Schema<Any>().apply {
+                    setSchemaType(withoutPatternDelimiters(pattern.pattern.first { it.typeAlias != "(empty)" }.typeAlias!!), this)
+                    this.nullable = true
+                }
+            }
+            pattern is ListPattern -> {
+                if(pattern.pattern is DeferredPattern) {
+                    ArraySchema().apply {
+                        this.items = Schema<Any>().apply {
+                            setSchemaType(pattern.pattern.typeAlias!!, this)
+                        }
+                    }
+                } else if (isArrayOfNullables(pattern)) {
+                    TODO("Array of nullables not yet supported")
+                } else {
+                    throw ContractException("Unsupported array type ${pattern.typeAlias ?: pattern.typeName}")
+                }
+            }
+            pattern is NumberPattern || (pattern is DeferredPattern && pattern.pattern == "(number)") -> NumberSchema()
+            pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(nothing)") -> StringSchema()
+            pattern is DeferredPattern -> Schema<Any>().apply {
+                this.`$ref` = withoutPatternDelimiters(pattern.pattern)
+            }
+            else ->
+                TODO("Not supported: ${pattern.typeAlias}")
+        }
+
         return schema as Schema<Any>;
+    }
+
+    private fun setSchemaType(type: String, schema: Schema<Any>) {
+        val cleanedUpType = withoutPatternDelimiters(type)
+        if(primitiveTypes.contains(cleanedUpType))
+            schema.type = cleanedUpType
+        else
+            schema.`$ref` = cleanedUpType
+    }
+
+    private fun isNullableArray(pattern: Pattern): Boolean =
+        isNullable(pattern) && pattern is AnyPattern && pattern.pattern.first { it.typeAlias != "(empty)" } is ListPattern
+
+    private fun isArrayOfNullables(pattern: Pattern) =
+        pattern is ListPattern && pattern.pattern is AnyPattern && isNullable(pattern.pattern)
+
+    private fun isNullable(pattern: Pattern) =
+        pattern is AnyPattern && pattern.pattern.any { it.typeAlias == "(empty)" }
+
+    private fun jsonObjectToSchema(pattern: JSONObjectPattern): Schema<Any> = jsonToSchema(pattern.pattern)
+    private fun tabularToSchema(pattern: TabularPattern): Schema<Any> = jsonToSchema(pattern.pattern)
+
+    private fun jsonToSchema(pattern: Map<String, Pattern>): Schema<Any> {
+        val schema = Schema<Any>()
+
+        schema.required = pattern.keys.filterNot { it.endsWith("?") }
+
+        val properties: Map<String, Schema<Any>> = pattern.mapValues { (key, valueType) ->
+            toOpenApiSchema(valueType)
+        }.mapKeys { withoutOptionality(it.key) }
+
+        schema.properties = properties
+
+        return schema
     }
 }
 

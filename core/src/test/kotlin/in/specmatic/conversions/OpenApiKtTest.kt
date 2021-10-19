@@ -749,17 +749,17 @@ Background:
                 In scenario "Open API - Operation Summary: create a pet. Response: pet response"
                 >> RESPONSE.BODY.breed
 
-                Expected ("labrador" or "retriever" or null), Actual was string: "malinois"
+                Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
 
                 In scenario "Open API - Operation Summary: create a pet. Response: pet response"
                 >> RESPONSE.BODY.breed
 
-                Expected ("labrador" or "retriever" or null), Actual was string: "malinois"
+                Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
 
                 In scenario "Open API - Operation Summary: create a pet. Response: pet response"
                 >> RESPONSE.BODY.breed
 
-                Expected ("labrador" or "retriever" or null), Actual was string: "malinois"
+                Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
             """.trimIndent()
         )
     }

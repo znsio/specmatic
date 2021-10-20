@@ -557,16 +557,25 @@ data class Feature(
                 } else if (isArrayOfNullables(pattern)) {
                     TODO("Array of nullables not yet supported")
                 } else {
-                    throw ContractException("Unsupported array type ${pattern.typeAlias ?: pattern.typeName}")
+                    ArraySchema().apply {
+                        this.items = toOpenApiSchema(pattern.pattern)
+                    }
                 }
             }
             pattern is NumberPattern || (pattern is DeferredPattern && pattern.pattern == "(number)") -> NumberSchema()
+            pattern is BooleanPattern || (pattern is DeferredPattern && pattern.pattern == "(boolean)") -> BooleanSchema()
             pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(nothing)") -> StringSchema()
+            pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> StringSchema().apply {
+                this.nullable = true
+            }.also {
+                information.forTheUser("Specmatic encountered a (null) in the spec. OpenAPI does not support raw nulls. Data types may be nullable, but you must specify the data type. Please make sure you specify the nullable datatype wherever null is encountered in the contract.")
+            }
             pattern is DeferredPattern -> Schema<Any>().apply {
                 this.`$ref` = withoutPatternDelimiters(pattern.pattern)
             }
+            pattern is LookupRowPattern -> toOpenApiSchema(pattern.pattern)
             else ->
-                TODO("Not supported: ${pattern.typeAlias}")
+                TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}")
         }
 
         return schema as Schema<Any>;

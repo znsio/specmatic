@@ -1066,6 +1066,72 @@ Scenario: Get product by id
         )
     }
 
+    @Test
+    fun `payload is a list of nullables`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              Given type Person
+              | address | (string?*) |
+              When POST /person
+              And request-body (Person)
+              Then status 200
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedJSON("""{"address": [null, "Baker Street"]}""")
+                ), HttpResponse.OK("success")
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: "#/components/schemas/Person"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas:
+                Person:
+                  required:
+                  - "address"
+                  properties:
+                    address:
+                      type: "array"
+                      items:
+                        type: "string"
+                        nullable: true
+            """.trimIndent()
+        )
+    }
+
     private fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {
         assertThat(headersPattern.pattern.keys.map { it.lowercase() }).doesNotContain(header.lowercase())
     }

@@ -26,7 +26,6 @@ import io.swagger.v3.oas.models.media.*
 import io.swagger.v3.oas.models.parameters.*
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
-import kotlinx.coroutines.Deferred
 import java.io.File
 import java.net.URI
 
@@ -526,7 +525,7 @@ data class Feature(
                     }
                 }
             }
-            isNullableArray(pattern) -> {
+            isArrayOrNull(pattern) -> {
                 ArraySchema().apply {
                     pattern as AnyPattern
 
@@ -555,7 +554,11 @@ data class Feature(
                         }
                     }
                 } else if (isArrayOfNullables(pattern)) {
-                    TODO("Array of nullables not yet supported")
+                    ArraySchema().apply {
+                        val innerPattern: Pattern = ((pattern as ListPattern).pattern as AnyPattern).pattern.first { it !is NullPattern }
+                        this.items = toOpenApiSchema(innerPattern)
+                        this.items.nullable = true
+                    }
                 } else {
                     ArraySchema().apply {
                         this.items = toOpenApiSchema(pattern.pattern)
@@ -593,7 +596,7 @@ data class Feature(
             schema.`$ref` = cleanedUpType
     }
 
-    private fun isNullableArray(pattern: Pattern): Boolean =
+    private fun isArrayOrNull(pattern: Pattern): Boolean =
         isNullable(pattern) && pattern is AnyPattern && pattern.pattern.first { it.typeAlias != "(empty)" } is ListPattern
 
     private fun isArrayOfNullables(pattern: Pattern) =

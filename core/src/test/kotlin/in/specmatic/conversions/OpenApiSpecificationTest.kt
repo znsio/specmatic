@@ -828,6 +828,68 @@ paths:
     }
 
     @Test
+    fun `response headers in gherkin are converted to response headers in OpenAIP`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Get Person
+              Given type Person
+              | address | (string) |
+              When GET /person
+              Then status 200
+              And response-header X-Hello-World (string)
+              And response-body (Person)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/person"
+                ), HttpResponse.OK(parsedJSON("""{"address": "Baker Street"}""")).copy(headers = mapOf("X-Hello-World" to "hello"))
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  parameters: []
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      headers:
+                        X-Hello-World:
+                          required: true
+                          schema:
+                            type: "string"
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: "#/components/schemas/Person"
+            components:
+              schemas:
+                Person:
+                  required:
+                  - "address"
+                  properties:
+                    address:
+                      type: "string"
+            """.trimIndent()
+        )
+    }
+
+    @Test
     fun `JSON response in gherkin is converted to JSON response in OpenAIP`() {
         val feature = parseGherkinStringToFeature(
             """

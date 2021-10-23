@@ -358,7 +358,7 @@ data class Feature(
                     })
                 }
             apiResponse.description = "Response Description"
-            val openApiResponseHeaders = scenario.httpRequestPattern.headersPattern.pattern.map { (key, pattern) ->
+            val openApiResponseHeaders = scenario.httpResponsePattern.headersPattern.pattern.map { (key, pattern) ->
                 val header = Header()
                 header.schema = toOpenApiSchema(pattern)
                 header.required = !key.endsWith("?")

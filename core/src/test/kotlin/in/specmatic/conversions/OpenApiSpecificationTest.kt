@@ -1402,6 +1402,148 @@ Scenario: Get product by id
         )
     }
 
+    @Test
+    fun `multiple scenarios with the same query parameters`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: Get details
+              When GET /data?param=(string)
+              Then status 200
+              And response-body (string)
+
+            Scenario: Get details
+              When GET /data?param=(string)
+              Then status 200
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data"
+                ), HttpResponse.OK.copy(body = StringValue("success"))
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data",
+                    queryParams = mapOf("param" to "data")
+                ), HttpResponse.OK.copy(body = StringValue("success"))
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "API"
+              version: "1"
+            paths:
+              /data:
+                get:
+                  parameters:
+                  - name: "param"
+                    in: "query"
+                    schema:
+                      type: "string"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `multiple scenarios with the different query parameters`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: Get details
+              When GET /data?param1=(string)
+              Then status 200
+              And response-body (string)
+
+            Scenario: Get details
+              When GET /data?param2=(string)
+              Then status 200
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data"
+                ), HttpResponse.OK.copy(body = StringValue("success"))
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data",
+                    queryParams = mapOf("param1" to "data")
+                ), HttpResponse.OK.copy(body = StringValue("success"))
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data",
+                    queryParams = mapOf("param2" to "data")
+                ), HttpResponse.OK.copy(body = StringValue("success"))
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data",
+                    queryParams = mapOf("param1" to "data", "param2" to "data")
+                ), HttpResponse.OK.copy(body = StringValue("success"))
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "API"
+              version: "1"
+            paths:
+              /data:
+                get:
+                  parameters:
+                  - name: "param1"
+                    in: "query"
+                    schema:
+                      type: "string"
+                  - name: "param2"
+                    in: "query"
+                    schema:
+                      type: "string"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+        )
+    }
+
     private fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {
         assertThat(headersPattern.pattern.keys.map { it.lowercase() }).doesNotContain(header.lowercase())
     }

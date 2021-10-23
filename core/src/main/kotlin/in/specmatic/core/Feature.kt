@@ -258,13 +258,165 @@ data class Feature(
         }
     }
 
+    fun combine(baseScenario: Scenario, newScenario: Scenario): Scenario {
+        return convergeHeaders(baseScenario, newScenario).let { convergedScenario ->
+            convergeQueryParameters(convergedScenario, newScenario)
+        }.let { convergedScenario ->
+            convergeRequestPayload(convergedScenario, newScenario)
+        }.let { convergedScenario ->
+            convergeResponsePayload(convergedScenario, newScenario)
+        }
+    }
+
+    private fun convergeResponsePayload(baseScenario: Scenario, newScenario: Scenario): Scenario {
+        val baseResponsePayload = baseScenario.httpResponsePattern.body
+        val newResponsePayload = newScenario.httpResponsePattern.body
+
+        return convergeDataStructure(baseResponsePayload, newResponsePayload, baseScenario.name) { converged ->
+            baseScenario.copy(
+                httpResponsePattern = baseScenario.httpResponsePattern.copy(
+                    body = converged
+                )
+            )
+        }
+    }
+
+    private fun convergeRequestPayload(baseScenario: Scenario, newScenario: Scenario): Scenario {
+        if(baseScenario.httpRequestPattern.multiPartFormDataPattern.isNotEmpty())
+            TODO("Multipart requests")
+
+        return if(baseScenario.httpRequestPattern.formFieldsPattern.size == 1) {
+            val fields = baseScenario.httpRequestPattern.formFieldsPattern
+            val pattern = fields.values.first()
+
+            if(pattern is PatternInStringPattern && pattern.pattern !is JSONObjectPattern)
+                TODO("Form fields with non-json-object values")
+
+            val baseInnerPattern = pattern.pattern as JSONObjectPattern
+
+            if(newScenario.httpRequestPattern.formFieldsPattern.size != 1 || newScenario.httpRequestPattern.formFieldsPattern.size == 1 && newScenario.httpRequestPattern.formFieldsPattern.values.first() !is JSONObjectPattern)
+                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with multiple payload types")
+
+            val newInnerPattern = newScenario.httpRequestPattern.formFieldsPattern.values.first().pattern as JSONObjectPattern
+
+            val converged = JSONObjectPattern(convergePatternMap(baseInnerPattern.pattern, newInnerPattern.pattern))
+
+            baseScenario.copy(
+                httpRequestPattern = baseScenario.httpRequestPattern.copy(
+                    formFieldsPattern = mapOf(baseScenario.httpRequestPattern.formFieldsPattern.keys.first() to PatternInStringPattern(converged))
+                )
+            )
+        } else if(baseScenario.httpRequestPattern.formFieldsPattern.isNotEmpty()) {
+            TODO("Form fields with non-json-object values")
+        } else {
+            val baseRequestBody = baseScenario.httpRequestPattern.body
+            val newRequestBody = newScenario.httpRequestPattern.body
+
+            convergeDataStructure(baseRequestBody, newRequestBody, baseScenario.name) { converged ->
+                baseScenario.copy(
+                    httpRequestPattern = baseScenario.httpRequestPattern.copy(
+                        body = converged
+                    )
+                )
+            }
+        }
+    }
+
+    private fun convergeDataStructure(
+        basePayload: Pattern,
+        newPayload: Pattern,
+        scenarioName: String,
+        updateConverged: (Pattern) -> Scenario
+    ) = if (basePayload is TabularPattern && newPayload is TabularPattern) {
+        val converged = TabularPattern(convergePatternMap(basePayload.pattern, newPayload.pattern))
+
+        updateConverged(converged)
+    } else if (bothAreIdenticalDeferreds(basePayload, newPayload)) {
+        updateConverged(basePayload)
+    } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
+        updateConverged(basePayload)
+    } else {
+        TODO("Non-json request bodies (seen in Scenario named ${scenarioName})")
+    }
+
+    private fun bothAreTheSamePrimitive(
+        baseRequestBody: Pattern,
+        newRequestBody: Pattern
+    ) =
+        (baseRequestBody is EmptyStringPattern && newRequestBody is EmptyStringPattern)
+                || (baseRequestBody.pattern is String
+                && primitiveTypes.contains(withoutPatternDelimiters(baseRequestBody.pattern as String))
+                && newRequestBody.pattern is String
+                && primitiveTypes.contains(withoutPatternDelimiters(newRequestBody.pattern as String))
+                && baseRequestBody.pattern == newRequestBody.pattern)
+
+    private fun bothAreIdenticalDeferreds(
+        baseRequestBody: Pattern,
+        newRequestBody: Pattern
+    ) =
+        baseRequestBody is DeferredPattern && newRequestBody is DeferredPattern && baseRequestBody.pattern == newRequestBody.pattern
+
+    private fun convergeQueryParameters(baseScenario: Scenario, newScenario: Scenario): Scenario {
+        val baseQueryParams = baseScenario.httpRequestPattern.urlMatcher?.queryPattern!!
+        val newQueryParams = newScenario.httpRequestPattern.urlMatcher?.queryPattern!!
+
+        val convergedQueryParams = convergePatternMap(baseQueryParams, newQueryParams)
+
+        return baseScenario.copy(
+            httpRequestPattern = baseScenario.httpRequestPattern.copy(
+                urlMatcher = baseScenario.httpRequestPattern.urlMatcher.copy(queryPattern = convergedQueryParams)
+            )
+        )
+    }
+
+    private fun convergeHeaders(baseScenario: Scenario, newScenario: Scenario): Scenario {
+        val baseRequestHeaders = baseScenario.httpRequestPattern.headersPattern.pattern
+        val newRequestHeaders = newScenario.httpRequestPattern.headersPattern.pattern
+        val convergedRequestHeaders = convergePatternMap(baseRequestHeaders, newRequestHeaders)
+
+        val baseResponseHeaders = baseScenario.httpResponsePattern.headersPattern.pattern
+        val newResponseHeaders = newScenario.httpResponsePattern.headersPattern.pattern
+        val convergedResponseHeaders = convergePatternMap(baseResponseHeaders, newResponseHeaders)
+
+        return baseScenario.copy(
+            httpRequestPattern = baseScenario.httpRequestPattern.copy(
+                headersPattern = HttpHeadersPattern(convergedRequestHeaders)
+            ),
+            httpResponsePattern = baseScenario.httpResponsePattern.copy(
+                headersPattern = HttpHeadersPattern(convergedResponseHeaders)
+            )
+        )
+    }
+
     fun toOpenApi(): OpenAPI {
         val openAPI = OpenAPI()
         openAPI.info = Info().also {
             it.title = this.name
             it.version = "1"
         }
-        val paths = scenarios.map { scenario ->
+
+        scenarios.find { it.httpRequestPattern.method == null }?.let {
+            throw ContractException("Scenario ${it.name} has no method")
+        }
+
+        scenarios.find { it.httpRequestPattern.urlMatcher == null }?.let {
+            throw ContractException("Scenario ${it.name} has no path")
+        }
+
+        val combinedScenarios = scenarios.fold(emptyList<Scenario>()) { acc, scenario ->
+            val scenarioWithSameURLAndPath = acc.find {
+                it.httpRequestPattern.urlMatcher?.path == scenario.httpRequestPattern.urlMatcher?.path
+                        && it.httpRequestPattern.method == scenario.httpRequestPattern.method
+            }
+
+            if(scenarioWithSameURLAndPath == null)
+                acc.plus(scenario)
+            else {
+                acc.minus(scenarioWithSameURLAndPath).plus(combine(scenarioWithSameURLAndPath, scenario))
+            }
+        }
+
+        val paths = combinedScenarios.map { scenario ->
             val path = PathItem()
             val operation = Operation()
             val pathParameters = scenario.httpRequestPattern.urlMatcher!!.pathParameters()
@@ -412,7 +564,7 @@ data class Feature(
                 val converged: Map<String, Pattern> = objectStructure(acc.getValue(entry.key))
                 val new: Map<String, Pattern> = objectStructure(entry.value)
 
-                acc.plus(entry.key to TabularPattern(converge(converged, new)))
+                acc.plus(entry.key to TabularPattern(convergePatternMap(converged, new)))
             }
             else {
                 acc.plus(entry.key to entry.value)
@@ -462,7 +614,7 @@ data class Feature(
         return Pair("application/json", mediaType)
     }
 
-    private fun converge(map1: Map<String, Pattern>, map2: Map<String, Pattern>): Map<String, Pattern> {
+    private fun convergePatternMap(map1: Map<String, Pattern>, map2: Map<String, Pattern>): Map<String, Pattern> {
         val common = map1.filter { entry ->
             val cleanedKey = withoutOptionality(entry.key)
             cleanedKey in map2 || "${cleanedKey}?" in map2
@@ -555,7 +707,7 @@ data class Feature(
                     }
                 } else if (isArrayOfNullables(pattern)) {
                     ArraySchema().apply {
-                        val innerPattern: Pattern = ((pattern as ListPattern).pattern as AnyPattern).pattern.first { it !is NullPattern }
+                        val innerPattern: Pattern = (pattern.pattern as AnyPattern).pattern.first { it !is NullPattern }
                         this.items = toOpenApiSchema(innerPattern)
                         this.items.nullable = true
                     }
@@ -581,6 +733,14 @@ data class Feature(
                 ArraySchema().apply {
                     this.items = StringSchema()
                 }
+            pattern is JSONArrayPattern && pattern.pattern.isNotEmpty() -> {
+                if(pattern.pattern.all { it == pattern.pattern.first() })
+                    ArraySchema().apply {
+                        this.items = toOpenApiSchema(pattern.pattern.first())
+                    }
+                else
+                    throw ContractException("Conversion of raw JSON array type to OpenAPI is not supported. Change the contract spec to define a type and use (type*) instead of a JSON array.")
+            }
             else ->
                 TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}")
         }

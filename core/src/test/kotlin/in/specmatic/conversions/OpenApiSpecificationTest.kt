@@ -8,6 +8,7 @@ import `in`.specmatic.core.pattern.DeferredPattern
 import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.value.StringValue
 import io.ktor.util.reflect.*
 import io.swagger.util.Yaml
 import org.assertj.core.api.Assertions.assertThat
@@ -1128,6 +1129,275 @@ Scenario: Get product by id
                       items:
                         type: "string"
                         nullable: true
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `same request headers from multiple scenarios`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: Get details
+              When GET /data
+              And request-header X-Data (string)
+              Then status 200
+              And response-body (string)
+
+            Scenario: Get details
+              When GET /data
+              And request-header X-Data (string)
+              Then status 200
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data",
+                    headers = mapOf("X-Data" to "data")
+                ), HttpResponse.OK("success")
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "API"
+              version: "1"
+            paths:
+              /data:
+                get:
+                  parameters:
+                  - name: "X-Data"
+                    in: "header"
+                    required: true
+                    schema:
+                      type: "string"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `same response headers from multiple scenarios`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: Get details
+              When GET /data
+              Then status 200
+              And response-header X-Data (string)
+              And response-body (string)
+
+            Scenario: Get details
+              When GET /data
+              Then status 200
+              And response-header X-Data (string)
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data"
+                ), HttpResponse.OK("success").copy(headers = mapOf("X-Data" to "data"))
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "API"
+              version: "1"
+            paths:
+              /data:
+                get:
+                  parameters: []
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      headers:
+                        X-Data:
+                          required: true
+                          schema:
+                            type: "string"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `different response headers from multiple scenarios with the same method and path`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: Get details
+              When GET /data
+              Then status 200
+              And response-header X-Data-One (string)
+              And response-body (string)
+
+            Scenario: Get details
+              When GET /data
+              Then status 200
+              And response-header X-Data-Two (string)
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data"
+                ), HttpResponse.OK("success").copy(headers = mapOf("X-Data-One" to "data"))
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data"
+                ), HttpResponse.OK("success").copy(headers = mapOf("X-Data-Two" to "data"))
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data"
+                ), HttpResponse.OK("success")
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "API"
+              version: "1"
+            paths:
+              /data:
+                get:
+                  parameters: []
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      headers:
+                        X-Data-One:
+                          required: false
+                          schema:
+                            type: "string"
+                        X-Data-Two:
+                          required: false
+                          schema:
+                            type: "string"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `different request headers from multiple scenarios with the same method and path`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: Get details
+              When GET /data
+              And request-header X-Data-One (string)
+              Then status 200
+              And response-body (string)
+
+            Scenario: Get details
+              When GET /data
+              And request-header X-Data-Two (string)
+              Then status 200
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data",
+                    headers = mapOf("X-Data-One" to "data")
+                ), HttpResponse.OK("success")
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data",
+                    headers = mapOf("X-Data-One" to "data")
+                ), HttpResponse.OK("success")
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/data",
+                    headers = mapOf("X-Data-One" to "data")
+                ), HttpResponse.OK("success")
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "API"
+              version: "1"
+            paths:
+              /data:
+                get:
+                  parameters:
+                  - name: "X-Data-One"
+                    in: "header"
+                    required: false
+                    schema:
+                      type: "string"
+                  - name: "X-Data-Two"
+                    in: "header"
+                    required: false
+                    schema:
+                      type: "string"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
             """.trimIndent()
         )
     }

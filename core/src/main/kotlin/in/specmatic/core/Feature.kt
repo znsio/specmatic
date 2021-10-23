@@ -574,6 +574,10 @@ data class Feature(
                 this.`$ref` = withoutPatternDelimiters(pattern.pattern)
             }
             pattern is LookupRowPattern -> toOpenApiSchema(pattern.pattern)
+            pattern is JSONArrayPattern && pattern.pattern.isEmpty() ->
+                ArraySchema().apply {
+                    this.items = StringSchema()
+                }
             else ->
                 TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}")
         }

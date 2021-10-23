@@ -189,57 +189,49 @@ Scenario: Get product by id
         )
         val openAPI = feature.toOpenApi()
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml).isEqualTo(
-            """---
-openapi: "3.0.1"
-info:
-  title: "Product API"
-  version: "1"
-paths:
-  /product/{id}/variants/{variantId}:
-    get:
-      parameters:
-      - name: "id"
-        in: "path"
-        required: true
-        schema:
-          type: "number"
-      - name: "variantId"
-        in: "path"
-        required: true
-        schema:
-          type: "number"
-      - name: "tag"
-        in: "query"
-        schema:
-          type: "string"
-      - name: "Authentication"
-        in: "header"
-        required: true
-        schema:
-          type: "string"
-      - name: "OptionalHeader"
-        in: "header"
-        required: false
-        schema:
-          type: "string"
-      responses:
-        "200":
-          description: "Response Description"
-          headers:
-            Authentication:
-              required: true
-              schema:
-                type: "string"
-            OptionalHeader:
-              required: false
-              schema:
-                type: "string"
-          content:
-            text/plain:
-              schema:
-                type: "string"
-"""
+        assertThat(openAPIYaml.trimIndent()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Product API"
+              version: "1"
+            paths:
+              /product/{id}/variants/{variantId}:
+                get:
+                  parameters:
+                  - name: "id"
+                    in: "path"
+                    required: true
+                    schema:
+                      type: "number"
+                  - name: "variantId"
+                    in: "path"
+                    required: true
+                    schema:
+                      type: "number"
+                  - name: "tag"
+                    in: "query"
+                    schema:
+                      type: "string"
+                  - name: "Authentication"
+                    in: "header"
+                    required: true
+                    schema:
+                      type: "string"
+                  - name: "OptionalHeader"
+                    in: "header"
+                    required: false
+                    schema:
+                      type: "string"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            """.trimIndent()
         )
     }
 
@@ -1009,7 +1001,72 @@ paths:
         )
     }
 
-    fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {
+    @Test
+    fun `converts empty json array in gherkin to string array in openapi`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              Given type Person
+              | address | [] |
+              When POST /person
+              And request-body (Person)
+              Then status 200
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedJSON("""{"address": []}""")
+                ), HttpResponse.OK("success")
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: "#/components/schemas/Person"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas:
+                Person:
+                  required:
+                  - "address"
+                  properties:
+                    address:
+                      type: "array"
+                      items:
+                        type: "string"
+            """.trimIndent()
+        )
+    }
+
+    private fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {
         assertThat(headersPattern.pattern.keys.map { it.lowercase() }).doesNotContain(header.lowercase())
     }
 }

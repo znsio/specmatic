@@ -827,6 +827,70 @@ paths:
         )
     }
 
+    @Test
+    fun `defaults to nullable string for null type in gherkin`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              Given type Person
+              | address | (null) |
+              When POST /person
+              And request-body (Person)
+              Then status 200
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedJSON("""{"address": null}""")
+                ), HttpResponse.OK("success")
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: "#/components/schemas/Person"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas:
+                Person:
+                  required:
+                  - "address"
+                  properties:
+                    address:
+                      type: "string"
+                      nullable: true
+            """.trimIndent()
+        )
+    }
+
     fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {
         assertThat(headersPattern.pattern.keys.map { it.lowercase() }).doesNotContain(header.lowercase())
     }

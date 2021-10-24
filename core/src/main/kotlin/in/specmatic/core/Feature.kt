@@ -319,7 +319,7 @@ data class Feature(
                 )
             )
         } else if(baseScenario.httpRequestPattern.formFieldsPattern.isNotEmpty()) {
-            TODO("Form fields with non-json-object values")
+            TODO("Form fields with non-json-object values (${baseScenario.httpRequestPattern.formFieldsPattern.values.joinToString(", ") { it.typeAlias ?: if(it.pattern is String) it.pattern.toString() else it.typeName }})")
         } else {
             val baseRequestBody = baseScenario.httpRequestPattern.body
             val newRequestBody = newScenario.httpRequestPattern.body
@@ -348,7 +348,7 @@ data class Feature(
     } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
         updateConverged(basePayload)
     } else {
-        TODO("Non-json request bodies (seen in Scenario named ${scenarioName})")
+        TODO("Non-json payloads (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName.toString()}, ${newPayload.typeAlias ?: newPayload.typeName.toString()})")
     }
 
     private fun bothAreTheSamePrimitive(
@@ -732,9 +732,12 @@ data class Feature(
             isNullable(pattern) -> {
                 pattern as AnyPattern
 
-                Schema<Any>().apply {
-                    val patternName = pattern.pattern.first { it.typeAlias != "(empty)" }.let { it.typeAlias ?: it.pattern as String }
-                    setSchemaType(patternName, this)
+                val innerPattern: Pattern = pattern.pattern.first { it.typeAlias != "(empty)" }
+
+                when {
+                    innerPattern.pattern is String && innerPattern.pattern in builtInPatterns -> toOpenApiSchema(builtInPatterns.getValue(innerPattern.pattern as String))
+                    else -> toOpenApiSchema(innerPattern)
+                }.apply {
                     this.nullable = true
                 }
             }

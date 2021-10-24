@@ -1544,6 +1544,84 @@ Scenario: Get product by id
         )
     }
 
+    @Test
+    fun `multiple scenarios with the same form fields containing JSON`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: Get details
+              Given type Record
+              | id | (number) |
+              When POST /data
+              And form-field Data (Record)
+              Then status 200
+              And response-body (string)
+
+            Scenario: Get details
+              Given type Record
+              | id | (number) |
+              When POST /data
+              And form-field Data (Record)
+              Then status 200
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    formFields = mapOf("Data" to """{"id": 10}""")
+                ), HttpResponse.OK.copy(body = StringValue("success"))
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/x-www-form-urlencoded:
+                        schema:
+                          required:
+                          - "Data"
+                          properties:
+                            Data:
+                              ${"$"}ref: "#/components/schemas/Record"
+                        encoding:
+                          Data:
+                            contentType: "application/json"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas:
+                Record:
+                  required:
+                  - "id"
+                  properties:
+                    id:
+                      type: "number"
+            """.trimIndent()
+        )
+    }
+
     private fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {
         assertThat(headersPattern.pattern.keys.map { it.lowercase() }).doesNotContain(header.lowercase())
     }

@@ -286,24 +286,37 @@ data class Feature(
             TODO("Multipart requests")
 
         return if(baseScenario.httpRequestPattern.formFieldsPattern.size == 1) {
-            val fields = baseScenario.httpRequestPattern.formFieldsPattern
-            val pattern = fields.values.first()
-
-            if(pattern is PatternInStringPattern && pattern.pattern !is JSONObjectPattern)
-                TODO("Form fields with non-json-object values")
-
-            val baseInnerPattern = pattern.pattern as JSONObjectPattern
-
-            if(newScenario.httpRequestPattern.formFieldsPattern.size != 1 || newScenario.httpRequestPattern.formFieldsPattern.size == 1 && newScenario.httpRequestPattern.formFieldsPattern.values.first() !is JSONObjectPattern)
+            if(newScenario.httpRequestPattern.formFieldsPattern.size != 1 ||
+                (newScenario.httpRequestPattern.formFieldsPattern.size == 1
+                        && !isObjectType(resolvedHop(newScenario.httpRequestPattern.formFieldsPattern.values.first(), newScenario.resolver))))
                 throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with multiple payload types")
 
-            val newInnerPattern = newScenario.httpRequestPattern.formFieldsPattern.values.first().pattern as JSONObjectPattern
+            val baseRawPattern = baseScenario.httpRequestPattern.formFieldsPattern.values.first()
+            val resolvedBasePattern = resolvedHop(baseRawPattern, baseScenario.resolver)
 
-            val converged = JSONObjectPattern(convergePatternMap(baseInnerPattern.pattern, newInnerPattern.pattern))
+            val newRawPattern = newScenario.httpRequestPattern.formFieldsPattern.values.first()
+            val resolvedNewPattern = resolvedHop(newRawPattern, newScenario.resolver)
+
+            val converged: Pattern = when {
+                baseRawPattern is DeferredPattern -> {
+                    if(baseRawPattern.pattern == newRawPattern.pattern && isObjectType(resolvedBasePattern))
+                        baseRawPattern
+                    else
+                        throw ContractException("Cannot converge different types ${baseRawPattern.pattern} and ${newRawPattern.pattern} found in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")
+                }
+                resolvedBasePattern.pattern is String && primitiveTypes.contains(resolvedBasePattern.pattern) -> {
+                    if(resolvedBasePattern.pattern != resolvedNewPattern.pattern)
+                        throw ContractException("Cannot converge ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} because there are multiple types of request payloads")
+
+                    resolvedBasePattern
+                }
+                else ->
+                    throw TODO("Converging of type ${resolvedBasePattern.pattern} and ${resolvedNewPattern.pattern} in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")
+            }
 
             baseScenario.copy(
                 httpRequestPattern = baseScenario.httpRequestPattern.copy(
-                    formFieldsPattern = mapOf(baseScenario.httpRequestPattern.formFieldsPattern.keys.first() to PatternInStringPattern(converged))
+                    formFieldsPattern = mapOf(baseScenario.httpRequestPattern.formFieldsPattern.keys.first() to converged)
                 )
             )
         } else if(baseScenario.httpRequestPattern.formFieldsPattern.isNotEmpty()) {
@@ -320,6 +333,14 @@ data class Feature(
                 )
             }
         }
+    }
+
+    private fun getPatternMap(
+        baseRawPattern: Pattern
+    ) = when (baseRawPattern) {
+        is JSONObjectPattern -> baseRawPattern.pattern
+        is TabularPattern -> baseRawPattern.pattern
+        else -> TODO("Form field of type $baseRawPattern")
     }
 
     private fun convergeDataStructure(

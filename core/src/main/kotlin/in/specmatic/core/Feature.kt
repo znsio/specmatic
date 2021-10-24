@@ -5,7 +5,6 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.*
-import `in`.specmatic.core.wsdl.parser.message.primitiveTypes
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
@@ -304,7 +303,7 @@ data class Feature(
                     else
                         throw ContractException("Cannot converge different types ${baseRawPattern.pattern} and ${newRawPattern.pattern} found in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")
                 }
-                resolvedBasePattern.pattern is String && primitiveTypes.contains(resolvedBasePattern.pattern) -> {
+                resolvedBasePattern.pattern is String && builtInPatterns.contains(resolvedBasePattern.pattern) -> {
                     if(resolvedBasePattern.pattern != resolvedNewPattern.pattern)
                         throw ContractException("Cannot converge ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} because there are multiple types of request payloads")
 
@@ -335,14 +334,6 @@ data class Feature(
         }
     }
 
-    private fun getPatternMap(
-        baseRawPattern: Pattern
-    ) = when (baseRawPattern) {
-        is JSONObjectPattern -> baseRawPattern.pattern
-        is TabularPattern -> baseRawPattern.pattern
-        else -> TODO("Form field of type $baseRawPattern")
-    }
-
     private fun convergeDataStructure(
         basePayload: Pattern,
         newPayload: Pattern,
@@ -366,9 +357,9 @@ data class Feature(
     ) =
         (baseRequestBody is EmptyStringPattern && newRequestBody is EmptyStringPattern)
                 || (baseRequestBody.pattern is String
-                && primitiveTypes.contains(withoutPatternDelimiters(baseRequestBody.pattern as String))
+                && builtInPatterns.contains(baseRequestBody.pattern as String)
                 && newRequestBody.pattern is String
-                && primitiveTypes.contains(withoutPatternDelimiters(newRequestBody.pattern as String))
+                && builtInPatterns.contains(newRequestBody.pattern as String)
                 && baseRequestBody.pattern == newRequestBody.pattern)
 
     private fun bothAreIdenticalDeferreds(
@@ -692,13 +683,18 @@ data class Feature(
                 ArraySchema().apply {
                     this.items = Schema<Any>().apply {
                         val typeAlias = ((pattern as ListPattern).pattern as AnyPattern).pattern.first { it.typeAlias != "(empty)" }.let {
-                            if(it.pattern is String && primitiveTypes.contains(withoutPatternDelimiters(it.pattern.toString())))
-                                withoutPatternDelimiters(it.pattern as String)
+                            if(it.pattern is String && builtInPatterns.contains(it.pattern.toString()))
+                                it.pattern as String
                             else
-                                it.typeAlias ?: throw ContractException("Unknown type: $it")
+                                it.typeAlias?.let { typeAlias ->
+                                    if(!typeAlias.startsWith("("))
+                                        "($typeAlias)"
+                                    else
+                                        typeAlias
+                                } ?: throw ContractException("Unknown type: $it")
                         }
 
-                        setSchemaType(withoutPatternDelimiters(typeAlias), this)
+                        setSchemaType(typeAlias, this)
                         this.nullable = true
                     }
                 }
@@ -776,7 +772,7 @@ data class Feature(
 
     private fun setSchemaType(type: String, schema: Schema<Any>) {
         val cleanedUpType = withoutPatternDelimiters(type)
-        if(primitiveTypes.contains(cleanedUpType))
+        if(builtInPatterns.contains(type))
             schema.type = cleanedUpType
         else
             schema.`$ref` = cleanedUpType

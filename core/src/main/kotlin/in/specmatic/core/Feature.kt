@@ -477,6 +477,11 @@ data class Feature(
                 requestBodyType is XMLPattern || requestBodyType is DeferredPattern && requestBodyType.resolvePattern(scenario.resolver) is XMLPattern -> {
                     throw ContractException("XML not supported yet")
                 }
+                requestBodyType is ExactValuePattern -> {
+                    val mediaType = MediaType()
+                    mediaType.schema = toOpenApiSchema(requestBodyType)
+                    Pair("text/plain", mediaType)
+                }
                 requestBodyType.pattern.let { it is String && builtInPatterns.contains(it) } -> {
                     val mediaType = MediaType()
                     mediaType.schema = toOpenApiSchema(requestBodyType)
@@ -775,6 +780,14 @@ data class Feature(
                     }
                 else
                     throw ContractException("Conversion of raw JSON array type to OpenAPI is not supported. Change the contract spec to define a type and use (type*) instead of a JSON array.")
+            }
+            pattern is ExactValuePattern -> {
+                toOpenApiSchema(pattern.pattern.type()).apply {
+                    this.enum = listOf(pattern.pattern.toStringLiteral())
+                }
+            }
+            pattern is PatternInStringPattern -> {
+                StringSchema()
             }
             else ->
                 TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}")

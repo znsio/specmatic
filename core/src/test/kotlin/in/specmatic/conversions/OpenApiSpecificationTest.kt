@@ -4,10 +4,7 @@ import `in`.specmatic.core.HttpHeadersPattern
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.pattern.DeferredPattern
-import `in`.specmatic.core.pattern.NullPattern
-import `in`.specmatic.core.pattern.Pattern
-import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import io.ktor.util.reflect.*
@@ -1023,6 +1020,106 @@ Scenario: Get product by id
     }
 
     @Test
+    fun `programmatically construct OpenAPI YAML for POST with request body with exact value`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              When POST /person
+              And request-body hello
+              Then status 200
+            """
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            this.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = StringValue("hello")
+                ), HttpResponse.OK
+            )
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      text/plain:
+                        schema:
+                          type: "string"
+                          enum:
+                          - "hello"
+                  responses:
+                    "200":
+                      description: "Response Description"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `programmatically construct OpenAPI YAML for POST with header with exact value`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              When POST /person
+              And request-header X-Exact-Value hello
+              Then status 200
+            """
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            this.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    headers = mapOf("X-Exact-Value" to "hello")
+                ), HttpResponse.OK
+            )
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters:
+                  - name: "X-Exact-Value"
+                    in: "header"
+                    required: true
+                    schema:
+                      type: "string"
+                      enum:
+                      - "hello"
+                  responses:
+                    "200":
+                      description: "Response Description"
+            """.trimIndent()
+        )
+    }
+
+    @Test
     fun `programmatically construct OpenAPI YAML for POST with request type number`() {
         val feature = parseGherkinStringToFeature(
             """
@@ -1063,6 +1160,59 @@ Scenario: Get product by id
                       text/plain:
                         schema:
                           type: "number"
+                  responses:
+                    "200":
+                      description: "Response Description"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `programmatically construct OpenAPI YAML for POST with type number in string`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              When POST /person
+              And request-body
+              | id | (number in string) |
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            this.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedValue("""{"id": "10"}""")
+                ), HttpResponse.OK
+            )
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - "id"
+                          properties:
+                            id:
+                              type: "string"
                   responses:
                     "200":
                       description: "Response Description"

@@ -349,7 +349,7 @@ data class Feature(
     } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
         updateConverged(basePayload)
     } else {
-        TODO("Non-json payloads (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName.toString()}, ${newPayload.typeAlias ?: newPayload.typeName.toString()})")
+        TODO("Payload definitions with different names found (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName}, ${newPayload.typeAlias ?: newPayload.typeName})")
     }
 
     private fun bothAreTheSamePrimitive(

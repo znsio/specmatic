@@ -49,7 +49,7 @@ fun parseContractFileToFeature(file: File): Feature {
 fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""): Feature {
     val gherkinDocument = parseGherkinString(gherkinData, sourceFilePath)
     val (name, scenarios) = lex(gherkinDocument, sourceFilePath)
-    return Feature(scenarios = scenarios, name = name)
+    return Feature(scenarios = scenarios, name = name, path = sourceFilePath)
 }
 
 data class Feature(
@@ -57,7 +57,8 @@ data class Feature(
     private var serverState: Map<String, Value> = emptyMap(),
     val name: String,
     val testVariables: Map<String, String> = emptyMap(),
-    val testBaseURLs: Map<String, String> = emptyMap()
+    val testBaseURLs: Map<String, String> = emptyMap(),
+    val path: String = ""
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {

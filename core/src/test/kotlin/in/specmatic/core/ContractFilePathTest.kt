@@ -9,8 +9,11 @@ import `in`.specmatic.core.pattern.ContractException
 internal class ContractFilePathTest {
     @Test
     fun `reads a qontract file and instantiates a feature file from it`() {
-        val actualFeature = ContractFileWithExports(pathTo("random.$CONTRACT_EXTENSION")).readFeatureForValue("")
-        val expectedFeature = parseGherkinStringToFeature(readTextResource("random.$CONTRACT_EXTENSION"))
+        val contractPath = "random.$CONTRACT_EXTENSION"
+
+        val actualFeature = ContractFileWithExports(pathTo(contractPath)).readFeatureForValue("")
+        val expectedFeature = parseGherkinStringToFeature(readTextResource(contractPath), javaClass.classLoader.getResource(contractPath)?.file!!)
+
         assertThat(actualFeature).isEqualTo(expectedFeature)
     }
 

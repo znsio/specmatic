@@ -471,6 +471,11 @@ data class Feature(
                 requestBodyType is XMLPattern || requestBodyType is DeferredPattern && requestBodyType.resolvePattern(scenario.resolver) is XMLPattern -> {
                     throw ContractException("XML not supported yet")
                 }
+                requestBodyType.pattern.let { it is String && builtInPatterns.contains(it) } -> {
+                    val mediaType = MediaType()
+                    mediaType.schema = toOpenApiSchema(requestBodyType)
+                    Pair("text/plain", mediaType)
+                }
                 else -> {
                     if(scenario.httpRequestPattern.formFieldsPattern.isNotEmpty()) {
                         val mediaType = MediaType()

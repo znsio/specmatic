@@ -8,6 +8,7 @@ import `in`.specmatic.core.pattern.DeferredPattern
 import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import io.ktor.util.reflect.*
 import io.swagger.util.Yaml
@@ -747,7 +748,7 @@ Scenario: Get product by id
     }
 
     @Test
-    fun `programmatically construct OpenAPI YAML for POST and merge data structures with common names`() {
+    fun `programmatically construct OpenAPI YAML for POST and merge JSON request bodies structures with common names`() {
         val feature = parseGherkinStringToFeature(
             """
             Feature: Person API
@@ -816,6 +817,312 @@ Scenario: Get product by id
                       type: "string"
                     id:
                       type: "string"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `programmatically construct OpenAPI YAML for GET and merge JSON response bodies structures with common names`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              Given type Person
+              | address | (string) |
+              When GET /person1
+              Then status 200
+              And response-body (Person)
+
+            Scenario: Add Person Details
+              Given type Person
+              | id | (string) |
+              | address | (string) |
+              When GET /person2
+              Then status 200
+              And response-body (Person)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/person1"
+                ), HttpResponse.OK(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/person2"
+                ), HttpResponse.OK(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/person1"
+                ), HttpResponse.OK(body = parsedJSON("""{"address": "Baker street"}"""))
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/person2"
+                ), HttpResponse.OK(body = parsedJSON("""{"address": "Baker street"}"""))
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person1:
+                get:
+                  parameters: []
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: "#/components/schemas/Person"
+              /person2:
+                get:
+                  parameters: []
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: "#/components/schemas/Person"
+            components:
+              schemas:
+                Person:
+                  required:
+                  - "address"
+                  properties:
+                    address:
+                      type: "string"
+                    id:
+                      type: "string"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `programmatically construct OpenAPI YAML for POST with request type string`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              When POST /person
+              And request-body (string)
+              Then status 200
+            """
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            this.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = StringValue("test")
+                ), HttpResponse.OK
+            )
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      text/plain:
+                        schema:
+                          type: "string"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        application/json:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `programmatically construct OpenAPI YAML for POST with request type number`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              When POST /person
+              And request-body (number)
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            this.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = NumberValue(10)
+                ), HttpResponse.OK
+            )
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      text/plain:
+                        schema:
+                          type: "number"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        application/json:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `programmatically construct OpenAPI YAML for POST and merge JSON request bodies structures with request type string`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              When POST /person
+              And request-body (string)
+              Then status 200
+
+            Scenario: Add Person Details
+              When POST /person
+              And request-body (string)
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            this.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = StringValue("test")
+                ), HttpResponse.OK
+            )
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      text/plain:
+                        schema:
+                          type: "string"
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        application/json:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `programmatically construct OpenAPI YAML for POST and merge JSON response bodies structures with response type number`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Add Person
+              When POST /person
+              Then status 200
+              And response-body (number)
+
+            Scenario: Add Person Details
+              When POST /person
+              Then status 200
+              And response-body (number)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            this.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/person"
+                ), HttpResponse.OK(NumberValue(10))
+            )
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters: []
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "number"
             """.trimIndent()
         )
     }

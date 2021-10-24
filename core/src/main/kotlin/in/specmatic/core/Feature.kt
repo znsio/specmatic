@@ -436,9 +436,6 @@ data class Feature(
             val existingPathItem = acc.find { it.first == pathName }?.second
             val path = existingPathItem ?: PathItem()
 
-//            val pathMethod = PathItem.HttpMethod.valueOf(scenario.httpRequestPattern.method!!)
-//            val operation = operationsMap[pathMethod] ?: Operation()
-
             val operation = when(scenario.httpRequestPattern.method!!) {
                 "GET" -> path.get
                 "POST" -> path.post
@@ -620,25 +617,6 @@ data class Feature(
                 it.addPathItem(pathName, newPath)
             }
         }
-
-//        openAPI.paths = Paths().apply {
-//            paths.forEach { (pathName, newPath) ->
-//                if(this.contains(pathName)) {
-//                    val existingPath = this.getValue(pathName)
-//                    if(existingPath.get == null)
-//                        existingPath.get = newPath.get
-//                    else {
-//                        existingPath.get.requestBody = newPath.get.requestBody
-//
-//                        newPath.get.responses.forEach { (responseType, response) ->
-//                            existingPath.get.responses[responseType] = response
-//                        }
-//                    }
-//                } else {
-//                    this.addPathItem(pathName, newPath)
-//                }
-//            }
-//        }
 
         return openAPI
     }

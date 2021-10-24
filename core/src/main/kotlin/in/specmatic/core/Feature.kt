@@ -144,8 +144,7 @@ data class Feature(
     }
 
     fun matches(request: HttpRequest, response: HttpResponse): Boolean {
-        return scenarios.firstOrNull { it.matches(request, serverState) is Result.Success }
-            ?.matches(response) is Result.Success
+        return scenarios.firstOrNull { it.matches(request, serverState) is Result.Success && it.matches(response) is Result.Success } != null
     }
 
     fun matchingStub(request: HttpRequest, response: HttpResponse): HttpStubData {
@@ -419,6 +418,7 @@ data class Feature(
             val scenarioWithSameURLAndPath = acc.find {
                 it.httpRequestPattern.urlMatcher?.path == scenario.httpRequestPattern.urlMatcher?.path
                         && it.httpRequestPattern.method == scenario.httpRequestPattern.method
+                        && it.httpResponsePattern.status == scenario.httpResponsePattern.status
             }
 
             if(scenarioWithSameURLAndPath == null)
@@ -428,10 +428,24 @@ data class Feature(
             }
         }
 
-        val paths = combinedScenarios.map { scenario ->
-            val path = PathItem()
-            val operation = Operation()
+        val paths: List<Pair<String, PathItem>> = combinedScenarios.fold(emptyList()) { acc, scenario ->
+            val pathName = scenario.httpRequestPattern.urlMatcher!!.toOpenApiPath()
+
+            val existingPathItem = acc.find { it.first == pathName }?.second
+            val path = existingPathItem ?: PathItem()
+
+//            val pathMethod = PathItem.HttpMethod.valueOf(scenario.httpRequestPattern.method!!)
+//            val operation = operationsMap[pathMethod] ?: Operation()
+
+            val operation = when(scenario.httpRequestPattern.method!!) {
+                "GET" -> path.get
+                "POST" -> path.post
+                "DELETE" -> path.delete
+                else -> TODO("Method \"${scenario.httpRequestPattern.method}\" in scenario ${scenario.name}")
+            } ?: Operation()
+
             val pathParameters = scenario.httpRequestPattern.urlMatcher!!.pathParameters()
+
             val openApiPathParameters = pathParameters.map {
                 val pathParameter: Parameter = PathParameter()
                 pathParameter.name = it.key
@@ -517,8 +531,11 @@ data class Feature(
             }
 
             operation.parameters = openApiPathParameters + openApiQueryParameters + openApiRequestHeaders
-            val responses = ApiResponses()
+
+            val responses = operation.responses ?: ApiResponses()
+
             val apiResponse = ApiResponse()
+
             apiResponse.content =
                 Content().also {
                     it.addMediaType("application/json", MediaType().also {
@@ -570,8 +587,8 @@ data class Feature(
                 "POST" -> path.post = operation
                 "DELETE" -> path.delete = operation
             }
-            val pathName = scenario.httpRequestPattern.urlMatcher!!.toOpenApiPath()
-            pathName to path
+
+            acc.plus(pathName to path)
         }
 
         val schemas: Map<String, Pattern> = this.scenarios.map {
@@ -603,10 +620,10 @@ data class Feature(
             }
         }
 
-//        openAPI.paths = Paths().also {
+//        openAPI.paths = Paths().apply {
 //            paths.forEach { (pathName, newPath) ->
-//                if(it.contains(pathName)) {
-//                    val existingPath = it.getValue(pathName)
+//                if(this.contains(pathName)) {
+//                    val existingPath = this.getValue(pathName)
 //                    if(existingPath.get == null)
 //                        existingPath.get = newPath.get
 //                    else {
@@ -617,7 +634,7 @@ data class Feature(
 //                        }
 //                    }
 //                } else {
-//                    it.addPathItem(pathName, newPath)
+//                    this.addPathItem(pathName, newPath)
 //                }
 //            }
 //        }

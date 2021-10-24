@@ -1929,6 +1929,70 @@ Scenario: Get product by id
         )
     }
 
+    @Test
+    fun `merge multiple scenarios with the different status codes during gherkin-openapi conversion`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: Get details
+              When POST /data
+              Then status 200
+
+            Scenario: Get details
+              When POST /data
+              Then status 500
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data"
+                ), HttpResponse.OK
+            )).isTrue
+
+            val check_500 = this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data"
+                ), HttpResponse(500)
+            )
+
+            assertThat(check_500).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trimIndent()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  parameters: []
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        application/json:
+                          schema:
+                            type: "string"
+                    "500":
+                      description: "Response Description"
+                      content:
+                        application/json:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+        )
+    }
+
     private fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {
         assertThat(headersPattern.pattern.keys.map { it.lowercase() }).doesNotContain(header.lowercase())
     }

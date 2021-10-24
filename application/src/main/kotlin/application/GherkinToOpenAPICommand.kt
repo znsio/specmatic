@@ -2,6 +2,7 @@
 
 package application
 
+import `in`.specmatic.core.Verbose
 import `in`.specmatic.core.information
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.utilities.exitWithMessage
@@ -18,20 +19,30 @@ class GherkinToOpenAPICommand : Callable<Unit> {
     @CommandLine.Parameters(description = ["Path in which to create the bundle"])
     lateinit var contractPath: String
 
-    @Autowired
-    lateinit var qontractConfig: QontractConfig
+    @CommandLine.Option(names = ["--verbose"])
+    var verbose: Boolean = false
 
     @Autowired
     lateinit var fileOperations: FileOperations
 
     override fun call() {
+        if(verbose) {
+            information = Verbose
+        }
+
         if(!fileOperations.isFile(contractPath))
             exitWithMessage("$contractPath is not a file")
 
-        val openAPI = parseGherkinStringToFeature(fileOperations.read(contractPath)).toOpenApi()
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        val contractFile = File(contractPath)
-        val openAPIFile: File = contractFile.canonicalFile.parentFile.resolve(contractFile.nameWithoutExtension + ".yaml")
-        openAPIFile.writeText(openAPIYaml)
+        try {
+            val openAPI = parseGherkinStringToFeature(fileOperations.read(contractPath)).toOpenApi()
+            val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+            val contractFile = File(contractPath)
+            val openAPIFile: File =
+                contractFile.canonicalFile.parentFile.resolve(contractFile.nameWithoutExtension + ".yaml")
+            openAPIFile.writeText(openAPIYaml)
+        } catch(e: Throwable) {
+            information.forTheUser("# Error parsing file $contractPath")
+            information.forTheUser(e)
+        }
     }
 }

@@ -54,7 +54,7 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
 
     fun toFeature(): Feature {
         val name = File(openApiFile).name
-        return Feature(toScenarioInfos().map { Scenario(it) }, name = name)
+        return Feature(toScenarioInfos().map { Scenario(it) }, name = name, path = openApiFile)
     }
 
     override fun toScenarioInfos(): List<ScenarioInfo> {

@@ -3,9 +3,10 @@ package `in`.specmatic.core
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.stub.HttpStubResponse
 import `in`.specmatic.stub.getDateStringValue
 
-data class JSONHTTPLog(var requestTime: String = "", var httpRequest: HttpRequest = HttpRequest(), var responseTime: String = "", var response: HttpResponse = HttpResponse.OK) {
+data class JSONHTTPLog(var requestTime: String = "", var httpRequest: HttpRequest = HttpRequest(), var responseTime: String = "", var response: HttpResponse = HttpResponse.OK, var contractPath: String = "") {
     fun addRequest(httpRequest: HttpRequest) {
         requestTime = getDateStringValue()
         this.httpRequest = httpRequest
@@ -33,7 +34,13 @@ data class JSONHTTPLog(var requestTime: String = "", var httpRequest: HttpReques
         log["http-request"] = httpRequest.toJSON()
         log["http-response"] = response.toJSON()
         log["responseTime"] = StringValue(getDateStringValue())
+        log["contractPath"] = StringValue(contractPath)
 
         return JSONObjectValue(log.toMap()).displayableValue() + ","
+    }
+
+    fun addResponse(stubResponse: HttpStubResponse) {
+        addResponse(stubResponse.response)
+        contractPath = stubResponse.contractPath
     }
 }

@@ -4,7 +4,6 @@ import `in`.specmatic.LogTail
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedValue
-import `in`.specmatic.core.pattern.withoutOptionality
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.toMap
@@ -33,7 +32,7 @@ import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.text.toCharArray
 
-data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null)
+data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "")
 
 class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
     fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
@@ -109,7 +108,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                     }
 
                     respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
-                    httpLog.addResponse(httpStubResponse.response)
+                    httpLog.addResponse(httpStubResponse)
                 }
                 catch(e: ContractException) {
                     val response = badRequest(e.report())
@@ -332,7 +331,7 @@ private fun stubbedResponse(
 
     val stubResponse = mock?.let {
         val softCastResponse = it.softCastResponseToXML(httpRequest).response
-        HttpStubResponse(softCastResponse, it.delayInSeconds)
+        HttpStubResponse(softCastResponse, it.delayInSeconds, it.contractPath)
     }
 
     return Pair(matchResults, stubResponse)

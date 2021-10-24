@@ -229,7 +229,7 @@ data class Feature(
     }
 
     fun matchingStub(scenarioStub: ScenarioStub): HttpStubData =
-        matchingStub(scenarioStub.request, scenarioStub.response).copy(delayInSeconds = scenarioStub.delayInSeconds)
+        matchingStub(scenarioStub.request, scenarioStub.response).copy(delayInSeconds = scenarioStub.delayInSeconds).copy(contractPath = path)
 
     fun clearServerState() {
         serverState = emptyMap()

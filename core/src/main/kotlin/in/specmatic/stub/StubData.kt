@@ -13,10 +13,11 @@ data class HttpStubData(
     val response: HttpResponse,
     val resolver: Resolver,
     val delayInSeconds: Int? = null,
-    val responsePattern: HttpResponsePattern
+    val responsePattern: HttpResponsePattern,
+    val contractPath: String = ""
 ) : StubData {
     fun softCastResponseToXML(httpRequest: HttpRequest): HttpStubData = when {
-        response.externalisedResponseCommand.isNotEmpty() -> invokeExternalCommand(httpRequest)
+        response.externalisedResponseCommand.isNotEmpty() -> invokeExternalCommand(httpRequest).copy(contractPath = contractPath)
         else -> this.copy(response = response.copy(body = softCastValueToXML(response.body)))
     }
 

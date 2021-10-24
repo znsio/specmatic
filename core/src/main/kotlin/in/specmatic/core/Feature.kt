@@ -716,10 +716,10 @@ data class Feature(
                     pattern as AnyPattern
 
                     this.items = Schema<Any>().apply {
-                        setSchemaType(withoutPatternDelimiters(pattern.pattern.first { it.typeAlias != "(empty)" }.let {
+                        setSchemaType(pattern.pattern.first { it.typeAlias != "(empty)" }.let {
                             it as ListPattern
-                            it.pattern.typeAlias!!
-                        }), this)
+                            it.pattern.typeAlias ?: (it.pattern as String)
+                        }, this)
                     }
                     this.nullable = true
                 }
@@ -728,7 +728,8 @@ data class Feature(
                 pattern as AnyPattern
 
                 Schema<Any>().apply {
-                    setSchemaType(withoutPatternDelimiters(pattern.pattern.first { it.typeAlias != "(empty)" }.typeAlias!!), this)
+                    val patternName = pattern.pattern.first { it.typeAlias != "(empty)" }.let { it.typeAlias ?: it.pattern as String }
+                    setSchemaType(patternName, this)
                     this.nullable = true
                 }
             }

@@ -505,6 +505,65 @@ Scenario: Get product by id
     }
 
     @Test
+    fun `programmatically construct OpenAPI YAML for POST with JSON request body containing a nullable primitive`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Person API
+            
+            Scenario: Get person by id
+              When POST /person
+              And request-body
+              | id | (string?) |
+              Then status 200
+              And response-body (string)
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedJSON("""{"id": null}""")
+                ), HttpResponse.OK("success")
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - "id"
+                          properties:
+                            id:
+                              type: "string"
+                              nullable: true
+                  responses:
+                    "200":
+                      description: "Response Description"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+                      """.trimIndent()
+        )
+    }
+
+    @Test
     fun `programmatically construct OpenAPI YAML for POST with JSON request body containing a nullable array`() {
         val feature = parseGherkinStringToFeature(
             """

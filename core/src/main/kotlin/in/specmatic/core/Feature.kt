@@ -537,12 +537,6 @@ data class Feature(
 
             val apiResponse = ApiResponse()
 
-            apiResponse.content =
-                Content().also {
-                    it.addMediaType("application/json", MediaType().also {
-                        it.schema = toOpenApiSchema(scenario.httpResponsePattern.body)
-                    })
-                }
             apiResponse.description = "Response Description"
             val openApiResponseHeaders = scenario.httpResponsePattern.headersPattern.pattern.map { (key, pattern) ->
                 val header = Header()

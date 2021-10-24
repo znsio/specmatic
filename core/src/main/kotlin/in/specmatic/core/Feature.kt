@@ -285,10 +285,8 @@ data class Feature(
             TODO("Multipart requests")
 
         return if(baseScenario.httpRequestPattern.formFieldsPattern.size == 1) {
-            if(newScenario.httpRequestPattern.formFieldsPattern.size != 1 ||
-                (newScenario.httpRequestPattern.formFieldsPattern.size == 1
-                        && !isObjectType(resolvedHop(newScenario.httpRequestPattern.formFieldsPattern.values.first(), newScenario.resolver))))
-                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with multiple payload types")
+            if(newScenario.httpRequestPattern.formFieldsPattern.size != 1)
+                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with different form fields")
 
             val baseRawPattern = baseScenario.httpRequestPattern.formFieldsPattern.values.first()
             val resolvedBasePattern = resolvedHop(baseRawPattern, baseScenario.resolver)
@@ -296,18 +294,21 @@ data class Feature(
             val newRawPattern = newScenario.httpRequestPattern.formFieldsPattern.values.first()
             val resolvedNewPattern = resolvedHop(newRawPattern, newScenario.resolver)
 
+            if(isObjectType(resolvedBasePattern) && !isObjectType(resolvedNewPattern))
+                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with multiple payload types")
+
             val converged: Pattern = when {
-                baseRawPattern is DeferredPattern -> {
-                    if(baseRawPattern.pattern == newRawPattern.pattern && isObjectType(resolvedBasePattern))
-                        baseRawPattern
-                    else
-                        throw ContractException("Cannot converge different types ${baseRawPattern.pattern} and ${newRawPattern.pattern} found in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")
-                }
                 resolvedBasePattern.pattern is String && builtInPatterns.contains(resolvedBasePattern.pattern) -> {
                     if(resolvedBasePattern.pattern != resolvedNewPattern.pattern)
                         throw ContractException("Cannot converge ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} because there are multiple types of request payloads")
 
                     resolvedBasePattern
+                }
+                baseRawPattern is DeferredPattern -> {
+                    if(baseRawPattern.pattern == newRawPattern.pattern && isObjectType(resolvedBasePattern))
+                        baseRawPattern
+                    else
+                        throw ContractException("Cannot converge different types ${baseRawPattern.pattern} and ${newRawPattern.pattern} found in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")
                 }
                 else ->
                     throw TODO("Converging of type ${resolvedBasePattern.pattern} and ${resolvedNewPattern.pattern} in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")

@@ -870,6 +870,62 @@ Scenario: Get product by id
     }
 
     @Test
+    fun `merge a POST request with www-urlencoded request body containing a primitive form field`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+                Scenario: Add Data
+                  When POST /data
+                  And form-field data (string)
+                  Then status 200
+
+                Scenario: Add Data
+                  When POST /data
+                  And form-field data (string)
+                  Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            this.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    formFields = mapOf("data" to "hello world")
+                ), HttpResponse.OK
+            )
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        assertThat(openAPIYaml.trim()).isEqualTo(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/x-www-form-urlencoded:
+                        schema:
+                          required:
+                          - "data"
+                          properties:
+                            data:
+                              type: "string"
+                  responses:
+                    "200":
+                      description: "Response Description"
+            """.trimIndent()
+        )
+    }
+
+    @Test
     fun `programmatically construct OpenAPI YAML for POST and merge JSON request bodies structures with common names`() {
         val feature = parseGherkinStringToFeature(
             """

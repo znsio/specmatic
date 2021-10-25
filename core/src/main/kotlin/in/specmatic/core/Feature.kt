@@ -439,6 +439,7 @@ data class Feature(
             val operation = when(scenario.httpRequestPattern.method!!) {
                 "GET" -> path.get
                 "POST" -> path.post
+                "PUT" -> path.put
                 "DELETE" -> path.delete
                 else -> TODO("Method \"${scenario.httpRequestPattern.method}\" in scenario ${scenario.name}")
             } ?: Operation()
@@ -583,6 +584,7 @@ data class Feature(
             when (scenario.httpRequestPattern.method) {
                 "GET" -> path.get = operation
                 "POST" -> path.post = operation
+                "PUT" -> path.put = operation
                 "DELETE" -> path.delete = operation
             }
 

@@ -41,7 +41,7 @@ class GherkinToOpenAPICommand : Callable<Unit> {
                 contractFile.canonicalFile.parentFile.resolve(contractFile.nameWithoutExtension + ".yaml")
             openAPIFile.writeText(openAPIYaml)
         } catch(e: Throwable) {
-            information.forTheUser("# Error parsing file $contractPath")
+            information.forTheUser("# Error converting file $contractPath")
             information.forTheUser(e)
         }
     }

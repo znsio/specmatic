@@ -469,7 +469,10 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
     private fun resolveReferenceToSchema(component: String): Pair<String, Schema<Any>> {
         if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
         val componentName = component.removePrefix("#/components/schemas/")
-        return componentName to openApi.components.schemas[componentName] as Schema<Any>
+        val schema = openApi.components.schemas[componentName]
+            ?: throw ContractException("Couldn't find schema for $component")
+
+        return componentName to schema as Schema<Any>
     }
 
     private fun toSpecmaticPath(openApiPath: String, operation: Operation): String {

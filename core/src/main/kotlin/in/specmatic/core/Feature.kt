@@ -166,7 +166,8 @@ data class Feature(
                                     response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
                                     resolver = resolver,
                                     requestType = requestTypeWithAncestors,
-                                    responsePattern = scenario.httpResponsePattern
+                                    responsePattern = scenario.httpResponsePattern,
+                                    contractPath = this.path
                                 )
                             }, Result.Success()
                         )
@@ -229,7 +230,7 @@ data class Feature(
     }
 
     fun matchingStub(scenarioStub: ScenarioStub): HttpStubData =
-        matchingStub(scenarioStub.request, scenarioStub.response).copy(delayInSeconds = scenarioStub.delayInSeconds).copy(contractPath = path)
+        matchingStub(scenarioStub.request, scenarioStub.response).copy(delayInSeconds = scenarioStub.delayInSeconds)
 
     fun clearServerState() {
         serverState = emptyMap()

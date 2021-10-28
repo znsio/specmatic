@@ -182,8 +182,8 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
         val results = features.asSequence().map { feature ->
             try {
-                val mockResponse = softCastResponseToXML(feature.matchingStub(stub.request, stub.response))
-                Pair(Result.Success(), mockResponse)
+                val stubData: HttpStubData = softCastResponseToXML(feature.matchingStub(stub.request, stub.response))
+                Pair(Result.Success(), stubData)
             } catch (e: NoMatchingScenario) {
                 Pair(Result.Failure(e.localizedMessage), null)
             }

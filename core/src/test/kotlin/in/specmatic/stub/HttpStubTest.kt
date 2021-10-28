@@ -34,6 +34,23 @@ import kotlin.time.measureTime
 
 internal class HttpStubTest {
     @Test
+    fun temp() {
+        val gherkin = """
+            Feature: API
+            Scenario: API
+                When GET /
+                Then status 200
+        """.trimIndent()
+
+        val request = HttpRequest(method = "GET", path = "/")
+
+        HttpStub(gherkin).use { stub ->
+            val response = HttpClient(stub.endPoint).execute(request)
+            assertThat(response.headers[SPECMATIC_TYPE_HEADER]).isEqualTo("random")
+        }
+    }
+
+    @Test
     fun `should serve mocked data before stub`() {
         val gherkin = """
 Feature: Math API

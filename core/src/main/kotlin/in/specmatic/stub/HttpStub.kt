@@ -355,7 +355,7 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
 
             HttpResponse(400, headers = headers.plus(mapOf(SPECMATIC_RESULT_HEADER to "failure")), body = body)
         }
-        else -> fakeResponse
+        else -> fakeResponse.withRandomResultHeader()
     }
 }
 

@@ -8,8 +8,10 @@ import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.value.*
 import io.ktor.http.*
 
-const val SPECMATIC_RESULT_HEADER = "X-$APPLICATION_NAME-Result"
-internal const val SPECMATIC_EMPTY_HEADER = "X-$APPLICATION_NAME-Empty"
+private const val SPECMATIC_HEADER_PREFIX = "X-$APPLICATION_NAME-"
+const val SPECMATIC_RESULT_HEADER = "${SPECMATIC_HEADER_PREFIX}Result"
+internal const val SPECMATIC_EMPTY_HEADER = "${SPECMATIC_HEADER_PREFIX}Empty"
+internal const val SPECMATIC_TYPE_HEADER = "${SPECMATIC_HEADER_PREFIX}Type"
 
 data class HttpResponse(
     val status: Int = 0,
@@ -82,6 +84,18 @@ data class HttpResponse(
         return bindings.entries.fold(emptyMap()) { acc, setter ->
             acc.plus(setter.key to selectValue(setter.value))
         }
+    }
+
+    fun withRandomResultHeader(): HttpResponse {
+        return this.copy(headers = this.headers.plus(SPECMATIC_TYPE_HEADER to "random"))
+    }
+
+    fun withoutSpecmaticHeaders(): HttpResponse {
+        val withoutSpecmaticHeaders = this.headers.filterNot {
+            it.key.startsWith(SPECMATIC_HEADER_PREFIX)
+        }
+
+        return this.copy(headers = withoutSpecmaticHeaders)
     }
 
     companion object {

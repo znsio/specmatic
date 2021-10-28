@@ -272,8 +272,8 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
 internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
 
 internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Int? = null) {
-    val headerString = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
-    val textContent = TextContent(httpResponse.body.toStringLiteral(), ContentType.parse(headerString), HttpStatusCode.fromValue(httpResponse.status))
+    val contentType = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
+    val textContent = TextContent(httpResponse.body.toStringLiteral(), ContentType.parse(contentType), HttpStatusCode.fromValue(httpResponse.status))
 
     val headersControlledByEngine = HttpHeaders.UnsafeHeadersList.map { it.lowercase() }
     for ((name, value) in httpResponse.headers.filterNot { it.key.lowercase() in headersControlledByEngine }) {

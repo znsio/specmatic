@@ -5,6 +5,8 @@ import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.True
 import `in`.specmatic.core.value.Value
+import io.ktor.features.*
+import io.ktor.http.*
 
 sealed class KeyError {
     abstract val name: String
@@ -91,8 +93,12 @@ fun validateUnexpectedKeys(pattern: Map<String, Any>, actual: Map<String, Any>):
     val patternKeys = pattern.minus("...").keys.map { withoutOptionality(it) }
     val actualKeys = actual.keys.map { withoutOptionality(it) }
 
-    return actualKeys.minus(patternKeys).firstOrNull()?.let { UnexpectedKeyError(it) }
+    return actualKeys.minus(patternKeys).filterNot { isStandardHeader(it) }.firstOrNull()?.let { UnexpectedKeyError(it) }
 }
+
+private val standardCommonHTTPHeaders = setOf("A-IM", "Accept", "Accept-Charset", "Accept-Datetime", "Accept-Encoding", "Accept-Language", "Access-Control-Request-Method,", "Access-Control-Request-Headers", "Authorization", "Cache-Control", "Connection", "Content-Encoding", "Content-Length", "Content-MD5", "Content-Type", "Cookie", "Date", "Expect", "Forwarded", "From", "Host", "HTTP2-Settings", "If-Match", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Origin", "Pragma", "Prefer", "Proxy-Authorization", "Range", "Referer", "TE", "Trailer", "Transfer-Encoding", "User-Agent", "Upgrade", "Via", "Warning")
+
+fun isStandardHeader(header: String): Boolean = withoutOptionality(header) in standardCommonHTTPHeaders
 
 internal val checkAllKeys = { pattern: Map<String, Any>, actual: Map<String, Any>, _: Any ->
     pattern.minus("...").keys.find { key -> isMissingKey(actual, key) }?.let { MissingKeyError(it) } ?: validateUnexpectedKeys(pattern, actual)

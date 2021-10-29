@@ -159,9 +159,9 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                 throw ContractException("Expectation payload was empty")
 
             val mock = stringToMockScenario(httpRequest.body)
-            createStub(mock)
+            val stub: HttpStubData? = createStub(mock)
 
-            HttpStubResponse(HttpResponse.OK)
+            HttpStubResponse(HttpResponse.OK, contractPath = stub?.contractPath ?: "")
         }
         catch(e: ContractException) {
             HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.report())))
@@ -177,7 +177,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         createStub(mock)
     }
 
-    fun createStub(stub: ScenarioStub) {
+    fun createStub(stub: ScenarioStub): HttpStubData? {
         if (stub.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
 
         val results = features.asSequence().map { feature ->
@@ -189,12 +189,14 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             }
         }
 
-        val result = results.find { it.first is Result.Success }
+        val result: Pair<Result, HttpStubData?>? = results.find { it.first is Result.Success }
 
         when (result?.first) {
             is Result.Success -> threadSafeHttpStubs.addToStub(result, stub)
             else -> throw NoMatchingScenario(Results(results.map { it.first }.toMutableList()).report(stub.request))
         }
+
+        return result.second
     }
 
     override fun close() {

@@ -190,4 +190,10 @@ internal class HttpHeadersPatternTest {
         assertThat(headersPattern.matches(mapOf("X-Data" to "(number)"), Resolver(mockMode = true))).isInstanceOf(Result.Success::class.java)
         assertThat(headersPattern.matches(mapOf("X-Data" to "(number)"), Resolver(mockMode = false))).isInstanceOf(Result.Failure::class.java)
     }
+
+    @Test
+    fun `unexpected standard http headers are allowed and will not break a match check`() {
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to StringPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Content-Type" to StringPattern()))
+        assertThat(headersPattern.matches(mapOf("X-Data" to "data", "Content-Type" to "text/plain"), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
 }

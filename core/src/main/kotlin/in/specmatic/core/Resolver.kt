@@ -73,10 +73,6 @@ data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boole
             }
         }
     }
-
-    fun addContext(row: Row): Row {
-        return row.copy(variables = context)
-    }
 }
 
 typealias UnexpectedKeyCheck = (Map<String, Any>, Map<String, Any>) -> KeyError?

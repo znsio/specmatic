@@ -13,7 +13,7 @@ import `in`.specmatic.consoleLog
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.information
+import `in`.specmatic.core.details
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.NumberPattern
@@ -36,7 +36,7 @@ import javax.xml.transform.stream.StreamResult
 import kotlin.system.exitProcess
 
 fun exitWithMessage(message: String): Nothing {
-    information.forTheUser(message)
+    details.forTheUser(message)
     exitProcess(1)
 }
 
@@ -133,7 +133,7 @@ fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCal
         if (transport is SshTransport) {
             transport.sshSessionFactory = SshdSessionFactory()
         } else if(bearerToken != null && transport is TransportHttp) {
-            information.forDebugging("Setting Authorization header")
+            details.forDebugging("Setting Authorization header")
             transport.setAdditionalHeaders(mapOf("Authorization" to "Bearer $bearerToken"))
         }
     }
@@ -251,15 +251,15 @@ fun gitRootDir(): String {
 data class ContractPathData(val baseDir: String, val path: String)
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
-    information.forTheUser("Loading config file $configFilePath")
+    details.forTheUser("Loading config file $configFilePath")
     val sources = loadSources(configFilePath)
 
     val contractPathData = sources.flatMap {
         it.loadContracts(selector, workingDirectory, configFilePath)
     }
 
-    information.forDebugging("Contract file paths in $configFilePath:")
-    information.forDebugging(contractPathData.joinToString(System.lineSeparator()) { it.path }.prependIndent("  "))
+    details.forDebugging("Contract file paths in $configFilePath:")
+    details.forDebugging(contractPathData.joinToString(System.lineSeparator()) { it.path }.prependIndent("  "))
 
     return contractPathData
 }
@@ -267,7 +267,7 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
 class UncaughtExceptionHandler: Thread.UncaughtExceptionHandler {
     override fun uncaughtException(t: Thread?, e: Throwable?) {
         if(e != null)
-            consoleLog(exceptionCauseMessage(e))
+            consoleLog(details.ofTheException(e))
 
         exitProcess(1)
     }

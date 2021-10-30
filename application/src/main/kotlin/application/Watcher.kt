@@ -2,6 +2,7 @@ package application
 
 import `in`.specmatic.consoleLog
 import `in`.specmatic.core.CONTRACT_EXTENSIONS
+import `in`.specmatic.core.StringLog
 import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Path
@@ -22,7 +23,7 @@ class Watcher(private val contractPaths: List<String>) {
                 key.reset()
 
                 val events = key.pollEvents().map { it.context().toString() }.joinToString(", ")
-                consoleLog("""Detected event(s) for $events, restarting stub server.""")
+                consoleLog(StringLog("""Detected event(s) for $events, restarting stub server."""))
                 restartServer()
             }
         }

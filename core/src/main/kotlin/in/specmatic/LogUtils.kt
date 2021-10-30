@@ -1,58 +1,54 @@
 package `in`.specmatic
 
-import `in`.specmatic.core.information
+import `in`.specmatic.core.LogMessage
+import `in`.specmatic.core.details
 import java.util.*
 
 object LogTail {
     var n: Int = 5000
 
-    private var logs = Collections.synchronizedList(LinkedList<String>())
-    private var snapshot = emptyList<String>()
+    private var logs = Collections.synchronizedList(LinkedList<LogMessage>())
+    private var snapshot = emptyList<LogMessage>()
 
     @OptIn(ExperimentalStdlibApi::class)
-    fun append(line: String) {
+    fun append(msg: LogMessage) {
         logs.size
-        logs.add(line)
+        logs.add(msg)
 
         if(logs.size > n && logs.isNotEmpty()) {
             logs.removeFirst()
         }
     }
 
-    fun append(logs: List<String>) {
-        val joined = logs.joinToString(System.lineSeparator())
-        append(joined)
-    }
-
     fun storeSnapshot() {
         snapshot = logs.toList()
     }
-    fun getString(): String = logs.joinToString("\n")
+    fun getString(): String = logs.joinToString("\n") { it.toLogString() }
 
-    fun getSnapshot(): String = snapshot.joinToString("\n")
+    fun getSnapshot(): String = snapshot.joinToString("\n") { it.toLogString() }
 
     internal fun clear() {
         logs.clear()
     }
 }
 
-fun consoleLog(event: String) {
+fun consoleLog(event: LogMessage) {
     LogTail.append(event)
-    information.forTheUser(event)
+    details.forTheUser(event)
 }
 
 fun consoleLog(e: Throwable) {
-    LogTail.append(information.exceptionString(e))
-    information.forTheUser(e)
+    LogTail.append(details.ofTheException(e))
+    details.forTheUser(e)
 }
 
 fun consoleLog(e: Throwable, msg: String) {
-    LogTail.append(information.exceptionString(e, msg))
-    information.forTheUser(e, msg)
+    LogTail.append(details.ofTheException(e, msg))
+    details.forTheUser(e, msg)
 }
 
-val dontPrintToConsole = { event: String ->
+val dontPrintToConsole = { event: LogMessage ->
     LogTail.append(event)
 }
 
-val ignoreLog = { _: String -> }
+val ignoreLog = { _: LogMessage -> }

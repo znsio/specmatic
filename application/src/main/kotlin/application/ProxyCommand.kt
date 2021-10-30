@@ -3,6 +3,7 @@ package application
 import picocli.CommandLine.*
 import `in`.specmatic.consoleLog
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import `in`.specmatic.core.StringLog
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.proxy.Proxy
@@ -54,7 +55,7 @@ class ProxyCommand : Callable<Unit> {
 
         val protocol = keyStoreData?.let { "https" } ?: "http"
 
-        consoleLog("Proxy server is running on $protocol://$host:$port. Ctrl + C to stop.")
+        consoleLog(StringLog("Proxy server is running on $protocol://$host:$port. Ctrl + C to stop."))
         while(true) sleep(10000)
     }
 

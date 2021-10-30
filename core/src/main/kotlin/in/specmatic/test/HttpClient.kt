@@ -23,7 +23,9 @@ import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.utilities.valueMapToPlainJsonString
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.core.JSONHTTPLog
+import `in`.specmatic.core.HttpLogMessage
+import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.stub.getDateStringValue
 import `in`.specmatic.stub.toParams
 import java.io.File
@@ -34,7 +36,7 @@ import java.util.zip.GZIPInputStream
 // API for non-Kotlin invokers
 fun createHttpClient(baseURL: String, timeout: Int) = HttpClient(baseURL, timeout)
 
-class HttpClient(val baseURL: String, private val timeout: Int = 60, private val log: (event: String) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(io.ktor.client.engine.apache.Apache) {
+class HttpClient(val baseURL: String, private val timeout: Int = 60, private val log: (event: LogMessage) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(io.ktor.client.engine.apache.Apache) {
     expectSuccess = false
 
     followRedirects = false
@@ -100,15 +102,14 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
 
             val endTime = getDateStringValue()
 
-            val httpLog = JSONHTTPLog()
+            val httpLogMessage = HttpLogMessage()
 
             val outboundRequest: HttpRequest = ktorHttpRequestToHttpRequest(ktorResponse.request, requestWithFileContent)
-            httpLog.addRequest(outboundRequest, startTime)
+            httpLogMessage.addRequest(outboundRequest, startTime)
 
             ktorResponseToHttpResponse(ktorResponse).also {
-                httpLog.addResponse(it, endTime)
-                log(httpLog.toLogString())
-                log(System.lineSeparator())
+                httpLogMessage.addResponse(it, endTime)
+                log(httpLogMessage)
             }
         }
     }
@@ -142,23 +143,50 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
         val startTime = Date()
 
         runBlocking {
-            log("# >> Request Sent At $startTime")
-            log(startLinesWith(valueMapToPlainJsonString(serverState), "# "))
+            var endTime: Date? = null
+            var response: HttpResponse? = null
 
-            val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
-                this.method = HttpMethod.Post
-                this.contentType(ContentType.Application.Json)
-                this.body = valueMapToPlainJsonString(serverState)
+            try {
+                val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
+                    this.method = HttpMethod.Post
+                    this.contentType(ContentType.Application.Json)
+                    this.body = valueMapToPlainJsonString(serverState)
+                }
+
+                endTime = Date()
+
+                response = ktorResponseToHttpResponse(ktorResponse)
+
+                if (ktorResponse.status != HttpStatusCode.OK)
+                    throw Exception("API responded with ${ktorResponse.status}")
+            } finally {
+                val serverStateLog = object: LogMessage {
+                    override fun toJSONObject(): JSONObjectValue {
+                        val data: MutableMap<String, String> = mutableMapOf(
+                            "requestTime" to startTime.toString(),
+                            "serverState" to valueMapToPlainJsonString(serverState)
+                        )
+
+                        if(endTime != null && response != null) {
+                            data["endTime"] = endTime.toString()
+                            data["response"] = response.toLogString()
+                        }
+
+                        return JSONObjectValue(data.mapValues { StringValue(it.value) }.toMap())
+                    }
+
+                    override fun toLogString(): String {
+
+                        return """
+                        # >> Request Sent At $startTime
+                        ${startLinesWith(valueMapToPlainJsonString(serverState), "# ")}
+                        "# << Complete At $endTime"
+                        """.trimIndent()
+                    }
+                }
+
+                log(serverStateLog)
             }
-
-            val endTime = Date()
-
-            log("# << Complete At $endTime")
-
-            ktorResponseToHttpResponse(ktorResponse)
-
-            if(ktorResponse.status != HttpStatusCode.OK)
-                throw Exception("API responded with ${ktorResponse.status}")
         }
     }
 }

@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import picocli.CommandLine
 import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.information
+import `in`.specmatic.core.details
 import `in`.specmatic.core.utilities.ContractPathData
 import java.io.File
 import java.io.FileOutputStream
@@ -141,7 +141,7 @@ fun stubDataDir(path: File): String {
 @Component
 class Zipper {
     fun compress(zipFilePath: String, zipperEntries: List<ZipperEntry>) {
-        information.forTheUser("Writing contracts to $zipFilePath")
+        details.forTheUser("Writing contracts to $zipFilePath")
 
         FileOutputStream(zipFilePath).use { zipFile ->
             ZipOutputStream(zipFile).use { zipOut ->

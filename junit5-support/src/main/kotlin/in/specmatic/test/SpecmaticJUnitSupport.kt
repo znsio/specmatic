@@ -61,7 +61,7 @@ open class SpecmaticJUnitSupport {
         val testConfig = try {
             loadTestConfig(envConfig).withVariablesFromFilePath(System.getProperty(VARIABLES_FILE_NAME))
         } catch (e: Exception) {
-            information.forTheUser(e)
+            details.forTheUser(e)
             throw e
         }
 
@@ -85,7 +85,7 @@ open class SpecmaticJUnitSupport {
             println(e.report())
             throw e
         } catch(e: Throwable) {
-            information.forTheUser(e)
+            details.forTheUser(e)
             throw e
         } finally {
             workingDirectory.delete()

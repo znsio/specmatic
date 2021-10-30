@@ -33,7 +33,7 @@ fun parseContractFileToFeature(contractPath: String): Feature {
 }
 
 fun parseContractFileToFeature(file: File): Feature {
-    information.forDebugging("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
+    details.forDebugging("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     if (!file.exists())
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
@@ -748,7 +748,7 @@ data class Feature(
             pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> StringSchema().apply {
                 this.nullable = true
             }.also {
-                information.forTheUser("Specmatic encountered a (null) in the spec. OpenAPI does not support raw nulls. Data types may be nullable, but you must specify the data type. Please make sure you specify the nullable datatype wherever null is encountered in the contract.")
+                details.forTheUser("Specmatic encountered a (null) in the spec. OpenAPI does not support raw nulls. Data types may be nullable, but you must specify the data type. Please make sure you specify the nullable datatype wherever null is encountered in the contract.")
             }
             pattern is DeferredPattern -> Schema<Any>().apply {
                 this.`$ref` = withoutPatternDelimiters(pattern.pattern)
@@ -1314,7 +1314,7 @@ private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, Examp
             val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
 
             for (message in examples.messages) {
-                information.forTheUser(message)
+                details.forTheUser(message)
             }
 
             val (responseClauses, allTypes, _) = toGherkinClauses(namedStub.stub.response, typesFromRequest)

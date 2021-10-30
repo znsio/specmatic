@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Contract
+import `in`.specmatic.core.JSONConsoleLogPrinter
+import `in`.specmatic.core.logPrinter
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
@@ -30,6 +32,9 @@ internal class SamplesCommandKtTest {
 
     @Test
     fun `samples function should generate sample given the input`() {
+        logPrinter.printers.clear()
+        logPrinter.printers.add(JSONConsoleLogPrinter)
+
         val (data, _) = captureStandardOutput {
             val gherkin = qontractFile.readText().trim()
             HttpStub(gherkin, emptyList(), "localhost", 9000).use { fake ->
@@ -37,11 +42,15 @@ internal class SamplesCommandKtTest {
             }
         }
 
+        println(data)
         validateOutput(data.trimIndent())
     }
 
     @Test
     fun `command should generate sample given the input`() {
+        logPrinter.printers.clear()
+        logPrinter.printers.add(JSONConsoleLogPrinter)
+
         val (data, _) = captureStandardOutput {
             val command = SamplesCommand()
             command.contractFile = qontractFile

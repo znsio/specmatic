@@ -64,9 +64,9 @@ fun getDateStringValue(): String {
     return "$year-$month-$day $hour:$minute:$second.$millisecond"
 }
 
-class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: String) -> Unit = dontPrintToConsole, private val strictMode: Boolean = false, keyData: KeyData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory(), val workingDirectory: WorkingDirectory? = null) : ContractStub {
-    constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = dontPrintToConsole) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
-    constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: String) -> Unit = dontPrintToConsole) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
+class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: LogMessage) -> Unit = dontPrintToConsole, private val strictMode: Boolean = false, keyData: KeyData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory(), val workingDirectory: WorkingDirectory? = null) : ContractStub {
+    constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: LogMessage) -> Unit = dontPrintToConsole) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
+    constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: LogMessage) -> Unit = dontPrintToConsole) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.toMutableList())
     val endPoint = endPointFromHostAndPort(host, port, keyData)
@@ -92,11 +92,11 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
             }
 
             intercept(ApplicationCallPipeline.Call) {
-                val httpLog = JSONHTTPLog()
+                val httpLogMessage = HttpLogMessage()
 
                 try {
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
-                    httpLog.addRequest(httpRequest)
+                    httpLogMessage.addRequest(httpRequest)
 
                     val httpStubResponse: HttpStubResponse = when {
                         isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
@@ -108,20 +108,20 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                     }
 
                     respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
-                    httpLog.addResponse(httpStubResponse)
+                    httpLogMessage.addResponse(httpStubResponse)
                 }
                 catch(e: ContractException) {
                     val response = badRequest(e.report())
-                    httpLog.addResponse(response)
+                    httpLogMessage.addResponse(response)
                     respondToKtorHttpResponse(call, response)
                 }
                 catch(e: Throwable) {
                     val response = badRequest(exceptionCauseMessage(e))
-                    httpLog.addResponse(response)
+                    httpLogMessage.addResponse(response)
                     respondToKtorHttpResponse(call, response)
                 }
 
-                log(httpLog.toLogString())
+                log(httpLogMessage)
             }
         }
 

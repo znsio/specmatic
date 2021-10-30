@@ -6,7 +6,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import `in`.specmatic.core.Verbose
-import `in`.specmatic.core.information
+import `in`.specmatic.core.details
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.*
@@ -86,6 +86,15 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--config"], description = ["Configuration file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
     var configFileName: String? = null
 
+    @Option(names = ["--textLog"], description = ["Directory in which to write a text log"])
+    var textLog: String? = null
+
+    @Option(names = ["--jsonLog"], description = ["Directory in which to write a json log"])
+    var jsonLog: String? = null
+
+    @Option(names = ["--logPrefix"], description = ["Prefix of log file"])
+    var logPrefix: String = "specmatic"
+
     @Autowired
     val watchMaker = WatchMaker()
 
@@ -97,7 +106,15 @@ class StubCommand : Callable<Unit> {
 
     override fun call() {
         if(verbose)
-            information = Verbose
+            details = Verbose
+
+        textLog?.let {
+            logPrinter.printers.add(TextFilePrinter(LogDirectory(it, logPrefix, "", "log")))
+        }
+
+        jsonLog?.let {
+            logPrinter.printers.add(JSONFilePrinter(LogDirectory(it, logPrefix, "json", "log")))
+        }
 
         configFileName?.let {
             Configuration.globalConfigFileName = it
@@ -122,7 +139,7 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun loadConfig() = contractPaths.ifEmpty {
-        information.forDebugging("No contractPaths specified. Using configuration file named $configFileName")
+        details.forDebugging("No contractPaths specified. Using configuration file named $configFileName")
         qontractConfig.contractStubPaths()
     }
 
@@ -139,10 +156,10 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun restartServer() {
-        consoleLog("Stopping servers...")
+        consoleLog(StringLog("Stopping servers..."))
         try {
             stopServer()
-            consoleLog("Stopped.")
+            consoleLog(StringLog("Stopped."))
         } catch (e: Throwable) {
             consoleLog(e,"Error stopping server")
         }
@@ -164,7 +181,7 @@ class StubCommand : Callable<Unit> {
         Runtime.getRuntime().addShutdownHook(object : Thread() {
             override fun run() {
                 try {
-                    consoleLog("Shutting down stub servers")
+                    consoleLog(StringLog("Shutting down stub servers"))
                     httpStub?.close()
                     kafkaStub?.close()
                 } catch (e: InterruptedException) {
@@ -211,7 +228,7 @@ class KafkaStubEngine {
         return when {
             validationResults.any { it is Result.Failure } -> {
                 val results = Results(validationResults.toMutableList())
-                consoleLog("Can't load Kafka mocks:\n${results.report(PATH_NOT_RECOGNIZED_ERROR)}")
+                consoleLog(StringLog("Can't load Kafka mocks:\n${results.report(PATH_NOT_RECOGNIZED_ERROR)}"))
                 null
             }
             hasKafkaScenarios(features) -> {
@@ -219,7 +236,7 @@ class KafkaStubEngine {
                     startKafka -> {
                         println("Starting local Kafka server...")
                         QontractKafka(kafkaPort).also {
-                            consoleLog("Started local Kafka server: ${it.bootstrapServers}")
+                            consoleLog(StringLog("Started local Kafka server: ${it.bootstrapServers}"))
                         }
                     }
                     else -> null
@@ -255,7 +272,7 @@ class HTTPStubEngine {
                 val keyStoreData = certInfo.getHttpsCert()
                 HttpStub(httpFeatures, httpExpectations, host, port, ::consoleLog, strictMode, keyStoreData, passThroughTargetBase = passThroughTargetBase, httpClientFactory = httpClientFactory, workingDirectory = workingDirectory).also {
                     val protocol = if (keyStoreData != null) "https" else "http"
-                    consoleLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop.")
+                    consoleLog(StringLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop."))
                 }
             }
             else -> null

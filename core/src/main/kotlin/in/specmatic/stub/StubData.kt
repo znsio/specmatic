@@ -33,7 +33,7 @@ data class HttpStubData(
             !responseMatches.isTrue() -> {
                 val errorMessage =
                     """Response returned by ${response.externalisedResponseCommand} not in line with specification for ${httpRequest.method} ${httpRequest.path}:\n${responseMatches.reportString()}"""
-                information.forTheUser(errorMessage)
+                details.forTheUser(errorMessage)
                 throw ContractException(errorMessage)
             }
             else -> {
@@ -43,7 +43,7 @@ data class HttpStubData(
     }
 
     private fun executeExternalCommand(command: String, envParam: String): String {
-        information.forDebugging("Executing: $command with EnvParam: $envParam")
+        details.forDebugging("Executing: $command with EnvParam: $envParam")
         return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf(envParam)).executeAsSeparateProcess()
     }
 }

@@ -1,5 +1,6 @@
 package `in`.specmatic
 
+import `in`.specmatic.core.StringLog
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -29,7 +30,7 @@ internal class LogTailTest {
     }
 
     private fun addLogs(vararg lines: String) {
-        for(line in lines) LogTail.append(line)
+        for(line in lines) LogTail.append(StringLog(line))
     }
 
     private fun logShouldContain(vararg lines: String) {

@@ -3,7 +3,7 @@
 package application
 
 import `in`.specmatic.core.Verbose
-import `in`.specmatic.core.information
+import `in`.specmatic.core.details
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.utilities.exitWithMessage
 import org.springframework.beans.factory.annotation.Autowired
@@ -27,7 +27,7 @@ class GherkinToOpenAPICommand : Callable<Unit> {
 
     override fun call() {
         if(verbose) {
-            information = Verbose
+            details = Verbose
         }
 
         if(!fileOperations.isFile(contractPath))
@@ -41,8 +41,8 @@ class GherkinToOpenAPICommand : Callable<Unit> {
                 contractFile.canonicalFile.parentFile.resolve(contractFile.nameWithoutExtension + ".yaml")
             openAPIFile.writeText(openAPIYaml)
         } catch(e: Throwable) {
-            information.forTheUser("# Error converting file $contractPath")
-            information.forTheUser(e)
+            details.forTheUser("# Error converting file $contractPath")
+            details.forTheUser(e)
         }
     }
 }

@@ -1,7 +1,7 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.information
+import `in`.specmatic.core.details
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.parseXML
@@ -34,19 +34,19 @@ fun postmanCollectionToGherkin(postmanContent: String): List<ImportedPostmanCont
 
 fun runTests(contract: ImportedPostmanContracts) {
     val (name, gherkin, baseURLInfo, _) = contract
-    information.forTheUser("Testing contract \"$name\" with base URL ${baseURLInfo.originalBaseURL}")
+    details.forTheUser("Testing contract \"$name\" with base URL ${baseURLInfo.originalBaseURL}")
     try {
         val feature = parseGherkinStringToFeature(gherkin)
         val results = feature.executeTests(HttpClient(baseURL = baseURLInfo.originalBaseURL))
 
-        information.forTheUser("Test result for contract \"$name\" ###")
+        details.forTheUser("Test result for contract \"$name\" ###")
         val resultReport = "${results.report(PATH_NOT_RECOGNIZED_ERROR).trim()}\n\n".trim()
         val testCounts = "Tests run: ${results.successCount + results.failureCount}, Passed: ${results.successCount}, Failed: ${results.failureCount}\n\n"
-        information.forTheUser("$testCounts$resultReport".trim())
-        information.newLine()
-        information.newLine()
+        details.forTheUser("$testCounts$resultReport".trim())
+        details.newLine()
+        details.newLine()
     } catch(e: Throwable) {
-        information.forTheUser(e, "Test reported an exception")
+        details.forTheUser(e, "Test reported an exception")
     }
 }
 
@@ -84,7 +84,7 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<BaseURLInfo, Na
     val request = item.getJSONObjectValue("request")
     val scenarioName = if (item.jsonObject.contains("name")) item.getString("name") else "New scenario"
 
-    information.forTheUser("Getting response for $scenarioName")
+    details.forTheUser("Getting response for $scenarioName")
 
     return try {
         val responses = item.getJSONArray("response")
@@ -92,7 +92,7 @@ private fun postmanItemToStubs(item: JSONObjectValue): List<Pair<BaseURLInfo, Na
 
         baseNamedStub(request, scenarioName).plus(namedStubsFromSavedResponses)
     } catch (e: Throwable) {
-        information.forTheUser(e, "  Exception thrown when processing Postman scenario \"$scenarioName\"")
+        details.forTheUser(e, "  Exception thrown when processing Postman scenario \"$scenarioName\"")
         emptyList()
     }
 }
@@ -101,12 +101,12 @@ private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<
     return try {
         val (baseURL, httpRequest) = postmanItemRequest(request)
 
-        information.forTheUser("  Using base url $baseURL")
+        details.forTheUser("  Using base url $baseURL")
         val response = HttpClient(baseURL, log = dontPrintToConsole).execute(httpRequest)
 
         listOf(Pair(hostAndPort(baseURL), NamedStub(scenarioName, ScenarioStub(httpRequest, response.withoutSpecmaticHeaders()))))
     } catch (e: Throwable) {
-        information.forTheUser(e,"  Failed to generate a response for the Postman request")
+        details.forTheUser(e,"  Failed to generate a response for the Postman request")
         emptyList()
     }
 }

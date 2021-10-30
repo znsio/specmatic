@@ -6,7 +6,7 @@ import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.clone
 import `in`.specmatic.core.git.exitErrorMessageContains
-import `in`.specmatic.core.information
+import `in`.specmatic.core.details
 import java.io.File
 
 sealed class ContractSource {
@@ -51,16 +51,16 @@ data class GitRepo(
 
         val repoDir = when {
             bundleDir.exists() -> {
-                information.forTheUser("Using contracts from ${bundleDir.path}")
+                details.forTheUser("Using contracts from ${bundleDir.path}")
                 bundleDir
             }
             defaultRepoDir.exists() -> {
-                information.forTheUser("Using contracts in home dir")
+                details.forTheUser("Using contracts in home dir")
                 defaultRepoDir
             }
             else -> {
                 val reposBaseDir = localRepoDir(workingDirectory)
-                information.forTheUser("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
+                details.forTheUser("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
                 if (!reposBaseDir.exists())
                     reposBaseDir.mkdirs()
                 clone(reposBaseDir, this)

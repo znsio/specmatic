@@ -1,9 +1,7 @@
 package application
 
+import `in`.specmatic.core.*
 import picocli.CommandLine.*
-import `in`.specmatic.core.Contract
-import `in`.specmatic.core.logException
-import `in`.specmatic.core.information
 import `in`.specmatic.stub.HttpStub
 import java.io.File
 import java.util.concurrent.Callable
@@ -16,6 +14,9 @@ class SamplesCommand : Callable<Unit> {
     lateinit var contractFile: File
 
     override fun call() {
+        logPrinter.printers.clear()
+        logPrinter.printers.add(JSONConsoleLogPrinter)
+
         logException {
             if(!contractFile.exists())
                 throw Exception("Could not find file ${contractFile.path}")
@@ -27,7 +28,7 @@ class SamplesCommand : Callable<Unit> {
                     Contract(gherkin).samples(fake)
                 }
             } catch(e: StackOverflowError) {
-                information.forTheUser("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
+                details.forTheUser("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
             }
         }
     }

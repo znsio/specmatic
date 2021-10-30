@@ -37,10 +37,10 @@ class GitCompatibleCommand : Callable<Int> {
     fun file(@Parameters(paramLabel = "contractPath", defaultValue = ".") contractPath: String,
              @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
-            information = Verbose
+            details = Verbose
 
         if(!contractPath.isContractFile() && !contractPath.endsWith(".yaml") && !File(contractPath).isDirectory) {
-            information.forTheUser(invalidContractExtensionMessage(contractPath))
+            details.forTheUser(invalidContractExtensionMessage(contractPath))
             return 1
         }
 
@@ -49,7 +49,7 @@ class GitCompatibleCommand : Callable<Int> {
                 backwardCompatibleFile(it, fileOperations, gitCommand)
             }
         } catch(e: Throwable) {
-            information.forTheUser(e)
+            details.forTheUser(e)
             1
         }
     }
@@ -60,14 +60,14 @@ class GitCompatibleCommand : Callable<Int> {
                 @Parameters(paramLabel = "olderCommit") olderCommit: String,
                 @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
-            information = Verbose
+            details = Verbose
 
         return try {
             backwardCompatibleOnFileOrDirectory(path, fileOperations) {
                 backwardCompatibleCommit(it, newerCommit, olderCommit, gitCommand)
             }
         } catch(e: Throwable) {
-            information.forTheUser(e)
+            details.forTheUser(e)
             1
         }
     }
@@ -113,10 +113,10 @@ private fun backwardCompatibleOnFileOrDirectory(
             }.toList()
 
             if(outputs.isEmpty()) {
-                information.forTheUser("No contract files were found")
+                details.forTheUser("No contract files were found")
                 0
             } else {
-                information.forTheUser(outputs.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (path, output) ->
+                details.forTheUser(outputs.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (path, output) ->
                     """$path:${System.lineSeparator()}${output.message.prependIndent("  ")}"""
                 })
 
@@ -147,9 +147,9 @@ internal fun backwardCompatibleFile(
     git: GitCommand
 ): Outcome<Results> {
     return try {
-        information.forDebugging("Newer version of $contractPath")
+        details.forDebugging("Newer version of $contractPath")
 
-        val newerFeature = parseContract(information.forDebugging(fileOperations.read(contractPath)), contractPath)
+        val newerFeature = parseContract(details.forDebugging(fileOperations.read(contractPath)), contractPath)
         val result = getOlderFeature(contractPath, git)
 
         result.onSuccess {
@@ -193,8 +193,8 @@ internal fun getOlderFeature(contractPath: String, git: GitCommand): Outcome<Fea
         return Outcome(null, "Older contract file must be provided, or the file must be in a git directory")
 
     val(contractGit, relativeContractPath) = git.relativeGitPath(contractPath)
-    information.forDebugging("Older version of $contractPath")
-    return Outcome(parseContract(information.forDebugging(contractGit.show("HEAD", relativeContractPath)), contractPath))
+    details.forDebugging("Older version of $contractPath")
+    return Outcome(parseContract(details.forDebugging(contractGit.show("HEAD", relativeContractPath)), contractPath))
 }
 
 internal data class CompatibilityOutput(val exitCode: Int, val message: String)

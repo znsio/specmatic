@@ -10,7 +10,7 @@ import `in`.specmatic.stub.HttpStubResponse
 class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = HttpRequest(), var responseTime: String = "", var response: HttpResponse = HttpResponse.OK, var contractPath: String = ""):
     LogMessage {
     fun addRequest(httpRequest: HttpRequest) {
-        requestTime = CurrentDate().getDateStringValue()
+        requestTime = CurrentDate().toLogString()
         this.request = httpRequest
     }
 
@@ -20,7 +20,7 @@ class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = Ht
     }
 
     fun addResponse(httpResponse: HttpResponse) {
-        responseTime = CurrentDate().getDateStringValue()
+        responseTime = CurrentDate().toLogString()
         this.response = httpResponse
     }
 
@@ -59,6 +59,6 @@ class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = Ht
     }
 
     fun logStartRequestTime() {
-        this.requestTime = CurrentDate().getDateStringValue()
+        this.requestTime = CurrentDate().toLogString()
     }
 }

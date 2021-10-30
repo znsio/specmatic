@@ -1,5 +1,6 @@
-package `in`.specmatic.core
-
+import `in`.specmatic.core.CreateProducerPredicate
+import `in`.specmatic.core.KafkaInstance
+import `in`.specmatic.core.QontractKafka
 import org.apache.kafka.clients.consumer.ConsumerGroupMetadata
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.clients.producer.Callback
@@ -88,7 +89,7 @@ open class FakeFutureRecordMetada : Future<RecordMetadata> {
 internal class QontractKafkaTest {
     @Test
     fun `send method should create and send a producer record`() {
-        val fakeKafkaInstance = object : `in`.specmatic.core.KafkaInstance {
+        val fakeKafkaInstance = object : KafkaInstance {
             override val bootstrapServers: String = ""
 
             override var portBindings: List<String>
@@ -103,19 +104,19 @@ internal class QontractKafkaTest {
         var key: String? = null
         var message: String? = null
 
-        val fakeProducerPredicate: `in`.specmatic.core.CreateProducerPredicate = {
-            object : `in`.specmatic.core.FakeProducer() {
+        val fakeProducerPredicate: CreateProducerPredicate = {
+            object : FakeProducer() {
                 override fun send(record: ProducerRecord<String, String>?): Future<RecordMetadata> {
                     topicReceived = record?.topic()
                     key = record?.key()
                     message = record?.value()
 
-                    return `in`.specmatic.core.FakeFutureRecordMetada()
+                    return FakeFutureRecordMetada()
                 }
             }
         }
 
-        `in`.specmatic.core.QontractKafka(fakeKafkaInstance, fakeProducerPredicate).use { kafka ->
+        QontractKafka(fakeKafkaInstance, fakeProducerPredicate).use { kafka ->
             kafka.send("test-topic", "data")
         }
 
@@ -126,7 +127,7 @@ internal class QontractKafkaTest {
 
     @Test
     fun `send method should create and send a producer record with a key`() {
-        val fakeKafkaInstance = object : `in`.specmatic.core.KafkaInstance {
+        val fakeKafkaInstance = object : KafkaInstance {
             override val bootstrapServers: String = ""
 
             override var portBindings: List<String>
@@ -141,19 +142,19 @@ internal class QontractKafkaTest {
         var key: String? = null
         var message: String? = null
 
-        val fakeProducerPredicate: `in`.specmatic.core.CreateProducerPredicate = {
-            object : `in`.specmatic.core.FakeProducer() {
+        val fakeProducerPredicate: CreateProducerPredicate = {
+            object : FakeProducer() {
                 override fun send(record: ProducerRecord<String, String>?): Future<RecordMetadata> {
                     topicReceived = record?.topic()
                     key = record?.key()
                     message = record?.value()
 
-                    return `in`.specmatic.core.FakeFutureRecordMetada()
+                    return FakeFutureRecordMetada()
                 }
             }
         }
 
-        `in`.specmatic.core.QontractKafka(fakeKafkaInstance, fakeProducerPredicate).use { kafka ->
+        QontractKafka(fakeKafkaInstance, fakeProducerPredicate).use { kafka ->
             kafka.send("test-topic", "some-key", "data")
         }
 

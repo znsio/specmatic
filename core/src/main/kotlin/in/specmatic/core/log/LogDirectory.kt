@@ -1,6 +1,5 @@
-package `in`.specmatic.core
+package `in`.specmatic.core.log
 
-import `in`.specmatic.core.log.LogFile
 import java.io.File
 import java.util.*
 
@@ -13,20 +12,9 @@ class LogDirectory(directory: File, prefix: String, tag: String, extension: Stri
         if(!directory.exists())
             directory.mkdirs()
 
-        val calendar = Calendar.getInstance()
+        val currentDate = CurrentDate()
 
-        val parts: List<String> = listOf(
-            Calendar.YEAR,
-            Calendar.MONTH,
-            Calendar.DAY_OF_MONTH,
-            Calendar.HOUR,
-            Calendar.MINUTE,
-            Calendar.SECOND
-        ).map {
-            calendar.get(it).toString()
-        }
-
-        val name = "$prefix-${parts.joinToString("-")}${logFileNameSuffix(tag, extension)}"
+        val name = "$prefix-${currentDate.toFileNameString()}${logFileNameSuffix(tag, extension)}"
 
         file = directory.resolve(name)
         if(!file.exists())

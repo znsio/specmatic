@@ -1,4 +1,4 @@
-package `in`.specmatic.core.utilities
+package utilities
 
 import io.mockk.every
 import io.mockk.mockkConstructor
@@ -9,6 +9,7 @@ import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.clone
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
 import java.io.File
@@ -133,8 +134,10 @@ internal class UtilitiesTest {
                 "{\"provider\": \"git\",\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
-        val expectedSources = listOf(GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
-                GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION")))
+        val expectedSources = listOf(
+            GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
+                GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"))
+        )
         assertThat(sources == expectedSources).isTrue
     }
 

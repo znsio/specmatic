@@ -41,12 +41,9 @@ class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = Ht
             separator,
             response.toLogString("  "))
 
-        val suffix = listOf(
-            "",
-            ""
-        )
+        val suffix = listOf("")
 
-        return mainMessage.plus(suffix).joinToString(System.lineSeparator())
+        return (mainMessage + suffix).joinToString(System.lineSeparator())
     }
 
     override fun toJSONObject(): JSONObjectValue {

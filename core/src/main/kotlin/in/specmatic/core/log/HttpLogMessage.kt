@@ -26,17 +26,15 @@ class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = Ht
 
     override fun toLogString(): String {
         val prefix = "  "
-        val separator = "$prefix--------------------"
 
         val mainMessage = listOf(
             "",
-            "====================",
-            "Request time: $requestTime",
-            "Response time: $responseTime",
-            separator,
-            request.toLogString("  "),
-            separator,
-            response.toLogString("  "))
+            "--------------------",
+            "${prefix}Request at $requestTime",
+            request.toLogString("$prefix$prefix"),
+            "${prefix}Response at $responseTime",
+            response.toLogString("$prefix$prefix")
+        )
 
         val suffix = listOf("")
 

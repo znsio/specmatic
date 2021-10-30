@@ -1,7 +1,5 @@
-package `in`.specmatic
+package `in`.specmatic.core.log
 
-import `in`.specmatic.core.LogMessage
-import `in`.specmatic.core.details
 import java.util.*
 
 object LogTail {
@@ -27,28 +25,7 @@ object LogTail {
 
     fun getSnapshot(): String = snapshot.joinToString("\n") { it.toLogString() }
 
-    internal fun clear() {
+    fun clear() {
         logs.clear()
     }
 }
-
-fun consoleLog(event: LogMessage) {
-    LogTail.append(event)
-    details.forTheUser(event)
-}
-
-fun consoleLog(e: Throwable) {
-    LogTail.append(details.ofTheException(e))
-    details.forTheUser(e)
-}
-
-fun consoleLog(e: Throwable, msg: String) {
-    LogTail.append(details.ofTheException(e, msg))
-    details.forTheUser(e, msg)
-}
-
-val dontPrintToConsole = { event: LogMessage ->
-    LogTail.append(event)
-}
-
-val ignoreLog = { _: LogMessage -> }

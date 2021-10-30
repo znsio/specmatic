@@ -1,6 +1,6 @@
 package `in`.specmatic.core.git
 
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File

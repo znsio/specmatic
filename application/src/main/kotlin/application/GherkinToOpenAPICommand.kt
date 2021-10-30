@@ -2,8 +2,8 @@
 
 package application
 
-import `in`.specmatic.core.Verbose
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.Verbose
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.utilities.exitWithMessage
 import org.springframework.beans.factory.annotation.Autowired

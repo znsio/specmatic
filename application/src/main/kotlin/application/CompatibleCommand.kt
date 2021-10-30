@@ -4,6 +4,8 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.conversions.wsdlContentToFeature
 import `in`.specmatic.core.*
 import `in`.specmatic.core.git.*
+import `in`.specmatic.core.log.Verbose
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import org.springframework.beans.factory.annotation.Autowired

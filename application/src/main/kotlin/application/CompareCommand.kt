@@ -1,8 +1,8 @@
 package application
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.details
-import `in`.specmatic.core.logException
+import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logException
 import `in`.specmatic.core.pattern.ContractException
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters

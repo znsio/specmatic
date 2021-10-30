@@ -1,7 +1,7 @@
 package `in`.specmatic.core.wsdl.parser
 
 import `in`.specmatic.core.SPECMATIC_GITHUB_ISSUES
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.*

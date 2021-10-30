@@ -1,7 +1,9 @@
 package `in`.specmatic.stub
 
-import `in`.specmatic.LogTail
+import `in`.specmatic.core.log.LogTail
 import `in`.specmatic.core.*
+import `in`.specmatic.core.log.HttpLogMessage
+import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
@@ -11,7 +13,7 @@ import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXMLNode
-import `in`.specmatic.dontPrintToConsole
+import `in`.specmatic.core.log.dontPrintToConsole
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON

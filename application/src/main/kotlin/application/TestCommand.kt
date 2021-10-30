@@ -12,8 +12,8 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
-import `in`.specmatic.core.Verbose
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.Verbose
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.test.SpecmaticJUnitSupport
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME

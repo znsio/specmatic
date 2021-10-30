@@ -6,7 +6,7 @@ import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.clone
 import `in`.specmatic.core.git.exitErrorMessageContains
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.details
 import java.io.File
 
 sealed class ContractSource {

@@ -1,12 +1,15 @@
-package `in`.specmatic.core
+package `in`.specmatic.core.log
 
+import `in`.specmatic.core.HttpRequest
+import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStubResponse
 import `in`.specmatic.stub.getDateStringValue
 
-class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = HttpRequest(), var responseTime: String = "", var response: HttpResponse = HttpResponse.OK, var contractPath: String = ""): LogMessage {
+class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = HttpRequest(), var responseTime: String = "", var response: HttpResponse = HttpResponse.OK, var contractPath: String = ""):
+    LogMessage {
     fun addRequest(httpRequest: HttpRequest) {
         requestTime = getDateStringValue()
         this.request = httpRequest

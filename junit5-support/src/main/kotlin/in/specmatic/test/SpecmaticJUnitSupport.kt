@@ -2,6 +2,7 @@ package `in`.specmatic.test
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.contractTestPathsFrom
 import `in`.specmatic.core.utilities.createIfDoesNotExist

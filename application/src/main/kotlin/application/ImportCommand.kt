@@ -5,9 +5,9 @@ import `in`.specmatic.conversions.postmanCollectionToGherkin
 import `in`.specmatic.conversions.runTests
 import `in`.specmatic.conversions.toFragment
 import `in`.specmatic.core.*
-import `in`.specmatic.core.Verbose
-import `in`.specmatic.core.details
-import `in`.specmatic.core.logException
+import `in`.specmatic.core.log.Verbose
+import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logException
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.toXMLNode

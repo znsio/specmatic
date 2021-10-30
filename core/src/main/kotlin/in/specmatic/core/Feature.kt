@@ -1,6 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.*
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.jsonStringToValueMap

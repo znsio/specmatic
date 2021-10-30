@@ -1,9 +1,9 @@
 package application
 
 import picocli.CommandLine.*
-import `in`.specmatic.consoleLog
+import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import `in`.specmatic.core.StringLog
+import `in`.specmatic.core.log.StringLog
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.proxy.Proxy

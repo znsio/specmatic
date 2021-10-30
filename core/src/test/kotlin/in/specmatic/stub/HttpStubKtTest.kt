@@ -3,7 +3,7 @@ package `in`.specmatic.stub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
-import `in`.specmatic.consoleLog
+import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.pattern.parsedValue

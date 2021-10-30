@@ -1,12 +1,10 @@
 package application
 
-import `in`.specmatic.LogTail
-import `in`.specmatic.consoleLog
+import `in`.specmatic.core.log.LogTail
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
-import `in`.specmatic.core.Verbose
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.*
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.*

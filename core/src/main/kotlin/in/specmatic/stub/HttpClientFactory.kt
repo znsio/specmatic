@@ -1,6 +1,6 @@
 package `in`.specmatic.stub
 
-import `in`.specmatic.ignoreLog
+import `in`.specmatic.core.log.ignoreLog
 import `in`.specmatic.test.HttpClient
 
 class HttpClientFactory {

@@ -14,7 +14,7 @@ import kotlinx.coroutines.runBlocking
 import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy
 import org.apache.http.ssl.SSLContextBuilder
-import `in`.specmatic.consoleLog
+import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
@@ -23,7 +23,8 @@ import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.utilities.valueMapToPlainJsonString
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.core.HttpLogMessage
+import `in`.specmatic.core.log.HttpLogMessage
+import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.stub.getDateStringValue

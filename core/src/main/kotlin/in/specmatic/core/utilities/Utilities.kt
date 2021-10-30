@@ -9,11 +9,11 @@ import org.eclipse.jgit.transport.sshd.SshdSessionFactory
 import org.w3c.dom.Document
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
-import `in`.specmatic.consoleLog
+import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.NumberPattern

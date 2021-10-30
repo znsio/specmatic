@@ -1,6 +1,6 @@
 package `in`.specmatic.core.wsdl.parser
 
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.value.XMLNode
 import `in`.specmatic.core.value.XMLValue

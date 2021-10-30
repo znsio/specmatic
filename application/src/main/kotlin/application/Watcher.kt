@@ -1,8 +1,8 @@
 package application
 
-import `in`.specmatic.consoleLog
+import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.CONTRACT_EXTENSIONS
-import `in`.specmatic.core.StringLog
+import `in`.specmatic.core.log.StringLog
 import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Path

@@ -1,6 +1,8 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.log.Verbose
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor

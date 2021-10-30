@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import picocli.CommandLine
 import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.utilities.ContractPathData
 import java.io.File
 import java.io.FileOutputStream

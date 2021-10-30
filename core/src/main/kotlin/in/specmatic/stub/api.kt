@@ -1,9 +1,10 @@
 @file:JvmName("API")
 package `in`.specmatic.stub
 
-import `in`.specmatic.consoleLog
+import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.StringLog
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.contractStubPaths
 import `in`.specmatic.core.utilities.jsonStringToValueMap

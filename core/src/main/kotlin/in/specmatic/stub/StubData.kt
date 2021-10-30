@@ -1,6 +1,7 @@
 package `in`.specmatic.stub
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.jsonStringToValueMap

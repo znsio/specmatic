@@ -1,6 +1,7 @@
 package `in`.specmatic
 
-import `in`.specmatic.core.StringLog
+import `in`.specmatic.core.log.LogTail
+import `in`.specmatic.core.log.StringLog
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

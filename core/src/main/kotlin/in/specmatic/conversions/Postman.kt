@@ -1,13 +1,13 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.details
+import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.dontPrintToConsole
+import `in`.specmatic.core.log.dontPrintToConsole
 import `in`.specmatic.test.HttpClient
 import java.net.URI
 import java.net.URL

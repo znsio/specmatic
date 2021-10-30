@@ -55,7 +55,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
                     Result.Failure("Expected an array of length ${pattern.size}, actual length ${sampleData.list.size}")
                 else -> {
                     val sampleValue = sampleData.list[index]
-                    patternValue.matches(sampleValue, resolverWithNumberType).breadCrumb("""[$index]""")
+                    resolverWithNumberType.matchesPattern(null, patternValue, sampleValue).breadCrumb("""[$index]""")
                 }
             }
         }.find {

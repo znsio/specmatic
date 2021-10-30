@@ -23,6 +23,16 @@ internal class JSONArrayPatternTest {
     }
 
     @Test
+    fun `JSON array of numbers should match stubbed json array containing number type`() {
+        val value = parsedValue("""["(number)"]""")
+        val pattern = JSONArrayPattern(listOf(NumberPattern()))
+
+        val resolver = Resolver(mockMode = true)
+
+        assertThat(resolver.matchesPattern(null, pattern, value)).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
     fun `An array with the first n elements should not match an array with all the elements`() {
         val value = parsedValue("[1,2]")
         val pattern = parsedPattern("""[1,2,3]""")

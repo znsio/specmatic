@@ -277,7 +277,7 @@ internal fun withNullPattern(resolver: Resolver): Resolver {
     return resolver.copy(newPatterns = resolver.newPatterns.plus("(empty)" to NullPattern))
 }
 
-internal fun withNumberType(resolverWithNullType: Resolver) =
-        resolverWithNullType.copy(newPatterns = resolverWithNullType.newPatterns.plus("(number)" to NumberPattern()))
+internal fun withNumberType(resolver: Resolver) =
+        resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberPattern()))
 
 fun String.capitalizeFirstChar() = this.replaceFirstChar { it.uppercase() }

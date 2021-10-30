@@ -56,7 +56,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
 
-        val missingKey = resolverWithNullType.findMissingKey(pattern, sampleData.jsonObject, unexpectedKeyCheck)
+        val missingKey = resolverWithNullType.findKeyError(pattern, sampleData.jsonObject, unexpectedKeyCheck)
         if (missingKey != null)
             return missingKeyToResult(missingKey, "key")
 

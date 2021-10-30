@@ -229,7 +229,7 @@ internal fun matchesQuery(
     resolver: Resolver
 ): Result {
     val missingKey =
-        resolver.findMissingKey(queryPattern, sampleQuery.mapValues { StringValue(it.value) }, ::validateUnexpectedKeys)
+        resolver.findKeyError(queryPattern, sampleQuery.mapValues { StringValue(it.value) }, ::validateUnexpectedKeys)
     if (missingKey != null)
         return missingKeyToResult(missingKey, "query param")
 

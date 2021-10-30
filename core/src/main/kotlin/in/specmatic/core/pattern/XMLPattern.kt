@@ -237,7 +237,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             it.key == "xmlns" || it.key.startsWith("xmlns:") || it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX)
         }
 
-        val missingKey = resolver.findMissingKey(
+        val missingKey = resolver.findKeyError(
                 ignoreXMLNamespaces(patternAttributesWithoutXmlns),
                 ignoreXMLNamespaces(sampleAttributesWithoutXmlns),
                 ::validateUnexpectedKeys

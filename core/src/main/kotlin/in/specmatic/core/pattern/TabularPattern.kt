@@ -24,7 +24,7 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
             return mismatchResult("JSON object", sampleData)
 
         val resolverWithNullType = withNullPattern(resolver)
-        val missingKey = resolverWithNullType.findMissingKey(pattern, sampleData.jsonObject, unexpectedKeyCheck)
+        val missingKey = resolverWithNullType.findKeyError(pattern, sampleData.jsonObject, unexpectedKeyCheck)
         if (missingKey != null)
             return missingKeyToResult(missingKey, "key")
 

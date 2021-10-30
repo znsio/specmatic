@@ -15,7 +15,9 @@ sealed class KeyError {
 data class MissingKeyError(override val name: String) : KeyError()
 data class UnexpectedKeyError(override val name: String) : KeyError()
 
-data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findMissingKey: (pattern: Map<String, Any>, actual: Map<String, Any>, UnexpectedKeyCheck) -> KeyError? = ::checkOnlyPatternKeys, val context: Map<String, String> = emptyMap()) {
+typealias KeyErrorPredicate = (pattern: Map<String, Any>, actual: Map<String, Any>, UnexpectedKeyCheck) -> KeyError?
+
+data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findKeyError: KeyErrorPredicate = ::checkOnlyPatternKeys, val context: Map<String, String> = emptyMap()) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
 
@@ -95,7 +97,11 @@ fun validateUnexpectedKeys(pattern: Map<String, Any>, actual: Map<String, Any>):
 }
 
 internal val checkAllKeys = { pattern: Map<String, Any>, actual: Map<String, Any>, _: Any ->
-    pattern.minus("...").keys.find { key -> isMissingKey(actual, key) }?.let { MissingKeyError(it) } ?: validateUnexpectedKeys(pattern, actual)
+    pattern.minus("...").keys.find { key ->
+        isMissingKey(actual, key)
+    }?.let {
+        MissingKeyError(it)
+    } ?: validateUnexpectedKeys(pattern, actual)
 }
 
 fun missingKeyToResult(keyError: KeyError, keyLabel: String): Result.Failure {

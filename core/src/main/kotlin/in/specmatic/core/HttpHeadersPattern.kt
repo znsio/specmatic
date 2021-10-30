@@ -82,8 +82,12 @@ data class HttpHeadersPattern(
         ancestorHeaders: Map<String, Pattern>
     ): Map<String, String> {
         return headers.filterKeys { key ->
-            val keyWithoutOptionality = withoutOptionality(key)
-            ancestorHeaders.containsKey(keyWithoutOptionality) || ancestorHeaders.containsKey("$keyWithoutOptionality?")
+            val headerWithoutOptionality = withoutOptionality(key)
+            ancestorHeaders.containsKey(headerWithoutOptionality) || ancestorHeaders.containsKey("$headerWithoutOptionality?")
+        }.filterNot { entry ->
+            val headerWithoutOptionality = withoutOptionality(entry.key)
+
+            isStandardHeader(headerWithoutOptionality) && "${headerWithoutOptionality}?" in ancestorHeaders
         }
     }
 
@@ -160,3 +164,8 @@ private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resol
     } catch (e: Throwable) {
         StringValue(sampleValue)
     }
+
+private val standardCommonHTTPHeaders = setOf("A-IM", "Accept", "Accept-Charset", "Accept-Datetime", "Accept-Encoding", "Accept-Language", "Access-Control-Request-Method,", "Access-Control-Request-Headers", "Authorization", "Cache-Control", "Connection", "Content-Encoding", "Content-Length", "Content-MD5", "Content-Type", "Cookie", "Date", "Expect", "Forwarded", "From", "Host", "HTTP2-Settings", "If-Match", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Origin", "Pragma", "Prefer", "Proxy-Authorization", "Range", "Referer", "TE", "Trailer", "Transfer-Encoding", "User-Agent", "Upgrade", "Via", "Warning")
+
+fun isStandardHeader(header: String): Boolean = withoutOptionality(header) in standardCommonHTTPHeaders
+

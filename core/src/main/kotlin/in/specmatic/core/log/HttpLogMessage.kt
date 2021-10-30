@@ -6,12 +6,11 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStubResponse
-import `in`.specmatic.stub.getDateStringValue
 
 class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = HttpRequest(), var responseTime: String = "", var response: HttpResponse = HttpResponse.OK, var contractPath: String = ""):
     LogMessage {
     fun addRequest(httpRequest: HttpRequest) {
-        requestTime = getDateStringValue()
+        requestTime = CurrentDate().getDateStringValue()
         this.request = httpRequest
     }
 
@@ -20,13 +19,8 @@ class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = Ht
         this.request = httpRequest
     }
 
-    fun addResponse(httpResponse: HttpResponse, responseTime: String) {
-        this.responseTime = responseTime
-        this.response = httpResponse
-    }
-
     fun addResponse(httpResponse: HttpResponse) {
-        responseTime = getDateStringValue()
+        responseTime = CurrentDate().getDateStringValue()
         this.response = httpResponse
     }
 
@@ -64,5 +58,9 @@ class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = Ht
     fun addResponse(stubResponse: HttpStubResponse) {
         addResponse(stubResponse.response)
         contractPath = stubResponse.contractPath
+    }
+
+    fun logStartRequestTime() {
+        this.requestTime = CurrentDate().getDateStringValue()
     }
 }

@@ -27,7 +27,6 @@ import `in`.specmatic.core.log.HttpLogMessage
 import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.stub.getDateStringValue
 import `in`.specmatic.stub.toParams
 import java.io.File
 import java.net.URL
@@ -63,9 +62,10 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
     override fun execute(request: HttpRequest): HttpResponse {
         val url = URL(request.getURL(baseURL))
 
-        val startTime = getDateStringValue()
-
         val requestWithFileContent = loadFileContentIntoParts(request)
+
+        val httpLogMessage = HttpLogMessage()
+        httpLogMessage.logStartRequestTime()
 
         return runBlocking {
             val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
@@ -101,15 +101,11 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
                 }
             }
 
-            val endTime = getDateStringValue()
-
-            val httpLogMessage = HttpLogMessage()
-
             val outboundRequest: HttpRequest = ktorHttpRequestToHttpRequest(ktorResponse.request, requestWithFileContent)
-            httpLogMessage.addRequest(outboundRequest, startTime)
+            httpLogMessage.addRequest(outboundRequest)
 
             ktorResponseToHttpResponse(ktorResponse).also {
-                httpLogMessage.addResponse(it, endTime)
+                httpLogMessage.addResponse(it)
                 log(httpLogMessage)
             }
         }

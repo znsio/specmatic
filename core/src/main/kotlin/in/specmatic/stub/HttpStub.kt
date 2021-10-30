@@ -1,9 +1,10 @@
 package `in`.specmatic.stub
 
-import `in`.specmatic.core.log.LogTail
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.HttpLogMessage
 import `in`.specmatic.core.log.LogMessage
+import `in`.specmatic.core.log.LogTail
+import `in`.specmatic.core.log.dontPrintToConsole
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
@@ -13,7 +14,6 @@ import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXMLNode
-import `in`.specmatic.core.log.dontPrintToConsole
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
@@ -35,36 +35,6 @@ import java.util.*
 import kotlin.text.toCharArray
 
 data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "")
-
-class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
-    fun matchResults(fn: (List<HttpStubData>) -> List<Pair<Result, HttpStubData>>): List<Pair<Result, HttpStubData>> {
-        synchronized(this) {
-            return fn(httpStubs.toList())
-        }
-    }
-
-    fun addToStub(result: Pair<Result, HttpStubData?>, stub: ScenarioStub) {
-        synchronized(this) {
-            result.second.let {
-                if(it != null)
-                    httpStubs.add(0, it.copy(delayInSeconds = stub.delayInSeconds))
-            }
-        }
-    }
-}
-
-fun getDateStringValue(): String {
-    val date = Calendar.getInstance()
-    val year = date.get(Calendar.YEAR)
-    val month = date.get(Calendar.MONTH)
-    val day = date.get(Calendar.DATE)
-    val hour = date.get(Calendar.HOUR)
-    val minute = date.get(Calendar.MINUTE)
-    val second = date.get(Calendar.SECOND)
-    val millisecond = date.get(Calendar.MILLISECOND)
-
-    return "$year-$month-$day $hour:$minute:$second.$millisecond"
-}
 
 class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: LogMessage) -> Unit = dontPrintToConsole, private val strictMode: Boolean = false, keyData: KeyData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory(), val workingDirectory: WorkingDirectory? = null) : ContractStub {
     constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: LogMessage) -> Unit = dontPrintToConsole) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)

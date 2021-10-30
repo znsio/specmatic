@@ -6,10 +6,11 @@ import `in`.specmatic.core.FailureReason.URLPathMisMatch
 fun pathNotRecognizedMessage(httpRequest: HttpRequest): String {
     val soapActionHeader = "SOAPAction"
     if(httpRequest.headers.containsKey(soapActionHeader))
-        return PATH_NOT_RECOGNIZED_ERROR + ": Path=\"" + httpRequest.path + "\", SOAPAction=\"${httpRequest.headers.getValue(soapActionHeader)}\""
+        return "SOAP request not recognized; path=" + httpRequest.path + ", SOAPAction=${httpRequest.headers.getValue(soapActionHeader)}"
 
-    return PATH_NOT_RECOGNIZED_ERROR + ": \"" + httpRequest.path + "\""
+    return "Request not recognized; method=${httpRequest.method}, path=${httpRequest.path}"
 }
+
 const val PATH_NOT_RECOGNIZED_ERROR = "URL path or SOAPAction not recognised"
 
 data class Results(val results: List<Result> = emptyList()) {

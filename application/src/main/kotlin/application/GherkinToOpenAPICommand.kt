@@ -2,6 +2,7 @@
 
 package application
 
+import `in`.specmatic.core.log.CompositePrinter
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.details
 import `in`.specmatic.core.parseGherkinStringToFeature
@@ -27,7 +28,7 @@ class GherkinToOpenAPICommand : Callable<Unit> {
 
     override fun call() {
         if(verbose) {
-            details = Verbose
+            details = Verbose()
         }
 
         if(!fileOperations.isFile(contractPath))

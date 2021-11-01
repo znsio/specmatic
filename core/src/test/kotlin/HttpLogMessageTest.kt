@@ -15,7 +15,7 @@ internal class HttpLogMessageTest {
         val json: JSONObjectValue = httpLog.toJSONObject()
         assertThat(json.getString("requestTime")).isEqualTo("start-time")
         assertThat(json.getString("responseTime")).isEqualTo("end-time")
-        assertThat(json.getString("contractPath")).isEqualTo("/path/to/file")
+        assertThat(json.getString("contractMatched")).isEqualTo("/path/to/file")
 
         assertThat(json.findFirstChildByPath("http-request.path")).isEqualTo(StringValue("/"))
         assertThat(json.findFirstChildByPath("http-request.method")).isEqualTo(StringValue("GET"))
@@ -29,10 +29,15 @@ internal class HttpLogMessageTest {
     @Test
     fun `render an http log message as Text`() {
         val text: String = httpLog.toLogString()
+
+        println(text)
+
         assertThat(text).contains("start-time")
         assertThat(text).contains("GET /")
 
         assertThat(text).contains("200 OK")
         assertThat(text).contains("end-time")
+
+        assertThat(text).contains("/path/to/file")
     }
 }

@@ -25,20 +25,32 @@ class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = Ht
     }
 
     override fun toLogString(): String {
-        val prefix = "  "
+        val linePrefix = "  "
 
-        val mainMessage = listOf(
+        val messagePrefix = listOf(
             "",
             "--------------------",
-            "${prefix}Request at $requestTime",
-            request.toLogString("$prefix$prefix"),
-            "${prefix}Response at $responseTime",
-            response.toLogString("$prefix$prefix")
         )
 
-        val suffix = listOf("")
+        val contractPathLines = if(contractPath.isNotBlank()) {
+            listOf(
+                "${linePrefix}Contract matched: $contractPath",
+                ""
+            )
+        } else {
+            emptyList()
+        }
 
-        return (mainMessage + suffix).joinToString(System.lineSeparator())
+        val mainMessage = listOf(
+            "${linePrefix}Request at $requestTime",
+            request.toLogString("$linePrefix$linePrefix"),
+            "${linePrefix}Response at $responseTime",
+            response.toLogString("$linePrefix$linePrefix")
+        )
+
+        val messageSuffix = listOf("")
+
+        return (messagePrefix + contractPathLines + mainMessage + messageSuffix).joinToString(System.lineSeparator())
     }
 
     override fun toJSONObject(): JSONObjectValue {
@@ -48,7 +60,7 @@ class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = Ht
         log["http-request"] = request.toJSON()
         log["http-response"] = response.toJSON()
         log["responseTime"] = StringValue(responseTime)
-        log["contractPath"] = StringValue(contractPath)
+        log["contractMatched"] = StringValue(contractPath)
 
         return JSONObjectValue(log.toMap())
     }

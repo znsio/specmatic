@@ -39,7 +39,7 @@ internal class ComplexElementTest {
         } returns complexType2
 
         every {
-            wsdl.getQualification(toXMLNode("<xsd:element type=\"ns0:Person\"/>").withPrimitiveNamespace(), "ns0:PersonRequest")
+            wsdl.getQualification(element, "ns0:PersonRequest")
         } returns UnqualifiedNamespace("Person")
 
         every {

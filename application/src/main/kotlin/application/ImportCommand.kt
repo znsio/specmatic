@@ -5,6 +5,7 @@ import `in`.specmatic.conversions.postmanCollectionToGherkin
 import `in`.specmatic.conversions.runTests
 import `in`.specmatic.conversions.toFragment
 import `in`.specmatic.core.*
+import `in`.specmatic.core.log.CompositePrinter
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.details
 import `in`.specmatic.core.log.logException
@@ -31,7 +32,7 @@ class ImportCommand : Callable<Int> {
 
     override fun call(): Int {
         if(verbose)
-            details = Verbose
+            details = Verbose()
 
         return logException {
             when {

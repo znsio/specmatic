@@ -99,7 +99,7 @@ class TestCommand : Callable<Unit> {
 
     override fun call() = try {
         if(verboseMode) {
-            details = Verbose
+            details = Verbose()
         }
 
         configFileName?.let {

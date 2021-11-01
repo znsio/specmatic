@@ -45,7 +45,7 @@ Scenario: zero should return not found
         @BeforeAll
         @JvmStatic
         fun setup() {
-            details = Verbose
+            details = Verbose()
         }
     }
 

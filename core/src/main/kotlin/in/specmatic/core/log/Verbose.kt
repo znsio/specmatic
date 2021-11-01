@@ -2,7 +2,7 @@ package `in`.specmatic.core.log
 
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 
-object Verbose : AmountOfDetail {
+class Verbose(override val printer: CompositePrinter = CompositePrinter()) : AmountOfDetail {
     override fun exceptionString(e: Throwable, msg: String?): String {
         val message = when(msg) {
             null -> exceptionCauseMessage(e)
@@ -17,7 +17,7 @@ object Verbose : AmountOfDetail {
     }
 
     override fun forTheUser(e: Throwable, msg: String?) {
-        logPrinter.print(VerboseExceptionLog(e, msg))
+        printer.print(VerboseExceptionLog(e, msg))
     }
 
     override fun forTheUser(msg: String) {
@@ -25,11 +25,11 @@ object Verbose : AmountOfDetail {
     }
 
     override fun forTheUser(msg: LogMessage) {
-        logPrinter.print(msg)
+        printer.print(msg)
     }
 
     override fun newLine() {
-        logPrinter.print(NewLineLogMessage)
+        printer.print(NewLineLogMessage)
     }
 
     override fun forDebugging(msg: String): String {
@@ -38,7 +38,7 @@ object Verbose : AmountOfDetail {
     }
 
     override fun forDebugging(msg: LogMessage) {
-        logPrinter.print(msg)
+        printer.print(msg)
     }
 
     override fun forDebugging(e: Throwable, msg: String?) {

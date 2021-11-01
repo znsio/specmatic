@@ -2,7 +2,7 @@ package `in`.specmatic.core.log
 
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 
-object NonVerbose : AmountOfDetail {
+class NonVerbose(override val printer: CompositePrinter) : AmountOfDetail {
     override fun exceptionString(e: Throwable, msg: String?): String {
         return when(msg) {
             null -> exceptionCauseMessage(e)
@@ -15,7 +15,7 @@ object NonVerbose : AmountOfDetail {
     }
 
     override fun forTheUser(e: Throwable, msg: String?) {
-        logPrinter.print(NonVerboseExceptionLog(e, msg))
+        printer.print(NonVerboseExceptionLog(e, msg))
     }
 
     override fun forTheUser(msg: String) {
@@ -23,11 +23,11 @@ object NonVerbose : AmountOfDetail {
     }
 
     override fun forTheUser(msg: LogMessage) {
-        logPrinter.print(msg)
+        printer.print(msg)
     }
 
     override fun newLine() {
-        logPrinter.print(NewLineLogMessage)
+        printer.print(NewLineLogMessage)
     }
 
     override fun forDebugging(msg: String): String { return msg }

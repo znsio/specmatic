@@ -90,6 +90,9 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--jsonLog"], description = ["Directory in which to write a json log"])
     var jsonLog: String? = null
 
+    @Option(names = ["--noConsoleLog"], description = ["Don't log to console"])
+    var noConsoleLog: Boolean = false
+
     @Option(names = ["--logPrefix"], description = ["Prefix of log file"])
     var logPrefix: String = "specmatic"
 
@@ -103,16 +106,26 @@ class StubCommand : Callable<Unit> {
     val httpClientFactory = HttpClientFactory()
 
     override fun call() {
-        if(verbose)
-            details = Verbose(CompositePrinter())
+        val logPrinters = mutableListOf<LogPrinter>()
+
+        if(!noConsoleLog) {
+            logPrinters.add(ConsolePrinter)
+        }
 
         textLog?.let {
+            logPrinters.add(TextFilePrinter(LogDirectory(it, logPrefix, "", "log")))
             details.printer.printers.add(TextFilePrinter(LogDirectory(it, logPrefix, "", "log")))
         }
 
         jsonLog?.let {
+            logPrinters.add(JSONFilePrinter(LogDirectory(it, logPrefix, "json", "log")))
             details.printer.printers.add(JSONFilePrinter(LogDirectory(it, logPrefix, "json", "log")))
         }
+
+        details = if(verbose)
+            Verbose(CompositePrinter(logPrinters))
+        else
+            NonVerbose(CompositePrinter(logPrinters))
 
         configFileName?.let {
             Configuration.globalConfigFileName = it

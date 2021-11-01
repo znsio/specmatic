@@ -1,5 +1,3 @@
-package `in`.specmatic.core
-
 import `in`.specmatic.core.log.logFileNameSuffix
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

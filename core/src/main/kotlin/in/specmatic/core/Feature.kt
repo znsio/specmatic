@@ -436,15 +436,17 @@ data class Feature(
             val pathName = scenario.httpRequestPattern.urlMatcher!!.toOpenApiPath()
 
             val existingPathItem = acc.find { it.first == pathName }?.second
-            val path = existingPathItem ?: PathItem()
+            val pathItem = existingPathItem ?: PathItem()
 
             val operation = when(scenario.httpRequestPattern.method!!) {
-                "GET" -> path.get
-                "POST" -> path.post
-                "PUT" -> path.put
-                "DELETE" -> path.delete
+                "GET" -> pathItem.get
+                "POST" -> pathItem.post
+                "PUT" -> pathItem.put
+                "DELETE" -> pathItem.delete
                 else -> TODO("Method \"${scenario.httpRequestPattern.method}\" in scenario ${scenario.name}")
-            } ?: Operation()
+            } ?: Operation().apply {
+                this.summary = scenario.name
+            }
 
             val pathParameters = scenario.httpRequestPattern.urlMatcher!!.pathParameters()
 
@@ -543,7 +545,8 @@ data class Feature(
 
             val apiResponse = ApiResponse()
 
-            apiResponse.description = "Response Description"
+            apiResponse.description = scenario.name
+
             val openApiResponseHeaders = scenario.httpResponsePattern.headersPattern.pattern.map { (key, pattern) ->
                 val header = Header()
                 header.schema = toOpenApiSchema(pattern)
@@ -584,13 +587,13 @@ data class Feature(
             operation.responses = responses
 
             when (scenario.httpRequestPattern.method) {
-                "GET" -> path.get = operation
-                "POST" -> path.post = operation
-                "PUT" -> path.put = operation
-                "DELETE" -> path.delete = operation
+                "GET" -> pathItem.get = operation
+                "POST" -> pathItem.post = operation
+                "PUT" -> pathItem.put = operation
+                "DELETE" -> pathItem.delete = operation
             }
 
-            acc.plus(pathName to path)
+            acc.plus(pathName to pathItem)
         }
 
         val schemas: Map<String, Pattern> = this.scenarios.map {

@@ -198,6 +198,7 @@ Scenario: Get product by id
             paths:
               /product/{id}/variants/{variantId}:
                 get:
+                  summary: "Get product by id"
                   parameters:
                   - name: "id"
                     in: "path"
@@ -225,7 +226,7 @@ Scenario: Get product by id
                       type: "string"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get product by id"
                       content:
                         text/plain:
                           schema:
@@ -260,6 +261,7 @@ Scenario: Get product by id
                 paths:
                   /person:
                     post:
+                      summary: "Get person by id"
                       parameters: []
                       requestBody:
                         content:
@@ -272,7 +274,7 @@ Scenario: Get product by id
                                   type: "string"
                       responses:
                         "200":
-                          description: "Response Description"
+                          description: "Get person by id"
                           content:
                             text/plain:
                               schema:
@@ -311,6 +313,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add person by id"
                   parameters: []
                   requestBody:
                     content:
@@ -326,7 +329,7 @@ Scenario: Get product by id
                               ${"$"}ref: "#/components/schemas/Address"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add person by id"
                       content:
                         text/plain:
                           schema:
@@ -387,6 +390,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Get person by id"
                   parameters: []
                   requestBody:
                     content:
@@ -404,7 +408,7 @@ Scenario: Get product by id
                                 ${"$"}ref: "#/components/schemas/Address"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get person by id"
                       content:
                         text/plain:
                           schema:
@@ -465,6 +469,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Get person by id"
                   parameters: []
                   requestBody:
                     content:
@@ -481,7 +486,7 @@ Scenario: Get product by id
                               nullable: true
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get person by id"
                       content:
                         text/plain:
                           schema:
@@ -538,6 +543,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Get person by id"
                   parameters: []
                   requestBody:
                     content:
@@ -551,7 +557,7 @@ Scenario: Get product by id
                               nullable: true
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get person by id"
                       content:
                         text/plain:
                           schema:
@@ -604,6 +610,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Get person by id"
                   parameters: []
                   requestBody:
                     content:
@@ -617,7 +624,7 @@ Scenario: Get product by id
                               nullable: true
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get person by id"
                       content:
                         text/plain:
                           schema:
@@ -667,6 +674,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Get person by id"
                   parameters: []
                   requestBody:
                     content:
@@ -685,7 +693,7 @@ Scenario: Get product by id
                                 ${"$"}ref: "#/components/schemas/Address"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get person by id"
                       content:
                         text/plain:
                           schema:
@@ -746,6 +754,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Get person by id"
                   parameters: []
                   requestBody:
                     content:
@@ -764,7 +773,7 @@ Scenario: Get product by id
                                 nullable: true
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get person by id"
                       content:
                         text/plain:
                           schema:
@@ -825,6 +834,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -840,7 +850,7 @@ Scenario: Get product by id
                             contentType: "application/json"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
                       content:
                         text/plain:
                           schema:
@@ -908,6 +918,7 @@ Scenario: Get product by id
             paths:
               /data:
                 post:
+                  summary: "Add Data"
                   parameters: []
                   requestBody:
                     content:
@@ -920,7 +931,7 @@ Scenario: Get product by id
                               type: "string"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Data"
             """.trimIndent()
         )
     }
@@ -972,6 +983,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -980,7 +992,7 @@ Scenario: Get product by id
                           ${"$"}ref: "#/components/schemas/Person"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
                       content:
                         text/plain:
                           schema:
@@ -1061,20 +1073,22 @@ Scenario: Get product by id
             paths:
               /person1:
                 get:
+                  summary: "Add Person"
                   parameters: []
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
                       content:
                         application/json:
                           schema:
                             ${"$"}ref: "#/components/schemas/Person"
               /person2:
                 get:
+                  summary: "Add Person Details"
                   parameters: []
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person Details"
                       content:
                         application/json:
                           schema:
@@ -1128,6 +1142,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -1136,7 +1151,7 @@ Scenario: Get product by id
                           type: "string"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
             """.trimIndent()
         )
     }
@@ -1176,6 +1191,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -1186,7 +1202,7 @@ Scenario: Get product by id
                           - "hello"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
             """.trimIndent()
         )
     }
@@ -1226,6 +1242,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters:
                   - name: "X-Exact-Value"
                     in: "header"
@@ -1236,7 +1253,7 @@ Scenario: Get product by id
                       - "hello"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
             """.trimIndent()
         )
     }
@@ -1276,6 +1293,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -1284,7 +1302,7 @@ Scenario: Get product by id
                           type: "number"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
             """.trimIndent()
         )
     }
@@ -1325,6 +1343,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -1337,7 +1356,7 @@ Scenario: Get product by id
                               type: "string"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
             """.trimIndent()
         )
     }
@@ -1378,6 +1397,7 @@ Scenario: Get product by id
             paths:
               /person:
                 put:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -1390,7 +1410,7 @@ Scenario: Get product by id
                               type: "string"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
             """.trimIndent()
         )
     }
@@ -1435,6 +1455,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -1443,7 +1464,7 @@ Scenario: Get product by id
                           type: "string"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
             """.trimIndent()
         )
     }
@@ -1487,10 +1508,11 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
                       content:
                         text/plain:
                           schema:
@@ -1536,10 +1558,11 @@ Scenario: Get product by id
             paths:
               /person:
                 get:
+                  summary: "Get Person"
                   parameters: []
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get Person"
                       headers:
                         X-Hello-World:
                           required: true
@@ -1597,10 +1620,11 @@ Scenario: Get product by id
             paths:
               /person:
                 get:
+                  summary: "Get Person"
                   parameters: []
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get Person"
                       content:
                         application/json:
                           schema:
@@ -1655,6 +1679,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -1663,7 +1688,7 @@ Scenario: Get product by id
                           ${"$"}ref: "#/components/schemas/Person"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
                       content:
                         text/plain:
                           schema:
@@ -1719,6 +1744,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -1727,7 +1753,7 @@ Scenario: Get product by id
                           ${"$"}ref: "#/components/schemas/Person"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
                       content:
                         text/plain:
                           schema:
@@ -1784,6 +1810,7 @@ Scenario: Get product by id
             paths:
               /person:
                 post:
+                  summary: "Add Person"
                   parameters: []
                   requestBody:
                     content:
@@ -1792,7 +1819,7 @@ Scenario: Get product by id
                           ${"$"}ref: "#/components/schemas/Person"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Add Person"
                       content:
                         text/plain:
                           schema:
@@ -1854,6 +1881,7 @@ Scenario: Get product by id
             paths:
               /data:
                 get:
+                  summary: "Get details"
                   parameters:
                   - name: "X-Data"
                     in: "header"
@@ -1862,7 +1890,7 @@ Scenario: Get product by id
                       type: "string"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get details"
                       content:
                         text/plain:
                           schema:
@@ -1912,10 +1940,11 @@ Scenario: Get product by id
             paths:
               /data:
                 get:
+                  summary: "Get details"
                   parameters: []
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get details"
                       headers:
                         X-Data:
                           required: true
@@ -1982,10 +2011,11 @@ Scenario: Get product by id
             paths:
               /data:
                 get:
+                  summary: "Get details"
                   parameters: []
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get details"
                       headers:
                         X-Data-One:
                           required: false
@@ -2059,6 +2089,7 @@ Scenario: Get product by id
             paths:
               /data:
                 get:
+                  summary: "Get details"
                   parameters:
                   - name: "X-Data-One"
                     in: "header"
@@ -2072,7 +2103,7 @@ Scenario: Get product by id
                       type: "string"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get details"
                       content:
                         text/plain:
                           schema:
@@ -2127,6 +2158,7 @@ Scenario: Get product by id
             paths:
               /data:
                 get:
+                  summary: "Get details"
                   parameters:
                   - name: "param"
                     in: "query"
@@ -2134,7 +2166,7 @@ Scenario: Get product by id
                       type: "string"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get details"
                       content:
                         text/plain:
                           schema:
@@ -2203,6 +2235,7 @@ Scenario: Get product by id
             paths:
               /data:
                 get:
+                  summary: "Get details"
                   parameters:
                   - name: "param1"
                     in: "query"
@@ -2214,7 +2247,7 @@ Scenario: Get product by id
                       type: "string"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get details"
                       content:
                         text/plain:
                           schema:
@@ -2269,6 +2302,7 @@ Scenario: Get product by id
             paths:
               /data:
                 post:
+                  summary: "Get details"
                   parameters: []
                   requestBody:
                     content:
@@ -2284,7 +2318,7 @@ Scenario: Get product by id
                             contentType: "application/json"
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get details"
                       content:
                         text/plain:
                           schema:
@@ -2311,7 +2345,7 @@ Scenario: Get product by id
               When POST /data
               Then status 200
 
-            Scenario: Get details
+            Scenario: Get details error
               When POST /data
               Then status 500
             """.trimIndent()
@@ -2347,12 +2381,13 @@ Scenario: Get product by id
             paths:
               /data:
                 post:
+                  summary: "Get details"
                   parameters: []
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get details"
                     "500":
-                      description: "Response Description"
+                      description: "Get details error"
             """.trimIndent()
         )
     }
@@ -2390,10 +2425,11 @@ Scenario: Get product by id
             paths:
               /data:
                 get:
+                  summary: "Get details"
                   parameters: []
                   responses:
                     "200":
-                      description: "Response Description"
+                      description: "Get details"
             """.trimIndent()
         )
     }

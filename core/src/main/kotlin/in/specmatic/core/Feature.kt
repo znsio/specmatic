@@ -184,7 +184,7 @@ data class Feature(
             return results.find {
                 it.first != null
             }?.let { it.first as HttpStubData }
-                ?: throw NoMatchingScenario(failureResults(results).withoutFluff())
+                ?: throw NoMatchingScenario(failureResults(results).withoutFluff(), msg = null, cachedMessage = failureResults(results).withoutFluff().report(request))
         } finally {
             serverState = emptyMap()
         }
@@ -218,7 +218,7 @@ data class Feature(
     fun assertMatchesMockKafkaMessage(kafkaMessage: KafkaMessage) {
         val result = matchesMockKafkaMessage(kafkaMessage)
         if (result is Result.Failure)
-            throw NoMatchingScenario(Results(), resultReport(result))
+            throw NoMatchingScenario(Results(), cachedMessage = resultReport(result))
     }
 
     fun matchesMockKafkaMessage(kafkaMessage: KafkaMessage): Result {

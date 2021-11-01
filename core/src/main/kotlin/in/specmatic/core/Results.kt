@@ -14,6 +14,8 @@ fun pathNotRecognizedMessage(httpRequest: HttpRequest): String {
 const val PATH_NOT_RECOGNIZED_ERROR = "URL path or SOAPAction not recognised"
 
 data class Results(val results: List<Result> = emptyList()) {
+    fun hasResults(): Boolean = results.isNotEmpty()
+
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
     fun success(): Boolean = !hasFailures()
 
@@ -52,6 +54,13 @@ data class Results(val results: List<Result> = emptyList()) {
             filteredResults.isNotEmpty() -> listToReport(filteredResults)
             else -> "$defaultMessage\n\n${listToReport(results)}".trim()
         }
+    }
+
+    fun appendReport(httpRequest: HttpRequest, existingReport: String): String {
+        return if(existingReport.isNotBlank())
+            "\n\n${report(httpRequest)}"
+        else
+            report(httpRequest)
     }
 
 }

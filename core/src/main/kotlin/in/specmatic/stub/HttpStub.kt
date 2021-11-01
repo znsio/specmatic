@@ -138,7 +138,10 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         catch(e: ContractException) {
             HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.report())))
         }
-        catch (e: Exception) {
+        catch(e: NoMatchingScenario) {
+            HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.report(httpRequest))))
+        }
+        catch(e: Exception) {
             HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)))
         }
     }
@@ -155,20 +158,27 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         val results = features.asSequence().map { feature ->
             try {
                 val stubData: HttpStubData = softCastResponseToXML(feature.matchingStub(stub.request, stub.response))
-                Pair(Result.Success(), stubData)
+                Pair(Pair(Result.Success(), stubData), null)
             } catch (e: NoMatchingScenario) {
-                Pair(Result.Failure(e.localizedMessage), null)
+                Pair(null, e)
             }
         }
 
-        val result: Pair<Result, HttpStubData?>? = results.find { it.first is Result.Success }
+        val result: Pair<Pair<Result.Success, HttpStubData>?, NoMatchingScenario?>? = results.find { it.first != null }
+        val firstResult = result?.first
 
-        when (result?.first) {
-            is Result.Success -> threadSafeHttpStubs.addToStub(result, stub)
-            else -> throw NoMatchingScenario(Results(results.map { it.first }.toMutableList()).report(stub.request))
+        when (firstResult) {
+            null -> {
+                val failures = results.map {
+                    it.second?.results?.withoutFluff()?.results ?: emptyList()
+                }.flatten().toList()
+
+                throw NoMatchingScenario(Results(failures))
+            }
+            else -> threadSafeHttpStubs.addToStub(firstResult, stub)
         }
 
-        return result.second
+        return firstResult.second
     }
 
     override fun close() {

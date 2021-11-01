@@ -140,6 +140,11 @@ private fun printDataFiles(dataFiles: List<File>) {
     }
 }
 
+class StubMatchExceptionReport(private val request: HttpRequest, private val e: NoMatchingScenario) {
+    val message: String
+        get() = e.report(request)
+}
+
 fun loadQontractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
     val contractInfoFromStubs = stubData.mapNotNull { (stubFile, stub) ->
         val matchResults = features.asSequence().map { (qontractFile, feature) ->
@@ -152,14 +157,14 @@ fun loadQontractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
                 }
                 Pair(feature, null)
             } catch (e: NoMatchingScenario) {
-                Pair(null, Pair(e, qontractFile))
+                Pair(null, Pair(StubMatchExceptionReport(stub.request, e), qontractFile))
             }
         }
 
         when (val feature = matchResults.mapNotNull { it.first }.firstOrNull()) {
             null -> {
-                consoleLog(StringLog(matchResults.mapNotNull { it.second }.map { (exception, contractFile) ->
-                    "$stubFile didn't match $contractFile${System.lineSeparator()}${exception.message?.prependIndent("  ")}"
+                consoleLog(StringLog(matchResults.mapNotNull { it.second }.map { (exceptionReport, contractFile) ->
+                    "$stubFile didn't match $contractFile${System.lineSeparator()}${exceptionReport.message.prependIndent("  ")}"
                 }.joinToString("${System.lineSeparator()}${System.lineSeparator()}").prependIndent( "  ")))
                 null
             }

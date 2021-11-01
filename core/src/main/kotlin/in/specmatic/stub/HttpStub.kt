@@ -274,7 +274,7 @@ fun getHttpResponse(httpRequest: HttpRequest, features: List<Feature>, threadSaf
                 if (strictMode)
                     HttpStubResponse(http400Response(httpRequest, matchResults))
                 else
-                    HttpStubResponse(fakeHttpResponse(features, httpRequest))
+                    fakeHttpResponse(features, httpRequest)
             }
     } finally {
         features.forEach { feature ->
@@ -311,25 +311,25 @@ private fun stubbedResponse(
     return Pair(matchResults, stubResponse)
 }
 
-private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): HttpResponse {
+private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): HttpStubResponse {
     val responses = features.asSequence().map {
-        it.stubResponse(httpRequest)
+        Pair(it, it.stubResponse(httpRequest))
     }.toList()
 
-    return when (val fakeResponse = responses.firstOrNull { it.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "none") != "failure" }) {
+    return when (val fakeResponse = responses.firstOrNull { it.second.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "none") != "failure" }) {
         null -> {
             val (headers, body) = when {
-                responses.all { it.headers.getOrDefault(SPECMATIC_EMPTY_HEADER, "none") == "true" } -> {
+                responses.all { it.second.headers.getOrDefault(SPECMATIC_EMPTY_HEADER, "none") == "true" } -> {
                     Pair(mapOf(SPECMATIC_EMPTY_HEADER to "true"), StringValue(pathNotRecognizedMessage(httpRequest)))
                 }
                 else -> Pair(emptyMap(), StringValue(responses.map {
-                    it.body
+                    it.second.body
                 }.filter { it != EmptyString }.joinToString("\n\n")))
             }
 
-            HttpResponse(400, headers = headers.plus(mapOf(SPECMATIC_RESULT_HEADER to "failure")), body = body)
+            HttpStubResponse(HttpResponse(400, headers = headers.plus(mapOf(SPECMATIC_RESULT_HEADER to "failure")), body = body))
         }
-        else -> fakeResponse.withRandomResultHeader()
+        else -> HttpStubResponse(fakeResponse.second.withRandomResultHeader(), contractPath = fakeResponse.first.path)
     }
 }
 

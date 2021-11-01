@@ -1,8 +1,6 @@
 package `in`.specmatic.core.log
 
 interface AmountOfDetail {
-    val printer: CompositePrinter
-
     fun exceptionString(e: Throwable, msg: String? = null): String
     fun ofTheException(e: Throwable, msg: String? = null): LogMessage
     fun forTheUser(e: Throwable, msg: String? = null)

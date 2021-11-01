@@ -1,6 +1,6 @@
 package `in`.specmatic.core.log
 
-var details: AmountOfDetail = NonVerbose(CompositePrinter())
+var details: AmountOfDetail = NonVerbose
 
 fun logException(fn: ()-> Unit): Int {
     return try {
@@ -11,6 +11,8 @@ fun logException(fn: ()-> Unit): Int {
         1
     }
 }
+
+val logPrinter = CompositePrinter()
 
 fun consoleLog(event: LogMessage) {
     LogTail.append(event)

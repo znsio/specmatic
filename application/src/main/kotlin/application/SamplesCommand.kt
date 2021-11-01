@@ -4,6 +4,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.log.JSONConsoleLogPrinter
 import `in`.specmatic.core.log.details
 import `in`.specmatic.core.log.logException
+import `in`.specmatic.core.log.logPrinter
 import picocli.CommandLine.*
 import `in`.specmatic.stub.HttpStub
 import java.io.File
@@ -17,10 +18,8 @@ class SamplesCommand : Callable<Unit> {
     lateinit var contractFile: File
 
     override fun call() {
-        details.printer.printers.apply {
-            clear()
-            add(JSONConsoleLogPrinter)
-        }
+        logPrinter.printers.clear()
+        logPrinter.printers.add(JSONConsoleLogPrinter)
 
         logException {
             if(!contractFile.exists())

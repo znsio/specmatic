@@ -104,14 +104,14 @@ class StubCommand : Callable<Unit> {
 
     override fun call() {
         if(verbose)
-            details = Verbose(CompositePrinter())
+            details = Verbose
 
         textLog?.let {
-            details.printer.printers.add(TextFilePrinter(LogDirectory(it, logPrefix, "", "log")))
+            logPrinter.printers.add(TextFilePrinter(LogDirectory(it, logPrefix, "", "log")))
         }
 
         jsonLog?.let {
-            details.printer.printers.add(JSONFilePrinter(LogDirectory(it, logPrefix, "json", "log")))
+            logPrinter.printers.add(JSONFilePrinter(LogDirectory(it, logPrefix, "json", "log")))
         }
 
         configFileName?.let {

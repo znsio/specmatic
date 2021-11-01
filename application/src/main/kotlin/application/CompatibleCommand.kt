@@ -4,7 +4,6 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.conversions.wsdlContentToFeature
 import `in`.specmatic.core.*
 import `in`.specmatic.core.git.*
-import `in`.specmatic.core.log.CompositePrinter
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.ContractException
@@ -40,7 +39,7 @@ class GitCompatibleCommand : Callable<Int> {
     fun file(@Parameters(paramLabel = "contractPath", defaultValue = ".") contractPath: String,
              @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
-            details = Verbose(CompositePrinter())
+            details = Verbose
 
         if(!contractPath.isContractFile() && !contractPath.endsWith(".yaml") && !File(contractPath).isDirectory) {
             details.forTheUser(invalidContractExtensionMessage(contractPath))
@@ -63,7 +62,7 @@ class GitCompatibleCommand : Callable<Int> {
                 @Parameters(paramLabel = "olderCommit") olderCommit: String,
                 @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
-            details = Verbose()
+            details = Verbose
 
         return try {
             backwardCompatibleOnFileOrDirectory(path, fileOperations) {

@@ -44,6 +44,7 @@ class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = Ht
         val mainMessage = listOf(
             "${linePrefix}Request at $requestTime",
             request.toLogString("$linePrefix$linePrefix"),
+            "",
             "${linePrefix}Response at $responseTime",
             response.toLogString("$linePrefix$linePrefix")
         )

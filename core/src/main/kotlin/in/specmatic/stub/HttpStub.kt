@@ -141,7 +141,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
         catch(e: NoMatchingScenario) {
             HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.report(httpRequest))))
         }
-        catch(e: Exception) {
+        catch(e: Throwable) {
             HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)))
         }
     }

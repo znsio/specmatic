@@ -174,7 +174,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                 }.flatten().toList()
 
                 val failureResults = Results(failures)
-                throw NoMatchingScenario(failureResults, failureResults.report(stub.request))
+                throw NoMatchingScenario(failureResults, cachedMessage = failureResults.report(stub.request))
             }
             else -> threadSafeHttpStubs.addToStub(firstResult, stub)
         }

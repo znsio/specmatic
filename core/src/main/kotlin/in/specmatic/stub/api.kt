@@ -86,7 +86,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
                         else -> emptyList()
                     }
 
-                    loadQontractStubs(listOf(Pair(contractPath.path, feature)), stubData)
+                    loadContractStubs(listOf(Pair(contractPath.path, feature)), stubData)
                 } catch(e: Throwable) {
                     details.forTheUser(e, "Could not load ${contractPath.canonicalPath}")
                     emptyList()
@@ -130,7 +130,7 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
 
     val mockData = dataFiles.map { Pair(it.path, stringToMockScenario(StringValue(it.readText()))) }
 
-    return loadQontractStubs(features, mockData)
+    return loadContractStubs(features, mockData)
 }
 
 private fun printDataFiles(dataFiles: List<File>) {
@@ -145,7 +145,7 @@ class StubMatchExceptionReport(private val request: HttpRequest, private val e: 
         get() = e.report(request)
 }
 
-fun loadQontractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
+fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
     val contractInfoFromStubs = stubData.mapNotNull { (stubFile, stub) ->
         val matchResults = features.asSequence().map { (qontractFile, feature) ->
             try {

@@ -5,7 +5,7 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 
-class NonVerboseExceptionLog(private val e: Throwable, val msg: String?): LogMessage {
+class NonVerboseExceptionLog(val e: Throwable, val msg: String?): LogMessage {
     override fun toJSONObject(): JSONObjectValue {
         val data: Map<String, Value> = mapOf(
             "className" to StringValue(e.javaClass.name),

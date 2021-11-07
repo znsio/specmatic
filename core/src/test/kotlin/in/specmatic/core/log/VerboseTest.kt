@@ -58,18 +58,50 @@ internal class VerboseTest {
     }
 
     @Test
-    fun `debugging logs do not log anything`() {
-        logger.forDebugging("test")
+    fun `debug string log`() {
+        val logReturnValue = logger.forDebugging("test")
+
+        val logged = printer.logged
+        assertThat(logReturnValue).isEqualTo("test")
+        assertThat(logged.toLogString()).isEqualTo("test")
+    }
+
+    @Test
+    fun `debug log message`() {
         logger.forDebugging(StringLog("test"))
-        try {
+
+        val logged = printer.logged
+
+        assertThat(logged).isInstanceOf(StringLog::class.java)
+        assertThat(logged.toLogString()).isEqualTo("test")
+    }
+
+    @Test
+    fun `debug log exception without message`() {
+        val logged = try {
+            throw Exception("test")
+        } catch(e: Throwable) {
+            logger.forDebugging(e)
+            printer.logged
+        }
+
+        assertThat(logged).isInstanceOf(VerboseExceptionLog::class.java)
+        assertThat(logged.toLogString()).startsWith("test")
+        assertThat(logged.toLogString()).contains("java.lang.Exception")
+    }
+
+    @Test
+    fun `debug log exception with message`() {
+        val logged = try {
             throw Exception("test")
         } catch(e: Throwable) {
             logger.forDebugging(e, "msg")
-            logger.forDebugging(e)
+            printer.logged
         }
 
-        val logged = printer.logged
-        assertThat(logged.toLogString()).isEqualTo("")
+        assertThat(logged).isInstanceOf(VerboseExceptionLog::class.java)
+        assertThat(logged.toLogString()).startsWith("msg: test")
+        assertThat(logged.toLogString()).contains("java.lang.Exception")
     }
 
     @Test

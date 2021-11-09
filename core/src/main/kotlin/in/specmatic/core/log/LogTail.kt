@@ -3,7 +3,7 @@ package `in`.specmatic.core.log
 import java.util.*
 
 object LogTail {
-    var n: Int = 5000
+    var n: Int = 50
 
     private var logs = Collections.synchronizedList(LinkedList<LogMessage>())
     private var snapshot = emptyList<LogMessage>()

@@ -286,7 +286,10 @@ class HTTPStubEngine {
                     consoleLog(StringLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop."))
                 }
             }
-            else -> null
+            else -> {
+                details.forTheUser("Could not find any HTTP APIs in the contracts, so stub server not started.")
+                null
+            }
         }
     }
 }

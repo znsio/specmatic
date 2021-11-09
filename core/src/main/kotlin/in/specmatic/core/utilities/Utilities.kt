@@ -49,7 +49,7 @@ fun exceptionCauseMessage(e: Throwable): String {
     return when(e) {
         is ContractException -> e.report()
         else -> messageStringFrom(e).ifEmpty {
-            "Exception class=${e.javaClass.name}, no message found"
+            "Exception class=${e.javaClass.name}"
         }
     }
 }

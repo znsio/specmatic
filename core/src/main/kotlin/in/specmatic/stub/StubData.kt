@@ -42,11 +42,11 @@ data class HttpStubData(
             }
         }
     }
+}
 
-    private fun executeExternalCommand(command: String, envParam: String): String {
-        details.forDebugging("Executing: $command with EnvParam: $envParam")
-        return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf(envParam)).executeAsSeparateProcess()
-    }
+fun executeExternalCommand(command: String, envParam: String): String {
+    details.forDebugging("Executing: $command with EnvParam: $envParam")
+    return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf(envParam)).executeAsSeparateProcess()
 }
 
 data class KafkaStubData(val kafkaMessage: KafkaMessage) : StubData

@@ -4,11 +4,13 @@ import `in`.specmatic.conversions.*
 import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
+import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
+import `in`.specmatic.stub.executeExternalCommand
 import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTest
 import `in`.specmatic.test.ScenarioTestGenerationFailure
@@ -40,11 +42,18 @@ fun parseContractFileToFeature(file: File): Feature {
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
 
     return when (file.extension) {
-        "yaml" -> OpenApiSpecification.fromFile(file.path).toFeature()
+        "yaml" -> OpenApiSpecification.fromYAML(readContractUsingHook(file.path), file.path).toFeature()
         "wsdl" -> wsdlContentToFeature(file.readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(file.readText().trim(), file.canonicalPath)
         else -> throw ContractException("File extension of ${file.path} not recognized")
     }
+}
+
+fun readContractUsingHook(path: String): String {
+    return Configuration.config?.stubHookFilePath?.let { command ->
+        details.forTheUser("Invoking plugin ${Configuration.config?.stubHookFilePath} ")
+        return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf("CONTRACT_FILE=$path")).executeAsSeparateProcess()
+    } ?: File(path).readText()
 }
 
 fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""): Feature {

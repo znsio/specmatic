@@ -51,7 +51,7 @@ fun parseContractFileToFeature(file: File): Feature {
 
 fun readContractUsingHook(path: String): String {
     return Configuration.config?.stubHookFilePath?.let { command ->
-        details.forTheUser("Invoking plugin ${Configuration.config?.stubHookFilePath} ")
+        details.forTheUser("  Invoking plugin ${Configuration.config?.stubHookFilePath} on $path")
         return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf("CONTRACT_FILE=$path")).executeAsSeparateProcess()
     } ?: File(path).readText()
 }

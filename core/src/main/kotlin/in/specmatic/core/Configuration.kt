@@ -22,9 +22,13 @@ class Configuration {
             else
                 null
 
-        val config: SpecmaticConfigJson?
+        var config: SpecmaticConfigJson?
             get() {
                 return _config
+            }
+
+            set(value) {
+                _config = value
             }
 
         private const val ALL_IPV4_ADDRESS_ON_LOCAL_MACHINE = "0.0.0.0"

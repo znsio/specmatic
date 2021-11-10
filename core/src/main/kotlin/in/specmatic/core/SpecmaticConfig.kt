@@ -84,7 +84,7 @@ data class SpecmaticConfigJson(
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
-    val hook: Map<String, String> = emptyMap()
+    val hooks: Map<String, String> = emptyMap()
 )
 
 val SpecmaticJsonFormat = Json {

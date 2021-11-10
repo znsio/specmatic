@@ -9,7 +9,7 @@ enum class HookName {
 }
 
 class CommandHook(private val name: HookName): Hook {
-    val command: String? = name.let { Configuration.config?.hook?.get(it.name) }
+    val command: String? = name.let { Configuration.config?.hooks?.get(it.name) }
 
     override fun readContract(path: String): String {
         checkExists(File(path))

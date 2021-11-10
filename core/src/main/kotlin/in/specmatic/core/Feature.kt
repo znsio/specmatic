@@ -51,7 +51,7 @@ fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook()): Feat
 }
 
 fun readContractUsingHook(path: String, parseHookName: String?): String {
-    val hook: String? = parseHookName?.let { Configuration.config?.hook?.get(it) }
+    val hook: String? = parseHookName?.let { Configuration.config?.hooks?.get(it) }
 
     return hook?.let { it ->
         details.forTheUser("  Invoking hook $parseHookName when loading contract $path")

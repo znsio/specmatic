@@ -9,6 +9,8 @@ class ExternalCommand(
     private val workingDirect: String,
     private val environmentParameters: Array<String>
 ) {
+    constructor (command: String, workingDirect: String, environmentParameters: List<String>) : this(command.split(" ").toTypedArray(), workingDirect, environmentParameters.toTypedArray())
+
     fun executeAsSeparateProcess(): String {
         val commandWithParameters = command.joinToString(" ")
         return try {

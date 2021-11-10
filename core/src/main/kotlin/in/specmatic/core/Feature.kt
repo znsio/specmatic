@@ -10,7 +10,6 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
-import `in`.specmatic.stub.executeExternalCommand
 import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTest
 import `in`.specmatic.test.ScenarioTestGenerationFailure
@@ -31,28 +30,32 @@ import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
 import java.net.URI
 
-fun parseContractFileToFeature(contractPath: String): Feature {
-    return parseContractFileToFeature(File(contractPath))
+fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook()): Feature {
+    return parseContractFileToFeature(File(contractPath), hook)
 }
 
-fun parseContractFileToFeature(file: File): Feature {
-    details.forDebugging("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
-
+fun checkExists(file: File) = file.also {
     if (!file.exists())
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
+}
+
+fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook()): Feature {
+    details.forDebugging("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
-        "yaml" -> OpenApiSpecification.fromYAML(readContractUsingHook(file.path), file.path).toFeature()
-        "wsdl" -> wsdlContentToFeature(file.readText(), file.canonicalPath)
-        in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(file.readText().trim(), file.canonicalPath)
+        "yaml" -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path).toFeature()
+        "wsdl" -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
+        in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw ContractException("File extension of ${file.path} not recognized")
     }
 }
 
-fun readContractUsingHook(path: String): String {
-    return Configuration.config?.stubHookFilePath?.let { command ->
-        details.forTheUser("  Invoking plugin ${Configuration.config?.stubHookFilePath} on $path")
-        return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf("CONTRACT_FILE=$path")).executeAsSeparateProcess()
+fun readContractUsingHook(path: String, parseHookName: String?): String {
+    val hook: String? = parseHookName?.let { Configuration.config?.hook?.get(it) }
+
+    return hook?.let { it ->
+        details.forTheUser("  Invoking hook $parseHookName when loading contract $path")
+        return ExternalCommand(it, ".", listOf("CONTRACT_FILE=$path")).executeAsSeparateProcess()
     } ?: File(path).readText()
 }
 

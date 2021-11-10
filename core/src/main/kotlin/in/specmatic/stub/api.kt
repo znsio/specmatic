@@ -68,7 +68,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
             contractPath.isFile && contractPath.extension in CONTRACT_EXTENSIONS -> {
                 consoleLog(StringLog("Loading $contractPath"))
                 try {
-                    val feature = parseContractFileToFeature(contractPath)
+                    val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract))
                     val implicitDataDir = implicitContractDataDir(contractPath.path)
 
                     val stubData = when {
@@ -118,7 +118,7 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
     val dataDirFileList = allDirsInTree(dataDirPaths)
 
     val features = contractPaths.map { path ->
-        Pair(path, parseContractFileToFeature(path))
+        Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
     }
 
     val dataFiles = dataDirFileList.flatMap {

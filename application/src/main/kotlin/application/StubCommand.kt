@@ -1,16 +1,14 @@
 package application
 
-import `in`.specmatic.core.log.LogTail
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import `in`.specmatic.core.log.*
 import `in`.specmatic.core.utilities.exitWithMessage
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.*
+import `in`.specmatic.stub.ContractStub
+import `in`.specmatic.stub.HttpClientFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
-import org.springframework.stereotype.Component
 import picocli.CommandLine.*
 import java.util.concurrent.Callable
 
@@ -208,104 +206,6 @@ internal fun validateContractFileExtensions(contractPaths: List<String>, fileOpe
         if (it.isNotEmpty()) {
             val files = it.joinToString("\n")
             exitWithMessage("The following files do not end with ${CONTRACT_EXTENSIONS} and cannot be used:\n$files")
-        }
-    }
-}
-
-@Component
-class StubLoaderEngine {
-    fun loadStubs(contractPaths: List<String>, dataDirs: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
-        return when {
-            dataDirs.isNotEmpty() -> loadContractStubsFromFiles(contractPaths, dataDirs)
-            else -> loadContractStubsFromImplicitPaths(contractPaths)
-        }
-    }
-}
-
-@Component
-class KafkaStubEngine {
-    fun runKafkaStub(stubs: List<Pair<Feature, List<ScenarioStub>>>, kafkaHost: String, kafkaPort: Int, startKafka: Boolean): QontractKafka? {
-        val features = stubs.map { it.first }
-
-        val kafkaExpectations = contractInfoToKafkaExpectations(stubs)
-        val validationResults = kafkaExpectations.map { stubData ->
-            features.asSequence().map {
-                it.matchesMockKafkaMessage(stubData.kafkaMessage)
-            }.find {
-                it is Result.Failure
-            } ?: Result.Success()
-        }
-
-        return when {
-            validationResults.any { it is Result.Failure } -> {
-                val results = Results(validationResults.toMutableList())
-                consoleLog(StringLog("Can't load Kafka mocks:\n${results.report(PATH_NOT_RECOGNIZED_ERROR)}"))
-                null
-            }
-            hasKafkaScenarios(features) -> {
-                val qontractKafka = when {
-                    startKafka -> {
-                        println("Starting local Kafka server...")
-                        QontractKafka(kafkaPort).also {
-                            consoleLog(StringLog("Started local Kafka server: ${it.bootstrapServers}"))
-                        }
-                    }
-                    else -> null
-                }
-
-                stubKafkaContracts(kafkaExpectations, qontractKafka?.bootstrapServers
-                        ?: "PLAINTEXT://$kafkaHost:$kafkaPort", ::createTopics, ::createProducer)
-
-                qontractKafka
-            }
-            else -> null
-        }
-    }
-}
-
-@Component
-class HTTPStubEngine {
-    fun runHTTPStub(stubs: List<Pair<Feature, List<ScenarioStub>>>, host: String, port: Int, certInfo: CertInfo, strictMode: Boolean, passThroughTargetBase: String = "", httpClientFactory: HttpClientFactory, workingDirectory: WorkingDirectory): HttpStub? {
-        val features = stubs.map { it.first }
-
-        return when {
-            hasHttpScenarios(features) -> {
-                val httpExpectations = contractInfoToHttpExpectations(stubs)
-
-                val httpFeatures = features.map {
-                    val httpScenarios = it.scenarios.filter { scenario ->
-                        scenario.kafkaMessagePattern == null
-                    }
-
-                    it.copy(scenarios = httpScenarios)
-                }
-
-                val keyStoreData = certInfo.getHttpsCert()
-                HttpStub(httpFeatures, httpExpectations, host, port, ::consoleLog, strictMode, keyStoreData, passThroughTargetBase = passThroughTargetBase, httpClientFactory = httpClientFactory, workingDirectory = workingDirectory).also {
-                    val protocol = if (keyStoreData != null) "https" else "http"
-                    consoleLog(StringLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop."))
-                }
-            }
-            else -> {
-                details.forTheUser("Could not find any HTTP APIs in the contracts, so stub server not started.")
-                null
-            }
-        }
-    }
-}
-
-internal fun hasHttpScenarios(behaviours: List<Feature>): Boolean {
-    return behaviours.any {
-        it.scenarios.any { scenario ->
-            scenario.kafkaMessagePattern == null
-        }
-    }
-}
-
-internal fun hasKafkaScenarios(behaviours: List<Feature>): Boolean {
-    return behaviours.any {
-        it.scenarios.any { scenario ->
-            scenario.kafkaMessagePattern != null
         }
     }
 }

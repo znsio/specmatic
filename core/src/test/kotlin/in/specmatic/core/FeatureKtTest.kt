@@ -7,6 +7,8 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -449,6 +451,35 @@ class FeatureKtTest {
             assertThat(it.references["data"]?.contractFile?.path).isEqualTo("data.$CONTRACT_EXTENSION")
             assertThat(it.references["data"]?.contractFile?.relativeTo).isEqualTo(AnchorFile("original.$CONTRACT_EXTENSION"))
         }
+    }
+
+    @Test
+    fun `invokes hook when it is passed`() {
+        val hookMock = mockk<Hook>()
+
+        every {
+            hookMock.readContract(any())
+        } returns """---
+            openapi: "3.0.1"
+            info:
+              title: "Random API"
+              version: "1"
+            paths:
+              /:
+                get:
+                  summary: "Random number"
+                  parameters: []
+                  responses:
+                    "200":
+                      description: "Random number"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "number"
+            """
+
+        val feature = parseContractFileToFeature("test.yaml", hookMock)
+        assertThat(feature.matches(HttpRequest("GET", "/"), HttpResponse.OK(NumberValue(10)))).isTrue
     }
 
     companion object {

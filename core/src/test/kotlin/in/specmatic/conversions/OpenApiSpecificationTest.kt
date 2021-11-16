@@ -225,7 +225,7 @@ Scenario: Get product by id
                     schema:
                       type: "string"
                   responses:
-                    "200":
+                    200:
                       description: "Get product by id"
                       content:
                         text/plain:
@@ -273,7 +273,7 @@ Scenario: Get product by id
                                 id:
                                   type: "string"
                       responses:
-                        "200":
+                        200:
                           description: "Get person by id"
                           content:
                             text/plain:
@@ -328,7 +328,7 @@ Scenario: Get product by id
                             address:
                               ${"$"}ref: "#/components/schemas/Address"
                   responses:
-                    "200":
+                    200:
                       description: "Add person by id"
                       content:
                         text/plain:
@@ -407,7 +407,7 @@ Scenario: Get product by id
                               items:
                                 ${"$"}ref: "#/components/schemas/Address"
                   responses:
-                    "200":
+                    200:
                       description: "Get person by id"
                       content:
                         text/plain:
@@ -485,7 +485,7 @@ Scenario: Get product by id
                               ${"$"}ref: "#/components/schemas/Address"
                               nullable: true
                   responses:
-                    "200":
+                    200:
                       description: "Get person by id"
                       content:
                         text/plain:
@@ -556,7 +556,7 @@ Scenario: Get product by id
                               type: "string"
                               nullable: true
                   responses:
-                    "200":
+                    200:
                       description: "Get person by id"
                       content:
                         text/plain:
@@ -623,7 +623,7 @@ Scenario: Get product by id
                               type: "string"
                               nullable: true
                   responses:
-                    "200":
+                    200:
                       description: "Get person by id"
                       content:
                         text/plain:
@@ -692,7 +692,7 @@ Scenario: Get product by id
                               items:
                                 ${"$"}ref: "#/components/schemas/Address"
                   responses:
-                    "200":
+                    200:
                       description: "Get person by id"
                       content:
                         text/plain:
@@ -772,7 +772,7 @@ Scenario: Get product by id
                                 ${"$"}ref: "#/components/schemas/Address"
                                 nullable: true
                   responses:
-                    "200":
+                    200:
                       description: "Get person by id"
                       content:
                         text/plain:
@@ -849,7 +849,7 @@ Scenario: Get product by id
                           person:
                             contentType: "application/json"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
                       content:
                         text/plain:
@@ -930,7 +930,7 @@ Scenario: Get product by id
                             data:
                               type: "string"
                   responses:
-                    "200":
+                    200:
                       description: "Add Data"
             """.trimIndent()
         )
@@ -991,7 +991,7 @@ Scenario: Get product by id
                         schema:
                           ${"$"}ref: "#/components/schemas/Person"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
                       content:
                         text/plain:
@@ -1076,7 +1076,7 @@ Scenario: Get product by id
                   summary: "Add Person"
                   parameters: []
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
                       content:
                         application/json:
@@ -1087,7 +1087,7 @@ Scenario: Get product by id
                   summary: "Add Person Details"
                   parameters: []
                   responses:
-                    "200":
+                    200:
                       description: "Add Person Details"
                       content:
                         application/json:
@@ -1150,7 +1150,7 @@ Scenario: Get product by id
                         schema:
                           type: "string"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
             """.trimIndent()
         )
@@ -1201,7 +1201,7 @@ Scenario: Get product by id
                           enum:
                           - "hello"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
             """.trimIndent()
         )
@@ -1252,7 +1252,7 @@ Scenario: Get product by id
                       enum:
                       - "hello"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
             """.trimIndent()
         )
@@ -1301,7 +1301,7 @@ Scenario: Get product by id
                         schema:
                           type: "number"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
             """.trimIndent()
         )
@@ -1355,7 +1355,7 @@ Scenario: Get product by id
                             id:
                               type: "string"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
             """.trimIndent()
         )
@@ -1409,7 +1409,7 @@ Scenario: Get product by id
                             id:
                               type: "string"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
             """.trimIndent()
         )
@@ -1463,7 +1463,7 @@ Scenario: Get product by id
                         schema:
                           type: "string"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
             """.trimIndent()
         )
@@ -1511,7 +1511,7 @@ Scenario: Get product by id
                   summary: "Add Person"
                   parameters: []
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
                       content:
                         text/plain:
@@ -1561,7 +1561,7 @@ Scenario: Get product by id
                   summary: "Get Person"
                   parameters: []
                   responses:
-                    "200":
+                    200:
                       description: "Get Person"
                       headers:
                         X-Hello-World:
@@ -1623,7 +1623,7 @@ Scenario: Get product by id
                   summary: "Get Person"
                   parameters: []
                   responses:
-                    "200":
+                    200:
                       description: "Get Person"
                       content:
                         application/json:
@@ -1687,7 +1687,7 @@ Scenario: Get product by id
                         schema:
                           ${"$"}ref: "#/components/schemas/Person"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
                       content:
                         text/plain:
@@ -1752,7 +1752,7 @@ Scenario: Get product by id
                         schema:
                           ${"$"}ref: "#/components/schemas/Person"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
                       content:
                         text/plain:
@@ -1818,7 +1818,7 @@ Scenario: Get product by id
                         schema:
                           ${"$"}ref: "#/components/schemas/Person"
                   responses:
-                    "200":
+                    200:
                       description: "Add Person"
                       content:
                         text/plain:
@@ -1889,7 +1889,7 @@ Scenario: Get product by id
                     schema:
                       type: "string"
                   responses:
-                    "200":
+                    200:
                       description: "Get details"
                       content:
                         text/plain:
@@ -1943,7 +1943,7 @@ Scenario: Get product by id
                   summary: "Get details"
                   parameters: []
                   responses:
-                    "200":
+                    200:
                       description: "Get details"
                       headers:
                         X-Data:
@@ -2014,7 +2014,7 @@ Scenario: Get product by id
                   summary: "Get details"
                   parameters: []
                   responses:
-                    "200":
+                    200:
                       description: "Get details"
                       headers:
                         X-Data-One:
@@ -2102,7 +2102,7 @@ Scenario: Get product by id
                     schema:
                       type: "string"
                   responses:
-                    "200":
+                    200:
                       description: "Get details"
                       content:
                         text/plain:
@@ -2165,7 +2165,7 @@ Scenario: Get product by id
                     schema:
                       type: "string"
                   responses:
-                    "200":
+                    200:
                       description: "Get details"
                       content:
                         text/plain:
@@ -2246,7 +2246,7 @@ Scenario: Get product by id
                     schema:
                       type: "string"
                   responses:
-                    "200":
+                    200:
                       description: "Get details"
                       content:
                         text/plain:
@@ -2317,7 +2317,7 @@ Scenario: Get product by id
                           Data:
                             contentType: "application/json"
                   responses:
-                    "200":
+                    200:
                       description: "Get details"
                       content:
                         text/plain:
@@ -2384,9 +2384,9 @@ Scenario: Get product by id
                   summary: "Get details"
                   parameters: []
                   responses:
-                    "200":
+                    200:
                       description: "Get details"
-                    "500":
+                    500:
                       description: "Get details error"
             """.trimIndent()
         )
@@ -2428,7 +2428,7 @@ Scenario: Get product by id
                   summary: "Get details"
                   parameters: []
                   responses:
-                    "200":
+                    200:
                       description: "Get details"
             """.trimIndent()
         )

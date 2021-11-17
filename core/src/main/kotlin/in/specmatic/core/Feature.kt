@@ -647,7 +647,7 @@ data class Feature(
     }
 
     private fun convergePatternMap(map1: Map<String, Pattern>, map2: Map<String, Pattern>): Map<String, Pattern> {
-        val common = map1.filter { entry ->
+        val common: Map<String, Pattern> = map1.filter { entry ->
             val cleanedKey = withoutOptionality(entry.key)
             cleanedKey in map2 || "${cleanedKey}?" in map2
         }.mapKeys { entry ->
@@ -658,7 +658,23 @@ data class Feature(
                 cleanedKey
         }.toMap()
 
-        val onlyInMap1 = map1.filter { entry ->
+        fun getTypeDescriptor(map: Map<String, Pattern>, key: String): String {
+            val nonOptionalKey = withoutOptionality(key)
+            val optionalKey = "$nonOptionalKey?"
+            val commonValueType = map.getOrElse(nonOptionalKey) { map.getValue(optionalKey) }
+
+            return commonValueType.typeAlias ?: commonValueType.typeName
+        }
+
+        common.forEach {
+            val type1Descriptor = getTypeDescriptor(map1, it.key)
+            val type2Descriptor = getTypeDescriptor(map2, it.key)
+
+            if(type1Descriptor != type2Descriptor)
+                details.forTheUser("Found conflicting values for the same key ${it.key} in multiple scenarios")
+        }
+
+        val onlyInMap1: Map<String, Pattern> = map1.filter { entry ->
             val cleanedKey = withoutOptionality(entry.key)
             (cleanedKey !in common && "${cleanedKey}?" !in common)
         }.mapKeys { entry ->
@@ -666,7 +682,7 @@ data class Feature(
             "${cleanedKey}?"
         }
 
-        val onlyInMap2 = map2.filter { entry ->
+        val onlyInMap2: Map<String, Pattern> = map2.filter { entry ->
             val cleanedKey = withoutOptionality(entry.key)
             (cleanedKey !in common && "${cleanedKey}?" !in common)
         }.mapKeys { entry ->
@@ -764,7 +780,7 @@ data class Feature(
             pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> StringSchema().apply {
                 this.nullable = true
             }.also {
-                details.forTheUser("Specmatic encountered a (null) in the spec. OpenAPI does not support raw nulls. Data types may be nullable, but you must specify the data type. Please make sure you specify the nullable datatype wherever null is encountered in the contract.")
+                details.forTheUser("Specmatic converted a (null) in the spec file to a nullable string in the OpenAPI file.")
             }
             pattern is DeferredPattern -> Schema<Any>().apply {
                 this.`$ref` = withoutPatternDelimiters(pattern.pattern)

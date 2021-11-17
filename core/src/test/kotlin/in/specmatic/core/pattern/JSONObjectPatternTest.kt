@@ -175,6 +175,14 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
+    fun `json type should encompass tabular`() {
+        val json = parsedPattern("""{"name": "(string)"}""") as JSONObjectPattern
+        val tabular = TabularPattern(json.pattern)
+
+        assertThat(json.encompasses(tabular, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
     fun `it should encompass itself with a nullable value`() {
         val type = parsedPattern("""{"number": "(number?)"}""")
         assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)

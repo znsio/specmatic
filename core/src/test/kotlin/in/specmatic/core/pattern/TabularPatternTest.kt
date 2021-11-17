@@ -379,6 +379,14 @@ Feature: Recursive test
     }
 
     @Test
+    fun `tabular type should encompass JSON type`() {
+        val tabular = toTabularPattern(mapOf("key1" to StringPattern(), "key2" to StringPattern()))
+        val json = JSONObjectPattern(tabular.pattern)
+
+        assertThat(tabular.encompasses(json, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
     fun `structure with fewer keys encompasses one with same keys plus more`() {
         val smaller = toTabularPattern(mapOf("key1" to StringPattern(), "key2" to StringPattern()))
         val bigger = toTabularPattern(mapOf("key1" to StringPattern()))

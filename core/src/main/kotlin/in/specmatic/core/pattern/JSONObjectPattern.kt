@@ -42,8 +42,9 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
         return when (otherPattern) {
             is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
-            !is JSONObjectPattern -> Result.Failure("Expected tabular json type, got ${otherPattern.typeName}")
-            else -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
+            is TabularPattern -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
+            is JSONObjectPattern -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
+            else -> Result.Failure("Expected json type, got ${otherPattern.typeName}")
         }
     }
 

@@ -513,7 +513,7 @@ data class Feature(
                 this.summary = scenario.name
             }
 
-            val pathParameters = scenario.httpRequestPattern.urlMatcher!!.pathParameters()
+            val pathParameters = scenario.httpRequestPattern.urlMatcher.pathParameters()
 
             val openApiPathParameters = pathParameters.map {
                 val pathParameter: Parameter = PathParameter()
@@ -521,7 +521,7 @@ data class Feature(
                 pathParameter.schema = toOpenApiSchema(it.pattern)
                 pathParameter
             }
-            val queryParameters = scenario.httpRequestPattern.urlMatcher!!.queryPattern
+            val queryParameters = scenario.httpRequestPattern.urlMatcher.queryPattern
             val openApiQueryParameters = queryParameters.map { (key, pattern) ->
                 val queryParameter: Parameter = QueryParameter()
                 queryParameter.name = key.removeSuffix("?")
@@ -792,7 +792,7 @@ data class Feature(
                     this.items = Schema<Any>().apply {
                         setSchemaType(pattern.pattern.first { it.typeAlias != "(empty)" }.let {
                             it as ListPattern
-                            it.pattern.typeAlias ?: (it.pattern as String)
+                            it.pattern.typeAlias ?: throw ContractException("Type alias not found for type ${it.typeName}")
                         }, this)
                     }
                     this.nullable = true

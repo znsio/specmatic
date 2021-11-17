@@ -36,16 +36,19 @@ jobs:
         name: Specmatic Standalone Executable
         path: application/build/libs/specmatic.jar
     - name: Upload core Gradle Log
+      if: always()
       uses: actions/upload-artifact@v2.2.4
       with:
         name: Gradle core Build Log
         path: core/build/reports/
     - name: Upload junit5-support Gradle Log
+      if: always()
       uses: actions/upload-artifact@v2.2.4
       with:
         name: Gradle junit5-support Build Log
         path: junit5-support/build/reports/
     - name: Upload application Gradle Log
+      if: always()
       uses: actions/upload-artifact@v2.2.4
       with:
         name: Gradle application Build Log

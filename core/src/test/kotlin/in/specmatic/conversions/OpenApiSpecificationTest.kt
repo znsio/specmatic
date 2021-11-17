@@ -143,6 +143,43 @@ components:
     }
 
     @Test
+    fun `nullable ref`() {
+        val gherkin = """
+            Feature: Test
+              Scenario: Test
+                Given type Address
+                | street | (string) |
+                When POST /user
+                And request-body
+                | address | (Address?) |
+                Then status 200
+                And response-body (string)
+        """.trimIndent()
+
+        val gherkinToOpenAPI = parseGherkinStringToFeature(gherkin).toOpenApi()
+        val yamlFromGherkin = Yaml.mapper().writeValueAsString(gherkinToOpenAPI)
+        println(yamlFromGherkin)
+        val spec = OpenApiSpecification.fromYAML(yamlFromGherkin, "")
+        val feature = spec.toFeature()
+
+        assertThat(feature.matchingStub(
+            HttpRequest(
+                "POST",
+                "/user",
+                body = parsedJSON("""{"address": {"street": "Baker Street"}}""")
+            ), HttpResponse.OK("success")
+        ).response.headers["X-Specmatic-Result"]).isEqualTo("success")
+
+        assertThat(feature.matchingStub(
+            HttpRequest(
+                "POST",
+                "/user",
+                body = parsedJSON("""{"address": null}""")
+            ), HttpResponse.OK("success")
+        ).response.headers["X-Specmatic-Result"]).isEqualTo("success")
+    }
+
+    @Test
     fun `should not resolve non ref nested types to Deferred Pattern`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
         val scenarioInfos = openApiSpecification.toScenarioInfos()
@@ -544,8 +581,10 @@ Scenario: Get product by id
                             id:
                               type: "string"
                             address:
-                              ${"$"}ref: "#/components/schemas/Address"
-                              nullable: true
+                              oneOf:
+                              - properties: {}
+                                nullable: true
+                              - ${"$"}ref: "#/components/schemas/Address"
                   responses:
                     200:
                       description: "Get person by id"

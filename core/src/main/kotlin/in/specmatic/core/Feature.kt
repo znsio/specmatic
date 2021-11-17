@@ -798,6 +798,26 @@ data class Feature(
                     this.nullable = true
                 }
             }
+            isNullableDeferred(pattern) -> {
+                pattern as AnyPattern
+
+                val innerPattern: Pattern = pattern.pattern.first { it.typeAlias != "(empty)" }
+                innerPattern as DeferredPattern
+
+                val schemas = mutableListOf<Schema<Any>>()
+
+                schemas.add(Schema<Any>().apply {
+                    this.nullable = true
+                    this.properties = emptyMap()
+                })
+                schemas.add(Schema<Any>().apply {
+                    this.`$ref` = withoutPatternDelimiters(innerPattern.pattern)
+                })
+
+                ComposedSchema().apply {
+                    this.oneOf = schemas
+                }
+            }
             isNullable(pattern) -> {
                 pattern as AnyPattern
 
@@ -866,6 +886,12 @@ data class Feature(
         }
 
         return schema as Schema<Any>;
+    }
+
+    private fun isNullableDeferred(pattern: Pattern): Boolean {
+        return isNullable(pattern) && pattern is AnyPattern && pattern.pattern.first { it.pattern != "(empty)" }.let {
+            it is DeferredPattern && withPatternDelimiters(withoutPatternDelimiters(it.pattern).removeSuffix("*").removeSuffix("?").removeSuffix("*")) !in builtInPatterns
+        }
     }
 
     private fun setSchemaType(type: String, schema: Schema<Any>) {

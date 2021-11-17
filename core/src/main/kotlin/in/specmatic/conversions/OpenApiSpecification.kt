@@ -20,7 +20,7 @@ import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.parser.OpenAPIV3Parser
 import java.io.File
 
-class OpenApiSpecification(private val openApiFile: String, private val openApi: OpenAPI) : IncludedSpecification {
+class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI) : IncludedSpecification {
     companion object {
         fun fromFile(openApiFilePath: String, relativeTo: String): OpenApiSpecification {
             val openApiFile = File(openApiFilePath).let { openApiFile ->
@@ -351,22 +351,24 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
             is ObjectSchema -> toJsonObjectPattern(schema, patternName, typeStack)
             is ArraySchema -> JSONArrayPattern(listOf(toSpecmaticPattern(schema.items)))
             is ComposedSchema -> {
-                if (schema.allOf == null) {
-                    throw UnsupportedOperationException("Specmatic does not support oneOf and anyOf. Only allOf is supported.")
+                if(schema.allOf != null) {
+                    val schemaProperties = schema.allOf.map { constituentSchema ->
+                        val schemaToProcess = if (constituentSchema.`$ref` != null) {
+                            val (_, referredSchema) = resolveReferenceToSchema(constituentSchema.`$ref`)
+                            referredSchema
+                        } else constituentSchema
+
+                        val requiredFields = schemaToProcess.required.orEmpty()
+                        toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
+                    }.fold(emptyMap<String, Pattern>()) { acc, entry -> acc.plus(entry) }
+                    val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
+                    patterns["(${patternName})"] = jsonObjectPattern
+                    jsonObjectPattern
+                } else if (nullableOneOf(schema)) {
+                    AnyPattern(listOf(NullPattern, toSpecmaticPattern(nonNullSchema(schema), typeStack, patternName)))
+                } else {
+                    throw UnsupportedOperationException("Specmatic does not support anyOf. Only allOf is supported, or oneOf for specifying nullable refs.")
                 }
-
-                val schemaProperties = schema.allOf.map { constituentSchema ->
-                    val schemaToProcess = if (constituentSchema.`$ref` != null) {
-                        val (_, referredSchema) = resolveReferenceToSchema(constituentSchema.`$ref`)
-                        referredSchema
-                    } else constituentSchema
-
-                    val requiredFields = schemaToProcess.required.orEmpty()
-                    toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
-                }.fold(emptyMap<String, Pattern>()) { acc, entry -> acc.plus(entry) }
-                val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
-                patterns["(${patternName})"] = jsonObjectPattern
-                jsonObjectPattern
             }
             is Schema -> {
                 val component = schema.`$ref`
@@ -404,6 +406,14 @@ class OpenApiSpecification(private val openApiFile: String, private val openApi:
                 else -> AnyPattern(listOf(NullPattern, pattern))
             }
         }
+    }
+
+    private fun nonNullSchema(schema: ComposedSchema): Schema<Any> {
+        return schema.oneOf.first { it.nullable != true }
+    }
+
+    private fun nullableOneOf(schema: ComposedSchema): Boolean {
+        return schema.oneOf.find { it.nullable != true } != null
     }
 
     private fun toJsonObjectPattern(

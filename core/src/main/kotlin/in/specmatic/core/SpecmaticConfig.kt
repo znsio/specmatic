@@ -46,7 +46,7 @@ fun String.loadContract(): Feature {
     if(!this.isContractFile())
         throw ContractException(invalidContractExtensionMessage(this))
 
-    return parseGherkinStringToFeature(readFile(this))
+    return parseContractFileToFeature(File(this))
 }
 
 @Serializable

@@ -611,14 +611,16 @@ data class Feature(
         val schemas: Map<String, Pattern> = this.scenarios.map {
             it.patterns.entries
         }.flatten().fold(emptyMap<String, Pattern>()) { acc, entry ->
-            if(acc.contains(entry.key) && isObjectType(acc.getValue(entry.key))) {
-                val converged: Map<String, Pattern> = objectStructure(acc.getValue(entry.key))
+            val key = withoutPatternDelimiters(entry.key).trimEnd('_')
+
+            if(acc.contains(key) && isObjectType(acc.getValue(key))) {
+                val converged: Map<String, Pattern> = objectStructure(acc.getValue(key))
                 val new: Map<String, Pattern> = objectStructure(entry.value)
 
-                acc.plus(entry.key to TabularPattern(convergePatternMap(converged, new)))
+                acc.plus(key to TabularPattern(convergePatternMap(converged, new)))
             }
             else {
-                acc.plus(entry.key to entry.value)
+                acc.plus(key to entry.value)
             }
         }.mapKeys {
             withoutPatternDelimiters(it.key)
@@ -783,7 +785,7 @@ data class Feature(
                 details.forTheUser("Specmatic converted a (null) in the spec file to a nullable string in the OpenAPI file.")
             }
             pattern is DeferredPattern -> Schema<Any>().apply {
-                this.`$ref` = withoutPatternDelimiters(pattern.pattern)
+                this.`$ref` = withoutPatternDelimiters(pattern.pattern).trimEnd('_')
             }
             pattern is LookupRowPattern -> toOpenApiSchema(pattern.pattern)
             pattern is JSONArrayPattern && pattern.pattern.isEmpty() ->
@@ -818,7 +820,7 @@ data class Feature(
         if(builtInPatterns.contains(type))
             schema.type = cleanedUpType
         else
-            schema.`$ref` = cleanedUpType
+            schema.`$ref` = cleanedUpType.trimEnd('_')
     }
 
     private fun isArrayOrNull(pattern: Pattern): Boolean =

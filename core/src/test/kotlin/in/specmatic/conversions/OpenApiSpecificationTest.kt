@@ -22,7 +22,7 @@ internal class OpenApiSpecificationTest {
     }
 
     fun portableComparisonAcrossBuildEnvironments(actual: String, expected: String) {
-        assertThat(actual.trim().replace("\"", "")).isEqualTo(expected.trim().replace("\"", ""))
+        assertThat(actual.trimIndent().replace("\"", "")).isEqualTo(expected.trimIndent().replace("\"", ""))
     }
 
     @BeforeEach
@@ -174,6 +174,64 @@ components:
             assertNotFoundInHeaders("Content-Type", scenarioInfo.httpRequestPattern.headersPattern)
             assertNotFoundInHeaders("Content-Type", scenarioInfo.httpResponsePattern.headersPattern)
         }
+    }
+
+    @Test
+    fun temp() {
+        val gherkin = """
+            Feature: Test
+              Scenario: Test
+                Given type Data
+                | person1 | (Person)  |
+                | person2 | (Person_) |
+                And type Person
+                | id | (number) |
+                And type Person_
+                | id | (number) |
+                When POST /
+                And request-body (Data)
+                Then status 200
+        """
+
+        val yaml = """
+            ---
+            openapi: 3.0.1
+            info:
+              title: Test
+              version: 1
+            paths:
+              /:
+                post:
+                  summary: Test
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: #/components/schemas/Data
+                  responses:
+                    200:
+                      description: Test
+            components:
+              schemas:
+                Data:
+                  required:
+                  - person1
+                  - person2
+                  properties:
+                    person1:
+                      ${"$"}ref: #/components/schemas/Person
+                    person2:
+                      ${"$"}ref: #/components/schemas/Person
+                Person:
+                  required:
+                  - id
+                  properties:
+                    id:
+                      type: number
+                  """.trimIndent()
+
+        portableComparisonAcrossBuildEnvironments(Yaml.mapper().writeValueAsString(parseGherkinStringToFeature(gherkin).toOpenApi()), yaml)
     }
 
     @Test

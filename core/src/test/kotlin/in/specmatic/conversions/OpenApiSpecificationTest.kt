@@ -21,6 +21,10 @@ internal class OpenApiSpecificationTest {
         const val OPENAPI_FILE = "openApiTest.yaml"
     }
 
+    fun portableComparisonAcrossBuildEnvironments(actual: String, expected: String) {
+        assertThat(actual.trim().replace("\"", "")).isEqualTo(expected.trim().replace("\"", ""))
+    }
+
     @BeforeEach
     fun `setup`() {
         val openAPI = """
@@ -188,7 +192,7 @@ Scenario: Get product by id
         )
         val openAPI = feature.toOpenApi()
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trimIndent()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -251,7 +255,7 @@ Scenario: Get product by id
         )
         val openAPI = feature.toOpenApi()
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
                 ---
                 openapi: "3.0.1"
@@ -303,7 +307,7 @@ Scenario: Get product by id
         )
         val openAPI = feature.toOpenApi()
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -380,7 +384,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -459,7 +463,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -533,7 +537,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -600,7 +604,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -664,7 +668,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -744,7 +748,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -824,7 +828,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -908,7 +912,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -973,7 +977,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1063,7 +1067,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1132,7 +1136,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1181,7 +1185,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1232,7 +1236,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1283,7 +1287,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1333,7 +1337,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1387,7 +1391,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1445,7 +1449,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1498,7 +1502,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1548,7 +1552,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1610,7 +1614,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1669,7 +1673,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1734,7 +1738,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1800,7 +1804,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1871,7 +1875,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1930,7 +1934,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2001,7 +2005,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2079,7 +2083,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2148,7 +2152,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2225,7 +2229,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2292,7 +2296,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trim()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2371,7 +2375,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trimIndent()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2415,7 +2419,7 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        assertThat(openAPIYaml.trimIndent()).isEqualTo(
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
             """
             ---
             openapi: "3.0.1"

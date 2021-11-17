@@ -7,35 +7,36 @@ import `in`.specmatic.core.pattern.ContractException
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import java.util.concurrent.Callable
+import kotlin.system.exitProcess
 
 @Command(name = "compare",
         mixinStandardHelpOptions = true,
         description = ["Checks if two contracts are equivalent"])
-class CompareCommand : Callable<Int> {
+class CompareCommand : Callable<Unit> {
     @Parameters(index = "0", description = ["Older contract file path"])
     lateinit var olderContractFilePath: String
 
     @Parameters(index = "1", description = ["Newer contract file path"])
     lateinit var newerContractFilePath: String
 
-    override fun call(): Int {
+    override fun call() {
         if(!olderContractFilePath.isContractFile()) {
             details.forTheUser(invalidContractExtensionMessage(olderContractFilePath))
-            return 1
+            exitProcess(1)
         }
 
         if(!newerContractFilePath.isContractFile()) {
             details.forTheUser(invalidContractExtensionMessage(newerContractFilePath))
-            return 1
+            exitProcess(1)
         }
 
-        return logException {
+        logException {
             val olderContract = olderContractFilePath.loadContract()
             val newerContract = newerContractFilePath.loadContract()
 
             val report = backwardCompatible(olderContract, newerContract)
             println(report.message())
-            report.exitCode
+            exitProcess(report.exitCode)
         }
     }
 }

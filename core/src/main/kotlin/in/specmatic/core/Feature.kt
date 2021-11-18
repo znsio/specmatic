@@ -187,11 +187,11 @@ data class Feature(
                             }, Result.Success()
                         )
                         is Result.Failure -> {
-                            Pair(null, matchResult.updateScenario(scenario))
+                            Pair(null, matchResult.updateScenario(scenario).updatePath(path))
                         }
                     }
                 } catch (contractException: ContractException) {
-                    Pair(null, contractException.failure())
+                    Pair(null, contractException.failure().updatePath(path))
                 }
             }
 
@@ -701,6 +701,16 @@ data class Feature(
         return Pair("application/json", mediaType)
     }
 
+    fun getTypeAndDescriptor(map: Map<String, Pattern>, key: String): Pair<String, Pattern> {
+        val nonOptionalKey = withoutOptionality(key)
+        val optionalKey = "$nonOptionalKey?"
+        val commonValueType = map.getOrElse(nonOptionalKey) { map.getValue(optionalKey) }
+
+        val descriptor = commonValueType.typeAlias
+            ?: commonValueType.pattern.let { if (it is String) it else commonValueType.typeName }
+        return Pair(descriptor, commonValueType)
+    }
+
     private fun convergePatternMap(map1: Map<String, Pattern>, map2: Map<String, Pattern>): Map<String, Pattern> {
         val common: Map<String, Pattern> = map1.filter { entry ->
             val cleanedKey = withoutOptionality(entry.key)
@@ -711,22 +721,32 @@ data class Feature(
                 "${cleanedKey}?"
             } else
                 cleanedKey
-        }.toMap()
+        }.mapValues {
+            val (type1Descriptor, type1) = getTypeAndDescriptor(map1, it.key)
+            val (type2Descriptor, type2) = getTypeAndDescriptor(map2, it.key)
 
-        fun getTypeDescriptor(map: Map<String, Pattern>, key: String): String {
-            val nonOptionalKey = withoutOptionality(key)
-            val optionalKey = "$nonOptionalKey?"
-            val commonValueType = map.getOrElse(nonOptionalKey) { map.getValue(optionalKey) }
+            if(type1Descriptor != type2Descriptor) {
+                val typeDescriptors = listOf(type1Descriptor, type2Descriptor).sorted()
 
-            return commonValueType.typeAlias ?: commonValueType.typeName
-        }
+                if(isEmptyOrNull(type1) || isEmptyOrNull(type2)) {
+                    val type = if(isEmptyOrNull(type1)) type2 else type1
 
-        common.forEach {
-            val type1Descriptor = getTypeDescriptor(map1, it.key)
-            val type2Descriptor = getTypeDescriptor(map2, it.key)
+                    if(type is DeferredPattern) {
+                        val descriptor = if(type1Descriptor == "(null)") type2Descriptor else type1Descriptor
+                        val withoutBrackets = withoutPatternDelimiters(descriptor)
+                        val newPattern = descriptor.removeSuffix("?")
 
-            if(type1Descriptor != type2Descriptor)
-                details.forTheUser("Found conflicting values for the same key ${it.key} in multiple scenarios")
+                        AnyPattern(listOf(NullPattern, type.copy(pattern = newPattern)))
+                    } else {
+                        AnyPattern(listOf(NullPattern, type))
+                    }
+                }
+                else {
+                    details.forTheUser("Found conflicting values for the same key ${it.key} ($type1Descriptor, $type2Descriptor).")
+                    it.value
+                }
+            } else
+                it.value
         }
 
         val onlyInMap1: Map<String, Pattern> = map1.filter { entry ->
@@ -768,7 +788,7 @@ data class Feature(
             isArrayOfNullables(pattern) -> {
                 ArraySchema().apply {
                     this.items = Schema<Any>().apply {
-                        val typeAlias = ((pattern as ListPattern).pattern as AnyPattern).pattern.first { it.typeAlias != "(empty)" }.let {
+                        val typeAlias = ((pattern as ListPattern).pattern as AnyPattern).pattern.first { !isEmptyOrNull(it) }.let {
                             if(it.pattern is String && builtInPatterns.contains(it.pattern.toString()))
                                 it.pattern as String
                             else
@@ -790,7 +810,7 @@ data class Feature(
                     pattern as AnyPattern
 
                     this.items = Schema<Any>().apply {
-                        setSchemaType(pattern.pattern.first { it.typeAlias != "(empty)" }.let {
+                        setSchemaType(pattern.pattern.first { !isEmptyOrNull(it) }.let {
                             it as ListPattern
                             it.pattern.typeAlias ?: throw ContractException("Type alias not found for type ${it.typeName}")
                         }, this)
@@ -801,7 +821,7 @@ data class Feature(
             isNullableDeferred(pattern) -> {
                 pattern as AnyPattern
 
-                val innerPattern: Pattern = pattern.pattern.first { it.typeAlias != "(empty)" }
+                val innerPattern: Pattern = pattern.pattern.first { !isEmptyOrNull(it) }
                 innerPattern as DeferredPattern
 
                 val schemas = mutableListOf<Schema<Any>>()
@@ -811,7 +831,7 @@ data class Feature(
                     this.properties = emptyMap()
                 })
                 schemas.add(Schema<Any>().apply {
-                    this.`$ref` = withoutPatternDelimiters(innerPattern.pattern)
+                    this.`$ref` = withoutPatternDelimiters(innerPattern.pattern).trimEnd('_')
                 })
 
                 ComposedSchema().apply {
@@ -821,7 +841,7 @@ data class Feature(
             isNullable(pattern) -> {
                 pattern as AnyPattern
 
-                val innerPattern: Pattern = pattern.pattern.first { it.typeAlias != "(empty)" }
+                val innerPattern: Pattern = pattern.pattern.first { !isEmptyOrNull(it) }
 
                 when {
                     innerPattern.pattern is String && innerPattern.pattern in builtInPatterns -> toOpenApiSchema(builtInPatterns.getValue(innerPattern.pattern as String))
@@ -889,7 +909,7 @@ data class Feature(
     }
 
     private fun isNullableDeferred(pattern: Pattern): Boolean {
-        return isNullable(pattern) && pattern is AnyPattern && pattern.pattern.first { it.pattern != "(empty)" }.let {
+        return isNullable(pattern) && pattern is AnyPattern && pattern.pattern.first { it.pattern != "(empty)" && it.pattern != "(null)" }.let {
             it is DeferredPattern && withPatternDelimiters(withoutPatternDelimiters(it.pattern).removeSuffix("*").removeSuffix("?").removeSuffix("*")) !in builtInPatterns
         }
     }
@@ -903,13 +923,21 @@ data class Feature(
     }
 
     private fun isArrayOrNull(pattern: Pattern): Boolean =
-        isNullable(pattern) && pattern is AnyPattern && pattern.pattern.first { it.typeAlias != "(empty)" } is ListPattern
+        isNullable(pattern) && pattern is AnyPattern && pattern.pattern.first { !isEmptyOrNull(it) } is ListPattern
 
     private fun isArrayOfNullables(pattern: Pattern) =
         pattern is ListPattern && pattern.pattern is AnyPattern && isNullable(pattern.pattern)
 
+    private fun isEmptyOrNull(pattern: Pattern): Boolean {
+        return when(pattern) {
+            is DeferredPattern -> pattern.typeAlias in listOf("(empty)", "(null)")
+            is LookupRowPattern -> isEmptyOrNull(pattern.pattern)
+            else -> pattern in listOf(EmptyStringPattern, NullPattern)
+        }
+    }
+
     private fun isNullable(pattern: Pattern) =
-        pattern is AnyPattern && pattern.pattern.any { it.typeAlias == "(empty)" }
+        pattern is AnyPattern && pattern.pattern.any { isEmptyOrNull(it) }
 
     private fun jsonObjectToSchema(pattern: JSONObjectPattern): Schema<Any> = jsonToSchema(pattern.pattern)
     private fun tabularToSchema(pattern: TabularPattern): Schema<Any> = jsonToSchema(pattern.pattern)

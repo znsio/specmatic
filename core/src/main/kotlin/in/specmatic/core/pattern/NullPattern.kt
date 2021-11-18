@@ -8,7 +8,7 @@ import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 
-const val NULL_TYPE = "(null))"
+const val NULL_TYPE = "(null)"
 
 object NullPattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =

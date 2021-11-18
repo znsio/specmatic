@@ -2626,6 +2626,164 @@ Scenario: Get product by id
         )
     }
 
+    @Test
+    fun temp() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: API 1
+              Given type RequestBody
+              | hello | (string) |
+              When POST /data
+              And request-body (RequestBody)
+              Then status 200
+
+            Scenario: API 2
+              Given type RequestBody
+              | hello | (null) |
+              When POST /data
+              And request-body (RequestBody)
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = parsedJSON("""{"hello": "Jill"}""")
+                ), HttpResponse.OK
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = parsedJSON("""{"hello": null}""")
+                ), HttpResponse.OK
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+            """
+            ---
+            openapi: 3.0.1
+            info:
+              title: API
+              version: 1
+            paths:
+              /data:
+                post:
+                  summary: API 1
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: #/components/schemas/Data_RequestBody
+                  responses:
+                    200:
+                      description: API 1
+            components:
+              schemas:
+                Data_RequestBody:
+                  required:
+                  - hello
+                  properties:
+                    hello:
+                      type: string
+                      nullable: true
+              """.trimIndent()
+        )
+    }
+
+    @Test
+    fun temp2() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: API 1
+              Given type RequestBody
+              | hello | (Hello) |
+              And type Hello
+              | world | (string) |
+              When POST /data
+              And request-body (RequestBody)
+              Then status 200
+
+            Scenario: API 2
+              Given type RequestBody
+              | hello | (null) |
+              When POST /data
+              And request-body (RequestBody)
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = parsedJSON("""{"hello": {"world": "jill"}}""")
+                ), HttpResponse.OK
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = parsedJSON("""{"hello": null}""")
+                ), HttpResponse.OK
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+            """
+            ---
+            openapi: 3.0.1
+            info:
+              title: API
+              version: 1
+            paths:
+              /data:
+                post:
+                  summary: API 1
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: #/components/schemas/Data_RequestBody
+                  responses:
+                    200:
+                      description: API 1
+            components:
+              schemas:
+                Hello:
+                  required:
+                  - world
+                  properties:
+                    world:
+                      type: string
+                Data_RequestBody:
+                  required:
+                  - hello
+                  properties:
+                    hello:
+                      oneOf:
+                      - properties: {}
+                        nullable: true
+                      - ${"$"}ref: #/components/schemas/Hello
+            """.trimIndent()
+        )
+    }
+
     private fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {
         assertThat(headersPattern.pattern.keys.map { it.lowercase() }).doesNotContain(header.lowercase())
     }

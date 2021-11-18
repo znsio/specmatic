@@ -128,16 +128,16 @@ fun toURLPrefixMap(urls: List<String>, mappedURLType: MappedURLType): Map<String
         it.split("/").size
     }.minOrNull() ?: throw ContractException("No schema namespaces found")
 
-    val segmentCount = mappedURLType.index.until(minLength + 1).first { length ->
+    val segmentCount = 1.until(minLength + 1).first { length ->
         val segments = normalisedURL.map { url ->
-            url.split("/").takeLast(length).joinToString("_")
+            url.split("/").filterNot { it.isEmpty() }.takeLast(length).joinToString("_")
         }
 
         segments.toSet().size == urls.size
     }
 
     val prefixes = normalisedURL.map { url ->
-        url.split("/").takeLast(segmentCount).joinToString("_") { it.capitalizeFirstChar() }
+        url.split("/").filterNot { it.isEmpty() }.takeLast(segmentCount).joinToString("_") { it.capitalizeFirstChar() }
     }
 
     return urls.zip(prefixes).toMap().also { details.forDebugging(it.toString()) }

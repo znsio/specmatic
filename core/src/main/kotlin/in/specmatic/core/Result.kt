@@ -6,6 +6,7 @@ import `in`.specmatic.core.value.Value
 
 sealed class Result {
     var scenario: Scenario? = null
+    var path: String? = null
 
     fun reportString(): String {
         return resultReport(this)
@@ -20,6 +21,11 @@ sealed class Result {
 
     abstract fun ifSuccess(function: () -> Result): Result
     abstract fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result
+
+    fun updatePath(path: String): Result {
+        this.path = path
+        return this
+    }
 
     data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
         override fun ifSuccess(function: () -> Result) = this
@@ -85,7 +91,14 @@ fun valueError(value: Value?): String? {
 fun resultReport(result: Result, scenarioMessage: String? = null): String {
     return when (result) {
         is Failure -> {
-            val firstLine = when(val scenario = result.scenario) {
+            val contractLine = result.path?.let {
+                if(it.isNotBlank())
+                    "Error from contract $it\n\n"
+                else
+                    ""
+            } ?: ""
+
+            val scenarioLine = when(val scenario = result.scenario) {
                 null -> ""
                 else -> {
                     """${scenarioMessage ?: "In scenario"} "${scenario.name}""""
@@ -107,7 +120,13 @@ fun resultReport(result: Result, scenarioMessage: String? = null): String {
                 "$breadCrumbString\n\n$errorMessagesString".trim()
             }
 
-            "$firstLine\n$report"
+            val reportDetails = "$scenarioLine\n$report"
+
+            if(contractLine.isNotEmpty()) {
+                "$contractLine${reportDetails.prependIndent("  ")}"
+            } else
+                reportDetails
+
         }
         else -> ""
     }.trim()

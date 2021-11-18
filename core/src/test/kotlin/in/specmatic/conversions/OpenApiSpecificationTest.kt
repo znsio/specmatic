@@ -2951,6 +2951,7 @@ Scenario: Get product by id
             """.trimIndent()
         )
     }
+
     @Test
     fun `lookup string value in gherkin should result in a string type in yaml`() {
         val feature = parseGherkinStringToFeature(
@@ -2996,6 +2997,70 @@ Scenario: Get product by id
                   responses:
                     200:
                       description: API
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `recursive array ref`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: API
+              Given type Data
+              | id | (number) |
+              | data? | (Data*) |
+              When POST /data
+              And request-body (Data)
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = parsedJSON("""{"id": 10}""")
+                ), HttpResponse.OK
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+            """
+            ---
+            openapi: 3.0.1
+            info:
+              title: API
+              version: 1
+            paths:
+              /data:
+                post:
+                  summary: API
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: #/components/schemas/Data
+                  responses:
+                    200:
+                      description: API
+            components:
+              schemas:
+                Data:
+                  required:
+                  - id
+                  properties:
+                    id:
+                      type: number
+                    data:
+                      type: array
+                      items:
+                        ${"$"}ref: #/components/schemas/Data
             """.trimIndent()
         )
     }

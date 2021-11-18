@@ -34,7 +34,7 @@ import kotlin.time.measureTime
 
 internal class HttpStubTest {
     @Test
-    fun temp() {
+    fun `randomly generated HTTP response includes an HTTP header indicating that it was randomly generated`() {
         val gherkin = """
             Feature: API
             Scenario: API

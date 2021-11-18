@@ -177,7 +177,7 @@ components:
     }
 
     @Test
-    fun temp() {
+    fun `data structures with trailing underscores but the same underlying name are merged into one`() {
         val gherkin = """
             Feature: Test
               Scenario: Test
@@ -2493,6 +2493,97 @@ Scenario: Get product by id
                     200:
                       description: "Get details"
             """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `payload type conversion when there are multiple request bodies named RequestBody should add prefixes to the type name and keep the request bodies separate`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: API 1
+              Given type RequestBody
+              | hello | (string) |
+              When POST /data1
+              And request-body (RequestBody)
+              Then status 200
+
+            Scenario: API 2
+              Given type RequestBody
+              | world | (string) |
+              When POST /data2
+              And request-body (RequestBody)
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data1",
+                    body = parsedJSON("""{"hello": "Jill"}""")
+                ), HttpResponse.OK
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data2",
+                    body = parsedJSON("""{"world": "Jack"}""")
+                ), HttpResponse.OK
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+            """
+            ---
+            openapi: 3.0.1
+            info:
+              title: API
+              version: 1
+            paths:
+              /data1:
+                post:
+                  summary: API 1
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: #/components/schemas/Data1_RequestBody
+                  responses:
+                    200:
+                      description: API 1
+              /data2:
+                post:
+                  summary: API 2
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: #/components/schemas/Data2_RequestBody
+                  responses:
+                    200:
+                      description: API 2
+            components:
+              schemas:
+                Data1_RequestBody:
+                  required:
+                  - hello
+                  properties:
+                    hello:
+                      type: string
+                Data2_RequestBody:
+                  required:
+                  - world
+                  properties:
+                    world:
+                      type: string
+              """.trimIndent()
         )
     }
 

@@ -8,7 +8,7 @@ import `in`.specmatic.core.wsdl.payload.EmptySOAPPayload
 
 internal class SOAPResponseTest {
     @Test
-    fun temp() {
+    fun `SOAP response generation`() {
         val soapResponse = SOAPResponse(EmptySOAPPayload(SOAPMessageType.Input))
         val statements = soapResponse.statements()
         assertThat(statements).hasSize(2)

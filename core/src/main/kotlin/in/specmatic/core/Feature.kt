@@ -7,6 +7,8 @@ import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.*
+import `in`.specmatic.core.wsdl.parser.MappedURLType
+import `in`.specmatic.core.wsdl.parser.toURLPrefixMap
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
@@ -430,7 +432,57 @@ data class Feature(
             throw ContractException("Scenario ${it.name} has no path")
         }
 
-        val combinedScenarios = scenarios.fold(emptyList<Scenario>()) { acc, scenario ->
+        fun normalize(url: String): String = url.replace('{', '_').replace('}', '_')
+
+        val urlPrefixMap = toURLPrefixMap(scenarios.mapNotNull {
+            it.httpRequestPattern.urlMatcher?.path
+        }.map {
+            normalize(it)
+        }.toSet().toList(), MappedURLType.pathOnly)
+
+        val payloadAdjustedScenarios: List<Scenario> = scenarios.map { rawScenario ->
+            val prefix = urlPrefixMap.getValue(normalize(rawScenario.httpRequestPattern.urlMatcher?.path!!))
+
+            var scenario = rawScenario
+
+            if(scenario.httpRequestPattern.body.let { it is DeferredPattern && it.pattern == "(RequestBody)" && isJSONPayload(it.resolvePattern(scenario.resolver)) }) {
+                val requestBody = scenario.httpRequestPattern.body as DeferredPattern
+                val oldTypeName = requestBody.pattern
+                val newTypeName = "(${prefix}_${withoutPatternDelimiters(oldTypeName)})"
+                val newRequestBody = requestBody.copy(pattern = newTypeName)
+
+                val type = scenario.patterns.getValue(oldTypeName)
+                val newTypes = scenario.patterns.minus(oldTypeName).plus(newTypeName to type)
+
+                scenario = scenario.copy(
+                    patterns = newTypes,
+                    httpRequestPattern = scenario.httpRequestPattern.copy(
+                        body = newRequestBody
+                    )
+                )
+            }
+
+            if(scenario.httpResponsePattern.body.let { it is DeferredPattern && it.pattern == "(ResponseBody)" && isJSONPayload(it.resolvePattern(scenario.resolver)) }) {
+                val responseBody = scenario.httpResponsePattern.body as DeferredPattern
+                val oldTypeName = responseBody.pattern
+                val newTypeName = "(${prefix}_${withoutPatternDelimiters(oldTypeName)})"
+                val newResponseBody = responseBody.copy(pattern = newTypeName)
+
+                val type = scenario.patterns.getValue(oldTypeName)
+                val newTypes = scenario.patterns.minus(oldTypeName).plus(newTypeName to type)
+
+                scenario = scenario.copy(
+                    patterns = newTypes,
+                    httpResponsePattern = scenario.httpResponsePattern.copy(
+                        body = newResponseBody
+                    )
+                )
+            }
+
+            scenario
+        }
+
+        val rawCombinedScenarios = payloadAdjustedScenarios.fold(emptyList<Scenario>()) { acc, scenario ->
             val scenarioWithSameURLAndPath = acc.find {
                 it.httpRequestPattern.urlMatcher?.path == scenario.httpRequestPattern.urlMatcher?.path
                         && it.httpRequestPattern.method == scenario.httpRequestPattern.method
@@ -440,11 +492,12 @@ data class Feature(
             if(scenarioWithSameURLAndPath == null)
                 acc.plus(scenario)
             else {
-                acc.minus(scenarioWithSameURLAndPath).plus(combine(scenarioWithSameURLAndPath, scenario))
+                val combined = combine(scenarioWithSameURLAndPath, scenario)
+                acc.minus(scenarioWithSameURLAndPath).plus(combined)
             }
         }
 
-        val paths: List<Pair<String, PathItem>> = combinedScenarios.fold(emptyList()) { acc, scenario ->
+        val paths: List<Pair<String, PathItem>> = rawCombinedScenarios.fold(emptyList()) { acc, scenario ->
             val pathName = scenario.httpRequestPattern.urlMatcher!!.toOpenApiPath()
 
             val existingPathItem = acc.find { it.first == pathName }?.second
@@ -608,7 +661,7 @@ data class Feature(
             acc.plus(pathName to pathItem)
         }
 
-        val schemas: Map<String, Pattern> = this.scenarios.map {
+        val schemas: Map<String, Pattern> = payloadAdjustedScenarios.map {
             it.patterns.entries
         }.flatten().fold(emptyMap<String, Pattern>()) { acc, entry ->
             val key = withoutPatternDelimiters(entry.key).trimEnd('_')

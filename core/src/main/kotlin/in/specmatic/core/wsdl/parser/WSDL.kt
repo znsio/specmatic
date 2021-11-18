@@ -108,27 +108,39 @@ fun WSDL(rootDefinition: XMLNode, wsdlPath: String): WSDL {
 fun schemaPrefixesFrom(schemas: Map<String, XMLNode>): Map<String, String> {
     val namespaces = schemas.keys.toSet().toList()
 
-    val normalisedNamespaces = namespaces.map { namespace ->
-        namespace.removeSuffix("/").removePrefix("http://").removePrefix("https://")
+    val namespacePrefixMap = toURLPrefixMap(namespaces, MappedURLType.includesDomain)
+
+    return namespacePrefixMap
+}
+
+enum class MappedURLType(val index: Int) {
+    includesDomain(1),
+    pathOnly(0)
+
+}
+
+fun toURLPrefixMap(urls: List<String>, mappedURLType: MappedURLType): Map<String, String> {
+    val normalisedURL = urls.map { url ->
+        url.removeSuffix("/").removePrefix("http://").removePrefix("https://")
     }
 
-    val minLength = normalisedNamespaces.map {
+    val minLength = normalisedURL.map {
         it.split("/").size
     }.minOrNull() ?: throw ContractException("No schema namespaces found")
 
-    val segmentCount = 1.until(minLength + 1).first { length ->
-        val segments = normalisedNamespaces.map { namespace ->
-            namespace.split("/").takeLast(length).joinToString("_")
+    val segmentCount = mappedURLType.index.until(minLength + 1).first { length ->
+        val segments = normalisedURL.map { url ->
+            url.split("/").takeLast(length).joinToString("_")
         }
 
-        segments.toSet().size == namespaces.size
+        segments.toSet().size == urls.size
     }
 
-    val prefixes = normalisedNamespaces.map { namespace ->
-        namespace.split("/").takeLast(segmentCount).joinToString("_") { it.capitalizeFirstChar() }
+    val prefixes = normalisedURL.map { url ->
+        url.split("/").takeLast(segmentCount).joinToString("_") { it.capitalizeFirstChar() }
     }
 
-    return namespaces.zip(prefixes).toMap().also { details.forDebugging(it.toString()) }
+    return urls.zip(prefixes).toMap().also { details.forDebugging(it.toString()) }
 }
 
 fun addSchemasToNodes(schemas: Map<String, XMLNode>): Map<String, XMLNode> {

@@ -9,7 +9,7 @@ import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 
 internal class SimpleTypedSOAPPayloadTest {
     @Test
-    fun temp() {
+    fun `statement generation`() {
         val payload = SimpleTypedSOAPPayload(SOAPMessageType.Input, toXMLNode("<person/>"), emptyMap())
         val statement = payload.qontractStatement().first().trim()
         assertThat(statement).isEqualTo("""And request-body

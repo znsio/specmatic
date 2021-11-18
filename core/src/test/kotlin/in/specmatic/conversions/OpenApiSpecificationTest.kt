@@ -2627,7 +2627,7 @@ Scenario: Get product by id
     }
 
     @Test
-    fun temp() {
+    fun `scenario 1 has string and scenario 2 has null and the paths are the same`() {
         val feature = parseGherkinStringToFeature(
             """
             Feature: API
@@ -2701,7 +2701,7 @@ Scenario: Get product by id
     }
 
     @Test
-    fun temp2() {
+    fun `scenario 1 has an object and scenario 2 has null but the paths are the same`() {
         val feature = parseGherkinStringToFeature(
             """
             Feature: API
@@ -2780,6 +2780,222 @@ Scenario: Get product by id
                       - properties: {}
                         nullable: true
                       - ${"$"}ref: #/components/schemas/Hello
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `scenario 1 has an object and scenario two has a nullable object of the same type but the paths are the same`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: API 1
+              Given type RequestBody
+              | hello | (Hello) |
+              And type Hello
+              | world | (string) |
+              When POST /data
+              And request-body (RequestBody)
+              Then status 200
+
+            Scenario: API 2
+              Given type RequestBody
+              | hello | (Hello?) |
+              When POST /data
+              And request-body (RequestBody)
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = parsedJSON("""{"hello": {"world": "jill"}}""")
+                ), HttpResponse.OK
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = parsedJSON("""{"hello": null}""")
+                ), HttpResponse.OK
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+            """
+            ---
+            openapi: 3.0.1
+            info:
+              title: API
+              version: 1
+            paths:
+              /data:
+                post:
+                  summary: API 1
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: #/components/schemas/Data_RequestBody
+                  responses:
+                    200:
+                      description: API 1
+            components:
+              schemas:
+                Hello:
+                  required:
+                  - world
+                  properties:
+                    world:
+                      type: string
+                Data_RequestBody:
+                  required:
+                  - hello
+                  properties:
+                    hello:
+                      oneOf:
+                      - properties: {}
+                        nullable: true
+                      - ${"$"}ref: #/components/schemas/Hello
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun `scenario 1 has an object and scenario 2 has the same object with underscores and it is nullable`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: API 1
+              Given type RequestBody
+              | hello | (Hello) |
+              And type Hello
+              | world | (string) |
+              When POST /data
+              And request-body (RequestBody)
+              Then status 200
+
+            Scenario: API 2
+              Given type RequestBody
+              | hello | (Hello__?) |
+              When POST /data
+              And request-body (RequestBody)
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = parsedJSON("""{"hello": {"world": "jill"}}""")
+                ), HttpResponse.OK
+            )).isTrue
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = parsedJSON("""{"hello": null}""")
+                ), HttpResponse.OK
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+            """
+            ---
+            openapi: 3.0.1
+            info:
+              title: API
+              version: 1
+            paths:
+              /data:
+                post:
+                  summary: API 1
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: #/components/schemas/Data_RequestBody
+                  responses:
+                    200:
+                      description: API 1
+            components:
+              schemas:
+                Hello:
+                  required:
+                  - world
+                  properties:
+                    world:
+                      type: string
+                Data_RequestBody:
+                  required:
+                  - hello
+                  properties:
+                    hello:
+                      oneOf:
+                      - properties: {}
+                        nullable: true
+                      - ${"$"}ref: #/components/schemas/Hello
+            """.trimIndent()
+        )
+    }
+    @Test
+    fun `lookup string value in gherkin should result in a string type in yaml`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: API
+              When POST /data
+              And request-body (RequestBody: string)
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = StringValue("Hello world")
+                ), HttpResponse.OK
+            )).isTrue
+        }
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+            """
+            ---
+            openapi: 3.0.1
+            info:
+              title: API
+              version: 1
+            paths:
+              /data:
+                post:
+                  summary: API
+                  parameters: []
+                  requestBody:
+                    content:
+                      text/plain:
+                        schema:
+                          type: string
+                  responses:
+                    200:
+                      description: API
             """.trimIndent()
         )
     }

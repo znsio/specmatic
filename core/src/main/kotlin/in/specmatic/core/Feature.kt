@@ -356,7 +356,7 @@ data class Feature(
         newPayload: Pattern,
         scenarioName: String,
         updateConverged: (Pattern) -> Scenario
-    ) = if (basePayload is TabularPattern && newPayload is TabularPattern) {
+    ): Scenario = if (basePayload is TabularPattern && newPayload is TabularPattern) {
         val converged = TabularPattern(convergePatternMap(basePayload.pattern, newPayload.pattern))
 
         updateConverged(converged)
@@ -538,63 +538,7 @@ data class Feature(
 
             val requestBodyType = scenario.httpRequestPattern.body
 
-            val requestBodySchema: Pair<String, MediaType>? = when {
-                isJSONPayload(requestBodyType) || requestBodyType is DeferredPattern && isJSONPayload(requestBodyType.resolvePattern(scenario.resolver))-> {
-                    jsonMediaType(requestBodyType)
-                }
-                requestBodyType is XMLPattern || requestBodyType is DeferredPattern && requestBodyType.resolvePattern(scenario.resolver) is XMLPattern -> {
-                    throw ContractException("XML not supported yet")
-                }
-                requestBodyType is ExactValuePattern -> {
-                    val mediaType = MediaType()
-                    mediaType.schema = toOpenApiSchema(requestBodyType)
-                    Pair("text/plain", mediaType)
-                }
-                requestBodyType.pattern.let { it is String && builtInPatterns.contains(it) } -> {
-                    val mediaType = MediaType()
-                    mediaType.schema = toOpenApiSchema(requestBodyType)
-                    Pair("text/plain", mediaType)
-                }
-                else -> {
-                    if(scenario.httpRequestPattern.formFieldsPattern.isNotEmpty()) {
-                        val mediaType = MediaType()
-                        mediaType.schema = Schema<Any>().apply {
-                            this.required = scenario.httpRequestPattern.formFieldsPattern.keys.toList()
-                            this.properties = scenario.httpRequestPattern.formFieldsPattern.map { (key, type) ->
-                                val schema = toOpenApiSchema(type)
-                                Pair(withoutOptionality(key), schema)
-                            }.toMap()
-                        }
-
-                        val encoding: MutableMap<String, Encoding> = scenario.httpRequestPattern.formFieldsPattern.map { (key, type) ->
-                            when {
-                                isJSONPayload(type) || (type is DeferredPattern && isJSONPayload(type.resolvePattern(scenario.resolver))) -> {
-                                    val encoding = Encoding().apply {
-                                        this.contentType = "application/json"
-                                    }
-
-                                    Pair(withoutOptionality(key), encoding)
-                                }
-                                type is XMLPattern ->
-                                    throw NotImplementedError("XML encoding not supported for form fields")
-                                else -> {
-                                    null
-                                }
-                            }
-                        }.filterNotNull().toMap().toMutableMap()
-
-                        if(encoding.isNotEmpty())
-                            mediaType.encoding = encoding
-
-                        Pair("application/x-www-form-urlencoded", mediaType)
-                    }
-                    else if(scenario.httpRequestPattern.multiPartFormDataPattern.isNotEmpty()) {
-                        throw NotImplementedError("mulitpart form data not yet supported")
-                    } else {
-                        null
-                    }
-                }
-            }
+            val requestBodySchema: Pair<String, MediaType>? = requestBodySchema(requestBodyType, scenario)
 
             if(requestBodySchema != null) {
                 operation.requestBody = RequestBody().apply {
@@ -695,10 +639,96 @@ data class Feature(
         return openAPI
     }
 
+    private fun requestBodySchema(
+        requestBodyType: Pattern,
+        scenario: Scenario
+    ): Pair<String, MediaType>? = when {
+        requestBodyType is LookupRowPattern -> {
+            requestBodySchema(requestBodyType.pattern, scenario)
+        }
+        isJSONPayload(requestBodyType) || requestBodyType is DeferredPattern && isJSONPayload(
+            requestBodyType.resolvePattern(
+                scenario.resolver
+            )
+        ) -> {
+            jsonMediaType(requestBodyType)
+        }
+        requestBodyType is XMLPattern || requestBodyType is DeferredPattern && requestBodyType.resolvePattern(scenario.resolver) is XMLPattern -> {
+            throw ContractException("XML not supported yet")
+        }
+        requestBodyType is ExactValuePattern -> {
+            val mediaType = MediaType()
+            mediaType.schema = toOpenApiSchema(requestBodyType)
+            Pair("text/plain", mediaType)
+        }
+        requestBodyType.pattern.let { it is String && builtInPatterns.contains(it) } -> {
+            val mediaType = MediaType()
+            mediaType.schema = toOpenApiSchema(requestBodyType)
+            Pair("text/plain", mediaType)
+        }
+        else -> {
+            if (scenario.httpRequestPattern.formFieldsPattern.isNotEmpty()) {
+                val mediaType = MediaType()
+                mediaType.schema = Schema<Any>().apply {
+                    this.required = scenario.httpRequestPattern.formFieldsPattern.keys.toList()
+                    this.properties = scenario.httpRequestPattern.formFieldsPattern.map { (key, type) ->
+                        val schema = toOpenApiSchema(type)
+                        Pair(withoutOptionality(key), schema)
+                    }.toMap()
+                }
+
+                val encoding: MutableMap<String, Encoding> =
+                    scenario.httpRequestPattern.formFieldsPattern.map { (key, type) ->
+                        when {
+                            isJSONPayload(type) || (type is DeferredPattern && isJSONPayload(
+                                type.resolvePattern(
+                                    scenario.resolver
+                                )
+                            )) -> {
+                                val encoding = Encoding().apply {
+                                    this.contentType = "application/json"
+                                }
+
+                                Pair(withoutOptionality(key), encoding)
+                            }
+                            type is XMLPattern ->
+                                throw NotImplementedError("XML encoding not supported for form fields")
+                            else -> {
+                                null
+                            }
+                        }
+                    }.filterNotNull().toMap().toMutableMap()
+
+                if (encoding.isNotEmpty())
+                    mediaType.encoding = encoding
+
+                Pair("application/x-www-form-urlencoded", mediaType)
+            } else if (scenario.httpRequestPattern.multiPartFormDataPattern.isNotEmpty()) {
+                throw NotImplementedError("mulitpart form data not yet supported")
+            } else {
+                null
+            }
+        }
+    }
+
     private fun jsonMediaType(requestBodyType: Pattern): Pair<String, MediaType> {
         val mediaType = MediaType()
         mediaType.schema = toOpenApiSchema(requestBodyType)
         return Pair("application/json", mediaType)
+    }
+
+    fun cleanupDescriptor(descriptor: String): String {
+        val withoutBrackets = withoutPatternDelimiters(descriptor)
+        val modifiersTrimmed = withoutBrackets.trimEnd('*', '?')
+
+        val (base, modifiers) = if(withoutBrackets == modifiersTrimmed)
+            Pair(withoutBrackets, "")
+        else {
+            val modifiers = withoutBrackets.substring(modifiersTrimmed.length)
+            Pair(modifiersTrimmed, modifiers)
+        }
+
+        return "${base.trim('_')}$modifiers"
     }
 
     fun getTypeAndDescriptor(map: Map<String, Pattern>, key: String): Pair<String, Pattern> {
@@ -708,6 +738,7 @@ data class Feature(
 
         val descriptor = commonValueType.typeAlias
             ?: commonValueType.pattern.let { if (it is String) it else commonValueType.typeName }
+
         return Pair(descriptor, commonValueType)
     }
 
@@ -721,32 +752,44 @@ data class Feature(
                 "${cleanedKey}?"
             } else
                 cleanedKey
-        }.mapValues {
-            val (type1Descriptor, type1) = getTypeAndDescriptor(map1, it.key)
-            val (type2Descriptor, type2) = getTypeAndDescriptor(map2, it.key)
+        }.mapValues { entry ->
+            val (type1Descriptor, type1) = getTypeAndDescriptor(map1, entry.key)
+            val (type2Descriptor, type2) = getTypeAndDescriptor(map2, entry.key)
 
             if(type1Descriptor != type2Descriptor) {
                 val typeDescriptors = listOf(type1Descriptor, type2Descriptor).sorted()
+                val cleanedUpDescriptors = typeDescriptors.map { cleanupDescriptor(it) }
 
                 if(isEmptyOrNull(type1) || isEmptyOrNull(type2)) {
                     val type = if(isEmptyOrNull(type1)) type2 else type1
 
                     if(type is DeferredPattern) {
-                        val descriptor = if(type1Descriptor == "(null)") type2Descriptor else type1Descriptor
+                        val descriptor = if(isEmptyOrNull(type1)) type2Descriptor else type1Descriptor
                         val withoutBrackets = withoutPatternDelimiters(descriptor)
-                        val newPattern = descriptor.removeSuffix("?")
+                        val newPattern = withoutBrackets.removeSuffix("?").let {"($it)"}
 
                         AnyPattern(listOf(NullPattern, type.copy(pattern = newPattern)))
                     } else {
                         AnyPattern(listOf(NullPattern, type))
                     }
                 }
+                else if(cleanedUpDescriptors.first() == cleanedUpDescriptors.second()) {
+                    entry.value
+                } else if(withoutPatternDelimiters(cleanedUpDescriptors.second()).trimEnd('?') == withoutPatternDelimiters(cleanedUpDescriptors.first())) {
+                    val type: Pattern = listOf(map1, map2).map {
+                        getTypeAndDescriptor(it, entry.key)
+                    }.map {
+                        cleanupDescriptor(it.first) to it.second
+                    }.toMap().getValue(cleanedUpDescriptors.second())
+
+                    type
+                }
                 else {
-                    details.forTheUser("Found conflicting values for the same key ${it.key} ($type1Descriptor, $type2Descriptor).")
-                    it.value
+                    details.forTheUser("Found conflicting values for the same key ${entry.key} ($type1Descriptor, $type2Descriptor).")
+                    entry.value
                 }
             } else
-                it.value
+                entry.value
         }
 
         val onlyInMap1: Map<String, Pattern> = map1.filter { entry ->
@@ -783,6 +826,7 @@ data class Feature(
 
     private fun toOpenApiSchema(pattern: Pattern): Schema<Any> {
         val schema = when {
+            pattern is LookupRowPattern -> toOpenApiSchema(pattern.pattern)
             pattern is TabularPattern -> tabularToSchema(pattern)
             pattern is JSONObjectPattern -> jsonObjectToSchema(pattern)
             isArrayOfNullables(pattern) -> {
@@ -880,7 +924,6 @@ data class Feature(
             pattern is DeferredPattern -> Schema<Any>().apply {
                 this.`$ref` = withoutPatternDelimiters(pattern.pattern).trimEnd('_')
             }
-            pattern is LookupRowPattern -> toOpenApiSchema(pattern.pattern)
             pattern is JSONArrayPattern && pattern.pattern.isEmpty() ->
                 ArraySchema().apply {
                     this.items = StringSchema()
@@ -1490,4 +1533,8 @@ fun toGherkinFeature(featureName: String, stubs: List<NamedStub>): String {
 private fun addCommentsToExamples(examples: ExampleDeclarations, stub: NamedStub): ExampleDeclarations {
     val date = stub.stub.response.headers["Date"]
     return examples.withComment(date)
+}
+
+private fun List<String>.second(): String {
+    return this[1]
 }

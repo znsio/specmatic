@@ -140,7 +140,7 @@ fun toURLPrefixMap(urls: List<String>, mappedURLType: MappedURLType): Map<String
         url.split("/").filterNot { it.isEmpty() }.takeLast(segmentCount).joinToString("_") { it.capitalizeFirstChar() }
     }
 
-    return urls.zip(prefixes).toMap().also { details.forDebugging(it.toString()) }
+    return urls.zip(prefixes).toMap()
 }
 
 fun addSchemasToNodes(schemas: Map<String, XMLNode>): Map<String, XMLNode> {

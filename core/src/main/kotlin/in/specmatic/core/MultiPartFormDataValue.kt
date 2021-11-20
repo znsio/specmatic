@@ -10,6 +10,7 @@ import `in`.specmatic.core.pattern.parsedPattern
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import io.ktor.util.*
 import io.ktor.utils.io.core.*
 import java.io.File
 import kotlin.text.String
@@ -44,6 +45,7 @@ $content
     override fun toJSONObject(): JSONObjectValue =
             JSONObjectValue(mapOf("name" to StringValue(name), "content" to StringValue(content.toStringLiteral()), "contentType" to StringValue(content.httpContentType)))
 
+    @OptIn(InternalAPI::class)
     override fun addTo(formBuilder: FormBuilder) {
         formBuilder.append(name, content.toStringLiteral(), Headers.build {
             append(HttpHeaders.ContentType, ContentType.parse(content.httpContentType))
@@ -134,6 +136,7 @@ $headerString
                 }
             })
 
+    @OptIn(InternalAPI::class)
     override fun addTo(formBuilder: FormBuilder) {
         formBuilder.appendInput(name, Headers.build {
             if(contentType != null)

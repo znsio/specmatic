@@ -1,8 +1,5 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.FailureReason.SOAPActionMismatch
-import `in`.specmatic.core.FailureReason.URLPathMisMatch
-
 fun pathNotRecognizedMessage(httpRequest: HttpRequest): String {
     val soapActionHeader = "SOAPAction"
     if(httpRequest.headers.containsKey(soapActionHeader))
@@ -19,7 +16,7 @@ data class Results(val results: List<Result> = emptyList()) {
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
     fun success(): Boolean = !hasFailures()
 
-    fun withoutFluff(): Results = copy(results = results.filterNot { isFluffyError(it) }.toMutableList())
+    fun withoutFluff(): Results = copy(results = results.filterNot { it.isFluffy() })
 
     fun toResultIfAny(): Result {
         return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { it.toReport().toText() })
@@ -48,30 +45,12 @@ data class Results(val results: List<Result> = emptyList()) {
     }
 
     fun report(defaultMessage: String = PATH_NOT_RECOGNIZED_ERROR): String {
-        val filteredResults = results.filterNot { isFluffyError(it) }
+        val filteredResults = withoutFluff().results
 
         return when {
             filteredResults.isNotEmpty() -> listToReport(filteredResults)
             else -> "$defaultMessage\n\n${listToReport(results)}".trim()
         }
-    }
-
-    fun appendReport(httpRequest: HttpRequest, existingReport: String): String {
-        return if(existingReport.isNotBlank())
-            "\n\n${report(httpRequest)}"
-        else
-            report(httpRequest)
-    }
-
-}
-
-internal fun isFluffyError(it: Result?): Boolean {
-    return when(it) {
-        is Result.Failure ->
-            it.failureReason == URLPathMisMatch
-                    || it.failureReason == SOAPActionMismatch
-                    || isFluffyError(it.cause)
-        else -> false
     }
 }
 

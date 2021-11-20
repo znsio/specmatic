@@ -105,7 +105,7 @@ data class Feature(
             val resultList = lookupScenario(httpRequest, scenarios)
             val matchingScenarios = matchingScenarios(resultList)
 
-            val firstRealResult = resultList.filterNot { isFluffyError(it.second) }.firstOrNull()
+            val firstRealResult = resultList.filterNot { it.second.isFluffy() }.firstOrNull()
             val resultsExist = resultList.firstOrNull() != null
 
             when {

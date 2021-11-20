@@ -12,6 +12,14 @@ sealed class Result {
         return toReport().toText()
     }
 
+    fun isFluffy(): Boolean {
+        return when(this) {
+            is Failure ->
+                failureReason?.fluffy == true || cause?.isFluffy() == true
+            else -> false
+        }
+    }
+
     fun updateScenario(scenario: Scenario): Result {
         this.scenario = scenario
         return this
@@ -72,10 +80,10 @@ sealed class Result {
     }
 }
 
-enum class FailureReason {
-    PartNameMisMatch,
-    URLPathMisMatch,
-    SOAPActionMismatch
+enum class FailureReason(val fluffy: Boolean) {
+    PartNameMisMatch(false),
+    URLPathMisMatch(true),
+    SOAPActionMismatch(true)
 }
 
 fun Result.breadCrumb(breadCrumb: String): Result =

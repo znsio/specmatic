@@ -30,6 +30,8 @@ open class SpecmaticJUnitSupport {
         const val TEST_BASE_URL = "testBaseURL"
         const val ENV_NAME = "environment"
         const val VARIABLES_FILE_NAME = "variablesFileName"
+
+        val testsNames = mutableListOf<String>()
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -94,6 +96,8 @@ open class SpecmaticJUnitSupport {
 
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {
+                testsNames.add(testScenario.testDescription())
+
                 val result: Result = when(val testBaseURL = System.getProperty(TEST_BASE_URL)) {
                     null -> testScenario.runTest(System.getProperty(HOST), System.getProperty(PORT), timeout)
                     else -> testScenario.runTest(testBaseURL, timeout)

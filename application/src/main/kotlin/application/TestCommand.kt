@@ -203,8 +203,15 @@ class TestCommand : Callable<Unit> {
             val reportFile = reportDirectory.resolve("TEST-junit-jupiter.xml")
 
             if(reportFile.isFile) {
-                val text = reportFile.readText()
-                val newText = text.replace("JUnit Jupiter", "Contract Tests")
+                val newText = reportFile.readText().let { text ->
+                    text.replace("JUnit Jupiter", "Contract Tests")
+                }.let { text ->
+                    SpecmaticJUnitSupport.testsNames.foldIndexed(text) { index, updatedText, actualTestName ->
+                        val methodBasedTestName = "contractAsTest()[${index + 1}]"
+                        updatedText.replace(methodBasedTestName, actualTestName)
+                    }
+                }
+
                 reportFile.writeText(newText)
             } else {
                 throw ContractException("Was expecting a JUnit report file called TEST-junit-jupiter.xml inside $junitReportDirName but could not find it.")

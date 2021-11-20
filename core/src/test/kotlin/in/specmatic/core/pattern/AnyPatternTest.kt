@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.resultReport
+import `in`.specmatic.core.toReport
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
@@ -39,12 +39,12 @@ internal class AnyPatternTest {
         val result1 = pattern1.matches(value, resolver)
         val result2 = pattern2.matches(value, resolver)
 
-        assertThat(resultReport(result2).trimIndent()).isEqualTo("""Expected string, actual was json object: {
+        assertThat(result2.toReport().toText().trimIndent()).isEqualTo("""Expected string, actual was json object: {
       "firstname": "Jane",
       "lastname": "Doe"
   }""")
 
-        assertThat(resultReport(result1).trimIndent()).isEqualTo("""Expected string, actual was json object: {
+        assertThat(result1.toReport().toText().trimIndent()).isEqualTo("""Expected string, actual was json object: {
       "firstname": "Jane",
       "lastname": "Doe"
   }""")

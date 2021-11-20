@@ -5,8 +5,6 @@ import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.True
 import `in`.specmatic.core.value.Value
-import io.ktor.features.*
-import io.ktor.http.*
 
 sealed class KeyError {
     abstract val name: String
@@ -69,7 +67,7 @@ data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boole
             True -> pattern.generate(this)
             else -> {
                 when(val matchResult = pattern.matches(fact, this)) {
-                    is Result.Failure -> throw ContractException(resultReport(matchResult))
+                    is Result.Failure -> throw ContractException(matchResult.toFailureReport())
                     else -> fact
                 }
             }

@@ -107,7 +107,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                                 val rowPattern = resolver.getPattern(rowValue)
                                 when (val result = urlPathPattern.encompasses(rowPattern, resolver, resolver)) {
                                     is Success -> urlPathPattern.copy(pattern = rowPattern)
-                                    else -> throw ContractException(resultReport(result))
+                                    is Failure -> throw ContractException(result.toFailureReport())
                                 }
                             }
                             else -> attempt("Format error in example of \"$key\"") {

@@ -343,7 +343,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         val matchResult = dereferenced.pattern.nodes[0].matches(parsedData, resolver)
 
                         if (matchResult is Failure)
-                            throw ContractException(resultReport(matchResult))
+                            throw ContractException(matchResult.toFailureReport())
 
                         listOf(listOf(ExactValuePattern(parsedData)))
                     }

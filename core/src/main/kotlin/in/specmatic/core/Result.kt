@@ -6,10 +6,10 @@ import `in`.specmatic.core.value.Value
 
 sealed class Result {
     var scenario: Scenario? = null
-    var path: String? = null
+    var contractPath: String? = null
 
     fun reportString(): String {
-        return resultReport(this)
+        return toReport().toText()
     }
 
     fun updateScenario(scenario: Scenario): Result {
@@ -23,8 +23,15 @@ sealed class Result {
     abstract fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result
 
     fun updatePath(path: String): Result {
-        this.path = path
+        this.contractPath = path
         return this
+    }
+
+    fun toReport(scenarioMessage: String? = null): Report {
+        return when (this) {
+            is Failure -> toFailureReport(scenarioMessage)
+            else -> SuccessReport
+        }
     }
 
     data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
@@ -36,8 +43,12 @@ sealed class Result {
         fun reason(errorMessage: String) = Failure(errorMessage, this)
         fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
 
-        fun report(): FailureReport =
-            (cause?.report() ?: FailureReport()).let { reason ->
+        fun toFailureReport(scenarioMessage: String? = null): FailureReport {
+            return FailureReport(contractPath, scenarioMessage, scenario, toMatchFailureDetails())
+        }
+
+        fun toMatchFailureDetails(): MatchFailureDetails =
+            (cause?.toMatchFailureDetails() ?: MatchFailureDetails()).let { reason ->
                 when {
                     message.isNotEmpty() -> reason.copy(errorMessages = listOf(message).plus(reason.errorMessages))
                     else -> reason
@@ -73,7 +84,7 @@ fun Result.breadCrumb(breadCrumb: String): Result =
         else -> this
     }
 
-data class FailureReport(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList())
+data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)
 
 fun mismatchResult(expected: String, actual: String): Failure = Failure("Expected $expected, actual was $actual")
 fun mismatchResult(expected: String, actual: Value?): Failure = mismatchResult(expected, valueError(actual) ?: "null")
@@ -88,51 +99,82 @@ fun valueError(value: Value?): String? {
     return value?.let { "${it.displayableType()}: ${it.displayableValue()}" }
 }
 
-fun resultReport(result: Result, scenarioMessage: String? = null): String {
+interface Report {
+    override fun toString(): String
+    fun toText(): String
+}
+
+object SuccessReport: Report {
+    override fun toString(): String = toText()
+
+    override fun toText(): String {
+        return ""
+    }
+}
+
+class FailureReport(val contractPath: String?, val scenarioMessage: String?, val scenario: Scenario?, val matchFailureDetails: MatchFailureDetails): Report {
+    override fun toText(): String {
+        val contractLine = contractPathDetails()
+        val scenarioDetails = scenarioDetails(scenario) ?: ""
+
+        val matchFailureDetails = matchFailureDetails()
+
+        val reportDetails = "$scenarioDetails${System.lineSeparator()}${System.lineSeparator()}${matchFailureDetails.prependIndent("  ")}"
+
+        val report = contractLine?.let {
+            val reportIndent = if(contractLine.isNotEmpty()) "  " else ""
+            "$contractLine${reportDetails.prependIndent(reportIndent)}"
+        } ?: reportDetails
+
+        return report.trim()
+    }
+
+    override fun toString(): String = toText()
+
+    private fun matchFailureDetails(): String {
+        return matchFailureDetails.let { (breadCrumbs, errorMessages) ->
+            val breadCrumbString =
+                breadCrumbs
+                    .filter { it.isNotBlank() }
+                    .joinToString(".") { it.trim() }
+                    .let {
+                        when {
+                            it.isNotBlank() -> ">> $it"
+                            else -> ""
+                        }
+                    }
+
+            val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+
+            "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}$errorMessagesString".trim()
+        }
+    }
+
+    private fun contractPathDetails(): String? {
+        if(contractPath == null || contractPath.isBlank())
+            return null
+
+        return "Error from contract $contractPath\n\n"
+    }
+
+    private fun scenarioDetails(scenario: Scenario?): String? {
+        return scenario?.let {
+            val scenarioLine = """${scenarioMessage ?: "In scenario"} "${scenario.name}""""
+            val urlLine =
+                "API: ${scenario.httpRequestPattern.method} ${scenario.httpRequestPattern.urlMatcher?.path} -> ${scenario.httpResponsePattern.status}"
+
+            "$scenarioLine${System.lineSeparator()}$urlLine"
+        }
+    }
+}
+
+fun toReport(result: Result, scenarioMessage: String? = null): String {
     return when (result) {
         is Failure -> {
-            val contractLine = result.path?.let {
-                if(it.isNotBlank())
-                    "Error from contract $it\n\n"
-                else
-                    ""
-            } ?: ""
-
-            val scenarioDetails = when(val scenario = result.scenario) {
-                null -> ""
-                else -> {
-                    val scenarioLine = """${scenarioMessage ?: "In scenario"} "${scenario.name}""""
-                    val urlLine = "API: ${scenario.httpRequestPattern.method} ${scenario.httpRequestPattern.urlMatcher?.path} -> ${scenario.httpResponsePattern.status}"
-                    "$scenarioLine${System.lineSeparator()}$urlLine"
-                }
-            }
-
-            val report = result.report().let { (breadCrumbs, errorMessages) ->
-                val breadCrumbString =
-                        breadCrumbs
-                                .filter { it.isNotBlank() }
-                                .joinToString(".") { it.trim() }
-                                .let {
-                                    when {
-                                        it.isNotBlank() -> ">> $it"
-                                        else -> ""
-                                    }
-                                }
-                val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
-                "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}$errorMessagesString".trim()
-            }
-
-            val reportDetails = "$scenarioDetails${System.lineSeparator()}${System.lineSeparator()}${report.prependIndent("  ")}"
-
-            if(contractLine.isNotEmpty()) {
-                val reportIndent = if(contractLine.isNotEmpty()) "  " else ""
-                "$contractLine${reportDetails.prependIndent(reportIndent)}"
-            } else
-                reportDetails
-
+            result.toFailureReport(scenarioMessage)
         }
-        else -> ""
-    }.trim()
+        else -> SuccessReport
+    }.toString()
 }
 
 fun shouldBeIgnored(result: Result): Boolean {

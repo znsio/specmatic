@@ -3,7 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
-import `in`.specmatic.core.resultReport
+import `in`.specmatic.core.toReport
 import `in`.specmatic.core.value.BooleanValue
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.Value
@@ -22,7 +22,7 @@ object BooleanPattern : Pattern, ScalarType {
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = when (value) {
-        !in listOf("true", "false") -> throw ContractException(resultReport(mismatchResult(BooleanPattern, value)))
+        !in listOf("true", "false") -> throw ContractException(mismatchResult(BooleanPattern, value).toFailureReport())
         else -> BooleanValue(value.toBoolean())
     }
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {

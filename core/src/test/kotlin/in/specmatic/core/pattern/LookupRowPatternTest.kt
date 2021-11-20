@@ -4,7 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.resultReport
+import `in`.specmatic.core.toReport
 import `in`.specmatic.core.value.NumberValue
 
 internal class LookupRowPatternTest {
@@ -31,7 +31,7 @@ internal class LookupRowPatternTest {
         val lookupRowPattern = LookupRowPattern(StringPattern(), "name")
         val result = lookupRowPattern.encompasses(lookupRowPattern, Resolver(), Resolver())
 
-        println(resultReport(result))
+        println(toReport(result))
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.resultReport
+import `in`.specmatic.core.toReport
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 
@@ -91,6 +91,6 @@ internal class PatternInStringPatternTest {
 
     private fun assertEncompasses(bigger: Pattern, biggerResolver: Resolver, smaller: ExactValuePattern, smallerResolver: Resolver) {
         val result = bigger.encompasses(smaller, biggerResolver, smallerResolver)
-        if(result is Result.Failure) fail(resultReport(result))
+        if(result is Result.Failure) fail(result.toReport().toText())
     }
 }

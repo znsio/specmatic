@@ -64,7 +64,7 @@ internal class ScenarioTest {
         )
         scenario.matches(HttpResponse.EMPTY).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf(), listOf("Exception: message")))
+            assertThat((it as Result.Failure).toMatchFailureDetails()).isEqualTo(MatchFailureDetails(listOf(), listOf("Exception: message")))
         }
     }
 

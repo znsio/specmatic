@@ -2,7 +2,7 @@ package `in`.specmatic.test
 
 import org.assertj.core.api.AbstractAssert
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.resultReport
+import `in`.specmatic.core.toReport
 
 class ResultAssert(result: Result) : AbstractAssert<ResultAssert, Result>(result, ResultAssert::class.java) {
     companion object {
@@ -15,7 +15,7 @@ class ResultAssert(result: Result) : AbstractAssert<ResultAssert, Result>(result
         isNotNull
 
         if(actual is Result.Failure) {
-            failWithMessage(resultReport(actual, "Testing scenario"))
+            failWithMessage(actual.toFailureReport("Testing scenario").toText())
         }
     }
 }

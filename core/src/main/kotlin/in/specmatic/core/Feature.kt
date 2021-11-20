@@ -110,7 +110,7 @@ data class Feature(
 
             when {
                 matchingScenarios.isNotEmpty() -> matchingScenarios
-                firstRealResult != null -> throw ContractException(resultReport(firstRealResult.second))
+                firstRealResult != null -> throw ContractException(firstRealResult.second.toReport().toText())
                 resultsExist -> throw ContractException(pathNotRecognizedMessage(httpRequest))
                 else -> throw ContractException("The contract is empty.")
             }
@@ -232,7 +232,7 @@ data class Feature(
     fun assertMatchesMockKafkaMessage(kafkaMessage: KafkaMessage) {
         val result = matchesMockKafkaMessage(kafkaMessage)
         if (result is Result.Failure)
-            throw NoMatchingScenario(Results(), cachedMessage = resultReport(result))
+            throw NoMatchingScenario(Results(), cachedMessage = result.toFailureReport().toText())
     }
 
     fun matchesMockKafkaMessage(kafkaMessage: KafkaMessage): Result {

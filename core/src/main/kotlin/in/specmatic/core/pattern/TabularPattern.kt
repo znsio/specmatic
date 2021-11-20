@@ -109,7 +109,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
                 attempt(breadCrumb = key) {
                     when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
                         is Result.Success -> rowPattern.newBasedOn(row, resolver)
-                        else -> throw ContractException(resultReport(result))
+                        is Result.Failure -> throw ContractException(result.toFailureReport())
                     }
                 }
             } else {
@@ -118,7 +118,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
                 }
 
                 when (val matchResult = pattern.matches(parsedRowValue, resolver)) {
-                    is Result.Failure -> throw ContractException(resultReport(matchResult))
+                    is Result.Failure -> throw ContractException(matchResult.toFailureReport())
                     else -> listOf(ExactValuePattern(parsedRowValue))
                 }
             }

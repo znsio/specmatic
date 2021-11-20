@@ -27,7 +27,7 @@ fun optionalPattern(pattern: Pattern): AnyPattern = AnyPattern(listOf(DeferredPa
 
 infix fun Value.shouldMatch(pattern: Pattern) {
     val result = pattern.matches(this, Resolver())
-    if(!result.isTrue()) println(resultReport(result))
+    if(!result.isTrue()) println(toReport(result))
     assertThat(result).isInstanceOf(Result.Success::class.java)
 }
 

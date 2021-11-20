@@ -6,7 +6,7 @@ import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.resultReport
+import `in`.specmatic.core.toReport
 import `in`.specmatic.core.utilities.*
 import java.io.File
 import java.util.concurrent.Callable
@@ -18,8 +18,8 @@ class SubscribeCommand: Callable<Unit> {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".$CONTRACT_EXTENSION/repos")
         val manifestFile = File(globalConfigFileName)
-        val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
-        val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
+        val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
+        val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 
         for(source in sources) {
             val sourceDir = source.directoryRelativeTo(workingDirectory)

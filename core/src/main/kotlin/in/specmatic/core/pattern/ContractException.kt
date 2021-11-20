@@ -1,16 +1,19 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.core.FailureReport
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.Scenario
-import `in`.specmatic.core.resultReport
+import `in`.specmatic.core.toReport
 
 data class ContractException(val errorMessage: String = "", val breadCrumb: String = "", val exceptionCause: ContractException? = null, val scenario: Scenario? = null) : Exception(errorMessage) {
+    constructor(failureReport: FailureReport): this(failureReport.toText())
+
     fun failure(): Result.Failure =
         Result.Failure(errorMessage, exceptionCause?.failure(), breadCrumb).also { result ->
             if(scenario != null) result.updateScenario(scenario)
         }
 
-    fun report(): String = resultReport(failure())
+    fun report(): String = failure().toReport().toText()
 }
 
 fun <ReturnType> attempt(errorMessage: String = "", breadCrumb: String = "", f: ()->ReturnType): ReturnType {

@@ -71,7 +71,7 @@ data class HttpRequestPattern(
 
         if (results.any { it !is Success }) {
             val reason = results.filter { it !is Success }.joinToString("\n\n") {
-                resultReport(it).prependIndent("  ")
+                it.toReport().toText().prependIndent("  ")
             }
 
             return MatchFailure(
@@ -288,7 +288,7 @@ data class HttpRequestPattern(
             isPatternToken(valueString) -> resolvedHop(parsedPattern(valueString, key), resolver).let { parsedType ->
                 when (val result = type.encompasses(parsedType, resolver, resolver)) {
                     is Success -> parsedType
-                    else -> throw ContractException(resultReport(result))
+                    is Failure -> throw ContractException(result.toFailureReport())
                 }
             }
             else -> type.parseToType(valueString, resolver)

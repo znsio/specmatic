@@ -22,7 +22,7 @@ data class Results(val results: List<Result> = emptyList()) {
     fun withoutFluff(): Results = copy(results = results.filterNot { isFluffyError(it) }.toMutableList())
 
     fun toResultIfAny(): Result {
-        return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { resultReport(it) })
+        return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { it.toReport().toText() })
     }
 
     val failureCount
@@ -75,6 +75,7 @@ internal fun isFluffyError(it: Result?): Boolean {
     }
 }
 
-private fun listToReport(list: List<Result>): String = list.map { result ->
-    resultReport(result)
-}.filter { it.isNotBlank() }.joinToString("\n\n")
+private fun listToReport(results: List<Result>): String =
+    results.filterIsInstance<Result.Failure>().joinToString("${System.lineSeparator()}${System.lineSeparator()}") {
+        it.toFailureReport().toText()
+    }

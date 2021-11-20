@@ -33,7 +33,7 @@ internal class URLMatcherTest {
         val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets/123/owners/hari"))
         urlPattern.matches(URI("/pets/123/owners"), HashMap(), Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("PATH"), listOf("""Expected /pets/123/owners (having 3 path segments) to match /pets/123/owners/hari (which has 4 path segments).""")))
+            assertThat((it as Result.Failure).toMatchFailureDetails()).isEqualTo(MatchFailureDetails(listOf("PATH"), listOf("""Expected /pets/123/owners (having 3 path segments) to match /pets/123/owners/hari (which has 4 path segments).""")))
         }
     }
 
@@ -45,7 +45,7 @@ internal class URLMatcherTest {
 
         urlPattern.matches(URI("/pets"), queryParameters, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf(QUERY_PARAMS_BREADCRUMB, "petid"), listOf("""Expected number, actual was string: "text"""")))
+            assertThat((it as Result.Failure).toMatchFailureDetails()).isEqualTo(MatchFailureDetails(listOf(QUERY_PARAMS_BREADCRUMB, "petid"), listOf("""Expected number, actual was string: "text"""")))
         }
     }
 
@@ -65,7 +65,7 @@ internal class URLMatcherTest {
         val queryParameters = HashMap<String, String>()
         urlPattern.matches(URI("/owners/123123"), queryParameters, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).report()).isEqualTo(FailureReport(listOf("PATH (/owners/123123)"), listOf("""Expected string: "pets", actual was string: "owners"""")))
+            assertThat((it as Result.Failure).toMatchFailureDetails()).isEqualTo(MatchFailureDetails(listOf("PATH (/owners/123123)"), listOf("""Expected string: "pets", actual was string: "owners"""")))
         }
     }
 

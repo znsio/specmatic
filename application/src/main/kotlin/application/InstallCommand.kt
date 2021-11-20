@@ -4,7 +4,7 @@ import picocli.CommandLine
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.resultReport
+import `in`.specmatic.core.toReport
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.core.utilities.loadSources
 import java.io.File
@@ -16,7 +16,7 @@ class InstallCommand: Callable<Unit> {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
 
-        val sources = try { loadSources(globalConfigFileName) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
+        val sources = try { loadSources(globalConfigFileName) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 
         for(source in sources) {
             println("Installing $source")

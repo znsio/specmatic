@@ -316,7 +316,7 @@ Feature: test feature
         val resolver = feature.scenarios.single().resolver
         val result = feature.scenarios.single().httpRequestPattern.matches(request, resolver)
 
-        assertThat(resultReport(result)).isEqualTo(
+        assertThat(toReport(result)).isEqualTo(
             """>> REQUEST.BODY.name
   
   Expected string, actual was json object: {

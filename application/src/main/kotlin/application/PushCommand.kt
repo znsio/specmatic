@@ -24,8 +24,8 @@ class PushCommand: Callable<Unit> {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".$CONTRACT_EXTENSION/repos")
         val manifestFile = File(globalConfigFileName)
-        val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
-        val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(resultReport(e.failure())) }
+        val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
+        val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 
         for (source in sources) {
             val sourceDir = source.directoryRelativeTo(workingDirectory)

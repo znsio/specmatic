@@ -52,15 +52,6 @@ fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook()): Feat
     }
 }
 
-fun readContractUsingHook(path: String, parseHookName: String?): String {
-    val hook: String? = parseHookName?.let { Configuration.config?.hooks?.get(it) }
-
-    return hook?.let { it ->
-        details.forTheUser("  Invoking hook $parseHookName when loading contract $path")
-        return ExternalCommand(it, ".", listOf("CONTRACT_FILE=$path")).executeAsSeparateProcess()
-    } ?: File(path).readText()
-}
-
 fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""): Feature {
     val gherkinDocument = parseGherkinString(gherkinData, sourceFilePath)
     val (name, scenarios) = lex(gherkinDocument, sourceFilePath)

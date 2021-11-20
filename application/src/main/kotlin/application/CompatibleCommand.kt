@@ -6,7 +6,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.git.*
 import `in`.specmatic.core.log.CompositePrinter
 import `in`.specmatic.core.log.Verbose
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import org.springframework.beans.factory.annotation.Autowired
@@ -38,12 +38,12 @@ class GitCompatibleCommand : Callable<Int> {
 
     @Command(name = "file", description = ["Compare file in working tree against HEAD"])
     fun file(@Parameters(paramLabel = "contractPath", defaultValue = ".") contractPath: String,
-             @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
+             @Option(names = ["--debug"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
-            details = Verbose(CompositePrinter())
+            logger = Verbose(CompositePrinter())
 
         if(!contractPath.isContractFile() && !contractPath.endsWith(".yaml") && !File(contractPath).isDirectory) {
-            details.forTheUser(invalidContractExtensionMessage(contractPath))
+            logger.log(invalidContractExtensionMessage(contractPath))
             return 1
         }
 
@@ -52,7 +52,7 @@ class GitCompatibleCommand : Callable<Int> {
                 backwardCompatibleFile(it, fileOperations, gitCommand)
             }
         } catch(e: Throwable) {
-            details.forTheUser(e)
+            logger.log(e)
             1
         }
     }
@@ -61,16 +61,16 @@ class GitCompatibleCommand : Callable<Int> {
     fun commits(@Parameters(paramLabel = "contractPath", defaultValue = ".") path: String,
                 @Parameters(paramLabel = "newerCommit") newerCommit: String,
                 @Parameters(paramLabel = "olderCommit") olderCommit: String,
-                @Option(names = ["-V", "--verbose"], required = false, defaultValue = "false") verbose: Boolean): Int {
+                @Option(names = ["--debug"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
-            details = Verbose()
+            logger = Verbose()
 
         return try {
             backwardCompatibleOnFileOrDirectory(path, fileOperations) {
                 backwardCompatibleCommit(it, newerCommit, olderCommit, gitCommand)
             }
         } catch(e: Throwable) {
-            details.forTheUser(e)
+            logger.log(e)
             1
         }
     }
@@ -116,10 +116,10 @@ private fun backwardCompatibleOnFileOrDirectory(
             }.toList()
 
             if(outputs.isEmpty()) {
-                details.forTheUser("No contract files were found")
+                logger.log("No contract files were found")
                 0
             } else {
-                details.forTheUser(outputs.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (path, output) ->
+                logger.log(outputs.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (path, output) ->
                     """$path:${System.lineSeparator()}${output.message.prependIndent("  ")}"""
                 })
 
@@ -150,9 +150,9 @@ internal fun backwardCompatibleFile(
     git: GitCommand
 ): Outcome<Results> {
     return try {
-        details.forDebugging("Newer version of $contractPath")
+        logger.debug("Newer version of $contractPath")
 
-        val newerFeature = parseContract(details.forDebugging(fileOperations.read(contractPath)), contractPath)
+        val newerFeature = parseContract(logger.debug(fileOperations.read(contractPath)), contractPath)
         val result = getOlderFeature(contractPath, git)
 
         result.onSuccess {
@@ -196,8 +196,8 @@ internal fun getOlderFeature(contractPath: String, git: GitCommand): Outcome<Fea
         return Outcome(null, "Older contract file must be provided, or the file must be in a git directory")
 
     val(contractGit, relativeContractPath) = git.relativeGitPath(contractPath)
-    details.forDebugging("Older version of $contractPath")
-    return Outcome(parseContract(details.forDebugging(contractGit.show("HEAD", relativeContractPath)), contractPath))
+    logger.debug("Older version of $contractPath")
+    return Outcome(parseContract(logger.debug(contractGit.show("HEAD", relativeContractPath)), contractPath))
 }
 
 internal data class CompatibilityOutput(val exitCode: Int, val message: String)

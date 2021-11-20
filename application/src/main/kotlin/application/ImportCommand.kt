@@ -5,9 +5,8 @@ import `in`.specmatic.conversions.postmanCollectionToGherkin
 import `in`.specmatic.conversions.runTests
 import `in`.specmatic.conversions.toFragment
 import `in`.specmatic.core.*
-import `in`.specmatic.core.log.CompositePrinter
 import `in`.specmatic.core.log.Verbose
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.log.logException
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.parseXML
@@ -27,12 +26,12 @@ class ImportCommand : Callable<Int> {
     @Option(names = ["--output"], description = ["Write the contract into this file"], required = false)
     var userSpecifiedOutFile: String? = null
 
-    @Option(names = ["--verbose"], required = false, defaultValue = "false")
+    @Option(names = ["--debug"], required = false, defaultValue = "false")
     var verbose: Boolean = false
 
     override fun call(): Int {
         if(verbose)
-            details = Verbose()
+            logger = Verbose()
 
         return logException {
             when {
@@ -99,7 +98,7 @@ private fun writeOut(gherkin: String, outputFilePath: String, hostAndPort: Strin
     val tag = if(hostAndPort != null) "-${hostAndPort.replace(":", "-")}" else ""
 
     fileWithTag(outputFile, tag).writeText(gherkin)
-    details.forTheUser("Written to file ${fileWithTag(outputFile, tag).path}")
+    logger.log("Written to file ${fileWithTag(outputFile, tag).path}")
 }
 
 private fun fileWithTag(file: File, tag: String): File {

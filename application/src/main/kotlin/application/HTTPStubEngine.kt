@@ -4,7 +4,7 @@ import `in`.specmatic.core.Feature
 import `in`.specmatic.core.WorkingDirectory
 import `in`.specmatic.core.log.StringLog
 import `in`.specmatic.core.log.consoleLog
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpClientFactory
 import `in`.specmatic.stub.HttpStub
@@ -46,7 +46,7 @@ class HTTPStubEngine {
                 }
             }
             else -> {
-                details.forTheUser("Could not find any HTTP APIs in the contracts, so stub server not started.")
+                logger.log("Could not find any HTTP APIs in the contracts, so stub server not started.")
                 null
             }
         }

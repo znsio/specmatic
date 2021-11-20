@@ -1,6 +1,6 @@
 package `in`.specmatic.core.git
 
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
@@ -14,7 +14,7 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
         workingDirectory: String,
         command: Array<String>
     ): String {
-        details.forDebugging("${prefix}Executing: ${command.joinToString(" ")}")
+        logger.debug("${prefix}Executing: ${command.joinToString(" ")}")
         return ExternalCommand(
             command,
             workingDirectory,
@@ -43,7 +43,7 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
         execute("git", "rev-parse", "--is-inside-work-tree").trim() == "true"
     } catch (e: Throwable) {
         false.also {
-            details.forDebugging(
+            logger.debug(
                 "This must not be a git dir, got error ${e.javaClass.name}: ${
                     exceptionCauseMessage(
                         e

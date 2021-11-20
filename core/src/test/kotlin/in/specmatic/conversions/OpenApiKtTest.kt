@@ -2,7 +2,7 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.Verbose
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
@@ -45,7 +45,7 @@ Scenario: zero should return not found
         @BeforeAll
         @JvmStatic
         fun setup() {
-            details = Verbose()
+            logger = Verbose()
         }
     }
 

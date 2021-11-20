@@ -2,7 +2,7 @@ package application
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.JSONConsoleLogPrinter
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.log.logException
 import picocli.CommandLine.*
 import `in`.specmatic.stub.HttpStub
@@ -17,7 +17,7 @@ class SamplesCommand : Callable<Unit> {
     lateinit var contractFile: File
 
     override fun call() {
-        details.printer.printers.apply {
+        logger.printer.printers.apply {
             clear()
             add(JSONConsoleLogPrinter)
         }
@@ -33,7 +33,7 @@ class SamplesCommand : Callable<Unit> {
                     Contract(gherkin).samples(fake)
                 }
             } catch(e: StackOverflowError) {
-                details.forTheUser("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
+                logger.log("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
             }
         }
     }

@@ -13,7 +13,7 @@ import picocli.CommandLine.Option
 import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
 import `in`.specmatic.core.log.Verbose
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.test.SpecmaticJUnitSupport
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
@@ -94,12 +94,12 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--variables"], description = ["Variables file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
     var variablesFileName: String? = null
 
-    @Option(names = ["--verbose", "--debug"], description = ["Display debug logs"])
+    @Option(names = ["--debug"], description = ["Debug logs"])
     var verboseMode: Boolean = false
 
     override fun call() = try {
         if(verboseMode) {
-            details = Verbose()
+            logger = Verbose()
         }
 
         configFileName?.let {
@@ -163,14 +163,14 @@ class TestCommand : Callable<Unit> {
             val zipFilePath = contractPaths.first()
             val path = Path(".${APPLICATION_NAME_LOWER_CASE}_test_bundle")
 
-            details.forDebugging("Unzipping bundle into ${path.toFile().canonicalPath}")
+            logger.debug("Unzipping bundle into ${path.toFile().canonicalPath}")
 
             val bundleDir = path.toFile()
             bundleDir.mkdirs()
 
             zipFileEntries(zipFilePath) { name, content ->
                 bundleDir.resolve(name).apply {
-                    details.forDebugging("Creating file ${this.canonicalPath}")
+                    logger.debug("Creating file ${this.canonicalPath}")
                     parentFile.mkdirs()
                     createNewFile()
                     writeText(content)
@@ -182,10 +182,10 @@ class TestCommand : Callable<Unit> {
 
             val bundledConfigFile = bundleDir.resolve(DEFAULT_CONFIG_FILE_NAME)
 
-            details.forDebugging("Checking for the existence of bundled config file ${bundledConfigFile.canonicalPath}")
+            logger.debug("Checking for the existence of bundled config file ${bundledConfigFile.canonicalPath}")
             if(!bundledConfigFile.exists())
                 throw ContractException("$DEFAULT_CONFIG_FILE_NAME must be included in the test bundle.")
-            details.forDebugging("Found bundled config file")
+            logger.debug("Found bundled config file")
 
             System.setProperty(CONFIG_FILE_NAME, bundledConfigFile.canonicalPath)
 
@@ -221,13 +221,13 @@ class TestCommand : Callable<Unit> {
         contractExecutionListener.exitProcess()
     }
     catch (e: Throwable) {
-        details.forTheUser(e)
+        logger.log(e)
     }
 
     private fun loadContractPaths(): List<String> {
         return when {
             contractPaths.isEmpty() -> {
-                details.forDebugging("No contractPaths specified. Using configuration file named ${Configuration.globalConfigFileName}")
+                logger.debug("No contractPaths specified. Using configuration file named ${Configuration.globalConfigFileName}")
                 qontractConfig.contractTestPaths()
             }
             else -> contractPaths

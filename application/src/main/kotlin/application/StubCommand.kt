@@ -76,7 +76,7 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--httpsPassword"], description = ["Key password if any"])
     var keyPassword = "forgotten"
 
-    @Option(names = ["--verbose", "--debug"], description = ["Verbose mode"])
+    @Option(names = ["--debug"], description = ["Debug logs"])
     var verbose = false
 
     @Option(names = ["--config"], description = ["Configuration file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
@@ -112,15 +112,15 @@ class StubCommand : Callable<Unit> {
 
         textLog?.let {
             logPrinters.add(TextFilePrinter(LogDirectory(it, logPrefix, "", "log")))
-            details.printer.printers.add(TextFilePrinter(LogDirectory(it, logPrefix, "", "log")))
+            logger.printer.printers.add(TextFilePrinter(LogDirectory(it, logPrefix, "", "log")))
         }
 
         jsonLog?.let {
             logPrinters.add(JSONFilePrinter(LogDirectory(it, logPrefix, "json", "log")))
-            details.printer.printers.add(JSONFilePrinter(LogDirectory(it, logPrefix, "json", "log")))
+            logger.printer.printers.add(JSONFilePrinter(LogDirectory(it, logPrefix, "json", "log")))
         }
 
-        details = if(verbose)
+        logger = if(verbose)
             Verbose(CompositePrinter(logPrinters))
         else
             NonVerbose(CompositePrinter(logPrinters))
@@ -148,7 +148,7 @@ class StubCommand : Callable<Unit> {
     }
 
     private fun loadConfig() = contractPaths.ifEmpty {
-        details.forDebugging("No contractPaths specified. Using configuration file named $configFileName")
+        logger.debug("No contractPaths specified. Using configuration file named $configFileName")
         qontractConfig.contractStubPaths()
     }
 

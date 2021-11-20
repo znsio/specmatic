@@ -1,7 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.*
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.jsonStringToValueMap
@@ -41,7 +41,7 @@ fun checkExists(file: File) = file.also {
 }
 
 fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook()): Feature {
-    details.forDebugging("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
+    logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
         "yaml" -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path).toFeature()
@@ -782,7 +782,7 @@ data class Feature(
                     type
                 }
                 else {
-                    details.forTheUser("Found conflicting values for the same key ${entry.key} ($type1Descriptor, $type2Descriptor).")
+                    logger.log("Found conflicting values for the same key ${entry.key} ($type1Descriptor, $type2Descriptor).")
                     entry.value
                 }
             } else
@@ -916,7 +916,7 @@ data class Feature(
             pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> StringSchema().apply {
                 this.nullable = true
             }.also {
-                details.forTheUser("Specmatic converted a (null) in the spec file to a nullable string in the OpenAPI file.")
+                logger.log("Specmatic converted a (null) in the spec file to a nullable string in the OpenAPI file.")
             }
             pattern is DeferredPattern -> Schema<Any>().apply {
                 this.`$ref` = withoutPatternDelimiters(pattern.pattern).trimEnd('_')
@@ -1495,7 +1495,7 @@ private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, Examp
             val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
 
             for (message in examples.messages) {
-                details.forTheUser(message)
+                logger.log(message)
             }
 
             val (responseClauses, allTypes, _) = toGherkinClauses(namedStub.stub.response, typesFromRequest)

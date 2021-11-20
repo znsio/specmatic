@@ -1,6 +1,6 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ExternalCommand
 import java.io.File
 
@@ -15,7 +15,7 @@ class CommandHook(private val name: HookName): Hook {
         checkExists(File(path))
 
         return command?.let {
-            details.forTheUser("  Invoking hook $name when loading contract $path")
+            logger.log("  Invoking hook $name when loading contract $path")
             ExternalCommand(it, ".", listOf("CONTRACT_FILE=$path")).executeAsSeparateProcess()
         } ?: File(path).readText()
     }

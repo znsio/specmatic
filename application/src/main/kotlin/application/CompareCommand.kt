@@ -1,7 +1,7 @@
 package application
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.log.logException
 import `in`.specmatic.core.pattern.ContractException
 import picocli.CommandLine.Command
@@ -21,12 +21,12 @@ class CompareCommand : Callable<Unit> {
 
     override fun call() {
         if(!olderContractFilePath.isContractFile()) {
-            details.forTheUser(invalidContractExtensionMessage(olderContractFilePath))
+            logger.log(invalidContractExtensionMessage(olderContractFilePath))
             exitProcess(1)
         }
 
         if(!newerContractFilePath.isContractFile()) {
-            details.forTheUser(invalidContractExtensionMessage(newerContractFilePath))
+            logger.log(invalidContractExtensionMessage(newerContractFilePath))
             exitProcess(1)
         }
 

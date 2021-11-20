@@ -2,16 +2,16 @@
 
 package application
 
-import `in`.specmatic.core.log.CompositePrinter
+import `in`.specmatic.core.log.StringLog
 import `in`.specmatic.core.log.Verbose
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.utilities.exitWithMessage
+import io.swagger.util.Yaml
 import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine
-import java.util.concurrent.Callable
-import io.swagger.util.Yaml
 import java.io.File
+import java.util.concurrent.Callable
 
 @CommandLine.Command(name = "gherkin-to-openapi",
         mixinStandardHelpOptions = true,
@@ -20,7 +20,7 @@ class GherkinToOpenAPICommand : Callable<Unit> {
     @CommandLine.Parameters(description = ["Path in which to create the bundle"])
     lateinit var contractPath: String
 
-    @CommandLine.Option(names = ["--verbose"])
+    @CommandLine.Option(names = ["--debug"])
     var verbose: Boolean = false
 
     @Autowired
@@ -28,8 +28,10 @@ class GherkinToOpenAPICommand : Callable<Unit> {
 
     override fun call() {
         if(verbose) {
-            details = Verbose()
+            logger = Verbose()
         }
+
+        logger.keepReady(StringLog("Converting $contractPath"))
 
         if(!fileOperations.isFile(contractPath))
             exitWithMessage("$contractPath is not a file")
@@ -42,8 +44,8 @@ class GherkinToOpenAPICommand : Callable<Unit> {
                 contractFile.canonicalFile.parentFile.resolve(contractFile.nameWithoutExtension + ".yaml")
             openAPIFile.writeText(openAPIYaml)
         } catch(e: Throwable) {
-            details.forTheUser("# Error converting file $contractPath")
-            details.forTheUser(e)
+            logger.log("# Error converting file $contractPath")
+            logger.log(e)
         }
     }
 }

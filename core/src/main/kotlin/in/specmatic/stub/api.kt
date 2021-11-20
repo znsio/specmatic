@@ -3,7 +3,7 @@ package `in`.specmatic.stub
 
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.log.StringLog
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.contractStubPaths
@@ -88,7 +88,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
 
                     loadContractStubs(listOf(Pair(contractPath.path, feature)), stubData)
                 } catch(e: Throwable) {
-                    details.forTheUser(e, "Could not load ${contractPath.canonicalPath}")
+                    logger.log(e, "Could not load ${contractPath.canonicalPath}")
                     emptyList()
                 }
             }
@@ -205,7 +205,7 @@ private fun filesInDir(implicitDataDir: File): List<File>? {
                 listOf(it)
             }
             else -> {
-                details.forDebugging("Could not recognise ${it.absolutePath}, ignoring it.")
+                logger.debug("Could not recognise ${it.absolutePath}, ignoring it.")
                 emptyList()
             }
         }

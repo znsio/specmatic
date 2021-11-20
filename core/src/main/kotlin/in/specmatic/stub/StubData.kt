@@ -1,7 +1,7 @@
 package `in`.specmatic.stub
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.jsonStringToValueMap
@@ -34,7 +34,7 @@ data class HttpStubData(
             !responseMatches.isTrue() -> {
                 val errorMessage =
                     """Response returned by ${response.externalisedResponseCommand} not in line with specification for ${httpRequest.method} ${httpRequest.path}:\n${responseMatches.reportString()}"""
-                details.forTheUser(errorMessage)
+                logger.log(errorMessage)
                 throw ContractException(errorMessage)
             }
             else -> {
@@ -45,7 +45,7 @@ data class HttpStubData(
 }
 
 fun executeExternalCommand(command: String, envParam: String): String {
-    details.forDebugging("Executing: $command with EnvParam: $envParam")
+    logger.debug("Executing: $command with EnvParam: $envParam")
     return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf(envParam)).executeAsSeparateProcess()
 }
 

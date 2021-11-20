@@ -2,7 +2,7 @@ package `in`.specmatic.test
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.contractTestPathsFrom
 import `in`.specmatic.core.utilities.createIfDoesNotExist
@@ -64,7 +64,7 @@ open class SpecmaticJUnitSupport {
         val testConfig = try {
             loadTestConfig(envConfig).withVariablesFromFilePath(System.getProperty(VARIABLES_FILE_NAME))
         } catch (e: Exception) {
-            details.forTheUser(e)
+            logger.log(e)
             throw e
         }
 
@@ -88,7 +88,7 @@ open class SpecmaticJUnitSupport {
             println(e.report())
             throw e
         } catch(e: Throwable) {
-            details.forTheUser(e)
+            logger.log(e)
             throw e
         } finally {
             workingDirectory.delete()

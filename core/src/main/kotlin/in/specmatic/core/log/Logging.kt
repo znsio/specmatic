@@ -1,30 +1,30 @@
 package `in`.specmatic.core.log
 
-var details: AmountOfDetail = NonVerbose(CompositePrinter())
+var logger: LogStrategy = NonVerbose(CompositePrinter())
 
 fun logException(fn: ()-> Unit): Int {
     return try {
         fn()
         0
     } catch(e: Throwable) {
-        details.forTheUser(e)
+        logger.log(e)
         1
     }
 }
 
 fun consoleLog(event: LogMessage) {
     LogTail.append(event)
-    details.forTheUser(event)
+    logger.log(event)
 }
 
 fun consoleLog(e: Throwable) {
-    LogTail.append(details.ofTheException(e))
-    details.forTheUser(e)
+    LogTail.append(logger.ofTheException(e))
+    logger.log(e)
 }
 
 fun consoleLog(e: Throwable, msg: String) {
-    LogTail.append(details.ofTheException(e, msg))
-    details.forTheUser(e, msg)
+    LogTail.append(logger.ofTheException(e, msg))
+    logger.log(e, msg)
 }
 
 val dontPrintToConsole = { event: LogMessage ->

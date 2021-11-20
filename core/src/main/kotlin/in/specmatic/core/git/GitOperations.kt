@@ -3,7 +3,7 @@
 package `in`.specmatic.core.git
 
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
-import `in`.specmatic.core.log.details
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.GitRepo
 import `in`.specmatic.core.utilities.getTransportCallingCallback
@@ -26,13 +26,13 @@ fun clone(workingDirectory: File, gitRepo: GitRepo): File {
 
 private fun clone(gitRepositoryURI: String, cloneDirectory: File) {
     jgitClone(gitRepositoryURI, cloneDirectory) { exception ->
-        details.forDebugging("""Falling back to git command after getting error from jgit (${exception.javaClass.name}: ${exception.message})""")
+        logger.debug("""Falling back to git command after getting error from jgit (${exception.javaClass.name}: ${exception.message})""")
         SystemGit(cloneDirectory.parent, "-").clone(gitRepositoryURI, cloneDirectory)
     }
 }
 
 private fun resetCloneDirectory(cloneDirectory: File) {
-    details.forTheUser("Resetting ${cloneDirectory.absolutePath}")
+    logger.log("Resetting ${cloneDirectory.absolutePath}")
     if (cloneDirectory.exists())
         cloneDirectory.deleteRecursively()
     cloneDirectory.mkdirs()
@@ -85,35 +85,35 @@ fun getBearerToken(): String? {
                 readBearerFromEnvVariable(qontractConfig) ?: readBearerFromFile(qontractConfig)
             }
         else -> null.also {
-            details.forTheUser("$globalConfigFileName not found")
-            details.forTheUser("Current working directory is ${File(".").absolutePath}")
+            logger.log("$globalConfigFileName not found")
+            logger.log("Current working directory is ${File(".").absolutePath}")
         }
     }
 }
 
 private fun readBearerFromEnvVariable(qontractConfig: Value): String? {
     return loadFromPath(qontractConfig, listOf("auth", "bearer-environment-variable"))?.toStringLiteral()?.let { bearerName ->
-        details.forTheUser("Found bearer name $bearerName")
+        logger.log("Found bearer name $bearerName")
 
         System.getenv(bearerName).also {
-            if(it != null) details.forTheUser("$bearerName is not empty")
+            if(it != null) logger.log("$bearerName is not empty")
         }
     }
 }
 
 private fun readBearerFromFile(qontractConfig: Value): String? {
     return loadFromPath(qontractConfig, listOf("auth", "bearer-file"))?.toStringLiteral()?.let { bearerFileName ->
-        details.forTheUser("Found bearer file name $bearerFileName")
+        logger.log("Found bearer file name $bearerFileName")
 
         val bearerFile = File(bearerFileName).absoluteFile
 
         when {
             bearerFile.exists() -> {
-                details.forTheUser("Found bearer file ${bearerFile.absolutePath}")
+                logger.log("Found bearer file ${bearerFile.absolutePath}")
                 bearerFile.readText().trim()
             }
             else -> {
-                details.forTheUser("Could not find bearer file ${bearerFile.absolutePath}")
+                logger.log("Could not find bearer file ${bearerFile.absolutePath}")
                 null
             }
         }

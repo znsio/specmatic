@@ -19,7 +19,7 @@ internal class VerboseTest {
         try {
             throw Exception("test")
         } catch(e: Throwable) {
-            logger.forTheUser(e, "msg")
+            logger.log(e, "msg")
         }
 
         val logged = printer.logged
@@ -34,7 +34,7 @@ internal class VerboseTest {
         try {
             throw Exception("test")
         } catch(e: Throwable) {
-            logger.forTheUser(e)
+            logger.log(e)
         }
 
         val logged = printer.logged
@@ -54,12 +54,12 @@ internal class VerboseTest {
 
     @Test
     fun `debugging log string returns string`() {
-        assertThat(logger.forDebugging("test")).isEqualTo("test")
+        assertThat(logger.debug("test")).isEqualTo("test")
     }
 
     @Test
     fun `debug string log`() {
-        val logReturnValue = logger.forDebugging("test")
+        val logReturnValue = logger.debug("test")
 
         val logged = printer.logged
         assertThat(logReturnValue).isEqualTo("test")
@@ -68,7 +68,7 @@ internal class VerboseTest {
 
     @Test
     fun `debug log message`() {
-        logger.forDebugging(StringLog("test"))
+        logger.debug(StringLog("test"))
 
         val logged = printer.logged
 
@@ -81,7 +81,7 @@ internal class VerboseTest {
         val logged = try {
             throw Exception("test")
         } catch(e: Throwable) {
-            logger.forDebugging(e)
+            logger.debug(e)
             printer.logged
         }
 
@@ -95,7 +95,7 @@ internal class VerboseTest {
         val logged = try {
             throw Exception("test")
         } catch(e: Throwable) {
-            logger.forDebugging(e, "msg")
+            logger.debug(e, "msg")
             printer.logged
         }
 

@@ -19,7 +19,7 @@ internal class NonVerboseTest {
         try {
             throw Exception("test")
         } catch(e: Throwable) {
-            logger.forTheUser(e, "msg")
+            logger.log(e, "msg")
         }
 
         val logged = printer.logged
@@ -34,7 +34,7 @@ internal class NonVerboseTest {
         try {
             throw Exception("test")
         } catch(e: Throwable) {
-            logger.forTheUser(e)
+            logger.log(e)
         }
 
         val logged = printer.logged
@@ -54,18 +54,18 @@ internal class NonVerboseTest {
 
     @Test
     fun `debugging log string returns string`() {
-        assertThat(logger.forDebugging("test")).isEqualTo("test")
+        assertThat(logger.debug("test")).isEqualTo("test")
     }
 
     @Test
     fun `debugging logs do not log anything`() {
-        logger.forDebugging("test")
-        logger.forDebugging(StringLog("test"))
+        logger.debug("test")
+        logger.debug(StringLog("test"))
         try {
             throw Exception("test")
         } catch(e: Throwable) {
-            logger.forDebugging(e, "msg")
-            logger.forDebugging(e)
+            logger.debug(e, "msg")
+            logger.debug(e)
         }
 
         val logged = printer.logged

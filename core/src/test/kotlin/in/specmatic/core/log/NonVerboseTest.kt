@@ -5,10 +5,10 @@ import org.junit.jupiter.api.Test
 
 internal class NonVerboseTest {
     private val printer = object: LogPrinter {
-        var logged: LogMessage = StringLog("")
+        val logged: MutableList<LogMessage> = mutableListOf()
 
         override fun print(msg: LogMessage) {
-            logged = msg
+            logged.add(msg)
         }
     }
 
@@ -22,8 +22,7 @@ internal class NonVerboseTest {
             logger.log(e, "msg")
         }
 
-        val logged = printer.logged
-        logged as NonVerboseExceptionLog
+        val logged = printer.logged.first() as NonVerboseExceptionLog
 
         assertThat(logged.e.message).isEqualTo("test")
         assertThat(logged.msg).isEqualTo("msg")
@@ -37,8 +36,7 @@ internal class NonVerboseTest {
             logger.log(e)
         }
 
-        val logged = printer.logged
-        logged as NonVerboseExceptionLog
+        val logged = printer.logged.first() as NonVerboseExceptionLog
 
         assertThat(logged.e.message).isEqualTo("test")
         assertThat(logged.msg).isNull()
@@ -48,8 +46,7 @@ internal class NonVerboseTest {
     fun `new line log`() {
         logger.newLine()
 
-        val logged = printer.logged
-        assertThat(logged).isInstanceOf(NewLineLogMessage::class.javaObjectType)
+        assertThat(printer.logged.first()).isEqualTo(NewLineLogMessage)
     }
 
     @Test
@@ -61,6 +58,7 @@ internal class NonVerboseTest {
     fun `debugging logs do not log anything`() {
         logger.debug("test")
         logger.debug(StringLog("test"))
+
         try {
             throw Exception("test")
         } catch(e: Throwable) {
@@ -68,8 +66,7 @@ internal class NonVerboseTest {
             logger.debug(e)
         }
 
-        val logged = printer.logged
-        assertThat(logged.toLogString()).isEqualTo("")
+        assertThat(printer.logged).isEmpty()
     }
 
     @Test
@@ -116,5 +113,14 @@ internal class NonVerboseTest {
         }
 
         assertThat(exceptionLogString).isEqualTo("msg: test")
+    }
+
+    @Test
+    fun `prints ready message`() {
+        logger.keepReady(StringLog("head"))
+        logger.print(StringLog("test"))
+
+        assertThat(printer.logged.first().toLogString()).isEqualTo("head")
+        assertThat(printer.logged.get(1).toLogString()).isEqualTo("test")
     }
 }

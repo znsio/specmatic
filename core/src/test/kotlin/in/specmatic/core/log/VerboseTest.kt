@@ -5,10 +5,10 @@ import org.junit.jupiter.api.Test
 
 internal class VerboseTest {
     private val printer = object: LogPrinter {
-        var logged: LogMessage = StringLog("")
+        val logged: MutableList<LogMessage> = mutableListOf()
 
         override fun print(msg: LogMessage) {
-            logged = msg
+            logged.add(msg)
         }
     }
 
@@ -22,8 +22,7 @@ internal class VerboseTest {
             logger.log(e, "msg")
         }
 
-        val logged = printer.logged
-        logged as VerboseExceptionLog
+        val logged = printer.logged.first() as VerboseExceptionLog
 
         assertThat(logged.e.message).isEqualTo("test")
         assertThat(logged.msg).isEqualTo("msg")
@@ -37,8 +36,7 @@ internal class VerboseTest {
             logger.log(e)
         }
 
-        val logged = printer.logged
-        logged as VerboseExceptionLog
+        val logged = printer.logged.first() as VerboseExceptionLog
 
         assertThat(logged.e.message).isEqualTo("test")
         assertThat(logged.msg).isNull()
@@ -48,8 +46,7 @@ internal class VerboseTest {
     fun `new line log`() {
         logger.newLine()
 
-        val logged = printer.logged
-        assertThat(logged).isInstanceOf(NewLineLogMessage::class.javaObjectType)
+        assertThat(printer.logged.first()).isEqualTo(NewLineLogMessage)
     }
 
     @Test
@@ -61,7 +58,8 @@ internal class VerboseTest {
     fun `debug string log`() {
         val logReturnValue = logger.debug("test")
 
-        val logged = printer.logged
+        val logged = printer.logged.first() as StringLog
+
         assertThat(logReturnValue).isEqualTo("test")
         assertThat(logged.toLogString()).isEqualTo("test")
     }
@@ -70,7 +68,7 @@ internal class VerboseTest {
     fun `debug log message`() {
         logger.debug(StringLog("test"))
 
-        val logged = printer.logged
+        val logged = printer.logged.first() as StringLog
 
         assertThat(logged).isInstanceOf(StringLog::class.java)
         assertThat(logged.toLogString()).isEqualTo("test")
@@ -82,7 +80,7 @@ internal class VerboseTest {
             throw Exception("test")
         } catch(e: Throwable) {
             logger.debug(e)
-            printer.logged
+            printer.logged.first() as VerboseExceptionLog
         }
 
         assertThat(logged).isInstanceOf(VerboseExceptionLog::class.java)
@@ -96,7 +94,7 @@ internal class VerboseTest {
             throw Exception("test")
         } catch(e: Throwable) {
             logger.debug(e, "msg")
-            printer.logged
+            printer.logged.first() as VerboseExceptionLog
         }
 
         assertThat(logged).isInstanceOf(VerboseExceptionLog::class.java)
@@ -150,5 +148,14 @@ internal class VerboseTest {
 
         assertThat(exceptionLogString).startsWith("msg: test")
         assertThat(exceptionLogString).contains("java.lang.Exception")
+    }
+
+    @Test
+    fun `prints ready message`() {
+        logger.keepReady(StringLog("head"))
+        logger.print(StringLog("test"))
+
+        assertThat(printer.logged.first().toLogString()).isEqualTo("head")
+        assertThat(printer.logged.get(1).toLogString()).isEqualTo("test")
     }
 }

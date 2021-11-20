@@ -2,7 +2,7 @@
 
 package application
 
-import `in`.specmatic.core.log.StringLog
+import `in`.specmatic.core.log.HeadingLog
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.parseGherkinStringToFeature
@@ -13,10 +13,10 @@ import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
 
-@CommandLine.Command(name = "gherkin-to-openapi",
+@CommandLine.Command(name = "to-openapi",
         mixinStandardHelpOptions = true,
         description = ["Converts a Gherkin file to OpenAPI"])
-class GherkinToOpenAPICommand : Callable<Unit> {
+class ToOpenAPICommand : Callable<Unit> {
     @CommandLine.Parameters(description = ["Path in which to create the bundle"])
     lateinit var contractPath: String
 
@@ -31,7 +31,7 @@ class GherkinToOpenAPICommand : Callable<Unit> {
             logger = Verbose()
         }
 
-        logger.keepReady(StringLog("Converting $contractPath"))
+        logger.keepReady(HeadingLog("Converting $contractPath"))
 
         if(!fileOperations.isFile(contractPath))
             exitWithMessage("$contractPath is not a file")

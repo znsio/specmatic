@@ -108,10 +108,12 @@ Scenario: zero should return not found
         assertThat(flags.size).isEqualTo(3)
         assertThat(results.report()).isEqualTo(
             """
-                In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
-                >> RESPONSE.STATUS
-
-                Expected status: 400, actual: 200
+            In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+            API: GET /hello/(id:number) -> 400
+            
+              >> RESPONSE.STATUS
+              
+              Expected status: 400, actual: 200
             """.trimIndent()
         )
     }
@@ -157,10 +159,12 @@ Background:
         assertThat(flags.size).isEqualTo(3)
         assertThat(results.report()).isEqualTo(
             """
-                In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
-                >> RESPONSE.STATUS
-
-                Expected status: 400, actual: 200
+            In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+            API: GET /hello/(id:number) -> 400
+            
+              >> RESPONSE.STATUS
+              
+              Expected status: 400, actual: 200
             """.trimIndent()
         )
     }
@@ -206,20 +210,26 @@ Background:
         assertThat(flags.size).isEqualTo(3)
         assertThat(results.report()).isEqualTo(
             """
-                In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
-                >> RESPONSE.STATUS
-
-                Expected status: 400, actual: 202
-
-                In scenario "Open API - Operation Summary: hello world. Response: Says hello Examples: id=15"
-                >> RESPONSE.STATUS
-
-                Expected status: 200, actual: 202
-
-                In scenario "Open API - Operation Summary: hello world. Response: Not Found Examples: id=0"
-                >> RESPONSE.STATUS
-
-                Expected status: 404, actual: 403
+            In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+            API: GET /hello/(id:number) -> 400
+            
+              >> RESPONSE.STATUS
+              
+              Expected status: 400, actual: 202
+            
+            In scenario "Open API - Operation Summary: hello world. Response: Says hello Examples: id=15"
+            API: GET /hello/(id:number) -> 200
+            
+              >> RESPONSE.STATUS
+              
+              Expected status: 200, actual: 202
+            
+            In scenario "Open API - Operation Summary: hello world. Response: Not Found Examples: id=0"
+            API: GET /hello/(id:number) -> 404
+            
+              >> RESPONSE.STATUS
+              
+              Expected status: 404, actual: 403
             """.trimIndent()
         )
     }
@@ -257,20 +267,26 @@ Background:
         assertFalse(results.success())
         assertThat(results.report()).isEqualTo(
             """
-                In scenario "Open API - Operation Summary: hello world. Response: Not Found"
-                >> RESPONSE.STATUS
-
-                Expected status: 404, actual: 403
-
-                In scenario "Open API - Operation Summary: hello world. Response: Says hello"
-                >> RESPONSE.STATUS
-
-                Expected status: 200, actual: 202
-
-                In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
-                >> RESPONSE.STATUS
-
-                Expected status: 400, actual: 202
+            In scenario "Open API - Operation Summary: hello world. Response: Not Found"
+            API: GET /hello/0 -> 404
+            
+              >> RESPONSE.STATUS
+              
+              Expected status: 404, actual: 403
+            
+            In scenario "Open API - Operation Summary: hello world. Response: Says hello"
+            API: GET /hello/(id:number) -> 200
+            
+              >> RESPONSE.STATUS
+              
+              Expected status: 200, actual: 202
+            
+            In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+            API: GET /hello/(id:number) -> 400
+            
+              >> RESPONSE.STATUS
+              
+              Expected status: 400, actual: 202
             """.trimIndent()
         )
     }
@@ -748,20 +764,26 @@ Background:
         assertFalse(results.success())
         assertThat(results.report()).isEqualTo(
             """
-                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
-                >> RESPONSE.BODY.breed
-
-                Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
-
-                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
-                >> RESPONSE.BODY.breed
-
-                Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
-
-                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
-                >> RESPONSE.BODY.breed
-
-                Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
+            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            API: POST /pets -> 201
+            
+              >> RESPONSE.BODY.breed
+              
+              Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
+            
+            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            API: POST /pets -> 201
+            
+              >> RESPONSE.BODY.breed
+              
+              Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
+            
+            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            API: POST /pets -> 201
+            
+              >> RESPONSE.BODY.breed
+              
+              Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
             """.trimIndent()
         )
     }
@@ -816,20 +838,26 @@ Background:
         assertFalse(results.success())
         assertThat(results.report()).isEqualTo(
             """
-                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
-                >> RESPONSE.BODY.rating
-
-                Expected (1 or 2), Actual was number: 3
-
-                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
-                >> RESPONSE.BODY.rating
-
-                Expected (1 or 2), Actual was number: 3
-
-                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
-                >> RESPONSE.BODY.rating
-
-                Expected (1 or 2), Actual was number: 3
+            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            API: POST /pets -> 201
+            
+              >> RESPONSE.BODY.rating
+              
+              Expected (1 or 2), Actual was number: 3
+            
+            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            API: POST /pets -> 201
+            
+              >> RESPONSE.BODY.rating
+              
+              Expected (1 or 2), Actual was number: 3
+            
+            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            API: POST /pets -> 201
+            
+              >> RESPONSE.BODY.rating
+              
+              Expected (1 or 2), Actual was number: 3
             """.trimIndent()
         )
     }
@@ -884,20 +912,26 @@ Background:
         assertFalse(results.success())
         assertThat(results.report()).isEqualTo(
             """
-                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
-                >> RESPONSE.BODY.name
-
-                Expected string with minLength 6, actual was string: "small"
-
-                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
-                >> RESPONSE.BODY.name
-
-                Expected string with minLength 6, actual was string: "small"
-
-                In scenario "Open API - Operation Summary: create a pet. Response: pet response"
-                >> RESPONSE.BODY.name
-
-                Expected string with minLength 6, actual was string: "small"
+            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            API: POST /pets -> 201
+            
+              >> RESPONSE.BODY.name
+              
+              Expected string with minLength 6, actual was string: "small"
+            
+            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            API: POST /pets -> 201
+            
+              >> RESPONSE.BODY.name
+              
+              Expected string with minLength 6, actual was string: "small"
+            
+            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            API: POST /pets -> 201
+            
+              >> RESPONSE.BODY.name
+              
+              Expected string with minLength 6, actual was string: "small"
             """.trimIndent()
         )
     }

@@ -39,15 +39,15 @@ internal class AnyPatternTest {
         val result1 = pattern1.matches(value, resolver)
         val result2 = pattern2.matches(value, resolver)
 
-        assertThat(resultReport(result2)).isEqualTo("""Expected string, actual was json object: {
-    "firstname": "Jane",
-    "lastname": "Doe"
-}""")
+        assertThat(resultReport(result2).trimIndent()).isEqualTo("""Expected string, actual was json object: {
+      "firstname": "Jane",
+      "lastname": "Doe"
+  }""")
 
-        assertThat(resultReport(result1)).isEqualTo("""Expected string, actual was json object: {
-    "firstname": "Jane",
-    "lastname": "Doe"
-}""")
+        assertThat(resultReport(result1).trimIndent()).isEqualTo("""Expected string, actual was json object: {
+      "firstname": "Jane",
+      "lastname": "Doe"
+  }""")
     }
 
     @Test

@@ -368,11 +368,16 @@ Feature: Math API
         assertThat(stubInfo.single().first).isEqualTo(feature)
         assertThat(stubInfo.single().second).isEmpty()
 
-        val expectedOnStandardOutput = """sample.json didn't match math.$CONTRACT_EXTENSION
-    In scenario "Square of a number"
-    >> RESPONSE.BODY
-  
-    Expected number, actual was string: "not a number""""
+        val expectedOnStandardOutput =
+            """
+            sample.json didn't match math.$CONTRACT_EXTENSION
+                In scenario "Square of a number"
+                API: POST /square -> 200
+              
+                  >> RESPONSE.BODY
+              
+                  Expected number, actual was string: "not a number"
+            """.trimIndent()
 
         assertThat(stdout).contains(expectedOnStandardOutput)
     }
@@ -430,9 +435,11 @@ Feature: Math API
         assertThat(stubInfo.single().second).isEmpty()
         assertThat(output).contains("""sample.json didn't match math.$CONTRACT_EXTENSION
     In scenario "Square of a number"
-    >> REQUEST.BODY
+    API: POST /square -> 200
   
-    Key named "unexpected" was unexpected""")
+      >> REQUEST.BODY
+  
+      Key named "unexpected" was unexpected""")
     }
 
     @Test
@@ -451,11 +458,15 @@ Feature: Math API
         assertThat(stubInfo.single().first).isEqualTo(feature)
         assertThat(stubInfo.single().second).isEmpty()
 
-        assertThat(output).contains("""sample.json didn't match math.$CONTRACT_EXTENSION
+        assertThat(output).contains("""
+sample.json didn't match math.$CONTRACT_EXTENSION
     In scenario "Square of a number"
-    >> RESPONSE.BODY
+    API: POST /square -> 200
   
-    Key named "unexpected" was unexpected""")
+      >> RESPONSE.BODY
+  
+      Key named "unexpected" was unexpected
+      """.trimIndent())
     }
 
     @Test

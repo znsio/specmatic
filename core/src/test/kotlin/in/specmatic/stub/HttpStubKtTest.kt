@@ -37,8 +37,8 @@ Feature: Test
         assertResponseFailure(stubResponse, """STRICT MODE ON
 
 >> REQUEST.BODY
-
-Expected number, actual was "Hello"""")
+  
+  Expected number, actual was "Hello"""")
     }
 
     private fun assertResponseFailure(stubResponse: HttpStubResponse, errorMessage: String) {
@@ -62,10 +62,15 @@ Feature: POST API
 
         val stubResponse = stubResponse(request, listOf(feature), emptyList(), false)
 
-        assertResponseFailure(stubResponse, """In scenario "Test"
->> REQUEST.BODY
-
-Key named "undeclared" was unexpected""")
+        assertResponseFailure(stubResponse,
+            """
+            In scenario "Test"
+            API: POST / -> 200
+            
+              >> REQUEST.BODY
+              
+              Key named "undeclared" was unexpected
+            """.trimIndent())
     }
 
     @Test
@@ -121,10 +126,15 @@ Scenario: Square of a number
         val request = HttpRequest(method = "POST", path = "/number", body = parsedValue("""{"number": 10, "unexpected": "data"}"""))
         val response = stubResponse(request, listOf(feature), emptyList(), false)
 
-        assertResponseFailure(response,"""In scenario "Square of a number"
->> REQUEST.BODY
-
-Key named "unexpected" was unexpected""")
+        assertResponseFailure(response,
+            """
+            In scenario "Square of a number"
+            API: POST /number -> 200
+            
+              >> REQUEST.BODY
+              
+              Key named "unexpected" was unexpected
+            """.trimIndent())
     }
 
     @Test
@@ -155,8 +165,8 @@ Scenario: Square of a number
         assertResponseFailure(strictResponse, """STRICT MODE ON
 
 >> REQUEST.URL.QUERY-PARAMS
-
-Expected query param named "status" was missing""")
+  
+  Expected query param named "status" was missing""")
     }
 
     @Test

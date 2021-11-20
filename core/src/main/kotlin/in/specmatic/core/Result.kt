@@ -98,10 +98,12 @@ fun resultReport(result: Result, scenarioMessage: String? = null): String {
                     ""
             } ?: ""
 
-            val scenarioLine = when(val scenario = result.scenario) {
+            val scenarioDetails = when(val scenario = result.scenario) {
                 null -> ""
                 else -> {
-                    """${scenarioMessage ?: "In scenario"} "${scenario.name}""""
+                    val scenarioLine = """${scenarioMessage ?: "In scenario"} "${scenario.name}""""
+                    val urlLine = "API: ${scenario.httpRequestPattern.method} ${scenario.httpRequestPattern.urlMatcher?.path} -> ${scenario.httpResponsePattern.status}"
+                    "$scenarioLine${System.lineSeparator()}$urlLine"
                 }
             }
 
@@ -117,13 +119,14 @@ fun resultReport(result: Result, scenarioMessage: String? = null): String {
                                     }
                                 }
                 val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
-                "$breadCrumbString\n\n$errorMessagesString".trim()
+                "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}$errorMessagesString".trim()
             }
 
-            val reportDetails = "$scenarioLine\n$report"
+            val reportDetails = "$scenarioDetails${System.lineSeparator()}${System.lineSeparator()}${report.prependIndent("  ")}"
 
             if(contractLine.isNotEmpty()) {
-                "$contractLine${reportDetails.prependIndent("  ")}"
+                val reportIndent = if(contractLine.isNotEmpty()) "  " else ""
+                "$contractLine${reportDetails.prependIndent(reportIndent)}"
             } else
                 reportDetails
 

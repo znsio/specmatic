@@ -318,11 +318,11 @@ Feature: test feature
 
         assertThat(resultReport(result)).isEqualTo(
             """>> REQUEST.BODY.name
-
-Expected string, actual was json object: {
-    "firstname": "Jane",
-    "lastname": "Doe"
-}"""
+  
+  Expected string, actual was json object: {
+      "firstname": "Jane",
+      "lastname": "Doe"
+  }"""
         )
     }
 

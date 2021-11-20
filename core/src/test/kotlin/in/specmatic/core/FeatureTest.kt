@@ -63,10 +63,15 @@ class FeatureTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateHeader("y-loginId", "abc123")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("""In scenario "Get balance info"
->> REQUEST.HEADERS
-
-Expected header named "x-loginId" was missing""".trimIndent())
+        assertThat(httpResponse.body.toStringLiteral()).isEqualTo(
+            """
+            In scenario "Get balance info"
+            API: GET /balance -> 200
+            
+              >> REQUEST.HEADERS
+              
+              Expected header named "x-loginId" was missing
+              """.trimIndent())
     }
 
     @Test
@@ -136,10 +141,15 @@ Expected header named "x-loginId" was missing""".trimIndent())
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("""In scenario "Update balance"
->> REQUEST.BODY.calls_made
-
-Expected an array of length 3, actual length 2""")
+        assertThat(httpResponse.body.toStringLiteral()).isEqualTo(
+            """
+            In scenario "Update balance"
+            API: POST /balance -> 200
+            
+              >> REQUEST.BODY.calls_made
+              
+              Expected an array of length 3, actual length 2
+            """.trimIndent())
     }
 
     @Test
@@ -156,10 +166,15 @@ Expected an array of length 3, actual length 2""")
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10, \"test\"]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("""In scenario "Update balance"
->> REQUEST.BODY.calls_made.[2]
-
-Expected number, actual was string: "test"""")
+        assertThat(httpResponse.body.toStringLiteral()).isEqualTo(
+            """
+            In scenario "Update balance"
+            API: POST /balance -> 200
+            
+              >> REQUEST.BODY.calls_made.[2]
+              
+              Expected number, actual was string: "test"
+            """.trimIndent())
     }
 
     @Test
@@ -194,10 +209,15 @@ Expected number, actual was string: "test"""")
         val httpRequest = HttpRequest().updatePath("/balance").updateQueryParam("account-id", "abc").updateMethod("GET")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("""In scenario "Get account balance"
->> REQUEST.URL.QUERY-PARAMS.account-id
-
-Expected number, actual was string: "abc"""")
+        assertThat(httpResponse.body.toStringLiteral()).isEqualTo(
+            """
+            In scenario "Get account balance"
+            API: GET /balance -> 200
+            
+              >> REQUEST.URL.QUERY-PARAMS.account-id
+              
+              Expected number, actual was string: "abc"
+            """.trimIndent())
     }
 
     @Test

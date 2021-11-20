@@ -83,10 +83,14 @@ class ContractAsTest {
             override fun setServerState(serverState: Map<String, Value>) {}
         })
         assertThat(results.report()).isEqualTo(
-            """In scenario "Get balance"
->> RESPONSE.HEADERS.length
-
-Expected number, actual was string: "abc""""
+            """
+            In scenario "Get balance"
+            API: GET /balance -> 200
+            
+              >> RESPONSE.HEADERS.length
+              
+              Expected number, actual was string: "abc"
+            """.trimIndent()
         )
     }
 

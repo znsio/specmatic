@@ -414,9 +414,11 @@ Scenario: JSON API to get account details with fact check
                 assertThat(e.toString()).isEqualTo(
                     """
                     in.specmatic.mock.NoMatchingScenario: In scenario "api call"
-                    >> RESPONSE.BODY.[0].rating
-
-                    Expected (1 or 2 or 3), Actual was number: 4
+                    API: GET /(organisation:Organisation)/employees/ -> 200
+                    
+                      >> RESPONSE.BODY.[0].rating
+                      
+                      Expected (1 or 2 or 3), Actual was number: 4
                 """.trimIndent()
                 )
             }

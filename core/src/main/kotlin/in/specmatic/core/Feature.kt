@@ -4,7 +4,6 @@ import `in`.specmatic.conversions.*
 import `in`.specmatic.core.log.details
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
-import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.MappedURLType
@@ -58,6 +57,12 @@ fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""
     return Feature(scenarios = scenarios, name = name, path = sourceFilePath)
 }
 
+class ResponseBuilder(val scenario: Scenario, val serverState: Map<String, Value>) {
+    fun build(): HttpResponse {
+        return scenario.generateHttpResponse(serverState)
+    }
+}
+
 data class Feature(
     val scenarios: List<Scenario> = emptyList(),
     private var serverState: Map<String, Value> = emptyMap(),
@@ -76,7 +81,7 @@ data class Feature(
         }
     }
 
-    fun stubResponse(httpRequest: HttpRequest): HttpResponse {
+    fun stubResponse(httpRequest: HttpRequest): Pair<ResponseBuilder?, Results> {
         try {
             val scenarioSequence = scenarios.asSequence()
 
@@ -84,8 +89,9 @@ data class Feature(
             val resultList = scenarioSequence.zip(scenarioSequence.map {
                 it.matchesStub(httpRequest, localCopyOfServerState)
             })
-            return matchingScenario(resultList)?.generateHttpResponse(serverState)
-                ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff().generateErrorHttpResponse()
+
+            return matchingScenario(resultList)?.let { Pair(ResponseBuilder(it, serverState), Results()) }
+                ?: Pair(null, Results(resultList.map { it.second }.toMutableList()).withoutFluff())
         } finally {
             serverState = emptyMap()
         }
@@ -102,7 +108,7 @@ data class Feature(
             when {
                 matchingScenarios.isNotEmpty() -> matchingScenarios
                 firstRealResult != null -> throw ContractException(firstRealResult.second.toReport().toText())
-                resultsExist -> throw ContractException(pathNotRecognizedMessage(httpRequest))
+                resultsExist -> throw ContractException(requestNotRecognized(httpRequest))
                 else -> throw ContractException("The contract is empty.")
             }
         } finally {

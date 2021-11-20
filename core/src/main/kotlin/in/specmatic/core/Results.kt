@@ -1,11 +1,11 @@
 package `in`.specmatic.core
 
-fun pathNotRecognizedMessage(httpRequest: HttpRequest): String {
+fun requestNotRecognized(httpRequest: HttpRequest): String {
     val soapActionHeader = "SOAPAction"
     if(httpRequest.headers.containsKey(soapActionHeader))
-        return "SOAP request not recognized; path=" + httpRequest.path + ", SOAPAction=${httpRequest.headers.getValue(soapActionHeader)}"
+        return "No matching contract found (SOAPAction ${httpRequest.headers.getValue(soapActionHeader)}, path ${httpRequest.path})"
 
-    return "Request not recognized; method=${httpRequest.method}, path=${httpRequest.path}"
+    return "No matching contract found"
 }
 
 const val PATH_NOT_RECOGNIZED_ERROR = "URL path or SOAPAction not recognised"
@@ -28,7 +28,7 @@ data class Results(val results: List<Result> = emptyList()) {
     val successCount
         get(): Int = results.count { it is Result.Success }
 
-    fun generateErrorHttpResponse(): HttpResponse {
+    fun generateErrorHttpResponse(httpRequest: HttpRequest? = null): HttpResponse {
         val report = report("").trim()
 
         val defaultHeaders = mapOf("Content-Type" to "text/plain", SPECMATIC_RESULT_HEADER to "failure")
@@ -37,11 +37,12 @@ data class Results(val results: List<Result> = emptyList()) {
             else -> defaultHeaders
         }
 
-        return HttpResponse(400, report(PATH_NOT_RECOGNIZED_ERROR), headers)
+        val message = httpRequest?.let { requestNotRecognized(httpRequest) } ?: PATH_NOT_RECOGNIZED_ERROR
+        return HttpResponse(400, report(message), headers)
     }
 
     fun report(httpRequest: HttpRequest): String {
-        return report(pathNotRecognizedMessage(httpRequest))
+        return report(requestNotRecognized(httpRequest))
     }
 
     fun report(defaultMessage: String = PATH_NOT_RECOGNIZED_ERROR): String {
@@ -52,6 +53,8 @@ data class Results(val results: List<Result> = emptyList()) {
             else -> "$defaultMessage\n\n${listToReport(results)}".trim()
         }
     }
+
+    fun plus(other: Results): Results = Results(results.plus(other.results))
 }
 
 private fun listToReport(results: List<Result>): String =

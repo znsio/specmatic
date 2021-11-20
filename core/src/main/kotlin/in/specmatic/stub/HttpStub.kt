@@ -323,24 +323,25 @@ private fun stubbedResponse(
 }
 
 private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): HttpStubResponse {
-    val responses = features.asSequence().map {
-        Pair(it, it.stubResponse(httpRequest))
+    data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
+
+    val responses: List<ResponseDetails> = features.asSequence().map { feature ->
+        feature.stubResponse(httpRequest).let {
+            ResponseDetails(feature, it.first, it.second)
+        }
     }.toList()
 
-    return when (val fakeResponse = responses.firstOrNull { it.second.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "none") != "failure" }) {
+    return when (val fakeResponse = responses.find { it.successResponse != null }) {
         null -> {
-            val (headers, body) = when {
-                responses.all { it.second.headers.getOrDefault(SPECMATIC_EMPTY_HEADER, "none") == "true" } -> {
-                    Pair(mapOf(SPECMATIC_EMPTY_HEADER to "true"), StringValue(pathNotRecognizedMessage(httpRequest)))
-                }
-                else -> Pair(emptyMap(), StringValue(responses.map {
-                    it.second.body
-                }.filter { it != EmptyString }.joinToString("\n\n")))
-            }
+            val failureResults = responses.filter { it.successResponse == null }.map { it.results }
 
-            HttpStubResponse(HttpResponse(400, headers = headers.plus(mapOf(SPECMATIC_RESULT_HEADER to "failure")), body = body))
+            val httpFailureResponse = failureResults.reduce { first, second ->
+                first.plus(second)
+            }.withoutFluff().generateErrorHttpResponse(httpRequest)
+
+            HttpStubResponse(httpFailureResponse)
         }
-        else -> HttpStubResponse(fakeResponse.second.withRandomResultHeader(), contractPath = fakeResponse.first.path)
+        else -> HttpStubResponse(fakeResponse.successResponse?.build()?.withRandomResultHeader()!!, contractPath = fakeResponse.feature.path)
     }
 }
 

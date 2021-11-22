@@ -12,7 +12,7 @@ class CurrentDate(private val date: Calendar = Calendar.getInstance()) {
         val second = date.get(Calendar.SECOND)
         val millisecond = date.get(Calendar.MILLISECOND)
 
-        return "$year-$month-$day $hour:$minute:$second.$millisecond"
+        return "$year-${month + 1}-$day $hour:$minute:$second.$millisecond"
     }
 
     fun toFileNameString(): String {
@@ -26,7 +26,10 @@ class CurrentDate(private val date: Calendar = Calendar.getInstance()) {
         )
 
         return parts.joinToString("-") {
-            date.get(it).toString()
+            if(it == Calendar.MONTH)
+                (date.get(it) + 1).toString()
+            else
+                date.get(it).toString()
         }
     }
 }

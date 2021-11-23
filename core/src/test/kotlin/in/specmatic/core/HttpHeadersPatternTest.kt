@@ -103,7 +103,7 @@ internal class HttpHeadersPatternTest {
             put("X-Unspecified-Header", "Can't accept this header in a mock")
         }
 
-        assertThat(expectedHeaders.matches(actualHeaders, Resolver(findKeyError = checkAllKeys))).isInstanceOf(Result.Failure::class.java)
+        assertThat(expectedHeaders.matches(actualHeaders, Resolver(findKeyErrorCheck = CheckAllKeys))).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test
@@ -194,14 +194,14 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `unexpected standard http headers are allowed and will not break a match check`() {
         val headersPattern = HttpHeadersPattern(mapOf("X-Data" to StringPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Content-Type?" to StringPattern()))
-        val resolver = Resolver(findKeyError = checkAllKeys)
+        val resolver = Resolver(findKeyErrorCheck = CheckAllKeys)
         assertThat(headersPattern.matches(mapOf("X-Data" to "data", "Content-Type" to "text/plain"), resolver)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `unexpected but non-optional standard http headers are allowed and will break a match check`() {
         val headersPattern = HttpHeadersPattern(mapOf("X-Data" to StringPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Content-Type" to StringPattern()))
-        val resolver = Resolver(findKeyError = checkAllKeys)
+        val resolver = Resolver(findKeyErrorCheck = CheckAllKeys)
         assertThat(headersPattern.matches(mapOf("X-Data" to "data", "Content-Type" to "text/plain"), resolver)).isInstanceOf(Result.Failure::class.java)
     }
 }

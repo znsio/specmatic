@@ -11,14 +11,14 @@ fun toTabularPattern(jsonContent: String, typeAlias: String? = null): TabularPat
 
 fun toTabularPattern(map: Map<String, Pattern>, typeAlias: String? = null): TabularPattern {
     val missingKeyStrategy = when ("...") {
-        in map -> ignoreUnexpectedKeys
-        else -> ::validateUnexpectedKeys
+        in map -> IgnoreUnexpectedKeys
+        else -> ValidateUnexpectedKeys
     }
 
     return TabularPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
-data class TabularPattern(override val pattern: Map<String, Pattern>, private val unexpectedKeyCheck: UnexpectedKeyCheck = ::validateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
+data class TabularPattern(override val pattern: Map<String, Pattern>, private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)
@@ -26,7 +26,7 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
         val resolverWithNullType = withNullPattern(resolver)
         val missingKey = resolverWithNullType.findKeyError(pattern, sampleData.jsonObject, unexpectedKeyCheck)
         if (missingKey != null)
-            return missingKeyToResult(missingKey, "key")
+            return missingKey.missingKeyToResult("key")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = resolverWithNullType.matchesPattern(key, patternValue, sampleValue)) {

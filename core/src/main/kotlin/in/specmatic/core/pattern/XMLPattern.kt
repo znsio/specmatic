@@ -240,10 +240,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         val missingKey = resolver.findKeyError(
                 ignoreXMLNamespaces(patternAttributesWithoutXmlns),
                 ignoreXMLNamespaces(sampleAttributesWithoutXmlns),
-                ::validateUnexpectedKeys
+                ValidateUnexpectedKeys
         )
         if (missingKey != null)
-            return missingKeyToResult(missingKey, "attribute")
+            return missingKey.missingKeyToResult("attribute")
 
         return matchAttributes(patternAttributesWithoutXmlns, sampleAttributesWithoutXmlns, resolver)
     }

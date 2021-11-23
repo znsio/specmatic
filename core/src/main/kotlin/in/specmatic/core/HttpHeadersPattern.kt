@@ -30,11 +30,11 @@ data class HttpHeadersPattern(
         val missingKey = resolver.findKeyError(
             pattern,
             headersWithRelevantKeys.mapValues { StringValue(it.value) },
-            ignoreUnexpectedKeys
+            IgnoreUnexpectedKeys
         )
         if (missingKey != null) {
             val failureReason: FailureReason? = highlightIfSOAPActionMismatch(missingKey.name)
-            return MatchFailure(missingKeyToResult(missingKey, "header").copy(failureReason = failureReason))
+            return MatchFailure(missingKey.missingKeyToResult("header").copy(failureReason = failureReason))
         }
 
         this.pattern.forEach { (key, pattern) ->
@@ -63,7 +63,7 @@ data class HttpHeadersPattern(
                 }
                 !key.endsWith("?") ->
                     return MatchFailure(
-                        missingKeyToResult(MissingKeyError(key), "header").breadCrumb(key)
+                        MissingKeyError(key).missingKeyToResult("header").breadCrumb(key)
                             .copy(failureReason = highlightIfSOAPActionMismatch(key))
                     )
             }
@@ -154,7 +154,7 @@ data class HttpHeadersPattern(
     private fun checkMissingHeaders(myRequiredKeys: List<String>, otherRequiredKeys: List<String>): Result =
         when (val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }) {
             null -> Result.Success()
-            else -> missingKeyToResult(MissingKeyError(missingFixedKey), "header").breadCrumb(missingFixedKey)
+            else -> MissingKeyError(missingFixedKey).missingKeyToResult("header").breadCrumb(missingFixedKey)
         }
 }
 

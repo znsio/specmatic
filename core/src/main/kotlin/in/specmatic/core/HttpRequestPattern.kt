@@ -116,9 +116,9 @@ data class HttpRequestPattern(
         if (keys.isNotEmpty())
             return MatchFailure(Failure(message = "Fields $keys not found", breadCrumb = FORM_FIELDS_BREADCRUMB))
 
-        val keyError = resolver.findKeyError(formFieldsPattern, httpRequest.formFields, ::validateUnexpectedKeys)
+        val keyError = resolver.findKeyError(formFieldsPattern, httpRequest.formFields, ValidateUnexpectedKeys)
         if (keyError != null)
-            return MatchFailure(missingKeyToResult(keyError, "form field"))
+            return MatchFailure(keyError.missingKeyToResult("form field"))
 
         val result: Result? = formFieldsPattern
             .filterKeys { key -> withoutOptionality(key) in httpRequest.formFields }

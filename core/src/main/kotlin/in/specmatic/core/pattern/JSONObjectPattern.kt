@@ -12,8 +12,8 @@ fun toJSONObjectPattern(jsonContent: String, typeAlias: String?): JSONObjectPatt
 
 fun toJSONObjectPattern(map: Map<String, Pattern>): JSONObjectPattern {
     val missingKeyStrategy = when ("...") {
-        in map -> ignoreUnexpectedKeys
-        else -> ::validateUnexpectedKeys
+        in map -> IgnoreUnexpectedKeys
+        else -> ValidateUnexpectedKeys
     }
 
     return JSONObjectPattern(map.minus("..."), missingKeyStrategy)
@@ -21,16 +21,14 @@ fun toJSONObjectPattern(map: Map<String, Pattern>): JSONObjectPattern {
 
 fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String?): JSONObjectPattern {
     val missingKeyStrategy = when ("...") {
-        in map -> ignoreUnexpectedKeys
-        else -> ::validateUnexpectedKeys
+        in map -> IgnoreUnexpectedKeys
+        else -> ValidateUnexpectedKeys
     }
 
     return JSONObjectPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
-val ignoreUnexpectedKeys = { _: Map<String, Any>, _: Map<String, Any> -> null }
-
-data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap(), private val unexpectedKeyCheck: UnexpectedKeyCheck = ::validateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
+data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap(), private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
     override fun equals(other: Any?): Boolean = when (other) {
         is JSONObjectPattern -> this.pattern == other.pattern
         else -> false
@@ -59,7 +57,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
         val missingKey = resolverWithNullType.findKeyError(pattern, sampleData.jsonObject, unexpectedKeyCheck)
         if (missingKey != null)
-            return missingKeyToResult(missingKey, "key")
+            return missingKey.missingKeyToResult("key")
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = resolverWithNullType.matchesPattern(key, patternValue, sampleValue)) {
@@ -108,7 +106,7 @@ internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<
 
     val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
     if (missingFixedKey != null)
-        return missingKeyToResult(MissingKeyError(missingFixedKey), "key").breadCrumb(missingFixedKey)
+        return MissingKeyError(missingFixedKey).missingKeyToResult("key").breadCrumb(missingFixedKey)
 
     return pattern.keys.asSequence().map { key ->
         val bigger = pattern.getValue(key)

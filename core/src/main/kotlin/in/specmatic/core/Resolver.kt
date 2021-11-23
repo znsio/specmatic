@@ -6,20 +6,21 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.True
 import `in`.specmatic.core.value.Value
 
-sealed class KeyError {
-    abstract val name: String
-}
-
-data class MissingKeyError(override val name: String) : KeyError()
-data class UnexpectedKeyError(override val name: String) : KeyError()
-
-typealias KeyErrorPredicate = (pattern: Map<String, Any>, actual: Map<String, Any>, UnexpectedKeyCheck) -> KeyError?
-
-data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boolean = false, val newPatterns: Map<String, Pattern> = emptyMap(), val findKeyError: KeyErrorPredicate = ::checkOnlyPatternKeys, val context: Map<String, String> = emptyMap()) {
+data class Resolver(
+    val factStore: FactStore = CheckFacts(),
+    val mockMode: Boolean = false,
+    val newPatterns: Map<String, Pattern> = emptyMap(),
+    val findKeyErrorCheck: KeyErrorCheck = CheckOnlyPatternKeys,
+    val context: Map<String, String> = emptyMap()
+) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
 
     val patterns = builtInPatterns.plus(newPatterns)
+
+    fun findKeyError(pattern: Map<String, Any>, actual: Map<String, Any>, unexpectedKeyCheck: UnexpectedKeyCheck?): KeyError? {
+        return findKeyErrorCheck.validate(pattern, actual, unexpectedKeyCheck)
+    }
 
     fun matchesPattern(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
         if (mockMode
@@ -73,40 +74,4 @@ data class Resolver(val factStore: FactStore = CheckFacts(), val mockMode: Boole
             }
         }
     }
-}
-
-typealias UnexpectedKeyCheck = (Map<String, Any>, Map<String, Any>) -> KeyError?
-
-fun checkOnlyPatternKeys(pattern: Map<String, Any>, actual: Map<String, Any>, lookForUnexpected: UnexpectedKeyCheck = ignoreUnexpectedKeys): KeyError? {
-    return pattern.minus("...").keys.find { key ->
-        isMissingKey(actual, key)
-    }?.let {
-        MissingKeyError(it)
-    } ?: lookForUnexpected(pattern, actual)
-}
-
-fun validateUnexpectedKeys(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? {
-    val patternKeys = pattern.minus("...").keys.map { withoutOptionality(it) }
-    val actualKeys = actual.keys.map { withoutOptionality(it) }
-
-    return actualKeys.minus(patternKeys).firstOrNull()?.let {
-        UnexpectedKeyError(it)
-    }
-}
-
-internal val checkAllKeys = { pattern: Map<String, Any>, actual: Map<String, Any>, _: Any ->
-    pattern.minus("...").keys.find { key ->
-        isMissingKey(actual, key)
-    }?.let {
-        MissingKeyError(it)
-    } ?: validateUnexpectedKeys(pattern, actual)
-}
-
-fun missingKeyToResult(keyError: KeyError, keyLabel: String): Result.Failure {
-    val message = when(keyError) {
-        is MissingKeyError -> "Expected ${keyLabel.lowercase()} named \"${keyError.name}\" was missing"
-        is UnexpectedKeyError -> "${keyLabel.lowercase().capitalizeFirstChar()} named \"${keyError.name}\" was unexpected"
-    }
-
-    return Result.Failure(message)
 }

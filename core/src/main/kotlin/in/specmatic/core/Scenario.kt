@@ -58,7 +58,7 @@ data class Scenario(
 
     fun matchesStub(httpRequest: HttpRequest, serverState: Map<String, Value>): Result {
         val headersResolver = Resolver(serverState, false, patterns)
-        val nonHeadersResolver = headersResolver.copy(findKeyError = checkAllKeys)
+        val nonHeadersResolver = headersResolver.copy(findKeyErrorCheck = CheckAllKeys)
 
         return matches(httpRequest, serverState, nonHeadersResolver, headersResolver)
     }
@@ -285,7 +285,7 @@ data class Scenario(
 
     fun matchesMock(request: HttpRequest, response: HttpResponse): Result {
         return scenarioBreadCrumb(this) {
-            val resolver = Resolver(IgnoreFacts(), true, patterns, findKeyError = checkAllKeys)
+            val resolver = Resolver(IgnoreFacts(), true, patterns, findKeyErrorCheck = CheckAllKeys)
 
             when (val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }) {
                 is Result.Failure -> requestMatchResult.updateScenario(this)
@@ -301,7 +301,7 @@ data class Scenario(
     }
 
     fun matchesMock(kafkaMessage: KafkaMessage): Result {
-        return kafkaMessagePattern?.matches(kafkaMessage, resolver.copy(findKeyError = checkAllKeys)) ?: Result.Failure("This scenario does not have a Kafka mock")
+        return kafkaMessagePattern?.matches(kafkaMessage, resolver.copy(findKeyErrorCheck = CheckAllKeys)) ?: Result.Failure("This scenario does not have a Kafka mock")
     }
 
     fun resolverAndResponseFrom(response: HttpResponse): Pair<Resolver, HttpResponse> =

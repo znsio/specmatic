@@ -229,9 +229,9 @@ internal fun matchesQuery(
     resolver: Resolver
 ): Result {
     val missingKey =
-        resolver.findKeyError(queryPattern, sampleQuery.mapValues { StringValue(it.value) }, ::validateUnexpectedKeys)
+        resolver.findKeyError(queryPattern, sampleQuery.mapValues { StringValue(it.value) }, ValidateUnexpectedKeys)
     if (missingKey != null)
-        return missingKeyToResult(missingKey, "query param")
+        return missingKey.missingKeyToResult("query param")
 
     for (key in queryPattern.keys) {
         val keyName = key.removeSuffix("?")

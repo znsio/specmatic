@@ -8,18 +8,9 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 
-fun toJSONObjectPattern(jsonContent: String, typeAlias: String?): JSONObjectPattern = toJSONObjectPattern(stringToPatternMap(jsonContent)).copy(typeAlias = typeAlias)
+fun toJSONObjectPattern(jsonContent: String, typeAlias: String?): JSONObjectPattern = toJSONObjectPattern(stringToPatternMap(jsonContent), typeAlias)
 
-fun toJSONObjectPattern(map: Map<String, Pattern>): JSONObjectPattern {
-    val missingKeyStrategy: UnexpectedKeyCheck = when ("...") {
-        in map -> IgnoreUnexpectedKeys
-        else -> ValidateUnexpectedKeys
-    }
-
-    return JSONObjectPattern(map.minus("..."), missingKeyStrategy)
-}
-
-fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String?): JSONObjectPattern {
+fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String? = null): JSONObjectPattern {
     val missingKeyStrategy: UnexpectedKeyCheck = when ("...") {
         in map -> IgnoreUnexpectedKeys
         else -> ValidateUnexpectedKeys

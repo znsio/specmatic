@@ -28,8 +28,10 @@ val MOCK_HTTP_RESPONSE_ALL_KEYS = listOf("mock-http-response", MOCK_HTTP_RESPONS
 
 fun validateMock(mockSpec: Map<String, Any?>) {
     if (!mockSpec.containsKey(MOCK_KAFKA_MESSAGE)) {
-        if (MOCK_HTTP_REQUEST_ALL_KEYS.none { mockSpec.containsKey(it) }) throw ContractException(errorMessage = "This spec does not contain information about either the kafka message or the request to be mocked.")
-        if (MOCK_HTTP_RESPONSE_ALL_KEYS.none { mockSpec.containsKey(it) }) throw ContractException(errorMessage = "This spec does not contain information about the response to be mocked.")
+        if (MOCK_HTTP_REQUEST_ALL_KEYS.none { mockSpec.containsKey(it) })
+            throw ContractException(errorMessage = "Stub does not contain http-request/mock-http-request as a top level key.")
+        if (MOCK_HTTP_RESPONSE_ALL_KEYS.none { mockSpec.containsKey(it) })
+            throw ContractException(errorMessage = "Stub does not contain http-request/mock-http-request as a top level key.")
     }
 }
 

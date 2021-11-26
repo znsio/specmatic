@@ -1,18 +1,18 @@
 package `in`.specmatic.core
 
 class KeyCheck(val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
-               var unexpectedKeyCheck: KeyErrorCheck = ValidateUnexpectedKeys,
+               var unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys,
                private val overrideUnexpectedKeyCheck: OverrideUnexpectedKeyCheck? = ::overrideUnexpectedKeyCheck
-) : KeyErrorCheck {
+) {
     fun disableOverrideUnexpectedKeycheck(): KeyCheck {
         return KeyCheck(patternKeyCheck, unexpectedKeyCheck, null)
     }
 
-    fun withUnexpectedKeyCheck(unexpectedKeyCheck: KeyErrorCheck): KeyCheck {
+    fun withUnexpectedKeyCheck(unexpectedKeyCheck: UnexpectedKeyCheck): KeyCheck {
         return this.overrideUnexpectedKeyCheck?.invoke(this, unexpectedKeyCheck) ?: this
     }
 
-    override fun validate(
+    fun validate(
         pattern: Map<String, Any>,
         actual: Map<String, Any>
     ): KeyError? {
@@ -21,10 +21,10 @@ class KeyCheck(val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
 
 }
 
-private fun overrideUnexpectedKeyCheck(keyCheck: KeyCheck, _unexpectedKeyCheck: KeyErrorCheck): KeyCheck {
-    return KeyCheck(keyCheck.patternKeyCheck, _unexpectedKeyCheck)
+private fun overrideUnexpectedKeyCheck(keyCheck: KeyCheck, unexpectedKeyCheck: UnexpectedKeyCheck): KeyCheck {
+    return KeyCheck(keyCheck.patternKeyCheck, unexpectedKeyCheck)
 }
 
-typealias OverrideUnexpectedKeyCheck = (KeyCheck, KeyErrorCheck) -> KeyCheck
+typealias OverrideUnexpectedKeyCheck = (KeyCheck, UnexpectedKeyCheck) -> KeyCheck
 
 val DefaultKeyCheck = KeyCheck()

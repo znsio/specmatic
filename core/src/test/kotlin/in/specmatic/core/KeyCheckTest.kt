@@ -24,8 +24,8 @@ internal class KeyCheckTest {
                 return null
             }
 
-        }, unexpectedKeyCheck = object: KeyErrorCheck {
-            override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError {
+        }, unexpectedKeyCheck = object: UnexpectedKeyCheck {
+            override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): UnexpectedKeyError {
                 return UnexpectedKeyError("test")
             }
 
@@ -41,8 +41,8 @@ internal class KeyCheckTest {
                 return null
             }
 
-        }, unexpectedKeyCheck = object: KeyErrorCheck {
-            override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError {
+        }, unexpectedKeyCheck = object: UnexpectedKeyCheck {
+            override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): UnexpectedKeyError {
                 return UnexpectedKeyError("test")
             }
 
@@ -60,8 +60,8 @@ internal class KeyCheckTest {
                 return null
             }
 
-        }, unexpectedKeyCheck = object: KeyErrorCheck {
-            override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError {
+        }, unexpectedKeyCheck = object: UnexpectedKeyCheck {
+            override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): UnexpectedKeyError {
                 return UnexpectedKeyError("test")
             }
 

@@ -11,7 +11,7 @@ import `in`.specmatic.core.value.Value
 fun toJSONObjectPattern(jsonContent: String, typeAlias: String?): JSONObjectPattern = toJSONObjectPattern(stringToPatternMap(jsonContent)).copy(typeAlias = typeAlias)
 
 fun toJSONObjectPattern(map: Map<String, Pattern>): JSONObjectPattern {
-    val missingKeyStrategy: KeyErrorCheck = when ("...") {
+    val missingKeyStrategy: UnexpectedKeyCheck = when ("...") {
         in map -> IgnoreUnexpectedKeys
         else -> ValidateUnexpectedKeys
     }
@@ -20,7 +20,7 @@ fun toJSONObjectPattern(map: Map<String, Pattern>): JSONObjectPattern {
 }
 
 fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String?): JSONObjectPattern {
-    val missingKeyStrategy: KeyErrorCheck = when ("...") {
+    val missingKeyStrategy: UnexpectedKeyCheck = when ("...") {
         in map -> IgnoreUnexpectedKeys
         else -> ValidateUnexpectedKeys
     }
@@ -28,7 +28,7 @@ fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String?): JSONObje
     return JSONObjectPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
-data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap(), private val unexpectedKeyCheck: KeyErrorCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
+data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap(), private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
     override fun equals(other: Any?): Boolean = when (other) {
         is JSONObjectPattern -> this.pattern == other.pattern
         else -> false

@@ -17,7 +17,7 @@ data class Resolver(
 
     val patterns = builtInPatterns.plus(newPatterns)
 
-    fun withUnexpectedKeyCheck(unexpectedKeyCheck: KeyErrorCheck): Resolver {
+    fun withUnexpectedKeyCheck(unexpectedKeyCheck: UnexpectedKeyCheck): Resolver {
         return this.copy(findKeyErrorCheck = this.findKeyErrorCheck.withUnexpectedKeyCheck(unexpectedKeyCheck))
     }
 

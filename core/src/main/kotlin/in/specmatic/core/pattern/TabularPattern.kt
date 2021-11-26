@@ -10,7 +10,7 @@ import io.cucumber.messages.types.TableRow
 fun toTabularPattern(jsonContent: String, typeAlias: String? = null): TabularPattern = toTabularPattern(stringToPatternMap(jsonContent), typeAlias)
 
 fun toTabularPattern(map: Map<String, Pattern>, typeAlias: String? = null): TabularPattern {
-    val missingKeyStrategy: KeyErrorCheck = when ("...") {
+    val missingKeyStrategy: UnexpectedKeyCheck = when ("...") {
         in map -> IgnoreUnexpectedKeys
         else -> ValidateUnexpectedKeys
     }
@@ -18,7 +18,7 @@ fun toTabularPattern(map: Map<String, Pattern>, typeAlias: String? = null): Tabu
     return TabularPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
-data class TabularPattern(override val pattern: Map<String, Pattern>, private val unexpectedKeyCheck: KeyErrorCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
+data class TabularPattern(override val pattern: Map<String, Pattern>, private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData)

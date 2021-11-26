@@ -1,8 +1,8 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.core.KeyError
-import `in`.specmatic.core.KeyErrorCheck
+import `in`.specmatic.core.UnexpectedKeyCheck
+import `in`.specmatic.core.UnexpectedKeyError
 
-object IgnoreUnexpectedKeys: KeyErrorCheck {
-    override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? = null
+object IgnoreUnexpectedKeys: UnexpectedKeyCheck {
+    override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): UnexpectedKeyError? = null
 }

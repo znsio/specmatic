@@ -1,7 +1,6 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.True
 import `in`.specmatic.core.value.Value
@@ -10,7 +9,7 @@ data class Resolver(
     val factStore: FactStore = CheckFacts(),
     val mockMode: Boolean = false,
     val newPatterns: Map<String, Pattern> = emptyMap(),
-    val findKeyErrorCheck: KeyErrorCheck = CheckOnlyPatternKeys,
+    val findKeyErrorCheck: KeyCheck = DefaultKeyCheck,
     val context: Map<String, String> = emptyMap()
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
@@ -18,8 +17,16 @@ data class Resolver(
 
     val patterns = builtInPatterns.plus(newPatterns)
 
-    fun findKeyError(pattern: Map<String, Any>, actual: Map<String, Any>, unexpectedKeyCheck: UnexpectedKeyCheck?): KeyError? {
-        return findKeyErrorCheck.validate(pattern, actual, unexpectedKeyCheck)
+    fun withUnexpectedKeyCheck(unexpectedKeyCheck: KeyErrorCheck): Resolver {
+        return this.copy(findKeyErrorCheck = this.findKeyErrorCheck.withUnexpectedKeyCheck(unexpectedKeyCheck))
+    }
+
+    fun disableOverrideUnexpectedKeycheck(): Resolver {
+        return this.copy(findKeyErrorCheck = this.findKeyErrorCheck.disableOverrideUnexpectedKeycheck())
+    }
+
+    fun findKeyError(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? {
+        return findKeyErrorCheck.validate(pattern, actual)
     }
 
     fun matchesPattern(factKey: String?, pattern: Pattern, sampleValue: Value): Result {

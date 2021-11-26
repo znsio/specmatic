@@ -27,10 +27,14 @@ data class HttpHeadersPattern(
             else -> withoutContentTypeGeneratedByQontract(headers, pattern)
         }
 
-        val missingKey = resolver.findKeyError(
+//        val missingKey = resolver.findKeyError(
+//            pattern,
+//            headersWithRelevantKeys.mapValues { StringValue(it.value) },
+//            IgnoreUnexpectedKeys
+//        )
+        val missingKey = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).findKeyError(
             pattern,
-            headersWithRelevantKeys.mapValues { StringValue(it.value) },
-            IgnoreUnexpectedKeys
+            headersWithRelevantKeys.mapValues { StringValue(it.value) }
         )
         if (missingKey != null) {
             val failureReason: FailureReason? = highlightIfSOAPActionMismatch(missingKey.name)

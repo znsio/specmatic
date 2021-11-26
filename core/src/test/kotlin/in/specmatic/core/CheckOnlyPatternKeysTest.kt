@@ -58,16 +58,4 @@ internal class CheckOnlyPatternKeysTest {
 
         assertThat(missing).isEqualTo(null)
     }
-
-    @Test
-    fun `checkOnlyPatternKeys should run the unexpected key strategy`() {
-        val expected = mapOf("expected" to "value")
-        val actual = mapOf("expected" to "value", "unexpected" to "value")
-        val unexpected = CheckOnlyPatternKeys.validate(expected, actual, ValidateUnexpectedKeys)
-
-        assertThat(unexpected).isEqualTo(UnexpectedKeyError("unexpected"))
-
-        val error = CheckOnlyPatternKeys.validate(expected, actual, IgnoreUnexpectedKeys)
-        assertThat(error).isNull()
-    }
 }

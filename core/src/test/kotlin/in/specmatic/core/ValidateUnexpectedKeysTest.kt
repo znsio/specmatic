@@ -2,7 +2,6 @@ package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.NullPattern
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 internal class ValidateUnexpectedKeysTest {

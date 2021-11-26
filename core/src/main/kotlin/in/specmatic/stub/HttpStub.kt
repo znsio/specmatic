@@ -308,7 +308,7 @@ private fun stubbedResponse(
     val matchResults = threadSafeStubs.matchResults { stubs ->
         stubs.map {
             val (requestPattern, _, resolver) = it
-            Pair(requestPattern.matches(httpRequest, resolver.copy(findKeyErrorCheck = CheckAllKeys)), it)
+            Pair(requestPattern.matches(httpRequest, resolver.disableOverrideUnexpectedKeycheck()), it)
         }
     }
 
@@ -355,7 +355,7 @@ private fun http400Response(httpRequest: HttpRequest, matchResults: List<Pair<Re
 fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>, stubs: StubDataItems): HttpResponse {
     return try {
         when (val mock = stubs.http.find { (requestPattern, _, resolver) ->
-            requestPattern.matches(httpRequest, resolver.copy(findKeyErrorCheck = CheckAllKeys)) is Result.Success
+            requestPattern.matches(httpRequest, resolver.disableOverrideUnexpectedKeycheck()) is Result.Success
         }) {
             null -> {
                 val responses = contractInfo.asSequence().map { (feature, _) ->

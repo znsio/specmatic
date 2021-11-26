@@ -2,7 +2,7 @@ package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.withoutOptionality
 
-object ValidateUnexpectedKeys: UnexpectedKeyCheck {
+object ValidateUnexpectedKeys: KeyErrorCheck {
     override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? {
         val patternKeys = pattern.minus("...").keys.map { withoutOptionality(it) }
         val actualKeys = actual.keys.map { withoutOptionality(it) }

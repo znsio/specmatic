@@ -122,7 +122,7 @@ Scenario: Square of a number
   | ...    |          |
   Then status 200
 """.trim())
-        
+
         val request = HttpRequest(method = "POST", path = "/number", body = parsedValue("""{"number": 10, "unexpected": "data"}"""))
         val response = stubResponse(request, listOf(feature), emptyList(), false)
 

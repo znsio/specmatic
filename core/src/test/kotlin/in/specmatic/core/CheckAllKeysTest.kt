@@ -1,12 +1,11 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.pattern.IgnoreUnexpectedKeys
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 internal class CheckAllKeysTest {
-    private fun _checkAllKeys(pattern: Map<String, Any>, actual: Map<String, Any>, ignored: UnexpectedKeyCheck = ValidateUnexpectedKeys): KeyError? =
-        CheckAllKeys.validate(pattern, actual, ignored)
+    private fun _checkAllKeys(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? =
+        CheckAllKeys.validate(pattern, actual)
 
     @Test
     fun `checkAllKeys should succeed when expected keys are all found`() {
@@ -66,7 +65,7 @@ internal class CheckAllKeysTest {
     fun `checkAllKeys should return unexpected keys regardless of what strategy is passed to it`() {
         val expected = mapOf("expected" to "value")
         val actual = mapOf("expected" to "value", "unexpected" to "value")
-        val unexpected = _checkAllKeys(expected, actual, IgnoreUnexpectedKeys)
+        val unexpected = _checkAllKeys(expected, actual)
 
         assertThat(unexpected).isEqualTo(UnexpectedKeyError("unexpected"))
     }

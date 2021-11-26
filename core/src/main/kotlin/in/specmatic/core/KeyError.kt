@@ -19,3 +19,7 @@ data class UnexpectedKeyError(override val name: String) : KeyError() {
         return Failure("${keyLabel.lowercase().capitalizeFirstChar()} named \"$name\" was unexpected")
     }
 }
+
+internal fun String.toMissingKeyError(): MissingKeyError {
+    return MissingKeyError(this)
+}

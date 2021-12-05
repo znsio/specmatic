@@ -18,7 +18,7 @@ repositories {
 
 def ktor_version = "1.6.4"
 def karate_version = "0.9.6"
-def jgit_version = "5.13.0.202109080827-r"
+def jgit_version = "6.0.0.202111291000-r"
 
 def junit_version = "5.8.2"
 def testcontainers_version = "1.16.2"

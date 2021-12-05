@@ -361,7 +361,20 @@ data class HttpRequestPattern(
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
         return attempt(breadCrumb = "REQUEST") {
             val newURLMatchers = urlMatcher?.newBasedOn(row, resolver) ?: listOf<URLMatcher?>(null)
-            val newBodies = attempt(breadCrumb = "BODY") { body.newBasedOn(row, resolver) }
+            val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
+                body.let {
+                    if(it is DeferredPattern && row.containsField(it.pattern)) {
+                        val example = row.getField(it.pattern)
+                        listOf(ExactValuePattern(it.parse(example, resolver)))
+                    }
+                    else if(it.typeAlias?.let { isPatternToken(it) } == true && row.containsField(it.typeAlias!!)) {
+                        val example = row.getField(it.typeAlias!!)
+                        listOf(ExactValuePattern(it.parse(example, resolver)))
+                    } else {
+                        body.newBasedOn(row, resolver)
+                    }
+                }
+            }
             val newHeadersPattern = headersPattern.newBasedOn(row, resolver)
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)

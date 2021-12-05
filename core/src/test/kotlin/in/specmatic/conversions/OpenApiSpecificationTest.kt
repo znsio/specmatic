@@ -5,6 +5,7 @@ import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import io.ktor.util.reflect.*
@@ -3063,6 +3064,32 @@ Scenario: Get product by id
                         ${"$"}ref: #/components/schemas/Data
             """.trimIndent()
         )
+    }
+
+    @Test
+    fun `clone request pattern with example of body type should pick up the example`() {
+        val openAPI = Yaml.mapper().writeValueAsString(parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: API
+              Given type Data
+              | id | (number) |
+              When POST /data
+              And request-body (Data)
+              Then status 200
+            """.trimIndent()
+        ).toOpenApi())
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val data = """{"id": 10}"""
+        val row = Row(columnNames = listOf("(Data)"), values = listOf(data))
+        val resolver = feature.scenarios.single().resolver
+
+        val newPatterns = feature.scenarios.single().httpRequestPattern.newBasedOn(row, resolver)
+
+        assertThat((newPatterns.single().body as ExactValuePattern).pattern as JSONObjectValue).isEqualTo(parsedValue(data))
     }
 
     private fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {

@@ -83,6 +83,22 @@ internal class HttpRequestPatternTest {
     }
 
     @Test
+    fun `clone request pattern with example of body type should pick up the example`() {
+        val pattern = HttpRequestPattern(
+                urlMatcher = toURLMatcherWithOptionalQueryParams(URI("/")),
+                method = "POST",
+                body = DeferredPattern("(Data)")
+        )
+
+        val resolver = Resolver(newPatterns = mapOf("(Data)" to TabularPattern(mapOf("id" to NumberPattern()))))
+        val data = """{"id": 10}"""
+        val row = Row(columnNames = listOf("(Data)"), values = listOf(data))
+        val newPatterns = pattern.newBasedOn(row, resolver)
+
+        assertThat((newPatterns.single().body as ExactValuePattern).pattern as JSONObjectValue).isEqualTo(parsedValue(data))
+    }
+
+    @Test
     fun `a request with an optional header should result in 2 options for newBasedOn`() {
         val requests = HttpRequestPattern(method = "GET",
                 urlMatcher = toURLMatcherWithOptionalQueryParams(URI("/")),

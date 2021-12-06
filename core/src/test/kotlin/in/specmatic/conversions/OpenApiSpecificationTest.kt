@@ -8,6 +8,7 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.stub.HttpStubData
 import io.ktor.util.reflect.*
 import io.swagger.util.Yaml
 import org.assertj.core.api.Assertions.assertThat
@@ -3090,6 +3091,55 @@ Scenario: Get product by id
         val newPatterns = feature.scenarios.single().httpRequestPattern.newBasedOn(row, resolver)
 
         assertThat((newPatterns.single().body as ExactValuePattern).pattern as JSONObjectValue).isEqualTo(parsedValue(data))
+    }
+
+    @Test
+    fun temp() {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              ${"$"}ref: '#/components/schemas/Data'
+      responses:
+        200:
+          description: API
+components:
+  schemas:
+    Data:
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+""".trimIndent()
+
+        println(openAPI)
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest("POST", "/data", body = parsedValue("""{"data": [{"id": 10}]}"""))
+        val response = HttpResponse.OK
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("POST")
+
     }
 
     private fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {

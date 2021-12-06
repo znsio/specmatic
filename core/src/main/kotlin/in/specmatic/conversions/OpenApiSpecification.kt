@@ -438,7 +438,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         if (patternName.isNotEmpty()) {
             if (typeStack.contains(patternName) &&
                 (propertyType.`$ref`.orEmpty().endsWith(patternName)
-                || (propertyType is ArraySchema && propertyType.items.`$ref`.endsWith(patternName)))
+                || (propertyType is ArraySchema && propertyType.items?.`$ref`?.endsWith(patternName) == true))
             ) toSpecmaticParamName(
                 optional,
                 propertyName

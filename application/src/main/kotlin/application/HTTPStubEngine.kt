@@ -46,7 +46,7 @@ class HTTPStubEngine {
                 }
             }
             else -> {
-                logger.log("Could not find any HTTP APIs in the contracts, so stub server not started.")
+                logger.log("Could not find any HTTP contracts, so stub server not started.")
                 null
             }
         }

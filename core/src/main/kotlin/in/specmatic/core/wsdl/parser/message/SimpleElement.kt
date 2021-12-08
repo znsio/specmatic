@@ -34,7 +34,7 @@ data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, va
     }
 
     private fun createSimpleType(element: XMLNode): Pair<List<XMLValue>, String?> {
-        val value = when (val typeName = element.attributes.getValue("type").toStringLiteral().localName()) {
+        val value = when (val typeName = simpleTypeName(element)) {
             in primitiveStringTypes -> StringValue("(string)")
             in primitiveNumberTypes -> StringValue("(number)")
             in primitiveDateTypes -> StringValue("(datetime)")
@@ -55,3 +55,19 @@ data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, va
     }
 }
 
+fun simpleTypeName(element: XMLNode): String {
+    return fromTypeAttribute(element) ?: fromRestriction(element) ?: throw ContractException("Could not find type for node ${element.displayableValue()}")
+}
+
+fun fromRestriction(element: XMLNode): String? {
+    return element.childNodes.find { it is XMLNode && it.name == "restriction" }?.let {
+        it as XMLNode
+        it.getAttributeValue("base").localName()
+    }
+}
+
+fun fromTypeAttribute(element: XMLNode): String? {
+    return element.attributes["type"]?.let {
+        it.toStringLiteral().localName()
+    }
+}

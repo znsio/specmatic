@@ -3,9 +3,7 @@ package `in`.specmatic.core.wsdl.parser
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.XMLPattern
 import `in`.specmatic.core.value.XMLNode
-import `in`.specmatic.core.wsdl.parser.message.MessageTypeInfoParser
-import `in`.specmatic.core.wsdl.parser.message.MessageTypeInfoParserStart
-import `in`.specmatic.core.wsdl.parser.message.isPrimitiveType
+import `in`.specmatic.core.wsdl.parser.message.*
 import `in`.specmatic.core.wsdl.parser.operation.SOAPOperationTypeInfo
 import `in`.specmatic.core.wsdl.payload.SoapPayloadType
 import java.net.URI
@@ -84,4 +82,4 @@ class SOAP11Parser(private val wsdl: WSDL): SOAPParser {
     }
 }
 
-fun hasSimpleTypeAttribute(element: XMLNode): Boolean = element.attributes.containsKey("type") && isPrimitiveType(element)
+fun hasSimpleTypeAttribute(element: XMLNode): Boolean = fromTypeAttribute(element)?.let { type -> isPrimitiveType(element) } == true

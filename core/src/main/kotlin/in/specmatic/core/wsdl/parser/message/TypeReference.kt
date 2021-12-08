@@ -11,7 +11,7 @@ data class TypeReference(val child: XMLNode, val wsdl: WSDL): ChildElementType {
 
         val element = when {
             hasSimpleTypeAttribute(child) -> SimpleElement(wsdlTypeReference, child, wsdl)
-            else -> ComplexElement(wsdlTypeReference, child, wsdl)
+            else -> ReferredType(wsdlTypeReference, child, wsdl)
         }
 
         return Pair(qontractTypeName, element)

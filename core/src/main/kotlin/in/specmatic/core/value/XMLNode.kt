@@ -294,9 +294,13 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
     }
 
     fun findByNodeNameAndAttribute(nodeName: String, attributeName: String, typeName: String, errorMessage: String? = null): XMLNode {
+        return findByNodeNameAndAttributeOrNull(nodeName, attributeName, typeName, errorMessage) ?: throw ContractException(errorMessage ?: "Couldn't find a node named $nodeName with attribute $attributeName=\"$typeName\"")
+    }
+
+    fun findByNodeNameAndAttributeOrNull(nodeName: String, attributeName: String, typeName: String, errorMessage: String? = null): XMLNode? {
         return this.childNodes.filterIsInstance<XMLNode>().find {
             it.name == nodeName && it.attributes[attributeName]?.toStringLiteral() == typeName
-        } ?: throw ContractException(errorMessage ?: "Couldn't find a node named $nodeName with attribute $attributeName=\"$typeName\"")
+        }
     }
 
     fun firstNode(): XMLNode? =

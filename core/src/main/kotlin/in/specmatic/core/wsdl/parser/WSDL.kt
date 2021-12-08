@@ -227,6 +227,15 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         return schema.findByNodeNameAndAttribute("complexType", "name", fullTypeName.localName())
     }
 
+    fun findSimpleType(
+        element: XMLNode,
+        attributeName: String
+    ): XMLNode? {
+        val fullTypeName = element.attributes.getValue(attributeName).toStringLiteral()
+        val schema = findSchema(namespace(fullTypeName, element))
+        return schema.findByNodeNameAndAttributeOrNull("simpleType", "name", fullTypeName.localName())
+    }
+
     fun findTypeFromAttribute(
         element: XMLNode,
         attributeName: String
@@ -258,7 +267,7 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         return if(hasSimpleTypeAttribute(node)) {
             SimpleElement(fullyQualifiedName.qname, node, this)
         } else {
-            ComplexElement(fullyQualifiedName.qname, node, this)
+            ReferredType(fullyQualifiedName.qname, node, this)
         }
     }
 
@@ -280,6 +289,13 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         }
 
         return ComplexType(node, this)
+    }
+
+    fun getSimpleTypeXMLNode(element: XMLNode): XMLNode? {
+        return when {
+            element.attributes.containsKey("type") -> findSimpleType(element, "type")
+            else -> element.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }.first()
+        }
     }
 
     fun findMessageNode(fullyQualifiedName: FullyQualifiedName): XMLNode {

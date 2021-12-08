@@ -46,7 +46,7 @@ private fun elementIsOptional(element: XMLNode): Boolean {
 }
 
 fun isPrimitiveType(node: XMLNode): Boolean {
-    val type = node.attributes.getValue("type").toStringLiteral()
+    val type = simpleTypeName(node)
     val namespace = node.resolveNamespace(type)
 
     if(namespace.isBlank())

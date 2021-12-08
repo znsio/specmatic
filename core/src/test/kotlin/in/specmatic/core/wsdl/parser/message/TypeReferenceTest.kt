@@ -21,7 +21,7 @@ internal class TypeReferenceTest {
         val element = toXMLNode("<xsd:element type=\"ns0:Person\" />").copy(namespaces = mapOf("ns0" to "http://person-service"))
         val typeReference = TypeReference(element, mockk())
         val (typeName, wsdlElement) = typeReference.getWSDLElement()
-        assertThat(wsdlElement).isInstanceOf(ComplexElement::class.java)
+        assertThat(wsdlElement).isInstanceOf(ReferredType::class.java)
         assertThat(typeName).isEqualTo("ns0_Person")
     }
 }

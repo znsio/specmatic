@@ -4,9 +4,14 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.HttpClient
 
-data class Contract(val contractGherkin: String) {
+data class Contract(val contract: Feature) {
+    companion object {
+        fun fromGherkin(contractGherkin: String): Contract {
+            return Contract(parseGherkinStringToFeature(contractGherkin))
+        }
+    }
     fun test(endPoint: String) {
-        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
+        val contractBehaviour = contract
         val results = contractBehaviour.executeTests(HttpClient(endPoint))
         if (results.hasFailures())
             throw ContractException(results.report(PATH_NOT_RECOGNIZED_ERROR))
@@ -16,7 +21,7 @@ data class Contract(val contractGherkin: String) {
 
     fun samples(fake: HttpStub) = samples(fake.endPoint)
     fun samples(endPoint: String) {
-        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
+        val contractBehaviour = contract
         val httpClient = HttpClient(endPoint)
 
         contractBehaviour.generateContractTestScenarios(emptyList()).fold(Results()) { results, scenario ->
@@ -31,8 +36,4 @@ ${kafkaMessagePattern.generate(scenario.resolver).toDisplayableString()}""".trim
             }
         }
     }
-}
-
-fun fromGherkin(contractGherkin: String): Contract {
-    return Contract(contractGherkin)
 }

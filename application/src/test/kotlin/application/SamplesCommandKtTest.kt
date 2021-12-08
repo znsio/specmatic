@@ -38,7 +38,7 @@ internal class SamplesCommandKtTest {
         val (data, _) = captureStandardOutput {
             val gherkin = qontractFile.readText().trim()
             HttpStub(gherkin, emptyList(), "localhost", 9000).use { fake ->
-                Contract(gherkin).samples(fake)
+                Contract.fromGherkin(gherkin).samples(fake)
             }
         }
 
@@ -57,7 +57,7 @@ internal class SamplesCommandKtTest {
 
             val gherkin = qontractFile.readText().trim()
             HttpStub(gherkin, emptyList(), "localhost", 9000).use { fake ->
-                Contract(gherkin).samples(fake)
+                Contract.fromGherkin(gherkin).samples(fake)
             }
         }
 

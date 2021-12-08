@@ -877,7 +877,7 @@ Then status 200"""
 
         assertThrows(Throwable::class.java) {
             HttpStub(oldContract, emptyList()).use { fake ->
-                fromGherkin(newContract).test(fake)
+                Contract.fromGherkin(newContract).test(fake)
             }
         }
     }

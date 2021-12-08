@@ -26,11 +26,11 @@ class SamplesCommand : Callable<Unit> {
             if(!contractFile.exists())
                 throw Exception("Could not find file ${contractFile.path}")
 
-            val gherkin = contractFile.readText().trim()
-
             try {
-                HttpStub(gherkin, emptyList(), "127.0.0.1", 56789).use { fake ->
-                    Contract(gherkin).samples(fake)
+                val feature = parseContractFileToFeature(contractFile)
+
+                HttpStub(feature, emptyList(), "127.0.0.1", 56789).use { fake ->
+                    Contract(feature).samples(fake)
                 }
             } catch(e: StackOverflowError) {
                 logger.log("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")

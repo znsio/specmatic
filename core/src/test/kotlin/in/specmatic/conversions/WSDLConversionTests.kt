@@ -93,6 +93,89 @@ class WSDLConversionTests {
     }
 
     @Test
+    fun `simpleTypes nodes in request body`() {
+        val wsdlContent = """
+            <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                              xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                              xmlns:qr="http://specmatic.in/SOAPService/"
+                              targetNamespace="http://specmatic.in/SOAPService/">
+                <wsdl:types>
+                    <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="http://specmatic.in/SOAPService/">
+                        <xsd:element name="SimpleRequest" type="qr:name"/>
+                        <xsd:element name="SimpleResponse" type="xsd:string"/>
+                        <xsd:simpleType name="name">
+                            <xsd:restriction base="xsd:string">
+                                <xsd:maxLength value="1"/>
+                            </xsd:restriction>
+                        </xsd:simpleType>
+                    </xsd:schema>
+                </wsdl:types>
+
+                <wsdl:message name="simpleInputMessage">
+                    <wsdl:part name="simpleInputPart" element="qr:SimpleRequest"/>
+                </wsdl:message>
+                <wsdl:message name="simpleOutputMessage">
+                    <wsdl:part name="simpleOutputPart" element="qr:SimpleResponse"/>
+                </wsdl:message>
+
+                <wsdl:portType name="simplePortType">
+                    <wsdl:operation name="SimpleOperation">
+                        <wsdl:input name="simpleInput"
+                                    message="qr:simpleInputMessage"/>
+                        <wsdl:output name="simpleOutput"
+                                     message="qr:simpleOutputMessage"/>
+                    </wsdl:operation>
+                </wsdl:portType>
+
+                <wsdl:binding name="simpleBinding" type="qr:simplePortType">
+                    <soap:binding transport="http://schemas.xmlsoap.org/soap/http"/>
+                    <wsdl:operation name="SimpleOperation">
+                        <soap:operation
+                                soapAction="http://specmatic.in/SOAPService/SimpleOperation"/>
+                        <wsdl:input name="simpleInput">
+                            <soap:body use="literal"/>
+                        </wsdl:input>
+                        <wsdl:output name="simpleOutput">
+                            <soap:body use="literal"/>
+                        </wsdl:output>
+                    </wsdl:operation>
+                </wsdl:binding>
+
+                <wsdl:service name="simpleService">
+                    <wsdl:port name="simplePort" binding="qr:simpleBinding">
+                        <soap:address
+                                location="http://specmatic.in/SOAPService/SimpleSOAP"/>
+                    </wsdl:port>
+                </wsdl:service>
+
+            </wsdl:definitions>
+        """
+
+        val wsdl = WSDL(toXMLNode(wsdlContent), "/path/to/wsdl.xml")
+
+        val expectedGherkin = """
+        Feature: simpleService
+
+            Scenario: SimpleOperation
+                When POST /SOAPService/SimpleSOAP
+                And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                And request-body
+                ""${'"'}
+                <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><SimpleRequest>(string)</SimpleRequest></soapenv:Body></soapenv:Envelope>
+                ""${'"'}
+                Then status 200
+                And response-body
+                ""${'"'}
+                <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><SimpleResponse>(string)</SimpleResponse></soapenv:Body></soapenv:Envelope>
+                ""${'"'}
+        """.trimIndent().trim()
+
+        val actualGherkin = wsdl.convertToGherkin()
+
+        assertThat(actualGherkin).isEqualTo(expectedGherkin)
+    }
+
+    @Test
     fun `complex type inline in request body`() {
         val wsdlContent = """
             <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"

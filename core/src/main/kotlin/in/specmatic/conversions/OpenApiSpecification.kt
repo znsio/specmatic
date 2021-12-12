@@ -348,7 +348,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             is DateTimeSchema -> DateTimePattern
             is DateSchema -> StringPattern()
             is BooleanSchema -> BooleanPattern
-            is ObjectSchema -> toJsonObjectPattern(schema, patternName, typeStack)
+            is ObjectSchema -> {
+                if(schema.additionalProperties != null) {
+                    toDictionaryPattern(schema, typeStack, patternName)
+                } else {
+                    toJsonObjectPattern(schema, patternName, typeStack)
+                }
+            }
             is ArraySchema -> JSONArrayPattern(listOf(toSpecmaticPattern(schema.items, typeStack)))
             is ComposedSchema -> {
                 if(schema.allOf != null) {
@@ -371,20 +377,24 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 }
             }
             is Schema -> {
-                val component = schema.`$ref`
-                when {
-                    component != null -> {
-                        val (componentName, referredSchema) = resolveReferenceToSchema(component)
-                        val cyclicReference = patternName.isNotEmpty()
-                                && patternName == componentName
-                                && typeStack.contains(patternName)
-                                && referredSchema.instanceOf(ObjectSchema::class)
-                        when {
-                            cyclicReference -> DeferredPattern("(${patternName})")
-                            else -> resolveReference(component, typeStack)
+                if(schema.additionalProperties != null) {
+                    toDictionaryPattern(schema, typeStack, patternName)
+                } else {
+                    val component = schema.`$ref`
+                    when {
+                        component != null -> {
+                            val (componentName, referredSchema) = resolveReferenceToSchema(component)
+                            val cyclicReference = patternName.isNotEmpty()
+                                    && patternName == componentName
+                                    && typeStack.contains(patternName)
+                                    && referredSchema.instanceOf(ObjectSchema::class)
+                            when {
+                                cyclicReference -> DeferredPattern("(${patternName})")
+                                else -> resolveReference(component, typeStack)
+                            }
                         }
+                        else -> toJsonObjectPattern(schema, patternName, typeStack)
                     }
-                    else -> toJsonObjectPattern(schema, patternName, typeStack)
                 }
             }
             else -> throw UnsupportedOperationException("Specmatic is unable to parse: $schema")
@@ -406,6 +416,22 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 else -> AnyPattern(listOf(NullPattern, pattern))
             }
         }
+    }
+
+    private fun toDictionaryPattern(
+        schema: Schema<*>,
+        typeStack: List<String>,
+        patternName: String
+    ): DictionaryPattern {
+        val valueSchema = schema.additionalProperties as Schema<Any>
+
+        if(valueSchema.`$ref` == null)
+            throw ContractException("Inline dictionaries not yet supported")
+
+        return DictionaryPattern(
+            StringPattern(),
+            toSpecmaticPattern(valueSchema, typeStack, valueSchema.`$ref`, false)
+        )
     }
 
     private fun nonNullSchema(schema: ComposedSchema): Schema<Any> {

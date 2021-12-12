@@ -362,7 +362,7 @@ data class Feature(
     } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
         updateConverged(basePayload)
     } else {
-        TODO("Payload definitions with different names found (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName}, ${newPayload.typeAlias ?: newPayload.typeName})")
+        throw ContractException("Payload definitions with different names found (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName}, ${newPayload.typeAlias ?: newPayload.typeName})")
     }
 
     private fun bothAreTheSamePrimitive(
@@ -823,6 +823,13 @@ data class Feature(
 
     private fun toOpenApiSchema(pattern: Pattern): Schema<Any> {
         val schema = when {
+            pattern is DictionaryPattern -> {
+                ObjectSchema().apply {
+                    additionalProperties = Schema<Any>().apply {
+                        this.`$ref` = withoutPatternDelimiters(pattern.valuePattern.pattern.toString())
+                    }
+                }
+            }
             pattern is LookupRowPattern -> toOpenApiSchema(pattern.pattern)
             pattern is TabularPattern -> tabularToSchema(pattern)
             pattern is JSONObjectPattern -> jsonObjectToSchema(pattern)

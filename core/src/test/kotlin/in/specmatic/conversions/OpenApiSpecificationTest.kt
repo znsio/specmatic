@@ -3094,7 +3094,7 @@ Scenario: Get product by id
     }
 
     @Test
-    fun temp() {
+    fun `handle object inside array inside object correctly`() {
         val openAPI =
             """
 ---
@@ -3139,6 +3139,135 @@ components:
         println(stub.requestType)
 
         assertThat(stub.requestType.method).isEqualTo("POST")
+
+    }
+
+    @Test
+    fun `support dictionary object type in request body with data structure as reference`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                ${"$"}ref: Data
+      responses:
+        200:
+          description: API
+components:
+  schemas:
+    Data:
+      type: object
+      properties:
+        name:
+          type: string
+""".trimIndent()
+
+        println(openAPI)
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest("POST", "/data", body = parsedValue("""{"10": {"name": "Jill"}, "20": {"name": "Jack"}}"""))
+        val response = HttpResponse.OK
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("POST")
+        assertThat(stub.response.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `support dictionary object type as JSON value`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Data:
+                  type: object
+                  additionalProperties:
+                    ${"$"}ref: Person
+      responses:
+        200:
+          description: API
+components:
+  schemas:
+    Person:
+      type: object
+      properties:
+        name:
+          type: string
+""".trimIndent()
+
+        println(openAPI)
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest("POST", "/data", body = parsedValue("""{"Data": {"10": {"name": "Jill"}, "20": {"name": "Jack"}}}"""))
+        val response = HttpResponse.OK
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("POST")
+        assertThat(stub.response.status).isEqualTo(200)
+
+    }
+
+    @Test
+    fun `conversion supports dictionary type`() {
+        val gherkin = """
+            Feature: Test
+              Scenario: Test
+                Given type Data
+                | name | (string) |
+                When GET /
+                Then status 200
+                And response-body (dictionary string Data)
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(gherkin)
+        val openAPI = feature.toOpenApi()
+
+        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+
+        println(openAPIYaml)
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(this.matches(
+                HttpRequest(
+                    "GET",
+                    "/"
+                ),
+                HttpResponse.OK(body = parsedJSON("""{"10": {"name": "Jane"}}""")
+            ))).isTrue
+        }
 
     }
 

@@ -15,6 +15,8 @@ import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.utilities.newXMLBuilder
+import `in`.specmatic.core.utilities.xmlToString
 import `in`.specmatic.test.SpecmaticJUnitSupport
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
@@ -27,9 +29,13 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.WORKING_DIRECTORY
+import org.w3c.dom.Document
+import org.w3c.dom.Node
+import org.xml.sax.InputSource
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintWriter
+import java.io.StringReader
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.zip.ZipEntry
@@ -206,10 +212,25 @@ class TestCommand : Callable<Unit> {
                 val newText = reportFile.readText().let { text ->
                     text.replace("JUnit Jupiter", "Contract Tests")
                 }.let { text ->
-                    SpecmaticJUnitSupport.testsNames.foldIndexed(text) { index, updatedText, actualTestName ->
-                        val methodBasedTestName = "contractAsTest()[${index + 1}]"
-                        updatedText.replace(methodBasedTestName, actualTestName)
+                    val builder = newXMLBuilder()
+                    val reportXML: Document = builder.parse(InputSource(StringReader(text)))
+
+                    val actualTestNameMap: Map<String, String> = SpecmaticJUnitSupport.testsNames.mapIndexed { index, actualTestName ->
+                        val nodeTestName = "contractAsTest()[${index + 1}]"
+                        nodeTestName to actualTestName
+                    }.toMap()
+
+                    for(i in 0..reportXML.documentElement.childNodes.length.minus(1)) {
+                        val node = reportXML.documentElement.childNodes.item(i)
+
+                        if(node.nodeName == "testcase") {
+                            val nodeTestName: String = node.attributes.getNamedItem("name").nodeValue
+                            val actualTestName = actualTestNameMap[nodeTestName]
+                            node.attributes.getNamedItem("name").nodeValue = actualTestName
+                        }
                     }
+
+                    xmlToString(reportXML)
                 }
 
                 reportFile.writeText(newText)

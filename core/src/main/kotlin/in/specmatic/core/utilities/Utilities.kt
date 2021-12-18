@@ -69,11 +69,11 @@ fun readFile(filePath: String): String {
 }
 
 fun parseXML(xmlData: String): Document {
-    val builder = newBuilder()
+    val builder = newXMLBuilder()
     return removeIrrelevantNodes(builder.parse(InputSource(StringReader(xmlData))))
 }
 
-internal fun newBuilder(): DocumentBuilder {
+fun newXMLBuilder(): DocumentBuilder {
     val builderFactory = DocumentBuilderFactory.newInstance()
     val builder = builderFactory.newDocumentBuilder()
     builder.setErrorHandler(null)

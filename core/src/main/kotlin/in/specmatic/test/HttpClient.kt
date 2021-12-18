@@ -19,16 +19,16 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.utilities.valueMapToPlainJsonString
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.log.HttpLogMessage
 import `in`.specmatic.core.log.LogMessage
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.stub.toParams
-import java.io.File
+import io.ktor.client.engine.apache.*
 import java.net.URL
 import java.util.*
 import java.util.zip.GZIPInputStream
@@ -36,100 +36,36 @@ import java.util.zip.GZIPInputStream
 // API for non-Kotlin invokers
 fun createHttpClient(baseURL: String, timeout: Int) = HttpClient(baseURL, timeout)
 
-class HttpClient(val baseURL: String, private val timeout: Int = 60, private val log: (event: LogMessage) -> Unit = ::consoleLog, private val ktorClient: HttpClient = HttpClient(io.ktor.client.engine.apache.Apache) {
-    expectSuccess = false
-
-    followRedirects = false
-
-    engine {
-        customizeClient {
-            setSSLContext(
-                    SSLContextBuilder
-                            .create()
-                            .loadTrustMaterial(TrustSelfSignedStrategy())
-                            .build()
-            )
-            setSSLHostnameVerifier(NoopHostnameVerifier())
-        }
-    }
-
-    install(HttpTimeout) {
-        requestTimeoutMillis = (timeout * 1000).toLong()
-    }
-}) : TestExecutor {
+class HttpClient(val baseURL: String, private val timeout: Int = 60, private val log: (event: LogMessage) -> Unit = ::consoleLog, private val httpClientFactory: HttpClientFactory = RealHttpClientFactory) : TestExecutor {
     private val serverStateURL = "/_$APPLICATION_NAME_LOWER_CASE/state"
 
     override fun execute(request: HttpRequest): HttpResponse {
         val url = URL(request.getURL(baseURL))
 
-        val requestWithFileContent = loadFileContentIntoParts(request)
+        val requestWithFileContent = request.loadFileContentIntoParts()
 
         val httpLogMessage = HttpLogMessage()
         httpLogMessage.logStartRequestTime()
 
+        logger.debug("Starting request ${request.method} ${request.path}")
+
         return runBlocking {
-            val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
-                this.method = HttpMethod.parse(requestWithFileContent.method as String)
-
-                val listOfExcludedHeaders = HttpHeaders.UnsafeHeadersList.map { it.lowercase() }
-
-                requestWithFileContent.headers
-                        .map {Triple(it.key.trim(), it.key.trim().lowercase(), it.value.trim())}
-                        .filter { (_, loweredKey, _) -> loweredKey !in listOfExcludedHeaders }
-                        .forEach { (key, _, value) ->
-                            this.header(key, value)
+            httpClientFactory.create(timeout).use { ktorClient ->
+                val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
+                    requestWithFileContent.buildRequest(this)
                 }
 
-                this.body = when {
-                    requestWithFileContent.formFields.isNotEmpty() -> {
-                        val parameters = requestWithFileContent.formFields.mapValues { listOf(it.value) }.toList()
-                        FormDataContent(parametersOf(*parameters.toTypedArray()))
-                    }
-                    requestWithFileContent.multiPartFormData.isNotEmpty() -> {
-                        MultiPartFormDataContent(formData {
-                            requestWithFileContent.multiPartFormData.forEach { value ->
-                                value.addTo(this)
-                            }
-                        })
-                    }
-                    else -> {
-                        when {
-                            requestWithFileContent.headers.containsKey("Content-Type") -> TextContent(requestWithFileContent.bodyString, ContentType.parse(requestWithFileContent.headers["Content-Type"] as String))
-                            else -> TextContent(requestWithFileContent.bodyString, ContentType.parse(requestWithFileContent.body.httpContentType))
-                        }
-                    }
-                }
-            }
+                val outboundRequest: HttpRequest =
+                    ktorHttpRequestToHttpRequest(ktorResponse.request, requestWithFileContent)
+                httpLogMessage.addRequest(outboundRequest)
 
-            val outboundRequest: HttpRequest = ktorHttpRequestToHttpRequest(ktorResponse.request, requestWithFileContent)
-            httpLogMessage.addRequest(outboundRequest)
-
-            ktorResponseToHttpResponse(ktorResponse).also {
-                httpLogMessage.addResponse(it)
-                log(httpLogMessage)
-            }
-        }
-    }
-
-    private fun loadFileContentIntoParts(request: HttpRequest): HttpRequest {
-        val parts = request.multiPartFormData
-
-        val newMultiPartFormData: List<MultiPartFormDataValue> = parts.map { part ->
-            when(part) {
-                is MultiPartContentValue -> part
-                is MultiPartFileValue -> {
-                    val partFile = File(part.filename.removePrefix("@"))
-                    val binaryContent = if(partFile.exists()) {
-                        MultiPartContent(partFile)
-                    } else {
-                        MultiPartContent(StringPattern().generate(Resolver()).toStringLiteral())
-                    }
-                    part.copy(content = binaryContent)
+                ktorResponseToHttpResponse(ktorResponse).also {
+                    httpLogMessage.addResponse(it)
+                    log(httpLogMessage)
+                    ktorClient.close()
                 }
             }
         }
-
-        return request.copy(multiPartFormData = newMultiPartFormData)
     }
 
     override fun setServerState(serverState: Map<String, Value>) {
@@ -140,50 +76,80 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
         val startTime = Date()
 
         runBlocking {
-            var endTime: Date? = null
-            var response: HttpResponse? = null
+            httpClientFactory.create(timeout).use { ktorClient ->
+                var endTime: Date? = null
+                var response: HttpResponse? = null
 
-            try {
-                val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
-                    this.method = HttpMethod.Post
-                    this.contentType(ContentType.Application.Json)
-                    this.body = valueMapToPlainJsonString(serverState)
-                }
-
-                endTime = Date()
-
-                response = ktorResponseToHttpResponse(ktorResponse)
-
-                if (ktorResponse.status != HttpStatusCode.OK)
-                    throw Exception("API responded with ${ktorResponse.status}")
-            } finally {
-                val serverStateLog = object: LogMessage {
-                    override fun toJSONObject(): JSONObjectValue {
-                        val data: MutableMap<String, String> = mutableMapOf(
-                            "requestTime" to startTime.toString(),
-                            "serverState" to valueMapToPlainJsonString(serverState)
-                        )
-
-                        if(endTime != null && response != null) {
-                            data["endTime"] = endTime.toString()
-                            data["response"] = response.toLogString()
-                        }
-
-                        return JSONObjectValue(data.mapValues { StringValue(it.value) }.toMap())
+                try {
+                    val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
+                        this.method = HttpMethod.Post
+                        this.contentType(ContentType.Application.Json)
+                        this.body = valueMapToPlainJsonString(serverState)
                     }
 
-                    override fun toLogString(): String {
+                    endTime = Date()
 
-                        return """
+                    response = ktorResponseToHttpResponse(ktorResponse)
+
+                    if (ktorResponse.status != HttpStatusCode.OK)
+                        throw Exception("API responded with ${ktorResponse.status}")
+                } finally {
+                    val serverStateLog = object : LogMessage {
+                        override fun toJSONObject(): JSONObjectValue {
+                            val data: MutableMap<String, String> = mutableMapOf(
+                                "requestTime" to startTime.toString(),
+                                "serverState" to valueMapToPlainJsonString(serverState)
+                            )
+
+                            if (endTime != null && response != null) {
+                                data["endTime"] = endTime.toString()
+                                data["response"] = response.toLogString()
+                            }
+
+                            return JSONObjectValue(data.mapValues { StringValue(it.value) }.toMap())
+                        }
+
+                        override fun toLogString(): String {
+
+                            return """
                         # >> Request Sent At $startTime
                         ${startLinesWith(valueMapToPlainJsonString(serverState), "# ")}
                         "# << Complete At $endTime"
                         """.trimIndent()
+                        }
                     }
-                }
 
-                log(serverStateLog)
+                    log(serverStateLog)
+                }
             }
+        }
+    }
+}
+
+interface HttpClientFactory {
+    fun create(timeout: Int): HttpClient
+}
+
+object RealHttpClientFactory: HttpClientFactory {
+    override fun create(timeout: Int): HttpClient = HttpClient(Apache) {
+        expectSuccess = false
+
+        followRedirects = false
+
+        engine {
+            customizeClient {
+                setSSLContext(
+                    SSLContextBuilder
+                        .create()
+                        .loadTrustMaterial(TrustSelfSignedStrategy())
+                        .build()
+                )
+                setSSLHostnameVerifier(NoopHostnameVerifier())
+            }
+        }
+
+        install(HttpTimeout) {
+            requestTimeoutMillis = (timeout * 1000).toLong()
         }
     }
 }

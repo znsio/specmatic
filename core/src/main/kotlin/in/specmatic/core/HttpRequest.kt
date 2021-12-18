@@ -7,6 +7,11 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.URIUtils.parseQuery
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.value.UseExampleDeclarations
+import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.http.*
+import io.ktor.http.content.*
+import java.io.File
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
@@ -143,6 +148,60 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
             else
                 ExactValuePattern(StringValue(value))
         }
+    }
+
+    fun buildRequest(httpRequestBuilder: HttpRequestBuilder) {
+        httpRequestBuilder.method = HttpMethod.parse(method as String)
+
+        val listOfExcludedHeaders = HttpHeaders.UnsafeHeadersList.map { it.lowercase() }
+
+        headers
+            .map {Triple(it.key.trim(), it.key.trim().lowercase(), it.value.trim())}
+            .filter { (_, loweredKey, _) -> loweredKey !in listOfExcludedHeaders }
+            .forEach { (key, _, value) ->
+                httpRequestBuilder.header(key, value)
+            }
+
+        httpRequestBuilder.body = when {
+            formFields.isNotEmpty() -> {
+                val parameters = formFields.mapValues { listOf(it.value) }.toList()
+                FormDataContent(parametersOf(*parameters.toTypedArray()))
+            }
+            multiPartFormData.isNotEmpty() -> {
+                MultiPartFormDataContent(formData {
+                    multiPartFormData.forEach { value ->
+                        value.addTo(this)
+                    }
+                })
+            }
+            else -> {
+                when {
+                    headers.containsKey("Content-Type") -> TextContent(bodyString, ContentType.parse(headers["Content-Type"] as String))
+                    else -> TextContent(bodyString, ContentType.parse(body.httpContentType))
+                }
+            }
+        }
+    }
+
+    fun loadFileContentIntoParts(): HttpRequest {
+        val parts = multiPartFormData
+
+        val newMultiPartFormData: List<MultiPartFormDataValue> = parts.map { part ->
+            when(part) {
+                is MultiPartContentValue -> part
+                is MultiPartFileValue -> {
+                    val partFile = File(part.filename.removePrefix("@"))
+                    val binaryContent = if(partFile.exists()) {
+                        MultiPartContent(partFile)
+                    } else {
+                        MultiPartContent(StringPattern().generate(Resolver()).toStringLiteral())
+                    }
+                    part.copy(content = binaryContent)
+                }
+            }
+        }
+
+        return copy(multiPartFormData = newMultiPartFormData)
     }
 }
 

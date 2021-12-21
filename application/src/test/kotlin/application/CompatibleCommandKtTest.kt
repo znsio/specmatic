@@ -161,10 +161,8 @@ internal class CompatibleCommandKtTest {
             fakeGit
         )
 
-        assertThat(outcome.errorMessage).isEqualTo("""Could not load HEAD^1:/Users/fakeuser/newer.$CONTRACT_EXTENSION because of error:
-Only one commit
-        """.trimMargin())
-        assertThat(outcome.result).isNull()
+        assertThat(outcome.errorMessage).isEqualTo("")
+        assertThat(outcome.result).isInstanceOf(Results::class.java)
     }
 
     @Test

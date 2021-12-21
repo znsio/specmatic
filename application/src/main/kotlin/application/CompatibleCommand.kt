@@ -176,8 +176,13 @@ internal fun backwardCompatibleCommit(
     val partial = getFileContentAtSpecifiedCommit(gitRoot)(relativeContractPath)(contractPath)
 
     return partial(newerCommit).onSuccess { newerGherkin ->
-        partial(olderCommit).onSuccess { olderGherkin ->
-            Outcome(testBackwardCompatibility(parseContract(olderGherkin, contractPath), parseContract(newerGherkin, contractPath)))
+        val olderCommitOutcome = partial(olderCommit)
+
+        when(olderCommitOutcome.result) {
+            null -> Outcome(Results())
+            else -> olderCommitOutcome.onSuccess { olderGherkin ->
+                Outcome(testBackwardCompatibility(parseContract(olderGherkin, contractPath), parseContract(newerGherkin, contractPath)))
+            }
         }
     }
 }

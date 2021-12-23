@@ -199,6 +199,7 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                 }
             }
             isPatternToken(it) -> when {
+                isDictionaryPattern(it) -> getBuiltInPattern(it)
                 isLookupRowPattern(it) -> {
                     val (pattern, lookupKey) = parseLookupRowPattern(it)
                     LookupRowPattern(parsedPattern(pattern, typeAlias = typeAlias), lookupKey)

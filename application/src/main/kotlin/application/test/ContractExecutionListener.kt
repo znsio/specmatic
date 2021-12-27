@@ -1,7 +1,5 @@
 package application.test
 
-import org.fusesource.jansi.Ansi
-import org.fusesource.jansi.Ansi.ansi
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
@@ -17,6 +15,8 @@ class ContractExecutionListener : TestExecutionListener {
 
     private var couldNotStart = false;
 
+    private val colorPrinter: ContractExecutionPrinter = if(System.console() == null) MonochromePrinter() else ColorPrinter()
+
     override fun executionSkipped(testIdentifier: TestIdentifier?, reason: String?) {
         super.executionSkipped(testIdentifier, reason)
     }
@@ -31,14 +31,7 @@ class ContractExecutionListener : TestExecutionListener {
                     return
         }
 
-        val color: Ansi = when(testExecutionResult?.status) {
-            TestExecutionResult.Status.SUCCESSFUL -> ansi().fgGreen()
-            TestExecutionResult.Status.ABORTED -> ansi().fgYellow()
-            TestExecutionResult.Status.FAILED -> ansi().fgBrightRed()
-            else -> ansi()
-        }
-
-        println(color.a("${testIdentifier?.displayName} ${testExecutionResult?.status}").reset())
+        colorPrinter.printTestSummary(testIdentifier, testExecutionResult)
 
         when(testExecutionResult?.status) {
             TestExecutionResult.Status.SUCCESSFUL ->  {
@@ -75,19 +68,11 @@ class ContractExecutionListener : TestExecutionListener {
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
         org.fusesource.jansi.AnsiConsole.systemInstall()
 
-        val message = "Tests run: ${success + aborted + failure}, Failures: $failure, Aborted: $aborted"
-
-        val color = when {
-            failure > 0 -> ansi().bgBrightRed().fgBlack()
-            aborted > 0 -> ansi().fgYellow()
-            else -> ansi().fgGreen()
-        }
-
-        println(color.a(message).reset())
+        colorPrinter.printFinalSummary(TestSummary(success, aborted, failure))
 
         if (failedLog.isNotEmpty()) {
             println()
-            println(ansi().fgBrightRed().a("Unsuccessful scenarios:").reset())
+            colorPrinter.printFailureTitle("Unsuccessful scenarios:")
             println(failedLog.joinToString(System.lineSeparator()) { it.prependIndent("  ") })
         }
     }

@@ -21,6 +21,9 @@ import java.io.File
 internal class OpenApiSpecificationTest {
     companion object {
         const val OPENAPI_FILE = "openApiTest.yaml"
+        const val OPENAPI_FILE_WITH_REFERENCE = "openApiWithRef.yaml"
+        const val PET_OPENAPI_FILE = "Pet.yaml"
+        const val SCHEMAS_DIRECTORY = "schemas"
     }
 
     fun portableComparisonAcrossBuildEnvironments(actual: String, expected: String) {
@@ -126,15 +129,71 @@ components:
               ${"$"}ref: '#/components/schemas/NestedTypeWithRef'
     """.trim()
 
+        var openApiWithRef = """
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: Swagger API Team
+    email: apiteam@swagger.io
+    url: http://swagger.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: http://petstore.swagger.io/api
+paths:
+  /pets:
+    get:
+      description: get all pets
+      operationId: getPets
+      responses:
+        200:
+          description: pet response
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: './${SCHEMAS_DIRECTORY}/Pet.yaml'
+components:
+  schemas:
+        """.trim()
+
+        var pet = """
+Pet:
+  type: object
+  required:
+    - id
+    - name
+  properties:
+    name:
+      type: string
+    id:
+      type: integer
+      format: int64
+        """.trim()
+
         val openApiFile = File(OPENAPI_FILE)
         openApiFile.createNewFile()
         openApiFile.writeText(openAPI)
 
+        val openApiFileWithRef = File(OPENAPI_FILE_WITH_REFERENCE)
+        openApiFileWithRef.createNewFile()
+        openApiFileWithRef.writeText(openApiWithRef)
+
+        File("./${SCHEMAS_DIRECTORY}").mkdirs()
+        val petFile = File("./${SCHEMAS_DIRECTORY}/$PET_OPENAPI_FILE")
+        petFile.createNewFile()
+        petFile.writeText(pet)
     }
 
     @AfterEach
     fun `teardown`() {
         File(OPENAPI_FILE).delete()
+        File(OPENAPI_FILE_WITH_REFERENCE).delete()
+        File(SCHEMAS_DIRECTORY).deleteRecursively()
     }
 
     @Ignore
@@ -164,21 +223,25 @@ components:
         val spec = OpenApiSpecification.fromYAML(yamlFromGherkin, "")
         val feature = spec.toFeature()
 
-        assertThat(feature.matchingStub(
-            HttpRequest(
-                "POST",
-                "/user",
-                body = parsedJSON("""{"address": {"street": "Baker Street"}}""")
-            ), HttpResponse.OK("success")
-        ).response.headers["X-Specmatic-Result"]).isEqualTo("success")
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"address": {"street": "Baker Street"}}""")
+                ), HttpResponse.OK("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
 
-        assertThat(feature.matchingStub(
-            HttpRequest(
-                "POST",
-                "/user",
-                body = parsedJSON("""{"address": null}""")
-            ), HttpResponse.OK("success")
-        ).response.headers["X-Specmatic-Result"]).isEqualTo("success")
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"address": null}""")
+                ), HttpResponse.OK("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
     }
 
     @Test
@@ -270,7 +333,9 @@ components:
                       type: number
                   """.trimIndent()
 
-        portableComparisonAcrossBuildEnvironments(Yaml.mapper().writeValueAsString(parseGherkinStringToFeature(gherkin).toOpenApi()), yaml)
+        portableComparisonAcrossBuildEnvironments(
+            Yaml.mapper().writeValueAsString(parseGherkinStringToFeature(gherkin).toOpenApi()), yaml
+        )
     }
 
     @Test
@@ -289,7 +354,8 @@ Scenario: Get product by id
         )
         val openAPI = feature.toOpenApi()
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -352,7 +418,8 @@ Scenario: Get product by id
         )
         val openAPI = feature.toOpenApi()
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
                 ---
                 openapi: "3.0.1"
@@ -404,7 +471,8 @@ Scenario: Get product by id
         )
         val openAPI = feature.toOpenApi()
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -471,17 +539,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}]}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}]}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -550,17 +621,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"id": "123", "address": null}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"id": "123", "address": null}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -626,17 +700,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"id": null}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"id": null}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -686,24 +763,29 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"id": null}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"id": "10"}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"id": null}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"id": "10"}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -757,17 +839,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -837,17 +922,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -927,7 +1015,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1011,7 +1100,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1066,17 +1156,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"id": "10", "address": "Baker street"}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"id": "10", "address": "Baker street"}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1139,34 +1232,43 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/person1"
-                ), HttpResponse.OK(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/person2"
-                ), HttpResponse.OK(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/person1"
-                ), HttpResponse.OK(body = parsedJSON("""{"address": "Baker street"}"""))
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/person2"
-                ), HttpResponse.OK(body = parsedJSON("""{"address": "Baker street"}"""))
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/person1"
+                    ), HttpResponse.OK(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/person2"
+                    ), HttpResponse.OK(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/person1"
+                    ), HttpResponse.OK(body = parsedJSON("""{"address": "Baker street"}"""))
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/person2"
+                    ), HttpResponse.OK(body = parsedJSON("""{"address": "Baker street"}"""))
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1235,7 +1337,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1284,7 +1387,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1335,7 +1439,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1386,7 +1491,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1436,7 +1542,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1490,7 +1597,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1548,7 +1656,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1601,7 +1710,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1642,16 +1752,21 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/person"
-                ), HttpResponse.OK(parsedJSON("""{"address": "Baker Street"}""")).copy(headers = mapOf("X-Hello-World" to "hello"))
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/person"
+                    ),
+                    HttpResponse.OK(parsedJSON("""{"address": "Baker Street"}"""))
+                        .copy(headers = mapOf("X-Hello-World" to "hello"))
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1704,16 +1819,19 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/person"
-                ), HttpResponse.OK(parsedJSON("""{"address": "Baker Street"}"""))
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/person"
+                    ), HttpResponse.OK(parsedJSON("""{"address": "Baker Street"}"""))
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1762,17 +1880,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"address": null}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"address": null}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1827,17 +1948,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"address": []}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"address": []}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1893,17 +2017,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/person",
-                    body = parsedJSON("""{"address": [null, "Baker Street"]}""")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"address": [null, "Baker Street"]}""")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -1964,17 +2091,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data",
-                    headers = mapOf("X-Data" to "data")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data",
+                        headers = mapOf("X-Data" to "data")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2024,16 +2154,19 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data"
-                ), HttpResponse.OK("success").copy(headers = mapOf("X-Data" to "data"))
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data"
+                    ), HttpResponse.OK("success").copy(headers = mapOf("X-Data" to "data"))
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2083,28 +2216,35 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data"
-                ), HttpResponse.OK("success").copy(headers = mapOf("X-Data-One" to "data"))
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data"
-                ), HttpResponse.OK("success").copy(headers = mapOf("X-Data-Two" to "data"))
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data"
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data"
+                    ), HttpResponse.OK("success").copy(headers = mapOf("X-Data-One" to "data"))
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data"
+                    ), HttpResponse.OK("success").copy(headers = mapOf("X-Data-Two" to "data"))
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data"
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2158,31 +2298,38 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data",
-                    headers = mapOf("X-Data-One" to "data")
-                ), HttpResponse.OK("success")
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data",
-                    headers = mapOf("X-Data-One" to "data")
-                ), HttpResponse.OK("success")
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data",
-                    headers = mapOf("X-Data-One" to "data")
-                ), HttpResponse.OK("success")
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data",
+                        headers = mapOf("X-Data-One" to "data")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data",
+                        headers = mapOf("X-Data-One" to "data")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data",
+                        headers = mapOf("X-Data-One" to "data")
+                    ), HttpResponse.OK("success")
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2235,23 +2382,28 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data"
-                ), HttpResponse.OK.copy(body = StringValue("success"))
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data",
-                    queryParams = mapOf("param" to "data")
-                ), HttpResponse.OK.copy(body = StringValue("success"))
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data"
+                    ), HttpResponse.OK.copy(body = StringValue("success"))
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data",
+                        queryParams = mapOf("param" to "data")
+                    ), HttpResponse.OK.copy(body = StringValue("success"))
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2298,37 +2450,46 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data"
-                ), HttpResponse.OK.copy(body = StringValue("success"))
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data",
-                    queryParams = mapOf("param1" to "data")
-                ), HttpResponse.OK.copy(body = StringValue("success"))
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data",
-                    queryParams = mapOf("param2" to "data")
-                ), HttpResponse.OK.copy(body = StringValue("success"))
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data",
-                    queryParams = mapOf("param1" to "data", "param2" to "data")
-                ), HttpResponse.OK.copy(body = StringValue("success"))
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data"
+                    ), HttpResponse.OK.copy(body = StringValue("success"))
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data",
+                        queryParams = mapOf("param1" to "data")
+                    ), HttpResponse.OK.copy(body = StringValue("success"))
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data",
+                        queryParams = mapOf("param2" to "data")
+                    ), HttpResponse.OK.copy(body = StringValue("success"))
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data",
+                        queryParams = mapOf("param1" to "data", "param2" to "data")
+                    ), HttpResponse.OK.copy(body = StringValue("success"))
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2385,17 +2546,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    formFields = mapOf("Data" to """{"id": 10}""")
-                ), HttpResponse.OK.copy(body = StringValue("success"))
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        formFields = mapOf("Data" to """{"id": 10}""")
+                    ), HttpResponse.OK.copy(body = StringValue("success"))
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2456,12 +2620,14 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data"
-                ), HttpResponse.OK
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data"
+                    ), HttpResponse.OK
+                )
+            ).isTrue
 
             assertThat(
                 matches(
@@ -2474,7 +2640,8 @@ Scenario: Get product by id
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2509,16 +2676,19 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/data"
-                ), HttpResponse.OK
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/data"
+                    ), HttpResponse.OK
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: "3.0.1"
@@ -2561,24 +2731,29 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data1",
-                    body = parsedJSON("""{"hello": "Jill"}""")
-                ), HttpResponse.OK
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data2",
-                    body = parsedJSON("""{"world": "Jack"}""")
-                ), HttpResponse.OK
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data1",
+                        body = parsedJSON("""{"hello": "Jill"}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data2",
+                        body = parsedJSON("""{"world": "Jack"}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: 3.0.1
@@ -2652,24 +2827,29 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedJSON("""{"hello": "Jill"}""")
-                ), HttpResponse.OK
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedJSON("""{"hello": null}""")
-                ), HttpResponse.OK
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        body = parsedJSON("""{"hello": "Jill"}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        body = parsedJSON("""{"hello": null}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: 3.0.1
@@ -2728,24 +2908,29 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedJSON("""{"hello": {"world": "jill"}}""")
-                ), HttpResponse.OK
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedJSON("""{"hello": null}""")
-                ), HttpResponse.OK
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        body = parsedJSON("""{"hello": {"world": "jill"}}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        body = parsedJSON("""{"hello": null}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: 3.0.1
@@ -2812,24 +2997,29 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedJSON("""{"hello": {"world": "jill"}}""")
-                ), HttpResponse.OK
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedJSON("""{"hello": null}""")
-                ), HttpResponse.OK
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        body = parsedJSON("""{"hello": {"world": "jill"}}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        body = parsedJSON("""{"hello": null}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: 3.0.1
@@ -2896,24 +3086,29 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedJSON("""{"hello": {"world": "jill"}}""")
-                ), HttpResponse.OK
-            )).isTrue
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedJSON("""{"hello": null}""")
-                ), HttpResponse.OK
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        body = parsedJSON("""{"hello": {"world": "jill"}}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        body = parsedJSON("""{"hello": null}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: 3.0.1
@@ -2969,17 +3164,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = StringValue("Hello world")
-                ), HttpResponse.OK
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        body = StringValue("Hello world")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: 3.0.1
@@ -3021,17 +3219,20 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedJSON("""{"id": 10}""")
-                ), HttpResponse.OK
-            )).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data",
+                        body = parsedJSON("""{"id": 10}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
         }
 
         val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
-        portableComparisonAcrossBuildEnvironments(openAPIYaml,
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
             """
             ---
             openapi: 3.0.1
@@ -3069,8 +3270,9 @@ Scenario: Get product by id
 
     @Test
     fun `clone request pattern with example of body type should pick up the example`() {
-        val openAPI = Yaml.mapper().writeValueAsString(parseGherkinStringToFeature(
-            """
+        val openAPI = Yaml.mapper().writeValueAsString(
+            parseGherkinStringToFeature(
+                """
             Feature: API
             
             Scenario: API
@@ -3080,7 +3282,8 @@ Scenario: Get product by id
               And request-body (Data)
               Then status 200
             """.trimIndent()
-        ).toOpenApi())
+            ).toOpenApi()
+        )
 
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
@@ -3090,7 +3293,11 @@ Scenario: Get product by id
 
         val newPatterns = feature.scenarios.single().httpRequestPattern.newBasedOn(row, resolver)
 
-        assertThat((newPatterns.single().body as ExactValuePattern).pattern as JSONObjectValue).isEqualTo(parsedValue(data))
+        assertThat((newPatterns.single().body as ExactValuePattern).pattern as JSONObjectValue).isEqualTo(
+            parsedValue(
+                data
+            )
+        )
     }
 
     @Test
@@ -3178,7 +3385,8 @@ components:
         println(openAPI)
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
-        val request = HttpRequest("POST", "/data", body = parsedValue("""{"10": {"name": "Jill"}, "20": {"name": "Jack"}}"""))
+        val request =
+            HttpRequest("POST", "/data", body = parsedValue("""{"10": {"name": "Jill"}, "20": {"name": "Jack"}}"""))
         val response = HttpResponse.OK
 
         val stub: HttpStubData = feature.matchingStub(request, response)
@@ -3228,7 +3436,11 @@ components:
         println(openAPI)
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
-        val request = HttpRequest("POST", "/data", body = parsedValue("""{"Data": {"10": {"name": "Jill"}, "20": {"name": "Jack"}}}"""))
+        val request = HttpRequest(
+            "POST",
+            "/data",
+            body = parsedValue("""{"Data": {"10": {"name": "Jill"}, "20": {"name": "Jack"}}}""")
+        )
         val response = HttpResponse.OK
 
         val stub: HttpStubData = feature.matchingStub(request, response)
@@ -3260,15 +3472,26 @@ components:
         println(openAPIYaml)
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(this.matches(
-                HttpRequest(
-                    "GET",
-                    "/"
-                ),
-                HttpResponse.OK(body = parsedJSON("""{"10": {"name": "Jane"}}""")
-            ))).isTrue
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "GET",
+                        "/"
+                    ),
+                    HttpResponse.OK(
+                        body = parsedJSON("""{"10": {"name": "Jane"}}""")
+                    )
+                )
+            ).isTrue
         }
 
+    }
+
+    @Test
+    fun `should resolve ref to another file`() {
+        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE_WITH_REFERENCE)
+        assertThat(openApiSpecification.toScenarioInfos().size).isEqualTo(1)
+        assertThat(openApiSpecification.patterns["(Pet)"]).isNotNull
     }
 
     private fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {

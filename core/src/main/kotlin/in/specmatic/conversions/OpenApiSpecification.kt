@@ -18,6 +18,7 @@ import io.swagger.v3.oas.models.parameters.QueryParameter
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.parser.OpenAPIV3Parser
+import io.swagger.v3.parser.core.models.ParseOptions
 import java.io.File
 
 class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI) : IncludedSpecification {
@@ -40,7 +41,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         fun fromFile(openApiFile: String): OpenApiSpecification {
-            val openApi = OpenAPIV3Parser().read(openApiFile)
+            val parseOptions = ParseOptions();
+            parseOptions.isResolve = true;
+            val openApi = OpenAPIV3Parser().read(openApiFile, null, parseOptions)
             return OpenApiSpecification(openApiFile, openApi)
         }
 

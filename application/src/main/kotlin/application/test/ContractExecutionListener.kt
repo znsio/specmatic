@@ -1,5 +1,6 @@
 package application.test
 
+import `in`.specmatic.core.log.logger
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
@@ -45,6 +46,9 @@ class ContractExecutionListener : TestExecutionListener {
             TestExecutionResult.Status.FAILED -> {
                 failure++
                 printAndLogFailure(testExecutionResult, testIdentifier)
+            }
+            else -> {
+                logger.debug("A test called \"${testIdentifier?.displayName}\" ran but the test execution result was null. Please inform the Specmatic developer.")
             }
         }
     }

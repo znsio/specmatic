@@ -7,6 +7,13 @@ import org.junit.platform.launcher.TestIdentifier
 import org.junit.platform.launcher.TestPlan
 import kotlin.system.exitProcess
 
+fun getContractExecutionPrinter(): ContractExecutionPrinter {
+    if(System.getenv("SPECMATIC_COLOR") != "1")
+        return MonochromePrinter()
+
+    return if(System.console() == null) MonochromePrinter() else ColorPrinter()
+}
+
 class ContractExecutionListener : TestExecutionListener {
     private var success: Int = 0
     private var failure: Int = 0
@@ -16,7 +23,7 @@ class ContractExecutionListener : TestExecutionListener {
 
     private var couldNotStart = false;
 
-    private val colorPrinter: ContractExecutionPrinter = if(System.console() == null) MonochromePrinter() else ColorPrinter()
+    private val colorPrinter: ContractExecutionPrinter = getContractExecutionPrinter()
 
     override fun executionSkipped(testIdentifier: TestIdentifier?, reason: String?) {
         super.executionSkipped(testIdentifier, reason)

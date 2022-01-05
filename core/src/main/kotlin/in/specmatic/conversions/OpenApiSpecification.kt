@@ -151,7 +151,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
 
         return MatchSuccess(specmaticScenarioInfo to openApiScenarioInfos.map {
-            it.copy(httpRequestPattern = it.httpRequestPattern.copy(urlMatcher = specmaticScenarioInfo.httpRequestPattern.urlMatcher))
+            val queryPattern = it.httpRequestPattern.urlMatcher?.queryPattern ?: emptyMap()
+            val urlMatcher = specmaticScenarioInfo.httpRequestPattern.urlMatcher?.copy(queryPattern = queryPattern)
+            val httpRequestPattern = it.httpRequestPattern.copy(urlMatcher = urlMatcher)
+            it.copy(httpRequestPattern = httpRequestPattern)
         })
     }
 

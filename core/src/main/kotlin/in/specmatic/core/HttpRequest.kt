@@ -162,6 +162,11 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
                 httpRequestBuilder.header(key, value)
             }
 
+        httpRequestBuilder.url.let { url ->
+            if(url.port == DEFAULT_PORT || url.port == url.protocol.defaultPort)
+                httpRequestBuilder.header("Host", url.authority)
+        }
+
         httpRequestBuilder.body = when {
             formFields.isNotEmpty() -> {
                 val parameters = formFields.mapValues { listOf(it.value) }.toList()

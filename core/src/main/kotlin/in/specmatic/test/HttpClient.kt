@@ -1,6 +1,20 @@
 package `in`.specmatic.test
 
-import io.ktor.client.HttpClient
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import `in`.specmatic.core.HttpRequest
+import `in`.specmatic.core.HttpResponse
+import `in`.specmatic.core.log.HttpLogMessage
+import `in`.specmatic.core.log.LogMessage
+import `in`.specmatic.core.log.consoleLog
+import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.startLinesWith
+import `in`.specmatic.core.utilities.valueMapToPlainJsonString
+import `in`.specmatic.core.value.EmptyString
+import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.value.Value
+import `in`.specmatic.stub.toParams
 import io.ktor.client.features.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
@@ -11,24 +25,6 @@ import io.ktor.http.content.*
 import io.ktor.util.*
 import io.ktor.utils.io.charsets.*
 import kotlinx.coroutines.runBlocking
-import org.apache.http.conn.ssl.NoopHostnameVerifier
-import org.apache.http.conn.ssl.TrustSelfSignedStrategy
-import org.apache.http.ssl.SSLContextBuilder
-import `in`.specmatic.core.log.consoleLog
-import `in`.specmatic.core.*
-import `in`.specmatic.core.HttpRequest
-import `in`.specmatic.core.HttpResponse
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.utilities.valueMapToPlainJsonString
-import `in`.specmatic.core.value.EmptyString
-import `in`.specmatic.core.value.Value
-import `in`.specmatic.core.log.HttpLogMessage
-import `in`.specmatic.core.log.LogMessage
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.stub.toParams
-import io.ktor.client.engine.apache.*
 import java.net.URL
 import java.util.*
 import java.util.zip.GZIPInputStream
@@ -122,34 +118,6 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
                     log(serverStateLog)
                 }
             }
-        }
-    }
-}
-
-interface HttpClientFactory {
-    fun create(timeout: Int): HttpClient
-}
-
-object RealHttpClientFactory: HttpClientFactory {
-    override fun create(timeout: Int): HttpClient = HttpClient(Apache) {
-        expectSuccess = false
-
-        followRedirects = false
-
-        engine {
-            customizeClient {
-                setSSLContext(
-                    SSLContextBuilder
-                        .create()
-                        .loadTrustMaterial(TrustSelfSignedStrategy())
-                        .build()
-                )
-                setSSLHostnameVerifier(NoopHostnameVerifier())
-            }
-        }
-
-        install(HttpTimeout) {
-            requestTimeoutMillis = (timeout * 1000).toLong()
         }
     }
 }

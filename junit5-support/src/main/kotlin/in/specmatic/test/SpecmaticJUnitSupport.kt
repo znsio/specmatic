@@ -4,10 +4,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.utilities.contractTestPathsFrom
-import `in`.specmatic.core.utilities.createIfDoesNotExist
-import `in`.specmatic.core.utilities.exitIfDoesNotExist
-import `in`.specmatic.core.utilities.loadConfigJSON
+import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
@@ -15,6 +12,22 @@ import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import java.io.File
+
+interface HTTPTestTargetInvoker {
+    fun execute(contractTest: ContractTest, timeout: Int): Result
+}
+
+class TargetBaseURL(private val testBaseURL: String): HTTPTestTargetInvoker {
+    override fun execute(contractTest: ContractTest, timeout: Int): Result {
+        return contractTest.runTest(testBaseURL, timeout)
+    }
+}
+
+class TargetHostAndPort(private val host: String?, private val port: String?): HTTPTestTargetInvoker {
+    override fun execute(contractTest: ContractTest, timeout: Int): Result {
+        return contractTest.runTest(host, port, timeout)
+    }
+}
 
 open class SpecmaticJUnitSupport {
     companion object {
@@ -47,6 +60,14 @@ open class SpecmaticJUnitSupport {
         return envConfig
     }
 
+    private fun loadExceptionAsTestError(e: Throwable): Collection<DynamicTest> {
+        return listOf(DynamicTest.dynamicTest("Load Error") {
+            testsNames.add("Load Error")
+            logger.log(e)
+            ResultAssert.assertThat(Result.Failure(exceptionCauseMessage(e))).isSuccess()
+        })
+    }
+
     @TestFactory
     fun contractAsTest(): Collection<DynamicTest> {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
@@ -63,9 +84,8 @@ open class SpecmaticJUnitSupport {
         val envConfig = getEnvConfig(System.getProperty(ENV_NAME))
         val testConfig = try {
             loadTestConfig(envConfig).withVariablesFromFilePath(System.getProperty(VARIABLES_FILE_NAME))
-        } catch (e: Exception) {
-            logger.log(e)
-            throw e
+        } catch (e: Throwable) {
+            return loadExceptionAsTestError(e)
         }
 
         val testScenarios = try {
@@ -85,23 +105,23 @@ open class SpecmaticJUnitSupport {
                 }
             }
         } catch(e: ContractException) {
-            println(e.report())
-            throw e
+            return loadExceptionAsTestError(e)
         } catch(e: Throwable) {
-            logger.log(e)
-            throw e
+            return loadExceptionAsTestError(e)
         } finally {
             workingDirectory.delete()
+        }
+
+        val invoker = when(val testBaseURL = System.getProperty(TEST_BASE_URL)) {
+            null -> TargetHostAndPort(System.getProperty(HOST), System.getProperty(PORT))
+            else -> TargetBaseURL(testBaseURL)
         }
 
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {
                 testsNames.add(testScenario.testDescription())
 
-                val result: Result = when(val testBaseURL = System.getProperty(TEST_BASE_URL)) {
-                    null -> testScenario.runTest(System.getProperty(HOST), System.getProperty(PORT), timeout)
-                    else -> testScenario.runTest(testBaseURL, timeout)
-                }
+                val result: Result = invoker.execute(testScenario, timeout)
 
                 when {
                     shouldBeIgnored(result) -> {

@@ -3,7 +3,10 @@ package `in`.specmatic.test
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.Examples
+import `in`.specmatic.core.pattern.Row
+import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
@@ -12,22 +15,6 @@ import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import java.io.File
-
-interface HTTPTestTargetInvoker {
-    fun execute(contractTest: ContractTest, timeout: Int): Result
-}
-
-class TargetBaseURL(private val testBaseURL: String): HTTPTestTargetInvoker {
-    override fun execute(contractTest: ContractTest, timeout: Int): Result {
-        return contractTest.runTest(testBaseURL, timeout)
-    }
-}
-
-class TargetHostAndPort(private val host: String?, private val port: String?): HTTPTestTargetInvoker {
-    override fun execute(contractTest: ContractTest, timeout: Int): Result {
-        return contractTest.runTest(host, port, timeout)
-    }
-}
 
 open class SpecmaticJUnitSupport {
     companion object {

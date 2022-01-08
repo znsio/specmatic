@@ -14,6 +14,8 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.optionalPattern
+import io.ktor.client.request.*
+import io.ktor.http.*
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 
@@ -170,5 +172,33 @@ internal class HttpRequestTest {
         val url = HttpRequest("GET", path).getURL(baseUrl)
 
         assertThat(url).isEqualTo("http://localhost/test")
+    }
+
+    @Test
+    fun `override the host header to exclude the port suffix when the default port is used`() {
+        val builderWithPort80 = HttpRequestBuilder().apply {
+            this.url.host = "test.com"
+            this.url.port = 80
+        }
+        HttpRequest("GET", "/").buildRequest(builderWithPort80)
+        assertThat(builderWithPort80.headers.get("Host")).isEqualTo("test.com")
+
+        val httpRequestBuilderWithHTTPS = HttpRequestBuilder().apply {
+            this.url.protocol = URLProtocol.HTTPS
+            this.url.host = "test.com"
+            this.url.port = 443
+        }
+        HttpRequest("GET", "/").buildRequest(httpRequestBuilderWithHTTPS)
+        assertThat(httpRequestBuilderWithHTTPS.headers.get("Host")).isEqualTo("test.com")
+    }
+
+    @Test
+    fun `by default do not override the host header unless a default port is used`() {
+        val httpRequestBuilder2 = HttpRequestBuilder().apply {
+            this.url.host = "test.com"
+            this.url.port = 8080
+        }
+        HttpRequest("GET", "/").buildRequest(httpRequestBuilder2)
+        assertThat(httpRequestBuilder2.headers.get("Host")).isNull()
     }
 }

@@ -1027,6 +1027,39 @@ Background:
         assertThat(flags["/services/nonJsonPayloadOnly POST executed"]).isEqualTo(1)
         assertThat(results.success()).isTrue
     }
+
+    @Test
+    fun `should not drop the query params declared in yaml when loading a test scenario from a wrapper spec`() {
+        val openAPISpec = """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/helloWithQueryParams.yaml            
+
+Scenario: zero should return not found
+  When GET /hello
+  Then status 200
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+
+        var executed = false
+
+        val result = executeTest(feature.scenarios.first(), object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                executed = true
+                assertThat(request.queryParams).containsKey("id")
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+        assertThat(executed).isTrue
+    }
 }
 
 data class Pet(

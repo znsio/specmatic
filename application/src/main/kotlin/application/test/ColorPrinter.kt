@@ -9,7 +9,7 @@ class ColorPrinter: ContractExecutionPrinter {
         val (_, aborted, failure) = testSummary
 
         val color = when {
-            failure > 0 -> Ansi.ansi().bgBrightRed().fgBlack()
+            failure > 0 -> Ansi.ansi().fgBrightRed()
             aborted > 0 -> Ansi.ansi().fgYellow()
             else -> Ansi.ansi().fgGreen()
         }

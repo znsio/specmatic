@@ -11,6 +11,6 @@ internal class ConsolePrinterTest {
             ConsolePrinter.print(StringLog("hello"))
         }
 
-        Assertions.assertThat(output.first).isEqualTo("hello")
+        Assertions.assertThat(output.first).startsWith("hello")
     }
 }

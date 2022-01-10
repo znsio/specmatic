@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 if [ -z "$1" ]
 then
 	echo Provide the version to be published as the first argument.

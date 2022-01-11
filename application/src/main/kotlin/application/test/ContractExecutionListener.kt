@@ -8,11 +8,16 @@ import org.junit.platform.launcher.TestPlan
 import kotlin.system.exitProcess
 
 fun getContractExecutionPrinter(): ContractExecutionPrinter {
-    if(System.getenv("SPECMATIC_COLOR") != "1")
-        return MonochromePrinter()
-
-    return if(System.console() == null) MonochromePrinter() else ColorPrinter()
+    return if(stdOutIsRedirected())
+        MonochromePrinter()
+    else if(colorIsRequested())
+        ColorPrinter()
+    else MonochromePrinter()
 }
+
+private fun colorIsRequested() = System.getenv("SPECMATIC_COLOR") == "1"
+
+private fun stdOutIsRedirected() = System.console() == null
 
 class ContractExecutionListener : TestExecutionListener {
     private var success: Int = 0

@@ -3688,15 +3688,192 @@ components:
             assertMatchesSnippet(xmlSnippet, xmlFeature)
         }
 
-        //TODO arrays of nodes / multiple
+        @Test
+        fun `xml contract with unwrapped xml node array marked required`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          type: object
+                          xml:
+                            name: products
+                          properties:
+                            id:
+                              type: array
+                              items:
+                                type: number
+                          required:
+                            - id
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<products><id>10</id><id>10</id></products>"""
+
+            assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with unwrapped xml node array which is not marked required`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          type: object
+                          xml:
+                            name: products
+                          properties:
+                            id:
+                              type: array
+                              items:
+                                type: number
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<products><id>10</id><id>10</id></products>"""
+
+            assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with unwrapped xml node array that specifies it's own name`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          type: object
+                          xml:
+                            name: products
+                          properties:
+                            id:
+                              type: array
+                              items:
+                                type: number
+                                xml:
+                                  name: productid
+                          required:
+                            - id
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<products><productid>10</productid><productid>10</productid></products>"""
+
+            assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with wrapped xml node array`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          type: array
+                          items:
+                            type: number
+                          xml:
+                            wrapped: true
+                            name: products
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<products><products>10</products><products>10</products></products>"""
+
+            assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with wrapped xml node array with items having their own name`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          type: array
+                          items:
+                            type: number
+                            xml:
+                              name: 'id'
+                          xml:
+                            wrapped: true
+                            name: products
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<products><id>10</id><id>10</id></products>"""
+
+            assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        //TODO array item as child of an object
         //TODO XML types
 
         //TODO namespaces and namespace prefixes for nodes
         //TODO namespace prefixes for attributes
 
         private fun assertMatchesSnippet(xmlSnippet: String, xmlFeature: Feature) {
-            val request = HttpRequest("POST", "/users", body = parsedValue(xmlSnippet))
+            assertMatchesSnippet("/users", xmlSnippet, xmlFeature)
+        }
 
+        private fun assertMatchesSnippet(path: String, xmlSnippet: String, xmlFeature: Feature) {
+            val request = HttpRequest("POST", path, body = parsedValue(xmlSnippet))
             val stubData = xmlFeature.matchingStub(request, HttpResponse.OK)
 
             val stubMatchResult = stubData.requestType.body.matches(parsedValue(xmlSnippet), Resolver())

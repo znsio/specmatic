@@ -6,6 +6,7 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import io.cucumber.messages.types.Step
@@ -366,7 +367,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     toJsonObjectPattern(schema, patternName, typeStack)
                 }
             }
-            is ArraySchema -> JSONArrayPattern(listOf(toSpecmaticPattern(schema.items, typeStack)))
+            is ArraySchema -> {
+                if(schema.xml?.name != null) {
+                    toXMLPattern(schema)
+                } else {
+
+                    JSONArrayPattern(listOf(toSpecmaticPattern(schema.items, typeStack)))
+                }
+            }
             is ComposedSchema -> {
                 if(schema.allOf != null) {
                     val schemaProperties = schema.allOf.map { constituentSchema ->
@@ -433,40 +441,78 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun toXMLPattern(schema: Schema<Any>, nodeNameFromProperty: String = ""): XMLPattern {
         val name = schema.xml?.name ?: nodeNameFromProperty
 
-        val nodeProperties = schema.properties.filter { entry ->
-            entry.value.xml?.attribute != true
-        }
+        return when(schema) {
+            is ObjectSchema -> {
+                val nodeProperties = schema.properties.filter { entry ->
+                    entry.value.xml?.attribute != true
+                }
 
-        val nodes = nodeProperties.map { (propertyName: String, propertySchema) ->
-            val type = when (propertySchema.type) {
-                in primitiveOpenAPITypes -> {
-                    val innerPattern = DeferredPattern(primitiveOpenAPITypes.getValue(propertySchema.type))
-                    XMLPattern(XMLTypeData(propertyName, propertyName, emptyMap(), listOf(innerPattern)))
+                val nodes = nodeProperties.map { (propertyName: String, propertySchema) ->
+                    val type = when (propertySchema.type) {
+                        in primitiveOpenAPITypes -> {
+                            val innerPattern = DeferredPattern(primitiveOpenAPITypes.getValue(propertySchema.type))
+                            XMLPattern(XMLTypeData(propertyName, propertyName, emptyMap(), listOf(innerPattern)))
+                        }
+                        else -> {
+                            toXMLPattern(propertySchema, propertyName)
+                        }
+                    }
+
+                    val optionalAttribute = if(propertyName !in (schema.required ?: emptyList<String>()))
+                        mapOf(OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(OPTIONAL_ATTRIBUTE_VALUE)))
+                    else
+                        emptyMap()
+
+                    type.copy(pattern = type.pattern.copy(attributes = optionalAttribute.plus(type.pattern.attributes)))
                 }
-                else -> {
-                    toXMLPattern(propertySchema, propertyName)
+
+                val attributeProperties = schema.properties.filter { entry ->
+                    entry.value.xml?.attribute == true
                 }
+
+                val attributes: Map<String, Pattern> = attributeProperties.map { (name, schema) ->
+                    name to toSpecmaticPattern(schema, emptyList())
+                }.toMap()
+
+                val xmlTypeData = XMLTypeData(name, name, attributes, nodes)
+
+                XMLPattern(xmlTypeData)
             }
+            is ArraySchema -> {
+                val repeatingSchema = schema.items
 
-            val optionalAttribute = if(propertyName !in (schema.required ?: emptyList<String>()))
-                mapOf(OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(OPTIONAL_ATTRIBUTE_VALUE)))
-            else
-                emptyMap()
+                val repeatingType = when(repeatingSchema.type) {
+                    in primitiveOpenAPITypes -> {
+                        val innerPattern = DeferredPattern(primitiveOpenAPITypes.getValue(repeatingSchema.type))
 
-            type.copy(pattern = type.pattern.copy(attributes = type.pattern.attributes.plus(optionalAttribute)))
+                        val innerName = repeatingSchema.xml?.name ?: name
+
+                        XMLPattern(XMLTypeData(innerName, innerName, emptyMap(), listOf(innerPattern)))
+                    }
+                    else -> {
+                        toXMLPattern(repeatingSchema, name)
+                    }
+                }.let { repeatingType ->
+                    repeatingType.copy(
+                        pattern = repeatingType.pattern.copy(
+                            attributes = repeatingType.pattern.attributes.plus(
+                                OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(MULTIPLE_ATTRIBUTE_VALUE))
+                            )
+                        )
+                    )
+                }
+
+                if(schema.xml?.wrapped == true) {
+                    val wrappedName = schema.xml?.name ?: nodeNameFromProperty
+                    val wrapperTypeData = XMLTypeData(wrappedName, wrappedName, emptyMap(), listOf(repeatingType))
+                    XMLPattern(wrapperTypeData)
+                } else
+                    repeatingType
+            }
+            else -> {
+                throw ContractException("Node not recognized as XML type: ${schema.type}")
+            }
         }
-
-        val attributeProperties = schema.properties.filter { entry ->
-            entry.value.xml?.attribute == true
-        }
-
-        val attributes: Map<String, Pattern> = attributeProperties.map { (name, schema) ->
-            name to toSpecmaticPattern(schema, emptyList())
-        }.toMap()
-
-        val xmlTypeData = XMLTypeData(name, name, attributes, nodes)
-
-        return XMLPattern(xmlTypeData)
     }
 
     private val primitiveOpenAPITypes = mapOf("string" to "(string)", "number" to "(number)", "integer" to "(number)", "boolean" to "(boolean)")

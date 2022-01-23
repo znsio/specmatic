@@ -23,7 +23,7 @@ import java.io.File
 
 class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI) : IncludedSpecification {
     companion object {
-        fun fromFile(openApiFilePath: String, relativeTo: String): OpenApiSpecification {
+        fun fromFile(openApiFilePath: String, relativeTo: String = ""): OpenApiSpecification {
             val openApiFile = File(openApiFilePath).let { openApiFile ->
                 if (openApiFile.isAbsolute) {
                     openApiFile
@@ -32,18 +32,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 }
             }
 
-            val openApiYAMLContent = openApiFile.readText()
-
-            return OpenApiSpecification(
-                openApiFile.canonicalPath,
-                OpenAPIV3Parser().readContents(openApiYAMLContent).openAPI
-            )
+            return fromFile(openApiFile.canonicalPath)
         }
 
         fun fromFile(openApiFile: String): OpenApiSpecification {
-            val parseOptions = ParseOptions();
-            parseOptions.isResolve = true;
-            val openApi = OpenAPIV3Parser().read(openApiFile, null, parseOptions)
+            val openApi = OpenAPIV3Parser().read(openApiFile, null, resolveExternalReferences())
             return OpenApiSpecification(openApiFile, openApi)
         }
 
@@ -51,6 +44,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             val openApi = OpenAPIV3Parser().readContents(yamlContent).openAPI
             return OpenApiSpecification(filePath, openApi)
         }
+
+        private fun resolveExternalReferences(): ParseOptions = ParseOptions().also { it.isResolve = true }
     }
 
     val patterns = mutableMapOf<String, Pattern>()
@@ -245,7 +240,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
         return responses.orEmpty().map { (status, response) ->
             val headersMap = response.headers.orEmpty().map { (headerName, header) ->
-                toSpecmaticParamName(header.required != true, headerName) to toSpecmaticPattern(header.schema, emptyList())
+                toSpecmaticParamName(header.required != true, headerName) to toSpecmaticPattern(
+                    header.schema,
+                    emptyList()
+                )
             }.toMap()
             when (val content = response.content) {
                 null -> listOf(
@@ -355,7 +353,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             is DateSchema -> StringPattern()
             is BooleanSchema -> BooleanPattern
             is ObjectSchema -> {
-                if(schema.additionalProperties != null) {
+                if (schema.additionalProperties != null) {
                     toDictionaryPattern(schema, typeStack, patternName)
                 } else {
                     toJsonObjectPattern(schema, patternName, typeStack)
@@ -363,7 +361,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
             is ArraySchema -> JSONArrayPattern(listOf(toSpecmaticPattern(schema.items, typeStack)))
             is ComposedSchema -> {
-                if(schema.allOf != null) {
+                if (schema.allOf != null) {
                     val schemaProperties = schema.allOf.map { constituentSchema ->
                         val schemaToProcess = if (constituentSchema.`$ref` != null) {
                             val (_, referredSchema) = resolveReferenceToSchema(constituentSchema.`$ref`)
@@ -383,7 +381,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 }
             }
             is Schema -> {
-                if(schema.additionalProperties != null) {
+                if (schema.additionalProperties != null) {
                     toDictionaryPattern(schema, typeStack, patternName)
                 } else {
                     val component = schema.`$ref`
@@ -431,7 +429,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     ): DictionaryPattern {
         val valueSchema = schema.additionalProperties as Schema<Any>
 
-        if(valueSchema.`$ref` == null)
+        if (valueSchema.`$ref` == null)
             throw ContractException("Inline dictionaries not yet supported")
 
         return DictionaryPattern(
@@ -470,7 +468,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         if (patternName.isNotEmpty()) {
             if (typeStack.contains(patternName) &&
                 (propertyType.`$ref`.orEmpty().endsWith(patternName)
-                || (propertyType is ArraySchema && propertyType.items?.`$ref`?.endsWith(patternName) == true))
+                        || (propertyType is ArraySchema && propertyType.items?.`$ref`?.endsWith(patternName) == true))
             ) toSpecmaticParamName(
                 optional,
                 propertyName
@@ -529,7 +527,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         val queryParameters = parameters.filterIsInstance(QueryParameter::class.java).joinToString("&") {
-            val specmaticPattern = toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name)
+            val specmaticPattern =
+                toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name)
             val patternName = when {
                 it.schema.enum != null -> specmaticPattern.run { "($typeAlias)" }
                 else -> specmaticPattern

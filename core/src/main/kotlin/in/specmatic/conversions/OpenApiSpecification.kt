@@ -11,7 +11,6 @@ import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
-import io.ktor.utils.io.*
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
@@ -273,7 +272,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 "default" -> 400
                                 else -> status.toInt()
                             },
-                            body = toSpecmaticPattern(mediaType)
+                            body = when(contentType) {
+                                "application/xml" -> toXMLPattern(mediaType)
+                                else -> toSpecmaticPattern(mediaType)
+                            }
                         )
                     )
                 }
@@ -289,32 +291,28 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema, emptyList())
         }.toMap()
 
+        val urlMatcher = toURLMatcherWithOptionalQueryParams(path)
+        val headersPattern = HttpHeadersPattern(headersMap)
+        val requestPattern = HttpRequestPattern(
+            urlMatcher = urlMatcher,
+            method = httpMethod,
+            headersPattern = headersPattern
+        )
+
         return when (operation.requestBody) {
             null -> listOf(
-                HttpRequestPattern(
-                    urlMatcher = toURLMatcherWithOptionalQueryParams(path),
-                    method = httpMethod,
-                    headersPattern = HttpHeadersPattern(headersMap)
-                )
+                requestPattern
             )
             else -> operation.requestBody.content.map { (contentType, mediaType) ->
-                val formData = contentType == "application/x-www-form-urlencoded"
-                when {
-                    formData -> {
-                        HttpRequestPattern(
-                            urlMatcher = toURLMatcherWithOptionalQueryParams(path),
-                            method = httpMethod,
-                            headersPattern = HttpHeadersPattern(headersMap),
-                            formFieldsPattern = toFormFields(mediaType)
-                        )
+                when(contentType.lowercase()) {
+                    "application/x-www-form-urlencoded" -> {
+                        requestPattern.copy(formFieldsPattern = toFormFields(mediaType))
+                    }
+                    "application/xml" -> {
+                        requestPattern.copy(body = toXMLPattern(mediaType))
                     }
                     else -> {
-                        HttpRequestPattern(
-                            urlMatcher = toURLMatcherWithOptionalQueryParams(path),
-                            method = httpMethod,
-                            headersPattern = HttpHeadersPattern(headersMap),
-                            body = toSpecmaticPattern(mediaType)
-                        )
+                        requestPattern.copy(body = toSpecmaticPattern(mediaType))
                     }
                 }
             }
@@ -438,7 +436,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
     }
 
-    private fun toXMLPattern(schema: Schema<Any>, nodeNameFromProperty: String = ""): XMLPattern {
+    private fun toXMLPattern(mediaType: MediaType): Pattern {
+        return toXMLPattern(mediaType.schema)
+    }
+
+    private fun toXMLPattern(schema: Schema<Any>, nodeNameFromProperty: String? = null): Pattern {
         val name = schema.xml?.name ?: nodeNameFromProperty
 
         return when(schema) {
@@ -463,7 +465,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     else
                         emptyMap()
 
-                    type.copy(pattern = type.pattern.copy(attributes = optionalAttribute.plus(type.pattern.attributes)))
+                    if(type is XMLPattern)
+                        type.copy(pattern = type.pattern.copy(attributes = optionalAttribute.plus(type.pattern.attributes)))
+                    else
+                        type
                 }
 
                 val attributeProperties = schema.properties.filter { entry ->
@@ -474,7 +479,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     name to toSpecmaticPattern(schema, emptyList())
                 }.toMap()
 
-                val xmlTypeData = XMLTypeData(name, name, attributes, nodes)
+                val xmlTypeData = XMLTypeData(name ?:
+                    throw ContractException("Could not determine name for an xml node"),
+                        name, attributes, nodes)
 
                 XMLPattern(xmlTypeData)
             }
@@ -487,30 +494,50 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                         val innerName = repeatingSchema.xml?.name ?: name
 
-                        XMLPattern(XMLTypeData(innerName, innerName, emptyMap(), listOf(innerPattern)))
+                        XMLPattern(XMLTypeData(innerName ?: throw ContractException("Could not determine name for an xml node"), innerName, emptyMap(), listOf(innerPattern)))
                     }
                     else -> {
                         toXMLPattern(repeatingSchema, name)
                     }
                 }.let { repeatingType ->
-                    repeatingType.copy(
-                        pattern = repeatingType.pattern.copy(
-                            attributes = repeatingType.pattern.attributes.plus(
-                                OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(MULTIPLE_ATTRIBUTE_VALUE))
+                    if(repeatingType is XMLPattern)
+                        repeatingType.copy(
+                            pattern = repeatingType.pattern.copy(
+                                attributes = repeatingType.pattern.attributes.plus(
+                                    OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(MULTIPLE_ATTRIBUTE_VALUE))
+                                )
                             )
                         )
-                    )
+                    else
+                        repeatingType
                 }
 
                 if(schema.xml?.wrapped == true) {
                     val wrappedName = schema.xml?.name ?: nodeNameFromProperty
-                    val wrapperTypeData = XMLTypeData(wrappedName, wrappedName, emptyMap(), listOf(repeatingType))
+                    val wrapperTypeData = XMLTypeData(wrappedName ?: throw ContractException("Could not determine name for an xml node"), wrappedName, emptyMap(), listOf(repeatingType))
                     XMLPattern(wrapperTypeData)
                 } else
                     repeatingType
             }
             else -> {
-                throw ContractException("Node not recognized as XML type: ${schema.type}")
+                if(schema.`$ref` != null) {
+                    val component = schema.`$ref`
+                    val (componentName, componentSchema) = resolveReferenceToSchema(component)
+
+                    val typeName = "($componentName)"
+
+                    val nodeName = componentSchema.xml?.name ?: name ?: componentName
+
+                    val xmlRefType = XMLTypeData(nodeName, nodeName, mapOf(TYPE_ATTRIBUTE_NAME to ExactValuePattern(
+                        StringValue(
+                            componentName
+                        ))), emptyList())
+
+                    this.patterns[typeName] = toXMLPattern(componentSchema, componentName)
+
+                    XMLPattern(xmlRefType)
+                } else
+                    throw ContractException("Node not recognized as XML type: ${schema.type}")
             }
         }
     }

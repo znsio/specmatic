@@ -3829,7 +3829,7 @@ components:
         }
 
         @Test
-        fun `xml contract with wrapped xml node array with items having their own name`() {
+        fun `xml contract with body defined by ref having xml name`() {
             val xmlContract = """
             openapi: 3.0.3
             info:
@@ -3845,25 +3845,321 @@ components:
                     content:
                       application/xml:
                         schema:
-                          type: array
-                          items:
-                            type: number
-                            xml:
-                              name: 'id'
-                          xml:
-                            wrapped: true
-                            name: products
+                          ${'$'}ref: '#/components/schemas/RequestBody'
+            components:
+              schemas:
+                RequestBody:
+                  type: object
+                  xml:
+                    name: products
+                  properties:
+                    id:
+                      type: number
         """.trimIndent()
 
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
 
-            val xmlSnippet = """<products><id>10</id><id>10</id></products>"""
+            val xmlSnippet = """<products><id>10</id></products>"""
 
             assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
         }
 
-        //TODO array item as child of an object
-        //TODO XML types
+        @Test
+        fun `xml contract with body defined by ref having no xml name`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/products'
+            components:
+              schemas:
+                products:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<products><id>10</id></products>"""
+
+            assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with xml response body`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                get:
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/xml:
+                          schema:
+                            ${'$'}ref: '#/components/schemas/products'
+            components:
+                  schemas:
+                    products:
+                      type: object
+                      properties:
+                        id:
+                          type: number
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<products><id>10</id></products>"""
+
+            assertMatchesResponseSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with xml ref within an xml payload`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/user':
+                get:
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/xml:
+                          schema:
+                            type: object
+                            xml:
+                              name: user
+                            properties:
+                              id:
+                                type: number
+                              company:
+                                type: object
+                                properties:
+                                  id:
+                                    type: number
+                                  address:
+                                    ${"$"}ref: '#/components/schemas/AddressData' 
+            components:
+                  schemas:
+                    AddressData:
+                      type: object
+                      properties:
+                        flat:
+                          type: string
+                        street:
+                          type: string
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<user><id>10</id><company><id>100</id><address><flat>221B</flat><street>Baker Street</street></address></company></user>"""
+
+            assertMatchesResponseSnippet("/user", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with xml ref within an xml payload nested at the second level`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/user':
+                get:
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/xml:
+                          schema:
+                            type: object
+                            xml:
+                              name: user
+                            properties:
+                              id:
+                                type: number
+                              address:
+                                ${"$"}ref: '#/components/schemas/AddressData' 
+            components:
+                  schemas:
+                    AddressData:
+                      type: object
+                      properties:
+                        flat:
+                          type: string
+                        street:
+                          type: string
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<user><id>10</id><address><flat>221B</flat><street>Baker Street</street></address></user>"""
+
+            assertMatchesResponseSnippet("/user", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with array items specified as ref`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/user':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          type: object
+                          xml:
+                            name: users
+                          properties:
+                            productid:
+                              type: array
+                              xml:
+                                name: user
+                              items:
+                                ${"$"}ref: '#/components/schemas/UserData'
+            components:
+              schemas:
+                UserData:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    name:
+                      type: string
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<users><user><id>10</id><name>John Doe</name></user><user><id>20</id><name>Jane Doe</name></user></users>"""
+
+            assertMatchesSnippet("/user", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with value specified as ref pointing to an array type`() {
+            val xmlContract1 = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/user':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          type: object
+                          xml:
+                            name: users
+                          properties:
+                            user:
+                              ${'$'}ref: '#/components/schemas/UserArray'
+                              type: array
+                              items:
+                                ${"$"}ref: '#/components/schemas/UserData'
+            components:
+              schemas:
+                UserData:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    name:
+                      type: string
+                UserArray:
+                  type: array
+                  items:
+                    ${"$"}ref: '#/components/schemas/UserData'
+                  xml:
+                    name: user
+        """.trimIndent()
+
+        val xmlContract2 = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/user':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          type: object
+                          xml:
+                            name: users
+                          properties:
+                            user:
+                              ${'$'}ref: '#/components/schemas/UserArray'
+                              type: array
+                              xml:
+                                name: user
+                              items:
+                                ${"$"}ref: '#/components/schemas/UserData'
+            components:
+              schemas:
+                UserData:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    name:
+                      type: string
+                UserArray:
+                  type: array
+                  items:
+                    ${"$"}ref: '#/components/schemas/UserData'
+        """.trimIndent()
+
+            for(xmlContract in listOf(xmlContract1, xmlContract2)) {
+                val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+                val xmlSnippet =
+                    """<users><user><id>10</id><name>John Doe</name></user><user><id>20</id><name>Jane Doe</name></user></users>"""
+
+                assertMatchesSnippet("/user", xmlSnippet, xmlFeature)
+            }
+        }
+
+        //TODO recursive type definition
 
         //TODO namespaces and namespace prefixes for nodes
         //TODO namespace prefixes for attributes
@@ -3876,7 +4172,16 @@ components:
             val request = HttpRequest("POST", path, body = parsedValue(xmlSnippet))
             val stubData = xmlFeature.matchingStub(request, HttpResponse.OK)
 
-            val stubMatchResult = stubData.requestType.body.matches(parsedValue(xmlSnippet), Resolver())
+            val stubMatchResult = stubData.requestType.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
+
+            assertThat(stubMatchResult).isInstanceOf(Result.Success::class.java)
+        }
+
+        private fun assertMatchesResponseSnippet(path: String, xmlSnippet: String, xmlFeature: Feature) {
+            val request = HttpRequest("GET", path)
+            val stubData = xmlFeature.matchingStub(request, HttpResponse.OK(body = parsedValue(xmlSnippet)))
+
+            val stubMatchResult = stubData.responsePattern.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
 
             assertThat(stubMatchResult).isInstanceOf(Result.Success::class.java)
         }

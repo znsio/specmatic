@@ -360,14 +360,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 if(schema.additionalProperties != null) {
                     toDictionaryPattern(schema, typeStack, patternName)
                 } else if(schema.xml?.name != null) {
-                    toXMLPattern(schema)
+                    toXMLPattern(schema, typeStack = typeStack)
                 } else {
                     toJsonObjectPattern(schema, patternName, typeStack)
                 }
             }
             is ArraySchema -> {
                 if(schema.xml?.name != null) {
-                    toXMLPattern(schema)
+                    toXMLPattern(schema, typeStack = typeStack)
                 } else {
 
                     JSONArrayPattern(listOf(toSpecmaticPattern(schema.items, typeStack)))
@@ -437,10 +437,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun toXMLPattern(mediaType: MediaType): Pattern {
-        return toXMLPattern(mediaType.schema)
+        return toXMLPattern(mediaType.schema, typeStack = emptyList())
     }
 
-    private fun toXMLPattern(schema: Schema<Any>, nodeNameFromProperty: String? = null): Pattern {
+    private fun toXMLPattern(schema: Schema<Any>, nodeNameFromProperty: String? = null, typeStack: List<String>): Pattern {
         val name = schema.xml?.name ?: nodeNameFromProperty
 
         return when(schema) {
@@ -456,7 +456,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             XMLPattern(XMLTypeData(propertyName, propertyName, emptyMap(), listOf(innerPattern)))
                         }
                         else -> {
-                            toXMLPattern(propertySchema, propertyName)
+                            toXMLPattern(propertySchema, propertyName, typeStack)
                         }
                     }
 
@@ -497,7 +497,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         XMLPattern(XMLTypeData(innerName ?: throw ContractException("Could not determine name for an xml node"), innerName, emptyMap(), listOf(innerPattern)))
                     }
                     else -> {
-                        toXMLPattern(repeatingSchema, name)
+                        toXMLPattern(repeatingSchema, name, typeStack)
                     }
                 }.let { repeatingType ->
                     if(repeatingType is XMLPattern)
@@ -528,12 +528,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                     val nodeName = componentSchema.xml?.name ?: name ?: componentName
 
+                    if(typeName !in typeStack)
+                        this.patterns[typeName] = toXMLPattern(componentSchema, componentName, typeStack.plus(typeName))
+
                     val xmlRefType = XMLTypeData(nodeName, nodeName, mapOf(TYPE_ATTRIBUTE_NAME to ExactValuePattern(
                         StringValue(
                             componentName
                         ))), emptyList())
-
-                    this.patterns[typeName] = toXMLPattern(componentSchema, componentName)
 
                     XMLPattern(xmlRefType)
                 } else

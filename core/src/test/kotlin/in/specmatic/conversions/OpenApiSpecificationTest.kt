@@ -4159,7 +4159,43 @@ components:
             }
         }
 
-        //TODO recursive type definition
+        @Test
+        fun `xml contract with recursive type definition`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/user':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/user'
+            components:
+              schemas:
+                user:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    name:
+                      type: string
+                    next:
+                      ${'$'}ref: '#/components/schemas/user'
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<user><id>10</id><name>John Doe</name><next><id>20</id><name>Jane Doe</name></next></user>"""
+
+            assertMatchesSnippet("/user", xmlSnippet, xmlFeature)
+        }
 
         //TODO namespaces and namespace prefixes for nodes
         //TODO namespace prefixes for attributes

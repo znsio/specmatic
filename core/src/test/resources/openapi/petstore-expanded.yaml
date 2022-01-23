@@ -27,13 +27,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: limit
-          in: query
-          description: maximum number of results to return
-          required: false
-          schema:
-            type: integer
-            format: int32
+        - $ref: './common.yaml#/components/parameters/limitParam'
       responses:
         '200':
           description: pet response
@@ -153,7 +147,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NewPet'
+              $ref: './common.yaml#/components/schemas/NewPet'
       responses:
         '201':
           description: pet response
@@ -241,17 +235,6 @@ components:
         rating:
           type: integer
           enum: [ 1, 2 ]
-
-    NewPet:
-      type: object
-      required:
-        - name
-      properties:
-        name:
-          type: string
-        tag:
-          type: string
-          nullable: true
 
     Tag:
       type: string

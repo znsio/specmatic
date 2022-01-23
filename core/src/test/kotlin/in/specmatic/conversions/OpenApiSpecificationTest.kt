@@ -4197,8 +4197,84 @@ components:
             assertMatchesSnippet("/user", xmlSnippet, xmlFeature)
         }
 
-        //TODO namespaces and namespace prefixes for nodes
-        //TODO namespace prefixes for attributes
+        @Test
+        fun `xml contract with prefix`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/user':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          type: object
+                          xml:
+                            name: user
+                            prefix: test
+                          properties:
+                            id:
+                              type: number
+                            name:
+                              type: string
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<test:user><id>10</id><name>John Doe</name></test:user>"""
+
+            assertMatchesSnippet("/user", xmlSnippet, xmlFeature)
+
+            val body = xmlFeature.scenarios.first().httpRequestPattern.body as XMLPattern
+            assertThat(body.pattern.realName).isEqualTo("test:user")
+        }
+
+        @Test
+        fun `xml contract with prefix and namespace`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/user':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          type: object
+                          xml:
+                            name: user
+                            prefix: test
+                            namespace: 'http://helloworld.com'
+                          properties:
+                            id:
+                              type: number
+                            name:
+                              type: string
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<test:user xmlns:test="http://helloworld.com"><id>10</id><name>John Doe</name></test:user>"""
+
+            assertMatchesSnippet("/user", xmlSnippet, xmlFeature)
+
+            val body = xmlFeature.scenarios.first().httpRequestPattern.body as XMLPattern
+            assertThat(body.pattern.realName).isEqualTo("test:user")
+            val testNamespaceAttribute = body.pattern.attributes.getValue("xmlns:test") as ExactValuePattern
+            assertThat(testNamespaceAttribute.pattern.toStringLiteral()).isEqualTo("http://helloworld.com")
+        }
 
         private fun assertMatchesSnippet(xmlSnippet: String, xmlFeature: Feature) {
             assertMatchesSnippet("/users", xmlSnippet, xmlFeature)

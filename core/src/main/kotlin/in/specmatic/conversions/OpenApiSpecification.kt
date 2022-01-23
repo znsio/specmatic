@@ -479,9 +479,17 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     name to toSpecmaticPattern(schema, emptyList())
                 }.toMap()
 
-                val xmlTypeData = XMLTypeData(name ?:
-                    throw ContractException("Could not determine name for an xml node"),
-                        name, attributes, nodes)
+                name ?: throw ContractException("Could not determine name for an xml node")
+
+                val namespaceAttributes: Map<String, ExactValuePattern> = if(schema.xml?.namespace != null && schema.xml?.prefix != null) {
+                    val attributeName = "xmlns:${schema.xml?.prefix}"
+                    val attributeValue = ExactValuePattern(StringValue(schema.xml.namespace))
+                    mapOf(attributeName to attributeValue)
+                } else {
+                    emptyMap()
+                }
+
+                val xmlTypeData = XMLTypeData(name, realName(schema, name), namespaceAttributes.plus(attributes), nodes)
 
                 XMLPattern(xmlTypeData)
             }
@@ -542,6 +550,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
         }
     }
+
+    private fun realName(schema: ObjectSchema, name: String): String =
+        if (schema.xml?.prefix != null) {
+            "${schema.xml?.prefix}:${name}"
+        } else {
+            name
+        }
 
     private val primitiveOpenAPITypes = mapOf("string" to "(string)", "number" to "(number)", "integer" to "(number)", "boolean" to "(boolean)")
 

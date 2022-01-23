@@ -44,7 +44,7 @@ fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook()): Feat
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
-        "yaml" -> OpenApiSpecification.fromFile(file.path).toFeature()
+        "yaml" -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path).toFeature()
         "wsdl" -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw ContractException("File extension of ${file.path} not recognized")

@@ -1,0 +1,22 @@
+openapi: 3.0.1
+components:
+  schemas:
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        tag:
+          type: string
+          nullable: true
+  parameters:
+    limitParam:
+      name: limit
+      in: query
+      description: maximum number of results to return
+      required: false
+      schema:
+        type: integer
+        format: int3

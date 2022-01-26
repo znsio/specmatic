@@ -49,8 +49,8 @@ dependencies {
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
-    implementation 'org.slf4j:slf4j-nop:1.7.33'
-    implementation 'org.apache.kafka:kafka-clients:3.0.0'
+    implementation 'org.slf4j:slf4j-nop:1.7.35'
+    implementation 'org.apache.kafka:kafka-clients:3.1.0'
 
     implementation 'org.apache.ant:ant-junit:1.10.12'
 

@@ -44,7 +44,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         fun fromYAML(yamlContent: String, filePath: String): OpenApiSpecification {
-            val openApi = OpenAPIV3Parser().readContents(yamlContent).openAPI
+            val openApi = OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences()).openAPI
             return OpenApiSpecification(filePath, openApi)
         }
 

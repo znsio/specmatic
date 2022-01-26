@@ -3797,7 +3797,7 @@ components:
         }
 
         @Test
-        fun `xml contract with wrapped xml node array`() {
+        fun `xml contract with wrapped xml node array that specifies wrapper name`() {
             val xmlContract = """
             openapi: 3.0.3
             info:
@@ -3824,6 +3824,156 @@ components:
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
 
             val xmlSnippet = """<products><products>10</products><products>10</products></products>"""
+
+            assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with wrapped xml node array that does not specify wrapper name`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/products'
+            components:
+              schemas:
+                products:
+                  type: array
+                  items:
+                    type: number
+                    xml:
+                      name: id
+                  xml:
+                    wrapped: true
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<products><id>10</id><id>10</id></products>"""
+
+            assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with wrapped xml node array that changes wrapper name but not member element name`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/product'
+            components:
+              schemas:
+                product:
+                  type: array
+                  items:
+                    type: number
+                  xml:
+                    wrapped: true
+                    name: products
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<products><products>10</products><products>10</products></products>"""
+
+            assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with wrapped xml node array that sets the array name without setting wrapper to true`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/product'
+            components:
+              schemas:
+                product:
+                  type: object
+                  properties:
+                    productdata:
+                      type: array
+                      items:
+                        type: number
+                      xml:
+                        name: products
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<product><productdata>10</productdata><productdata>10</productdata></product>"""
+
+            assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
+        }
+
+        @Test
+        fun `xml contract with wrapped xml node array defined in an object that sets the array name and sets wrapper to true`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                  requestBody:
+                    content:
+                      application/xml:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/productdata'
+            components:
+              schemas:
+                productdata:
+                  type: object
+                  properties:
+                    productinner:
+                      type: array
+                      items:
+                        type: number
+                      xml:
+                        name: products
+                        wrapped: true
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<productdata><products><products>10</products><products>10</products></products></productdata>"""
 
             assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
         }

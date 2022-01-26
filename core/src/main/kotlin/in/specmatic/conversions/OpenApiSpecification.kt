@@ -500,7 +500,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     in primitiveOpenAPITypes -> {
                         val innerPattern = DeferredPattern(primitiveOpenAPITypes.getValue(repeatingSchema.type))
 
-                        val innerName = repeatingSchema.xml?.name ?: name
+                        val innerName = repeatingSchema.xml?.name ?: if(schema.xml?.name != null && schema.xml?.wrapped == true) schema.xml.name else nodeNameFromProperty
 
                         XMLPattern(XMLTypeData(innerName ?: throw ContractException("Could not determine name for an xml node"), innerName, emptyMap(), listOf(innerPattern)))
                     }

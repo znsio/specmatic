@@ -5,13 +5,16 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.stub.HttpStubData
+import `in`.specmatic.test.TestExecutor
 import io.ktor.util.reflect.*
 import io.swagger.util.Yaml
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
 internal class OpenApiSpecificationTest {
@@ -4424,6 +4427,72 @@ components:
             assertThat(body.pattern.realName).isEqualTo("test:user")
             val testNamespaceAttribute = body.pattern.attributes.getValue("xmlns:test") as ExactValuePattern
             assertThat(testNamespaceAttribute.pattern.toStringLiteral()).isEqualTo("http://helloworld.com")
+        }
+
+        @Test
+        fun `run contract tests from an OpenAPI XML spec`(@TempDir dir: File) {
+            val contractString = """
+                openapi: 3.0.3
+                info:
+                  title: test-xml
+                  version: '1.0'
+                paths:
+                  '/users':
+                    post:
+                      responses:
+                        '200':
+                          description: OK
+                      requestBody:
+                        content:
+                          application/xml:
+                            schema:
+                              ${'$'}ref: '#/components/schemas/user'
+                components:
+                  schemas:
+                    user:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                      required:
+                        - id
+            """.trimIndent()
+
+            val contractFile = dir.canonicalFile.resolve("contract.yaml")
+            contractFile.writeText(contractString)
+
+            val wrapperSpecString = """
+                Feature: Test
+                  Background:
+                    Given openapi ./contract.yaml
+                    
+                  Scenario Outline: Test
+                    When POST /users
+                    Then status 200
+                    
+                    Examples:
+                    | user        |
+                    | <id>10</id> |
+            """.trimIndent()
+
+            val wrapperSpecFile = dir.canonicalFile.resolve("contract.spec")
+            wrapperSpecFile.writeText(wrapperSpecString)
+
+            val feature: Feature = parseContractFileToFeature(wrapperSpecFile.path)
+            var state = "not_called"
+
+            feature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.body.toStringLiteral()).isEqualTo("""<user><id>10</id></user>""")
+                    state = "called"
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(state).isEqualTo("called")
         }
 
         private fun assertMatchesSnippet(xmlSnippet: String, xmlFeature: Feature) {

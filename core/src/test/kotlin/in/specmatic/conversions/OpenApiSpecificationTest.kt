@@ -4471,8 +4471,8 @@ components:
                     Then status 200
                     
                     Examples:
-                    | user        |
-                    | <id>10</id> |
+                    | (user)                   |
+                    | <user><id>10</id></user> |
             """.trimIndent()
 
             val wrapperSpecFile = dir.canonicalFile.resolve("contract.spec")
@@ -4481,8 +4481,9 @@ components:
             val feature: Feature = parseContractFileToFeature(wrapperSpecFile.path)
             var state = "not_called"
 
-            feature.executeTests(object: TestExecutor {
+            val result: Results = feature.executeTests(object: TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.body.toStringLiteral())
                     assertThat(request.body.toStringLiteral()).isEqualTo("""<user><id>10</id></user>""")
                     state = "called"
                     return HttpResponse.OK
@@ -4491,6 +4492,10 @@ components:
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             })
+
+            println(result.report())
+
+            assertThat(result.success()).isTrue()
 
             assertThat(state).isEqualTo("called")
         }

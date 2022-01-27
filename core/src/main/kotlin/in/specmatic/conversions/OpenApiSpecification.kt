@@ -438,7 +438,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return toXMLPattern(mediaType.schema, typeStack = emptyList())
     }
 
-    private fun toXMLPattern(schema: Schema<Any>, nodeNameFromProperty: String? = null, typeStack: List<String>): Pattern {
+    private fun toXMLPattern(schema: Schema<Any>, nodeNameFromProperty: String? = null, typeStack: List<String>): XMLPattern {
         val name = schema.xml?.name ?: nodeNameFromProperty
 
         return when(schema) {
@@ -463,10 +463,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     else
                         emptyMap()
 
-                    if(type is XMLPattern)
-                        type.copy(pattern = type.pattern.copy(attributes = optionalAttribute.plus(type.pattern.attributes)))
-                    else
-                        type
+                    type.copy(pattern = type.pattern.copy(attributes = optionalAttribute.plus(type.pattern.attributes)))
                 }
 
                 val attributeProperties = schema.properties.filter { entry ->
@@ -506,16 +503,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         toXMLPattern(repeatingSchema, name, typeStack)
                     }
                 }.let { repeatingType ->
-                    if(repeatingType is XMLPattern)
-                        repeatingType.copy(
-                            pattern = repeatingType.pattern.copy(
-                                attributes = repeatingType.pattern.attributes.plus(
-                                    OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(MULTIPLE_ATTRIBUTE_VALUE))
-                                )
+                    repeatingType.copy(
+                        pattern = repeatingType.pattern.copy(
+                            attributes = repeatingType.pattern.attributes.plus(
+                                OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(MULTIPLE_ATTRIBUTE_VALUE))
                             )
                         )
-                    else
-                        repeatingType
+                    )
                 }
 
                 if(schema.xml?.wrapped == true) {

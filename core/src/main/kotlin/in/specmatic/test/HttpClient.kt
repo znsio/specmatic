@@ -40,7 +40,7 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
 
         val requestWithFileContent = request.loadFileContentIntoParts()
 
-        val httpLogMessage = HttpLogMessage()
+        val httpLogMessage = HttpLogMessage(targetServer = baseURL)
         httpLogMessage.logStartRequestTime()
 
         logger.debug("Starting request ${request.method} ${request.path}")

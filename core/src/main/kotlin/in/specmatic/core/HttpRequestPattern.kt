@@ -370,6 +370,11 @@ data class HttpRequestPattern(
                     else if(it.typeAlias?.let { isPatternToken(it) } == true && row.containsField(it.typeAlias!!)) {
                         val example = row.getField(it.typeAlias!!)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
+                    }
+                    else if(it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
+                        val referredType = "(${it.referredType})"
+                        val example = row.getField(referredType)
+                        listOf(ExactValuePattern(it.parse(example, resolver)))
                     } else {
                         body.newBasedOn(row, resolver)
                     }

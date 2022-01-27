@@ -6,6 +6,9 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
+import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
+import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
 import io.swagger.v3.oas.models.OpenAPI
@@ -41,7 +44,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         fun fromYAML(yamlContent: String, filePath: String): OpenApiSpecification {
-            val openApi = OpenAPIV3Parser().readContents(yamlContent).openAPI
+            val openApi = OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences()).openAPI
             return OpenApiSpecification(filePath, openApi)
         }
 
@@ -267,7 +270,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 "default" -> 400
                                 else -> status.toInt()
                             },
-                            body = toSpecmaticPattern(mediaType)
+                            body = when(contentType) {
+                                "application/xml" -> toXMLPattern(mediaType)
+                                else -> toSpecmaticPattern(mediaType)
+                            }
                         )
                     )
                 }
@@ -283,32 +289,28 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema, emptyList())
         }.toMap()
 
+        val urlMatcher = toURLMatcherWithOptionalQueryParams(path)
+        val headersPattern = HttpHeadersPattern(headersMap)
+        val requestPattern = HttpRequestPattern(
+            urlMatcher = urlMatcher,
+            method = httpMethod,
+            headersPattern = headersPattern
+        )
+
         return when (operation.requestBody) {
             null -> listOf(
-                HttpRequestPattern(
-                    urlMatcher = toURLMatcherWithOptionalQueryParams(path),
-                    method = httpMethod,
-                    headersPattern = HttpHeadersPattern(headersMap)
-                )
+                requestPattern
             )
             else -> operation.requestBody.content.map { (contentType, mediaType) ->
-                val formData = contentType == "application/x-www-form-urlencoded"
-                when {
-                    formData -> {
-                        HttpRequestPattern(
-                            urlMatcher = toURLMatcherWithOptionalQueryParams(path),
-                            method = httpMethod,
-                            headersPattern = HttpHeadersPattern(headersMap),
-                            formFieldsPattern = toFormFields(mediaType)
-                        )
+                when(contentType.lowercase()) {
+                    "application/x-www-form-urlencoded" -> {
+                        requestPattern.copy(formFieldsPattern = toFormFields(mediaType))
+                    }
+                    "application/xml" -> {
+                        requestPattern.copy(body = toXMLPattern(mediaType))
                     }
                     else -> {
-                        HttpRequestPattern(
-                            urlMatcher = toURLMatcherWithOptionalQueryParams(path),
-                            method = httpMethod,
-                            headersPattern = HttpHeadersPattern(headersMap),
-                            body = toSpecmaticPattern(mediaType)
-                        )
+                        requestPattern.copy(body = toSpecmaticPattern(mediaType))
                     }
                 }
             }
@@ -355,11 +357,20 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             is ObjectSchema -> {
                 if (schema.additionalProperties != null) {
                     toDictionaryPattern(schema, typeStack, patternName)
+                } else if(schema.xml?.name != null) {
+                    toXMLPattern(schema, typeStack = typeStack)
                 } else {
                     toJsonObjectPattern(schema, patternName, typeStack)
                 }
             }
-            is ArraySchema -> JSONArrayPattern(listOf(toSpecmaticPattern(schema.items, typeStack)))
+            is ArraySchema -> {
+                if(schema.xml?.name != null) {
+                    toXMLPattern(schema, typeStack = typeStack)
+                } else {
+
+                    JSONArrayPattern(listOf(toSpecmaticPattern(schema.items, typeStack)))
+                }
+            }
             is ComposedSchema -> {
                 if (schema.allOf != null) {
                     val schemaProperties = schema.allOf.map { constituentSchema ->
@@ -380,11 +391,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     throw UnsupportedOperationException("Specmatic does not support anyOf. Only allOf is supported, or oneOf for specifying nullable refs.")
                 }
             }
-            is Schema -> {
+            else -> {
                 if (schema.additionalProperties != null) {
                     toDictionaryPattern(schema, typeStack, patternName)
                 } else {
-                    val component = schema.`$ref`
+                    val component: String? = schema.`$ref`
+
                     when {
                         component != null -> {
                             val (componentName, referredSchema) = resolveReferenceToSchema(component)
@@ -401,7 +413,6 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     }
                 }
             }
-            else -> throw UnsupportedOperationException("Specmatic is unable to parse: $schema")
         }.also {
             when {
                 it.instanceOf(JSONObjectPattern::class) && jsonInFormData -> {
@@ -413,6 +424,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 else -> it
             }
         }
+
         return when (schema.nullable != true) {
             true -> pattern
             else -> when (pattern) {
@@ -421,6 +433,124 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
         }
     }
+
+    private fun toXMLPattern(mediaType: MediaType): Pattern {
+        return toXMLPattern(mediaType.schema, typeStack = emptyList())
+    }
+
+    private fun toXMLPattern(schema: Schema<Any>, nodeNameFromProperty: String? = null, typeStack: List<String>): XMLPattern {
+        val name = schema.xml?.name ?: nodeNameFromProperty
+
+        return when(schema) {
+            is ObjectSchema -> {
+                val nodeProperties = schema.properties.filter { entry ->
+                    entry.value.xml?.attribute != true
+                }
+
+                val nodes = nodeProperties.map { (propertyName: String, propertySchema) ->
+                    val type = when (propertySchema.type) {
+                        in primitiveOpenAPITypes -> {
+                            val innerPattern = DeferredPattern(primitiveOpenAPITypes.getValue(propertySchema.type))
+                            XMLPattern(XMLTypeData(propertyName, propertyName, emptyMap(), listOf(innerPattern)))
+                        }
+                        else -> {
+                            toXMLPattern(propertySchema, propertyName, typeStack)
+                        }
+                    }
+
+                    val optionalAttribute = if(propertyName !in (schema.required ?: emptyList<String>()))
+                        mapOf(OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(OPTIONAL_ATTRIBUTE_VALUE)))
+                    else
+                        emptyMap()
+
+                    type.copy(pattern = type.pattern.copy(attributes = optionalAttribute.plus(type.pattern.attributes)))
+                }
+
+                val attributeProperties = schema.properties.filter { entry ->
+                    entry.value.xml?.attribute == true
+                }
+
+                val attributes: Map<String, Pattern> = attributeProperties.map { (name, schema) ->
+                    name to toSpecmaticPattern(schema, emptyList())
+                }.toMap()
+
+                name ?: throw ContractException("Could not determine name for an xml node")
+
+                val namespaceAttributes: Map<String, ExactValuePattern> = if(schema.xml?.namespace != null && schema.xml?.prefix != null) {
+                    val attributeName = "xmlns:${schema.xml?.prefix}"
+                    val attributeValue = ExactValuePattern(StringValue(schema.xml.namespace))
+                    mapOf(attributeName to attributeValue)
+                } else {
+                    emptyMap()
+                }
+
+                val xmlTypeData = XMLTypeData(name, realName(schema, name), namespaceAttributes.plus(attributes), nodes)
+
+                XMLPattern(xmlTypeData)
+            }
+            is ArraySchema -> {
+                val repeatingSchema = schema.items
+
+                val repeatingType = when(repeatingSchema.type) {
+                    in primitiveOpenAPITypes -> {
+                        val innerPattern = DeferredPattern(primitiveOpenAPITypes.getValue(repeatingSchema.type))
+
+                        val innerName = repeatingSchema.xml?.name ?: if(schema.xml?.name != null && schema.xml?.wrapped == true) schema.xml.name else nodeNameFromProperty
+
+                        XMLPattern(XMLTypeData(innerName ?: throw ContractException("Could not determine name for an xml node"), innerName, emptyMap(), listOf(innerPattern)))
+                    }
+                    else -> {
+                        toXMLPattern(repeatingSchema, name, typeStack)
+                    }
+                }.let { repeatingType ->
+                    repeatingType.copy(
+                        pattern = repeatingType.pattern.copy(
+                            attributes = repeatingType.pattern.attributes.plus(
+                                OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(MULTIPLE_ATTRIBUTE_VALUE))
+                            )
+                        )
+                    )
+                }
+
+                if(schema.xml?.wrapped == true) {
+                    val wrappedName = schema.xml?.name ?: nodeNameFromProperty
+                    val wrapperTypeData = XMLTypeData(wrappedName ?: throw ContractException("Could not determine name for an xml node"), wrappedName, emptyMap(), listOf(repeatingType))
+                    XMLPattern(wrapperTypeData)
+                } else
+                    repeatingType
+            }
+            else -> {
+                if(schema.`$ref` != null) {
+                    val component = schema.`$ref`
+                    val (componentName, componentSchema) = resolveReferenceToSchema(component)
+
+                    val typeName = "($componentName)"
+
+                    val nodeName = componentSchema.xml?.name ?: name ?: componentName
+
+                    if(typeName !in typeStack)
+                        this.patterns[typeName] = toXMLPattern(componentSchema, componentName, typeStack.plus(typeName))
+
+                    val xmlRefType = XMLTypeData(nodeName, nodeName, mapOf(TYPE_ATTRIBUTE_NAME to ExactValuePattern(
+                        StringValue(
+                            componentName
+                        ))), emptyList())
+
+                    XMLPattern(xmlRefType)
+                } else
+                    throw ContractException("Node not recognized as XML type: ${schema.type}")
+            }
+        }
+    }
+
+    private fun realName(schema: ObjectSchema, name: String): String =
+        if (schema.xml?.prefix != null) {
+            "${schema.xml?.prefix}:${name}"
+        } else {
+            name
+        }
+
+    private val primitiveOpenAPITypes = mapOf("string" to "(string)", "number" to "(number)", "integer" to "(number)", "boolean" to "(boolean)")
 
     private fun toDictionaryPattern(
         schema: Schema<*>,

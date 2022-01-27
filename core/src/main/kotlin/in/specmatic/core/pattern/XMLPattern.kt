@@ -617,6 +617,14 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return types
     }
 
+    val referredType: String?
+        get() {
+            return pattern.attributes[TYPE_ATTRIBUTE_NAME]?.let {
+                it as ExactValuePattern
+                it.pattern.toStringLiteral()
+            }
+        }
+
     override val memberList: MemberList
         get() = MemberList(pattern.nodes, null)
 

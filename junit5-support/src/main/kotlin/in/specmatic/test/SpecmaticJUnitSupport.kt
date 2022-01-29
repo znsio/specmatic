@@ -30,6 +30,7 @@ open class SpecmaticJUnitSupport {
         const val TEST_BASE_URL = "testBaseURL"
         const val ENV_NAME = "environment"
         const val VARIABLES_FILE_NAME = "variablesFileName"
+        const val FILTER_NAME = "filterName"
 
         val testsNames = mutableListOf<String>()
     }
@@ -60,6 +61,7 @@ open class SpecmaticJUnitSupport {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
         val givenConfigFile = System.getProperty(CONFIG_FILE_NAME)
+        val filterName: String? = System.getProperty(FILTER_NAME)
 
         val timeout = System.getProperty(TIMEOUT, DEFAULT_TIMEOUT).toInt()
 
@@ -76,7 +78,7 @@ open class SpecmaticJUnitSupport {
         }
 
         val testScenarios = try {
-            when {
+            val testScenarios = when {
                 contractPaths != null -> {
                     contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig) }
                 }
@@ -91,6 +93,13 @@ open class SpecmaticJUnitSupport {
                     contractFilePaths.flatMap { loadTestScenarios(it, "", "", testConfig) }
                 }
             }
+
+            if(filterName != null) {
+                testScenarios.filter {
+                    it.testDescription().contains(filterName)
+                }
+            } else
+                testScenarios
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
         } catch(e: Throwable) {

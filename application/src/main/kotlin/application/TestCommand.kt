@@ -25,12 +25,12 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.WORKING_DIRECTORY
 import org.w3c.dom.Document
-import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -69,6 +69,9 @@ class TestCommand : Callable<Unit> {
 
     @Option(names = ["--suggestions"], description = ["A json value with scenario name and multiple suggestions"], defaultValue = "")
     var suggestions: String = ""
+
+    @Option(names = ["--filter-name"], description = ["Run only tests with this value in their name"], defaultValue = "")
+    var filterName: String = ""
 
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
@@ -135,6 +138,10 @@ class TestCommand : Callable<Unit> {
         System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
+
+        if(filterName.isNotBlank()) {
+            System.setProperty(FILTER_NAME, filterName)
+        }
 
         System.setProperty("kafkaBootstrapServers", kafkaBootstrapServers)
         System.setProperty("kafkaHost", kafkaHost)

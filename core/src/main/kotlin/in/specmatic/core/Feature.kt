@@ -1192,7 +1192,9 @@ private fun lexScenario(
 
         if (matchingScenarios.size > 1) throw ContractException("Scenario: ${parsedScenarioInfo.scenarioName} is not specific, it matches ${matchingScenarios.size} in the included Wsdl / OpenApi")
 
-        scenarioInfoWithExamples(matchingScenarios.first(), backgroundScenarioInfo, examplesList, ignoreFailure)
+        val matchingScenario = matchingScenarios.first().copy(bindings = parsedScenarioInfo.bindings)
+
+        scenarioInfoWithExamples(matchingScenario, backgroundScenarioInfo, examplesList, ignoreFailure)
     }
 }
 

@@ -4536,4 +4536,69 @@ components:
             }
         }
     }
+
+    @Test
+    fun `support for exporting values from a wrapper spec file`(@TempDir tempDir: File) {
+        val openAPI = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: "Get person by id"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - "id"
+                          properties:
+                            id:
+                              type: "string"
+                  responses:
+                    200:
+                      description: "Get person by id"
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                            properties:
+                              id:
+                                type: integer
+            """.trimIndent()
+
+        val openAPIFile = tempDir.resolve("person.yaml")
+        openAPIFile.writeText(openAPI)
+
+        val spec = """
+            Feature: Person API
+            
+              Background:
+                Given openapi ./person.yaml
+                
+              Scenario Outline: Person API
+                When POST /person
+                Then status 200
+                And export id = response-body.id
+                
+                Examples:
+                | id |
+                | 10 |
+        """.trimIndent()
+
+        val specFile = tempDir.resolve("person.spec")
+        specFile.writeText(spec)
+
+        val feature = parseContractFileToFeature(specFile)
+
+        val testScenario = feature.generateContractTestScenarios(emptyList()).single()
+
+        assertThat(testScenario.bindings).containsEntry("id", "response-body.id")
+    }
 }

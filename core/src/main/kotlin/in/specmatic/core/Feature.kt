@@ -1441,7 +1441,7 @@ fun scenarioInfos(
     } ?: ScenarioInfo()
 
     val specmaticScenarioInfos = scenarios(featureChildren).map { featureChild ->
-        if (featureChild.scenario.name.isBlank())
+        if (featureChild.scenario.name.isBlank() && openApiSpecification == null && wsdlSpecification == null)
             throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
 
         val backgroundInfoCopy = backgroundInfo.copy(scenarioName = featureChild.scenario.name)

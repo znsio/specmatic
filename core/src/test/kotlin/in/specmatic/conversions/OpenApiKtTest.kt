@@ -108,7 +108,7 @@ Scenario: zero should return not found
         assertThat(flags.size).isEqualTo(3)
         assertThat(results.report()).isEqualTo(
             """
-            In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+            In scenario "hello world. Response: Bad Request"
             API: GET /hello/(id:number) -> 400
             
               >> RESPONSE.STATUS
@@ -159,7 +159,7 @@ Background:
         assertThat(flags.size).isEqualTo(3)
         assertThat(results.report()).isEqualTo(
             """
-            In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+            In scenario "hello world. Response: Bad Request"
             API: GET /hello/(id:number) -> 400
             
               >> RESPONSE.STATUS
@@ -210,21 +210,21 @@ Background:
         assertThat(flags.size).isEqualTo(3)
         assertThat(results.report()).isEqualTo(
             """
-            In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+            In scenario "hello world. Response: Bad Request"
             API: GET /hello/(id:number) -> 400
             
               >> RESPONSE.STATUS
               
               Expected status: 400, actual: 202
             
-            In scenario "Open API - Operation Summary: hello world. Response: Says hello Examples: id=15"
+            In scenario "hello world. Response: Says hello Examples: id=15"
             API: GET /hello/(id:number) -> 200
             
               >> RESPONSE.STATUS
               
               Expected status: 200, actual: 202
             
-            In scenario "Open API - Operation Summary: hello world. Response: Not Found Examples: id=0"
+            In scenario "hello world. Response: Not Found Examples: id=0"
             API: GET /hello/(id:number) -> 404
             
               >> RESPONSE.STATUS
@@ -267,21 +267,21 @@ Background:
         assertFalse(results.success())
         assertThat(results.report()).isEqualTo(
             """
-            In scenario "Open API - Operation Summary: hello world. Response: Not Found"
+            In scenario "hello world. Response: Not Found"
             API: GET /hello/0 -> 404
             
               >> RESPONSE.STATUS
               
               Expected status: 404, actual: 403
             
-            In scenario "Open API - Operation Summary: hello world. Response: Says hello"
+            In scenario "hello world. Response: Says hello"
             API: GET /hello/(id:number) -> 200
             
               >> RESPONSE.STATUS
               
               Expected status: 200, actual: 202
             
-            In scenario "Open API - Operation Summary: hello world. Response: Bad Request"
+            In scenario "hello world. Response: Bad Request"
             API: GET /hello/(id:number) -> 400
             
               >> RESPONSE.STATUS
@@ -758,27 +758,27 @@ Background:
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             },
-            scenarioNames = listOf("Open API - Operation Summary: create a pet. Response: pet response")
+            scenarioNames = listOf("create a pet. Response: pet response")
         )
 
         assertFalse(results.success())
         assertThat(results.report()).isEqualTo(
             """
-            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.breed
               
               Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
             
-            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.breed
               
               Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
             
-            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.breed
@@ -832,27 +832,27 @@ Background:
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             },
-            scenarioNames = listOf("Open API - Operation Summary: create a pet. Response: pet response")
+            scenarioNames = listOf("create a pet. Response: pet response")
         )
 
         assertFalse(results.success())
         assertThat(results.report()).isEqualTo(
             """
-            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.rating
               
               Expected (1 or 2), Actual was number: 3
             
-            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.rating
               
               Expected (1 or 2), Actual was number: 3
             
-            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.rating
@@ -906,27 +906,27 @@ Background:
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             },
-            scenarioNames = listOf("Open API - Operation Summary: create a pet. Response: pet response")
+            scenarioNames = listOf("create a pet. Response: pet response")
         )
 
         assertFalse(results.success())
         assertThat(results.report()).isEqualTo(
             """
-            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.name
               
               Expected string with minLength 6, actual was string: "small"
             
-            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.name
               
               Expected string with minLength 6, actual was string: "small"
             
-            In scenario "Open API - Operation Summary: create a pet. Response: pet response"
+            In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.name

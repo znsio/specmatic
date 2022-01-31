@@ -167,13 +167,28 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         httpMethod,
                         operation
                     ).map { httpRequestPattern: HttpRequestPattern ->
-                        val scenarioName =
-                            """Open API - Operation Summary: ${operation.summary}. Response: ${response.description}"""
+                        val scenarioName = scenarioName(operation, response, httpRequestPattern, null)
+
                         scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, patterns = this.patterns)
                     }
                 }.flatten()
             }.flatten()
         }.flatten()
+    }
+
+    private fun scenarioName(
+        operation: Operation,
+        response: ApiResponse,
+        httpRequestPattern: HttpRequestPattern,
+        specmaticExampleRow: Row?
+    ): String {
+        val name = operation.summary?.let {
+            """${operation.summary}. Response: ${response.description}"""
+        } ?: "${httpRequestPattern.testDescription()}. Response: ${response.description}"
+
+        return specmaticExampleRow?.let {
+            "${name} Examples: ${specmaticExampleRow.stringForOpenAPIError()}"
+        } ?: name
     }
 
     private fun toScenarioInfosWithExamples(): List<ScenarioInfo> {
@@ -205,8 +220,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             httpMethod,
                             operation
                         ).map { httpRequestPattern: HttpRequestPattern ->
-                            val scenarioName =
-                                """Open API - Operation Summary: ${operation.summary}. Response: ${response.description} Examples: ${specmaticExampleRow.stringForOpenAPIError()}"""
+                            val scenarioName = scenarioName(operation, response, httpRequestPattern, specmaticExampleRow)
+
                             scenarioInfo(
                                 scenarioName,
                                 httpRequestPattern,

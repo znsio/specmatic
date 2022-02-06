@@ -405,8 +405,20 @@ Background:
 
     @Test
     fun `should not throw errors while parsing file with no paths`() {
-        val openApi = OpenApiSpecification.fromFile("openapi/common.yaml")
-        openApi.toFeature()
+        OpenApiSpecification.fromFile("openapi/common.yaml").toFeature()
+    }
+
+    @Test
+    fun `should run zero tests when the file has no paths`() {
+        val feature = OpenApiSpecification.fromFile("openapi/common.yaml").toFeature()
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse = HttpResponse(200)
+                override fun setServerState(serverState: Map<String, Value>) {}
+            },
+            scenarioNames = emptyList()
+        )
+        assertThat(results.hasResults()).isFalse
     }
 
     @Test
@@ -964,7 +976,11 @@ Background:
 
         val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
-            restTemplate.postForEntity(URI.create("http://localhost:9000/services/jsonAndNonJsonPayload"), request, String::class.java)
+            restTemplate.postForEntity(
+                URI.create("http://localhost:9000/services/jsonAndNonJsonPayload"),
+                request,
+                String::class.java
+            )
         }
 
         assertThat(response).isNotNull

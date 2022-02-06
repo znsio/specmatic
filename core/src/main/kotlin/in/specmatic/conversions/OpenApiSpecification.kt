@@ -157,7 +157,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun openApitoScenarioInfos(): List<ScenarioInfo> {
-        return openApi.paths.map { (openApiPath, pathItem) ->
+        return openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
                 val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
@@ -192,7 +192,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun toScenarioInfosWithExamples(): List<ScenarioInfo> {
-        return openApi.paths.map { (openApiPath, pathItem) ->
+        return openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
                 val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
@@ -220,7 +220,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             httpMethod,
                             operation
                         ).map { httpRequestPattern: HttpRequestPattern ->
-                            val scenarioName = scenarioName(operation, response, httpRequestPattern, specmaticExampleRow)
+                            val scenarioName =
+                                scenarioName(operation, response, httpRequestPattern, specmaticExampleRow)
 
                             scenarioInfo(
                                 scenarioName,
@@ -235,6 +236,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }.flatten()
         }.flatten()
     }
+
+    private fun openApiPaths() = openApi.paths.orEmpty()
 
     private fun scenarioInfo(
         scenarioName: String,
@@ -285,7 +288,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 "default" -> 400
                                 else -> status.toInt()
                             },
-                            body = when(contentType) {
+                            body = when (contentType) {
                                 "application/xml" -> toXMLPattern(mediaType)
                                 else -> toSpecmaticPattern(mediaType)
                             }
@@ -317,7 +320,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 requestPattern
             )
             else -> operation.requestBody.content.map { (contentType, mediaType) ->
-                when(contentType.lowercase()) {
+                when (contentType.lowercase()) {
                     "application/x-www-form-urlencoded" -> {
                         requestPattern.copy(formFieldsPattern = toFormFields(mediaType))
                     }
@@ -372,14 +375,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             is ObjectSchema -> {
                 if (schema.additionalProperties != null) {
                     toDictionaryPattern(schema, typeStack, patternName)
-                } else if(schema.xml?.name != null) {
+                } else if (schema.xml?.name != null) {
                     toXMLPattern(schema, typeStack = typeStack)
                 } else {
                     toJsonObjectPattern(schema, patternName, typeStack)
                 }
             }
             is ArraySchema -> {
-                if(schema.xml?.name != null) {
+                if (schema.xml?.name != null) {
                     toXMLPattern(schema, typeStack = typeStack)
                 } else {
 
@@ -453,10 +456,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return toXMLPattern(mediaType.schema, typeStack = emptyList())
     }
 
-    private fun toXMLPattern(schema: Schema<Any>, nodeNameFromProperty: String? = null, typeStack: List<String>): XMLPattern {
+    private fun toXMLPattern(
+        schema: Schema<Any>,
+        nodeNameFromProperty: String? = null,
+        typeStack: List<String>
+    ): XMLPattern {
         val name = schema.xml?.name ?: nodeNameFromProperty
 
-        return when(schema) {
+        return when (schema) {
             is ObjectSchema -> {
                 val nodeProperties = schema.properties.filter { entry ->
                     entry.value.xml?.attribute != true
@@ -473,7 +480,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         }
                     }
 
-                    val optionalAttribute = if(propertyName !in (schema.required ?: emptyList<String>()))
+                    val optionalAttribute = if (propertyName !in (schema.required ?: emptyList<String>()))
                         mapOf(OCCURS_ATTRIBUTE_NAME to ExactValuePattern(StringValue(OPTIONAL_ATTRIBUTE_VALUE)))
                     else
                         emptyMap()
@@ -491,13 +498,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                 name ?: throw ContractException("Could not determine name for an xml node")
 
-                val namespaceAttributes: Map<String, ExactValuePattern> = if(schema.xml?.namespace != null && schema.xml?.prefix != null) {
-                    val attributeName = "xmlns:${schema.xml?.prefix}"
-                    val attributeValue = ExactValuePattern(StringValue(schema.xml.namespace))
-                    mapOf(attributeName to attributeValue)
-                } else {
-                    emptyMap()
-                }
+                val namespaceAttributes: Map<String, ExactValuePattern> =
+                    if (schema.xml?.namespace != null && schema.xml?.prefix != null) {
+                        val attributeName = "xmlns:${schema.xml?.prefix}"
+                        val attributeValue = ExactValuePattern(StringValue(schema.xml.namespace))
+                        mapOf(attributeName to attributeValue)
+                    } else {
+                        emptyMap()
+                    }
 
                 val xmlTypeData = XMLTypeData(name, realName(schema, name), namespaceAttributes.plus(attributes), nodes)
 
@@ -506,13 +514,21 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             is ArraySchema -> {
                 val repeatingSchema = schema.items
 
-                val repeatingType = when(repeatingSchema.type) {
+                val repeatingType = when (repeatingSchema.type) {
                     in primitiveOpenAPITypes -> {
                         val innerPattern = DeferredPattern(primitiveOpenAPITypes.getValue(repeatingSchema.type))
 
-                        val innerName = repeatingSchema.xml?.name ?: if(schema.xml?.name != null && schema.xml?.wrapped == true) schema.xml.name else nodeNameFromProperty
+                        val innerName = repeatingSchema.xml?.name
+                            ?: if (schema.xml?.name != null && schema.xml?.wrapped == true) schema.xml.name else nodeNameFromProperty
 
-                        XMLPattern(XMLTypeData(innerName ?: throw ContractException("Could not determine name for an xml node"), innerName, emptyMap(), listOf(innerPattern)))
+                        XMLPattern(
+                            XMLTypeData(
+                                innerName ?: throw ContractException("Could not determine name for an xml node"),
+                                innerName,
+                                emptyMap(),
+                                listOf(innerPattern)
+                            )
+                        )
                     }
                     else -> {
                         toXMLPattern(repeatingSchema, name, typeStack)
@@ -527,15 +543,20 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     )
                 }
 
-                if(schema.xml?.wrapped == true) {
+                if (schema.xml?.wrapped == true) {
                     val wrappedName = schema.xml?.name ?: nodeNameFromProperty
-                    val wrapperTypeData = XMLTypeData(wrappedName ?: throw ContractException("Could not determine name for an xml node"), wrappedName, emptyMap(), listOf(repeatingType))
+                    val wrapperTypeData = XMLTypeData(
+                        wrappedName ?: throw ContractException("Could not determine name for an xml node"),
+                        wrappedName,
+                        emptyMap(),
+                        listOf(repeatingType)
+                    )
                     XMLPattern(wrapperTypeData)
                 } else
                     repeatingType
             }
             else -> {
-                if(schema.`$ref` != null) {
+                if (schema.`$ref` != null) {
                     val component = schema.`$ref`
                     val (componentName, componentSchema) = resolveReferenceToSchema(component)
 
@@ -543,13 +564,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                     val nodeName = componentSchema.xml?.name ?: name ?: componentName
 
-                    if(typeName !in typeStack)
+                    if (typeName !in typeStack)
                         this.patterns[typeName] = toXMLPattern(componentSchema, componentName, typeStack.plus(typeName))
 
-                    val xmlRefType = XMLTypeData(nodeName, nodeName, mapOf(TYPE_ATTRIBUTE_NAME to ExactValuePattern(
-                        StringValue(
-                            componentName
-                        ))), emptyList())
+                    val xmlRefType = XMLTypeData(
+                        nodeName, nodeName, mapOf(
+                            TYPE_ATTRIBUTE_NAME to ExactValuePattern(
+                                StringValue(
+                                    componentName
+                                )
+                            )
+                        ), emptyList()
+                    )
 
                     XMLPattern(xmlRefType)
                 } else
@@ -565,7 +591,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             name
         }
 
-    private val primitiveOpenAPITypes = mapOf("string" to "(string)", "number" to "(number)", "integer" to "(number)", "boolean" to "(boolean)")
+    private val primitiveOpenAPITypes =
+        mapOf("string" to "(string)", "number" to "(number)", "integer" to "(number)", "boolean" to "(boolean)")
 
     private fun toDictionaryPattern(
         schema: Schema<*>,

@@ -404,6 +404,12 @@ Background:
     }
 
     @Test
+    fun `should not throw errors while parsing file with no paths`() {
+        val openApi = OpenApiSpecification.fromFile("openapi/common.yaml")
+        openApi.toFeature()
+    }
+
+    @Test
     fun `should generate stub with primitive array open api data types`() {
         val feature = parseGherkinStringToFeature(
             """

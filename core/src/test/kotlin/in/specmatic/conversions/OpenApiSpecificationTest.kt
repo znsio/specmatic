@@ -600,6 +600,57 @@ Scenario: Get product by id
     }
 
     @Test
+    fun `OpenAPI contract where the request body refers to externalised type`() {
+        val openAPIYaml = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: "Get person by id"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: "#/components/schemas/Address"
+                  responses:
+                    200:
+                      description: "Get person by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas:
+                Address:
+                  required:
+                  - "locality"
+                  - "street"
+                  properties:
+                    street:
+                      type: "string"
+                    locality:
+                      type: "string"
+            """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPIYaml, "file.yaml").toFeature()
+
+        assertThat(
+            feature.matches(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedJSON("""{"street": "baker street", "locality": "London"}""")
+                ), HttpResponse.OK("success")
+            )
+        ).isTrue
+    }
+
+    @Test
     fun `programmatically construct OpenAPI YAML for POST with JSON request body containing a nullable object`() {
         val feature = parseGherkinStringToFeature(
             """

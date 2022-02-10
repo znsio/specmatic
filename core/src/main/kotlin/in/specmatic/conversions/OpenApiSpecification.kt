@@ -411,10 +411,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 if (schema.additionalProperties != null) {
                     toDictionaryPattern(schema, typeStack, patternName)
                 } else {
-                    val component: String? = schema.`$ref`
+                    when (schema.`$ref`) {
+                        null -> toJsonObjectPattern(schema, patternName, typeStack)
+                        else -> {
+                            val component: String = schema.`$ref`
 
-                    when {
-                        component != null -> {
                             val (componentName, referredSchema) = resolveReferenceToSchema(component)
                             val cyclicReference =
                                 patternName.isNotEmpty() && patternName == componentName && typeStack.contains(
@@ -422,10 +423,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 ) && referredSchema.instanceOf(ObjectSchema::class)
                             when {
                                 cyclicReference -> DeferredPattern("(${patternName})")
-                                else -> resolveReference(component, typeStack)
+                                else -> {
+                                    val componentType = resolveReference(component, typeStack)
+                                    val typeName = "(${componentNameFromReference(component)})"
+                                    patterns[typeName] = componentType
+                                    DeferredPattern(typeName)
+                                }
                             }
                         }
-                        else -> toJsonObjectPattern(schema, patternName, typeStack)
                     }
                 }
             }
@@ -661,11 +666,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     private fun resolveReferenceToSchema(component: String): Pair<String, Schema<Any>> {
         if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
-        val componentName = component.removePrefix("#/components/schemas/")
+        val componentName = componentNameFromReference(component)
         val schema = openApi.components.schemas[componentName] ?: ObjectSchema().also { it.properties = emptyMap() }
 
         return componentName to schema as Schema<Any>
     }
+
+    private fun componentNameFromReference(component: String) = component.removePrefix("#/components/schemas/")
 
     private fun toSpecmaticPath(openApiPath: String, operation: Operation): String {
         val parameters = operation.parameters ?: return openApiPath

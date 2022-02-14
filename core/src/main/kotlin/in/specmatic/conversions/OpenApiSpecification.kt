@@ -299,17 +299,32 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }.flatten()
     }
 
-    fun toHttpRequestPatterns(path: String, httpMethod: String, operation: Operation): List<HttpRequestPattern> {
+    private fun toHttpRequestPatterns(
+        path: String,
+        httpMethod: String,
+        operation: Operation
+    ): List<HttpRequestPattern> {
 
         val parameters = operation.parameters
 
         val headersMap = parameters.orEmpty().filterIsInstance(HeaderParameter::class.java).map {
             toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema, emptyList())
-        }.toMap()
+        }.toMap().toMutableMap()
+
+        operation.security?.let { securityRequirements ->
+            if (!securityRequirements.isNullOrEmpty()) {
+                val securitySchemeName = openApi.components.securitySchemes.toList().findLast { securityScheme ->
+                    securityScheme.second.scheme == "bearer"
+                }
+                securityRequirements.toList().any { it.keys.contains(securitySchemeName?.first.orEmpty()) }?.let {
+                    headersMap["Authorization"] = StringPattern()
+                }
+            }
+        }
 
         val urlMatcher = toURLMatcherWithOptionalQueryParams(path)
         val headersPattern = HttpHeadersPattern(headersMap)
-        val requestPattern = HttpRequestPattern(
+        val requestPattern: HttpRequestPattern = HttpRequestPattern(
             urlMatcher = urlMatcher,
             method = httpMethod,
             headersPattern = headersPattern

@@ -14,10 +14,12 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
@@ -26,6 +28,7 @@ import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
 import java.io.File
 import java.net.URI
 import java.util.function.Consumer
+
 
 internal class OpenApiKtTest {
     companion object {
@@ -398,7 +401,7 @@ Background:
                     object : ParameterizedTypeReference<List<Pet>>() {}
                 )
             } catch (e: HttpClientErrorException) {
-                assertThat(e.statusCode).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST)
+                assertThat(e.statusCode).isEqualTo(BAD_REQUEST)
             }
         }
     }
@@ -437,7 +440,7 @@ Background:
             restTemplate.exchange(
                 URI.create("http://localhost:9000/petIds"),
                 HttpMethod.GET,
-                null,
+                HttpEntity(null, HttpHeaders().also { it.setBearerAuth("test") }),
                 object : ParameterizedTypeReference<List<Integer>>() {}
             )
         }
@@ -445,6 +448,31 @@ Background:
         assertThat(response.statusCodeValue).isEqualTo(200)
         assertThat(response.body).isInstanceOf(List::class.java)
         assertThat(response.body[0]).isInstanceOf(Integer::class.java)
+    }
+
+    @Test
+    fun `should generate stub that returns error when bearer auth security is not satisfied`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            val httpClientErrorException = assertThrows<HttpClientErrorException> {
+                restTemplate.exchange(
+                    URI.create("http://localhost:9000/petIds"),
+                    HttpMethod.GET,
+                    null,
+                    object : ParameterizedTypeReference<List<Integer>>() {}
+                )
+            }
+            assertThat(httpClientErrorException.statusCode).isEqualTo(BAD_REQUEST)
+        }
     }
 
     @Test
@@ -556,7 +584,7 @@ Background:
                 )
                 throw AssertionError("Should not allow unexpected fields")
             } catch (e: HttpClientErrorException) {
-                assertThat(e.statusCode).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST)
+                assertThat(e.statusCode).isEqualTo(BAD_REQUEST)
             }
         }
     }
@@ -606,7 +634,7 @@ Background:
                 )
                 throw AssertionError("Should not allow empty value on the name field which is required")
             } catch (e: HttpClientErrorException) {
-                assertThat(e.statusCode).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST)
+                assertThat(e.statusCode).isEqualTo(BAD_REQUEST)
             }
         }
     }
@@ -705,11 +733,18 @@ Background:
                         }
                         request.path == "/petIds" -> {
                             when (request.method) {
-                                "GET" -> HttpResponse(
-                                    200,
-                                    ObjectMapper().writeValueAsString(listOf(1)),
-                                    headers
-                                )
+                                "GET" -> {
+                                    if(request.headers.containsKey("Authorization")) {
+                                        HttpResponse(
+                                            200,
+                                            ObjectMapper().writeValueAsString(listOf(1)),
+                                            headers
+                                        )
+                                    }else
+                                    {
+                                        HttpResponse(403, "UnAuthorized", headers)
+                                    }
+                                }
                                 else -> HttpResponse(400, "", headers)
                             }
                         }

@@ -1,4 +1,4 @@
-openapi: "3.0.0"
+openapi: "3.0.3"
 info:
   version: 1.0.0
   title: Swagger Petstore
@@ -37,6 +37,8 @@ paths:
                 type: array
                 items:
                   type: integer
+      security:
+        - BearerAuth: []
   /pets:
     get:
       summary: get pets
@@ -250,3 +252,7 @@ components:
           format: int32
         message:
           type: string
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer

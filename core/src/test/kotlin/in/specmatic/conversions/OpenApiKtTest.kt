@@ -3,6 +3,7 @@ package `in`.specmatic.conversions
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
@@ -58,7 +59,10 @@ Scenario: zero should return not found
 
         val response = HttpStub(feature).use {
             val restTemplate = RestTemplate()
-            restTemplate.exchange(URI.create("http://localhost:9000/hello/1"), HttpMethod.GET, null, String::class.java)
+            restTemplate.exchange(
+                URI.create("http://localhost:9000/hello/1"), HttpMethod.GET,
+                httpEntityWithBearerAuthHeader(), String::class.java
+            )
         }
 
         assertThat(response.statusCodeValue).isEqualTo(200)
@@ -69,7 +73,7 @@ Scenario: zero should return not found
                 restTemplate.exchange(
                     URI.create("http://localhost:9000/hello/0"),
                     HttpMethod.GET,
-                    null,
+                    httpEntityWithBearerAuthHeader(),
                     String::class.java
                 )
             } catch (e: HttpClientErrorException) {
@@ -440,7 +444,7 @@ Background:
             restTemplate.exchange(
                 URI.create("http://localhost:9000/petIds"),
                 HttpMethod.GET,
-                HttpEntity(null, HttpHeaders().also { it.setBearerAuth("test") }),
+                httpEntityWithBearerAuthHeader(),
                 object : ParameterizedTypeReference<List<Integer>>() {}
             )
         }
@@ -450,8 +454,10 @@ Background:
         assertThat(response.body[0]).isInstanceOf(Integer::class.java)
     }
 
+    private fun httpEntityWithBearerAuthHeader() = HttpEntity(null, HttpHeaders().also { it.setBearerAuth("test") })
+
     @Test
-    fun `should generate stub that returns error when bearer auth security is not satisfied`() {
+    fun `should generate stub that returns error when bearer auth security defined at operation level is not satisfied`() {
         val feature = parseGherkinStringToFeature(
             """
 Feature: Hello world
@@ -473,6 +479,45 @@ Background:
             }
             assertThat(httpClientErrorException.statusCode).isEqualTo(BAD_REQUEST)
         }
+    }
+
+    @Test
+    fun `should generate stub that returns error when bearer auth security defined at document level is not satisfied`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/hello.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            val httpClientErrorException = assertThrows<HttpClientErrorException> {
+                restTemplate.exchange(
+                    URI.create("http://localhost:9000/hello/0"),
+                    HttpMethod.GET,
+                    null,
+                    object : ParameterizedTypeReference<List<Integer>>() {}
+                )
+            }
+            assertThat(httpClientErrorException.statusCode).isEqualTo(BAD_REQUEST)
+        }
+    }
+
+    @Test
+    fun `should throw not supported error when a security scheme other than bearer auth is defined`() {
+        assertThrows<ContractException> {
+            parseGherkinStringToFeature(
+                """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/non-bearer-authentication.yaml
+        """.trimIndent(), sourceSpecPath
+            )
+        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer authentication scheme at the moment") }
     }
 
     @Test
@@ -734,14 +779,13 @@ Background:
                         request.path == "/petIds" -> {
                             when (request.method) {
                                 "GET" -> {
-                                    if(request.headers.containsKey("Authorization")) {
+                                    if (request.headers.containsKey("Authorization")) {
                                         HttpResponse(
                                             200,
                                             ObjectMapper().writeValueAsString(listOf(1)),
                                             headers
                                         )
-                                    }else
-                                    {
+                                    } else {
                                         HttpResponse(403, "UnAuthorized", headers)
                                     }
                                 }

@@ -42,9 +42,7 @@ paths:
 
 components:
   securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-
-security:
-  - BearerAuth: []
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key

@@ -75,7 +75,7 @@ data class Feature(
         try {
             val resultList = lookupScenario(httpRequest, scenarios)
             return matchingScenario(resultList)?.generateHttpResponse(serverState)
-                ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff().generateErrorHttpResponse()
+                ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff().generateErrorHttpResponse(httpRequest)
         } finally {
             serverState = emptyMap()
         }
@@ -108,7 +108,7 @@ data class Feature(
             when {
                 matchingScenarios.isNotEmpty() -> matchingScenarios
                 firstRealResult != null -> throw ContractException(firstRealResult.second.toReport().toText())
-                resultsExist -> throw ContractException(requestNotRecognized(httpRequest))
+                resultsExist -> throw ContractException(httpRequest.requestNotRecognized())
                 else -> throw ContractException("The contract is empty.")
             }
         } finally {
@@ -994,7 +994,7 @@ data class Feature(
 
         schema.required = pattern.keys.filterNot { it.endsWith("?") }
 
-        val properties: Map<String, Schema<Any>> = pattern.mapValues { (key, valueType) ->
+        val properties: Map<String, Schema<Any>> = pattern.mapValues { (_, valueType) ->
             toOpenApiSchema(valueType)
         }.mapKeys { withoutOptionality(it.key) }
 

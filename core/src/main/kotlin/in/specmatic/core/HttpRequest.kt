@@ -208,6 +208,66 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
 
         return copy(multiPartFormData = newMultiPartFormData)
     }
+
+    interface RequestNotRecognizedMessages {
+        fun soap(soapActionHeaderValue: String, path: String): String
+
+        fun xmlOverHttp(method: String, path: String): String
+
+        fun restful(method: String, path: String): String
+    }
+
+    class LenientRequestNotRecognizedMessages : RequestNotRecognizedMessages {
+        override fun soap(soapActionHeaderValue: String, path: String): String {
+            return "No matching SOAP stub or contract found for SOAPAction $soapActionHeaderValue and path $path"
+        }
+
+        override fun xmlOverHttp(method: String, path: String): String {
+            return "No matching XML-REST stub or contract found for method $method and path $path"
+        }
+
+        override fun restful(method: String, path: String): String {
+            return "No matching REST stub or contract found for method $method and path $path"
+        }
+    }
+
+    class StrictRequestNotRecognizedMessages : RequestNotRecognizedMessages {
+        override fun soap(soapActionHeaderValue: String, path: String): String {
+            return "No matching SOAP stub (strict mode) found for SOAPAction $soapActionHeaderValue and path $path"
+        }
+
+        override fun xmlOverHttp(method: String, path: String): String {
+            return "No matching XML-REST stub (strict mode) found for method $method and path $path"
+        }
+
+        override fun restful(method: String, path: String): String {
+            return "No matching REST stub (strict mode) found for method $method and path $path"
+        }
+    }
+
+    fun requestNotRecognized(requestNotRecognizedMessages: RequestNotRecognizedMessages): String {
+        val soapActionHeader = "SOAPAction"
+
+        val method = this.method!!
+        val path = this.path ?: "/"
+
+        return when {
+            this.headers.containsKey(soapActionHeader) ->
+                requestNotRecognizedMessages.soap(this.headers.getValue(soapActionHeader), path)
+            this.body is XMLNode ->
+                requestNotRecognizedMessages.xmlOverHttp(method, path)
+            else ->
+                requestNotRecognizedMessages.restful(method, path)
+        }
+    }
+
+    fun requestNotRecognized(): String {
+        return requestNotRecognized(LenientRequestNotRecognizedMessages())
+    }
+
+    fun requestNotRecognizedInStrictMode(): String {
+        return requestNotRecognized(StrictRequestNotRecognizedMessages())
+    }
 }
 
 private fun setIfNotEmpty(dest: MutableMap<String, Value>, key: String, data: Map<String, String>) {

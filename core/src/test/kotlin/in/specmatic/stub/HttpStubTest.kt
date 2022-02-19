@@ -577,7 +577,7 @@ Scenario: Square of a number
             val request = HttpRequest(method = "POST", path = "/wrong_path", body = NumberValue(10))
             val squareResponse = client.execute(request)
             assertThat(squareResponse.status).isEqualTo(400)
-            assertThat(squareResponse.body.toStringLiteral()).isEqualTo(requestNotRecognized(request))
+            assertThat(squareResponse.body.toStringLiteral()).isEqualTo(request.requestNotRecognized())
         }
     }
 

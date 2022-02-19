@@ -1,13 +1,5 @@
 package `in`.specmatic.core
 
-fun requestNotRecognized(httpRequest: HttpRequest): String {
-    val soapActionHeader = "SOAPAction"
-    if(httpRequest.headers.containsKey(soapActionHeader))
-        return "No matching contract found (SOAPAction ${httpRequest.headers.getValue(soapActionHeader)}, path ${httpRequest.path})"
-
-    return "No matching contract found"
-}
-
 const val PATH_NOT_RECOGNIZED_ERROR = "URL path or SOAPAction not recognised"
 
 data class Results(val results: List<Result> = emptyList()) {
@@ -28,7 +20,7 @@ data class Results(val results: List<Result> = emptyList()) {
     val successCount
         get(): Int = results.count { it is Result.Success }
 
-    fun generateErrorHttpResponse(httpRequest: HttpRequest? = null): HttpResponse {
+    fun generateErrorHttpResponse(httpRequest: HttpRequest): HttpResponse {
         val report = report("").trim()
 
         val defaultHeaders = mapOf("Content-Type" to "text/plain", SPECMATIC_RESULT_HEADER to "failure")
@@ -37,12 +29,16 @@ data class Results(val results: List<Result> = emptyList()) {
             else -> defaultHeaders
         }
 
-        val message = httpRequest?.let { requestNotRecognized(httpRequest) } ?: PATH_NOT_RECOGNIZED_ERROR
+        val message = httpRequest.let { httpRequest.requestNotRecognized() }
         return HttpResponse(400, report(message), headers)
     }
 
     fun report(httpRequest: HttpRequest): String {
-        return report(requestNotRecognized(httpRequest))
+        return report(httpRequest.requestNotRecognized())
+    }
+
+    fun strictModeReport(httpRequest: HttpRequest): String {
+        return report(httpRequest.requestNotRecognizedInStrictMode())
     }
 
     fun report(defaultMessage: String = PATH_NOT_RECOGNIZED_ERROR): String {

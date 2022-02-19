@@ -45,7 +45,7 @@ class FeatureTest {
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance2").updateQueryParam("account-id", "10")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("URL path or SOAPAction not recognised")
+        assertThat(httpResponse.body.toStringLiteral()).isEqualTo("No matching REST stub or contract found for method GET and path /balance2")
     }
 
     @Test

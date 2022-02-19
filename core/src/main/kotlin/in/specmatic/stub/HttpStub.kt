@@ -283,7 +283,7 @@ fun getHttpResponse(httpRequest: HttpRequest, features: List<Feature>, threadSaf
                 passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory)
             } else {
                 if (strictMode)
-                    HttpStubResponse(http400Response(httpRequest, matchResults))
+                    HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults))
                 else
                     fakeHttpResponse(features, httpRequest)
             }
@@ -345,11 +345,11 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
     }
 }
 
-private fun http400Response(httpRequest: HttpRequest, matchResults: List<Pair<Result, HttpStubData>>): HttpResponse {
+private fun strictModeHttp400Response(httpRequest: HttpRequest, matchResults: List<Pair<Result, HttpStubData>>): HttpResponse {
     val failureResults = matchResults.map { it.first }
 
     val results = Results(failureResults.toMutableList()).withoutFluff()
-    return HttpResponse(400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.report(httpRequest)}"))
+    return HttpResponse(400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.strictModeReport(httpRequest)}"))
 }
 
 fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>, stubs: StubDataItems): HttpResponse {

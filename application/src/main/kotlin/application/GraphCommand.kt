@@ -1,5 +1,6 @@
 package application
 
+import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.SpecmaticConfigJson
 import `in`.specmatic.core.git.getPersonalAccessToken
 import `in`.specmatic.core.log.CompositePrinter
@@ -7,12 +8,13 @@ import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
-import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.test.HttpClient
 import picocli.CommandLine
 import picocli.CommandLine.Option
+import java.net.URI
 import java.util.*
 import java.util.concurrent.Callable
 
@@ -26,7 +28,7 @@ data class PersonalAccessToken(private val token: String): AzureAuthToken {
     }
 }
 
-class AzureAPI(private val azureAuthToken: AzureAuthToken, private val azureBaseDirectory: String, private val collection: String) {
+class AzureAPI(private val azureAuthToken: AzureAuthToken, private val azureBaseURL: String, private val collection: String) {
     data class ContractConsumerEntry(val collection: String, val project: String, val branch: String) {
         constructor(collection: String, jsonObject: JSONObjectValue): this(undefault(jsonObject, collection), jsonObject.jsonObject["project"]!!.toStringLiteral(), jsonObject.jsonObject["branch"]!!.toStringLiteral())
         constructor(collection: String, jsonObject: Value): this(collection, jsonObject as JSONObjectValue)
@@ -47,44 +49,21 @@ class AzureAPI(private val azureAuthToken: AzureAuthToken, private val azureBase
     }
 
     private fun codeAdvancedSearch(searchString: String): JSONObjectValue {
-//        val client = HttpClient("https://devops.jio.com")
-//        val request = HttpRequest("POST",
-//            URL("https://devops.jio.com/JioMobilityAndEnterprise/_apis/search/codeAdvancedQueryResults?api-version=5.1-preview.1")
-//        ).copy(
-//            headers = mapOf(
-//                "Authorization" to "Basic M25ybTdreDdjZ2w1bGNhaWp4cXcyeHozMnQ0a3lyNHVxY21sZ2VjNDdxYnNhcnJzdGFlcTo="
-//            ),
-//            body = parsedJSON("""
-//                {"searchText":"specmatic.json","skipResults":0,"takeResults":50,"sortOptions":[],"summarizedHitCountsNeeded":true,"searchFilters":{}}
-//            """.trimIndent())
-//        )
-//        client.execute(request)
-
-        val commandFragments = listOf(
-            "curl",
-            "-k",
-            "-X",
-            "POST",
-            "-H",
-            "Authorization: Basic ${azureAuthToken.basic()}",
-            "-H",
-            "Content-Type: application/json",
-            "-d",
-            """{"searchText":"$searchString","skipResults":0,"takeResults":50,"sortOptions":[],"summarizedHitCountsNeeded":true,"searchFilters":{}}""",
-            "$azureBaseDirectory/$collection/_apis/search/codeAdvancedQueryResults?api-version=5.1-preview.1"
+        val client = HttpClient(azureBaseURL, log = { })
+        val request = HttpRequest("POST",
+            URI("/$collection/_apis/search/codeAdvancedQueryResults?api-version=5.1-preview.1")
+        ).copy(
+            headers = mapOf(
+                "Authorization" to "Basic ${azureAuthToken.basic()}"
+            ),
+            body = parsedJSON("""
+                {"searchText":"$searchString","skipResults":0,"takeResults":50,"sortOptions":[],"summarizedHitCountsNeeded":true,"searchFilters":{}}
+            """.trimIndent())
         )
 
-        val cmd = ExternalCommand(
-            commandFragments.toTypedArray(), ".", emptyList<String>().toTypedArray()
-        )
+        val response = client.execute(request)
 
-        logger.debug(commandFragments.toString())
-
-        val response = cmd.executeAsSeparateProcess()
-
-        logger.debug(response)
-
-        return parsedJSON(response) as JSONObjectValue
+        return parsedJSON(response.body.toStringLiteral()) as JSONObjectValue
     }
 
 }
@@ -104,8 +83,6 @@ class GraphCommand: Callable<Unit> {
     fun consumers(@Option(names = ["--verbose"], description = ["Print verbose logs"]) verbose: Boolean = false) {
         if(verbose)
             logger = Verbose(CompositePrinter())
-
-        val config = SpecmaticConfig()
 
         val configJson = SpecmaticConfigJson.load()
 

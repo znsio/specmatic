@@ -47,7 +47,7 @@ import kotlin.io.path.Path
         description = ["Run contract as tests"])
 class TestCommand : Callable<Unit> {
     @Autowired
-    lateinit var qontractConfig: QontractConfig
+    lateinit var specmaticConfig: SpecmaticConfig
 
     @Autowired
     lateinit var junitLauncher: Launcher
@@ -256,7 +256,7 @@ class TestCommand : Callable<Unit> {
         return when {
             contractPaths.isEmpty() -> {
                 logger.debug("No contractPaths specified. Using configuration file named ${Configuration.globalConfigFileName}")
-                qontractConfig.contractTestPaths()
+                specmaticConfig.contractTestPaths()
             }
             else -> contractPaths
         }

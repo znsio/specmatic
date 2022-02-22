@@ -84,7 +84,19 @@ data class SpecmaticConfigJson(
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
-    val hooks: Map<String, String> = emptyMap()
+    val hooks: Map<String, String> = emptyMap(),
+    val azure: AzureInfo? = null
+) {
+    companion object {
+        fun load(configFileName: String? = null): SpecmaticConfigJson {
+            return SpecmaticJsonFormat.decodeFromString(File(configFileName ?: globalConfigFileName).readText())
+        }
+    }
+}
+
+@Serializable
+data class AzureInfo(
+    val collectionName: String? = null
 )
 
 val SpecmaticJsonFormat = Json {

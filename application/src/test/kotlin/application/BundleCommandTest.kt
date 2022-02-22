@@ -14,7 +14,7 @@ import java.io.File
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, BundleCommand::class])
 internal class BundleCommandTest {
     @MockkBean
-    lateinit var qontractConfig: QontractConfig
+    lateinit var specmaticConfig: SpecmaticConfig
 
     @MockkBean
     lateinit var zipper: Zipper
@@ -34,7 +34,7 @@ internal class BundleCommandTest {
         val contractPath = "/Users/jane_doe/.$CONTRACT_EXTENSION/repos/git-repo/com/example/api_1.$CONTRACT_EXTENSION"
         val bytes = "123".encodeToByteArray()
 
-        every { qontractConfig.contractStubPathData() }.returns(listOf(ContractPathData("/Users/jane_doe/.$CONTRACT_EXTENSION/repos/git-repo/", contractPath)))
+        every { specmaticConfig.contractStubPathData() }.returns(listOf(ContractPathData("/Users/jane_doe/.$CONTRACT_EXTENSION/repos/git-repo/", contractPath)))
         every { fileOperations.readBytes(contractPath) }.returns(bytes)
 
         val files = listOf(file)
@@ -51,7 +51,7 @@ internal class BundleCommandTest {
 
         CommandLine(bundleCommand, factory).execute()
 
-        verify(exactly = 1) { qontractConfig.contractStubPathData() }
+        verify(exactly = 1) { specmaticConfig.contractStubPathData() }
         verify(exactly = 1) { fileOperations.readBytes(contractPath) }
         verify(exactly = 1) { fileOperations.readBytes(stubFilePath) }
         verify(exactly = 1) { zipper.compress("./bundle.zip", listOf(ZipperEntry("git-repo/com/example/api_1.$CONTRACT_EXTENSION", bytes), ZipperEntry("git-repo/com/example/api_1_data/stub.json", bytes))) }
@@ -137,7 +137,7 @@ internal class BundleCommandTest {
                 ContractPathData("cloneDir", "cloneDir/b/1.$CONTRACT_EXTENSION"),
                 ContractPathData(".", "./c/1.$CONTRACT_EXTENSION"),
         )
-        every { qontractConfig.contractStubPathData() }.returns(contractPaths)
+        every { specmaticConfig.contractStubPathData() }.returns(contractPaths)
 
         mockkStatic("application.BundleCommand_Jvm")
         every { pathDataToZipperEntry(any(), any(), any()) }.returns(emptyList())

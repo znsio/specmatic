@@ -26,7 +26,7 @@ import java.util.stream.Stream
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = arrayOf(SpecmaticApplication::class, TestCommand::class))
 internal class TestCommandTest {
     @MockkBean
-    lateinit var qontractConfig: QontractConfig
+    lateinit var specmaticConfig: SpecmaticConfig
 
     @MockkBean
     lateinit var junitLauncher: Launcher
@@ -48,18 +48,18 @@ internal class TestCommandTest {
 
     @Test
     fun `when contract files are not given it should load from qontract config`() {
-        every { qontractConfig.contractTestPaths() }.returns(contractsToBeRunAsTests)
+        every { specmaticConfig.contractTestPaths() }.returns(contractsToBeRunAsTests)
 
         CommandLine(testCommand, factory).execute()
 
-        verify(exactly = 1) { qontractConfig.contractTestPaths() }
+        verify(exactly = 1) { specmaticConfig.contractTestPaths() }
         assertThat(System.getProperty(CONTRACT_PATHS)).isEqualTo(contractsToBeRunAsTests.joinToString(","))
     }
 
     @Test
     fun `when contract files are given it should not load from qontract config`() {
         CommandLine(testCommand, factory).execute(contractsToBeRunAsTests[0], contractsToBeRunAsTests[1])
-        verify(exactly = 0) { qontractConfig.contractTestPaths() }
+        verify(exactly = 0) { specmaticConfig.contractTestPaths() }
         assertThat(System.getProperty(CONTRACT_PATHS)).isEqualTo(contractsToBeRunAsTests.joinToString(","))
     }
 
@@ -97,7 +97,7 @@ internal class TestCommandTest {
             systemPropertyName: String,
             systemPropertyValue: String
     ) {
-        every { qontractConfig.contractTestPaths() }.returns(contractsToBeRunAsTests)
+        every { specmaticConfig.contractTestPaths() }.returns(contractsToBeRunAsTests)
 
         CommandLine(testCommand, factory).execute(optionName, optionValue)
 

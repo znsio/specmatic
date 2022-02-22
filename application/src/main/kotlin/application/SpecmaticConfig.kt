@@ -2,13 +2,12 @@ package application
 
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.DEFAULT_WORKING_DIRECTORY
-import `in`.specmatic.core.WorkingDirectory
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.contractFilePathsFrom
 import org.springframework.stereotype.Component
 
 @Component
-class QontractConfig {
+class SpecmaticConfig {
     val configFilePath: String
         get() {
             return globalConfigFileName

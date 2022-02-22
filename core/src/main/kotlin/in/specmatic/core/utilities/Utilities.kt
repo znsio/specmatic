@@ -248,7 +248,17 @@ fun gitRootDir(): String {
     return gitRoot.substring(gitRoot.lastIndexOf('/') + 1)
 }
 
-data class ContractPathData(val baseDir: String, val path: String)
+data class ContractPathData(val baseDir: String, val path: String) {
+    val relativePath: String
+      get() {
+          return File(this.path).relativeTo(File(this.baseDir)).path.let {
+              when(it[0]) {
+                  '/' -> it
+                  else -> "/$it"
+              }
+          }
+      }
+}
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
     logger.log("Loading config file $configFilePath")

@@ -17,7 +17,7 @@ internal class QontractConfigTest {
             contractFilePathsFrom(any(), any(), any())
         }.returns(listOf(contractPathData))
 
-        val paths = QontractConfig().contractStubPathData()
+        val paths = SpecmaticConfig().contractStubPathData()
         assertThat(paths.equals(listOf(contractPathData))).isTrue
     }
 }

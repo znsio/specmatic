@@ -32,7 +32,7 @@ class StubCommand : Callable<Unit> {
     private lateinit var context: ApplicationContext
 
     @Autowired
-    private var qontractConfig: QontractConfig = QontractConfig()
+    private var specmaticConfig: SpecmaticConfig = SpecmaticConfig()
 
     @Parameters(arity = "0..*", description = ["Contract file paths"])
     var contractPaths: List<String> = mutableListOf()
@@ -149,7 +149,7 @@ class StubCommand : Callable<Unit> {
 
     private fun loadConfig() = contractPaths.ifEmpty {
         logger.debug("No contractPaths specified. Using configuration file named $configFileName")
-        qontractConfig.contractStubPaths()
+        specmaticConfig.contractStubPaths()
     }
 
     private fun startServer() {

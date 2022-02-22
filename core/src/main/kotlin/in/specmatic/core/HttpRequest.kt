@@ -15,6 +15,7 @@ import java.io.File
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
+import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
@@ -22,7 +23,16 @@ import java.nio.charset.StandardCharsets
 const val FORM_FIELDS_JSON_KEY = "form-fields"
 const val MULTIPART_FORMDATA_JSON_KEY = "multipart-formdata"
 
+fun urlToQueryParams(url: URL): Map<String, String> {
+    return url.query.split("&").map {
+        val parts = it.split("=".toRegex(), 2)
+        Pair(parts[0], parts[1])
+    }.toMap()
+}
+
 data class HttpRequest(val method: String? = null, val path: String? = null, val headers: Map<String, String> = emptyMap(), val body: Value = EmptyString, val queryParams: Map<String, String> = emptyMap(), val formFields: Map<String, String> = emptyMap(), val multiPartFormData: List<MultiPartFormDataValue> = emptyList()) {
+    constructor(method: String, url: URL): this(method, url.path, queryParams = urlToQueryParams(url))
+
     fun updateQueryParams(queryParams: Map<String, String>): HttpRequest = copy(queryParams = queryParams.plus(queryParams))
 
     fun withHost(host: String) = this.copy(headers = this.headers.plus("Host" to host))

@@ -21,7 +21,7 @@ interface Bundle {
     val bundlePath: String
 }
 
-class StubBundle(private val _bundlePath: String?, private val config: QontractConfig, private val fileOperations: FileOperations) : Bundle {
+class StubBundle(private val _bundlePath: String?, private val config: SpecmaticConfig, private val fileOperations: FileOperations) : Bundle {
     override val bundlePath = _bundlePath ?: "./bundle.zip"
 
     override fun contractPathData(): List<ContractPathData> {
@@ -43,7 +43,7 @@ class StubBundle(private val _bundlePath: String?, private val config: QontractC
     override fun configEntry(): List<ZipperEntry> = emptyList()
 }
 
-class TestBundle(private val _bundlePath: String?, private val config: QontractConfig, private val fileOperations: FileOperations) : Bundle {
+class TestBundle(private val _bundlePath: String?, private val config: SpecmaticConfig, private val fileOperations: FileOperations) : Bundle {
     override val bundlePath: String = _bundlePath ?: "./test-bundle.zip"
 
     override fun contractPathData(): List<ContractPathData> {
@@ -83,7 +83,7 @@ class BundleCommand : Callable<Unit> {
     var testBundle: Boolean = false
 
     @Autowired
-    lateinit var qontractConfig: QontractConfig
+    lateinit var specmaticConfig: SpecmaticConfig
 
     @Autowired
     lateinit var zipper: Zipper
@@ -93,8 +93,8 @@ class BundleCommand : Callable<Unit> {
 
     override fun call() {
         val bundle = when {
-            testBundle -> TestBundle(bundlePath, qontractConfig, fileOperations)
-            else -> StubBundle(bundlePath, qontractConfig, fileOperations)
+            testBundle -> TestBundle(bundlePath, specmaticConfig, fileOperations)
+            else -> StubBundle(bundlePath, specmaticConfig, fileOperations)
         }
 
         val pathData = bundle.contractPathData()

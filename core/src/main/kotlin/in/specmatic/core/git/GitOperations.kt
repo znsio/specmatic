@@ -2,6 +2,7 @@
 
 package `in`.specmatic.core.git
 
+import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.parsedJSON
@@ -125,7 +126,7 @@ fun getPersonalAccessToken(): String? {
     val homeDir = File(System.getProperty("user.home"))
 
     if(homeDir.exists()) {
-        val configFile = homeDir.resolve(globalConfigFileName)
+        val configFile = homeDir.resolve("specmatic-azure.json")
 
         if(configFile.exists()) {
             val qontractConfig = readQontractConfig(configFile)

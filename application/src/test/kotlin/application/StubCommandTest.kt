@@ -27,7 +27,7 @@ import java.nio.file.Path
 @SpringBootTest(webEnvironment = NONE, classes = [SpecmaticApplication::class, StubCommand::class, HttpClientFactory::class])
 internal class StubCommandTest {
     @MockkBean
-    lateinit var qontractConfig: QontractConfig
+    lateinit var specmaticConfig: SpecmaticConfig
 
     @MockkBean
     lateinit var fileOperations: FileOperations
@@ -60,20 +60,20 @@ internal class StubCommandTest {
 
     @Test
     fun `when contract files are not given it should load from qontract config`() {
-        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
+        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
 
         CommandLine(stubCommand, factory).execute()
 
-        verify(exactly = 1) { qontractConfig.contractStubPaths() }
+        verify(exactly = 1) { specmaticConfig.contractStubPaths() }
     }
 
     @Test
     fun `when contract files are given it should not load from qontract config`() {
-        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
+        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
 
         CommandLine(stubCommand, factory).execute("/parameter/path/to/contract.$CONTRACT_EXTENSION")
 
-        verify(exactly = 0) { qontractConfig.contractStubPaths() }
+        verify(exactly = 0) { specmaticConfig.contractStubPaths() }
     }
 
     @Test
@@ -103,7 +103,7 @@ internal class StubCommandTest {
         every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any(), any()) }.returns(null)
         every { kafkaStubEngine.runKafkaStub(stubInfo, kafkaHost, kafkaPort, false) }.returns(null)
 
-        every { qontractConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
+        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
         every { fileOperations.isFile(contractPath) }.returns(true)
         every { fileOperations.extensionIsNot(contractPath, CONTRACT_EXTENSIONS) }.returns(false)
 
@@ -125,7 +125,7 @@ internal class StubCommandTest {
         """.trimIndent())
 
         every { watchMaker.make(listOf(qontractFilePath)) }.returns(watcher)
-        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$extension"))
+        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$extension"))
         every { fileOperations.isFile(qontractFilePath) }.returns(true)
         every { fileOperations.extensionIsNot(qontractFilePath, CONTRACT_EXTENSIONS) }.returns(false)
 
@@ -145,7 +145,7 @@ internal class StubCommandTest {
         """.trimIndent())
 
         every { watchMaker.make(listOf(qontractFilePath)) }.returns(watcher)
-        every { qontractConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
+        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
         every { fileOperations.isFile(qontractFilePath) }.returns(true)
         every { fileOperations.extensionIsNot(qontractFilePath, CONTRACT_EXTENSIONS) }.returns(true)
 
@@ -177,7 +177,7 @@ internal class StubCommandTest {
 
         every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, passThroughTargetBase, any(), any()) }.returns(null)
 
-        every { qontractConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
+        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
         every { fileOperations.isFile(contractPath) }.returns(true)
         every { fileOperations.extensionIsNot(contractPath, CONTRACT_EXTENSIONS) }.returns(false)
 

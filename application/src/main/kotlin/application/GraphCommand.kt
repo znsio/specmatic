@@ -88,7 +88,7 @@ class GraphCommand: Callable<Unit> {
 
         val azureAuthToken = PersonalAccessToken(getPersonalAccessToken() ?: throw ContractException("Access token not found, put it in ${System.getProperty("user.home")}/specmatic.json"))
 
-        val collection = configJson.azure?.collectionName!!
+        val collection = configJson.repository?.collectionName!!
         val azure = AzureAPI(azureAuthToken, "https://devops.jio.com", collection)
 
         logger.log("Dependency projects")

@@ -2,7 +2,6 @@ package `in`.specmatic.core
 
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.utilities.readFile
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -85,7 +84,7 @@ data class SpecmaticConfigJson(
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
-    val azure: AzureInfo? = null
+    val repository: RespositoryInfo? = null
 ) {
     companion object {
         fun load(configFileName: String? = null): SpecmaticConfigJson {
@@ -95,7 +94,8 @@ data class SpecmaticConfigJson(
 }
 
 @Serializable
-data class AzureInfo(
+data class RespositoryInfo(
+    val provider: String,
     val collectionName: String? = null
 )
 

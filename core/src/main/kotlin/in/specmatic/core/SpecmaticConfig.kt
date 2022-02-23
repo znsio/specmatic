@@ -96,7 +96,7 @@ data class SpecmaticConfigJson(
 @Serializable
 data class RespositoryInfo(
     val provider: String,
-    val collectionName: String? = null
+    val collectionName: String
 )
 
 val SpecmaticJsonFormat = Json {

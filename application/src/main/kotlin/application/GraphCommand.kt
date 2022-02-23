@@ -8,6 +8,7 @@ import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
@@ -88,7 +89,17 @@ class GraphCommand: Callable<Unit> {
 
         val azureAuthToken = PersonalAccessToken(getPersonalAccessToken() ?: throw ContractException("Access token not found, put it in ${System.getProperty("user.home")}/specmatic.json"))
 
-        val collection = configJson.repository?.collectionName!!
+        val repository = configJson.repository
+            ?: exitWithMessage("""specmatic.json needs to contain a the repository information, as below:
+                    |{
+                    |  "repository": {
+                    |    "provider": "azure"
+                    |    "collectionName": "NameOfTheCollectionContainingThisProject"
+                    |  }
+                    |}
+                """.trimMargin())
+
+        val collection = repository.collectionName
         val azure = AzureAPI(azureAuthToken, "https://devops.jio.com", collection)
 
         logger.log("Dependency projects")

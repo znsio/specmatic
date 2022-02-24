@@ -83,7 +83,8 @@ sealed class Result {
 enum class FailureReason(val fluffy: Boolean) {
     PartNameMisMatch(false),
     URLPathMisMatch(true),
-    SOAPActionMismatch(true)
+    SOAPActionMismatch(true),
+    StatusMismatch(true)
 }
 
 fun Result.breadCrumb(breadCrumb: String): Result =

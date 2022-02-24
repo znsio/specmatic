@@ -141,13 +141,53 @@ private fun printDataFiles(dataFiles: List<File>) {
 }
 
 class StubMatchExceptionReport(private val request: HttpRequest, private val e: NoMatchingScenario) {
+    fun withoutFluff(): StubMatchExceptionReport {
+        return StubMatchExceptionReport(request, e.withoutFluff())
+    }
+
+    fun hasErrors(): Boolean {
+        return e.results.hasResults()
+    }
+
     val message: String
         get() = e.report(request)
 }
 
+data class StubMatchErrorReport(val exceptionReport: StubMatchExceptionReport, val contractFilePath: String) {
+    fun withoutFluff(): StubMatchErrorReport {
+        return this.copy(exceptionReport = exceptionReport.withoutFluff())
+    }
+
+    fun hasErrors(): Boolean {
+        return exceptionReport.hasErrors()
+    }
+}
+data class StubMatchResults(val feature: Feature?, val errorReport: StubMatchErrorReport?)
+
+fun stubMatchErrorMessage(
+    matchResults: List<StubMatchResults>,
+    stubFile: String
+): String {
+    val errorReports = matchResults.mapNotNull { it.errorReport }.map {
+        it.withoutFluff()
+    }.filter {
+        it.hasErrors()
+    }
+
+    return if(errorReports.isEmpty())
+        "$stubFile didn't match any of the contracts"
+    else errorReports.map { (exceptionReport, contractFilePath) ->
+        "$stubFile didn't match $contractFilePath${System.lineSeparator()}${
+            exceptionReport.message.prependIndent(
+                "  "
+            )
+        }"
+    }.joinToString("${System.lineSeparator()}${System.lineSeparator()}")
+}
+
 fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
     val contractInfoFromStubs = stubData.mapNotNull { (stubFile, stub) ->
-        val matchResults = features.asSequence().map { (qontractFile, feature) ->
+        val matchResults = features.map { (qontractFile, feature) ->
             try {
                 val kafkaMessage = stub.kafkaMessage
                 if (kafkaMessage != null) {
@@ -155,17 +195,18 @@ fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
                 } else {
                     feature.matchingStub(stub.request, stub.response)
                 }
-                Pair(feature, null)
+                StubMatchResults(feature, null)
             } catch (e: NoMatchingScenario) {
-                Pair(null, Pair(StubMatchExceptionReport(stub.request, e), qontractFile))
+                StubMatchResults(null, StubMatchErrorReport(StubMatchExceptionReport(stub.request, e), qontractFile))
             }
         }
 
-        when (val feature = matchResults.mapNotNull { it.first }.firstOrNull()) {
+        when (val feature = matchResults.mapNotNull { it.feature }.firstOrNull()) {
             null -> {
-                consoleLog(StringLog(matchResults.mapNotNull { it.second }.map { (exceptionReport, contractFile) ->
-                    "$stubFile didn't match $contractFile${System.lineSeparator()}${exceptionReport.message.prependIndent("  ")}"
-                }.joinToString("${System.lineSeparator()}${System.lineSeparator()}").prependIndent( "  ")))
+                val errorMessage = stubMatchErrorMessage(matchResults, stubFile).prependIndent("  ")
+
+                consoleLog(StringLog(errorMessage))
+
                 null
             }
             else -> Pair(feature, stub)

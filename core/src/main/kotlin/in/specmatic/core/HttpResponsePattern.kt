@@ -48,7 +48,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, _) = parameters
         when (response.status != status) {
-            true -> return MatchFailure(Result.Failure(message = "Expected status: $status, actual: ${response.status}", breadCrumb = "STATUS"))
+            true -> return MatchFailure(Result.Failure(message = "Expected status: $status, actual: ${response.status}", breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
         }
         return MatchSuccess(parameters)
     }

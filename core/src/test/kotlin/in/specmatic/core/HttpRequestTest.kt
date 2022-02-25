@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.HttpRequest.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -16,6 +17,10 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.optionalPattern
 import io.ktor.client.request.*
 import io.ktor.http.*
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 
@@ -200,5 +205,67 @@ internal class HttpRequestTest {
         }
         HttpRequest("GET", "/").buildRequest(httpRequestBuilder2)
         assertThat(httpRequestBuilder2.headers.get("Host")).isNull()
+    }
+
+    @Test
+    fun `should formulate a loggable error in non-strict mode`() {
+        val request = spyk(
+            HttpRequest(
+                "POST",
+                "/test",
+                headers = mapOf("SOAPAction" to "test")
+            )
+        )
+        every { request.requestNotRecognized(any<LenientRequestNotRecognizedMessages>()) }.returns("msg")
+
+        request.requestNotRecognized()
+
+        verify { request.requestNotRecognized(any<LenientRequestNotRecognizedMessages>()) }
+    }
+
+    @Test
+    fun `should formulate a loggable error in strict mode`() {
+        val request = spyk(
+            HttpRequest(
+                "POST",
+                "/test",
+                headers = mapOf("SOAPAction" to "test")
+            )
+        )
+        every { request.requestNotRecognized(any<StrictRequestNotRecognizedMessages>()) }.returns("msg")
+
+        request.requestNotRecognized()
+
+        verify { request.requestNotRecognized(any<StrictRequestNotRecognizedMessages>()) }
+    }
+
+    @Test
+    fun `should formulate a loggable error message describing the SOAP request without strict mode`() {
+        assertThat(LenientRequestNotRecognizedMessages().soap("test", "/test")).isEqualTo("No matching SOAP stub or contract found for SOAPAction test and path /test")
+    }
+
+    @Test
+    fun `should formulate a loggable error message describing the XML-REST request without strict mode`() {
+        assertThat(LenientRequestNotRecognizedMessages().xmlOverHttp("POST", "/test")).isEqualTo("No matching XML-REST stub or contract found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)")
+    }
+
+    @Test
+    fun `should formulate a loggable error message describing the JSON-REST request without strict mode`() {
+        assertThat(LenientRequestNotRecognizedMessages().restful("POST", "/test")).isEqualTo("No matching REST stub or contract found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)")
+    }
+
+    @Test
+    fun `should formulate a loggable error message describing the SOAP request in strict mode`() {
+        assertThat(StrictRequestNotRecognizedMessages().soap("test", "/test")).isEqualTo("No matching SOAP stub (strict mode) found for SOAPAction test and path /test")
+    }
+
+    @Test
+    fun `should formulate a loggable error message describing the XML-REST request in strict mode`() {
+        assertThat(StrictRequestNotRecognizedMessages().xmlOverHttp("POST", "/test")).isEqualTo("No matching XML-REST stub (strict mode) found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)")
+    }
+
+    @Test
+    fun `should formulate a loggable error message describing the JSON-REST request in strict mode`() {
+        assertThat(StrictRequestNotRecognizedMessages().restful("POST", "/test")).isEqualTo("No matching REST stub (strict mode) found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)")
     }
 }

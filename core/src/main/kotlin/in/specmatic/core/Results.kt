@@ -1,6 +1,6 @@
 package `in`.specmatic.core
 
-const val PATH_NOT_RECOGNIZED_ERROR = "URL path or SOAPAction not recognised"
+const val PATH_NOT_RECOGNIZED_ERROR = "Match not found"
 
 data class Results(val results: List<Result> = emptyList()) {
     fun hasResults(): Boolean = results.isNotEmpty()
@@ -42,11 +42,11 @@ data class Results(val results: List<Result> = emptyList()) {
     }
 
     fun report(defaultMessage: String = PATH_NOT_RECOGNIZED_ERROR): String {
-        val filteredResults = withoutFluff().results
+        val filteredResults = withoutFluff().results.filterIsInstance<Result.Failure>()
 
         return when {
             filteredResults.isNotEmpty() -> listToReport(filteredResults)
-            else -> "$defaultMessage\n\n${listToReport(results)}".trim()
+            else -> "$defaultMessage".trim()
         }
     }
 

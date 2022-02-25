@@ -113,16 +113,7 @@ Scenario: zero should return not found
 
         assertThat(flags["/hello/0 executed"]).isTrue
         assertThat(flags.size).isEqualTo(3)
-        assertThat(results.report()).isEqualTo(
-            """
-            In scenario "hello world. Response: Bad Request"
-            API: GET /hello/(id:number) -> 400
-            
-              >> RESPONSE.STATUS
-              
-              Expected status: 400, actual: 200
-            """.trimIndent()
-        )
+        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
 
     @Test
@@ -164,16 +155,7 @@ Background:
         assertThat(flags["/hello/0 executed"]).isTrue
         assertThat(flags["/hello/15 executed"]).isTrue
         assertThat(flags.size).isEqualTo(3)
-        assertThat(results.report()).isEqualTo(
-            """
-            In scenario "hello world. Response: Bad Request"
-            API: GET /hello/(id:number) -> 400
-            
-              >> RESPONSE.STATUS
-              
-              Expected status: 400, actual: 200
-            """.trimIndent()
-        )
+        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
 
     @Test
@@ -215,30 +197,7 @@ Background:
         assertThat(flags["/hello/0 executed"]).isTrue
         assertThat(flags["/hello/15 executed"]).isTrue
         assertThat(flags.size).isEqualTo(3)
-        assertThat(results.report()).isEqualTo(
-            """
-            In scenario "hello world. Response: Bad Request"
-            API: GET /hello/(id:number) -> 400
-            
-              >> RESPONSE.STATUS
-              
-              Expected status: 400, actual: 202
-            
-            In scenario "hello world. Response: Says hello Examples: id=15"
-            API: GET /hello/(id:number) -> 200
-            
-              >> RESPONSE.STATUS
-              
-              Expected status: 200, actual: 202
-            
-            In scenario "hello world. Response: Not Found Examples: id=0"
-            API: GET /hello/(id:number) -> 404
-            
-              >> RESPONSE.STATUS
-              
-              Expected status: 404, actual: 403
-            """.trimIndent()
-        )
+        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
 
     @Test
@@ -272,30 +231,7 @@ Background:
 
         assertThat(flags["executed"]).isTrue
         assertFalse(results.success())
-        assertThat(results.report()).isEqualTo(
-            """
-            In scenario "hello world. Response: Not Found"
-            API: GET /hello/0 -> 404
-            
-              >> RESPONSE.STATUS
-              
-              Expected status: 404, actual: 403
-            
-            In scenario "hello world. Response: Says hello"
-            API: GET /hello/(id:number) -> 200
-            
-              >> RESPONSE.STATUS
-              
-              Expected status: 200, actual: 202
-            
-            In scenario "hello world. Response: Bad Request"
-            API: GET /hello/(id:number) -> 400
-            
-              >> RESPONSE.STATUS
-              
-              Expected status: 400, actual: 202
-            """.trimIndent()
-        )
+        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
 
     @Test

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.value.*
+import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
@@ -493,6 +494,20 @@ Feature: Customer Data
     private fun stubResponse(request: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>): HttpResponse {
         val expectations = contractInfoToExpectations(contractInfo)
         return stubResponse(request, contractInfo, expectations)
+    }
+
+    @Test
+    fun `should eliminate fluffy error messages and display a standard error if all errors are fluffy`() {
+        val results = Results(listOf(Result.Failure("failed", null, "", FailureReason.StatusMismatch)))
+        val exceptionReport = StubMatchExceptionReport(HttpRequest("POST", "/test"), NoMatchingScenario(results))
+        val stubMatchResults = StubMatchResults(null, StubMatchErrorReport(exceptionReport, "/path/to/contract"))
+        val errorMessage = stubMatchErrorMessage(listOf(stubMatchResults), "stubfile.json")
+
+        assertThat(errorMessage).isEqualTo("""
+            stubfile.json didn't match any of the contracts
+              No matching REST stub or contract found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)
+""".trimIndent())
+        println(errorMessage)
     }
 }
 

@@ -140,7 +140,7 @@ private fun printDataFiles(dataFiles: List<File>) {
     }
 }
 
-class StubMatchExceptionReport(private val request: HttpRequest, private val e: NoMatchingScenario) {
+class StubMatchExceptionReport(val request: HttpRequest, private val e: NoMatchingScenario) {
     fun withoutFluff(): StubMatchExceptionReport {
         return StubMatchExceptionReport(request, e.withoutFluff())
     }
@@ -175,7 +175,7 @@ fun stubMatchErrorMessage(
     }
 
     return if(errorReports.isEmpty())
-        "$stubFile didn't match any of the contracts"
+        "$stubFile didn't match any of the contracts\n${matchResults.firstOrNull()?.errorReport?.exceptionReport?.request?.requestNotRecognized()?.prependIndent("  ")}".trim()
     else errorReports.map { (exceptionReport, contractFilePath) ->
         "$stubFile didn't match $contractFilePath${System.lineSeparator()}${
             exceptionReport.message.prependIndent(

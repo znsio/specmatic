@@ -10,7 +10,10 @@ import `in`.specmatic.core.pattern.StringPattern
 internal class HttpRequestPatternKtTest {
     @Test
     fun `when generating new content part types with two value options there should be two types generated`() {
-        val multiPartTypes = listOf(MultiPartContentPattern("data", AnyPattern(listOf(StringPattern(), NumberPattern()))))
+        val multiPartTypes = listOf(MultiPartContentPattern(
+            "data",
+            AnyPattern(listOf(StringPattern(), NumberPattern())),
+        ))
 
         val newTypes = newMultiPartBasedOn(multiPartTypes, Row(), Resolver())
 

@@ -7,7 +7,8 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.NoMatchingScenario
-import `in`.specmatic.stub.HttpStubData
+import `in`.specmatic.stub.*
+import `in`.specmatic.test.HttpClient
 import `in`.specmatic.test.TestExecutor
 import io.ktor.util.reflect.*
 import io.swagger.util.Yaml
@@ -15,6 +16,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
+import org.springframework.web.client.RestTemplate
 import java.io.File
 
 internal class OpenApiSpecificationTest {
@@ -4651,5 +4653,462 @@ components:
         val testScenario = feature.generateContractTestScenarios(emptyList()).single()
 
         assertThat(testScenario.bindings).containsEntry("id", "response-body.id")
+    }
+
+    @Test
+    fun `support for multipart form data tests`(@TempDir tempDir: File) {
+        val openAPI = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data_csv:
+                post:
+                  summary: "Save data"
+                  parameters: []
+                  requestBody:
+                    content:
+                      multipart/form-data:
+                        encoding:
+                          csv:
+                            contentType: text/csv
+                        schema:
+                          required:
+                          - "csv"
+                          properties:
+                            csv:
+                              type: "string"
+                  responses:
+                    200:
+                      description: "Get product by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+
+        val openAPIFile = tempDir.resolve("data.yaml")
+        openAPIFile.writeText(openAPI)
+
+        val csvFile = tempDir.resolve("data.csv")
+        val csvFileContent = "1,2,3"
+        csvFile.writeText(csvFileContent)
+
+        val spec = """
+            Feature: Data API
+            
+              Background:
+                Given openapi data.yaml
+                
+              Scenario Outline: Save data
+                When POST /data_csv
+                Then status 200
+                
+                Examples:
+                | csv         |
+                | (@${csvFile.canonicalPath}) |
+        """.trimIndent()
+
+        val specFile = tempDir.resolve("data.spec")
+        specFile.writeText(spec)
+
+        val feature = parseContractFileToFeature(specFile)
+
+        val testScenario = feature.generateContractTestScenarios(emptyList()).single()
+
+        val requestPattern = testScenario.httpRequestPattern
+        assertThat(requestPattern.multiPartFormDataPattern.single().name).isEqualTo("csv")
+        assertThat(requestPattern.multiPartFormDataPattern.single().contentType).isEqualTo("text/csv")
+
+        val generatedValue: MultiPartContentValue = requestPattern.multiPartFormDataPattern.single().generate(Resolver()) as MultiPartContentValue
+        assertThat(generatedValue.content.toStringLiteral()).isEqualTo(csvFileContent)
+    }
+
+    @TempDir
+    lateinit var tempDir: File
+
+    @Nested
+    inner class MultiPartRequestBody {
+        private val openAPI = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data_csv:
+                post:
+                  summary: "Save data"
+                  parameters: []
+                  requestBody:
+                    content:
+                      multipart/form-data:
+                        encoding:
+                          csv:
+                            contentType: text/csv
+                        schema:
+                          required:
+                          -  csv
+                          properties:
+                            csv:
+                              type: "string"
+                  responses:
+                    200:
+                      description: "Get product by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+
+        @Test
+        fun `should make multipart type optional or non-optional as per the schema`() {
+            val openAPINonOptional = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data_csv:
+                post:
+                  summary: "Save data"
+                  parameters: []
+                  requestBody:
+                    content:
+                      multipart/form-data:
+                        encoding:
+                          csv:
+                            contentType: text/csv
+                        schema:
+                          required:
+                          -  csv
+                          properties:
+                            csv:
+                              type: "string"
+                  responses:
+                    200:
+                      description: "Get product by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+
+            OpenApiSpecification.fromYAML(openAPINonOptional, "").toFeature().let {
+                assertThat(it.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single().name).doesNotEndWith("?")
+            }
+
+            val openAPIOptional = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data_csv:
+                post:
+                  summary: "Save data"
+                  parameters: []
+                  requestBody:
+                    content:
+                      multipart/form-data:
+                        encoding:
+                          csv:
+                            contentType: text/csv
+                        schema:
+                          properties:
+                            csv:
+                              type: "string"
+                  responses:
+                    200:
+                      description: "Get product by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            """.trimIndent()
+
+            OpenApiSpecification.fromYAML(openAPIOptional, "").toFeature().let {
+                assertThat(it.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single().name).endsWith("?")
+            }
+        }
+
+        @Test
+        fun `support for multipart form data file stub`() {
+            val openAPIFile = tempDir.resolve("data.yaml")
+            openAPIFile.writeText(openAPI)
+
+            val csvFile = tempDir.resolve("data.csv")
+            val csvFileContent = "1,2,3"
+            csvFile.writeText(csvFileContent)
+
+            val stubContent = """
+            {
+              "http-request": {
+                "method": "POST",
+                "path": "/data_csv",
+                "multipart-formdata": [{
+                  "name": "csv",
+                  "content": "(string)",
+                  "contentType": "text/csv"
+                }]
+              },
+              "http-response": {
+                "status": 200,
+                "body": "success"
+              }
+            }
+        """.trimIndent()
+
+            val stubDir = tempDir.resolve("data_data")
+            stubDir.mkdirs()
+            val stubFile = stubDir.resolve("stub.json")
+            stubFile.writeText(stubContent)
+
+            var testStatus: String = "Did not run"
+
+            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
+                testStatus = "test ran"
+
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/data_csv",
+                    multiPartFormData = listOf(
+                        MultiPartFileValue("csv", csvFile.canonicalPath, "text/csv")
+                    )
+                )
+
+                val response = it.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.body.toStringLiteral()).isEqualTo("success")
+            }
+
+            assertThat(testStatus).isEqualTo("test ran")
+        }
+
+        @Test
+        fun `support for multipart form data stub and validate contentType`() {
+            val openAPIFile = tempDir.resolve("data.yaml")
+            openAPIFile.writeText(openAPI)
+
+            val csvFile = tempDir.resolve("data.csv")
+            val csvFileContent = "1,2,3"
+            csvFile.writeText(csvFileContent)
+
+            val stubContent = """
+            {
+              "http-request": {
+                "method": "POST",
+                "path": "/data_csv",
+                "multipart-formdata": [{
+                  "name": "csv",
+                  "content": "(string)",
+                  "contentType": "text/csv"
+                }]
+              },
+              "http-response": {
+                "status": 200,
+                "body": "success"
+              }
+            }
+        """.trimIndent()
+
+            val stubDir = tempDir.resolve("data_data")
+            stubDir.mkdirs()
+            val stubFile = stubDir.resolve("stub.json")
+            stubFile.writeText(stubContent)
+
+            var testStatus: String = "Did not run"
+
+            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
+                testStatus = "test ran"
+
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/data_csv",
+                    multiPartFormData = listOf(
+                        MultiPartFileValue("csv", csvFile.canonicalPath, "text/plain")
+                    )
+                )
+
+                val response = it.client.execute(request)
+
+                assertThat(response.status).isEqualTo(400)
+            }
+
+            assertThat(testStatus).isEqualTo("test ran")
+        }
+
+        @Test
+        fun `support for multipart form data file stub and validate content`() {
+            val openAPIFile = tempDir.resolve("data.yaml")
+            openAPIFile.writeText(openAPI)
+
+            val csvFile = tempDir.resolve("data.csv")
+            val csvFileContent = "1,2,3"
+            csvFile.writeText(csvFileContent)
+
+            val stubContent = """
+            {
+              "http-request": {
+                "method": "POST",
+                "path": "/data_csv",
+                "multipart-formdata": [
+                  {
+                    "name": "csv",
+                    "content": "1,2,3",
+                    "contentType": "text/csv"
+                  }
+                ]
+              },
+              "http-response": {
+                "status": 200,
+                "body": "success"
+              }
+            }
+        """.trimIndent()
+
+            val stubDir = tempDir.resolve("data_data")
+            stubDir.mkdirs()
+            val stubFile = stubDir.resolve("stub.json")
+            stubFile.writeText(stubContent)
+
+            var testStatus: String = "Did not run"
+
+            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
+                testStatus = "test ran"
+
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/data_csv",
+                    multiPartFormData = listOf(
+                        MultiPartFileValue("csv", csvFile.canonicalPath, "text/csv")
+                    )
+                )
+
+                val response = it.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                println(response.body.toStringLiteral())
+            }
+
+            assertThat(testStatus).isEqualTo("test ran")
+        }
+
+        @Test
+        fun `support for multipart form data non-file stub and validate content type`() {
+            val openAPIFile = tempDir.resolve("data.yaml")
+            openAPIFile.writeText(openAPI)
+
+            val csvFile = tempDir.resolve("data.csv")
+            val csvFileContent = "1,2,3"
+            csvFile.writeText(csvFileContent)
+
+            val stubContent = """
+            {
+              "http-request": {
+                "method": "POST",
+                "path": "/data_csv",
+                "multipart-formdata": [
+                  {
+                    "name": "csv",
+                    "content": "1,2,3",
+                    "contentType": "text/csv"
+                  }
+                ]
+              },
+              "http-response": {
+                "status": 200,
+                "body": "success"
+              }
+            }
+        """.trimIndent()
+
+            val stubDir = tempDir.resolve("data_data")
+            stubDir.mkdirs()
+            val stubFile = stubDir.resolve("stub.json")
+            stubFile.writeText(stubContent)
+
+            var testStatus: String = "Did not run"
+
+            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
+                testStatus = "test ran"
+
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/data_csv",
+                    multiPartFormData = listOf(
+                        MultiPartContentValue("csv", StringValue("1,2,3"), specifiedContentType = "text/plain")
+                    )
+                )
+
+                val response = it.client.execute(request)
+
+                assertThat(response.status).isEqualTo(400)
+                println(response.body.toStringLiteral())
+            }
+
+            assertThat(testStatus).isEqualTo("test ran")
+        }
+
+        @Test
+        fun `support for multipart form data non-file stub and validate content`() {
+            val openAPIFile = tempDir.resolve("data.yaml")
+            openAPIFile.writeText(openAPI)
+
+            val csvFile = tempDir.resolve("data.csv")
+            val csvFileContent = "1,2,3"
+            csvFile.writeText(csvFileContent)
+
+            val stubContent = """
+            {
+              "http-request": {
+                "method": "POST",
+                "path": "/data_csv",
+                "multipart-formdata": [
+                  {
+                    "name": "csv",
+                    "content": "1,2,3",
+                    "contentType": "text/csv"
+                  }
+                ]
+              },
+              "http-response": {
+                "status": 200,
+                "body": "success"
+              }
+            }
+        """.trimIndent()
+
+            val stubDir = tempDir.resolve("data_data")
+            stubDir.mkdirs()
+            val stubFile = stubDir.resolve("stub.json")
+            stubFile.writeText(stubContent)
+
+            var testStatus: String = "Did not run"
+
+            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
+                testStatus = "test ran"
+
+                val request = HttpRequest(
+                    method = "POST",
+                    path = "/data_csv",
+                    multiPartFormData = listOf(
+                        MultiPartContentValue("csv", StringValue("1,2,3"), specifiedContentType = "text/csv")
+                    )
+                )
+
+                val response = it.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                println(response.body.toStringLiteral())
+            }
+
+            assertThat(testStatus).isEqualTo("test ran")
+        }
     }
 }

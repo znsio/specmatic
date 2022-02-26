@@ -17,7 +17,7 @@ import kotlin.text.String
 
 const val CONTENT_DISPOSITION = "Content-Disposition"
 
-sealed class MultiPartFormDataValue(open val name: String) {
+sealed class MultiPartFormDataValue(open val name: String, open val contentType: String?) {
     abstract fun inferType(): MultiPartFormDataPattern
     abstract fun toDisplayableValue(): String
     abstract fun toJSONObject(): JSONObjectValue
@@ -29,26 +29,33 @@ sealed class MultiPartFormDataValue(open val name: String) {
     ): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations>
 }
 
-data class MultiPartContentValue(override val name: String, val content: Value, val boundary: String = "#####") : MultiPartFormDataValue(name) {
+data class MultiPartContentValue(override val name: String, val content: Value, val boundary: String = "#####", val specifiedContentType: String? = null) : MultiPartFormDataValue(name,
+    specifiedContentType ?: content.httpContentType
+) {
+    override val contentType: String
+      get() {
+          return specifiedContentType ?: content.httpContentType
+      }
+
     override fun inferType(): MultiPartFormDataPattern {
-        return MultiPartContentPattern(name, content.exactMatchElseType())
+        return MultiPartContentPattern(name, content.exactMatchElseType(), contentType)
     }
 
     override fun toDisplayableValue(): String = """
 --$boundary
 $CONTENT_DISPOSITION: form-data; name="$name"
-Content-Type: ${content.httpContentType}
+Content-Type: $contentType
 
 $content
 """.trim()
 
     override fun toJSONObject(): JSONObjectValue =
-            JSONObjectValue(mapOf("name" to StringValue(name), "content" to StringValue(content.toStringLiteral()), "contentType" to StringValue(content.httpContentType)))
+            JSONObjectValue(mapOf("name" to StringValue(name), "content" to StringValue(content.toStringLiteral()), "contentType" to StringValue(contentType)))
 
     @OptIn(InternalAPI::class)
     override fun addTo(formBuilder: FormBuilder) {
         formBuilder.append(name, content.toStringLiteral(), Headers.build {
-            append(HttpHeaders.ContentType, ContentType.parse(content.httpContentType))
+            append(HttpHeaders.ContentType, ContentType.parse(contentType))
         })
     }
 
@@ -76,6 +83,10 @@ data class MultiPartContent(val bytes: ByteArray) {
     val text: String = String(bytes)
     val input: Input = bytes.inputStream().asInput()
 
+    fun toStringLiteral(): String {
+        return String(bytes)
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -97,7 +108,7 @@ data class MultiPartContent(val bytes: ByteArray) {
     }
 }
 
-data class MultiPartFileValue(override val name: String, val filename: String, val contentType: String? = null, val contentEncoding: String? = null, val content: MultiPartContent = MultiPartContent(), val boundary: String = "#####") : MultiPartFormDataValue(name) {
+data class MultiPartFileValue(override val name: String, val filename: String, override val contentType: String? = null, val contentEncoding: String? = null, val content: MultiPartContent = MultiPartContent(), val boundary: String = "#####") : MultiPartFormDataValue(name, contentType) {
     override fun inferType(): MultiPartFormDataPattern {
         return MultiPartFilePattern(name, filenameToType(), contentType, contentEncoding)
     }

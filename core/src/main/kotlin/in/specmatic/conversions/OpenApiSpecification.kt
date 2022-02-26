@@ -319,6 +319,21 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             )
             else -> operation.requestBody.content.map { (contentType, mediaType) ->
                 when (contentType.lowercase()) {
+                    "multipart/form-data" -> {
+                        val partSchemas = mediaType.schema
+
+                        val parts: List<MultiPartFormDataPattern> = partSchemas.properties.map { (partName, partSchema) ->
+                            val partContentType = mediaType.encoding?.get(partName)?.contentType
+                            val partNameWithPresence = if(partSchemas.required?.contains(partName) == true)
+                                partName
+                            else
+                                "$partName?"
+
+                            MultiPartContentPattern(partNameWithPresence, toSpecmaticPattern(partSchema, emptyList()), partContentType)
+                        }
+
+                        requestPattern.copy(multiPartFormDataPattern = parts)
+                    }
                     "application/x-www-form-urlencoded" -> {
                         requestPattern.copy(formFieldsPattern = toFormFields(mediaType))
                     }

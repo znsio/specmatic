@@ -8,16 +8,20 @@ import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
 import kotlin.io.path.name
 
-sealed class MultiPartFormDataPattern(open val name: String) {
+sealed class MultiPartFormDataPattern(open val name: String, open val contentType: String?) {
     abstract fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?>
     abstract fun generate(resolver: Resolver): MultiPartFormDataValue
     abstract fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result
     abstract fun nonOptional(): MultiPartFormDataPattern
 }
 
-data class MultiPartContentPattern(override val name: String, val content: Pattern) : MultiPartFormDataPattern(name) {
+data class MultiPartContentPattern(override val name: String, val content: Pattern, override val contentType: String? = null) : MultiPartFormDataPattern(name, contentType) {
     override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartContentPattern?> =
-            newBasedOn(row, withoutOptionality(name), content, resolver).map { newContent -> MultiPartContentPattern(withoutOptionality(name), newContent) }.let {
+            newBasedOn(row, withoutOptionality(name), content, resolver).map { newContent: Pattern -> MultiPartContentPattern(
+                withoutOptionality(name),
+                newContent,
+                contentType
+            ) }.let {
                 when{
                     isOptional(name) && !row.containsField(withoutOptionality(name)) -> listOf(null).plus(it)
                     else -> it
@@ -25,13 +29,17 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
             }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
-            MultiPartContentValue(name, content.generate(resolver))
+            MultiPartContentValue(name, content.generate(resolver), specifiedContentType = contentType ?: "")
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
-        return when {
-            name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}", failureReason = FailureReason.PartNameMisMatch)
-            value !is MultiPartContentValue -> Failure("The contract expected content, but got a file.")
-            value.content is StringValue -> {
+        if(withoutOptionality(name) != value.name)
+            return Failure("The contract expected a part name to be $name, but got ${value.name}", failureReason = FailureReason.PartNameMisMatch)
+
+        if(contentType != null && contentType != value.contentType)
+            return Failure("Expected $contentType, but got ${value.contentType}")
+
+        return when(value) {
+            is MultiPartFileValue -> {
                 try {
                     val parsedContent = try { content.parse(value.content.toStringLiteral(), resolver) } catch (e: Throwable) { StringValue(value.content.toStringLiteral()) }
                     resolver.matchesPattern(name, content, parsedContent)
@@ -41,8 +49,19 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
                     Failure("Expected a ${content.typeName} but got ${value.content.toStringLiteral()}", breadCrumb = "content")
                 }
             }
-            else -> {
-                content.matches(value.content, resolver)
+            is MultiPartContentValue -> {
+                if(value.content is StringValue) {
+                    return try {
+                        val parsedContent = try { content.parse(value.content.toStringLiteral(), resolver) } catch (e: Throwable) { StringValue(value.content.toStringLiteral()) }
+                        resolver.matchesPattern(name, content, parsedContent)
+                    } catch (e: ContractException) {
+                        Failure(e.report(), breadCrumb = "content")
+                    } catch (e: Throwable) {
+                        Failure("Expected a ${content.typeName} but got ${value.content.toStringLiteral()}", breadCrumb = "content")
+                    }
+                } else {
+                    content.matches(value.content, resolver)
+                }
             }
         }
     }
@@ -52,14 +71,14 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
     }
 }
 
-data class MultiPartFilePattern(override val name: String, val filename: Pattern, val contentType: String? = null, val contentEncoding: String? = null) : MultiPartFormDataPattern(name) {
+data class MultiPartFilePattern(override val name: String, val filename: Pattern, override val contentType: String? = null, val contentEncoding: String? = null) : MultiPartFormDataPattern(name, contentType) {
     override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?> {
         val rowKey = "${name}_filename"
         return listOf(this.copy(filename = if(row.containsField(rowKey)) ExactValuePattern(StringValue(row.getField(rowKey))) else filename))
     }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
-            MultiPartFileValue(name, filename.generate(resolver).toStringLiteral(), contentType, contentEncoding)
+            MultiPartFileValue(name, filename.generate(resolver).toStringLiteral(), contentType ?: "", contentEncoding)
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
         return when {

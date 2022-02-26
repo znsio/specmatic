@@ -150,7 +150,10 @@ internal class HttpRequestPatternTest {
 
     @Test
     fun `request with multiple parts and no optional values should result in just one test for the whole`() {
-        val parts = listOf(MultiPartContentPattern("data1", StringPattern()), MultiPartContentPattern("data2", StringPattern()))
+        val parts = listOf(MultiPartContentPattern(
+            "data1",
+            StringPattern(),
+        ), MultiPartContentPattern("data2", StringPattern()))
         val requestPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = parts)
         val patterns = requestPattern.newBasedOn(Row(), Resolver())
 
@@ -182,7 +185,10 @@ internal class HttpRequestPatternTest {
 
         assertThat(patterns).hasSize(1)
 
-        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("data", toJSONObjectPattern(mapOf("name" to ExactValuePattern(StringValue("John Doe")))))))
+        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern(
+            "data",
+            toJSONObjectPattern(mapOf("name" to ExactValuePattern(StringValue("John Doe")))),
+        )))
         assertThat(patterns.single()).isEqualTo(expectedPattern)
     }
 
@@ -196,7 +202,10 @@ internal class HttpRequestPatternTest {
 
         assertThat(patterns).hasSize(1)
 
-        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("name", ExactValuePattern(StringValue("John Doe")))))
+        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern(
+            "name",
+            ExactValuePattern(StringValue("John Doe")),
+        )))
         assertThat(patterns.single()).isEqualTo(expectedPattern)
     }
 
@@ -210,7 +219,10 @@ internal class HttpRequestPatternTest {
 
         assertThat(patterns).hasSize(1)
 
-        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern("name", ExactValuePattern(StringValue("John Doe")))))
+        val expectedPattern = HttpRequestPattern(method = "GET", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(MultiPartContentPattern(
+            "name",
+            ExactValuePattern(StringValue("John Doe")),
+        )))
         assertThat(patterns.single()).isEqualTo(expectedPattern)
     }
 

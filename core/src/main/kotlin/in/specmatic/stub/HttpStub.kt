@@ -18,6 +18,7 @@ import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
 import `in`.specmatic.mock.validateMock
+import `in`.specmatic.test.HttpClient
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.http.*
@@ -42,6 +43,8 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.toMutableList())
     val endPoint = endPointFromHostAndPort(host, port, keyData)
+
+    override val client = HttpClient(this.endPoint)
 
     private val environment = applicationEngineEnvironment {
         module {
@@ -234,7 +237,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                         MultiPartFileValue(it.name ?: "", it.originalFileName ?: "", "${it.contentType?.contentType}/${it.contentType?.contentSubtype}", null, content, boundary)
                     }
                     is PartData.FormItem -> {
-                        MultiPartContentValue(it.name ?: "", StringValue(it.value), boundary)
+                        MultiPartContentValue(it.name ?: "", StringValue(it.value), boundary, specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}")
                     }
                     is PartData.BinaryItem -> {
                         val content = it.provider().asStream().use { input ->
@@ -243,7 +246,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             output.toString()
                         }
 
-                        MultiPartContentValue(it.name ?: "", StringValue(content), boundary)
+                        MultiPartContentValue(it.name ?: "", StringValue(content), boundary, specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}")
                     }
                 }
             }

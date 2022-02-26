@@ -184,7 +184,7 @@ fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpRequest> {
                     val name = formField.getString("key")
                     val value = formField.getString("value")
 
-                    MultiPartContentValue(name, guessType(parsedValue(value)))
+                    MultiPartContentValue(name, guessType(parsedValue(value)), specifiedContentType = null)
                 }
 
                 Triple(EmptyString, emptyMap(), formData)

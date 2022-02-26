@@ -295,7 +295,7 @@ data class Feature(
 
     private fun convergeRequestPayload(baseScenario: Scenario, newScenario: Scenario): Scenario {
         if(baseScenario.httpRequestPattern.multiPartFormDataPattern.isNotEmpty())
-            TODO("Multipart requests")
+            TODO("Multipart requests not yet supported")
 
         return if(baseScenario.httpRequestPattern.formFieldsPattern.size == 1) {
             if(newScenario.httpRequestPattern.formFieldsPattern.size != 1)

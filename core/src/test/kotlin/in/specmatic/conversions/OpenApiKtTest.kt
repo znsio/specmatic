@@ -6,6 +6,7 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
+import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.assertj.core.api.Assertions.assertThat
@@ -443,6 +444,33 @@ Background:
     }
 
     @Test
+    fun `should generate stub that returns authenticates with api key in header and query`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/apiKeyAuth.yaml")).use {
+            val requestWithHeader = HttpRequest(
+                method = "GET",
+                path = "/hello/10",
+                headers = mapOf(
+                    "X-API-KEY" to "test"
+                )
+            )
+
+            val responseFromHeader = it.client.execute(requestWithHeader)
+            assertThat(responseFromHeader.status).isEqualTo(200)
+
+            val requestWithQuery = HttpRequest(
+                method = "GET",
+                path = "/hello/10",
+                queryParams = mapOf(
+                    "apiKey" to "test"
+                )
+            )
+
+            val responseFromQuery = it.client.execute(requestWithQuery)
+            assertThat(responseFromQuery.status).isEqualTo(200)
+        }
+    }
+
+    @Test
     fun `should throw not supported error when a security scheme other than bearer auth is defined`() {
         assertThrows<ContractException> {
             parseGherkinStringToFeature(
@@ -450,10 +478,24 @@ Background:
 Feature: Hello world
 
 Background:
-  Given openapi openapi/non-bearer-authentication.yaml
+  Given openapi openapi/unsupported-authentication.yaml
         """.trimIndent(), sourceSpecPath
             )
-        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer authentication scheme at the moment") }
+        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer and api key authentication (header, query) scheme at the moment") }
+    }
+
+    @Test
+    fun `should throw not supported error when a non-query-or-header API security scheme is defined`() {
+        assertThrows<ContractException> {
+            parseGherkinStringToFeature(
+                """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/apiKeyAuthCookie.yaml
+        """.trimIndent(), sourceSpecPath
+            )
+        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer and api key authentication (header, query) scheme at the moment") }
     }
 
     @Test

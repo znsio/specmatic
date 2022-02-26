@@ -186,10 +186,10 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 }
 
-internal fun toURLMatcherWithOptionalQueryParams(url: String): URLMatcher =
-    toURLMatcherWithOptionalQueryParams(URI.create(url))
+internal fun toURLMatcherWithOptionalQueryParams(url: String, apiKeyQueryParams: Set<String> = emptySet()): URLMatcher =
+    toURLMatcherWithOptionalQueryParams(URI.create(url), apiKeyQueryParams)
 
-internal fun toURLMatcherWithOptionalQueryParams(urlPattern: URI): URLMatcher {
+internal fun toURLMatcherWithOptionalQueryParams(urlPattern: URI, apiKeyQueryParams: Set<String> = emptySet()): URLMatcher {
     val path = urlPattern.path
 
     val pathPattern = pathToPattern(urlPattern.rawPath)
@@ -201,6 +201,10 @@ internal fun toURLMatcherWithOptionalQueryParams(urlPattern: URI): URLMatcher {
             DeferredPattern(it.value, it.key)
         else
             ExactValuePattern(StringValue(it.value))
+    }.let { queryParams ->
+        apiKeyQueryParams.map { apiKeyQueryParam ->
+            Pair("${apiKeyQueryParam}?", StringPattern())
+        }.toMap().plus(queryParams)
     }
 
     return URLMatcher(queryPattern = queryPattern, path = path, pathPattern = pathPattern)

@@ -21,6 +21,7 @@ import io.swagger.v3.oas.models.parameters.QueryParameter
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.oas.models.security.SecurityRequirement
+import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.parser.OpenAPIV3Parser
 import io.swagger.v3.parser.core.models.ParseOptions
 import org.apache.http.HttpHeaders.AUTHORIZATION
@@ -291,12 +292,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema, emptyList())
         }.toMap().toMutableMap()
 
+        val securityQueryParams = mutableSetOf<String>()
+
         if (openApi.components != null && !openApi.components.securitySchemes.isNullOrEmpty()) {
-            if (openApi.components.securitySchemes.toList().any { securityScheme -> securityScheme.second.scheme != BEARER_SECURITY_SCHEME })
-                throw ContractException("Specmatic only supports bearer authentication scheme at the moment")
+            if (openApi.components.securitySchemes.toList().any { securityScheme ->
+                    notBearerAuth(securityScheme) && unsupportedApiKeyAuth(securityScheme)
+            })
+                throw ContractException("Specmatic only supports bearer and api key authentication (header, query) scheme at the moment")
+
             val bearerAuthSecuritySchemeName = openApi.components.securitySchemes.toList().findLast { securityScheme ->
                 securityScheme.second.scheme == BEARER_SECURITY_SCHEME
             }?.first
+
             if (!bearerAuthSecuritySchemeName.isNullOrEmpty()) {
                 if (doSecurityRequirementsMatch(
                         operation.security, bearerAuthSecuritySchemeName
@@ -305,9 +312,27 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     )
                 ) headersMap[AUTHORIZATION] = StringPattern()
             }
+
+            openApi.components.securitySchemes.toList().filter { securityScheme ->
+                securityScheme.second.type == SecurityScheme.Type.APIKEY
+            }.forEach { (apiKeySecuritySchemeName, apiKeySecurityScheme) ->
+                if(!apiKeySecuritySchemeName.isNullOrEmpty()) {
+                    if(doSecurityRequirementsMatch(operation.security, apiKeySecuritySchemeName) ||
+                            doSecurityRequirementsMatch(openApi.security, apiKeySecuritySchemeName)) {
+                                when(apiKeySecurityScheme.`in`) {
+                                    SecurityScheme.In.HEADER ->
+                                        headersMap["${apiKeySecurityScheme.name}?"] = StringPattern()
+                                    SecurityScheme.In.QUERY ->
+                                        securityQueryParams.add(apiKeySecurityScheme.name)
+                                    else ->
+                                        throw ContractException("Only Header and Query API Key security schemes are supported at the moment")
+                                }
+                            }
+                }
+            }
         }
 
-        val urlMatcher = toURLMatcherWithOptionalQueryParams(path)
+        val urlMatcher = toURLMatcherWithOptionalQueryParams(path, securityQueryParams)
         val headersPattern = HttpHeadersPattern(headersMap)
         val requestPattern = HttpRequestPattern(
             urlMatcher = urlMatcher, method = httpMethod, headersPattern = headersPattern
@@ -346,6 +371,15 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 }
             }
         }
+    }
+
+    private fun unsupportedApiKeyAuth(securityScheme: Pair<String, SecurityScheme>): Boolean {
+        return (securityScheme.second.type != SecurityScheme.Type.APIKEY
+                || securityScheme.second.`in` !in listOf(SecurityScheme.In.HEADER, SecurityScheme.In.QUERY))
+    }
+
+    private fun notBearerAuth(securityScheme: Pair<String, SecurityScheme>): Boolean {
+        return securityScheme.second.scheme != BEARER_SECURITY_SCHEME
     }
 
     private fun doSecurityRequirementsMatch(

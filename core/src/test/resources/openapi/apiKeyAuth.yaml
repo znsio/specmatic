@@ -42,7 +42,14 @@ paths:
 
 components:
   securitySchemes:
-    ApiKeyAuth:
+    ApiKeyAuthHeader:
       type: apiKey
       in: header
-      name: X-API-Key
+      name: X-API-KEY
+    ApiKeyAuthQuery:
+      type: apiKey
+      in: query
+      name: apiKey
+security:
+  - ApiKeyAuthHeader: []
+  - ApiKeyAuthQuery: []

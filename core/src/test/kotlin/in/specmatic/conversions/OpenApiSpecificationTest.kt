@@ -4726,9 +4726,6 @@ components:
         assertThat(generatedValue.content.toStringLiteral()).isEqualTo(csvFileContent)
     }
 
-    @TempDir
-    lateinit var tempDir: File
-
     @Nested
     inner class MultiPartRequestBody {
         private val openAPI = """
@@ -4837,7 +4834,7 @@ components:
         }
 
         @Test
-        fun `support for multipart form data file stub`() {
+        fun `support for multipart form data file stub`(@TempDir tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -4891,7 +4888,7 @@ components:
         }
 
         @Test
-        fun `support for multipart form data stub and validate contentType`() {
+        fun `support for multipart form data stub and validate contentType`(@TempDir tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -4944,7 +4941,7 @@ components:
         }
 
         @Test
-        fun `support for multipart form data file stub and validate content`() {
+        fun `support for multipart form data file stub and validate content`(@TempDir tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -5000,7 +4997,7 @@ components:
         }
 
         @Test
-        fun `support for multipart form data non-file stub and validate content type`() {
+        fun `support for multipart form data non-file stub and validate content type`(@TempDir tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -5056,7 +5053,7 @@ components:
         }
 
         @Test
-        fun `support for multipart form data non-file stub and validate content`() {
+        fun `support for multipart form data non-file stub and validate content`(@TempDir tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 

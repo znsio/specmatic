@@ -76,6 +76,7 @@ internal class CommandHookTest {
         Configuration.config = SpecmaticConfigJson(emptyList(), hooks = mapOf(HookName.stub_load_contract.name to "cat ${secondary.canonicalPath}"))
 
         val contractInFile = CommandHook(HookName.stub_load_contract).readContract(primary.canonicalPath)
+        Configuration.config = SpecmaticConfigJson(emptyList())
         assertThat(contractInFile.trimIndent()).isEqualTo(secondaryContractString)
     }
 
@@ -84,8 +85,6 @@ internal class CommandHookTest {
         val primary = dir.resolve("primary.yaml")
         primary.createNewFile()
         primary.writeText(primaryContractString)
-
-        Configuration.config = SpecmaticConfigJson(emptyList())
 
         val contractInFile = CommandHook(HookName.stub_load_contract).readContract(primary.canonicalPath)
         assertThat(contractInFile.trimIndent()).isEqualTo(primaryContractString)

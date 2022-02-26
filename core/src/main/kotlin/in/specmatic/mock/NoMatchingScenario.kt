@@ -6,8 +6,8 @@ import `in`.specmatic.core.Results
 private const val defaultMessage = "No match was found."
 
 class NoMatchingScenario(val results: Results, val msg: String? = defaultMessage, cachedMessage: String? = null) : Exception(cachedMessage ?: msg) {
-    fun withoutFluff(): NoMatchingScenario {
-        return NoMatchingScenario(results.withoutFluff(), msg)
+    fun withoutFluff(fluffLevel: Int): NoMatchingScenario {
+        return NoMatchingScenario(results.withoutFluff(fluffLevel), msg)
     }
 
     fun report(request: HttpRequest): String {

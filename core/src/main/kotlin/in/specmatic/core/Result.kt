@@ -13,9 +13,13 @@ sealed class Result {
     }
 
     fun isFluffy(): Boolean {
+        return isFluffy(0)
+    }
+
+    fun isFluffy(acceptableFluffLevel: Int): Boolean {
         return when(this) {
             is Failure ->
-                failureReason?.fluffy == true || cause?.isFluffy() == true
+                failureReason?.let { it.fluffLevel > acceptableFluffLevel } == true || cause?.isFluffy() == true
             else -> false
         }
     }
@@ -80,11 +84,11 @@ sealed class Result {
     }
 }
 
-enum class FailureReason(val fluffy: Boolean) {
-    PartNameMisMatch(false),
-    URLPathMisMatch(true),
-    SOAPActionMismatch(true),
-    StatusMismatch(true)
+enum class FailureReason(val fluffLevel: Int) {
+    PartNameMisMatch(0),
+    URLPathMisMatch(2),
+    SOAPActionMismatch(2),
+    StatusMismatch(1)
 }
 
 fun Result.breadCrumb(breadCrumb: String): Result =

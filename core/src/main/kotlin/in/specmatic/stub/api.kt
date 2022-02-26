@@ -140,9 +140,9 @@ private fun printDataFiles(dataFiles: List<File>) {
     }
 }
 
-class StubMatchExceptionReport(val request: HttpRequest, private val e: NoMatchingScenario) {
-    fun withoutFluff(): StubMatchExceptionReport {
-        return StubMatchExceptionReport(request, e.withoutFluff())
+class StubMatchExceptionReport(val request: HttpRequest, val e: NoMatchingScenario) {
+    fun withoutFluff(fluffLevel: Int): StubMatchExceptionReport {
+        return StubMatchExceptionReport(request, e.withoutFluff(fluffLevel))
     }
 
     fun hasErrors(): Boolean {
@@ -154,8 +154,8 @@ class StubMatchExceptionReport(val request: HttpRequest, private val e: NoMatchi
 }
 
 data class StubMatchErrorReport(val exceptionReport: StubMatchExceptionReport, val contractFilePath: String) {
-    fun withoutFluff(): StubMatchErrorReport {
-        return this.copy(exceptionReport = exceptionReport.withoutFluff())
+    fun withoutFluff(fluffLevel: Int): StubMatchErrorReport {
+        return this.copy(exceptionReport = exceptionReport.withoutFluff(fluffLevel))
     }
 
     fun hasErrors(): Boolean {
@@ -168,15 +168,26 @@ fun stubMatchErrorMessage(
     matchResults: List<StubMatchResults>,
     stubFile: String
 ): String {
-    val errorReports = matchResults.mapNotNull { it.errorReport }.map {
-        it.withoutFluff()
+    val matchResultsWithErrorReports = matchResults.mapNotNull { it.errorReport }
+
+    val errorReports: List<StubMatchErrorReport> = matchResultsWithErrorReports.map {
+        it.withoutFluff(0)
     }.filter {
         it.hasErrors()
+    }.ifEmpty {
+        matchResultsWithErrorReports.map {
+            it.withoutFluff(1)
+        }.filter {
+            it.hasErrors()
+        }
     }
 
-    return if(errorReports.isEmpty())
-        "$stubFile didn't match any of the contracts\n${matchResults.firstOrNull()?.errorReport?.exceptionReport?.request?.requestNotRecognized()?.prependIndent("  ")}".trim()
-    else errorReports.map { (exceptionReport, contractFilePath) ->
+    if(errorReports.isEmpty() || matchResults.isEmpty())
+        return "$stubFile didn't match any of the contracts\n${matchResults.firstOrNull()?.errorReport?.exceptionReport?.request?.requestNotRecognized()?.prependIndent("  ")}".trim()
+
+
+
+    return errorReports.map { (exceptionReport, contractFilePath) ->
         "$stubFile didn't match $contractFilePath${System.lineSeparator()}${
             exceptionReport.message.prependIndent(
                 "  "

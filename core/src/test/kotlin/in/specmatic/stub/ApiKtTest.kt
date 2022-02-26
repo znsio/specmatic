@@ -496,9 +496,55 @@ Feature: Customer Data
         return stubResponse(request, contractInfo, expectations)
     }
 
+    private fun makeStubMatchResults(results: Results): StubMatchResults {
+        val exceptionReport = StubMatchExceptionReport(HttpRequest("POST", "/test"), NoMatchingScenario(results))
+        return StubMatchResults(null, StubMatchErrorReport(exceptionReport, "/path/to/contract"))
+    }
+
     @Test
-    fun `should eliminate fluffy error messages and display a standard error if all errors are fluffy`() {
-        val results = Results(listOf(Result.Failure("failed", null, "", FailureReason.StatusMismatch)))
+    fun `should eliminate fluffy error messages and display only the deep error`() {
+        val results1 = Results(listOf(Result.Failure("deep", null, "")))
+        val results2 = Results(listOf(Result.Failure("fluffLevel 2", null, "", FailureReason.SOAPActionMismatch)))
+        val results3 = Results(listOf(Result.Failure("fluffLevel 1", null, "", FailureReason.StatusMismatch)))
+
+        val stubMatchResults = listOf(
+            makeStubMatchResults(results1),
+            makeStubMatchResults(results2),
+            makeStubMatchResults(results3)
+        )
+
+        val errorMessage = stubMatchErrorMessage(stubMatchResults, "stubfile.json")
+
+        assertThat(errorMessage).isEqualTo("""
+            stubfile.json didn't match /path/to/contract
+              No match was found.
+              
+              deep
+        """.trimIndent())
+
+        println(errorMessage)
+    }
+
+    @Test
+    fun `should show level 1 fluffy errors and eliminate level 2 fluffy errors if no deep errors are found`() {
+        val results1 = Results(listOf(Result.Failure("failed", null, "", FailureReason.StatusMismatch)))
+        val results2 = Results(listOf(Result.Failure("fluffy", null, "", FailureReason.SOAPActionMismatch)))
+
+        val errorMessage = stubMatchErrorMessage(listOf(makeStubMatchResults(results1), makeStubMatchResults(results2)), "stubfile.json")
+
+        assertThat(errorMessage).isEqualTo("""
+            stubfile.json didn't match /path/to/contract
+              No match was found.
+              
+              failed
+        """.trimIndent())
+
+        println(errorMessage)
+    }
+
+    @Test
+    fun `should eliminate all level 2 fluffy error messages and display a standard error if all errors are level 2 fluffy`() {
+        val results = Results(listOf(Result.Failure("failed", null, "", FailureReason.URLPathMisMatch)))
         val exceptionReport = StubMatchExceptionReport(HttpRequest("POST", "/test"), NoMatchingScenario(results))
         val stubMatchResults = StubMatchResults(null, StubMatchErrorReport(exceptionReport, "/path/to/contract"))
         val errorMessage = stubMatchErrorMessage(listOf(stubMatchResults), "stubfile.json")

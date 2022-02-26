@@ -176,7 +176,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                     it.second?.results?.withoutFluff()?.results ?: emptyList()
                 }.flatten().toList()
 
-                val failureResults = Results(failures)
+                val failureResults = Results(failures).withoutFluff()
                 throw NoMatchingScenario(failureResults, cachedMessage = failureResults.report(stub.request))
             }
             else -> threadSafeHttpStubs.addToStub(firstResult, stub)
@@ -351,7 +351,7 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
 private fun strictModeHttp400Response(httpRequest: HttpRequest, matchResults: List<Pair<Result, HttpStubData>>): HttpResponse {
     val failureResults = matchResults.map { it.first }
 
-    val results = Results(failureResults.toMutableList()).withoutFluff()
+    val results = Results(failureResults).withoutFluff()
     return HttpResponse(400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.strictModeReport(httpRequest)}"))
 }
 

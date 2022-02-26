@@ -8,7 +8,11 @@ data class Results(val results: List<Result> = emptyList()) {
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
     fun success(): Boolean = !hasFailures()
 
-    fun withoutFluff(): Results = copy(results = results.filterNot { it.isFluffy() })
+    fun withoutFluff(fluffLevel: Int): Results = copy(results = results.filterNot { it.isFluffy(fluffLevel) })
+
+    fun withoutFluff(): Results = copy(results = minimumFluff())
+
+    private fun minimumFluff() = results.filterNot { it.isFluffy() }.ifEmpty { results.filterNot { it.isFluffy(1) } }
 
     fun toResultIfAny(): Result {
         return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { it.toReport().toText() })

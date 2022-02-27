@@ -24,3 +24,5 @@ echo Tagging release $1
 git tag $1
 git push origin $1
 
+echo Release done
+

@@ -2,6 +2,7 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -24,6 +25,7 @@ import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.parser.OpenAPIV3Parser
 import io.swagger.v3.parser.core.models.ParseOptions
+import io.swagger.v3.parser.core.models.SwaggerParseResult
 import org.apache.http.HttpHeaders.AUTHORIZATION
 import java.io.File
 
@@ -49,7 +51,22 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         fun fromYAML(yamlContent: String, filePath: String): OpenApiSpecification {
-            val openApi = OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences()).openAPI
+            val parseResult: SwaggerParseResult = OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences())
+            val openApi: OpenAPI? = parseResult.openAPI
+
+            if(openApi == null) {
+                logger.debug("Failed to parse OpenAPI from file $filePath\n\n$yamlContent")
+
+                parseResult.messages.filterNotNull().let {
+                    if(it.isNotEmpty()) {
+                        val parserMessages = parseResult.messages.joinToString(System.lineSeparator())
+                        logger.log("Parser errors:\n${parserMessages.prependIndent("  ")}")
+                    }
+                }
+
+                throw ContractException("Could not parse contract $filePath, please validate the syntax using https://editor.swagger.io")
+            }
+
             return OpenApiSpecification(filePath, openApi)
         }
 

@@ -288,7 +288,12 @@ data class Scenario(
             val resolver = Resolver(IgnoreFacts(), true, patterns, findKeyErrorCheck = DefaultKeyCheck.disableOverrideUnexpectedKeycheck())
 
             when (val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }) {
-                is Result.Failure -> requestMatchResult.updateScenario(this)
+                is Result.Failure -> requestMatchResult.updateScenario(this).let {
+                    if(response.status != httpResponsePattern.status)
+                        Result.Failure(cause = it as Result.Failure, failureReason = FailureReason.RequestMismatchButStatusAlsoWrong)
+                    else
+                        it
+                }
                 else ->
                     when (val responseMatchResult = attempt(breadCrumb = "RESPONSE") { httpResponsePattern.matchesMock(response, resolver) }) {
                         is Result.Failure -> {

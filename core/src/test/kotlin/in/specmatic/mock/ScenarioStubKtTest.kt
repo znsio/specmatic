@@ -1,5 +1,6 @@
 package `in`.specmatic.mock
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -10,6 +11,8 @@ import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
+import `in`.specmatic.stub.HttpStubData
+import java.util.function.Consumer
 
 internal class ScenarioStubKtTest {
     @Test
@@ -818,6 +821,69 @@ internal class ScenarioStubKtTest {
 
         val scenarioStub = mockFromJSON(jsonStringToValueMap(stubText))
         assertThat(scenarioStub.delayInSeconds).isNull()
+    }
+
+    @Test
+    fun `show only the error for the scenario with matching status when there is a request mismatch for an OpenAPI contract having multiple error statuses`() {
+        val openAPI = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /hello/{id}:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Numeric ID
+        - in: header
+          name: X-Value
+          schema:
+            type: number
+          required: true
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: string
+    """.trim()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+        val request = HttpRequest(method = "GET", path = "/hello/10", headers = mapOf("X-Value" to "data"))
+        val response = HttpResponse.OK("success")
+
+        assertThatThrownBy {
+            feature.matchingStub(request, response)
+        }.satisfies(Consumer {
+            assertThat((it as NoMatchingScenario).report(request).trim()).isEqualTo("""
+                In scenario "hello world. Response: Says hello"
+                API: GET /hello/(id:number) -> 200
+                
+                  >> REQUEST.HEADERS.X-Value
+                  
+                  Expected number, actual was string: "data"
+                """.trimIndent())
+        })
     }
 }
 

@@ -65,12 +65,12 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation('org.springframework.boot:spring-boot-starter-test:2.6.3') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:2.6.4') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }
-    testImplementation 'io.mockk:mockk:1.12.2'
-    testImplementation('com.ninja-squad:springmockk:3.1.0') {
+    testImplementation 'io.mockk:mockk:1.12.3'
+    testImplementation('com.ninja-squad:springmockk:3.1.1') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
     testImplementation 'org.assertj:assertj-core:3.21.0'

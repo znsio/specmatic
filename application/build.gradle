@@ -30,7 +30,7 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "1.6.4"
+def ktor_version = "1.6.7"
 def junit_version = "5.8.2"
 def jgit_version = "5.13.0.202109080827-r"
 

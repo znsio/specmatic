@@ -24,15 +24,15 @@ data class NumberPattern(
             true -> {
                 if (minLength != null && sampleData.toStringLiteral().length < minLength) return mismatchResult(
                     "number with minLength $minLength",
-                    sampleData
+                    sampleData, resolver.mismatchMessages
                 )
                 if (maxLength != null && sampleData.toStringLiteral().length > maxLength) return mismatchResult(
                     "number with maxLength $maxLength",
-                    sampleData
+                    sampleData, resolver.mismatchMessages
                 )
                 return Result.Success()
             }
-            false -> mismatchResult("number", sampleData)
+            false -> mismatchResult("number", sampleData, resolver.mismatchMessages)
         }
     }
 
@@ -91,5 +91,5 @@ fun encompasses(
             thisResolver,
             typeStack
         )
-        else -> mismatchResult(thisPattern, otherPattern)
+        else -> mismatchResult(thisPattern, otherPattern, thisResolver.mismatchMessages)
     }

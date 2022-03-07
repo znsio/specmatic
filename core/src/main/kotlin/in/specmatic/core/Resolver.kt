@@ -10,7 +10,8 @@ data class Resolver(
     val mockMode: Boolean = false,
     val newPatterns: Map<String, Pattern> = emptyMap(),
     val findKeyErrorCheck: KeyCheck = DefaultKeyCheck,
-    val context: Map<String, String> = emptyMap()
+    val context: Map<String, String> = emptyMap(),
+    val mismatchMessages: MismatchMessages = DefaultMismatchMessages
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)

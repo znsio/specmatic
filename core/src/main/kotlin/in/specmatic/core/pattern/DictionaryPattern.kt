@@ -11,7 +11,7 @@ import `in`.specmatic.core.value.Value
 data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern, override val typeAlias: String? = null) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
-            return mismatchResult("JSON object", sampleData)
+            return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)
 
         sampleData.jsonObject.forEach { (key, value) ->
             try {

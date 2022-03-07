@@ -9,7 +9,7 @@ object EmptyStringPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (sampleData) {
             EmptyString -> Result.Success()
-            else -> mismatchResult("empty string", sampleData)
+            else -> mismatchResult("empty string", sampleData, resolver.mismatchMessages)
         }
     }
 

@@ -13,7 +13,7 @@ object BooleanPattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
         when(sampleData) {
             is BooleanValue -> Result.Success()
-            else -> mismatchResult("boolean", sampleData)
+            else -> mismatchResult("boolean", sampleData, resolver.mismatchMessages)
         }
 
     override fun generate(resolver: Resolver): Value =
@@ -22,7 +22,7 @@ object BooleanPattern : Pattern, ScalarType {
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun parse(value: String, resolver: Resolver): Value = when (value) {
-        !in listOf("true", "false") -> throw ContractException(mismatchResult(BooleanPattern, value).toFailureReport())
+        !in listOf("true", "false") -> throw ContractException(mismatchResult(BooleanPattern, value, resolver.mismatchMessages).toFailureReport())
         else -> BooleanValue(value.toBoolean())
     }
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {

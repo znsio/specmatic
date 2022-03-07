@@ -110,7 +110,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             this
         }
 
-        return matchName(sampleData).ifSuccess {
+        return matchName(sampleData, resolver).ifSuccess {
             matchingType.matchNamespaces(sampleData)
         }.ifSuccess {
             matchingType.matchAttributes(sampleData, resolver)
@@ -247,9 +247,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return matchAttributes(patternAttributesWithoutXmlns, sampleAttributesWithoutXmlns, resolver)
     }
 
-    private fun matchName(sampleData: XMLNode): Result {
+    private fun matchName(sampleData: XMLNode, resolver: Resolver): Result {
         if (sampleData.name != pattern.name)
-            return mismatchResult(pattern.name, sampleData.name)
+            return mismatchResult(pattern.name, sampleData.name, resolver.mismatchMessages)
 
         return Success()
     }
@@ -496,7 +496,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
                 failureResult ?: provisionalFailure(results) ?: Success()
             }
-            else -> mismatchResult(this, otherResolvedPattern)
+            else -> mismatchResult(this, otherResolvedPattern, thisResolver.mismatchMessages)
         }.breadCrumb(this.pattern.name)
     }
 

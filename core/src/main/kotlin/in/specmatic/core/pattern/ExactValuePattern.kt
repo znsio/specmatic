@@ -9,7 +9,7 @@ data class ExactValuePattern(override val pattern: Value, override val typeAlias
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (pattern == sampleData) {
             true -> Result.Success()
-            else -> mismatchResult(pattern, sampleData)
+            else -> mismatchResult(pattern, sampleData, resolver.mismatchMessages)
         }
     }
 

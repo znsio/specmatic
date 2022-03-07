@@ -9,7 +9,7 @@ import `in`.specmatic.core.value.Value
 data class PatternInStringPattern(override val pattern: Pattern = StringPattern(), override val typeAlias: String? = null): Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is StringValue)
-            return mismatchResult(pattern, sampleData)
+            return mismatchResult(pattern, sampleData, resolver.mismatchMessages)
 
         val value = try {
             pattern.parse(sampleData.string, resolver)

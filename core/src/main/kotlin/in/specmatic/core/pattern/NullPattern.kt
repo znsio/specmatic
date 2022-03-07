@@ -15,7 +15,7 @@ object NullPattern : Pattern, ScalarType {
             when {
                 sampleData is NullValue -> Result.Success()
                 sampleData is StringValue && sampleData.string.isEmpty() -> Result.Success()
-                else -> mismatchResult("null", sampleData)
+                else -> mismatchResult("null", sampleData, resolver.mismatchMessages)
             }
 
     override fun generate(resolver: Resolver): Value = NullValue

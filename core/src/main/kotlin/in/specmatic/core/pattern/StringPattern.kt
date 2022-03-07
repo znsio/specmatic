@@ -27,15 +27,15 @@ data class StringPattern(
             is StringValue, EmptyString -> {
                 if (minLength != null && sampleData.toStringLiteral().length < minLength) return mismatchResult(
                     "string with minLength $minLength",
-                    sampleData
+                    sampleData, resolver.mismatchMessages
                 )
                 if (maxLength != null && sampleData.toStringLiteral().length > maxLength) return mismatchResult(
                     "string with maxLength $maxLength",
-                    sampleData
+                    sampleData, resolver.mismatchMessages
                 )
                 return Result.Success()
             }
-            else -> mismatchResult("string", sampleData)
+            else -> mismatchResult("string", sampleData, resolver.mismatchMessages)
         }
     }
 

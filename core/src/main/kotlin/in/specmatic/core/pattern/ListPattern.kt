@@ -15,8 +15,8 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is ListValue)
             return when {
-                resolvedHop(pattern, resolver) is XMLPattern -> mismatchResult("xml nodes", sampleData)
-                else -> mismatchResult("JSON array", sampleData)
+                resolvedHop(pattern, resolver) is XMLPattern -> mismatchResult("xml nodes", sampleData, resolver.mismatchMessages)
+                else -> mismatchResult("JSON array", sampleData, resolver.mismatchMessages)
             }
 
         val resolverWithEmptyType = withEmptyType(pattern, resolver)

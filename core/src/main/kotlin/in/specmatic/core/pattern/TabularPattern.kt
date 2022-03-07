@@ -21,7 +21,7 @@ fun toTabularPattern(map: Map<String, Pattern>, typeAlias: String? = null): Tabu
 data class TabularPattern(override val pattern: Map<String, Pattern>, private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if (sampleData !is JSONObjectValue)
-            return mismatchResult("JSON object", sampleData)
+            return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)
 
         val resolverWithNullType = withNullPattern(resolver).withUnexpectedKeyCheck(unexpectedKeyCheck)
         val missingKey = resolverWithNullType.findKeyError(pattern, sampleData.jsonObject)

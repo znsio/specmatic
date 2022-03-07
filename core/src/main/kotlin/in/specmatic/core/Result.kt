@@ -100,13 +100,23 @@ fun Result.breadCrumb(breadCrumb: String): Result =
 
 data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)
 
-fun mismatchResult(expected: String, actual: String): Failure = Failure("Expected $expected, actual was $actual")
-fun mismatchResult(expected: String, actual: Value?): Failure = mismatchResult(expected, valueError(actual) ?: "null")
-fun mismatchResult(expected: Value, actual: Value?): Result = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "nothing")
-fun mismatchResult(expected: Pattern, actual: String): Failure = mismatchResult(expected.typeName, actual)
-fun mismatchResult(pattern: Pattern, sampleData: Value?): Failure = mismatchResult(pattern, sampleData?.toStringLiteral() ?: "null")
-fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern): Failure {
-    return mismatchResult(thisPattern.typeName, otherPattern.typeName)
+interface MismatchMessages {
+    fun mismatchMessage(expected: String, actual: String): String
+}
+
+object DefaultMismatchMessages: MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "Expected $expected, actual was $actual"
+    }
+}
+
+fun mismatchResult(expected: String, actual: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure = Failure(mismatchMessages.mismatchMessage(expected, actual))
+fun mismatchResult(expected: String, actual: Value?, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure = mismatchResult(expected, valueError(actual) ?: "null", mismatchMessages)
+fun mismatchResult(expected: Value, actual: Value?, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Result = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "nothing", mismatchMessages)
+fun mismatchResult(expected: Pattern, actual: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure = mismatchResult(expected.typeName, actual, mismatchMessages)
+fun mismatchResult(pattern: Pattern, sampleData: Value?, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure = mismatchResult(pattern, sampleData?.toStringLiteral() ?: "null", mismatchMessages)
+fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure {
+    return mismatchResult(thisPattern.typeName, otherPattern.typeName, mismatchMessages)
 }
 
 fun valueError(value: Value?): String? {

@@ -1,7 +1,9 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.core.MismatchMessages
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.Value
 
@@ -18,9 +20,11 @@ data class AnyPattern(
         pattern.asSequence().map {
             resolver.matchesPattern(key, it, sampleData ?: EmptyString)
         }.let { results ->
-            results.find { it is Result.Success } ?: failedToFindAny(
+            results.find { it is Result.Success } ?: failedToFindAny2(
                 typeName,
-                getResult(results.map { it as Result.Failure }.toList())
+                sampleData,
+                getResult(results.map { it as Result.Failure }.toList()),
+                resolver.mismatchMessages
             )
         }
 
@@ -100,5 +104,13 @@ private fun failedToFindAny(description: String, results: List<Result.Failure>):
         else -> {
             val actual = results.first().message.replace(Regex("Expected.*actual was "), "")
             Result.Failure("""Expected $description, Actual was $actual""".trim())
+        }
+    }
+
+private fun failedToFindAny2(expected: String, actual: Value?, results: List<Result.Failure>, mismatchMessages: MismatchMessages): Result.Failure =
+    when (results.size) {
+        1 -> results[0]
+        else -> {
+            mismatchResult(expected, actual, mismatchMessages)
         }
     }

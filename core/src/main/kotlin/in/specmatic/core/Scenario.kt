@@ -12,6 +12,12 @@ import `in`.specmatic.test.ScenarioTest
 import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 
+object ContractAndStubMismatchMessages: MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "Contract expected $expected but stub contained $actual"
+    }
+}
+
 data class Scenario(
     val name: String,
     val httpRequestPattern: HttpRequestPattern,
@@ -51,13 +57,13 @@ data class Scenario(
                         }
                     }
 
-    fun matches(httpRequest: HttpRequest, serverState: Map<String, Value>): Result {
-        val resolver = Resolver(serverState, false, patterns)
+    fun matches(httpRequest: HttpRequest, serverState: Map<String, Value>, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Result {
+        val resolver = Resolver(serverState, false, patterns).copy(mismatchMessages = mismatchMessages)
         return matches(httpRequest, serverState, resolver, resolver)
     }
 
-    fun matchesStub(httpRequest: HttpRequest, serverState: Map<String, Value>): Result {
-        val headersResolver = Resolver(serverState, false, patterns)
+    fun matchesStub(httpRequest: HttpRequest, serverState: Map<String, Value>, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Result {
+        val headersResolver = Resolver(serverState, false, patterns).copy(mismatchMessages = mismatchMessages)
         val nonHeadersResolver = headersResolver.disableOverrideUnexpectedKeycheck()
 
         return matches(httpRequest, serverState, nonHeadersResolver, headersResolver)
@@ -125,8 +131,8 @@ data class Scenario(
     fun generateHttpRequest(): HttpRequest =
             scenarioBreadCrumb(this) { httpRequestPattern.generate(Resolver(expectedFacts, false, patterns)) }
 
-    fun matches(httpResponse: HttpResponse): Result {
-        val resolver = Resolver(expectedFacts, false, patterns)
+    fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Result {
+        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages)
 
         return try {
             httpResponsePattern.matches(httpResponse, resolver).updateScenario(this)
@@ -135,8 +141,14 @@ data class Scenario(
         }
     }
 
+    object ContractAndValueMismatch: MismatchMessages {
+        override fun mismatchMessage(expected: String, actual: String): String {
+            return "Contract expected $expected but found value $actual"
+        }
+    }
+
     private fun newBasedOn(row: Row): List<Scenario> {
-        val resolver = Resolver(expectedFacts, false, patterns)
+        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndValueMismatch)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
@@ -283,9 +295,9 @@ data class Scenario(
     val serverState: Map<String, Value>
         get() = expectedFacts
 
-    fun matchesMock(request: HttpRequest, response: HttpResponse): Result {
+    fun matchesMock(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Result {
         return scenarioBreadCrumb(this) {
-            val resolver = Resolver(IgnoreFacts(), true, patterns, findKeyErrorCheck = DefaultKeyCheck.disableOverrideUnexpectedKeycheck())
+            val resolver = Resolver(IgnoreFacts(), true, patterns, findKeyErrorCheck = DefaultKeyCheck.disableOverrideUnexpectedKeycheck(), mismatchMessages = mismatchMessages)
 
             when (val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }) {
                 is Result.Failure -> requestMatchResult.updateScenario(this).let {
@@ -368,6 +380,13 @@ fun newExpectedServerStateBasedOn(row: Row, expectedServerState: Map<String, Val
             }
         }
 
+object ContractAndResponseMismatch: MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "Contract expected $expected but response contained $actual"
+    }
+
+}
+
 fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
     val request = testScenario.generateHttpRequest()
 
@@ -378,7 +397,7 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
 
         val result = when (response.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "success")) {
             "failure" -> Result.Failure(response.body.toStringLiteral()).updateScenario(testScenario)
-            else -> testScenario.matches(response)
+            else -> testScenario.matches(response, ContractAndResponseMismatch)
         }
 
         result.withBindings(testScenario.bindings, response)

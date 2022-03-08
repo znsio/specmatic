@@ -47,18 +47,19 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
 
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, _) = parameters
-        when (response.status != status) {
-            true -> return MatchFailure(Result.Failure(message = "Expected status: $status, actual: ${response.status}", breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
+
+        return when (response.status) {
+            status -> MatchSuccess(parameters)
+            else -> MatchFailure(mismatchResult("status $status", "status ${response.status}").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
         }
-        return MatchSuccess(parameters)
     }
 
     private fun matchHeaders(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, resolver) = parameters
-        when (val result = headersPattern.matches(response.headers, resolver)) {
-            is Result.Failure -> return MatchFailure(result)
+        return when (val result = headersPattern.matches(response.headers, resolver)) {
+            is Result.Failure -> MatchFailure(result)
+            else -> MatchSuccess(parameters)
         }
-        return MatchSuccess(parameters)
     }
 
     private fun matchBody(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
@@ -69,10 +70,10 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
             else -> response.body
         }
 
-        when (val result = body.matches(parsedValue, resolver)) {
-            is Result.Failure -> return MatchFailure(result.breadCrumb("BODY"))
+        return when (val result = body.matches(parsedValue, resolver)) {
+            is Result.Failure -> MatchFailure(result.breadCrumb("BODY"))
+            else -> MatchSuccess(parameters)
         }
-        return MatchSuccess(parameters)
     }
 
     fun bodyPattern(newBody: Pattern): HttpResponsePattern = this.copy(body = newBody)

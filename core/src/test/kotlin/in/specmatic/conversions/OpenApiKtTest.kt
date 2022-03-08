@@ -844,21 +844,21 @@ Background:
             
               >> RESPONSE.BODY.breed
               
-              Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
+              ${ContractAndResponseMismatch.mismatchMessage("""("labrador" or "retriever" or "null")""", "string: \"malinois\"")}
             
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.breed
               
-              Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
+              ${ContractAndResponseMismatch.mismatchMessage("""("labrador" or "retriever" or "null")""", "string: \"malinois\"")}
             
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.breed
               
-              Expected ("labrador" or "retriever" or "null"), Actual was string: "malinois"
+              ${ContractAndResponseMismatch.mismatchMessage("""("labrador" or "retriever" or "null")""", "string: \"malinois\"")}
             """.trimIndent()
         )
     }
@@ -918,21 +918,21 @@ Background:
             
               >> RESPONSE.BODY.rating
               
-              Expected (1 or 2), Actual was number: 3
+              ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
             
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.rating
               
-              Expected (1 or 2), Actual was number: 3
+              ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
             
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.rating
               
-              Expected (1 or 2), Actual was number: 3
+              ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
             """.trimIndent()
         )
     }
@@ -992,21 +992,21 @@ Background:
             
               >> RESPONSE.BODY.name
               
-              Expected string with minLength 6, actual was string: "small"
+              ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
             
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.name
               
-              Expected string with minLength 6, actual was string: "small"
+              ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
             
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.name
               
-              Expected string with minLength 6, actual was string: "small"
+              ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
             """.trimIndent()
         )
     }

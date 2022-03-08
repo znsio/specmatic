@@ -11,7 +11,6 @@ import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
-import `in`.specmatic.stub.HttpStubData
 import java.util.function.Consumer
 
 internal class ScenarioStubKtTest {
@@ -873,7 +872,7 @@ paths:
         val response = HttpResponse.OK("success")
 
         assertThatThrownBy {
-            feature.matchingStub(request, response)
+            feature.matchingStub(request, response, ContractAndStubMismatchMessages)
         }.satisfies(Consumer {
             assertThat((it as NoMatchingScenario).report(request).trim()).isEqualTo("""
                 In scenario "hello world. Response: Says hello"
@@ -881,7 +880,7 @@ paths:
                 
                   >> REQUEST.HEADERS.X-Value
                   
-                  Expected number, actual was string: "data"
+                  ${ContractAndStubMismatchMessages.mismatchMessage("number", """string: "data" """.trim())}
                 """.trimIndent())
         })
     }

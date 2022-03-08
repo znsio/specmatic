@@ -160,7 +160,7 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
         val results = features.asSequence().map { feature ->
             try {
-                val stubData: HttpStubData = softCastResponseToXML(feature.matchingStub(stub.request, stub.response))
+                val stubData: HttpStubData = softCastResponseToXML(feature.matchingStub(stub.request, stub.response, ContractAndStubMismatchMessages))
                 Pair(Pair(Result.Success(), stubData), null)
             } catch (e: NoMatchingScenario) {
                 Pair(null, e)
@@ -304,6 +304,13 @@ fun passThroughResponse(httpRequest: HttpRequest, passThroughUrl: String, httpCl
     return HttpStubResponse(response.copy(headers = response.headers.plus(QONTRACT_SOURCE_HEADER to "proxy")))
 }
 
+object StubAndRequestMismatchMessages: MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "Stub expected $expected but request contained $actual"
+    }
+
+}
+
 private fun stubbedResponse(
     threadSafeStubs: ThreadSafeListOfStubs,
     httpRequest: HttpRequest
@@ -311,7 +318,7 @@ private fun stubbedResponse(
     val matchResults = threadSafeStubs.matchResults { stubs ->
         stubs.map {
             val (requestPattern, _, resolver) = it
-            Pair(requestPattern.matches(httpRequest, resolver.disableOverrideUnexpectedKeycheck()), it)
+            Pair(requestPattern.matches(httpRequest, resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages)), it)
         }
     }
 
@@ -325,11 +332,17 @@ private fun stubbedResponse(
     return Pair(matchResults, stubResponse)
 }
 
+object ContractAndRequestsMismatch: MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "Contract expected $expected but request contained $actual"
+    }
+}
+
 private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): HttpStubResponse {
     data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
 
     val responses: List<ResponseDetails> = features.asSequence().map { feature ->
-        feature.stubResponse(httpRequest).let {
+        feature.stubResponse(httpRequest, ContractAndRequestsMismatch).let {
             ResponseDetails(feature, it.first, it.second)
         }
     }.toList()
@@ -383,7 +396,7 @@ fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List
 fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<HttpStubData> {
     return contractInfo.flatMap { (feature, mocks) ->
         mocks.filter { it.kafkaMessage == null }.map { mock ->
-            feature.matchingStub(mock)
+            feature.matchingStub(mock, ContractAndStubMismatchMessages)
         }
     }
 }

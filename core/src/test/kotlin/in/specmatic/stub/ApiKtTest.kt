@@ -377,7 +377,7 @@ Feature: Math API
               
                   >> RESPONSE.BODY
               
-                  Expected number, actual was string: "not a number"
+                  ${ContractAndStubMismatchMessages.mismatchMessage("number", """string: "not a number"""")}
             """.trimIndent()
 
         assertThat(stdout).contains(expectedOnStandardOutput)

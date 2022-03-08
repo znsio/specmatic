@@ -81,13 +81,13 @@ data class Feature(
         }
     }
 
-    fun stubResponse(httpRequest: HttpRequest): Pair<ResponseBuilder?, Results> {
+    fun stubResponse(httpRequest: HttpRequest, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Pair<ResponseBuilder?, Results> {
         try {
             val scenarioSequence = scenarios.asSequence()
 
             val localCopyOfServerState = serverState
             val resultList = scenarioSequence.zip(scenarioSequence.map {
-                it.matchesStub(httpRequest, localCopyOfServerState)
+                it.matchesStub(httpRequest, localCopyOfServerState, mismatchMessages)
             })
 
             return matchingScenario(resultList)?.let { Pair(ResponseBuilder(it, serverState), Results()) }
@@ -99,7 +99,7 @@ data class Feature(
 
     fun lookupScenario(httpRequest: HttpRequest): List<Scenario> =
         try {
-            val resultList = lookupScenario(httpRequest, scenarios)
+            val resultList = lookupScenario(httpRequest, scenarios, BackwardCompatibilityMismatch)
             val matchingScenarios = matchingScenarios(resultList)
 
             val firstRealResult = resultList.filterNot { it.second.isFluffy() }.firstOrNull()
@@ -127,12 +127,12 @@ data class Feature(
         }?.first
     }
 
-    private fun lookupScenario(httpRequest: HttpRequest, scenarios: List<Scenario>): Sequence<Pair<Scenario, Result>> {
+    private fun lookupScenario(httpRequest: HttpRequest, scenarios: List<Scenario>, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Sequence<Pair<Scenario, Result>> {
         val scenarioSequence = scenarios.asSequence()
 
         val localCopyOfServerState = serverState
         return scenarioSequence.zip(scenarioSequence.map {
-            it.matches(httpRequest, localCopyOfServerState)
+            it.matches(httpRequest, localCopyOfServerState, mismatchMessages)
         })
     }
 
@@ -160,11 +160,11 @@ data class Feature(
         return scenarios.firstOrNull { it.matches(request, serverState) is Result.Success && it.matches(response) is Result.Success } != null
     }
 
-    fun matchingStub(request: HttpRequest, response: HttpResponse): HttpStubData {
+    fun matchingStub(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages): HttpStubData {
         try {
             val results = scenarios.map { scenario ->
                 try {
-                    when (val matchResult = scenario.matchesMock(request, response)) {
+                    when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
                         is Result.Success -> Pair(
                             scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
                                 val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
@@ -241,8 +241,8 @@ data class Feature(
         ?: Result.Failure("No match found, couldn't check the message")
     }
 
-    fun matchingStub(scenarioStub: ScenarioStub): HttpStubData =
-        matchingStub(scenarioStub.request, scenarioStub.response).copy(delayInSeconds = scenarioStub.delayInSeconds)
+    fun matchingStub(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages = DefaultMismatchMessages): HttpStubData =
+        matchingStub(scenarioStub.request, scenarioStub.response, mismatchMessages).copy(delayInSeconds = scenarioStub.delayInSeconds)
 
     fun clearServerState() {
         serverState = emptyMap()

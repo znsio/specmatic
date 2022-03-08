@@ -22,6 +22,12 @@ data class HttpStubData(
         else -> this.copy(response = response.copy(body = softCastValueToXML(response.body)))
     }
 
+    object StubResponseMismatch: MismatchMessages {
+        override fun mismatchMessage(expected: String, actual: String): String {
+            return "Stub expected $expected but response contained $actual"
+        }
+    }
+
     private fun invokeExternalCommand(httpRequest: HttpRequest): HttpStubData {
         val result = executeExternalCommand(
             response.externalisedResponseCommand,
@@ -29,7 +35,7 @@ data class HttpStubData(
         )
         val responseMap = jsonStringToValueMap(result)
         val externalCommandResponse = HttpResponse.fromJSON(responseMap)
-        val responseMatches = responsePattern.matches(externalCommandResponse, resolver)
+        val responseMatches = responsePattern.matches(externalCommandResponse, resolver.copy(mismatchMessages = StubResponseMismatch))
         return when {
             !responseMatches.isTrue() -> {
                 val errorMessage =

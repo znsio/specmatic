@@ -89,7 +89,7 @@ class ContractAsTest {
             
               >> RESPONSE.HEADERS.length
               
-              Expected number, actual was string: "abc"
+              ${ContractAndResponseMismatch.mismatchMessage("number", "string: \"abc\"")}
             """.trimIndent()
         )
     }

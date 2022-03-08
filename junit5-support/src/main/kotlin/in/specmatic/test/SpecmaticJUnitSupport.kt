@@ -190,7 +190,6 @@ open class SpecmaticJUnitSupport {
             )
         }
     }
-
 }
 
 private fun columnsFromExamples(exampleData: JSONArrayValue): List<String> {

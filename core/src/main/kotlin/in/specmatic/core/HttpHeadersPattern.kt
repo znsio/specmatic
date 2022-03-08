@@ -27,11 +27,6 @@ data class HttpHeadersPattern(
             else -> withoutContentTypeGeneratedByQontract(headers, pattern)
         }
 
-//        val missingKey = resolver.findKeyError(
-//            pattern,
-//            headersWithRelevantKeys.mapValues { StringValue(it.value) },
-//            IgnoreUnexpectedKeys
-//        )
         val missingKey = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).findKeyError(
             pattern,
             headersWithRelevantKeys.mapValues { StringValue(it.value) }

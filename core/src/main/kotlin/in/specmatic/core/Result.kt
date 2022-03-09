@@ -2,6 +2,7 @@ package `in`.specmatic.core
 
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.pattern.Pattern
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.Value
 
 sealed class Result {
@@ -102,11 +103,21 @@ data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val 
 
 interface MismatchMessages {
     fun mismatchMessage(expected: String, actual: String): String
+    fun unexpectedKey(keyLabel: String, keyName: String): String
+    fun expectedKeyWasMissing(keyLabel: String, keyName: String): String
 }
 
 object DefaultMismatchMessages: MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
         return "Expected $expected, actual was $actual"
+    }
+
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named \"$keyName\" was unexpected"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        return "Expected ${keyLabel.lowercase()} named \"$keyName\" was missing"
     }
 }
 

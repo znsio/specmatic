@@ -7,6 +7,7 @@ import `in`.specmatic.core.log.LogTail
 import `in`.specmatic.core.log.dontPrintToConsole
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.toMap
@@ -309,6 +310,13 @@ object StubAndRequestMismatchMessages: MismatchMessages {
         return "Stub expected $expected but request contained $actual"
     }
 
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the request was not in the stub"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the stub was not found in the request"
+    }
 }
 
 private fun stubbedResponse(
@@ -335,6 +343,14 @@ private fun stubbedResponse(
 object ContractAndRequestsMismatch: MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
         return "Contract expected $expected but request contained $actual"
+    }
+
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the request was not in the contract"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the contract was not found in the request"
     }
 }
 

@@ -53,8 +53,4 @@ fun testBackwardCompatibility(
     }
 }
 
-object BackwardCompatibilityMismatch: MismatchMessages {
-    override fun mismatchMessage(expected: String, actual: String): String {
-        return "Older contract expected $expected but got $actual"
-    }
-}
+val BackwardCompatibilityMismatch = DefaultMismatchMessages

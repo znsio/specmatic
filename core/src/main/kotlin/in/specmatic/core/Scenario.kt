@@ -1,6 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.value.KafkaMessage
@@ -15,6 +16,14 @@ import `in`.specmatic.test.TestExecutor
 object ContractAndStubMismatchMessages: MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
         return "Contract expected $expected but stub contained $actual"
+    }
+
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the stub was not in the contract"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the contract was not found in the stub"
     }
 }
 
@@ -141,14 +150,22 @@ data class Scenario(
         }
     }
 
-    object ContractAndValueMismatch: MismatchMessages {
+    object ContractAndRowValueMismatch: MismatchMessages {
         override fun mismatchMessage(expected: String, actual: String): String {
             return "Contract expected $expected but found value $actual"
+        }
+
+        override fun unexpectedKey(keyLabel: String, keyName: String): String {
+            return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the row value was not in the contract"
+        }
+
+        override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+            return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the contract was not found in the row value"
         }
     }
 
     private fun newBasedOn(row: Row): List<Scenario> {
-        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndValueMismatch)
+        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndRowValueMismatch)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
@@ -385,6 +402,13 @@ object ContractAndResponseMismatch: MismatchMessages {
         return "Contract expected $expected but response contained $actual"
     }
 
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the response was not in the contract"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the contract was not found in the response"
+    }
 }
 
 fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {

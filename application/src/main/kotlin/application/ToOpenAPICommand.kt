@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
+import kotlin.system.exitProcess
 
 @CommandLine.Command(name = "to-openapi",
         mixinStandardHelpOptions = true,
@@ -31,21 +32,23 @@ class ToOpenAPICommand : Callable<Unit> {
             logger = Verbose()
         }
 
-        logger.keepReady(HeadingLog("Converting $contractPath"))
+        logger.keepReady(HeadingLog(contractPath))
 
-        if(!fileOperations.isFile(contractPath))
+        if(!fileOperations.isFile(contractPath)) {
             exitWithMessage("$contractPath is not a file")
+        }
 
         try {
-            val openAPI = parseGherkinStringToFeature(fileOperations.read(contractPath)).toOpenApi()
+            val gherkinContract = parseGherkinStringToFeature(fileOperations.read(contractPath))
+            val openAPI = gherkinContract.toOpenApi()
             val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
             val contractFile = File(contractPath)
             val openAPIFile: File =
                 contractFile.canonicalFile.parentFile.resolve(contractFile.nameWithoutExtension + ".yaml")
             openAPIFile.writeText(openAPIYaml)
         } catch(e: Throwable) {
-            logger.log("# Error converting file $contractPath")
             logger.log(e)
+            exitProcess(1)
         }
     }
 }

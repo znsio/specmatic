@@ -859,8 +859,7 @@ data class Feature(
 
                     this.items = Schema<Any>().apply {
                         setSchemaType(pattern.pattern.first { !isEmptyOrNull(it) }.let {
-                            it as ListPattern
-                            it.pattern.typeAlias ?: throw ContractException("Type alias not found for type ${it.typeName}")
+                            listInnerTypeDescriptor(it as ListPattern)
                         }, this)
                     }
                     this.nullable = true
@@ -919,6 +918,7 @@ data class Feature(
             }
             pattern is NumberPattern || (pattern is DeferredPattern && pattern.pattern == "(number)") -> NumberSchema()
             pattern is BooleanPattern || (pattern is DeferredPattern && pattern.pattern == "(boolean)") -> BooleanSchema()
+            pattern is DateTimePattern || (pattern is DeferredPattern && pattern.pattern == "(datetime)") -> StringSchema()
             pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(nothing)") -> StringSchema()
             pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> StringSchema().apply {
                 this.nullable = true
@@ -953,6 +953,14 @@ data class Feature(
         }
 
         return schema as Schema<Any>;
+    }
+
+    private fun listInnerTypeDescriptor(it: ListPattern): String {
+        return it.pattern.typeAlias
+            ?: when(val innerPattern = it.pattern.pattern) {
+                is String -> innerPattern
+                else -> throw ContractException("Type alias not found for type ${it.typeName}")
+            }
     }
 
     private fun isNullableDeferred(pattern: Pattern): Boolean {

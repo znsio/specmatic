@@ -9,7 +9,7 @@ class HeadingLog(var msg: String): LogMessage {
     }
 
     override fun toLogString(): String {
-        return "--$msg"
+        return "# $msg"
     }
 
 }

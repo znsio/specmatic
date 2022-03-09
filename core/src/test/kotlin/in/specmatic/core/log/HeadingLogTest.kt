@@ -6,6 +6,6 @@ import org.junit.jupiter.api.Test
 internal class HeadingLogTest {
     @Test
     fun `heading log prints heading with prefix`() {
-        assertThat(HeadingLog("test").toLogString()).isEqualTo("--test")
+        assertThat(HeadingLog("test").toLogString()).isEqualTo("# test")
     }
 }

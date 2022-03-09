@@ -1,5 +1,6 @@
 package `in`.specmatic.core.git
 
+import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
@@ -22,25 +23,25 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
         ).executeAsSeparateProcess()
     }
 
-    override fun add(): SystemGit = this.also { execute("git", "add", ".") }
-    override fun add(relativePath: String): SystemGit = this.also { execute("git", "add", relativePath) }
-    override fun commit(): SystemGit = this.also { execute("git", "commit", "-m", "Updated contract") }
-    override fun push(): SystemGit = this.also { execute("git", "push") }
-    override fun pull(): SystemGit = this.also { execute("git", "pull") }
-    override fun resetHard(): SystemGit = this.also { execute("git", "reset", "--hard", "HEAD") }
-    override fun resetMixed(): SystemGit = this.also { execute("git", "reset", "--mixed", "HEAD") }
-    override fun mergeAbort(): SystemGit = this.also { execute("git", "merge", "--aborg") }
-    override fun checkout(branchName: String): SystemGit = this.also { execute("git", "checkout", branchName) }
-    override fun merge(branchName: String): SystemGit = this.also { execute("git", "merge", branchName) }
+    override fun add(): SystemGit = this.also { execute(Configuration.gitCommand, "add", ".") }
+    override fun add(relativePath: String): SystemGit = this.also { execute(Configuration.gitCommand, "add", relativePath) }
+    override fun commit(): SystemGit = this.also { execute(Configuration.gitCommand, "commit", "-m", "Updated contract") }
+    override fun push(): SystemGit = this.also { execute(Configuration.gitCommand, "push") }
+    override fun pull(): SystemGit = this.also { execute(Configuration.gitCommand, "pull") }
+    override fun resetHard(): SystemGit = this.also { execute(Configuration.gitCommand, "reset", "--hard", "HEAD") }
+    override fun resetMixed(): SystemGit = this.also { execute(Configuration.gitCommand, "reset", "--mixed", "HEAD") }
+    override fun mergeAbort(): SystemGit = this.also { execute(Configuration.gitCommand, "merge", "--aborg") }
+    override fun checkout(branchName: String): SystemGit = this.also { execute(Configuration.gitCommand, "checkout", branchName) }
+    override fun merge(branchName: String): SystemGit = this.also { execute(Configuration.gitCommand, "merge", branchName) }
     override fun clone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
-        this.also { execute("git", "clone", gitRepositoryURI, cloneDirectory.absolutePath) }
+        this.also { execute(Configuration.gitCommand, "clone", gitRepositoryURI, cloneDirectory.absolutePath) }
 
-    override fun gitRoot(): String = execute("git", "rev-parse", "--show-toplevel").trim()
+    override fun gitRoot(): String = execute(Configuration.gitCommand, "rev-parse", "--show-toplevel").trim()
     override fun show(treeish: String, relativePath: String): String =
-        execute("git", "show", "${treeish}:${relativePath}")
+        execute(Configuration.gitCommand, "show", "${treeish}:${relativePath}")
 
     override fun workingDirectoryIsGitRepo(): Boolean = try {
-        execute("git", "rev-parse", "--is-inside-work-tree").trim() == "true"
+        execute(Configuration.gitCommand, "rev-parse", "--is-inside-work-tree").trim() == "true"
     } catch (e: Throwable) {
         false.also {
             logger.debug(
@@ -54,7 +55,7 @@ class SystemGit(private val workingDirectory: String = ".", private val prefix: 
     }
 
     override fun getChangedFiles(): List<String> {
-        val result = execute("git", "status", "--porcelain=1").trim()
+        val result = execute(Configuration.gitCommand, "status", "--porcelain=1").trim()
 
         if (result.isEmpty())
             return emptyList()

@@ -26,7 +26,7 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
         val resolverWithNullType = withNullPattern(resolver).withUnexpectedKeyCheck(unexpectedKeyCheck)
         val missingKey = resolverWithNullType.findKeyError(pattern, sampleData.jsonObject)
         if (missingKey != null)
-            return missingKey.missingKeyToResult("key")
+            return missingKey.missingKeyToResult("key", resolver.mismatchMessages)
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = resolverWithNullType.matchesPattern(key, patternValue, sampleValue)) {

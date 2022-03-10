@@ -33,7 +33,7 @@ data class HttpHeadersPattern(
         )
         if (missingKey != null) {
             val failureReason: FailureReason? = highlightIfSOAPActionMismatch(missingKey.name)
-            return MatchFailure(missingKey.missingKeyToResult("header").copy(failureReason = failureReason))
+            return MatchFailure(missingKey.missingKeyToResult("header", resolver.mismatchMessages).copy(failureReason = failureReason))
         }
 
         this.pattern.forEach { (key, pattern) ->
@@ -62,7 +62,7 @@ data class HttpHeadersPattern(
                 }
                 !key.endsWith("?") ->
                     return MatchFailure(
-                        MissingKeyError(key).missingKeyToResult("header").breadCrumb(key)
+                        MissingKeyError(key).missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(key)
                             .copy(failureReason = highlightIfSOAPActionMismatch(key))
                     )
             }
@@ -127,7 +127,7 @@ data class HttpHeadersPattern(
         val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
         val otherRequiredKeys = other.pattern.keys.filter { !isOptional(it) }
 
-        return checkMissingHeaders(myRequiredKeys, otherRequiredKeys).ifSuccess {
+        return checkMissingHeaders(myRequiredKeys, otherRequiredKeys, thisResolver).ifSuccess {
             val otherWithoutOptionality = other.pattern.mapKeys { withoutOptionality(it.key) }
             val thisWithoutOptionality = pattern.filterKeys { withoutOptionality(it) in otherWithoutOptionality }
                 .mapKeys { withoutOptionality(it.key) }
@@ -150,10 +150,10 @@ data class HttpHeadersPattern(
         }.breadCrumb("HEADER")
     }
 
-    private fun checkMissingHeaders(myRequiredKeys: List<String>, otherRequiredKeys: List<String>): Result =
+    private fun checkMissingHeaders(myRequiredKeys: List<String>, otherRequiredKeys: List<String>, resolver: Resolver): Result =
         when (val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }) {
             null -> Result.Success()
-            else -> MissingKeyError(missingFixedKey).missingKeyToResult("header").breadCrumb(missingFixedKey)
+            else -> MissingKeyError(missingFixedKey).missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(missingFixedKey)
         }
 }
 

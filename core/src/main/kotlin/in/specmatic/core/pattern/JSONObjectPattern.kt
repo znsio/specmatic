@@ -48,7 +48,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
         val missingKey = resolverWithNullType.findKeyError(pattern, sampleData.jsonObject)
         if (missingKey != null)
-            return missingKey.missingKeyToResult("key")
+            return missingKey.missingKeyToResult("key", resolver.mismatchMessages)
 
         mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
             when (val result = resolverWithNullType.matchesPattern(key, patternValue, sampleValue)) {
@@ -97,7 +97,7 @@ internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<
 
     val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
     if (missingFixedKey != null)
-        return MissingKeyError(missingFixedKey).missingKeyToResult("key").breadCrumb(missingFixedKey)
+        return MissingKeyError(missingFixedKey).missingKeyToResult("key", thisResolverWithNullType.mismatchMessages).breadCrumb(missingFixedKey)
 
     return pattern.keys.asSequence().map { key ->
         val bigger = pattern.getValue(key)

@@ -242,7 +242,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                 ignoreXMLNamespaces(sampleAttributesWithoutXmlns)
         )
         if (missingKey != null)
-            return missingKey.missingKeyToResult("attribute")
+            return missingKey.missingKeyToResult("attribute", resolver.mismatchMessages)
 
         return matchAttributes(patternAttributesWithoutXmlns, sampleAttributesWithoutXmlns, resolver)
     }

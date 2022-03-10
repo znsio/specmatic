@@ -99,7 +99,7 @@ data class Feature(
 
     fun lookupScenario(httpRequest: HttpRequest): List<Scenario> =
         try {
-            val resultList = lookupScenario(httpRequest, scenarios, BackwardCompatibilityMismatch)
+            val resultList = lookupScenario(httpRequest, scenarios, NewAndOldContractRequestMismatches)
             val matchingScenarios = matchingScenarios(resultList)
 
             val firstRealResult = resultList.filterNot { it.second.isFluffy() }.firstOrNull()

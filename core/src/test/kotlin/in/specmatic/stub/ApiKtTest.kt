@@ -440,7 +440,7 @@ Feature: Math API
   
       >> REQUEST.BODY
   
-      Key named "unexpected" was unexpected""")
+      ${ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected")}""")
     }
 
     @Test
@@ -466,7 +466,7 @@ sample.json didn't match math.$CONTRACT_EXTENSION
   
       >> RESPONSE.BODY
   
-      Key named "unexpected" was unexpected
+      ${ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected")}
       """.trimIndent())
     }
 

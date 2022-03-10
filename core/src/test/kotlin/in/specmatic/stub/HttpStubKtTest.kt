@@ -69,7 +69,7 @@ Feature: POST API
             
               >> REQUEST.BODY
               
-              Key named "undeclared" was unexpected
+              ${ContractAndRequestsMismatch.unexpectedKey("key", "undeclared")}
             """.trimIndent())
     }
 
@@ -133,7 +133,7 @@ Scenario: Square of a number
             
               >> REQUEST.BODY
               
-              Key named "unexpected" was unexpected
+              ${ContractAndRequestsMismatch.unexpectedKey("key", "unexpected")}
             """.trimIndent())
     }
 
@@ -166,7 +166,7 @@ Scenario: Square of a number
 
 >> REQUEST.URL.QUERY-PARAMS
   
-  Expected query param named "status" was missing""")
+  ${StubAndRequestMismatchMessages.expectedKeyWasMissing("query param", "status")}""")
     }
 
     @Test

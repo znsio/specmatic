@@ -920,10 +920,8 @@ data class Feature(
             pattern is BooleanPattern || (pattern is DeferredPattern && pattern.pattern == "(boolean)") -> BooleanSchema()
             pattern is DateTimePattern || (pattern is DeferredPattern && pattern.pattern == "(datetime)") -> StringSchema()
             pattern is StringPattern || pattern is EmptyStringPattern || (pattern is DeferredPattern && pattern.pattern == "(string)") || (pattern is DeferredPattern && pattern.pattern == "(nothing)") -> StringSchema()
-            pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> StringSchema().apply {
+            pattern is NullPattern || (pattern is DeferredPattern && pattern.pattern == "(null)") -> Schema<Any>().apply {
                 this.nullable = true
-            }.also {
-                logger.log("Specmatic converted a (null) in the spec file to a nullable string in the OpenAPI file.")
             }
             pattern is DeferredPattern -> Schema<Any>().apply {
                 this.`$ref` = withoutPatternDelimiters(pattern.pattern).trimEnd('_')

@@ -473,7 +473,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 }
             }
             else -> {
-                if (schema.additionalProperties != null) {
+                if (schema.nullable == true && schema.additionalProperties == null && schema.`$ref` == null) {
+                    NullPattern
+                }
+                else if (schema.additionalProperties != null) {
                     toDictionaryPattern(schema, typeStack, patternName)
                 } else {
                     when (schema.`$ref`) {
@@ -513,7 +516,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return when (schema.nullable != true) {
             true -> pattern
             else -> when (pattern) {
-                is AnyPattern -> pattern
+                is AnyPattern, NullPattern -> pattern
                 else -> AnyPattern(listOf(NullPattern, pattern))
             }
         }

@@ -1976,7 +1976,6 @@ Scenario: Get product by id
                   - "address"
                   properties:
                     address:
-                      type: "string"
                       nullable: true
             """.trimIndent()
         )
@@ -5107,5 +5106,48 @@ components:
 
             assertThat(testStatus).isEqualTo("test ran")
         }
+    }
+
+    @Test
+    fun `recognizes null value`() {
+        val contractString = """
+                openapi: 3.0.3
+                info:
+                  title: test
+                  version: '1.0'
+                paths:
+                  '/users':
+                    post:
+                      responses:
+                        '200':
+                          description: OK
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              ${'$'}ref: '#/components/schemas/user'
+                components:
+                  schemas:
+                    user:
+                      type: object
+                      properties:
+                        id:
+                          nullable: true
+                      required:
+                        - id
+            """.trimIndent()
+
+        val contract: Feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
+
+        val scenario = contract.scenarios.single()
+        val resolver = scenario.resolver
+
+        val requestPattern = scenario.httpRequestPattern
+
+        val matchingRequest = HttpRequest("POST", "/users", body = parsedJSON("""{"id": null}"""))
+        assertThat(requestPattern.matches(matchingRequest, resolver)).isInstanceOf(Result.Success::class.java)
+
+        val nonMatchingRequest = HttpRequest("POST", "/users", body = parsedJSON("""{"id": 10}"""))
+        assertThat(requestPattern.matches(nonMatchingRequest, resolver)).isInstanceOf(Result.Failure::class.java)
     }
 }

@@ -137,7 +137,7 @@ class StubCommand : Callable<Unit> {
             if(httpStub != null || kafkaStub != null) {
                 addShutdownHook()
 
-                val watcher = watchMaker.make(contractPaths)
+                val watcher = watchMaker.make(contractPaths.plus(dataDirs))
                 watcher.watchForChanges {
                     restartServer()
                 }

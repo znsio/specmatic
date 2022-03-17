@@ -3,6 +3,7 @@ package `in`.specmatic.stub
 
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
+import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.log.StringLog
 import `in`.specmatic.core.pattern.ContractException
@@ -275,9 +276,23 @@ fun createStubFromContracts(contractPaths: List<String>, host: String = "localho
 fun implicitContractDataDirs(contractPaths: List<String>) =
         contractPaths.map { implicitContractDataDir(it).absolutePath }
 
+val customImplicitStubBase: String? = System.getenv("SPECMATIC_CUSTOM_IMPLICIT_STUB_BASE") ?: System.getProperty("customImplicitStubBase")
+
 fun implicitContractDataDir(contractPath: String): File {
     val contractFile = File(contractPath)
-    return File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
+    val customImplicitStubBase: String? = customImplicitStubBase
+
+    return if(customImplicitStubBase == null)
+        File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
+    else {
+        val gitRoot: String = File(SystemGit().inGitRootOf(contractPath).workingDirectory).canonicalPath
+        val fullContractPath = File(contractPath).canonicalPath
+
+        val relativeContractPath = File(fullContractPath).relativeTo(File(gitRoot))
+        File(gitRoot).resolve(customImplicitStubBase).resolve(relativeContractPath).let {
+            File("${it.parent}/${it.nameWithoutExtension}$DATA_DIR_SUFFIX")
+        }
+    }
 }
 
 // Used by stub client code

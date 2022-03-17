@@ -3,6 +3,7 @@ package `in`.specmatic.core.git
 import java.io.File
 
 interface GitCommand {
+    val workingDirectory: String
     fun add(): SystemGit
     fun add(relativePath: String): SystemGit
     fun commit(): SystemGit

@@ -8,6 +8,8 @@ import picocli.CommandLine
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ContractPathData
+import `in`.specmatic.stub.customImplicitStubBase
+import `in`.specmatic.stub.implicitContractDataDir
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Callable
@@ -29,14 +31,33 @@ class StubBundle(private val _bundlePath: String?, private val config: Specmatic
     }
 
     override fun ancillaryEntries(pathData: ContractPathData): List<ZipperEntry> {
-        val base = File(pathData.baseDir)
+        if(customImplicitStubBase != null) {
+            val base = File(pathData.baseDir)
+            val contractRelativePath = File(pathData.path).relativeTo(base)
 
-        val stubDataDir = stubDataDir(File(pathData.path))
-        val stubFiles = stubFilesIn(stubDataDir, fileOperations)
+            val stubRelativePath = contractRelativePath.parent?.let {
+                "${contractRelativePath.parent}/${contractRelativePath.nameWithoutExtension}_data"
+            } ?: "${contractRelativePath.nameWithoutExtension}_data"
 
-        return stubFiles.map {
-            val relativeEntryPath = File(it).relativeTo(base)
-            ZipperEntry("${base.name}/${relativeEntryPath.path}", fileOperations.readBytes(it))
+            val stubFiles: List<Pair<String, String>> = stubFilesIn(base, File(customImplicitStubBase), File(stubRelativePath))
+
+//            val stubDataDir = stubDataDir(File(pathData.path))
+//            val stubFiles = stubFilesIn(stubDataDir, fileOperations)
+
+            return stubFiles.map { (virtualPath, actualPath) ->
+                val relativeEntryPath = File(virtualPath).relativeTo(base)
+                ZipperEntry("${base.name}/${relativeEntryPath.path}", fileOperations.readBytes(actualPath))
+            }
+        } else {
+            val base = File(pathData.baseDir)
+
+            val stubDataDir = stubDataDir(File(pathData.path))
+            val stubFiles = stubFilesIn(stubDataDir, fileOperations)
+
+            return stubFiles.map {
+                val relativeEntryPath = File(it).relativeTo(base)
+                ZipperEntry("${base.name}/${relativeEntryPath.path}", fileOperations.readBytes(it))
+            }
         }
     }
 
@@ -125,6 +146,21 @@ fun pathDataToZipperEntry(bundle: Bundle, pathData: ContractPathData, fileOperat
     return listOf(contractEntry).plus(ancillaryEntries)
 }
 
+fun stubFilesIn(base: File, customImplicitStubBase: File, stubRelativePath: File): List<Pair<String, String>> {
+    return base.resolve(customImplicitStubBase).resolve(stubRelativePath).listFiles()?.flatMap {
+        when {
+            it.extension == "json" -> {
+                val actualPath = it.path
+                val virtualPath = base.resolve(it.relativeTo(base.resolve(customImplicitStubBase))).path
+
+                listOf(Pair(virtualPath, actualPath))
+            }
+            it.isDirectory -> stubFilesIn(base, customImplicitStubBase, it.relativeTo(base.resolve(customImplicitStubBase)))
+            else -> emptyList()
+        }
+    } ?: emptyList()
+}
+
 fun stubFilesIn(stubDataDir: String, fileOperations: FileOperations): List<String> =
         fileOperations.files(stubDataDir).flatMap {
             when {
@@ -135,8 +171,12 @@ fun stubFilesIn(stubDataDir: String, fileOperations: FileOperations): List<Strin
         }
 
 fun stubDataDir(path: File): String {
-    return "${path.parent}/${path.nameWithoutExtension}_data"
+    return implicitContractDataDir(path.path).path
 }
+
+//fun stubDataDir(path: File): String {
+//    return "${path.parent}/${path.nameWithoutExtension}_data"
+//}
 
 @Component
 class Zipper {

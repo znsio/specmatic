@@ -6,7 +6,7 @@ import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
 
-class SystemGit(private val workingDirectory: String = ".", private val prefix: String = "- ") : GitCommand {
+class SystemGit(override val workingDirectory: String = ".", private val prefix: String = "- ") : GitCommand {
     private fun execute(vararg command: String): String =
         executeCommandWithWorkingDirectory(prefix, workingDirectory, command.toList().toTypedArray())
 

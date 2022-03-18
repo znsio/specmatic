@@ -50,7 +50,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
 
         return when (response.status) {
             status -> MatchSuccess(parameters)
-            else -> MatchFailure(mismatchResult("status $status", "status ${response.status}").copyWithDetails(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
+            else -> MatchFailure(mismatchResult("status $status", "status ${response.status}").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
         }
     }
 

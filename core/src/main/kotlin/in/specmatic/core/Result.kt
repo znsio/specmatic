@@ -35,6 +35,8 @@ sealed class Result {
     abstract fun ifSuccess(function: () -> Result): Result
     abstract fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result
 
+    abstract fun shouldBeIgnored(): Boolean
+
     fun updatePath(path: String): Result {
         this.contractPath = path
         return this
@@ -47,47 +49,44 @@ sealed class Result {
         }
     }
 
-    data class FailureCause(val message: String="", var cause: Failure? = null, val breadCrumb: String = "")
+    data class FailureCause(val message: String="", var cause: Failure? = null)
 
-    data class Failure(val causes: List<FailureCause> = emptyList(), val failureReason: FailureReason? = null) : Result() {
-        constructor(message: String="", cause: Failure? = null, breadCrumb: String = "", failureReason: FailureReason? = null): this(listOf(FailureCause(message, cause, breadCrumb)), failureReason)
+    data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
+        constructor(message: String="", cause: Failure? = null, breadCrumb: String = "", failureReason: FailureReason? = null): this(listOf(FailureCause(message, cause)), breadCrumb, failureReason)
 
         companion object {
             fun fromFailures(failures: List<Failure>): Failure {
-                val allCauses = failures.flatMap {
-                    it.causes
-                }
-
-                return Failure(allCauses)
+                return Failure(failures.map {
+                    it.toFailureCause()
+                })
             }
-        }
-
-        fun copyWithDetails(breadCrumb: String, failureReason: FailureReason): Failure {
-            val newCauses = causes.map {
-                it.copy(breadCrumb = breadCrumb)
-            }
-
-            return this.copy(causes = newCauses, failureReason = failureReason)
         }
 
         val message = causes.firstOrNull()?.message ?: ""
         val cause = causes.firstOrNull()?.cause
-        val breadCrumb: String = causes.firstOrNull()?.breadCrumb ?: ""
+
+        fun toFailureCause(): FailureCause {
+            return FailureCause(cause = this)
+        }
 
         override fun ifSuccess(function: () -> Result) = this
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
             return this
         }
 
+        override fun shouldBeIgnored(): Boolean {
+            return this.scenario?.ignoreFailure == true
+        }
+
         fun reason(errorMessage: String) = Failure(errorMessage, this)
         fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
 
         fun toFailureReport(scenarioMessage: String? = null): FailureReport {
-            return FailureReport(contractPath, scenarioMessage, scenario, toMatchFailureDetails())
+            return FailureReport(contractPath, scenarioMessage, scenario, toMatchFailureDetailList())
         }
 
-        fun toMatchFailureDetails(): MatchFailureDetails =
-            (cause?.toMatchFailureDetails() ?: MatchFailureDetails()).let { reason ->
+        fun toMatchFailureDetails(): MatchFailureDetails {
+            return (cause?.toMatchFailureDetails() ?: MatchFailureDetails()).let { reason ->
                 when {
                     message.isNotEmpty() -> reason.copy(errorMessages = listOf(message).plus(reason.errorMessages))
                     else -> reason
@@ -98,6 +97,23 @@ sealed class Result {
                     else -> reason
                 }
             }
+        }
+
+        fun toMatchFailureDetailList(): List<MatchFailureDetails> {
+            return causes.flatMap {
+                (it.cause?.toMatchFailureDetailList() ?: listOf(MatchFailureDetails())).map { matchFailureDetails ->
+                    val withReason = when {
+                        message.isNotEmpty() -> matchFailureDetails.copy(errorMessages = listOf(message).plus(matchFailureDetails.errorMessages))
+                        else -> matchFailureDetails
+                    }
+
+                    when {
+                        breadCrumb.isNotEmpty() -> withReason.copy(breadCrumbs = listOf(breadCrumb).plus(withReason.breadCrumbs))
+                        else -> withReason
+                    }
+                }
+            }
+        }
 
         override fun isTrue() = false
     }
@@ -108,6 +124,8 @@ sealed class Result {
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
             return this.copy(variables = response.export(bindings))
         }
+
+        override fun shouldBeIgnored(): Boolean = false
     }
 }
 
@@ -158,89 +176,4 @@ fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern, mismatchMessages
 
 fun valueError(value: Value?): String? {
     return value?.let { "${it.displayableType()}: ${it.displayableValue()}" }
-}
-
-interface Report {
-    override fun toString(): String
-    fun toText(): String
-}
-
-object SuccessReport: Report {
-    override fun toString(): String = toText()
-
-    override fun toText(): String {
-        return ""
-    }
-}
-
-class FailureReport(val contractPath: String?, val scenarioMessage: String?, val scenario: Scenario?, val matchFailureDetails: MatchFailureDetails): Report {
-    override fun toText(): String {
-        val contractLine = contractPathDetails()
-        val scenarioDetails = scenarioDetails(scenario) ?: ""
-
-        val matchFailureDetails = matchFailureDetails()
-
-        val reportDetails = "$scenarioDetails${System.lineSeparator()}${System.lineSeparator()}${matchFailureDetails.prependIndent("  ")}"
-
-        val report = contractLine?.let {
-            val reportIndent = if(contractLine.isNotEmpty()) "  " else ""
-            "$contractLine${reportDetails.prependIndent(reportIndent)}"
-        } ?: reportDetails
-
-        return report.trim()
-    }
-
-    override fun toString(): String = toText()
-
-    private fun matchFailureDetails(): String {
-        return matchFailureDetails.let { (breadCrumbs, errorMessages) ->
-            val breadCrumbString =
-                breadCrumbs
-                    .filter { it.isNotBlank() }
-                    .joinToString(".") { it.trim() }
-                    .let {
-                        when {
-                            it.isNotBlank() -> ">> $it"
-                            else -> ""
-                        }
-                    }
-
-            val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
-
-            "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}$errorMessagesString".trim()
-        }
-    }
-
-    private fun contractPathDetails(): String? {
-        if(contractPath == null || contractPath.isBlank())
-            return null
-
-        return "Error from contract $contractPath\n\n"
-    }
-
-    private fun scenarioDetails(scenario: Scenario?): String? {
-        return scenario?.let {
-            val scenarioLine = """${scenarioMessage ?: "In scenario"} "${scenario.name}""""
-            val urlLine =
-                "API: ${scenario.httpRequestPattern.method} ${scenario.httpRequestPattern.urlMatcher?.path} -> ${scenario.httpResponsePattern.status}"
-
-            "$scenarioLine${System.lineSeparator()}$urlLine"
-        }
-    }
-}
-
-fun toReport(result: Result, scenarioMessage: String? = null): String {
-    return when (result) {
-        is Failure -> {
-            result.toFailureReport(scenarioMessage)
-        }
-        else -> SuccessReport
-    }.toString()
-}
-
-fun shouldBeIgnored(result: Result): Boolean {
-    return when(result) {
-        is Result.Success -> false
-        is Failure -> result.scenario?.ignoreFailure == true
-    }
 }

@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.toReport
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
@@ -181,7 +180,7 @@ internal class XMLPatternTest {
             val value = parsedValue("""<name/>""")
 
             val result = type.matches(value, Resolver())
-            println(toReport(result))
+            println(result.toReport())
             assertThat(result).isInstanceOf(Result.Success::class.java)
         }
 

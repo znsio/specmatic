@@ -3,7 +3,6 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
-import `in`.specmatic.core.toReport
 import `in`.specmatic.core.value.BooleanValue
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.Value

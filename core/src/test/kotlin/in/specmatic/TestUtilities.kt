@@ -15,6 +15,15 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertFalse
 import java.io.File
 
+fun toReport(result: Result, scenarioMessage: String? = null): String {
+    return when (result) {
+        is Result.Failure -> {
+            result.toFailureReport(scenarioMessage)
+        }
+        else -> SuccessReport
+    }.toString()
+}
+
 object Utils {
     fun readTextResource(path: String) =
         File(

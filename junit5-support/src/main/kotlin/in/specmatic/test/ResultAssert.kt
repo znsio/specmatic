@@ -1,8 +1,7 @@
 package `in`.specmatic.test
 
-import org.assertj.core.api.AbstractAssert
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.toReport
+import org.assertj.core.api.AbstractAssert
 
 class ResultAssert(result: Result) : AbstractAssert<ResultAssert, Result>(result, ResultAssert::class.java) {
     companion object {

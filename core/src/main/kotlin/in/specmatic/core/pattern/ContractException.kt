@@ -3,7 +3,6 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.FailureReport
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.Scenario
-import `in`.specmatic.core.toReport
 
 data class ContractException(val errorMessage: String = "", val breadCrumb: String = "", val exceptionCause: ContractException? = null, val scenario: Scenario? = null) : Exception(errorMessage) {
     constructor(failureReport: FailureReport): this(failureReport.toText())

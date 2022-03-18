@@ -47,7 +47,13 @@ sealed class Result {
         }
     }
 
-    data class Failure(val message: String="", var cause: Failure? = null, val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
+    data class FailureCause(val message: String="", var cause: Failure? = null)
+
+    data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
+        constructor(message: String="", cause: Failure? = null, breadCrumb: String = "", failureReason: FailureReason? = null): this(listOf(FailureCause(message, cause)), breadCrumb, failureReason)
+        val message = causes.first().message
+        val cause = causes.first().cause
+
         override fun ifSuccess(function: () -> Result) = this
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
             return this

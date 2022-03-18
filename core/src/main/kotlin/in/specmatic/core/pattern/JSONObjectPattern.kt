@@ -50,13 +50,14 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         if (missingKey != null)
             return missingKey.missingKeyToResult("key", resolver.mismatchMessages)
 
-        mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
-            when (val result = resolverWithNullType.matchesPattern(key, patternValue, sampleValue)) {
-                is Result.Failure -> return result.breadCrumb(key)
-            }
-        }
+        val results: List<Result.Failure> = mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
+            resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
+        }.filterIsInstance<Result.Failure>()
 
-        return Result.Success()
+        return if(results.isEmpty())
+            Result.Success()
+        else
+            Result.Failure.fromFailures(results)
     }
 
     override fun generate(resolver: Resolver): JSONObjectValue {

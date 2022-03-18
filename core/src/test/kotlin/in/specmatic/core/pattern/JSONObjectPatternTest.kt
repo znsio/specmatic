@@ -7,6 +7,7 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Assertions.*
+import java.util.function.Consumer
 
 internal class JSONObjectPatternTest {
     @Test
@@ -303,5 +304,18 @@ internal class JSONObjectPatternTest {
         assertThat(combinations).contains(personWithAddressWithoutStreet)
         assertThat(combinations).contains(personWithAddressSetToNull)
         assertThat(combinations).contains(personWithoutAddress)
+    }
+
+    @Test
+    fun `returns as many errors as contract-invalid values in a JSON object`() {
+        val type = JSONObjectPattern(mapOf("id" to NumberPattern(), "height" to NumberPattern()))
+        val json = parsedJSON("""{"id": "abc123", "height": "5 feet 7"}""")
+
+        assertThat(type.matches(json, Resolver())).satisfies(Consumer {
+            it as Result.Failure
+            assertThat(it.causes).hasSize(2)
+
+            println(it)
+        })
     }
 }

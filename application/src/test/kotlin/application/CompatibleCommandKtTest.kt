@@ -43,6 +43,8 @@ internal class CompatibleCommandKtTest {
     fun `compatibility test of file against HEAD when change is backward compatible`() {
         val fakeGit = object : FakeGit() {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
+            override val workingDirectory: String
+                get() = ""
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")
@@ -70,6 +72,8 @@ internal class CompatibleCommandKtTest {
     fun `compatibility test of file against HEAD when change is NOT backward compatible`() {
         val fakeGit = object : FakeGit() {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
+            override val workingDirectory: String
+                get() = ""
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")
@@ -104,6 +108,8 @@ internal class CompatibleCommandKtTest {
 
         val fakeGit = object : FakeGit() {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
+            override val workingDirectory: String
+                get() = ""
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")
@@ -137,6 +143,8 @@ internal class CompatibleCommandKtTest {
 
         val fakeGit = object : FakeGit() {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
+            override val workingDirectory: String
+                get() = ""
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")

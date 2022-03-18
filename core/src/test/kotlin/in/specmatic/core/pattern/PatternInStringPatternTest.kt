@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.toReport
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 

@@ -1,12 +1,11 @@
 package application
 
-import picocli.CommandLine
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.toReport
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.core.utilities.loadSources
+import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
 

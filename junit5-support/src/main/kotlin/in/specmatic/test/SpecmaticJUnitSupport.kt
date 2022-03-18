@@ -120,7 +120,7 @@ open class SpecmaticJUnitSupport {
                 val result: Result = invoker.execute(testScenario, timeout)
 
                 when {
-                    shouldBeIgnored(result) -> {
+                    result.shouldBeIgnored() -> {
                         val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${result.toReport().toText().prependIndent("  ")}"
                         throw TestAbortedException(message)
                     }

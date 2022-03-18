@@ -1,13 +1,12 @@
 package application
 
-import picocli.CommandLine
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
-import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.NonZeroExitError
+import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.toReport
 import `in`.specmatic.core.utilities.*
+import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess

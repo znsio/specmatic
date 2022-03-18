@@ -318,4 +318,25 @@ internal class JSONObjectPatternTest {
             println(it)
         })
     }
+
+    @Test
+    fun `an error for failure n levels deep should have a path with all the levels`() {
+        val type = JSONObjectPattern(mapOf("id" to NumberPattern(), "address" to JSONObjectPattern(mapOf("flat" to NumberPattern()))))
+        val json = parsedJSON("""{"id": "abc123", "address": {"flat": "10"}}""")
+
+        assertThat(type.matches(json, Resolver())).satisfies(Consumer {
+            it as Result.Failure
+            assertThat(it.causes).hasSize(2)
+
+            assertThat(it.toFailureReport().toString()).isEqualTo("""
+                >> id
+                  
+                  Expected number, actual was string: "abc123"
+                  
+                  >> address.flat
+                  
+                  Expected number, actual was string: "10"
+            """.trimIndent().trim())
+        })
+    }
 }

@@ -47,12 +47,22 @@ sealed class Result {
         }
     }
 
-    data class FailureCause(val message: String="", var cause: Failure? = null)
+    data class FailureCause(val message: String="", var cause: Failure? = null, val breadCrumb: String = "")
 
-    data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
-        constructor(message: String="", cause: Failure? = null, breadCrumb: String = "", failureReason: FailureReason? = null): this(listOf(FailureCause(message, cause)), breadCrumb, failureReason)
+    data class Failure(val causes: List<FailureCause> = emptyList(), val failureReason: FailureReason? = null) : Result() {
+        constructor(message: String="", cause: Failure? = null, breadCrumb: String = "", failureReason: FailureReason? = null): this(listOf(FailureCause(message, cause, breadCrumb)), failureReason)
+
+        fun copyWithDetails(breadCrumb: String, failureReason: FailureReason): Failure {
+            val newCauses = causes.map {
+                it.copy(breadCrumb = breadCrumb)
+            }
+
+            return this.copy(causes = newCauses, failureReason = failureReason)
+        }
+
         val message = causes.first().message
         val cause = causes.first().cause
+        val breadCrumb: String = causes.first().breadCrumb
 
         override fun ifSuccess(function: () -> Result) = this
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {

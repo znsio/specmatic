@@ -9,6 +9,8 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.shouldNotMatch
+import org.junit.jupiter.api.Nested
+import org.junit.runner.notification.Failure
 
 internal class ListPatternTest {
     @Test
@@ -83,5 +85,27 @@ Feature: Recursive test
         val result = testBackwardCompatibility(feature, feature)
         println(result.report())
         assertThat(result.success()).isTrue()
+    }
+
+    @Nested
+    inner class ReturnAllErrors {
+        val listType = ListPattern(NumberPattern())
+        val list = parsedJSON("""["elementA", 2, "elementC"]""")
+        val result: Result.Failure = listType.matches(list, Resolver()) as Result.Failure
+        val resultText = result.toFailureReport().toText()
+
+        @Test
+        fun `should return all errors in a list`() {
+            assertThat(result.toMatchFailureDetailList()).hasSize(2)
+        }
+
+        @Test
+        fun `should refer to all errors in the report`() {
+            println(resultText)
+            assertThat(resultText).contains("[0]")
+            assertThat(resultText).contains("elementA")
+            assertThat(resultText).contains("[2]")
+            assertThat(resultText).contains("elementC")
+        }
     }
 }

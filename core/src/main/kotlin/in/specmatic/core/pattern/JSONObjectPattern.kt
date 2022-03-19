@@ -46,13 +46,13 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)
 
-        val missingKey = resolverWithNullType.findKeyError(pattern, sampleData.jsonObject)
-        if (missingKey != null)
-            return missingKey.missingKeyToResult("key", resolver.mismatchMessages)
+        val keyErrors: List<Result.Failure> = resolverWithNullType.findKeyErrorList(pattern, sampleData.jsonObject).map {
+            it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
+        }
 
         val results: List<Result.Failure> = mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
             resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
-        }.filterIsInstance<Result.Failure>()
+        }.filterIsInstance<Result.Failure>().plus(keyErrors)
 
         return if(results.isEmpty())
             Result.Success()

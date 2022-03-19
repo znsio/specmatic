@@ -7,6 +7,7 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Nested
 import java.util.function.Consumer
 
 internal class JSONObjectPatternTest {
@@ -338,5 +339,30 @@ internal class JSONObjectPatternTest {
                   Expected number, actual was string: "10"
             """.trimIndent().trim())
         })
+    }
+
+    @Nested
+    inner class MatchReturnsAllKeyErrors {
+        val type = JSONObjectPattern(mapOf("id" to NumberPattern(), "address" to StringPattern()))
+        val json = parsedJSON("""{"person_id": "abc123"}""")
+        val error: Result = type.matches(json, Resolver())
+
+        @Test
+        fun `return as many errors as the number of key errors`() {
+            error as Result.Failure
+
+            assertThat(error.toMatchFailureDetailList()).hasSize(3)
+        }
+
+        @Test
+        fun `errors should refer to the missing keys`() {
+            error as Result.Failure
+
+            println(error.toFailureReport().toText())
+
+            assertThat(error.toFailureReport().toText()).contains(">> id")
+            assertThat(error.toFailureReport().toText()).contains(">> address")
+            assertThat(error.toFailureReport().toText()).contains(">> person_id")
+        }
     }
 }

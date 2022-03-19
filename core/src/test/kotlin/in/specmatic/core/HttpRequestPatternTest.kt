@@ -51,7 +51,7 @@ internal class HttpRequestPatternTest {
             .updateBody("""{"unmatchedKey": "unmatchedValue"}""")
         httpRequestPattern.matches(httpRequest, Resolver()).let {
             assertThat(it).isInstanceOf(Failure::class.java)
-            assertThat((it as Failure).toMatchFailureDetails()).isEqualTo(MatchFailureDetails(listOf("REQUEST", "BODY"), listOf("Expected key named \"name\" was missing")))
+            assertThat((it as Failure).toMatchFailureDetails()).isEqualTo(MatchFailureDetails(listOf("REQUEST", "BODY", "name"), listOf("Expected key named \"name\" was missing")))
         }
     }
 

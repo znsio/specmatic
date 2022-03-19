@@ -877,10 +877,10 @@ paths:
             assertThat((it as NoMatchingScenario).report(request).trim()).isEqualTo("""
                 In scenario "hello world. Response: Says hello"
                 API: GET /hello/(id:number) -> 200
-                
+
                   >> REQUEST.HEADERS.X-Value
                   
-                  ${ContractAndStubMismatchMessages.mismatchMessage("number", """string: "data" """.trim())}
+                     ${ContractAndStubMismatchMessages.mismatchMessage("number", """string: "data" """.trim())}
                 """.trimIndent())
         })
     }

@@ -331,12 +331,12 @@ internal class JSONObjectPatternTest {
 
             assertThat(it.toFailureReport().toString()).isEqualTo("""
                 >> id
-                  
-                  Expected number, actual was string: "abc123"
-                  
-                  >> address.flat
-                  
-                  Expected number, actual was string: "10"
+
+                   Expected number, actual was string: "abc123"
+
+                >> address.flat
+
+                   Expected number, actual was string: "10"
             """.trimIndent().trim())
         })
     }

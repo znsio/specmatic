@@ -1,7 +1,7 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.pattern.IgnoreUnexpectedKeys
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
 internal class CheckOnlyPatternKeysTest {
@@ -57,5 +57,25 @@ internal class CheckOnlyPatternKeysTest {
         val missing = CheckOnlyPatternKeys.validate(expected, actual)
 
         assertThat(missing).isEqualTo(null)
+    }
+
+    @Nested
+    inner class ReturnAllErrors {
+        val expected = mapOf("hello" to "value", "world" to "value")
+        val actual = mapOf("hello_world" to "value")
+        val missingList: List<KeyError> = CheckOnlyPatternKeys.validateList(expected, actual)
+
+        @Test
+        fun `should return as many errors as the number of missing keys`() {
+            assertThat(missingList).hasSize(2)
+        }
+
+        @Test
+        fun `the errors should refer to the missing keys`() {
+            val keys = missingList.map { it.name }
+
+            assertThat(keys).contains("hello")
+            assertThat(keys).contains("world")
+        }
     }
 }

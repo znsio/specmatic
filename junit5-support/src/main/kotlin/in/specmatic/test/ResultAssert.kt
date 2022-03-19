@@ -13,8 +13,10 @@ class ResultAssert(result: Result) : AbstractAssert<ResultAssert, Result>(result
     fun isSuccess() {
         isNotNull
 
-        if(actual is Result.Failure) {
-            failWithMessage(actual.toFailureReport("Testing scenario").toText())
+        actual.let {
+            if(it is Result.Failure) {
+                failWithMessage(it.toFailureReport("Testing scenario").toText())
+            }
         }
     }
 }

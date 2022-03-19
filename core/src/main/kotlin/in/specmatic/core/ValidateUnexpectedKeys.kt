@@ -11,8 +11,8 @@ object ValidateUnexpectedKeys: UnexpectedKeyCheck {
         val patternKeys = pattern.minus("...").keys.map { withoutOptionality(it) }
         val actualKeys = actual.keys.map { withoutOptionality(it) }
 
-        return actualKeys.minus(patternKeys.toSet()).firstOrNull()?.let {
-            listOf(UnexpectedKeyError(it))
-        } ?: emptyList()
+        return actualKeys.minus(patternKeys.toSet()).map {
+            UnexpectedKeyError(it)
+        }
     }
 }

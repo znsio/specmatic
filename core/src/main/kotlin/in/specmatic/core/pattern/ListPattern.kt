@@ -21,15 +21,20 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
 
-        return sampleData.list.asSequence().map {
+        val failures: List<Result.Failure> = sampleData.list.map {
             resolverWithEmptyType.matchesPattern(null, pattern, it)
         }.mapIndexed { index, result ->
             ResultWithIndex(index, result)
-        }.find {
+        }.filter {
             it.result is Result.Failure
-        }?.let {
-            it.result.breadCrumb("[${it.index}]")
-        } ?: Result.Success()
+        }.map {
+            it.result.breadCrumb("[${it.index}]") as Result.Failure
+        }
+
+        return if(failures.isEmpty())
+            Result.Success()
+        else
+            Result.Failure.fromFailures(failures)
     }
 
     override fun generate(resolver: Resolver): Value {

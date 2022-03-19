@@ -1,14 +1,12 @@
 #!/bin/sh
 
-set -e
-
 BRANCH=`git rev-parse --abbrev-ref HEAD`
 
 if [ $BRANCH != "main" ]
 then
-	echo Current branch is $BRANCH
+	echo Current branch is $BRANCH.
 	echo
-	echo You should only release from main
+	echo You should only release from main.
 	exit 1
 fi
 
@@ -19,11 +17,21 @@ then
 	exit 1
 fi
 
+OUTPUT=`git rev-parse $1 2>&1`
+
+if [ $? = "0" ]
+then
+	echo This tag already exists, most likely because a release with this version has already been done.
+	exit 1
+fi
+
+set -e
+
 ACTUAL_VERSION=`cat version.properties | sed s/version=//g`
 
 if [ "$1" != $ACTUAL_VERSION ]
 then
-	echo The specified version $1 does not match the actual version $ACTUAL_VERSION
+	echo The specified version $1 does not match the actual version $ACTUAL_VERSION.
 	exit 1
 fi
 

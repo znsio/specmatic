@@ -12,6 +12,10 @@ internal class KeyCheckTest {
                 return MissingKeyError("test")
             }
 
+            override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<KeyError> {
+                return listOf(MissingKeyError("test"))
+            }
+
         }).validate(emptyMap(), emptyMap())
 
         assertThat(result?.name).isEqualTo("test")
@@ -24,9 +28,17 @@ internal class KeyCheckTest {
                 return null
             }
 
+            override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<KeyError> {
+                return emptyList()
+            }
+
         }, unexpectedKeyCheck = object: UnexpectedKeyCheck {
             override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): UnexpectedKeyError {
                 return UnexpectedKeyError("test")
+            }
+
+            override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<UnexpectedKeyError> {
+                return listOf(UnexpectedKeyError("test"))
             }
 
         }).validate(emptyMap(), emptyMap())
@@ -41,9 +53,17 @@ internal class KeyCheckTest {
                 return null
             }
 
+            override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<KeyError> {
+                return emptyList()
+            }
+
         }, unexpectedKeyCheck = object: UnexpectedKeyCheck {
             override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): UnexpectedKeyError {
                 return UnexpectedKeyError("test")
+            }
+
+            override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<UnexpectedKeyError> {
+                return listOf(UnexpectedKeyError("test"))
             }
 
         }).withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
@@ -60,9 +80,17 @@ internal class KeyCheckTest {
                 return null
             }
 
+            override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<KeyError> {
+                return emptyList()
+            }
+
         }, unexpectedKeyCheck = object: UnexpectedKeyCheck {
             override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): UnexpectedKeyError {
                 return UnexpectedKeyError("test")
+            }
+
+            override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<UnexpectedKeyError> {
+                return listOf(UnexpectedKeyError("test"))
             }
 
         }).disableOverrideUnexpectedKeycheck().withUnexpectedKeyCheck(IgnoreUnexpectedKeys)

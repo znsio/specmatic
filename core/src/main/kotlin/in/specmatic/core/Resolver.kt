@@ -27,7 +27,11 @@ data class Resolver(
     }
 
     fun findKeyError(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? {
-        return findKeyErrorCheck.validate(pattern, actual)
+        return findKeyErrorList(pattern, actual).firstOrNull()
+    }
+
+    fun findKeyErrorList(pattern: Map<String, Any>, actual: Map<String, Any>): List<KeyError> {
+        return findKeyErrorCheck.validate(pattern, actual)?.let { listOf(it) } ?: emptyList()
     }
 
     fun matchesPattern(factKey: String?, pattern: Pattern, sampleValue: Value): Result {

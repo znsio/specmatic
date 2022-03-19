@@ -344,8 +344,9 @@ internal class JSONObjectPatternTest {
     @Nested
     inner class MatchReturnsAllKeyErrors {
         val type = JSONObjectPattern(mapOf("id" to NumberPattern(), "address" to StringPattern()))
-        val json = parsedJSON("""{"person_id": "abc123"}""")
-        val error: Result = type.matches(json, Resolver())
+        val json = parsedJSON("""{"id": "10", "person_address": "abc123"}""")
+        val error: Result.Failure = type.matches(json, Resolver()) as Result.Failure
+        val reportText = error.toFailureReport().toText()
 
         @Test
         fun `return as many errors as the number of key errors`() {
@@ -356,13 +357,17 @@ internal class JSONObjectPatternTest {
 
         @Test
         fun `errors should refer to the missing keys`() {
-            error as Result.Failure
+            println(reportText)
 
-            println(error.toFailureReport().toText())
+            assertThat(reportText).contains(">> id")
+            assertThat(reportText).contains(">> address")
+            assertThat(reportText).contains(">> person_address")
+        }
 
-            assertThat(error.toFailureReport().toText()).contains(">> id")
-            assertThat(error.toFailureReport().toText()).contains(">> address")
-            assertThat(error.toFailureReport().toText()).contains(">> person_id")
+        @Test
+        fun `key errors appear before value errors`() {
+            assertThat(reportText.indexOf(">> person_address")).isGreaterThan(reportText.indexOf("id"))
+            assertThat(reportText.indexOf(">> address")).isGreaterThan(reportText.indexOf("id"))
         }
     }
 }

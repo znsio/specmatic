@@ -27,51 +27,59 @@ data class HttpHeadersPattern(
             else -> withoutContentTypeGeneratedByQontract(headers, pattern)
         }
 
-        val missingKey = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).findKeyError(
+        val keyErrors: List<KeyError> = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).findKeyErrorList(
             pattern,
             headersWithRelevantKeys.mapValues { StringValue(it.value) }
         )
-        if (missingKey != null) {
-            val failureReason: FailureReason? = highlightIfSOAPActionMismatch(missingKey.name)
-            return MatchFailure(missingKey.missingKeyToResult("header", resolver.mismatchMessages).copy(failureReason = failureReason))
+
+        keyErrors.find { it.name == "SOAPAction" }?.apply {
+            return MatchFailure(this.missingKeyToResult("header", resolver.mismatchMessages).breadCrumb("SOAPAction").copy(failureReason = FailureReason.SOAPActionMismatch))
         }
 
-        this.pattern.forEach { (key, pattern) ->
+        val keyErrorResults: List<Result.Failure> = keyErrors.map {
+            it.missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(it.name)
+        }
+
+        val results: List<Result?> = this.pattern.map { (key, pattern) ->
             val keyWithoutOptionality = withoutOptionality(key)
             val sampleValue = headersWithRelevantKeys[keyWithoutOptionality]
 
             when {
-                sampleValue != null -> try {
-                    val result = resolver.matchesPattern(
-                        keyWithoutOptionality,
-                        pattern,
-                        attempt(breadCrumb = keyWithoutOptionality) { parseOrString(pattern, sampleValue, resolver) })
-                    if (result is Result.Failure) {
-                        return MatchFailure(
-                            result.breadCrumb(keyWithoutOptionality)
-                                .copy(failureReason = highlightIfSOAPActionMismatch(key))
-                        )
-                    }
-                } catch (e: ContractException) {
-                    return MatchFailure(e.failure().copy(failureReason = highlightIfSOAPActionMismatch(key)))
-                } catch (e: Throwable) {
-                    return MatchFailure(
+                sampleValue != null -> {
+                    try {
+                        val result = resolver.matchesPattern(
+                            keyWithoutOptionality,
+                            pattern,
+                            attempt(breadCrumb = keyWithoutOptionality) {
+                                parseOrString(
+                                    pattern,
+                                    sampleValue,
+                                    resolver
+                                )
+                            })
+
+                        result.breadCrumb(keyWithoutOptionality).failureReason(highlightIfSOAPActionMismatch(key))
+                    } catch (e: ContractException) {
+                        e.failure().copy(failureReason = highlightIfSOAPActionMismatch(key))
+                    } catch (e: Throwable) {
                         Result.Failure(e.localizedMessage, breadCrumb = keyWithoutOptionality)
                             .copy(failureReason = highlightIfSOAPActionMismatch(key))
-                    )
+                    }
                 }
-                !key.endsWith("?") ->
-                    return MatchFailure(
-                        MissingKeyError(key).missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(key)
-                            .copy(failureReason = highlightIfSOAPActionMismatch(key))
-                    )
+                else ->
+                    null
             }
         }
 
-        return MatchSuccess(parameters)
+        val failures: List<Result.Failure> = keyErrorResults.plus(results.filterIsInstance<Result.Failure>())
+
+        return if(failures.isNotEmpty())
+            MatchFailure(Result.Failure.fromFailures(failures))
+        else
+            MatchSuccess(parameters)
     }
 
-    private fun highlightIfSOAPActionMismatch(missingKey: String) = when (withoutOptionality(missingKey)) {
+    private fun highlightIfSOAPActionMismatch(missingKey: String): FailureReason? = when (withoutOptionality(missingKey)) {
         "SOAPAction" -> FailureReason.SOAPActionMismatch
         else -> null
     }

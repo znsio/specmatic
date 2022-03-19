@@ -68,7 +68,7 @@ class FeatureTest {
             In scenario "Get balance info"
             API: GET /balance -> 200
             
-              >> REQUEST.HEADERS
+              >> REQUEST.HEADERS.x-loginId
               
                  Expected header named "x-loginId" was missing
               """.trimIndent())

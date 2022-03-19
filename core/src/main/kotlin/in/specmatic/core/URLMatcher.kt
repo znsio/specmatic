@@ -232,32 +232,39 @@ internal fun matchesQuery(
     sampleQuery: Map<String, String>,
     resolver: Resolver
 ): Result {
-    val missingKey =
-        resolver.findKeyError(queryPattern, sampleQuery.mapValues { StringValue(it.value) })
-    if (missingKey != null)
-        return missingKey.missingKeyToResult("query param", resolver.mismatchMessages)
+    val keyErrors = resolver.findKeyErrorList(queryPattern, sampleQuery.mapValues { StringValue(it.value) })
+    val keyErrorList: List<Failure> = keyErrors.map {
+        it.missingKeyToResult("query param", resolver.mismatchMessages).breadCrumb(it.name)
+    }
 
-    for (key in queryPattern.keys) {
+    val results: List<Result?> = queryPattern.keys.map { key ->
         val keyName = key.removeSuffix("?")
-        if (!sampleQuery.containsKey(keyName)) continue
-        try {
-            val patternValue = queryPattern.getValue(key)
-            val sampleValue = sampleQuery.getValue(keyName)
 
-            val parsedValue = try {
-                patternValue.parse(sampleValue, resolver)
-            } catch (e: Exception) {
-                StringValue(sampleValue)
+        if (!sampleQuery.containsKey(keyName))
+            null
+        else {
+            try {
+                val patternValue = queryPattern.getValue(key)
+                val sampleValue = sampleQuery.getValue(keyName)
+
+                val parsedValue = try {
+                    patternValue.parse(sampleValue, resolver)
+                } catch (e: Exception) {
+                    StringValue(sampleValue)
+                }
+                resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
+            } catch (e: ContractException) {
+                e.failure().breadCrumb(keyName)
+            } catch (e: Throwable) {
+                Failure(e.localizedMessage).breadCrumb(keyName)
             }
-            when (val result = resolver.matchesPattern(keyName, patternValue, parsedValue)) {
-                is Failure -> return result.breadCrumb(keyName)
-            }
-        } catch (e: ContractException) {
-            return e.failure().breadCrumb(keyName)
-        } catch (e: Throwable) {
-            return Failure(e.localizedMessage).breadCrumb(keyName)
         }
     }
-    return Success()
-}
 
+    val failures = keyErrorList.plus(results).filterIsInstance<Failure>()
+
+    return if(failures.isNotEmpty())
+        Failure.fromFailures(failures)
+    else
+        Success()
+}

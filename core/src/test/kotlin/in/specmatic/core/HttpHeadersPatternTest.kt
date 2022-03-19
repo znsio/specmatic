@@ -9,6 +9,7 @@ import `in`.specmatic.core.pattern.stringToPattern
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Nested
 import kotlin.collections.HashMap
 
 internal class HttpHeadersPatternTest {
@@ -55,7 +56,7 @@ internal class HttpHeadersPatternTest {
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
             assertThat((it as Result.Failure).toMatchFailureDetails())
-                    .isEqualTo(MatchFailureDetails(listOf("HEADERS"), listOf("Expected header named \"key\" was missing")))
+                    .isEqualTo(MatchFailureDetails(listOf("HEADERS", "key"), listOf("Expected header named \"key\" was missing")))
         }
     }
 
@@ -203,5 +204,40 @@ internal class HttpHeadersPatternTest {
         val headersPattern = HttpHeadersPattern(mapOf("X-Data" to StringPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Content-Type" to StringPattern()))
         val resolver = Resolver(findKeyErrorCheck = DefaultKeyCheck.disableOverrideUnexpectedKeycheck())
         assertThat(headersPattern.matches(mapOf("X-Data" to "data", "Content-Type" to "text/plain"), resolver)).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Nested
+    inner class ReturnMultipleErrrors {
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()))
+        val resolver = Resolver()
+        val result = headersPattern.matches(mapOf("Y-Data" to "data"), resolver)
+
+        @Test
+        fun `should return as many errors as there are problems`() {
+            result as Result.Failure
+
+            assertThat(result.toMatchFailureDetailList()).hasSize(2)
+        }
+
+        @Test
+        fun `errors should mention the name of header`() {
+            result as Result.Failure
+
+            assertThat(result.toFailureReport().toText()).contains(">> HEADERS.X-Data")
+            assertThat(result.toFailureReport().toText()).contains(">> HEADERS.Y-Data")
+
+            println(result.toFailureReport().toText())
+        }
+
+        @Test
+        fun `key errors appear before value errors`() {
+            result as Result.Failure
+
+            val resultText = result.toFailureReport().toText()
+
+            assertThat(resultText.indexOf(">> HEADERS.X-Data")).isLessThan(resultText.indexOf(">> HEADERS.Y-Data"))
+
+            println(result.toFailureReport().toText())
+        }
     }
 }

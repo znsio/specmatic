@@ -34,6 +34,8 @@ sealed class Result {
 
     abstract fun ifSuccess(function: () -> Result): Result
     abstract fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result
+    abstract fun breadCrumb(breadCrumb: String): Result
+    abstract fun failureReason(failureReason: FailureReason?): Result
 
     abstract fun shouldBeIgnored(): Boolean
 
@@ -79,7 +81,10 @@ sealed class Result {
         }
 
         fun reason(errorMessage: String) = Failure(errorMessage, this)
-        fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
+        override fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
+        override fun failureReason(failureReason: FailureReason?): Result {
+            return this.copy(failureReason = failureReason)
+        }
 
         fun toFailureReport(scenarioMessage: String? = null): FailureReport {
             return FailureReport(contractPath, scenarioMessage, scenario, toMatchFailureDetailList())
@@ -123,6 +128,14 @@ sealed class Result {
         override fun ifSuccess(function: () -> Result) = function()
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
             return this.copy(variables = response.export(bindings))
+        }
+
+        override fun breadCrumb(breadCrumb: String): Result {
+            return this
+        }
+
+        override fun failureReason(failureReason: FailureReason?): Result {
+            return this
         }
 
         override fun shouldBeIgnored(): Boolean = false

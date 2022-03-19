@@ -2,6 +2,16 @@
 
 set -e
 
+BRANCH=`git rev-parse --abbrev-ref HEAD`
+
+if [ $BRANCH != "main" ]
+then
+	echo Current branch is $BRANCH
+	echo
+	echo You should only release from main
+	exit 1
+fi
+
 if [ -z "$1" ]
 then
 	echo Provide the version to be published as the first argument.

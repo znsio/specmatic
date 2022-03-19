@@ -16,7 +16,14 @@ class KeyCheck(val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
         pattern: Map<String, Any>,
         actual: Map<String, Any>
     ): KeyError? {
-        return patternKeyCheck.validate(pattern, actual) ?: unexpectedKeyCheck.validate(pattern, actual)
+        return validateAll(pattern, actual).firstOrNull()
+    }
+
+    fun validateAll(
+        pattern: Map<String, Any>,
+        actual: Map<String, Any>
+    ): List<KeyError> {
+        return patternKeyCheck.validateList(pattern, actual).plus(unexpectedKeyCheck.validateList(pattern, actual))
     }
 
 }

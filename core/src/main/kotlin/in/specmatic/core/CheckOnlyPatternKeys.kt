@@ -1,6 +1,6 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.pattern.isMissingKey
+import `in`.specmatic.core.pattern.isOptional
 
 internal object CheckOnlyPatternKeys: KeyErrorCheck {
     override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? {
@@ -8,8 +8,18 @@ internal object CheckOnlyPatternKeys: KeyErrorCheck {
     }
 
     override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<KeyError> {
-        return pattern.minus("...").keys.find { key ->
+        return pattern.minus("...").keys.filter { key ->
             isMissingKey(actual, key)
-        }?.toMissingKeyError()?.let { listOf(it) } ?: emptyList()
+        }.map { it.toMissingKeyError() }
     }
 }
+
+internal fun String.toMissingKeyError(): MissingKeyError {
+    return MissingKeyError(this)
+}
+
+internal fun isMissingKey(jsonObject: Map<String, Any?>, key: String) =
+    when {
+        isOptional(key) -> false
+        else -> key !in jsonObject && "$key?" !in jsonObject && "$key:" !in jsonObject
+    }

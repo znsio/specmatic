@@ -2,6 +2,7 @@ package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.NullPattern
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
 internal class ValidateUnexpectedKeysTest {
@@ -32,5 +33,25 @@ internal class ValidateUnexpectedKeysTest {
 
         val error = ValidateUnexpectedKeys.validate(expected, actual)
         assertThat(error).isNull()
+    }
+
+    @Nested
+    inner class AllUnexpectedErrors {
+        private val expected = mapOf("hello" to NullPattern)
+        private val actual = mapOf("hello_there" to NullPattern, "hello_world" to NullPattern)
+        private val errorList: List<UnexpectedKeyError> = ValidateUnexpectedKeys.validateList(expected, actual)
+
+        @Test
+        fun `returns as many errors as unexpected keys`() {
+            assertThat(errorList).hasSize(2)
+        }
+
+        @Test
+        fun `errors should refer to the unexpected keys`() {
+            val names = errorList.map { it.name }
+
+            assertThat(names).contains("hello_there")
+            assertThat(names).contains("hello_world")
+        }
     }
 }

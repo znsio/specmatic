@@ -18,12 +18,6 @@ internal fun withoutOptionality(key: String): String {
 internal fun isOptional(key: String): Boolean =
     key.endsWith(DEFAULT_OPTIONAL_SUFFIX) || key.endsWith(XML_ATTR_OPTIONAL_SUFFIX)
 
-internal fun isMissingKey(jsonObject: Map<String, Any?>, key: String) =
-    when {
-        isOptional(key) -> false
-        else -> key !in jsonObject && "$key?" !in jsonObject && "$key:" !in jsonObject
-    }
-
 internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
     when {
         isOptional(key) -> withoutOptionality(key) in jsonObject

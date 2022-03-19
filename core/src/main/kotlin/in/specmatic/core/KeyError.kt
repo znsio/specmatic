@@ -18,7 +18,3 @@ data class UnexpectedKeyError(override val name: String) : KeyError() {
     override fun missingKeyToResult(keyLabel: String, mismatchMessages: MismatchMessages): Failure =
         Failure(mismatchMessages.unexpectedKey(keyLabel, name))
 }
-
-internal fun String.toMissingKeyError(): MissingKeyError {
-    return MissingKeyError(this)
-}

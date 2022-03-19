@@ -13,6 +13,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.fail
@@ -463,6 +464,34 @@ Feature: Recursive test
 
         assertThat(theOne.encompasses(theOther, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(theOther.encompasses(theOne, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Nested
+    inner class MatchReturnsAllKeyErrors {
+        val type = TabularPattern(mapOf("id" to NumberPattern(), "address" to StringPattern()))
+        val json = parsedJSON("""{"id": "10", "person_address": "abc123"}""")
+        val error: Result.Failure = type.matches(json, Resolver()) as Result.Failure
+        val reportText = error.toFailureReport().toText()
+
+        @Test
+        fun `return as many errors as the number of key errors`() {
+            assertThat(error.toMatchFailureDetailList()).hasSize(3)
+        }
+
+        @Test
+        fun `errors should refer to the missing keys`() {
+            println(reportText)
+
+            assertThat(reportText).contains(">> id")
+            assertThat(reportText).contains(">> address")
+            assertThat(reportText).contains(">> person_address")
+        }
+
+        @Test
+        fun `key errors appear before value errors`() {
+            assertThat(reportText.indexOf(">> person_address")).isLessThan(reportText.indexOf(">> id"))
+            assertThat(reportText.indexOf(">> address")).isLessThan(reportText.indexOf(">> id"))
+        }
     }
 }
 

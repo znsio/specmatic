@@ -24,17 +24,21 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
             return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)
 
         val resolverWithNullType = withNullPattern(resolver).withUnexpectedKeyCheck(unexpectedKeyCheck)
-        val missingKey = resolverWithNullType.findKeyError(pattern, sampleData.jsonObject)
-        if (missingKey != null)
-            return missingKey.missingKeyToResult("key", resolver.mismatchMessages)
 
-        mapZip(pattern, sampleData.jsonObject).forEach { (key, patternValue, sampleValue) ->
-            when (val result = resolverWithNullType.matchesPattern(key, patternValue, sampleValue)) {
-                is Result.Failure -> return result.breadCrumb(key)
-            }
+        val keyErrors: List<Result.Failure> = resolverWithNullType.findKeyErrorList(pattern, sampleData.jsonObject).map {
+            it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
         }
 
-        return Result.Success()
+        val results: List<Result.Failure> = mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
+            resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
+        }.filterIsInstance<Result.Failure>()
+
+        val failures = keyErrors.plus(results)
+
+        return if(failures.isEmpty())
+            Result.Success()
+        else
+            Result.Failure.fromFailures(failures)
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value = JSONArrayValue(valueList)

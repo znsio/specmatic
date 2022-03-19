@@ -67,7 +67,7 @@ Feature: POST API
             In scenario "Test"
             API: POST / -> 200
             
-              >> REQUEST.BODY
+              >> REQUEST.BODY.undeclared
               
                  ${ContractAndRequestsMismatch.unexpectedKey("key", "undeclared")}
             """.trimIndent())
@@ -131,7 +131,7 @@ Scenario: Square of a number
             In scenario "Square of a number"
             API: POST /number -> 200
             
-              >> REQUEST.BODY
+              >> REQUEST.BODY.unexpected
               
                  ${ContractAndRequestsMismatch.unexpectedKey("key", "unexpected")}
             """.trimIndent())

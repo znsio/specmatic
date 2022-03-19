@@ -37,8 +37,8 @@ Feature: Test
         assertResponseFailure(stubResponse, """STRICT MODE ON
 
 >> REQUEST.BODY
-  
-  Expected number, actual was "Hello"""")
+
+   Expected number, actual was "Hello"""")
     }
 
     private fun assertResponseFailure(stubResponse: HttpStubResponse, errorMessage: String) {
@@ -69,7 +69,7 @@ Feature: POST API
             
               >> REQUEST.BODY
               
-              ${ContractAndRequestsMismatch.unexpectedKey("key", "undeclared")}
+                 ${ContractAndRequestsMismatch.unexpectedKey("key", "undeclared")}
             """.trimIndent())
     }
 
@@ -133,7 +133,7 @@ Scenario: Square of a number
             
               >> REQUEST.BODY
               
-              ${ContractAndRequestsMismatch.unexpectedKey("key", "unexpected")}
+                 ${ContractAndRequestsMismatch.unexpectedKey("key", "unexpected")}
             """.trimIndent())
     }
 
@@ -165,8 +165,8 @@ Scenario: Square of a number
         assertResponseFailure(strictResponse, """STRICT MODE ON
 
 >> REQUEST.URL.QUERY-PARAMS
-  
-  ${StubAndRequestMismatchMessages.expectedKeyWasMissing("query param", "status")}""")
+
+   ${StubAndRequestMismatchMessages.expectedKeyWasMissing("query param", "status")}""")
     }
 
     @Test

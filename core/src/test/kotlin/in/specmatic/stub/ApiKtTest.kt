@@ -370,15 +370,15 @@ Feature: Math API
         assertThat(stubInfo.single().second).isEmpty()
 
         val expectedOnStandardOutput =
-            """
-            sample.json didn't match math.$CONTRACT_EXTENSION
-                In scenario "Square of a number"
-                API: POST /square -> 200
-              
-                  >> RESPONSE.BODY
-              
-                  ${ContractAndStubMismatchMessages.mismatchMessage("number", """string: "not a number"""")}
-            """.trimIndent()
+"""
+sample.json didn't match math.$CONTRACT_EXTENSION
+    In scenario "Square of a number"
+    API: POST /square -> 200
+  
+      >> RESPONSE.BODY
+  
+         ${ContractAndStubMismatchMessages.mismatchMessage("number", """string: "not a number"""")}
+""".trim()
 
         assertThat(stdout).contains(expectedOnStandardOutput)
     }
@@ -440,7 +440,7 @@ Feature: Math API
   
       >> REQUEST.BODY
   
-      ${ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected")}""")
+         ${ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected")}""")
     }
 
     @Test
@@ -466,8 +466,8 @@ sample.json didn't match math.$CONTRACT_EXTENSION
   
       >> RESPONSE.BODY
   
-      ${ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected")}
-      """.trimIndent())
+         ${ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected")}
+  """.trimIndent())
     }
 
     @Test

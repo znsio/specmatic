@@ -841,24 +841,24 @@ Background:
             """
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
-            
+
               >> RESPONSE.BODY.breed
               
-              ${ContractAndResponseMismatch.mismatchMessage("""("labrador" or "retriever" or "null")""", "string: \"malinois\"")}
-            
+                 ${ContractAndResponseMismatch.mismatchMessage("""("labrador" or "retriever" or "null")""", "string: \"malinois\"")}
+
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
-            
+
               >> RESPONSE.BODY.breed
               
-              ${ContractAndResponseMismatch.mismatchMessage("""("labrador" or "retriever" or "null")""", "string: \"malinois\"")}
-            
+                 ${ContractAndResponseMismatch.mismatchMessage("""("labrador" or "retriever" or "null")""", "string: \"malinois\"")}
+
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
-            
+
               >> RESPONSE.BODY.breed
               
-              ${ContractAndResponseMismatch.mismatchMessage("""("labrador" or "retriever" or "null")""", "string: \"malinois\"")}
+                 ${ContractAndResponseMismatch.mismatchMessage("""("labrador" or "retriever" or "null")""", "string: \"malinois\"")}
             """.trimIndent()
         )
     }
@@ -918,21 +918,21 @@ Background:
             
               >> RESPONSE.BODY.rating
               
-              ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
+                 ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
             
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.rating
               
-              ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
+                 ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
             
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
               >> RESPONSE.BODY.rating
               
-              ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
+                 ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
             """.trimIndent()
         )
     }
@@ -989,24 +989,24 @@ Background:
             """
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
-            
+
               >> RESPONSE.BODY.name
               
-              ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
-            
+                 ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
+
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
-            
+
               >> RESPONSE.BODY.name
               
-              ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
-            
+                 ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
+
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
-            
+
               >> RESPONSE.BODY.name
               
-              ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
+                 ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
             """.trimIndent()
         )
     }

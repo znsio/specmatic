@@ -7,7 +7,9 @@ class FailureReport(val contractPath: String?, val scenarioMessage: String?, val
 
         val matchFailureDetails = matchFailureDetails()
 
-        val reportDetails = "$scenarioDetails${System.lineSeparator()}${System.lineSeparator()}${matchFailureDetails.prependIndent("  ")}"
+        val reportDetails: String = scenario?.let {
+            "$scenarioDetails${System.lineSeparator()}${System.lineSeparator()}${matchFailureDetails.prependIndent("  ")}"
+        } ?: matchFailureDetails
 
         val report = contractLine?.let {
             val reportIndent = if(contractLine.isNotEmpty()) "  " else ""
@@ -27,21 +29,24 @@ class FailureReport(val contractPath: String?, val scenarioMessage: String?, val
 
     private fun matchFailureDetails(matchFailureDetails: MatchFailureDetails): String {
         return matchFailureDetails.let { (breadCrumbs, errorMessages) ->
-            val breadCrumbString =
-                breadCrumbs
-                    .filter { it.isNotBlank() }
-                    .joinToString(".") { it.trim() }
-                    .let {
-                        when {
-                            it.isNotBlank() -> ">> $it"
-                            else -> ""
-                        }
-                    }
+            val breadCrumbString = breadCrumbString(breadCrumbs)
 
             val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
 
-            "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}$errorMessagesString".trim()
+            "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}${errorMessagesString.prependIndent("   ")}".trim()
         }
+    }
+
+    private fun breadCrumbString(breadCrumbs: List<String>): String {
+        return breadCrumbs
+            .filter { it.isNotBlank() }
+            .joinToString(".") { it.trim() }
+            .let {
+                when {
+                    it.isNotBlank() -> ">> $it"
+                    else -> ""
+                }
+            }
     }
 
     private fun contractPathDetails(): String? {

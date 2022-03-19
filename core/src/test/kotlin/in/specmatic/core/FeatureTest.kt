@@ -70,7 +70,7 @@ class FeatureTest {
             
               >> REQUEST.HEADERS
               
-              Expected header named "x-loginId" was missing
+                 Expected header named "x-loginId" was missing
               """.trimIndent())
     }
 
@@ -148,7 +148,7 @@ class FeatureTest {
             
               >> REQUEST.BODY.calls_made
               
-              Expected an array of length 3, actual length 2
+                 Expected an array of length 3, actual length 2
             """.trimIndent())
     }
 
@@ -173,7 +173,7 @@ class FeatureTest {
             
               >> REQUEST.BODY.calls_made.[2]
               
-              Expected number, actual was string: "test"
+                 Expected number, actual was string: "test"
             """.trimIndent())
     }
 
@@ -216,7 +216,7 @@ class FeatureTest {
             
               >> REQUEST.URL.QUERY-PARAMS.account-id
               
-              Expected number, actual was string: "abc"
+                 Expected number, actual was string: "abc"
             """.trimIndent())
     }
 

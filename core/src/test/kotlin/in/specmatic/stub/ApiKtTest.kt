@@ -438,7 +438,7 @@ Feature: Math API
     In scenario "Square of a number"
     API: POST /square -> 200
   
-      >> REQUEST.BODY
+      >> REQUEST.BODY.unexpected
   
          ${ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected")}""")
     }
@@ -464,7 +464,7 @@ sample.json didn't match math.$CONTRACT_EXTENSION
     In scenario "Square of a number"
     API: POST /square -> 200
   
-      >> RESPONSE.BODY
+      >> RESPONSE.BODY.unexpected
   
          ${ContractAndStubMismatchMessages.unexpectedKey("key", "unexpected")}
   """.trimIndent())

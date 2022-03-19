@@ -366,8 +366,8 @@ internal class JSONObjectPatternTest {
 
         @Test
         fun `key errors appear before value errors`() {
-            assertThat(reportText.indexOf(">> person_address")).isGreaterThan(reportText.indexOf("id"))
-            assertThat(reportText.indexOf(">> address")).isGreaterThan(reportText.indexOf("id"))
+            assertThat(reportText.indexOf(">> person_address")).isLessThan(reportText.indexOf(">> id"))
+            assertThat(reportText.indexOf(">> address")).isLessThan(reportText.indexOf(">> id"))
         }
     }
 }

@@ -52,12 +52,14 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
         val results: List<Result.Failure> = mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
             resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
-        }.filterIsInstance<Result.Failure>().plus(keyErrors)
+        }.filterIsInstance<Result.Failure>()
 
-        return if(results.isEmpty())
+        val failures = keyErrors.plus(results)
+
+        return if(failures.isEmpty())
             Result.Success()
         else
-            Result.Failure.fromFailures(results)
+            Result.Failure.fromFailures(failures)
     }
 
     override fun generate(resolver: Resolver): JSONObjectValue {

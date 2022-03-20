@@ -316,21 +316,25 @@ data class Scenario(
         return scenarioBreadCrumb(this) {
             val resolver = Resolver(IgnoreFacts(), true, patterns, findKeyErrorCheck = DefaultKeyCheck.disableOverrideUnexpectedKeycheck(), mismatchMessages = mismatchMessages)
 
-            when (val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }) {
-                is Result.Failure -> requestMatchResult.updateScenario(this).let {
-                    if(response.status != httpResponsePattern.status)
-                        Result.Failure(cause = it as Result.Failure, failureReason = FailureReason.RequestMismatchButStatusAlsoWrong)
-                    else
-                        it
-                }
-                else ->
-                    when (val responseMatchResult = attempt(breadCrumb = "RESPONSE") { httpResponsePattern.matchesMock(response, resolver) }) {
-                        is Result.Failure -> {
-                            responseMatchResult.updateScenario(this)
-                        }
-                        else -> responseMatchResult
-                    }
-            }
+            val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }
+
+            if(requestMatchResult is Result.Failure)
+                requestMatchResult.updateScenario(this)
+
+            if(requestMatchResult is Result.Failure && response.status != httpResponsePattern.status)
+                return Result.Failure(cause = requestMatchResult, failureReason = FailureReason.RequestMismatchButStatusAlsoWrong)
+
+            val responseMatchResult = attempt(breadCrumb = "RESPONSE") { httpResponsePattern.matchesMock(response, resolver) }
+
+            if(requestMatchResult is Result.Failure)
+                responseMatchResult.updateScenario(this)
+
+            val failures = listOf(requestMatchResult, responseMatchResult).filterIsInstance<Result.Failure>()
+
+            return if(failures.isEmpty())
+                Result.Success()
+            else
+                Result.Failure.fromFailures(failures)
         }
     }
 

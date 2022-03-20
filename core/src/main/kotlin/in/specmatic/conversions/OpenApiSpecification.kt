@@ -15,6 +15,7 @@ import io.ktor.util.reflect.*
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
+import io.swagger.v3.oas.models.examples.Example
 import io.swagger.v3.oas.models.media.*
 import io.swagger.v3.oas.models.parameters.HeaderParameter
 import io.swagger.v3.oas.models.parameters.PathParameter
@@ -183,7 +184,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     ).map { httpRequestPattern: HttpRequestPattern ->
                         val scenarioName = scenarioName(operation, response, httpRequestPattern, null)
 
-                        scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, patterns = this.patterns)
+                        scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, patterns = this.patterns.toMap())
                     }
                 }.flatten()
             }.flatten()
@@ -208,13 +209,24 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
-                    val responseExamples = responseMediaType.examples.orEmpty()
+                    val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
                     val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, _) ->
-                        val requestExamples = operation.parameters.orEmpty()
-                            .filter { parameter -> parameter.examples.orEmpty().any { it.key == exampleName } }
-                            .map { it.name to it.examples[exampleName]!!.value }.toMap()
+                        val parameterExamples: Map<String, Any> = operation.parameters.orEmpty()
+                            .filter { parameter ->
+                                parameter.examples.orEmpty().any { it.key == exampleName }
+                            }
+                            .map {
+                                it.name to it.examples[exampleName]!!.value
+                            }.toMap()
 
-                        requestExamples.map { (key, value) -> key to value.toString() }.toList().isNotEmpty()
+                        val requestBodyExample: Map<String, Any> = operation.requestBody?.content?.values?.firstOrNull()?.schema?.`$ref`?.let { refValue ->
+                            val key = "(${refValue.split("/").last()})"
+                            operation.requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName)?.value?.let { value ->
+                                mapOf(key to value)
+                            } ?: emptyMap()
+                        } ?: emptyMap()
+
+                        val requestExamples = parameterExamples.plus(requestBodyExample)
 
                         when {
                             requestExamples.isNotEmpty() -> Row(
@@ -232,7 +244,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 scenarioName(operation, response, httpRequestPattern, specmaticExampleRow)
 
                             scenarioInfo(
-                                scenarioName, httpRequestPattern, httpResponsePattern, specmaticExampleRow, emptyMap()
+                                scenarioName, httpRequestPattern, httpResponsePattern, specmaticExampleRow, this.patterns.toMap()
                             )
                         }
                     }.flatten()
@@ -254,11 +266,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         patterns = patterns,
         httpRequestPattern = when (specmaticExampleRow.columnNames.isEmpty()) {
             true -> httpRequestPattern
-            else -> httpRequestPattern.newBasedOn(specmaticExampleRow, Resolver())[0]
+            else -> httpRequestPattern.newBasedOn(specmaticExampleRow, Resolver(newPatterns = patterns))[0]
         },
         httpResponsePattern = when (specmaticExampleRow.columnNames.isEmpty()) {
             true -> httpResponsePattern
-            else -> httpResponsePattern.newBasedOn(specmaticExampleRow, Resolver())[0]
+            else -> httpResponsePattern
         }
     )
 

@@ -334,7 +334,7 @@ data class HttpRequestPattern(
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
         return attempt(breadCrumb = "REQUEST") {
             val newURLMatchers = urlMatcher?.newBasedOn(row, resolver) ?: listOf<URLMatcher?>(null)
-            val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
+                val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
                 body.let {
                     if(it is DeferredPattern && row.containsField(it.pattern)) {
                         val example = row.getField(it.pattern)

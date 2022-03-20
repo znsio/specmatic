@@ -337,4 +337,15 @@ internal class HttpRequestPatternTest {
 
         assertThat(result).isInstanceOf(Success::class.java)
     }
+
+    @Test
+    fun `match errors across the request including header and body will be returned`()  {
+        val type = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("http://helloworld.com/data"), headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern())), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
+        val request = HttpRequest("POST", "/data", headers = mapOf("X-Data" to "abc123"), body = parsedJSON("""{"id": "abc123"}"""))
+
+        val result = type.matches(request, Resolver())
+        val reportText = result.reportString()
+        assertThat(reportText).contains(">> REQUEST.HEADERS.X-Data")
+        assertThat(reportText).contains(">> REQUEST.BODY.id")
+    }
 }

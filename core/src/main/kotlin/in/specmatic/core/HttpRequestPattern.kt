@@ -27,7 +27,8 @@ data class HttpRequestPattern(
                 } then
                 ::matchFormFields then
                 ::matchMultiPartFormData then
-                ::matchBody otherwise
+                ::matchBody then
+                ::summarize otherwise
                 ::handleError toResult
                 ::returnResult
 
@@ -40,8 +41,17 @@ data class HttpRequestPattern(
     fun matchesSignature(other: HttpRequestPattern): Boolean =
         urlMatcher!!.path == other.urlMatcher!!.path && method.equals(method)
 
+    private fun summarize(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
+        val (_, _, failures) = parameters
+
+        return if(failures.isNotEmpty())
+            MatchFailure(Failure.fromFailures(failures))
+        else
+            MatchSuccess(parameters)
+    }
+
     private fun matchMultiPartFormData(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
-        val (httpRequest, resolver, failure) = parameters
+        val (httpRequest, resolver, failures) = parameters
 
         if (multiPartFormDataPattern.isEmpty() && httpRequest.multiPartFormData.isEmpty())
             return MatchSuccess(parameters)
@@ -105,7 +115,7 @@ data class HttpRequestPattern(
                 )
             )
 
-        return MatchSuccess(Triple(httpRequest, resolver, emptyList()))
+        return MatchSuccess(parameters)
     }
 
     fun matchFormFields(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
@@ -140,7 +150,7 @@ data class HttpRequestPattern(
 
         return when (result) {
             is Failure -> MatchFailure(result)
-            else -> MatchSuccess(Triple(httpRequest, resolver, emptyList()))
+            else -> MatchSuccess(parameters)
         }
     }
 
@@ -148,26 +158,29 @@ data class HttpRequestPattern(
         val (httpRequest, headersResolver, defaultResolver) = parameters
         val headers = httpRequest.headers
         return when (val result = this.headersPattern.matches(headers, headersResolver ?: defaultResolver)) {
-            is Failure -> MatchFailure(result)
+            is Failure -> MatchSuccess(Triple(httpRequest, defaultResolver, listOf(result)))
             else -> MatchSuccess(Triple(httpRequest, defaultResolver, emptyList()))
         }
     }
 
     private fun matchBody(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
-        val (httpRequest, resolver) = parameters
+        val (httpRequest, resolver, failures) = parameters
 
-        val bodyValue = try {
-            if (isPatternToken(httpRequest.bodyString)) StringValue(httpRequest.bodyString) else body.parse(
-                httpRequest.bodyString,
-                resolver
-            )
+        val result = try {
+            val bodyValue =
+                if (isPatternToken(httpRequest.bodyString))
+                    StringValue(httpRequest.bodyString)
+                else
+                    body.parse(httpRequest.bodyString, resolver)
+
+            resolver.matchesPattern(null, body, bodyValue).breadCrumb("BODY")
         } catch (e: ContractException) {
-            return MatchFailure(e.failure().breadCrumb("BODY"))
+            e.failure().breadCrumb("BODY")
         }
 
-        return when (val result = resolver.matchesPattern(null, body, bodyValue)) {
-            is Failure -> MatchFailure(result.breadCrumb("BODY"))
-            else -> MatchSuccess(Triple(httpRequest, resolver, emptyList()))
+        return when (result) {
+            is Failure -> MatchSuccess(Triple(httpRequest, resolver, failures.plus(result)))
+            else -> MatchSuccess(parameters)
         }
     }
 

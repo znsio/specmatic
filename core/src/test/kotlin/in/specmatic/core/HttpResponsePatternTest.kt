@@ -42,4 +42,22 @@ internal class HttpResponsePatternTest {
 
         assertThat(pattern.matches(response, Resolver())).isInstanceOf(Result.Failure::class.java)
     }
+
+    @Test
+    fun `all response errors should be returned together`() {
+        val response = HttpResponse.OK(StringValue("not a number")).copy(headers = mapOf("X-Data" to "abc123"))
+        val pattern = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern())), body = NumberPattern())
+
+        val result = pattern.matches(response, Resolver())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+
+        result as Result.Failure
+
+        assertThat(result.toMatchFailureDetailList()).hasSize(2)
+
+        val resultText = result.reportString()
+        assertThat(resultText).contains(">> RESPONSE.HEADERS.X-Data")
+        assertThat(resultText).contains(">> RESPONSE.BODY")
+    }
 }

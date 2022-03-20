@@ -41,15 +41,6 @@ data class HttpRequestPattern(
     fun matchesSignature(other: HttpRequestPattern): Boolean =
         urlMatcher!!.path == other.urlMatcher!!.path && method.equals(method)
 
-    private fun summarize(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
-        val (_, _, failures) = parameters
-
-        return if(failures.isNotEmpty())
-            MatchFailure(Failure.fromFailures(failures))
-        else
-            MatchSuccess(parameters)
-    }
-
     private fun matchMultiPartFormData(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
 

@@ -24,7 +24,8 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         val result = response to resolver to
                 ::matchStatus then
                 ::matchHeaders then
-                ::matchBody otherwise
+                ::matchBody then
+                ::summarize otherwise
                 ::handleError toResult
                 ::returnResult
 
@@ -54,16 +55,16 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         }
     }
 
-    private fun matchHeaders(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
+    private fun matchHeaders(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
         val (response, resolver) = parameters
         return when (val result = headersPattern.matches(response.headers, resolver)) {
-            is Result.Failure -> MatchFailure(result)
-            else -> MatchSuccess(parameters)
+            is Result.Failure -> MatchSuccess(Triple(response, resolver, listOf(result)))
+            else -> MatchSuccess(Triple(response, resolver, emptyList()))
         }
     }
 
-    private fun matchBody(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
-        val (response, resolver) = parameters
+    private fun matchBody(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
+        val (response, resolver, failures) = parameters
 
         val parsedValue = when (response.body) {
             is StringValue -> try { body.parse(response.body.string, resolver) } catch(e: Throwable) { response.body }
@@ -71,7 +72,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         }
 
         return when (val result = body.matches(parsedValue, resolver)) {
-            is Result.Failure -> MatchFailure(result.breadCrumb("BODY"))
+            is Result.Failure -> MatchSuccess(Triple(response, resolver, failures.plus(result.breadCrumb("BODY"))))
             else -> MatchSuccess(parameters)
         }
     }

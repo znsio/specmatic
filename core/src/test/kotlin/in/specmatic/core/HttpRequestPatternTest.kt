@@ -324,4 +324,17 @@ internal class HttpRequestPatternTest {
                 Success::class.java)
         }
     }
+
+    @Test
+    fun `optional form field can be omitted from request`() {
+        val request = HttpRequest(method = "POST", path = "/", formFields = mapOf("hello" to """10"""))
+
+        val result = HttpRequestPattern(
+            method = "POST",
+            urlMatcher = URLMatcher(emptyMap(), emptyList(), "/"),
+            formFieldsPattern = mapOf("hello" to NumberPattern(), "world?" to NumberPattern())
+        ).matches(request, Resolver())
+
+        assertThat(result).isInstanceOf(Success::class.java)
+    }
 }

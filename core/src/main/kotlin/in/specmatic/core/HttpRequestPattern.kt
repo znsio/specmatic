@@ -111,11 +111,6 @@ data class HttpRequestPattern(
     fun matchFormFields(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver) = parameters
 
-        val keys: List<String> =
-            formFieldsPattern.keys.filter { key -> isOptional(key) && withoutOptionality(key) !in httpRequest.formFields }
-        if (keys.isNotEmpty())
-            return MatchFailure(Failure(message = "Fields $keys not found", breadCrumb = FORM_FIELDS_BREADCRUMB))
-
         val keyError = resolver.findKeyError(formFieldsPattern, httpRequest.formFields)
         if (keyError != null)
             return MatchFailure(keyError.missingKeyToResult("form field", resolver.mismatchMessages))

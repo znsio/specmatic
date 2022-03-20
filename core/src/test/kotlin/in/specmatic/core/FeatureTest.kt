@@ -663,14 +663,14 @@ Feature: Contract for /balance API
     fun `successfully matches valid form fields`() {
         val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, EmptyStringPattern, mapOf("Data" to NumberPattern()))
         val request = HttpRequest().copy(formFields = mapOf("Data" to "10"))
-        assertTrue(requestPattern.matchFormFields(request to Resolver()) is MatchSuccess)
+        assertTrue(requestPattern.matchFormFields(Triple(request, Resolver(), emptyList())) is MatchSuccess)
     }
 
     @Test
     fun `returns error for form fields`() {
         val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, EmptyStringPattern, mapOf("Data" to NumberPattern()))
         val request = HttpRequest().copy(formFields = mapOf("Data" to "hello"))
-        assertTrue(requestPattern.matchFormFields(request to Resolver()) is MatchFailure)
+        assertTrue(requestPattern.matchFormFields(Triple(request, Resolver(), emptyList())) is MatchFailure)
     }
 
     @Test

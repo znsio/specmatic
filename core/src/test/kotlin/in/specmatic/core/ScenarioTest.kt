@@ -466,4 +466,26 @@ And response-body (number)
             assertThat((it.httpRequestPattern.headersPattern.pattern["X-Header2"] as ExactValuePattern).pattern.toStringLiteral()).isEqualTo("20")
         })
     }
+
+    @Test
+    fun `mock should return match errors across both request and response`() {
+        val requestType = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("http://localhost/data"), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
+        val responseType = HttpResponsePattern(status = 200, body = JSONObjectPattern(mapOf("id" to NumberPattern())))
+
+        val scenario = Scenario(ScenarioInfo("name", requestType, responseType))
+
+        val result = scenario.matchesMock(
+            HttpRequest("POST", "/data", body = parsedJSON("""{"id": "abc123"}""")),
+            HttpResponse.OK(parsedJSON("""{"id": "abc123"}"""))
+        )
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+
+        result as Result.Failure
+
+        assertThat(result.toMatchFailureDetailList()).hasSize(2)
+
+        assertThat(result.reportString()).contains("REQUEST.BODY.id")
+        assertThat(result.reportString()).contains("RESPONSE.BODY.id")
+    }
 }

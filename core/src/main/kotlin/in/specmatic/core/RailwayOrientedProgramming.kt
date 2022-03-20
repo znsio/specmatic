@@ -26,3 +26,12 @@ infix fun <T> MatchingResult<T>.toResult(f: (Result) -> Result) =
 fun <T> handleError(error: Result.Failure): MatchingResult<T> = MatchFailure(error)
 
 fun returnResult(result: Result) = result
+
+fun <T> summarize(parameters: Triple<T, Resolver, List<Result.Failure>>): MatchingResult<Triple<T, Resolver, List<Result.Failure>>> {
+    val (_, _, failures) = parameters
+
+    return if(failures.isNotEmpty())
+        MatchFailure(Result.Failure.fromFailures(failures))
+    else
+        MatchSuccess(parameters)
+}

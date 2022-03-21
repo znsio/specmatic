@@ -44,69 +44,42 @@ data class HttpRequestPattern(
     private fun matchMultiPartFormData(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
 
-        if (multiPartFormDataPattern.isEmpty() && httpRequest.multiPartFormData.isEmpty())
+        if (multiPartFormDataPattern.isEmpty() && httpRequest.multiPartFormData.isEmpty()) {
             return MatchSuccess(parameters)
-
-        if (multiPartFormDataPattern.isEmpty() && httpRequest.multiPartFormData.isNotEmpty()) {
-            return MatchFailure(
-                Failure(
-                    "The contract expected no multipart data, but the request contained ${httpRequest.multiPartFormData.size} parts.",
-                    breadCrumb = MULTIPART_FORMDATA_BREADCRUMB
-                )
-            )
         }
 
-        val results = multiPartFormDataPattern.map { type ->
+        val results: List<Result?> = multiPartFormDataPattern.map { type ->
             val results = httpRequest.multiPartFormData.map { value ->
                 type.matches(value, resolver)
             }
 
-            val result = results.find { it is Success }
-                ?: results.find { it is Failure && it.failureReason != FailureReason.PartNameMisMatch }
-                    ?.breadCrumb(type.name)
+            val result = results.find { it is Success } ?: results.find { it is Failure && it.failureReason != FailureReason.PartNameMisMatch }?.breadCrumb(type.name)?.breadCrumb(MULTIPART_FORMDATA_BREADCRUMB)
             result ?: when {
                 isOptional(type.name) -> Success()
-                else -> Failure("The part named ${type.name} was not found.").breadCrumb(type.name)
+                else -> null
             }
         }
 
-        if (results.any { it !is Success }) {
-            val reason = results.filter { it !is Success }.joinToString("\n\n") {
-                it.toReport().toText().prependIndent("  ")
-            }
-
-            return MatchFailure(
-                Failure(
-                    "The multipart data in the request did not match the contract:\n$reason",
-                    breadCrumb = MULTIPART_FORMDATA_BREADCRUMB
-                )
-            )
-        }
+        val payloadFailures: List<Failure> = results.filterIsInstance<Failure>()
 
         val typeKeys = multiPartFormDataPattern.map { withoutOptionality(it.name) }.sorted()
         val valueKeys = httpRequest.multiPartFormData.map { it.name }.sorted()
 
-        val missingInType = valueKeys.filter { it !in typeKeys }
-        if (missingInType.isNotEmpty())
-            return MatchFailure(
-                Failure(
-                    "Some parts in the request were missing from the contract, and their names are $missingInType.",
-                    breadCrumb = MULTIPART_FORMDATA_BREADCRUMB
-                )
-            )
+        val missingInType: List<Failure> = valueKeys.filter { it !in typeKeys }.map {
+            Failure(resolver.mismatchMessages.unexpectedKey("part", it)).breadCrumb(it).breadCrumb(MULTIPART_FORMDATA_BREADCRUMB)
+        }
 
         val originalTypeKeys = multiPartFormDataPattern.map { it.name }.sorted()
-        val missingInValue = originalTypeKeys.filter { !isOptional(it) }.filter { withoutOptionality(it) !in valueKeys }
-            .joinToString(", ")
-        if (missingInValue.isNotEmpty())
-            return MatchFailure(
-                Failure(
-                    "Some parts in the contract were missing from the request, and their names are $missingInValue",
-                    breadCrumb = MULTIPART_FORMDATA_BREADCRUMB
-                )
-            )
+        val missingInValue = originalTypeKeys.filter { !isOptional(it) }.filter { withoutOptionality(it) !in valueKeys }.map { partName ->
+            Failure(resolver.mismatchMessages.expectedKeyWasMissing("part", withoutOptionality(partName))).breadCrumb(withoutOptionality(partName)).breadCrumb(MULTIPART_FORMDATA_BREADCRUMB)
+        }
 
-        return MatchSuccess(parameters)
+        val allFailures: List<Failure> = missingInValue.plus(missingInType).plus(payloadFailures)
+
+        return if(allFailures.isEmpty())
+            MatchSuccess(parameters)
+        else
+            MatchSuccess(Triple(httpRequest, resolver, failures.plus(allFailures)))
     }
 
     fun matchFormFields(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {

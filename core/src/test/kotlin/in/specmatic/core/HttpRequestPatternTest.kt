@@ -379,4 +379,33 @@ internal class HttpRequestPatternTest {
             assertThat(reportText.indexOf(""">> REQUEST.FORM-FIELDS.world""")).isLessThan(reportText.indexOf(""">> REQUEST.FORM-FIELDS.hello"""))
         }
     }
+
+    @Nested
+    inner class MultiPartMatchReturnsAllErrors {
+        val parts = listOf(
+            MultiPartContentPattern("data1", NumberPattern()),
+            MultiPartContentPattern("data2", NumberPattern()))
+        val requestPattern = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = parts)
+        val request = HttpRequest("POST", "/", multiPartFormData = listOf(MultiPartContentValue("data1", StringValue("abc123"))))
+
+        val result = requestPattern.matches(request, Resolver())
+        val reportText = result.reportString()
+
+        @Test
+        fun `returns all multipart field errors`() {
+            result as Failure
+            assertThat(result.toMatchFailureDetailList()).hasSize(2)
+        }
+
+        @Test
+        fun `error fields are referenced in the report`() {
+            assertThat(reportText).contains(""">> REQUEST.MULTIPART-FORMDATA.data1""")
+            assertThat(reportText).contains(""">> REQUEST.MULTIPART-FORMDATA.data2""")
+        }
+
+        @Test
+        fun `presence errors appear before the payload errors`() {
+            assertThat(reportText.indexOf(""">> REQUEST.MULTIPART-FORMDATA.data2""")).isLessThan(reportText.indexOf(""">> REQUEST.MULTIPART-FORMDATA.data1"""))
+        }
+    }
 }

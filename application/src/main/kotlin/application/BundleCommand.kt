@@ -41,9 +41,6 @@ class StubBundle(private val _bundlePath: String?, private val config: Specmatic
 
             val stubFiles: List<Pair<String, String>> = stubFilesIn(base, File(customImplicitStubBase), File(stubRelativePath))
 
-//            val stubDataDir = stubDataDir(File(pathData.path))
-//            val stubFiles = stubFilesIn(stubDataDir, fileOperations)
-
             return stubFiles.map { (virtualPath, actualPath) ->
                 val relativeEntryPath = File(virtualPath).relativeTo(base)
                 ZipperEntry("${base.name}/${relativeEntryPath.path}", fileOperations.readBytes(actualPath))

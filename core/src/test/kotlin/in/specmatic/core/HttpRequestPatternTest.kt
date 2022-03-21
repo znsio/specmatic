@@ -10,6 +10,7 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Nested
 import java.net.URI
 
 internal class HttpRequestPatternTest {
@@ -347,5 +348,35 @@ internal class HttpRequestPatternTest {
         val reportText = result.reportString()
         assertThat(reportText).contains(">> REQUEST.HEADERS.X-Data")
         assertThat(reportText).contains(">> REQUEST.BODY.id")
+    }
+
+    @Nested
+    inner class FormFieldMatchReturnsAllErrors {
+        val request = HttpRequest(method = "POST", path = "/", formFields = mapOf("hello" to "abc123"))
+
+        val result = HttpRequestPattern(
+            method = "POST",
+            urlMatcher = URLMatcher(emptyMap(), emptyList(), "/"),
+            formFieldsPattern = mapOf("hello" to NumberPattern(), "world" to NumberPattern())
+        ).matches(request, Resolver())
+
+        val reportText = result.reportString()
+
+        @Test
+        fun `returns all form field errors`() {
+            result as Failure
+            assertThat(result.toMatchFailureDetailList()).hasSize(2)
+        }
+
+        @Test
+        fun `error fields are referenced in the report`() {
+            assertThat(reportText).contains(""">> REQUEST.FORM-FIELDS.hello""")
+            assertThat(reportText).contains(""">> REQUEST.FORM-FIELDS.world""")
+        }
+
+        @Test
+        fun `presence errors appear before the payload errors`() {
+            assertThat(reportText.indexOf(""">> REQUEST.FORM-FIELDS.world""")).isLessThan(reportText.indexOf(""">> REQUEST.FORM-FIELDS.hello"""))
+        }
     }
 }

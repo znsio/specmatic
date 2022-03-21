@@ -110,13 +110,13 @@ data class HttpRequestPattern(
     }
 
     fun matchFormFields(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
-        val (httpRequest, resolver) = parameters
+        val (httpRequest, resolver, failures) = parameters
 
-        val keyError = resolver.findKeyError(formFieldsPattern, httpRequest.formFields)
-        if (keyError != null)
-            return MatchFailure(keyError.missingKeyToResult("form field", resolver.mismatchMessages))
+        val keyErrorResults: List<Failure> = resolver.findKeyErrorList(formFieldsPattern, httpRequest.formFields).map {
+            it.missingKeyToResult("form field", resolver.mismatchMessages).breadCrumb(it.name).breadCrumb(FORM_FIELDS_BREADCRUMB)
+        }
 
-        val result: Result? = formFieldsPattern
+        val payloadResults: List<Result> = formFieldsPattern
             .filterKeys { key -> withoutOptionality(key) in httpRequest.formFields }
             .map { (key, pattern) -> Triple(withoutOptionality(key), pattern, httpRequest.formFields.getValue(key)) }
             .map { (key, pattern, value) ->
@@ -137,12 +137,13 @@ data class HttpRequestPattern(
                     mismatchResult(pattern, value).breadCrumb(key).breadCrumb(FORM_FIELDS_BREADCRUMB)
                 }
             }
-            .firstOrNull { it is Failure }
 
-        return when (result) {
-            is Failure -> MatchFailure(result)
-            else -> MatchSuccess(parameters)
-        }
+        val allFailures = keyErrorResults.plus(payloadResults.filterIsInstance<Failure>())
+
+        return if(allFailures.isEmpty())
+            MatchSuccess(parameters)
+        else
+            MatchSuccess(Triple(httpRequest, resolver, allFailures))
     }
 
     private fun matchHeaders(parameters: Triple<HttpRequest, Resolver?, Resolver>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {

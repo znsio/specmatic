@@ -70,18 +70,21 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
                 consoleLog(StringLog("Loading $contractPath"))
                 try {
                     val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract))
-                    val implicitDataDir = implicitContractDataDir(contractPath.path)
+
+                    val implicitDataDirs = listOf(implicitContractDataDir(contractPath.path)).plus(if(customImplicitStubBase != null) listOf(implicitContractDataDir(contractPath.path, customImplicitStubBase)) else emptyList())
 
                     val stubData = when {
-                        implicitDataDir.isDirectory -> {
-                            consoleLog(StringLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  ")))
-                            logIgnoredFiles(implicitDataDir)
+                        implicitDataDirs.any { it.isDirectory } -> {
+                            implicitDataDirs.filter { it.isDirectory }.flatMap { implicitDataDir ->
+                                consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
+                                logIgnoredFiles(implicitDataDir)
 
-                            val stubDataFiles =
-                                filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" } ?: emptyList()
-                            printDataFiles(stubDataFiles)
-                            stubDataFiles.map {
-                                Pair(it.path, stringToMockScenario(StringValue(it.readText())))
+                                val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty()
+                                printDataFiles(stubDataFiles)
+
+                                stubDataFiles.map {
+                                    Pair(it.path, stringToMockScenario(StringValue(it.readText())))
+                                }
                             }
                         }
                         else -> emptyList()
@@ -269,27 +272,32 @@ private fun filesInDir(implicitDataDir: File): List<File>? {
 
 // Used by stub client code
 fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
-    val dataDirPaths = implicitContractDataDirs(contractPaths)
-    return createStubFromContracts(contractPaths, dataDirPaths, host, port)
+    val defaultImplicitDirs: List<String> = implicitContractDataDirs(contractPaths)
+
+    val completeList = if(customImplicitStubBase != null) {
+        defaultImplicitDirs.plus(implicitContractDataDirs(contractPaths, customImplicitStubBase))
+    } else
+        defaultImplicitDirs
+
+    return createStubFromContracts(contractPaths, completeList, host, port)
 }
 
-fun implicitContractDataDirs(contractPaths: List<String>) =
-        contractPaths.map { implicitContractDataDir(it).absolutePath }
+fun implicitContractDataDirs(contractPaths: List<String>, customBase: String? = null) =
+        contractPaths.map { implicitContractDataDir(it, customBase).absolutePath }
 
 val customImplicitStubBase: String? = System.getenv("SPECMATIC_CUSTOM_IMPLICIT_STUB_BASE") ?: System.getProperty("customImplicitStubBase")
 
-fun implicitContractDataDir(contractPath: String): File {
+fun implicitContractDataDir(contractPath: String, customBase: String? = null): File {
     val contractFile = File(contractPath)
-    val customImplicitStubBase: String? = customImplicitStubBase
 
-    return if(customImplicitStubBase == null)
+    return if(customBase == null)
         File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
     else {
         val gitRoot: String = File(SystemGit().inGitRootOf(contractPath).workingDirectory).canonicalPath
         val fullContractPath = File(contractPath).canonicalPath
 
         val relativeContractPath = File(fullContractPath).relativeTo(File(gitRoot))
-        File(gitRoot).resolve(customImplicitStubBase).resolve(relativeContractPath).let {
+        File(gitRoot).resolve(customBase).resolve(relativeContractPath).let {
             File("${it.parent}/${it.nameWithoutExtension}$DATA_DIR_SUFFIX")
         }
     }

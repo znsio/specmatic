@@ -12,6 +12,10 @@ fun logException(fn: ()-> Unit): Int {
     }
 }
 
+fun consoleLog(event: String) {
+    consoleLog(StringLog(event))
+}
+
 fun consoleLog(event: LogMessage) {
     LogTail.append(event)
     logger.log(event)

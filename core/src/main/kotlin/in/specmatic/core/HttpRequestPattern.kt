@@ -348,6 +348,9 @@ data class HttpRequestPattern(
                         val referredType = "(${it.referredType})"
                         val example = row.getField(referredType)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
+                    } else if(row.containsField("(REQUEST-BODY)")) {
+                        val example = row.getField("(REQUEST-BODY)")
+                        listOf(ExactValuePattern(it.parse(example, resolver)))
                     } else {
                         body.newBasedOn(row, resolver)
                     }

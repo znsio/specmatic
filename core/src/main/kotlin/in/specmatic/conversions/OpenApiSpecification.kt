@@ -219,12 +219,20 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 it.name to it.examples[exampleName]!!.value
                             }.toMap()
 
-                        val requestBodyExample: Map<String, Any> = operation.requestBody?.content?.values?.firstOrNull()?.schema?.`$ref`?.let { refValue ->
-                            val key = "(${refValue.split("/").last()})"
-                            operation.requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName)?.value?.let { value ->
-                                mapOf(key to value)
-                            } ?: emptyMap()
-                        } ?: emptyMap()
+                        val requestExampleValue: Any? = operation.requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName)?.value
+
+                        val requestBodyExample: Map<String, Any> = if(requestExampleValue != null) {
+                            val refValue = operation.requestBody?.content?.values?.firstOrNull()?.schema?.`$ref`
+
+                            if(refValue != null) {
+                                val key = "(${refValue.split("/").last()})"
+                                mapOf(key to requestExampleValue)
+                            } else {
+                                mapOf("(REQUEST-BODY)" to requestExampleValue)
+                            }
+                        } else {
+                            emptyMap()
+                        }
 
                         val requestExamples = parameterExamples.plus(requestBodyExample)
 

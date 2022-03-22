@@ -5150,4 +5150,64 @@ components:
         val nonMatchingRequest = HttpRequest("POST", "/users", body = parsedJSON("""{"id": 10}"""))
         assertThat(requestPattern.matches(nonMatchingRequest, resolver)).isInstanceOf(Result.Failure::class.java)
     }
+
+    @Test
+    fun `should generate tests for inline payload definitions`() {
+        val contractString = """
+                openapi: 3.0.3
+                info:
+                  title: test
+                  version: '1.0'
+                paths:
+                  '/users':
+                    post:
+                      responses:
+                        '200':
+                          description: OK
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                200_OK:
+                                  value:
+                      requestBody:
+                        content:
+                          application/json:
+                            examples:
+                              200_OK:
+                                value:
+                                    id: abc123
+                            schema:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                              required:
+                                - id
+            """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
+
+        val results: List<Result> = feature.generateContractTestScenarios(emptyList()).map {
+            executeTest(it, object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.body).isInstanceOf(JSONObjectValue::class.java)
+
+                    val body = request.body as JSONObjectValue
+                    assertThat(body.jsonObject).hasSize(1)
+                    assertThat(body.jsonObject).containsEntry("id", StringValue("abc123"))
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+        }
+
+        assertThat(results).hasSize(1)
+        println(results.single().reportString())
+
+        assertThat(results.single()).isInstanceOf(Result.Success::class.java)
+    }
 }

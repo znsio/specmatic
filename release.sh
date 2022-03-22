@@ -10,6 +10,14 @@ then
 	exit 1
 fi
 
+GITDIFF=`git diff --stat`
+
+if [ ! -z "$GITDIFF" ]
+then
+	echo Git working tree is dirty, please commit all changes before releasing an new version.
+	exit 1
+fi
+
 if [ -z "$1" ]
 then
 	echo Provide the version to be published as the first argument.

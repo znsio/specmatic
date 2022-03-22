@@ -4,6 +4,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
@@ -211,28 +212,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
                     val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
                     val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, _) ->
-                        val parameterExamples: Map<String, Any> = operation.parameters.orEmpty()
-                            .filter { parameter ->
-                                parameter.examples.orEmpty().any { it.key == exampleName }
-                            }
-                            .map {
-                                it.name to it.examples[exampleName]!!.value
-                            }.toMap()
+                        val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
 
-                        val requestExampleValue: Any? = operation.requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName)?.value
-
-                        val requestBodyExample: Map<String, Any> = if(requestExampleValue != null) {
-                            val refValue = operation.requestBody?.content?.values?.firstOrNull()?.schema?.`$ref`
-
-                            if(refValue != null) {
-                                val key = "(${refValue.split("/").last()})"
-                                mapOf(key to requestExampleValue)
-                            } else {
-                                mapOf("(REQUEST-BODY)" to requestExampleValue)
-                            }
-                        } else {
-                            emptyMap()
-                        }
+                        val requestBodyExample: Map<String, Any> = requestBodyExample(operation, exampleName)
 
                         val requestExamples = parameterExamples.plus(requestBodyExample)
 
@@ -260,6 +242,39 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }.flatten()
         }.flatten()
     }
+
+    private fun requestBodyExample(
+        operation: Operation,
+        exampleName: String
+    ): Map<String, Any> {
+        val requestExampleValue: Any? =
+            operation.requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName)?.value
+
+        val requestBodyExample: Map<String, Any> = if (requestExampleValue != null) {
+            if(operation.requestBody?.content?.entries?.first()?.key == "application/x-www-form-urlencoded") {
+                val jsonExample = attempt("Could not parse example $exampleName for operation \"${operation.summary}\"") {  parsedJSON(requestExampleValue.toString()) as JSONObjectValue }
+                jsonExample.jsonObject.map { (key, value) ->
+                    key to value.toString()
+                }.toMap()
+            } else {
+                mapOf("(REQUEST-BODY)" to requestExampleValue)
+            }
+        } else {
+            emptyMap()
+        }
+        return requestBodyExample
+    }
+
+    private fun parameterExamples(
+        operation: Operation,
+        exampleName: String
+    ) = operation.parameters.orEmpty()
+        .filter { parameter ->
+            parameter.examples.orEmpty().any { it.key == exampleName }
+        }
+        .map {
+            it.name to it.examples[exampleName]!!.value
+        }.toMap()
 
     private fun openApiPaths() = openApi.paths.orEmpty()
 

@@ -14,7 +14,11 @@ class Configuration {
 
             set(value) {
                 _globalConfigFileName = value
-                _config = loadSpecmaticJsonConfig(_globalConfigFileName)
+                _config = if(File(_globalConfigFileName).exists())
+                    loadSpecmaticJsonConfig(_globalConfigFileName)
+                else
+                    null
+
             }
 
         private var _config: SpecmaticConfigJson? =

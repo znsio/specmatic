@@ -23,6 +23,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         ).executeAsSeparateProcess()
     }
 
+    fun init(): SystemGit = this.also { execute(Configuration.gitCommand, "init") }
     override fun add(): SystemGit = this.also { execute(Configuration.gitCommand, "add", ".") }
     override fun add(relativePath: String): SystemGit = this.also { execute(Configuration.gitCommand, "add", relativePath) }
     override fun commit(): SystemGit = this.also { execute(Configuration.gitCommand, "commit", "-m", "Updated contract") }

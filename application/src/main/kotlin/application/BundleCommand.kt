@@ -131,20 +131,34 @@ class BundleCommand : Callable<Unit> {
     @Autowired
     lateinit var fileOperations: FileOperations
 
+    var bundleOutputPath: String? = null
+
     override fun call() {
-        val bundle = when {
-            testBundle -> TestBundle(bundlePath, specmaticConfig, fileOperations)
-            else -> StubBundle(bundlePath, specmaticConfig, fileOperations)
-        }
-
-        val pathData = bundle.contractPathData()
-
-        val zipperEntries = pathData.flatMap { contractPathData ->
-            pathDataToZipperEntry(bundle, contractPathData, fileOperations)
-        }.plus(bundle.configEntry())
-
-        zipper.compress(bundle.bundlePath, zipperEntries)
+        createBundle(bundlePath, specmaticConfig, fileOperations, zipper, testBundle, bundleOutputPath)
     }
+
+}
+
+private fun createBundle(
+    bundlePath: String?,
+    specmaticConfig: SpecmaticConfig,
+    fileOperations: FileOperations,
+    zipper: Zipper,
+    testBundle: Boolean,
+    bundleOutputPath: String?
+) {
+    val bundle = when {
+        testBundle -> TestBundle(bundlePath, specmaticConfig, fileOperations)
+        else -> StubBundle(bundlePath, specmaticConfig, fileOperations)
+    }
+
+    val pathData = bundle.contractPathData()
+
+    val zipperEntries = pathData.flatMap { contractPathData ->
+        pathDataToZipperEntry(bundle, contractPathData, fileOperations)
+    }.plus(bundle.configEntry())
+
+    zipper.compress(bundleOutputPath ?: bundle.bundlePath, zipperEntries)
 }
 
 private fun yamlFileName(path: String): String = path.removeSuffix(".spec") + ".yaml"

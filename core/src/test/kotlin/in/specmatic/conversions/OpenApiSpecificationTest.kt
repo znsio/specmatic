@@ -5280,4 +5280,65 @@ components:
 
         assertThat(results.single()).isInstanceOf(Result.Success::class.java)
     }
+
+    @Test
+    fun `should generate tests for multipart fields with examples`() {
+        val contractString = """
+                openapi: 3.0.3
+                info:
+                  title: test
+                  version: '1.0'
+                paths:
+                  '/users':
+                    post:
+                      responses:
+                        '200':
+                          description: OK
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                200_OK:
+                                  value:
+                      requestBody:
+                        content:
+                          multipart/form-data:
+                             examples:
+                               200_OK:
+                                 value:
+                                   Data: abc123
+                             schema:
+                               type: object
+                               properties:
+                                 Data:
+                                   type: string
+                               required:
+                                 - Data
+            """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
+
+        val results: List<Result> = feature.generateContractTestScenarios(emptyList()).map {
+            executeTest(it, object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.multiPartFormData.first().name).isEqualTo("Data")
+
+                    val content = request.multiPartFormData.first() as MultiPartContentValue
+                    assertThat(content.content.toStringLiteral()).isEqualTo("abc123")
+
+                    assertThat(request.multiPartFormData).hasSize(1)
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+        }
+
+        assertThat(results).hasSize(1)
+        println(results.single().reportString())
+
+        assertThat(results.single()).isInstanceOf(Result.Success::class.java)
+    }
 }

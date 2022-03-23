@@ -251,7 +251,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             operation.requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName)?.value
 
         val requestBodyExample: Map<String, Any> = if (requestExampleValue != null) {
-            if(operation.requestBody?.content?.entries?.first()?.key == "application/x-www-form-urlencoded") {
+            if(operation.requestBody?.content?.entries?.first()?.key == "application/x-www-form-urlencoded" || operation.requestBody?.content?.entries?.first()?.key == "multipart/form-data") {
                 val jsonExample = attempt("Could not parse example $exampleName for operation \"${operation.summary}\"") {  parsedJSON(requestExampleValue.toString()) as JSONObjectValue }
                 jsonExample.jsonObject.map { (key, value) ->
                     key to value.toString()

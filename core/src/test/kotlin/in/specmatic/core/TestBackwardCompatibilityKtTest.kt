@@ -1,8 +1,10 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Nested
 
 internal class TestBackwardCompatibilityKtTest {
     @Test
@@ -1002,4 +1004,144 @@ Then status 200
 
         assertThat(results.success()).isTrue()
     }
+
+    @Test
+    fun `backward compatibility error in optional key should not contain a question mark`() {
+        val olderContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          description: Sample
+          version: 1
+        servers:
+          - url: http://api.example.com/v1
+            description: Optional server description, e.g. Main (production) server
+        paths:
+          /data:
+            get:
+              summary: hello world
+              description: Optional extended description in CommonMark or HTML.
+              responses:
+                '200':
+                  description: Says hello
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          data:
+                            type: string
+            """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          description: Sample
+          version: 1
+        servers:
+          - url: http://api.example.com/v1
+            description: Optional server description, e.g. Main (production) server
+        paths:
+          /data:
+            get:
+              summary: hello world
+              description: Optional extended description in CommonMark or HTML.
+              responses:
+                '200':
+                  description: Says hello
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          data:
+                            type: number
+            """.trimIndent().openAPIToContract()
+
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        assertThat(result.report()).doesNotContain("data?")
+    }
+
+    @Nested
+    inner class EnumStringIsBackardCompatibleWithString {
+        val olderContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          description: Sample
+          version: 1
+        servers:
+          - url: http://api.example.com/v1
+            description: Optional server description, e.g. Main (production) server
+        paths:
+          /data:
+            get:
+              summary: hello world
+              description: Optional extended description in CommonMark or HTML.
+              responses:
+                '200':
+                  description: Says hello
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          data:
+                            type: string
+            """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          description: Sample
+          version: 1
+        servers:
+          - url: http://api.example.com/v1
+            description: Optional server description, e.g. Main (production) server
+        paths:
+          /data:
+            get:
+              summary: hello world
+              description: Optional extended description in CommonMark or HTML.
+              responses:
+                '200':
+                  description: Says hello
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          data:
+                            type: string
+                            enum:
+                              - 01
+                              - 02
+            """.trimIndent().openAPIToContract()
+
+
+        @Test
+        fun `new should be should be backward compatible with old`() {
+            val results: Results = testBackwardCompatibility(olderContract, newerContract)
+
+            assertThat(results.success()).isTrue
+        }
+
+        @Test
+        fun `old should be backward incompatible with new`() {
+            val results: Results = testBackwardCompatibility(newerContract, olderContract)
+
+            assertThat(results.hasFailures()).isTrue
+        }
+    }
+}
+
+private fun String.openAPIToContract(): Feature {
+    return OpenApiSpecification.fromYAML(this, "").toFeature()
 }

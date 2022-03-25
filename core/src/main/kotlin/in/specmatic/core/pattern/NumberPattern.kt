@@ -91,5 +91,15 @@ fun encompasses(
             thisResolver,
             typeStack
         )
+        otherPattern is AnyPattern -> {
+            val failures: List<Result.Failure> = otherPattern.patternSet(otherResolver).map {
+                thisPattern.encompasses(it, thisResolver, otherResolver)
+            }.filterIsInstance<Result.Failure>()
+
+            if(failures.isEmpty())
+                Result.Success()
+            else
+                Result.Failure.fromFailures(failures)
+        }
         else -> mismatchResult(thisPattern, otherPattern, thisResolver.mismatchMessages)
     }

@@ -5,6 +5,7 @@ import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.EmptyString
+import `in`.specmatic.core.value.ScalarValue
 import `in`.specmatic.core.value.Value
 
 data class AnyPattern(
@@ -76,8 +77,15 @@ data class AnyPattern(
         otherResolver: Resolver,
         typeStack: TypeStack
     ): Result {
-        return otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver, typeStack)
+        val compatibleResult = otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver, typeStack)
+
+        return if(compatibleResult is Result.Failure && allValuesAreScalar())
+            mismatchResult(this, otherPattern, thisResolver.mismatchMessages)
+        else
+            compatibleResult
     }
+
+    private fun allValuesAreScalar() = pattern.all { it is ExactValuePattern && it.pattern is ScalarValue }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         if (pattern.isEmpty())

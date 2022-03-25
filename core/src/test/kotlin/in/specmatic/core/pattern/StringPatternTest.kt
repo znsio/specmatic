@@ -5,6 +5,7 @@ import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldNotMatch
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -12,6 +13,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.testcontainers.shaded.org.apache.commons.lang.RandomStringUtils
 import java.util.stream.Stream
+import `in`.specmatic.core.Result as Result
 
 internal class StringPatternTest {
     @Test
@@ -89,5 +91,34 @@ internal class StringPatternTest {
         val result = StringPattern(minLength = min, maxLength = max).generate(Resolver()) as StringValue
 
         assertThat(result.string.length).isEqualTo(length)
+    }
+
+    @Test
+    fun `string should encompass enum of string`() {
+        val result: Result = StringPattern().encompasses(
+            AnyPattern(
+                listOf(
+                    ExactValuePattern(StringValue("01")),
+                    ExactValuePattern(StringValue("02"))
+                )
+            ), Resolver(), Resolver()
+        )
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `enum should not encompass string`() {
+        val result: Result = AnyPattern(
+            listOf(
+                ExactValuePattern(StringValue("01")),
+                ExactValuePattern(StringValue("02"))
+            )
+        ).encompasses(
+            StringPattern(), Resolver(), Resolver()
+        )
+
+        println(result.reportString())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
     }
 }

@@ -68,7 +68,7 @@ object NewAndOldContractRequestMismatches: MismatchMessages {
 
 object NewAndOldContractResponseMismatches: MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
-        return "New contract returned $expected but old contract expected $actual"
+        return "New contract returned $actual but old contract expected $expected"
     }
 
     override fun unexpectedKey(keyLabel: String, keyName: String): String {

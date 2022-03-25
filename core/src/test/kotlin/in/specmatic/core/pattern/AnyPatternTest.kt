@@ -159,4 +159,26 @@ internal class AnyPatternTest {
             assertThat(enum.encompasses(enumWithLess, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
         }
     }
+
+    @Nested
+    inner class EnumErrorMessage {
+        @Test
+        fun `enum error message should feature the expected values`() {
+            val result: Result = AnyPattern(
+                listOf(
+                    ExactValuePattern(StringValue("01")),
+                    ExactValuePattern(StringValue("02"))
+                )
+            ).encompasses(
+                StringPattern(), Resolver(), Resolver()
+            )
+
+            val resultText = result.reportString()
+
+            println(resultText)
+
+            assertThat(resultText).contains("01")
+            assertThat(resultText).contains("02")
+        }
+    }
 }

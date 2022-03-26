@@ -289,7 +289,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         patterns = patterns,
         httpRequestPattern = when (specmaticExampleRow.columnNames.isEmpty()) {
             true -> httpRequestPattern
-            else -> httpRequestPattern.newBasedOn(specmaticExampleRow, Resolver(newPatterns = patterns))[0]
+            else -> httpRequestPattern.newBasedOn(specmaticExampleRow, Resolver(newPatterns = patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch))[0]
         },
         httpResponsePattern = when (specmaticExampleRow.columnNames.isEmpty()) {
             true -> httpResponsePattern

@@ -485,4 +485,100 @@ paths:
             assertThat(reportText).contains("response from external command")
         })
     }
+
+    @Test
+    fun `stub request mismatch triggers custom errors`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: object
+              properties:
+                data: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+        """.trimIndent(), "").toFeature()
+        val stub = HttpStubData(
+            HttpRequest("POST", "/data", body = parsedJSON("""{"data": 10}""")).toPattern(),
+            HttpResponse.OK("123"),
+            Resolver(),
+            responsePattern = contract.scenarios.single().httpResponsePattern
+        )
+
+        val response = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), true)
+        val requestString = response.response.toLogString()
+
+        println(requestString)
+
+        assertThat(requestString).contains("Stub expected")
+        assertThat(requestString).contains("request contained")
+    }
+
+    @Test
+    fun `stub request mismatch should return custom error mismatch`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(contract, emptyList()).use {
+            val response = it.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = StringValue("""
+                {
+                    "http-request": {
+                        "method": "POST",
+                        "path": "/data",
+                        "body": {
+                            "data": "abc"
+                        }
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "10"
+                    }
+                }
+            """.trimIndent())) )
+
+            val responseString = response.toLogString()
+            println(responseString)
+
+            assertThat(responseString).contains("in the stub")
+            assertThat(responseString).contains("not in the contract")
+        }
+    }
 }

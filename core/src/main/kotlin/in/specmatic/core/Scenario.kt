@@ -170,20 +170,24 @@ data class Scenario(
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
         return when (kafkaMessagePattern) {
-            null -> httpRequestPattern.newBasedOn(row, resolver).map { newHttpRequestPattern ->
-                Scenario(
-                    name,
-                    newHttpRequestPattern,
-                    httpResponsePattern,
-                    newExpectedServerState,
-                    examples,
-                    patterns,
-                    fixtures,
-                    kafkaMessagePattern,
-                    ignoreFailure,
-                    references,
-                    bindings
-                )
+            null -> scenarioBreadCrumb(this) {
+                attempt {
+                    httpRequestPattern.newBasedOn(row, resolver).map { newHttpRequestPattern ->
+                        Scenario(
+                            name,
+                            newHttpRequestPattern,
+                            httpResponsePattern,
+                            newExpectedServerState,
+                            examples,
+                            patterns,
+                            fixtures,
+                            kafkaMessagePattern,
+                            ignoreFailure,
+                            references,
+                            bindings
+                        )
+                    }
+                }
             }
             else -> {
                 kafkaMessagePattern.newBasedOn(row, resolver).map { newKafkaMessagePattern ->

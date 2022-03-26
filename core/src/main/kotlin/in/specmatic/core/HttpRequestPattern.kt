@@ -350,7 +350,12 @@ data class HttpRequestPattern(
                         listOf(ExactValuePattern(it.parse(example, resolver)))
                     } else if(row.containsField("(REQUEST-BODY)")) {
                         val example = row.getField("(REQUEST-BODY)")
-                        listOf(ExactValuePattern(it.parse(example, resolver)))
+                        val value = it.parse(example, resolver)
+                        val result = body.matches(value, resolver)
+                        if(result is Failure)
+                            throw ContractException(result.toFailureReport())
+
+                        listOf(ExactValuePattern(value))
                     } else {
                         body.newBasedOn(row, resolver)
                     }

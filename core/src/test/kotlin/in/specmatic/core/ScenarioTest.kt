@@ -1,13 +1,18 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.test.ScenarioTestGenerationFailure
+import `in`.specmatic.test.TestExecutor
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import java.util.*
 import java.util.function.Consumer
 import kotlin.collections.HashMap
@@ -487,5 +492,110 @@ And response-body (number)
 
         assertThat(result.reportString()).contains("REQUEST.BODY.id")
         assertThat(result.reportString()).contains("RESPONSE.BODY.id")
+    }
+
+    @Test
+    fun `test loading erroneous row value should return customized error`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: abc123
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+        """.trimIndent(), ""
+            ).toFeature()
+        }.satisfies(Consumer {
+            val msg = exceptionCauseMessage(it)
+
+            println(msg)
+
+            assertThat(msg).contains("Contract expected")
+            assertThat(msg).contains("found value")
+        })
+    }
+
+    @Test
+    fun `test erroneous contract test response should return customized error`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        val contractTestScenarios = contract.generateContractTestScenarios(emptyList())
+
+        val result: Result = executeTest(contractTestScenarios.single(), object: TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK("abc")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        }) as Result.Failure
+
+        assertThat(result.reportString()).contains("Contract expected")
+        assertThat(result.reportString()).contains("response contained")
     }
 }

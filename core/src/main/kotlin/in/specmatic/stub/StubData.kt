@@ -4,7 +4,6 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.ExternalCommand
-import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.KafkaMessage
 
@@ -23,20 +22,6 @@ data class HttpStubData(
         else -> this.copy(response = response.copy(body = softCastValueToXML(response.body)))
     }
 
-    object StubResponseMismatch: MismatchMessages {
-        override fun mismatchMessage(expected: String, actual: String): String {
-            return "Stub expected $expected but response contained $actual"
-        }
-
-        override fun unexpectedKey(keyLabel: String, keyName: String): String {
-            return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the response was not in the stub"
-        }
-
-        override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-            return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the stub was not found in the response"
-        }
-    }
-
     private fun invokeExternalCommand(httpRequest: HttpRequest): HttpStubData {
         val result = executeExternalCommand(
             response.externalisedResponseCommand,
@@ -44,7 +29,7 @@ data class HttpStubData(
         )
         val responseMap = jsonStringToValueMap(result)
         val externalCommandResponse = HttpResponse.fromJSON(responseMap)
-        val responseMatches = responsePattern.matches(externalCommandResponse, resolver.copy(mismatchMessages = StubResponseMismatch))
+        val responseMatches = responsePattern.matches(externalCommandResponse, resolver.copy(mismatchMessages = ContractExternalResponseMismatch))
         return when {
             !responseMatches.isTrue() -> {
                 val errorMessage =

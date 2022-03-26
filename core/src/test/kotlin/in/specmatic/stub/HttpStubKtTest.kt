@@ -1,10 +1,12 @@
 package `in`.specmatic.stub
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
@@ -14,6 +16,9 @@ import `in`.specmatic.test.HttpClient
 import java.security.KeyStore
 import java.util.*
 import `in`.specmatic.stubResponse
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.assertDoesNotThrow
+import java.util.function.Consumer
 
 internal class HttpStubKtTest {
     @Test
@@ -398,5 +403,86 @@ Feature: POST API
                 "Response for stub number $stubNumber:\n${response.toLogString()}"
             }
         }
+    }
+
+    @Test
+    fun `request mismatch with contract triggers triggers custom errors`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: integer
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        """.trimIndent(), "").toFeature()
+        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf()), false)
+
+        println(response.response.toLogString())
+
+        assertThat(response.response.body.toStringLiteral()).contains("Contract expected")
+        assertThat(response.response.body.toStringLiteral()).contains("request contained")
+    }
+
+    @Test
+    fun `response mismatch with contract triggers triggers custom errors`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+        """.trimIndent(), "").toFeature()
+        val stub: HttpStubData = HttpStubData(
+            HttpRequest("POST", "/data", body = StringValue("Hello")).toPattern(),
+            HttpResponse.OK("abc123").copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
+            Resolver(),
+            responsePattern = contract.scenarios.single().httpResponsePattern
+        )
+
+        assertThatThrownBy {
+            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), false)
+        }.satisfies(Consumer {
+            it as ContractException
+
+            val reportText = it.report()
+            println(reportText)
+
+            assertThat(reportText).contains("Contract expected")
+            assertThat(reportText).contains("response from external command")
+        })
     }
 }

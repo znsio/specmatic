@@ -1140,6 +1140,173 @@ Then status 200
             assertThat(results.hasFailures()).isTrue
         }
     }
+
+    fun `backward compatibility error in request shows contextual error message`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: abc
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result: Results = testBackwardCompatibility(oldContract, newContract)
+
+        assertThat(result.report()).contains("New contract expected")
+        assertThat(result.report()).contains("old contract sent")
+    }
+
+    @Test
+    fun `backward compatibility error in response shows contextual error message`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result: Results = testBackwardCompatibility(oldContract, newContract)
+
+        assertThat(result.report()).contains("New contract returned")
+        assertThat(result.report()).contains("old contract expected")
+    }
 }
 
 private fun String.openAPIToContract(): Feature {

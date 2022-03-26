@@ -24,7 +24,7 @@ data class StringPattern(
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (sampleData) {
-            is StringValue, EmptyString -> {
+            is StringValue -> {
                 if (minLength != null && sampleData.toStringLiteral().length < minLength) return mismatchResult(
                     "string with minLength $minLength",
                     sampleData, resolver.mismatchMessages

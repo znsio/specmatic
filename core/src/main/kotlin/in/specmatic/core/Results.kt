@@ -57,7 +57,8 @@ data class Results(val results: List<Result> = emptyList()) {
     fun plus(other: Results): Results = Results(results.plus(other.results))
 }
 
-private fun listToReport(results: List<Result>): String =
-    results.filterIsInstance<Result.Failure>().joinToString("${System.lineSeparator()}${System.lineSeparator()}") {
+private fun listToReport(results: List<Result>): String {
+    return results.filterIsInstance<Result.Failure>().map {
         it.toFailureReport().toText()
-    }
+    }.distinct().joinToString("${System.lineSeparator()}${System.lineSeparator()}")
+}

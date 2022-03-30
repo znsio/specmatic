@@ -50,7 +50,7 @@ data class Results(val results: List<Result> = emptyList()) {
 
         return when {
             filteredResults.isNotEmpty() -> listToReport(filteredResults)
-            else -> "$defaultMessage".trim()
+            else -> defaultMessage.trim()
         }
     }
 

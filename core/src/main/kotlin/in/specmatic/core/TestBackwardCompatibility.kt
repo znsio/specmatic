@@ -2,6 +2,7 @@ package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.capitalizeFirstChar
+import `in`.specmatic.core.value.Value
 
 fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results {
     return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
@@ -53,31 +54,33 @@ fun testBackwardCompatibility(
 }
 
 object NewAndOldContractRequestMismatches: MismatchMessages {
+    override fun valueMismatchFailure(expected: String, actual: Value?, mismatchMessages: MismatchMessages): Result.Failure {
+        return mismatchResult(expected, actual?.type()?.typeName ?: "null", mismatchMessages)
+    }
+
     override fun mismatchMessage(expected: String, actual: String): String {
-        return "New contract expected $expected, old contract sent $actual"
+        return "This is $expected in the new contract, $actual in the old contract"
     }
 
     override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "${keyLabel.lowercase().capitalizeFirstChar()} named \"$keyName\" in the request from the old contract was unexpected by the new contract"
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named \"$keyName\" in the request from the old contract is not in the new contract"
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-        return "New contract expected ${keyLabel.lowercase()} named \"$keyName\" but it was missing in the request sent from the old contract"
+        return "New contract expects ${keyLabel.lowercase()} named \"$keyName\" in the request but it is missing from the old contract"
     }
 }
 
 object NewAndOldContractResponseMismatches: MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
-        return "New contract returned $actual but old contract expected $expected"
+        return "This is $actual in the new contract response but $expected in the old contract"
     }
 
     override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "${keyLabel.lowercase().capitalizeFirstChar()} named \"$keyName\" in the response from the new contract was unexpected by the old contract"
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named \"$keyName\" in the response from the new contract is not in the old contract"
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-        return "The old contract expected ${keyLabel.lowercase()} named \"$keyName\" but it was missing in the response sent from the new contract"
+        return "The old contract expects ${keyLabel.lowercase()} named \"$keyName\" but it is missing in the new contract"
     }
 }
-
-val BackwardCompatibilityMismatch = DefaultMismatchMessages

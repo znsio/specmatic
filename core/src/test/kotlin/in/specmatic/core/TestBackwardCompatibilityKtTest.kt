@@ -1304,8 +1304,8 @@ paths:
 
         val result: Results = testBackwardCompatibility(oldContract, newContract)
 
-        assertThat(result.report()).contains("New contract returned")
-        assertThat(result.report()).contains("old contract expected")
+        assertThat(result.report()).contains("new contract response")
+        assertThat(result.report()).contains("old contract")
     }
 
     @Test

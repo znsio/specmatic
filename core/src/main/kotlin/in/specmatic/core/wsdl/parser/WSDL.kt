@@ -79,7 +79,7 @@ fun loadSchemaImports(schema: XMLNode, parentFile: File): List<XMLNode> {
 private fun schemasFrom(definition: XMLNode, parentFile: File): Map<String, XMLNode> {
     val schemas = getSchemaNodesFromDefinition(definition, parentFile)
 
-    return schemas.associateBy { schema ->
+    return schemas.filter { it.attributes.containsKey("targetNamespace") } .associateBy { schema ->
         schema.getAttributeValue("targetNamespace")
     }
 }

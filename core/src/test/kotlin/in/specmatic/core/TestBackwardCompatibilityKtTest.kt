@@ -502,8 +502,10 @@ Then status 200
 
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
 
+        println(results.report())
+
         assertEquals(0, results.successCount)
-        assertEquals(2, results.failureCount)
+        assertEquals(1, results.failureCount)
     }
 
     @Test

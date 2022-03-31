@@ -54,10 +54,50 @@ data class Results(val results: List<Result> = emptyList()) {
         }
     }
 
+    fun distinctReport(defaultMessage: String = PATH_NOT_RECOGNIZED_ERROR): String {
+        val filteredResults = withoutFluff().results.filterIsInstance<Result.Failure>()
+
+        return when {
+            filteredResults.isNotEmpty() -> listToDistinctReport(filteredResults)
+            else -> defaultMessage.trim()
+        }
+    }
+
     fun plus(other: Results): Results = Results(results.plus(other.results))
+
+    fun distinct(): Results {
+        val filteredResults = withoutFluff().results
+        val resultReports = filteredResults.map {
+            when(it) {
+                is Result.Failure -> it.toFailureReport().toText()
+                else -> ""
+            }
+        }
+
+        val uniqueResults: List<Result> = filteredResults.foldIndexed(emptyList()) { index, acc, result ->
+            val report = resultReports[index]
+            when(result) {
+                is Result.Failure -> {
+                    if(resultReports.indexOf(report) == index)
+                        acc.plus(result)
+                    else
+                        acc
+                }
+                else -> acc.plus(result)
+            }
+        }
+
+        return Results(uniqueResults)
+    }
 }
 
 private fun listToReport(results: List<Result>): String {
+    return results.filterIsInstance<Result.Failure>().map {
+        it.toFailureReport().toText()
+    }.joinToString("${System.lineSeparator()}${System.lineSeparator()}")
+}
+
+private fun listToDistinctReport(results: List<Result>): String {
     return results.filterIsInstance<Result.Failure>().map {
         it.toFailureReport().toText()
     }.distinct().joinToString("${System.lineSeparator()}${System.lineSeparator()}")

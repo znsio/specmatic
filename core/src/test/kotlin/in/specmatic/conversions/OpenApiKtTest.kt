@@ -30,6 +30,7 @@ import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
 import java.io.File
 import java.net.URI
 import java.util.function.Consumer
+import java.util.regex.Pattern
 
 
 internal class OpenApiKtTest {
@@ -837,16 +838,24 @@ Background:
         )
 
         assertFalse(results.success())
-        assertThat(results.report()).isEqualTo(
-            """
+        val reportText = """
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
 
               >> RESPONSE.BODY.breed
               
-                 ${ContractAndResponseMismatch.mismatchMessage("""("labrador" or "retriever" or "null")""", "string: \"malinois\"")}
+                 ${
+            ContractAndResponseMismatch.mismatchMessage(
+                """("labrador" or "retriever" or "null")""",
+                "string: \"malinois\""
+            )
+        }
             """.trimIndent()
+        assertThat(results.report()).contains(
+            reportText
         )
+
+        assertThat(countMatches(results.report(), reportText)).isEqualTo(3)
     }
 
     @Test
@@ -897,8 +906,7 @@ Background:
         )
 
         assertFalse(results.success())
-        assertThat(results.report()).isEqualTo(
-            """
+        val reportText = """
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
             
@@ -906,7 +914,11 @@ Background:
               
                  ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
             """.trimIndent()
+        assertThat(results.report()).contains(
+            reportText
         )
+
+        assertThat(countMatches(results.report(), reportText)).isEqualTo(3)
     }
 
     @Test
@@ -957,8 +969,7 @@ Background:
         )
 
         assertFalse(results.success())
-        assertThat(results.report()).isEqualTo(
-            """
+        val expectedReport = """
             In scenario "create a pet. Response: pet response"
             API: POST /pets -> 201
 
@@ -966,7 +977,29 @@ Background:
               
                  ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
             """.trimIndent()
+        assertThat(results.report()).contains(
+            expectedReport
         )
+
+        assertThat(countMatches(results.report(), expectedReport)).isEqualTo(3)
+    }
+
+    fun countMatches(string: String, pattern: String): Int {
+        var index = 0
+        var count = 0
+
+        while (true)
+        {
+            index = string.indexOf(pattern, index)
+            index += if (index != -1)
+            {
+                count++
+                pattern.length
+            }
+            else {
+                return count
+            }
+        }
     }
 
     @Test

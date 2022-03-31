@@ -8,7 +8,7 @@ fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results 
     return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
         val scenarioResults: List<Result> = testBackwardCompatibility(olderScenario, newerBehaviour)
         results.copy(results = results.results.plus(scenarioResults))
-    }
+    }.distinct()
 }
 
 fun testBackwardCompatibility(

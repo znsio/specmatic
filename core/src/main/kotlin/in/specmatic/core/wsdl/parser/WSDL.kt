@@ -52,13 +52,13 @@ fun getSchemaNodesFromDefinition(definition: XMLNode, parentFile: File): List<XM
     val schemasWithinDefinition =  typesNode.findChildrenByName("schema")
 
     val importedSchemas = schemasWithinDefinition.map { schema ->
-        loadSchemaImports(schema, parentFile)
+        loadSchemaImports(schema, parentFile, definition)
     }.flatten()
 
     return schemasWithinDefinition.plus(importedSchemas)
 }
 
-fun loadSchemaImports(schema: XMLNode, parentFile: File): List<XMLNode> {
+fun loadSchemaImports(schema: XMLNode, parentFile: File, definition: XMLNode): List<XMLNode> {
     val importNodes = schema.findChildrenByName("import").filter { it.attributes.containsKey("schemaLocation") }
 
     return importNodes.map { importNode ->
@@ -71,8 +71,8 @@ fun loadSchemaImports(schema: XMLNode, parentFile: File): List<XMLNode> {
             }
         }
 
-        val importedSchema = toXMLNode(schemaFile.readText())
-        listOf(importedSchema).plus(loadSchemaImports(importedSchema, schemaFile))
+        val importedSchema = toXMLNode(schemaFile.readText(), definition.namespaces)
+        listOf(importedSchema).plus(loadSchemaImports(importedSchema, schemaFile, definition))
     }.flatten()
 }
 
@@ -281,6 +281,7 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
 
     fun getComplexTypeNode(element: XMLNode): ComplexType {
         val node = when {
+            element.name == "complexType" -> element
             element.attributes.containsKey("type") -> findComplexType(element, "type")
             else -> element.childNodes.filterIsInstance<XMLNode>().filterNot { it.name == "annotation" }.first()
         }.also {

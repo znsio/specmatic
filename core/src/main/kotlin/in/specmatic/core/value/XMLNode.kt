@@ -12,7 +12,7 @@ import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.wsdl.parser.WSDL
 
-fun toXMLNode(document: Document): XMLNode = nonTextXMLNode(document.documentElement)
+fun toXMLNode(document: Document, parentNamespaces: Map<String, String> = emptyMap()): XMLNode = nonTextXMLNode(document.documentElement, parentNamespaces)
 
 fun toXMLNode(node: Node, parentNamespaces: Map<String, String> = emptyMap()): XMLValue {
     return when (node.nodeType) {
@@ -43,9 +43,9 @@ private fun attributes(node: Node): Map<String, StringValue> {
     }
 }
 
-fun toXMLNode(xmlData: String): XMLNode {
+fun toXMLNode(xmlData: String, parentNamespaces: Map<String, String> = emptyMap()): XMLNode {
     val document = parseXML(xmlData)
-    return toXMLNode(document)
+    return toXMLNode(document, parentNamespaces)
 }
 
 fun String.localName(): String = this.substringAfter(':')

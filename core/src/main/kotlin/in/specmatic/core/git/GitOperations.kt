@@ -2,7 +2,6 @@
 
 package `in`.specmatic.core.git
 
-import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.parsedJSON
@@ -95,10 +94,11 @@ fun getBearerToken(): String? {
 
 private fun readBearerFromEnvVariable(qontractConfig: Value): String? {
     return loadFromPath(qontractConfig, listOf("auth", "bearer-environment-variable"))?.toStringLiteral()?.let { bearerName ->
-        logger.log("Found bearer name $bearerName")
+        logger.log("Found bearer environment variable name \"$bearerName\"")
 
         System.getenv(bearerName).also {
-            if(it != null) logger.log("$bearerName is not empty")
+            if(it == null)
+                logger.log("$bearerName environment variable has not been set")
         }
     }
 }

@@ -14,6 +14,7 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import java.io.File
+import java.util.*
 
 fun clone(workingDirectory: File, gitRepo: GitRepo): File {
     val cloneDirectory = gitRepo.directoryRelativeTo(workingDirectory)
@@ -47,10 +48,12 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File, onFailure:
             setDirectory(cloneDirectory)
         }
 
-        val accessToken = getPersonalAccessToken()
+        val accessTokenText = getPersonalAccessToken()
 
-        if (accessToken != null) {
-            val credentialsProvider: CredentialsProvider = UsernamePasswordCredentialsProvider(accessToken, "")
+        if (accessTokenText != null) {
+//            val accessToken = String(Base64.getEncoder().encode("$token:".encodeToByteArray()))
+
+            val credentialsProvider: CredentialsProvider = UsernamePasswordCredentialsProvider(accessTokenText, "")
             cloneCommand.setCredentialsProvider(credentialsProvider)
         } else {
             val ciBearerToken = getBearerToken()
@@ -123,27 +126,50 @@ private fun readBearerFromFile(qontractConfig: Value): String? {
 }
 
 fun getPersonalAccessToken(): String? {
+    return getPersonalAccessTokenProperty() ?: getPersonalAccessTokenEnvVariable() ?: getPersonalAccessTokenConfig()
+}
+
+private fun getPersonalAccessTokenConfig(): String? {
     val homeDir = File(System.getProperty("user.home"))
     val configFile = homeDir.resolve("specmatic-azure.json")
 
-    if(configFile.exists()) {
+    if (configFile.exists()) {
         val qontractConfig = readQontractConfig(configFile)
 
         "azure-access-token".let { azureAccessTokenKey ->
             if (qontractConfig is JSONObjectValue && qontractConfig.jsonObject.containsKey(azureAccessTokenKey)) {
-                return qontractConfig.getString(azureAccessTokenKey)
+                return qontractConfig.getString(azureAccessTokenKey).also {
+                    println("Using personal access token from home directory config")
+                }
             }
         }
 
         "personal-access-token".let { azureAccessTokenKey ->
             if (qontractConfig is JSONObjectValue && qontractConfig.jsonObject.containsKey(azureAccessTokenKey)) {
-                return qontractConfig.getString(azureAccessTokenKey)
+                return qontractConfig.getString(azureAccessTokenKey).also {
+                    println("Using personal access token from home directory config")
+                }
             }
         }
     }
 
+    return null
+}
+
+private fun getPersonalAccessTokenEnvVariable(): String? {
+    val environmentVariableName = "PERSONAL_ACCESS_TOKEN"
+
+    return System.getenv(environmentVariableName)?.also {
+        println("Using personal access token from environment variable")
+    }
+}
+
+private fun getPersonalAccessTokenProperty(): String? {
     val accessTokenVariableName = "personalAccessToken"
-    return System.getProperty(accessTokenVariableName) ?: System.getenv(accessTokenVariableName)
+
+    return System.getProperty(accessTokenVariableName)?.also {
+        println("Using personal access token from property")
+    }
 }
 
 private fun readQontractConfig(qontractConfigFile: File) = parsedJSON(qontractConfigFile.readText())

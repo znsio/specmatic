@@ -124,21 +124,26 @@ private fun readBearerFromFile(qontractConfig: Value): String? {
 
 fun getPersonalAccessToken(): String? {
     val homeDir = File(System.getProperty("user.home"))
+    val configFile = homeDir.resolve("specmatic-azure.json")
 
-    if(homeDir.exists()) {
-        val configFile = homeDir.resolve("specmatic-azure.json")
+    if(configFile.exists()) {
+        val qontractConfig = readQontractConfig(configFile)
 
-        if(configFile.exists()) {
-            val qontractConfig = readQontractConfig(configFile)
+        "azure-access-token".let { azureAccessTokenKey ->
+            if (qontractConfig is JSONObjectValue && qontractConfig.jsonObject.containsKey(azureAccessTokenKey)) {
+                return qontractConfig.getString(azureAccessTokenKey)
+            }
+        }
 
-            val azureAccessTokenKey = "azure-access-token"
+        "personal-access-token".let { azureAccessTokenKey ->
             if (qontractConfig is JSONObjectValue && qontractConfig.jsonObject.containsKey(azureAccessTokenKey)) {
                 return qontractConfig.getString(azureAccessTokenKey)
             }
         }
     }
 
-    return null
+    val accessTokenVariableName = "personalAccessToken"
+    return System.getProperty(accessTokenVariableName) ?: System.getenv(accessTokenVariableName)
 }
 
 private fun readQontractConfig(qontractConfigFile: File) = parsedJSON(qontractConfigFile.readText())

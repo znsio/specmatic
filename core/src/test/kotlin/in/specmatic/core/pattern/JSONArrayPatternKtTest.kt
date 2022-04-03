@@ -3,6 +3,8 @@ package `in`.specmatic.core.pattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.value.JSONArrayValue
+import `in`.specmatic.core.value.StringValue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 
@@ -60,5 +62,17 @@ internal class JSONArrayPatternKtTest {
         fun `the other result should have all the types with order preserved`() {
             assertThat(combinations).contains(listOf(StringPattern(), NumberPattern(), BooleanPattern, DateTimePattern))
         }
+    }
+
+    @Test
+    fun `error message when the value is not an array`() {
+        val arrayType: JSONArrayPattern = parsedPattern("""["(number)"]""") as JSONArrayPattern
+        val nonArrayValue = StringValue("""not a json array""")
+
+        val result = arrayType.matches(nonArrayValue, Resolver())
+
+        println(result.reportString())
+        assertThat(result.reportString()).contains("not a json array")
+        assertThat(result.reportString()).contains("Expected json array")
     }
 }

@@ -3,6 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.breadCrumb
+import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.utilities.stringTooPatternArray
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.utilities.withNumberType
@@ -33,7 +34,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
     @Throws(Exception::class)
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if (sampleData !is JSONArrayValue)
-            return Result.Failure("Value is not a JSON array")
+            return mismatchResult(this, sampleData, resolver.mismatchMessages)
 
         if (sampleData.list.isEmpty())
             return Result.Success()

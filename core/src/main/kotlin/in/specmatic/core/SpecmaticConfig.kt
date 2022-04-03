@@ -49,7 +49,7 @@ fun String.loadContract(): Feature {
 }
 
 @Serializable
-data class Auth(@SerialName("bearer-file") val bearerFile: String = "bearer.txt", @SerialName("bearer-environment-variable") val bearerEnvironmentVariable: String?)
+data class Auth(@SerialName("bearer-file") val bearerFile: String = "bearer.txt", @SerialName("bearer-environment-variable") val bearerEnvironmentVariable: String? = null)
 
 enum class PipelineProvider { azure }
 

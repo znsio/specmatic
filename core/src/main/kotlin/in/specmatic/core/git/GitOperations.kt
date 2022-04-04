@@ -12,9 +12,17 @@ import `in`.specmatic.core.value.Value
 import io.ktor.http.*
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.HttpTransport
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.transport.http.HttpConnection
+import org.eclipse.jgit.transport.http.HttpConnectionFactory
+import org.eclipse.jgit.transport.http.JDKHttpConnectionFactory
+import org.eclipse.jgit.util.HttpSupport
 import java.io.File
-import java.util.*
+import java.io.IOException
+import java.net.Proxy
+import java.net.URL
+
 
 fun clone(workingDirectory: File, gitRepo: GitRepo): File {
     val cloneDirectory = gitRepo.directoryRelativeTo(workingDirectory)
@@ -27,8 +35,11 @@ fun clone(workingDirectory: File, gitRepo: GitRepo): File {
 
 private fun clone(gitRepositoryURI: String, cloneDirectory: File) {
     jgitClone(gitRepositoryURI, cloneDirectory) { exception ->
-        logger.debug("""Falling back to git command after getting error from jgit (${exception.javaClass.name}: ${exception.message})""")
+        logger.debug("""Falling back to git command after getting error from jgit""")
+        logger.debug(exception.localizedMessage ?: exception.message ?: "")
+        logger.debug(exception.stackTraceToString())
         resetCloneDirectory(cloneDirectory)
+        logger.debug("Cloning using git command")
         SystemGit(cloneDirectory.parent, "-").clone(gitRepositoryURI, cloneDirectory)
     }
 }
@@ -40,8 +51,26 @@ private fun resetCloneDirectory(cloneDirectory: File) {
     cloneDirectory.mkdirs()
 }
 
+internal class InsecureHttpConnectionFactory : HttpConnectionFactory {
+    @Throws(IOException::class)
+    override fun create(url: URL?): HttpConnection {
+        return create(url, null)
+    }
+
+    @Throws(IOException::class)
+    override fun create(url: URL?, proxy: Proxy?): HttpConnection {
+        val connection: HttpConnection = JDKHttpConnectionFactory().create(url, proxy)
+        HttpSupport.disableSslVerify(connection)
+        return connection
+    }
+}
+
 private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File, onFailure: (exception: Throwable) -> Unit) {
+    val preservedConnectionFactory: HttpConnectionFactory = HttpTransport.getConnectionFactory()
+
     try {
+        HttpTransport.setConnectionFactory(InsecureHttpConnectionFactory())
+
         val cloneCommand = Git.cloneRepository().apply {
             setTransportConfigCallback(getTransportCallingCallback())
             setURI(gitRepositoryURI)
@@ -51,8 +80,6 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File, onFailure:
         val accessTokenText = getPersonalAccessToken()
 
         if (accessTokenText != null) {
-//            val accessToken = String(Base64.getEncoder().encode("$token:".encodeToByteArray()))
-
             val credentialsProvider: CredentialsProvider = UsernamePasswordCredentialsProvider(accessTokenText, "")
             cloneCommand.setCredentialsProvider(credentialsProvider)
         } else {
@@ -63,9 +90,12 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File, onFailure:
             }
         }
 
+        logger.log("Cloning: $gitRepositoryURI -> ${cloneDirectory.canonicalPath}")
         cloneCommand.call()
     } catch (e: Throwable) {
         onFailure(e)
+    } finally {
+        HttpTransport.setConnectionFactory(preservedConnectionFactory)
     }
 }
 

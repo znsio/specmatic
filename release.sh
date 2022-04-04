@@ -39,7 +39,7 @@ ACTUAL_VERSION=`cat version.properties | sed s/version=//g`
 
 if [ "$1" != $ACTUAL_VERSION ]
 then
-	echo The specified version $1 does not match the actual version $ACTUAL_VERSION.
+	echo The specified version $1 does not match the version declared in version.properties which is $ACTUAL_VERSION.
 	exit 1
 fi
 

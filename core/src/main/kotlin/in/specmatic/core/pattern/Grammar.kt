@@ -1,5 +1,7 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.core.DefaultMismatchMessages
+import `in`.specmatic.core.MismatchMessages
 import `in`.specmatic.core.utilities.jsonStringToValueArray
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.*
@@ -233,7 +235,7 @@ fun isLookupRowPattern(token: String): Boolean {
     }
 }
 
-fun parsedJSON(content: String): Value {
+fun parsedJSON(content: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Value {
     return content.trim().let {
         when {
             it.startsWith("{") -> try {
@@ -246,7 +248,33 @@ fun parsedJSON(content: String): Value {
             } catch (e: Throwable) {
                 throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}")
             }
-            else -> throw ContractException("Expected json, actual $content.")
+            else -> throw ContractException(mismatchMessages.mismatchMessage("json value", content))
+        }
+    }
+}
+
+fun parsedJSONObject(content: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): JSONObjectValue {
+    return content.trim().let {
+        when {
+            it.startsWith("{") -> try {
+                JSONObjectValue(jsonStringToValueMap(it))
+            } catch (e: Throwable) {
+                throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}")
+            }
+            else -> throw ContractException(mismatchMessages.mismatchMessage("json object", content))
+        }
+    }
+}
+
+fun parsedJSONArray(content: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): JSONArrayValue {
+    return content.trim().let {
+        when {
+            it.startsWith("[") -> try {
+                JSONArrayValue(jsonStringToValueArray(it))
+            } catch (e: Throwable) {
+                throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}")
+            }
+            else -> throw ContractException(mismatchMessages.mismatchMessage("json array", content))
         }
     }
 }

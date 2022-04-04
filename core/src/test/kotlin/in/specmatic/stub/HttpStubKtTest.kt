@@ -581,4 +581,44 @@ paths:
             assertThat(responseString).contains("not in the contract")
         }
     }
+
+    @Test
+    fun `stub request mismatch should return custom error mismatch for payload level mismatch`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(contract, emptyList()).use {
+            val response = it.client.execute(HttpRequest("POST", "/data", body = StringValue("""hello world""".trimIndent())) )
+
+            val responseString = response.toLogString()
+            println(responseString)
+
+            assertThat(responseString).contains("Contract expected")
+            assertThat(responseString).contains("request contained")
+            assertThat(responseString).contains("json array")
+        }
+    }
 }

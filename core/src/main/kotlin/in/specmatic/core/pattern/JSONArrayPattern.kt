@@ -83,7 +83,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         return newBasedOn(pattern, resolverWithNullType).map { JSONArrayPattern(it) }
     }
 
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSON(value)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value, resolver.mismatchMessages)
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val thisResolverWithNullType = withNullPattern(thisResolver)
         val otherResolverWithNullType = withNullPattern(otherResolver)

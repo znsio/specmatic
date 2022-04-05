@@ -171,7 +171,7 @@ class FeatureTest {
             In scenario "Update balance"
             API: POST /balance -> 200
             
-              >> REQUEST.BODY.calls_made.[2]
+              >> REQUEST.BODY.calls_made[2]
               
                  Expected number, actual was string: "test"
             """.trimIndent())

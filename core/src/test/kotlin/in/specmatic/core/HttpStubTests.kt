@@ -416,7 +416,7 @@ Scenario: JSON API to get account details with fact check
                     in.specmatic.mock.NoMatchingScenario: In scenario "api call"
                     API: GET /(organisation:Organisation)/employees/ -> 200
                     
-                      >> RESPONSE.BODY.[0].rating
+                      >> RESPONSE.BODY[0].rating
                       
                          ${ContractAndStubMismatchMessages.mismatchMessage("(1 or 2 or 3)", "number: 4")}
                 """.trimIndent()

@@ -33,4 +33,27 @@ internal class FailureReportTest {
                error
         """.trimIndent())
     }
+
+    @Test
+    fun `breadcrumb path parts should be separated from eachother by a dot`() {
+        val errorDetails = MatchFailureDetails(listOf("address", "street"), listOf("error"))
+
+        val report = FailureReport(null, null, null, listOf(errorDetails))
+
+        val reportText = report.toText()
+
+        assertThat(reportText).contains("address.street")
+    }
+
+    @Test
+    fun `array breadcrumbs should not be separated from previous breadcrumb by a dot`() {
+        val errorDetails = MatchFailureDetails(listOf("addresses", "[0]", "street"), listOf("error"))
+
+        val report = FailureReport(null, null, null, listOf(errorDetails))
+
+        val reportText = report.toText()
+        println(reportText)
+
+        assertThat(reportText).contains("addresses[0].street")
+    }
 }

@@ -46,7 +46,7 @@ class FailureReport(val contractPath: String?, val scenarioMessage: String?, val
                     it.isNotBlank() -> ">> $it"
                     else -> ""
                 }
-            }
+            }.replace(".[", "[")
     }
 
     private fun contractPathDetails(): String? {

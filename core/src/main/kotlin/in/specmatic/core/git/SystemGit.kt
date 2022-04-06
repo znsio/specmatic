@@ -1,12 +1,13 @@
 package `in`.specmatic.core.git
 
 import `in`.specmatic.core.Configuration
+import `in`.specmatic.core.azure.PersonalAccessToken
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
 
-class SystemGit(override val workingDirectory: String = ".", private val prefix: String = "- ") : GitCommand {
+class SystemGit(override val workingDirectory: String = ".", private val prefix: String = "- ", val azurePAT: String? = null, val bearer: String? = null) : GitCommand {
     private fun execute(vararg command: String): String =
         executeCommandWithWorkingDirectory(prefix, workingDirectory, command.toList().toTypedArray())
 
@@ -36,6 +37,15 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     override fun merge(branchName: String): SystemGit = this.also { execute(Configuration.gitCommand, "merge", branchName) }
     override fun clone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
         this.also { execute(Configuration.gitCommand, "clone", gitRepositoryURI, cloneDirectory.absolutePath) }
+
+    fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
+        this.also {
+            if(azurePAT != null) {
+                execute(Configuration.gitCommand, "-c", "http.extraHeader=Authorization: Basic ${PersonalAccessToken(azurePAT).basic()}", "clone", "--depth", "1", gitRepositoryURI, cloneDirectory.absolutePath)
+            } else {
+                execute(Configuration.gitCommand, "clone", gitRepositoryURI, cloneDirectory.absolutePath)
+            }
+        }
 
     override fun gitRoot(): String = execute(Configuration.gitCommand, "rev-parse", "--show-toplevel").trim()
     override fun show(treeish: String, relativePath: String): String =

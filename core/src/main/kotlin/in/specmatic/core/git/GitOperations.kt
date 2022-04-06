@@ -34,13 +34,21 @@ fun clone(workingDirectory: File, gitRepo: GitRepo): File {
 }
 
 private fun clone(gitRepositoryURI: String, cloneDirectory: File) {
-    jgitClone(gitRepositoryURI, cloneDirectory) { exception ->
-        logger.debug("""Falling back to git command after getting error from jgit""")
+    try {
+        SystemGit(cloneDirectory.parent, "-", getPersonalAccessToken(), getBearerToken()).shallowClone(gitRepositoryURI, cloneDirectory)
+    } catch(exception: Exception) {
+        logger.debug("Falling back to jgit after trying shallow clone")
         logger.debug(exception.localizedMessage ?: exception.message ?: "")
         logger.debug(exception.stackTraceToString())
-        resetCloneDirectory(cloneDirectory)
-        logger.debug("Cloning using git command")
-        SystemGit(cloneDirectory.parent, "-").clone(gitRepositoryURI, cloneDirectory)
+
+        jgitClone(gitRepositoryURI, cloneDirectory) { exception ->
+            logger.debug("""Falling back to git command after getting error from jgit""")
+            logger.debug(exception.localizedMessage ?: exception.message ?: "")
+            logger.debug(exception.stackTraceToString())
+            resetCloneDirectory(cloneDirectory)
+            logger.debug("Cloning using git command")
+            SystemGit(cloneDirectory.parent, "-").clone(gitRepositoryURI, cloneDirectory)
+        }
     }
 }
 

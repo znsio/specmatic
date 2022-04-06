@@ -1,13 +1,24 @@
 package `in`.specmatic.core.git
 
 import `in`.specmatic.core.Configuration
-import `in`.specmatic.core.azure.PersonalAccessToken
+import `in`.specmatic.core.azure.AuthCredentials
+import `in`.specmatic.core.azure.NoGitAuthCredentials
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
 
-class SystemGit(override val workingDirectory: String = ".", private val prefix: String = "- ", val azurePAT: String? = null, val bearer: String? = null) : GitCommand {
+class SystemGit(override val workingDirectory: String = ".", private val prefix: String = "- ", val authCredentials: AuthCredentials = NoGitAuthCredentials) : GitCommand {
+    fun executeWithAuth(vararg command: String): String {
+        val gitExecutable = listOf(Configuration.gitCommand)
+        val auth = authCredentials.gitCommandAuthHeaders()
+
+        return execute(gitExecutable + auth + command.toList())
+    }
+
+    private fun execute(command: List<String>): String =
+        executeCommandWithWorkingDirectory(prefix, workingDirectory, command.toList().toTypedArray())
+
     private fun execute(vararg command: String): String =
         executeCommandWithWorkingDirectory(prefix, workingDirectory, command.toList().toTypedArray())
 
@@ -28,23 +39,19 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     override fun add(): SystemGit = this.also { execute(Configuration.gitCommand, "add", ".") }
     override fun add(relativePath: String): SystemGit = this.also { execute(Configuration.gitCommand, "add", relativePath) }
     override fun commit(): SystemGit = this.also { execute(Configuration.gitCommand, "commit", "-m", "Updated contract") }
-    override fun push(): SystemGit = this.also { execute(Configuration.gitCommand, "push") }
-    override fun pull(): SystemGit = this.also { execute(Configuration.gitCommand, "pull") }
+    override fun push(): SystemGit = this.also { executeWithAuth(Configuration.gitCommand, "push") }
+    override fun pull(): SystemGit = this.also { executeWithAuth(Configuration.gitCommand, "pull") }
     override fun resetHard(): SystemGit = this.also { execute(Configuration.gitCommand, "reset", "--hard", "HEAD") }
     override fun resetMixed(): SystemGit = this.also { execute(Configuration.gitCommand, "reset", "--mixed", "HEAD") }
     override fun mergeAbort(): SystemGit = this.also { execute(Configuration.gitCommand, "merge", "--aborg") }
     override fun checkout(branchName: String): SystemGit = this.also { execute(Configuration.gitCommand, "checkout", branchName) }
     override fun merge(branchName: String): SystemGit = this.also { execute(Configuration.gitCommand, "merge", branchName) }
     override fun clone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
-        this.also { execute(Configuration.gitCommand, "clone", gitRepositoryURI, cloneDirectory.absolutePath) }
+        this.also { executeWithAuth("clone", gitRepositoryURI, cloneDirectory.absolutePath) }
 
-    fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
+    override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
         this.also {
-            if(azurePAT != null) {
-                execute(Configuration.gitCommand, "-c", "http.extraHeader=Authorization: Basic ${PersonalAccessToken(azurePAT).basic()}", "clone", "--depth", "1", gitRepositoryURI, cloneDirectory.absolutePath)
-            } else {
-                execute(Configuration.gitCommand, "clone", gitRepositoryURI, cloneDirectory.absolutePath)
-            }
+            executeWithAuth("clone", "--depth", "1", gitRepositoryURI, cloneDirectory.absolutePath)
         }
 
     override fun gitRoot(): String = execute(Configuration.gitCommand, "rev-parse", "--show-toplevel").trim()

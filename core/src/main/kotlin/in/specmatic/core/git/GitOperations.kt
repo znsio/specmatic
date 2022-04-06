@@ -3,6 +3,7 @@
 package `in`.specmatic.core.git
 
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.azure.AzureAuthCredentials
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.GitRepo
@@ -35,20 +36,13 @@ fun clone(workingDirectory: File, gitRepo: GitRepo): File {
 
 private fun clone(gitRepositoryURI: String, cloneDirectory: File) {
     try {
-        SystemGit(cloneDirectory.parent, "-", getPersonalAccessToken(), getBearerToken()).shallowClone(gitRepositoryURI, cloneDirectory)
+        SystemGit(cloneDirectory.parent, "-", AzureAuthCredentials).shallowClone(gitRepositoryURI, cloneDirectory)
     } catch(exception: Exception) {
         logger.debug("Falling back to jgit after trying shallow clone")
         logger.debug(exception.localizedMessage ?: exception.message ?: "")
         logger.debug(exception.stackTraceToString())
 
-        jgitClone(gitRepositoryURI, cloneDirectory) { exception ->
-            logger.debug("""Falling back to git command after getting error from jgit""")
-            logger.debug(exception.localizedMessage ?: exception.message ?: "")
-            logger.debug(exception.stackTraceToString())
-            resetCloneDirectory(cloneDirectory)
-            logger.debug("Cloning using git command")
-            SystemGit(cloneDirectory.parent, "-").clone(gitRepositoryURI, cloneDirectory)
-        }
+        jgitClone(gitRepositoryURI, cloneDirectory)
     }
 }
 
@@ -73,7 +67,7 @@ internal class InsecureHttpConnectionFactory : HttpConnectionFactory {
     }
 }
 
-private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File, onFailure: (exception: Throwable) -> Unit) {
+private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File) {
     val preservedConnectionFactory: HttpConnectionFactory = HttpTransport.getConnectionFactory()
 
     try {
@@ -100,8 +94,6 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File, onFailure:
 
         logger.log("Cloning: $gitRepositoryURI -> ${cloneDirectory.canonicalPath}")
         cloneCommand.call()
-    } catch (e: Throwable) {
-        onFailure(e)
     } finally {
         HttpTransport.setConnectionFactory(preservedConnectionFactory)
     }

@@ -203,5 +203,5 @@ fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern, mismatchMessages
 }
 
 fun valueError(value: Value?): String? {
-    return value?.let { "${it.displayableType()}: ${it.displayableValue()}" }
+    return value?.valueErrorSnippet()
 }

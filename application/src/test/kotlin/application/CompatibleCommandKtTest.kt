@@ -10,6 +10,8 @@ import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.Results
 import `in`.specmatic.core.git.GitCommand
+import `in`.specmatic.core.git.SystemGit
+import java.io.File
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, CompatibleCommand::class])
 internal class CompatibleCommandKtTest {
@@ -46,6 +48,10 @@ internal class CompatibleCommandKtTest {
             override val workingDirectory: String
                 get() = ""
 
+            override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit {
+                TODO("Not yet implemented")
+            }
+
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")
                 return Pair(this, "newer.$CONTRACT_EXTENSION")
@@ -74,6 +80,10 @@ internal class CompatibleCommandKtTest {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
             override val workingDirectory: String
                 get() = ""
+
+            override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit {
+                TODO("Not yet implemented")
+            }
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")
@@ -111,6 +121,10 @@ internal class CompatibleCommandKtTest {
             override val workingDirectory: String
                 get() = ""
 
+            override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit {
+                TODO("Not yet implemented")
+            }
+
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")
                 return Pair(this, "newer.$CONTRACT_EXTENSION")
@@ -145,6 +159,10 @@ internal class CompatibleCommandKtTest {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
             override val workingDirectory: String
                 get() = ""
+
+            override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit {
+                TODO("Not yet implemented")
+            }
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")

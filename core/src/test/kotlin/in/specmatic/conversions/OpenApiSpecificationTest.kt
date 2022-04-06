@@ -8,7 +8,6 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.stub.*
-import `in`.specmatic.test.HttpClient
 import `in`.specmatic.test.TestExecutor
 import io.ktor.util.reflect.*
 import io.swagger.util.Yaml
@@ -17,7 +16,6 @@ import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.Ignore
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
-import org.springframework.web.client.RestTemplate
 import java.io.File
 
 internal class OpenApiSpecificationTest {
@@ -5340,5 +5338,69 @@ components:
         println(results.single().reportString())
 
         assertThat(results.single()).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `nullable ref in yaml`() {
+        val openAPIText = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Test"
+              version: "1"
+            paths:
+              /user:
+                post:
+                  summary: "Test"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - "address"
+                          properties:
+                            address:
+                              oneOf:
+                              - nullable: true
+                              - ${'$'}ref: "#/components/schemas/Address"
+                  responses:
+                    "200":
+                      description: "Test"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas:
+                Address:
+                  required:
+                  - "street"
+                  properties:
+                    street:
+                      type: "string"
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"address": {"street": "Baker Street"}}""")
+                ), HttpResponse.OK("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"address": null}""")
+                ), HttpResponse.OK("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
     }
 }

@@ -97,24 +97,6 @@ data class Feature(
         }
     }
 
-    fun lookupScenario(httpRequest: HttpRequest): List<Scenario> =
-        try {
-            val resultList = lookupScenario(httpRequest, scenarios, NewAndOldContractRequestMismatches)
-            val matchingScenarios = matchingScenarios(resultList)
-
-            val firstRealResult = resultList.filterNot { it.second.isFluffy() }.firstOrNull()
-            val resultsExist = resultList.firstOrNull() != null
-
-            when {
-                matchingScenarios.isNotEmpty() -> matchingScenarios
-                firstRealResult != null -> throw ContractException(firstRealResult.second.toReport().toText())
-                resultsExist -> throw ContractException(httpRequest.requestNotRecognized())
-                else -> throw ContractException("The contract is empty.")
-            }
-        } finally {
-            serverState = emptyMap()
-        }
-
     fun lookupScenariosWithDeepMatch(httpRequest: HttpRequest): List<Pair<Scenario, Result>> {
         try {
             val resultList = lookupAllScenarios(httpRequest, scenarios, NewAndOldContractRequestMismatches)

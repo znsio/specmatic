@@ -44,7 +44,7 @@ internal class HttpResponsePatternTest {
     }
 
     @Test
-    fun `all response errors should be returned together`() {
+    fun `all response match errors should be returned together`() {
         val response = HttpResponse.OK(StringValue("not a number")).copy(headers = mapOf("X-Data" to "abc123"))
         val pattern = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern())), body = NumberPattern())
 
@@ -59,5 +59,18 @@ internal class HttpResponsePatternTest {
         val resultText = result.reportString()
         assertThat(resultText).contains(">> RESPONSE.HEADERS.X-Data")
         assertThat(resultText).contains(">> RESPONSE.BODY")
+    }
+
+    @Test
+    fun `all response backward compatibility header errors should be returned together with body errors`() {
+        val older = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Data" to StringPattern())), body = StringPattern())
+        val newer = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern())), body = NumberPattern())
+
+        val result: Result = newer.encompasses(older, Resolver(), Resolver())
+
+        val resultText = result.reportString()
+
+        assertThat(resultText).contains("RESPONSE.HEADER.X-Data")
+        assertThat(resultText).contains("RESPONSE.BODY")
     }
 }

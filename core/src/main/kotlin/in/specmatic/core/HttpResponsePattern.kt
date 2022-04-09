@@ -80,17 +80,17 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
     fun bodyPattern(newBody: Pattern): HttpResponsePattern = this.copy(body = newBody)
 
     fun encompasses(other: HttpResponsePattern, olderResolver: Resolver, newerResolver: Resolver): Result {
-        val result = listOf(
-                {
-                    when {
-                        status != other.status -> Result.Failure("The status didn't match", breadCrumb = "STATUS")
-                        else -> Result.Success()
-                    }
-                },
-                { headersPattern.encompasses(other.headersPattern, Resolver(), Resolver()) },
-                { resolvedHop(body, olderResolver).encompasses(resolvedHop(other.body, newerResolver), olderResolver, newerResolver).breadCrumb("BODY") }
-        ).asSequence().map { it.invoke() }.firstOrNull { it is Result.Failure } ?: Result.Success()
+        if(status != other.status)
+            return Result.Failure("The status didn't match", breadCrumb = "STATUS")
 
-        return result.breadCrumb("RESPONSE")
+        val headerResult = headersPattern.encompasses(other.headersPattern, Resolver(), Resolver())
+        val bodyResult = resolvedHop(body, olderResolver).encompasses(resolvedHop(other.body, newerResolver), olderResolver, newerResolver).breadCrumb("BODY")
+
+        val failures = listOf(headerResult, bodyResult).filterIsInstance<Result.Failure>()
+
+        return if(failures.isNotEmpty())
+            Result.Failure.fromFailures(failures).breadCrumb("RESPONSE")
+        else
+            Result.Success()
     }
 }

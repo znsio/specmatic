@@ -321,6 +321,17 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
+    fun `backward compatibility errors should all be returned together`() {
+        val older = JSONObjectPattern(mapOf("id" to NumberPattern()))
+        val newer = JSONObjectPattern(mapOf("id" to StringPattern(), "address" to JSONObjectPattern(mapOf("flat" to NumberPattern()))))
+
+        val resultText = newer.encompasses(older, Resolver(), Resolver()).reportString()
+
+        assertThat(resultText).contains("id")
+        assertThat(resultText).contains("address")
+    }
+
+    @Test
     fun `an error for failure n levels deep should have a path with all the levels`() {
         val type = JSONObjectPattern(mapOf("id" to NumberPattern(), "address" to JSONObjectPattern(mapOf("flat" to NumberPattern()))))
         val json = parsedJSON("""{"id": "abc123", "address": {"flat": "10"}}""")

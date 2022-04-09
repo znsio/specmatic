@@ -98,11 +98,11 @@ internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<
     val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
     val otherRequiredKeys = otherPattern.keys.filter { !isOptional(it) }
 
-    val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }
-    if (missingFixedKey != null)
-        return MissingKeyError(missingFixedKey).missingKeyToResult("key", thisResolverWithNullType.mismatchMessages).breadCrumb(withoutOptionality(missingFixedKey))
+    val missingFixedKeyErrors: List<Result.Failure> = myRequiredKeys.filter { it !in otherRequiredKeys }.map { missingFixedKey ->
+        MissingKeyError(missingFixedKey).missingKeyToResult("key", thisResolverWithNullType.mismatchMessages).breadCrumb(withoutOptionality(missingFixedKey))
+    }
 
-    return pattern.keys.asSequence().map { key ->
+    val keyErrors = pattern.keys.map { key ->
         val bigger = pattern.getValue(key)
         val smaller = otherPattern[key] ?: otherPattern[withoutOptionality(key)]
 
@@ -110,5 +110,7 @@ internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<
             smaller != null -> biggerEncompassesSmaller(bigger, smaller, thisResolverWithNullType, otherResolverWithNullType, typeStack).breadCrumb(withoutOptionality(key))
             else -> Result.Success()
         }
-    }.find { it is Result.Failure } ?: Result.Success()
+    }
+
+    return Result.fromResults(missingFixedKeyErrors.plus(keyErrors))
 }

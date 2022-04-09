@@ -135,7 +135,31 @@ data class HttpHeadersPattern(
         val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
         val otherRequiredKeys = other.pattern.keys.filter { !isOptional(it) }
 
-        return checkMissingHeaders(myRequiredKeys, otherRequiredKeys, thisResolver).ifSuccess {
+        val missingHeaderResult: Result = checkAllMissingHeaders(myRequiredKeys, otherRequiredKeys, thisResolver)
+
+        val otherWithoutOptionality = other.pattern.mapKeys { withoutOptionality(it.key) }
+        val thisWithoutOptionality = pattern.filterKeys { withoutOptionality(it) in otherWithoutOptionality }
+            .mapKeys { withoutOptionality(it.key) }
+
+        val valueResults: List<Result> =
+            thisWithoutOptionality.keys.map { headerName ->
+                thisWithoutOptionality.getValue(headerName).encompasses(
+                    resolvedHop(otherWithoutOptionality.getValue(headerName), otherResolver),
+                    thisResolver,
+                    otherResolver
+                ).breadCrumb(headerName)
+            }
+
+        val results = listOf(missingHeaderResult).plus(valueResults)
+
+        return Result.fromResults(results).breadCrumb("HEADER")
+    }
+
+    fun encompassesOld(other: HttpHeadersPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
+        val otherRequiredKeys = other.pattern.keys.filter { !isOptional(it) }
+
+        return checkAllMissingHeaders(myRequiredKeys, otherRequiredKeys, thisResolver).ifSuccess {
             val otherWithoutOptionality = other.pattern.mapKeys { withoutOptionality(it.key) }
             val thisWithoutOptionality = pattern.filterKeys { withoutOptionality(it) in otherWithoutOptionality }
                 .mapKeys { withoutOptionality(it.key) }
@@ -158,11 +182,13 @@ data class HttpHeadersPattern(
         }.breadCrumb("HEADER")
     }
 
-    private fun checkMissingHeaders(myRequiredKeys: List<String>, otherRequiredKeys: List<String>, resolver: Resolver): Result =
-        when (val missingFixedKey = myRequiredKeys.find { it !in otherRequiredKeys }) {
-            null -> Result.Success()
-            else -> MissingKeyError(missingFixedKey).missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(missingFixedKey)
+    private fun checkAllMissingHeaders(myRequiredKeys: List<String>, otherRequiredKeys: List<String>, resolver: Resolver): Result {
+        val failures = myRequiredKeys.filter { it !in otherRequiredKeys }.map { missingFixedKey ->
+            MissingKeyError(missingFixedKey).missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(missingFixedKey)
         }
+
+        return Result.fromFailures(failures)
+    }
 }
 
 private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resolver) =

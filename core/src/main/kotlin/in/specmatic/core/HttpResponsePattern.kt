@@ -86,11 +86,6 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         val headerResult = headersPattern.encompasses(other.headersPattern, Resolver(), Resolver())
         val bodyResult = resolvedHop(body, olderResolver).encompasses(resolvedHop(other.body, newerResolver), olderResolver, newerResolver).breadCrumb("BODY")
 
-        val failures = listOf(headerResult, bodyResult).filterIsInstance<Result.Failure>()
-
-        return if(failures.isNotEmpty())
-            Result.Failure.fromFailures(failures).breadCrumb("RESPONSE")
-        else
-            Result.Success()
+        return Result.fromResults(listOf(headerResult, bodyResult)).breadCrumb("RESPONSE")
     }
 }

@@ -4,10 +4,25 @@ import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.Value
+import org.junit.internal.runners.statements.Fail
 
 sealed class Result {
     var scenario: Scenario? = null
     var contractPath: String? = null
+
+    companion object {
+        fun fromFailures(failures: List<Failure>): Result {
+            return if(failures.isNotEmpty())
+                Failure.fromFailures(failures)
+            else
+                Success()
+        }
+
+        fun fromResults(results: List<Result>): Result {
+            val failures = results.filterIsInstance<Failure>()
+            return fromFailures(failures)
+        }
+    }
 
     fun reportString(): String {
         return toReport().toText()

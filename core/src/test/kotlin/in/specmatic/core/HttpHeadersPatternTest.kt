@@ -240,4 +240,39 @@ internal class HttpHeadersPatternTest {
             println(result.toFailureReport().toText())
         }
     }
+
+    @Test
+    fun `all missing header backward compatibility errors together`() {
+        val older = HttpHeadersPattern()
+        val newer = HttpHeadersPattern(mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()))
+
+        val resultText = newer.encompasses(older, Resolver(), Resolver()).reportString()
+        println(resultText)
+
+        assertThat(resultText).contains("HEADER.X-Data")
+        assertThat(resultText).contains("HEADER.Y-Data")
+    }
+
+    @Test
+    fun `header presence and value backward compatibility errors together`() {
+        val older = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()))
+        val newer = HttpHeadersPattern(mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()))
+
+        val resultText = newer.encompasses(older, Resolver(), Resolver()).reportString()
+        println(resultText)
+
+        assertThat(resultText).contains("HEADER.X-Data")
+        assertThat(resultText).contains("HEADER.Y-Data")
+    }
+
+    @Test
+    fun `all header value backward compatibility errors together`() {
+        val older = HttpHeadersPattern(mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()))
+        val newer = HttpHeadersPattern(mapOf("X-Data" to NumberPattern(), "Y-Data" to StringPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()))
+
+        val resultText = newer.encompasses(older, Resolver(), Resolver()).reportString()
+
+        assertThat(resultText).contains("HEADER.X-Data")
+        assertThat(resultText).contains("HEADER.Y-Data")
+    }
 }

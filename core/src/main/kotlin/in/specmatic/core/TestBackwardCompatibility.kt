@@ -29,20 +29,31 @@ fun testBackwardCompatibility(
 
         try {
             val request = oldScenario.generateHttpRequest()
-            val newerScenarios = newFeature.lookupScenario(request)
-
-            val httpScenarioResults = newerScenarios.map { newerScenario ->
-                val newerResponsePattern = newerScenario.httpResponsePattern
-                oldScenario.httpResponsePattern.encompasses(
-                    newerResponsePattern,
-                    oldScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
-                    newerScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
-                ).also {
-                    it.scenario = newerScenario
-                }
+            val requestMatchResults: List<Pair<Scenario, Result>> = newFeature.lookupScenariosWithDeepMatch(request).map { (scenario, result) ->
+                Pair(scenario, result.updateScenario(scenario))
             }
 
-            httpScenarioResults.find { it is Result.Success }?.let { listOf(it) } ?: httpScenarioResults
+            if(requestMatchResults.isEmpty())
+                listOf(Result.Failure("Old API \"${oldScenario.testDescription()}\" did not match any API in the new contract"))
+            else {
+                val responseMatchResults: List<Result> = requestMatchResults.map { (newerScenario, _) ->
+                    val newerResponsePattern = newerScenario.httpResponsePattern
+                    oldScenario.httpResponsePattern.encompasses(
+                        newerResponsePattern,
+                        oldScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
+                        newerScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
+                    ).also {
+                        it.scenario = newerScenario
+                    }
+                }
+
+                val requestFailures = requestMatchResults.map { (_, result) -> result }.filterIsInstance<Result.Failure>()
+                val responseFailures = responseMatchResults.filterIsInstance<Result.Failure>()
+
+                val allFailures: List<Result.Failure> = requestFailures.plus(responseFailures)
+
+                allFailures.ifEmpty { listOf(Result.Success()) }
+            }
         } catch (contractException: ContractException) {
             listOf(contractException.failure())
         } catch (stackOverFlowException: StackOverflowError) {

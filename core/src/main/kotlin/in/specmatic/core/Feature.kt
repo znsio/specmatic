@@ -115,10 +115,45 @@ data class Feature(
             serverState = emptyMap()
         }
 
+    fun lookupScenariosWithDeepMatch(httpRequest: HttpRequest): List<Pair<Scenario, Result>> {
+        try {
+            val resultList = lookupAllScenarios(httpRequest, scenarios, NewAndOldContractRequestMismatches)
+
+            val successes = lookupAllSuccessfulScenarios(resultList)
+            if(successes.isNotEmpty())
+                return successes
+
+            val deepMatchingErrors = allDeeplyMatchingScenarios(resultList)
+
+            return when {
+                deepMatchingErrors.isNotEmpty() -> deepMatchingErrors
+                scenarios.isEmpty() -> throw ContractException("The contract is empty.")
+                else -> emptyList()
+            }
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
+    private fun lookupAllSuccessfulScenarios(resultList: List<Pair<Scenario, Result>>): List<Pair<Scenario, Result>> {
+        return resultList.filter { (_, result) ->
+            result is Result.Success
+        }
+    }
+
     private fun matchingScenarios(resultList: Sequence<Pair<Scenario, Result>>): List<Scenario> {
         return resultList.filter {
             it.second is Result.Success
         }.map { it.first }.toList()
+    }
+
+    private fun allDeeplyMatchingScenarios(resultList: List<Pair<Scenario, Result>>): List<Pair<Scenario, Result>> {
+        return resultList.filter {
+            when(val result = it.second) {
+                is Result.Success -> true
+                is Result.Failure -> !result.isFluffy()
+            }
+        }
     }
 
     private fun matchingScenario(resultList: Sequence<Pair<Scenario, Result>>): Scenario? {
@@ -129,6 +164,15 @@ data class Feature(
 
     private fun lookupScenario(httpRequest: HttpRequest, scenarios: List<Scenario>, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Sequence<Pair<Scenario, Result>> {
         val scenarioSequence = scenarios.asSequence()
+
+        val localCopyOfServerState = serverState
+        return scenarioSequence.zip(scenarioSequence.map {
+            it.matches(httpRequest, localCopyOfServerState, mismatchMessages)
+        })
+    }
+
+    private fun lookupAllScenarios(httpRequest: HttpRequest, scenarios: List<Scenario>, mismatchMessages: MismatchMessages = DefaultMismatchMessages): List<Pair<Scenario, Result>> {
+        val scenarioSequence = scenarios
 
         val localCopyOfServerState = serverState
         return scenarioSequence.zip(scenarioSequence.map {

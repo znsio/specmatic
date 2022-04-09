@@ -1381,6 +1381,79 @@ paths:
 
         assertThat(report.indexOf("REQUEST.BODY.data2")).`as`("There should only be one instance of any error report that occurs in multiple contract-vs-contract requests").isEqualTo(report.lastIndexOf("REQUEST.BODY.data2"))
     }
+
+    @Test
+    fun `backward compatibility errors in request and response are returned together`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data2
+              properties:
+                data:
+                  type: number
+                data2:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result: Results = testBackwardCompatibility(oldContract, newContract)
+
+        val reportText: String = result.report()
+        println(reportText)
+
+        assertThat(reportText).contains("REQUEST.BODY.data2")
+        assertThat(reportText).contains("RESPONSE.BODY")
+    }
 }
 
 private fun String.openAPIToContract(): Feature {

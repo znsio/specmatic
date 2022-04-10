@@ -102,7 +102,6 @@ internal class BundleCommandTestE2E {
     @Autowired
     lateinit var bundleCommand: BundleCommand
 
-    @Disabled
     @Test
     fun `basic stub bundle command functionality`(@TempDir tempDir: File) {
         val bundleTestData = BundleTestData(tempDir)
@@ -136,7 +135,6 @@ internal class BundleCommandTestE2E {
         assertThat(entries).hasSize(2)
     }
 
-    @Disabled
     @Test
     fun `bundle is generated with shifted base`(@TempDir tempDir: File) {
         val bundleTestData = BundleTestData(tempDir)
@@ -161,6 +159,7 @@ internal class BundleCommandTestE2E {
             }
 
             println(entries)
+
             assertThat(entries).anySatisfy(Consumer {
                 assertThat(it.first).contains("test.yaml")
                 assertThat(it.second).contains("dummy contract content")
@@ -180,7 +179,6 @@ internal class BundleCommandTestE2E {
         }
     }
 
-    @Disabled
     @Test
     fun `test bundle is generated`(@TempDir tempDir: File) {
         val bundleTestData = BundleTestData(tempDir)

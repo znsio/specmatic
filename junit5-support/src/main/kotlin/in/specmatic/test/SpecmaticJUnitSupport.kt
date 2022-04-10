@@ -83,7 +83,7 @@ open class SpecmaticJUnitSupport {
                     contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig) }
                 }
                 else -> {
-                    val configFile = valueOrDefault(givenConfigFile, globalConfigFileName, "Neither contract nor config were specified")
+                    val configFile = givenConfigFile ?: globalConfigFileName
 
                     exitIfDoesNotExist("config file", configFile)
 
@@ -128,10 +128,6 @@ open class SpecmaticJUnitSupport {
                 }
             }
         }.toList()
-    }
-
-    private fun valueOrDefault(givenConfigFilePath: String?, default: String, reason: String): String {
-        return givenConfigFilePath ?: default.also { println("$reason, defaulting to $it") }
     }
 
     private fun loadTestScenarios(

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
@@ -13,6 +14,7 @@ import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.w3c.dom.Document
 import java.util.function.Consumer
 
 private const val isOptional: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
@@ -991,5 +993,17 @@ internal class XMLPatternTest {
 </account>
 ""${'"'}"""
         )
+    }
+
+    @Test
+    fun `will load a stub value with unexpected xmlns value defined`() {
+        val type = XMLPattern("<account><id>(number)</id></account>")
+        val value = toXMLNode("""<account xmlns:ns0="https://hello-world.com"><id>10</id></account>""")
+
+        val matchResult = type.matches(value, Resolver())
+
+        println(matchResult.reportString())
+
+        assertThat(matchResult).isInstanceOf(Result.Success::class.java)
     }
 }

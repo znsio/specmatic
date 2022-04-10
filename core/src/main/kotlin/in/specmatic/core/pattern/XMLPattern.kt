@@ -198,35 +198,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     private fun matchNamespaces(sampleData: XMLNode): Result {
-        if (pattern.attributes.any { it.key == "xmlns" || it.key.startsWith("xmlns:") }) {
-            val patternXmlnsValues =
-                    pattern.attributes.entries.filter { it.key == "xmlns" || it.key.startsWith("xmlns:") }
-                            .map { (_, attributePattern) ->
-                                when (attributePattern) {
-                                    is ExactValuePattern -> attributePattern.pattern.toStringLiteral()
-                                    else -> attributePattern.pattern.toString()
-                                }
-                            }.toSet()
-            val sampleXmlnsValues =
-                    sampleData.attributes.entries.filter { it.key == "xmlns" || it.key.startsWith("xmlns:") }
-                            .map { (_, attributeValue) ->
-                                attributeValue.toStringLiteral()
-                            }.toSet()
-
-            val missing = patternXmlnsValues - sampleXmlnsValues
-            if (missing.isNotEmpty())
-                Failure(
-                        "In node named ${pattern.name}, the following namespaces were missing: $missing",
-                )
-
-            val extra = sampleXmlnsValues - patternXmlnsValues
-            if (extra.isNotEmpty())
-                return Failure(
-                        "In node named ${pattern.name}, the following unexpected namespaces were found: $extra",
-                )
-        }
-
-        return Success()
+        return PLACEHOLDER_USE_GIT_BLAME_TO_FIND_RELEVANT_COMMIT(Success(), "Removed namespace validation but we should put it back")
     }
 
     private fun matchAttributes(sampleData: XMLNode, resolver: Resolver): Result {
@@ -643,4 +615,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         val typeString = this.toGherkinXMLNode().toPrettyStringValue().trim()
         return "And type $qontractTypeName\n\"\"\"\n$typeString\n\"\"\""
     }
+}
+
+private fun <T> PLACEHOLDER_USE_GIT_BLAME_TO_FIND_RELEVANT_COMMIT (value: T, s: String): T {
+    return value
 }

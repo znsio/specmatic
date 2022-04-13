@@ -2,6 +2,7 @@ package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.capitalizeFirstChar
+import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 
 fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results {
@@ -71,7 +72,14 @@ fun testBackwardCompatibility(
 
 object NewAndOldContractRequestMismatches: MismatchMessages {
     override fun valueMismatchFailure(expected: String, actual: Value?, mismatchMessages: MismatchMessages): Result.Failure {
-        return mismatchResult(expected, actual?.type()?.typeName ?: "null", mismatchMessages)
+        return mismatchResult(expected, nullOrValue(actual), mismatchMessages)
+    }
+
+    private fun nullOrValue(actual: Value?): String {
+        return when (actual) {
+            is NullValue -> "nullable"
+            else -> actual?.type()?.typeName ?: "null"
+        }
     }
 
     override fun mismatchMessage(expected: String, actual: String): String {

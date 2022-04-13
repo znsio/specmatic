@@ -1454,6 +1454,445 @@ paths:
         assertThat(reportText).contains("REQUEST.BODY.data2")
         assertThat(reportText).contains("RESPONSE.BODY")
     }
+
+    @Test
+    fun `contract with multiple responses statuses should be backward compatible with itself`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result: Results = testBackwardCompatibility(contract, contract)
+
+        assertThat(result.successCount).isNotZero()
+        assertThat(result.failureCount).isZero()
+    }
+
+    @Nested
+    inner class FluffyBackwardCompatibilityErrors {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data2:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result: Results = testBackwardCompatibility(oldContract, newContract)
+
+        val reportText: String = result.report().also { println(it) }
+
+        @Test
+        fun `fluffy backward compatibility errors should be eliminated`() {
+            assertThat(reportText).doesNotContain(">> STATUS")
+        }
+
+        @Test
+        fun `backward compatibility errors with fluff removed should have at least one error`() {
+            assertThat(result.failureCount).isNotZero
+        }
+    }
+
+    @Test
+    fun `errors for a missing URL should show up`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data2:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        val reportText = result.report()
+
+        assertThat(reportText).contains("POST /data")
+    }
+
+    @Test
+    fun `errors for a missing URL should show up even when there are deep matches for other URLs`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+  /data2:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        val reportText = result.report()
+
+        println(reportText)
+
+        assertThat(reportText).contains("POST /data")
+        assertThat(reportText).contains("POST /data2")
+    }
+
+    @Test
+    fun `backward compatibility errors with fluff removed should show deep mismatch errors`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+  /data2:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+  /data3:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+  /data2:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        val reportText = result.report()
+
+        assertThat(reportText).contains("API: POST /data -> 200")
+        assertThat(reportText).contains("API: POST /data -> 400")
+        assertThat(reportText).doesNotContain("API: POST /data2 -> 200")
+        assertThat(reportText).contains("POST /data3 -> 200")
+    }
 }
 
 private fun String.openAPIToContract(): Feature {

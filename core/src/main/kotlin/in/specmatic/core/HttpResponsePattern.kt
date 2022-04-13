@@ -81,7 +81,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
 
     fun encompasses(other: HttpResponsePattern, olderResolver: Resolver, newerResolver: Resolver): Result {
         if(status != other.status)
-            return Result.Failure("The status didn't match", breadCrumb = "STATUS")
+            return Result.Failure("The status didn't match", breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch)
 
         val headerResult = headersPattern.encompasses(other.headersPattern, Resolver(), Resolver())
         val bodyResult = resolvedHop(body, olderResolver).encompasses(resolvedHop(other.body, newerResolver), olderResolver, newerResolver).breadCrumb("BODY")

@@ -29,30 +29,35 @@ fun testBackwardCompatibility(
 
         try {
             val request = oldScenario.generateHttpRequest()
-            val requestMatchResults: List<Pair<Scenario, Result>> = newFeature.lookupScenariosWithDeepMatch(request).map { (scenario, result) ->
-                Pair(scenario, result.updateScenario(scenario))
-            }
 
-            if(requestMatchResults.isEmpty())
-                listOf(Result.Failure("Old API \"${oldScenario.testDescription()}\" did not match any API in the new contract"))
-            else {
-                val responseMatchResults: List<Result> = requestMatchResults.map { (newerScenario, _) ->
-                    val newerResponsePattern = newerScenario.httpResponsePattern
-                    oldScenario.httpResponsePattern.encompasses(
-                        newerResponsePattern,
-                        oldScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
-                        newerScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
-                    ).also {
-                        it.scenario = newerScenario
-                    }
+            val wholeMatchResults: List<Pair<Result, Result>> = newFeature.lookupScenariosWithDeepMatch(request).map { (scenario, result) ->
+                Pair(scenario, result.updateScenario(scenario))
+            }.filterNot { (_, result) ->
+                result is Result.Failure && result.isFluffy()
+            }.map { (newerScenario, requestResult) ->
+                val newerResponsePattern = newerScenario.httpResponsePattern
+                val responseResult = oldScenario.httpResponsePattern.encompasses(
+                    newerResponsePattern,
+                    oldScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
+                    newerScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
+                ).also {
+                    it.scenario = newerScenario
                 }
 
-                val requestFailures = requestMatchResults.map { (_, result) -> result }.filterIsInstance<Result.Failure>()
-                val responseFailures = responseMatchResults.filterIsInstance<Result.Failure>()
+                if(responseResult.isFluffy())
+                    null
+                else
+                    Pair(requestResult, responseResult)
+            }.filterNotNull()
 
-                val allFailures: List<Result.Failure> = requestFailures.plus(responseFailures)
-
-                allFailures.ifEmpty { listOf(Result.Success()) }
+            if(wholeMatchResults.isEmpty())
+                listOf(Result.Failure("Old API \"${oldScenario.testDescription()} -> ${oldScenario.httpResponsePattern.status}\" did not match any API in the new contract"))
+            else if (wholeMatchResults.any { it.first is Result.Success && it.second is Result.Success })
+                listOf(Result.Success())
+            else {
+                wholeMatchResults.map {
+                    it.toList()
+                }.flatten().filterIsInstance<Result.Failure>()
             }
         } catch (contractException: ContractException) {
             listOf(contractException.failure())

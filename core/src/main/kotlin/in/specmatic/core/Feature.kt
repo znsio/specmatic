@@ -123,12 +123,6 @@ data class Feature(
         }
     }
 
-    private fun matchingScenarios(resultList: Sequence<Pair<Scenario, Result>>): List<Scenario> {
-        return resultList.filter {
-            it.second is Result.Success
-        }.map { it.first }.toList()
-    }
-
     private fun allDeeplyMatchingScenarios(resultList: List<Pair<Scenario, Result>>): List<Pair<Scenario, Result>> {
         return resultList.filter {
             when(val result = it.second) {

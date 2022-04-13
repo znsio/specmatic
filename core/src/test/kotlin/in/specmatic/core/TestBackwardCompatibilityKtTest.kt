@@ -1886,12 +1886,12 @@ paths:
         ).toFeature()
 
         val result = testBackwardCompatibility(oldContract, newContract)
-        val reportText = result.report()
+        val reportText = result.report().also { println(it) }
 
         assertThat(reportText).contains("API: POST /data -> 200")
         assertThat(reportText).contains("API: POST /data -> 400")
         assertThat(reportText).doesNotContain("API: POST /data2 -> 200")
-        assertThat(reportText).contains("POST /data3 -> 200")
+        assertThat(reportText).contains("API: POST /data3 -> 200")
     }
 }
 

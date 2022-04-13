@@ -51,7 +51,7 @@ fun testBackwardCompatibility(
             }.filterNotNull()
 
             if(wholeMatchResults.isEmpty())
-                listOf(Result.Failure("Old API \"${oldScenario.testDescription()} -> ${oldScenario.httpResponsePattern.status}\" did not match any API in the new contract"))
+                listOf(Result.Failure("""The API in the old contract does not exist in the new contract""").updateScenario(oldScenario))
             else if (wholeMatchResults.any { it.first is Result.Success && it.second is Result.Success })
                 listOf(Result.Success())
             else {

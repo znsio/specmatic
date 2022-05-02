@@ -9,7 +9,7 @@ then
 	echo You should only release from main.
 	exit 1
 else
-	echo √ Release is being done from main.
+	echo √ Release is being done from main
 fi
 
 GITDIFF=`git diff --stat`

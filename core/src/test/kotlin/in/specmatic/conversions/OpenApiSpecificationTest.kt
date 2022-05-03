@@ -5403,4 +5403,74 @@ components:
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
     }
+
+    @Test
+    fun `should read WIP tag in OpenAPI paths`() {
+        val contractString = """
+                openapi: 3.0.3
+                info:
+                  title: test
+                  version: '1.0'
+                paths:
+                  '/users':
+                    post:
+                      tags:
+                        - WIP
+                      responses:
+                        '200':
+                          description: OK
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                              required:
+                                - id
+            """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
+
+        assertThat(feature.scenarios.first().ignoreFailure).isTrue()
+    }
+
+    @Test
+    fun `should not break when there are no tags in OpenAPI paths`() {
+        val contractString = """
+                openapi: 3.0.3
+                info:
+                  title: test
+                  version: '1.0'
+                paths:
+                  '/users':
+                    post:
+                      responses:
+                        '200':
+                          description: OK
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                              required:
+                                - id
+            """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
+
+        assertThat(feature.scenarios.first().ignoreFailure).isFalse()
+    }
 }

@@ -185,11 +185,30 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     ).map { httpRequestPattern: HttpRequestPattern ->
                         val scenarioName = scenarioName(operation, response, httpRequestPattern, null)
 
-                        scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, patterns = this.patterns.toMap())
+                        scenarioInfo(operation, scenarioName, httpRequestPattern, httpResponsePattern)
                     }
                 }.flatten()
             }.flatten()
         }.flatten()
+    }
+
+    private fun scenarioInfo(
+        operation: Operation,
+        scenarioName: String,
+        httpRequestPattern: HttpRequestPattern,
+        httpResponsePattern: HttpResponsePattern,
+        specmaticExampleRow: Row = Row(),
+    ): ScenarioInfo {
+        val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
+
+        return scenarioInfo(
+            scenarioName,
+            httpRequestPattern,
+            httpResponsePattern,
+            patterns = this.patterns.toMap(),
+            ignoreFailure = ignoreFailure,
+            specmaticExampleRow = specmaticExampleRow
+        )
     }
 
     private fun scenarioName(
@@ -233,9 +252,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             val scenarioName =
                                 scenarioName(operation, response, httpRequestPattern, specmaticExampleRow)
 
-                            scenarioInfo(
-                                scenarioName, httpRequestPattern, httpResponsePattern, specmaticExampleRow, this.patterns.toMap()
-                            )
+                            scenarioInfo(operation, scenarioName, httpRequestPattern, httpResponsePattern, specmaticExampleRow = specmaticExampleRow)
                         }
                     }.flatten()
                 }.flatten()
@@ -283,7 +300,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         httpRequestPattern: HttpRequestPattern,
         httpResponsePattern: HttpResponsePattern,
         specmaticExampleRow: Row = Row(),
-        patterns: Map<String, Pattern>
+        patterns: Map<String, Pattern>,
+        ignoreFailure: Boolean = false
     ) = ScenarioInfo(
         scenarioName = scenarioName,
         patterns = patterns,
@@ -294,7 +312,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         httpResponsePattern = when (specmaticExampleRow.columnNames.isEmpty()) {
             true -> httpResponsePattern
             else -> httpResponsePattern
-        }
+        },
+        ignoreFailure = ignoreFailure
     )
 
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {

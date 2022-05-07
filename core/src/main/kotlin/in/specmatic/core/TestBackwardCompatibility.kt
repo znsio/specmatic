@@ -52,7 +52,7 @@ fun testBackwardCompatibility(
             }.filterNotNull()
 
             if(wholeMatchResults.isEmpty())
-                listOf(Result.Failure("""The API in the old contract does not exist in the new contract""").updateScenario(oldScenario))
+                listOf(Result.Failure("""This API exists in the old contract but not in the new contract""").updateScenario(oldScenario))
             else if (wholeMatchResults.any { it.first is Result.Success && it.second is Result.Success })
                 listOf(Result.Success())
             else {

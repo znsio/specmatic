@@ -497,7 +497,7 @@ Feature: Recursive test
     }
 
     @Test
-    fun temp() {
+    fun `when parsing an empty string should use custom error messages`() {
         val type = TabularPattern(emptyMap())
 
         val testMismatchMessages = object : MismatchMessages {

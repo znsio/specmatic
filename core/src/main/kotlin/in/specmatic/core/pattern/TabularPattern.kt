@@ -65,7 +65,7 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
         return allOrNothingCombinationIn.map { toTabularPattern(it) }
     }
 
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val thisResolverWithNullType = withNullPattern(thisResolver)
         val otherResolverWithNullType = withNullPattern(otherResolver)

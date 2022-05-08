@@ -173,7 +173,7 @@ class FeatureTest {
             
               >> REQUEST.BODY.calls_made[2]
               
-                 Expected number, actual was string: "test"
+                 Expected number, actual was "test"
             """.trimIndent())
     }
 
@@ -216,7 +216,7 @@ class FeatureTest {
             
               >> REQUEST.URL.QUERY-PARAMS.account-id
               
-                 Expected number, actual was string: "abc"
+                 Expected number, actual was "abc"
             """.trimIndent())
     }
 

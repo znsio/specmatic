@@ -322,7 +322,7 @@ Feature: test feature
         assertThat(result.toReport().toString()).isEqualTo(
             """>> REQUEST.BODY.name
 
-   Expected string, actual was json object: {
+   Expected string, actual was JSON object {
        "firstname": "Jane",
        "lastname": "Doe"
    }"""

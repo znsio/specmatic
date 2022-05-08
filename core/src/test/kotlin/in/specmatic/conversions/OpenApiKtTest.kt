@@ -847,7 +847,7 @@ Background:
                  ${
             ContractAndResponseMismatch.mismatchMessage(
                 """("labrador" or "retriever" or "null")""",
-                "string: \"malinois\""
+                "\"malinois\""
             )
         }
             """.trimIndent()
@@ -912,7 +912,7 @@ Background:
             
               >> RESPONSE.BODY.rating
               
-                 ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "number: 3")}
+                 ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "3 (number)")}
             """.trimIndent()
         assertThat(results.report()).contains(
             reportText
@@ -975,7 +975,7 @@ Background:
 
               >> RESPONSE.BODY.name
               
-                 ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "string: \"small\"")}
+                 ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "\"small\"")}
             """.trimIndent()
         assertThat(results.report()).contains(
             expectedReport

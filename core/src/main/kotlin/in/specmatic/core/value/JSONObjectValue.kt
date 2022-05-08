@@ -8,6 +8,10 @@ import kotlinx.serialization.encodeToString
 data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Value {
     override val httpContentType = "application/json"
 
+    override fun valueErrorSnippet(): String {
+        return "JSON object ${displayableValue()}"
+    }
+
     override fun displayableValue() = toStringLiteral()
     override fun toStringLiteral() = valueMapToPrettyJsonString(jsonObject)
     fun toUnformattedStringLiteral() = valueMapToUnintendedJsonString(jsonObject)

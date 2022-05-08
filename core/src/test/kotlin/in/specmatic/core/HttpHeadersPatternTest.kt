@@ -44,7 +44,7 @@ internal class HttpHeadersPatternTest {
         headers["key"] = "abc"
         httpHeaders.matches(headers, Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
-            assertThat((it as Result.Failure).toMatchFailureDetails()).isEqualTo(MatchFailureDetails(listOf("HEADERS", "key"), listOf("Expected number, actual was string: \"abc\"")))
+            assertThat((it as Result.Failure).toMatchFailureDetails()).isEqualTo(MatchFailureDetails(listOf("HEADERS", "key"), listOf("Expected number, actual was \"abc\"")))
         }
     }
 

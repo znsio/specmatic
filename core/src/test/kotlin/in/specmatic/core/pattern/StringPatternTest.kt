@@ -57,14 +57,14 @@ internal class StringPatternTest {
     fun `should not match when String is shorter than minLength`() {
         val result = StringPattern(minLength = 4).matches(StringValue("abc"), Resolver())
         assertThat(result.isTrue()).isFalse
-        assertThat(result.reportString()).isEqualTo("""Expected string with minLength 4, actual was string: "abc"""")
+        assertThat(result.reportString()).isEqualTo("""Expected string with minLength 4, actual was "abc"""")
     }
 
     @Test
     fun `should not match when String is longer than maxLength`() {
         val result = StringPattern(maxLength = 3).matches(StringValue("test"), Resolver())
         assertThat(result.isTrue()).isFalse
-        assertThat(result.reportString()).isEqualTo("""Expected string with maxLength 3, actual was string: "test"""")
+        assertThat(result.reportString()).isEqualTo("""Expected string with maxLength 3, actual was "test"""")
     }
 
     companion object {

@@ -27,7 +27,7 @@ if [ -z "$1" ]
 then
 	echo
 	echo Provide the version to be published as the first argument.
-	echo Current version is `cat version.properties`
+	echo Currently `cat version.properties`
 	exit 1
 fi
 
@@ -39,7 +39,7 @@ then
 	echo This tag already exists, most likely because a release with this version has already been done.
 	exit 1
 else
-	echo √ Tag $1 does not exist
+	echo √ Tag $1 does not yet exist
 fi
 
 set -e

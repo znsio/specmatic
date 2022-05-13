@@ -31,7 +31,7 @@ dependencies {
     implementation "io.ktor:ktor-client-apache:$ktor_version"
     implementation "io.ktor:ktor-client-features:$ktor_version"
 
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.3.2"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.3.3"
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.6.21"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
@@ -55,7 +55,7 @@ dependencies {
     testImplementation "com.intuit.karate:karate-apache:$karate_version"
     testImplementation "com.intuit.karate:karate-junit5:$karate_version"
     testImplementation 'org.springframework:spring-web:5.3.19'
-    testImplementation 'io.mockk:mockk:1.12.3'
+    testImplementation 'io.mockk:mockk:1.12.4'
     testImplementation 'org.assertj:assertj-core:3.21.0'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
 }

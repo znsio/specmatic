@@ -42,7 +42,7 @@ dependencies {
     implementation 'org.apache.kafka:kafka-clients:3.2.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.2.2'
 
-    implementation 'io.swagger.parser.v3:swagger-parser:2.0.0'
+    implementation 'io.swagger.parser.v3:swagger-parser:2.0.32'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 

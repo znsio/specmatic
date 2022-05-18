@@ -2,10 +2,9 @@ package `in`.specmatic.test
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.apache.*
-import io.ktor.client.features.*
+import io.ktor.client.plugins.*
 import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustAllStrategy
-import org.apache.http.conn.ssl.TrustSelfSignedStrategy
 import org.apache.http.ssl.SSLContextBuilder
 
 object RealHttpClientFactory: HttpClientFactory {

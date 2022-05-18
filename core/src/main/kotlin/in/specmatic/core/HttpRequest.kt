@@ -177,7 +177,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
                 httpRequestBuilder.header("Host", url.authority)
         }
 
-        httpRequestBuilder.body = when {
+        httpRequestBuilder.setBody(when {
             formFields.isNotEmpty() -> {
                 val parameters = formFields.mapValues { listOf(it.value) }.toList()
                 FormDataContent(parametersOf(*parameters.toTypedArray()))
@@ -195,7 +195,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
                     else -> TextContent(bodyString, ContentType.parse(body.httpContentType))
                 }
             }
-        }
+        })
     }
 
     fun loadFileContentIntoParts(): HttpRequest {

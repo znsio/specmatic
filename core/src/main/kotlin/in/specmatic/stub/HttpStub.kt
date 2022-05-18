@@ -20,14 +20,15 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
 import `in`.specmatic.mock.validateMock
 import `in`.specmatic.test.HttpClient
-import io.ktor.application.*
-import io.ktor.features.*
+import io.ktor.server.application.*
+import io.ktor.server.plugins.*
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.ktor.request.*
-import io.ktor.response.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.cors.*
 import io.ktor.util.asStream
 import io.ktor.util.toMap
 import kotlinx.coroutines.delay
@@ -50,12 +51,12 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
     private val environment = applicationEngineEnvironment {
         module {
             install(CORS) {
-                method(HttpMethod.Options)
-                method(HttpMethod.Get)
-                method(HttpMethod.Post)
-                method(HttpMethod.Put)
-                method(HttpMethod.Delete)
-                method(HttpMethod.Patch)
+                allowMethod(HttpMethod.Options)
+                allowMethod(HttpMethod.Get)
+                allowMethod(HttpMethod.Post)
+                allowMethod(HttpMethod.Put)
+                allowMethod(HttpMethod.Delete)
+                allowMethod(HttpMethod.Patch)
 
                 allowHeaders {
                     true
@@ -248,6 +249,9 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                         }
 
                         MultiPartContentValue(it.name ?: "", StringValue(content), boundary, specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}")
+                    }
+                    else -> {
+                        throw UnsupportedOperationException("Unhandled PartData")
                     }
                 }
             }

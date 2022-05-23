@@ -86,11 +86,16 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                         else -> serveStubResponse(httpRequest)
                     }
 
-                    if(httpRequest.headers["Content-Type"] == "text/event-stream") {
+                    if(httpRequest.path!!.startsWith("""/features/default""")) {
                         val channel = produce { // this: ProducerScope<SseEvent> ->
                             var n = 0
+                            send(SseEvent("""{"status":"discover"}""", "ack"))
+                            delay(1000)
+                            send(SseEvent("""[{"id":"8b6002e8-e97a-4ebe-8cae-ac68fb99fc33","key":"F04","l":true,"version":5,"type":"BOOLEAN","value":false},{"id":"b5bf7f9e-9391-40a4-8808-61ad73f800e9","key":"FS01","l":true,"version":16,"type":"STRING","value":"purple"},{"id":"94399e94-b608-4a81-9804-9c442aad6a68","key":"FTTTT","l":false,"version":0,"type":"JSON"},{"id":"2f2096c2-bf1b-4310-aab6-79819d1b7fa6","key":"FT01","l":false,"version":29,"type":"BOOLEAN","value":true},{"id":"41552453-d1eb-4f62-91ca-a38d7a80bf8e","key":"FS02","l":true,"version":2,"type":"STRING","value":"HybrisV2"},{"id":"a0b72213-aebb-49ed-8793-4dbddd979d83","key":"FT09","l":false,"version":4,"type":"BOOLEAN","value":false},{"id":"249677f8-78bc-42c3-ad26-8c24d59efec6","key":"FT02","l":false,"version":2,"type":"BOOLEAN","value":false},{"id":"190c58d6-0453-4a51-8000-cb94aee7d2db","key":"FT05","l":false,"version":2,"type":"BOOLEAN","value":false},{"id":"33854160-3a2e-40cd-8297-7a2fd1fc9492","key":"FT07","l":false,"version":2,"type":"BOOLEAN","value":false},{"id":"45a2da05-dd51-4e63-8cb9-a0b4a5a86d22","key":"SampleKey","l":true,"version":1,"type":"BOOLEAN","value":false},{"id":"2d91fe8f-18bc-4b7a-abaa-4d24c7018d24","key":"11_FT01","l":true,"version":1,"type":"BOOLEAN","value":false},{"id":"5a0575cd-1b15-4e04-b0a5-8cb008603df4","key":"FJ01","l":false,"version":0,"type":"JSON"},{"id":"afae6daf-25f4-4e68-baee-4fe1f36cc623","key":"FT1234","l":true,"version":1,"type":"BOOLEAN","value":false},{"id":"70c992dc-1a5c-4290-a476-3aa6c1e619b1","key":"FT06","l":false,"version":4,"type":"BOOLEAN","value":false},{"id":"04ec642e-d722-4834-998b-648ed1c54f6b","key":"FS03","l":true,"version":3,"type":"STRING","value":"V1.1"}]"""
+                                , "features", "ef0c67ba"))
+                            delay(1000)
                             while (true) {
-                                send(SseEvent("demo$n"))
+                                send(SseEvent("""{"status":"closed"}""", "bye"))
                                 delay(1000)
                                 n++
                             }

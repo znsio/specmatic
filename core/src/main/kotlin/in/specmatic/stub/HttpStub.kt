@@ -86,11 +86,16 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                         else -> serveStubResponse(httpRequest)
                     }
 
-                    if(httpRequest.headers["Content-Type"] == "text/event-stream") {
+                    if(httpRequest.path!!.startsWith("""/features/default""")) {
                         val channel = produce { // this: ProducerScope<SseEvent> ->
                             var n = 0
+                            send(SseEvent("""{"status":"discover"}""", "ack"))
+                            delay(1000)
+                            send(SseEvent("""[{"id":"8b6002e8-e97a-4ebe-8cae-ac68fb123121","key":"T03","l":true,"version":5,"type":"BOOLEAN","value":false}]"""
+                                , "features", "ef0c67ba"))
+                            delay(1000)
                             while (true) {
-                                send(SseEvent("demo$n"))
+                                send(SseEvent("""{"status":"closed"}""", "bye"))
                                 delay(1000)
                                 n++
                             }

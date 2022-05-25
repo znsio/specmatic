@@ -1,32 +1,34 @@
-[
-  {
-    "id": 10,
-    "name": "Jane Doe",
-    "department": "Engineering",
-    "designation": "Engineering Manager"
-  },
-  {
-    "id": 20,
-    "name": "George Doe",
-    "department": "Engineering",
-    "designation": "Developer"
-  },
-  {
-    "id": 30,
-    "name": "Chuck Doe",
-    "department": "Engineering",
-    "designation": "Senior Developer"
-  },
-  {
-    "id": 40,
-    "name": "Jill Doe",
-    "department": "Engineering",
-    "designation": "Principal Engineer"
-  },
-  {
-    "id": 50,
-    "name": "Holly Doe",
-    "department": "Engineering",
-    "designation": "Developer"
-  }
-]
+{
+  "employees": [
+    {
+      "id": 10,
+      "name": "Jane Doe",
+      "department": "Engineering",
+      "designation": "Engineering Manager"
+    },
+    {
+      "id": 20,
+      "name": "George Doe",
+      "department": "Engineering",
+      "designation": "Developer"
+    },
+    {
+      "id": 30,
+      "name": "Chuck Doe",
+      "department": "Engineering",
+      "designation": "Senior Developer"
+    },
+    {
+      "id": 40,
+      "name": "Jill Doe",
+      "department": "Engineering",
+      "designation": "Principal Engineer"
+    },
+    {
+      "id": 50,
+      "name": "Holly Doe",
+      "department": "Engineering",
+      "designation": "Developer"
+    }
+  ]
+}

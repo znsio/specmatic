@@ -1,5 +1,6 @@
 package `in`.specmatic.stub
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.HttpLogMessage
 import `in`.specmatic.core.log.LogMessage
@@ -20,6 +21,7 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
 import `in`.specmatic.mock.validateMock
 import `in`.specmatic.test.HttpClient
+import io.cucumber.gherkin.internal.com.eclipsesource.json.JsonObject
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.http.*
@@ -30,6 +32,8 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.util.asStream
 import io.ktor.util.toMap
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.broadcast
 import kotlinx.coroutines.channels.produce
@@ -41,14 +45,40 @@ import kotlin.text.toCharArray
 
 data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "")
 
-class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubData> = emptyList(), host: String = "127.0.0.1", port: Int = 9000, private val log: (event: LogMessage) -> Unit = dontPrintToConsole, private val strictMode: Boolean = false, keyData: KeyData? = null, val passThroughTargetBase: String = "", val httpClientFactory: HttpClientFactory = HttpClientFactory(), val workingDirectory: WorkingDirectory? = null) : ContractStub {
-    constructor(feature: Feature, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: LogMessage) -> Unit = dontPrintToConsole) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
-    constructor(gherkinData: String, scenarioStubs: List<ScenarioStub> = emptyList(), host: String = "localhost", port: Int = 9000, log: (event: LogMessage) -> Unit = dontPrintToConsole) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
+class HttpStub(
+    private val features: List<Feature>,
+    _httpStubs: List<HttpStubData> = emptyList(),
+    host: String = "127.0.0.1",
+    port: Int = 9000,
+    private val log: (event: LogMessage) -> Unit = dontPrintToConsole,
+    private val strictMode: Boolean = false,
+    keyData: KeyData? = null,
+    val passThroughTargetBase: String = "",
+    val httpClientFactory: HttpClientFactory = HttpClientFactory(),
+    val workingDirectory: WorkingDirectory? = null
+) : ContractStub {
+    constructor(
+        feature: Feature,
+        scenarioStubs: List<ScenarioStub> = emptyList(),
+        host: String = "localhost",
+        port: Int = 9000,
+        log: (event: LogMessage) -> Unit = dontPrintToConsole
+    ) : this(listOf(feature), contractInfoToHttpExpectations(listOf(Pair(feature, scenarioStubs))), host, port, log)
+
+    constructor(
+        gherkinData: String,
+        scenarioStubs: List<ScenarioStub> = emptyList(),
+        host: String = "localhost",
+        port: Int = 9000,
+        log: (event: LogMessage) -> Unit = dontPrintToConsole
+    ) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.toMutableList())
     val endPoint = endPointFromHostAndPort(host, port, keyData)
 
     override val client = HttpClient(this.endPoint)
+
+    private val sseConflatedChannel = Channel<SseEvent>(CONFLATED)
 
     private val environment = applicationEngineEnvironment {
         module {
@@ -82,22 +112,15 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                         isFetchLoadLogRequest(httpRequest) -> handleFetchLoadLogRequest()
                         isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest()
                         isExpectationCreation(httpRequest) -> handleExpectationCreationRequest(httpRequest)
+                        isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
                         else -> serveStubResponse(httpRequest)
                     }
 
-                    if(httpRequest.path!!.startsWith("""/features/default""")) {
+                    if (httpRequest.path!!.startsWith("""/features/default""")) {
                         val channel = produce { // this: ProducerScope<SseEvent> ->
-                            var n = 0
-                            send(SseEvent("""{"status":"discover"}""", "ack"))
-                            delay(1000)
-                            send(SseEvent("""[{"id":"8b6002e8-e97a-4ebe-8cae-ac68fb123121","key":"T03","l":true,"version":5,"type":"BOOLEAN","value":false}]"""
-                                , "features", "ef0c67ba"))
-                            delay(1000)
                             while (true) {
-                                send(SseEvent("""{"status":"closed"}""", "bye"))
-                                delay(1000)
-                                n++
+                                send(sseConflatedChannel.receive())
                             }
                         }.broadcast()
                         val events = channel.openSubscription()
@@ -110,13 +133,11 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                         respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
                         httpLogMessage.addResponse(httpStubResponse)
                     }
-                }
-                catch(e: ContractException) {
+                } catch (e: ContractException) {
                     val response = badRequest(e.report())
                     httpLogMessage.addResponse(response)
                     respondToKtorHttpResponse(call, response)
-                }
-                catch(e: Throwable) {
+                } catch (e: Throwable) {
                     val response = badRequest(exceptionCauseMessage(e))
                     httpLogMessage.addResponse(response)
                     respondToKtorHttpResponse(call, response)
@@ -131,7 +152,11 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
                 this.host = host
                 this.port = port
             }
-            else -> sslConnector(keyStore = keyData.keyStore, keyAlias = keyData.keyAlias, privateKeyPassword = { keyData.keyPassword.toCharArray() }, keyStorePassword = { keyData.keyPassword.toCharArray() }) {
+            else -> sslConnector(
+                keyStore = keyData.keyStore,
+                keyAlias = keyData.keyAlias,
+                privateKeyPassword = { keyData.keyPassword.toCharArray() },
+                keyStorePassword = { keyData.keyPassword.toCharArray() }) {
                 this.host = host
                 this.port = port
             }
@@ -143,35 +168,73 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
     })
 
     private fun handleFetchLoadLogRequest(): HttpStubResponse =
-            HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getSnapshot())))
+        HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getSnapshot())))
 
     private fun handleFetchContractsRequest(): HttpStubResponse =
-            HttpStubResponse(HttpResponse.OK(StringValue(features.joinToString("\n") { it.name })))
+        HttpStubResponse(HttpResponse.OK(StringValue(features.joinToString("\n") { it.name })))
 
     private fun handleFetchLogRequest(): HttpStubResponse =
-            HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getString())))
+        HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getString())))
 
     private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse =
-            getHttpResponse(httpRequest, features, threadSafeHttpStubs, strictMode, passThroughTargetBase, httpClientFactory)
+        getHttpResponse(
+            httpRequest,
+            features,
+            threadSafeHttpStubs,
+            strictMode,
+            passThroughTargetBase,
+            httpClientFactory
+        )
 
-    private fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
+    private suspend fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {
-            if(httpRequest.body.toStringLiteral().isEmpty())
+            if (httpRequest.body.toStringLiteral().isEmpty())
                 throw ContractException("Expectation payload was empty")
 
             val mock = stringToMockScenario(httpRequest.body)
             val stub: HttpStubData? = createStub(mock)
 
             HttpStubResponse(HttpResponse.OK, contractPath = stub?.contractPath ?: "")
+        } catch (e: ContractException) {
+            HttpStubResponse(
+                HttpResponse(
+                    status = 400,
+                    headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
+                    body = StringValue(e.report())
+                )
+            )
+        } catch (e: NoMatchingScenario) {
+            HttpStubResponse(
+                HttpResponse(
+                    status = 400,
+                    headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
+                    body = StringValue(e.report(httpRequest))
+                )
+            )
+        } catch (e: Throwable) {
+            HttpStubResponse(
+                HttpResponse(
+                    status = 400,
+                    headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
+                    body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)
+                )
+            )
         }
-        catch(e: ContractException) {
-            HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.report())))
-        }
-        catch(e: NoMatchingScenario) {
-            HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.report(httpRequest))))
-        }
-        catch(e: Throwable) {
-            HttpStubResponse(HttpResponse(status = 400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)))
+    }
+
+    private suspend fun handleSseExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
+        return try {
+            val sseEvent: SseEvent? = ObjectMapper().readValue(httpRequest.bodyString, SseEvent::class.java)
+            sseConflatedChannel.send(sseEvent!!)
+            HttpStubResponse(HttpResponse.OK, contractPath = "")
+        } catch (e: Throwable) {
+            HttpStubResponse(
+                HttpResponse(
+                    status = 400,
+                    headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
+                    body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)
+                )
+            )
         }
     }
 
@@ -186,7 +249,13 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 
         val results = features.asSequence().map { feature ->
             try {
-                val stubData: HttpStubData = softCastResponseToXML(feature.matchingStub(stub.request, stub.response, ContractAndStubMismatchMessages))
+                val stubData: HttpStubData = softCastResponseToXML(
+                    feature.matchingStub(
+                        stub.request,
+                        stub.response,
+                        ContractAndStubMismatchMessages
+                    )
+                )
                 Pair(Pair(Result.Success(), stubData), null)
             } catch (e: NoMatchingScenario) {
                 Pair(null, e)
@@ -233,23 +302,29 @@ class HttpStub(private val features: List<Feature>, _httpStubs: List<HttpStubDat
 }
 
 internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
-    val(body, formFields, multiPartFormData) = bodyFromCall(call)
+    val (body, formFields, multiPartFormData) = bodyFromCall(call)
 
     val requestHeaders = call.request.headers.toMap().mapValues { it.value[0] }
 
-    return HttpRequest(method = call.request.httpMethod.value,
-            path = call.request.path(),
-            headers = requestHeaders,
-            body = body,
-            queryParams = toParams(call.request.queryParameters),
-            formFields = formFields,
-            multiPartFormData = multiPartFormData)
+    return HttpRequest(
+        method = call.request.httpMethod.value,
+        path = call.request.path(),
+        headers = requestHeaders,
+        body = body,
+        queryParams = toParams(call.request.queryParameters),
+        formFields = formFields,
+        multiPartFormData = multiPartFormData
+    )
 }
 
 private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<String, String>, List<MultiPartFormDataValue>> {
     return when {
         call.request.httpMethod == HttpMethod.Get -> Triple(EmptyString, emptyMap(), emptyList())
-        call.request.contentType().match(ContentType.Application.FormUrlEncoded) -> Triple(EmptyString, call.receiveParameters().toMap().mapValues { (_, values) -> values.first() }, emptyList())
+        call.request.contentType().match(ContentType.Application.FormUrlEncoded) -> Triple(
+            EmptyString,
+            call.receiveParameters().toMap().mapValues { (_, values) -> values.first() },
+            emptyList()
+        )
         call.request.isMultipart() -> {
             val multiPartData = call.receiveMultipart()
             val boundary = call.request.contentType().parameter("boundary") ?: "boundary"
@@ -258,12 +333,24 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                 when (it) {
                     is PartData.FileItem -> {
                         val content = it.provider().asStream().use { inputStream ->
-                             MultiPartContent(inputStream.readBytes())
+                            MultiPartContent(inputStream.readBytes())
                         }
-                        MultiPartFileValue(it.name ?: "", it.originalFileName ?: "", "${it.contentType?.contentType}/${it.contentType?.contentSubtype}", null, content, boundary)
+                        MultiPartFileValue(
+                            it.name ?: "",
+                            it.originalFileName ?: "",
+                            "${it.contentType?.contentType}/${it.contentType?.contentSubtype}",
+                            null,
+                            content,
+                            boundary
+                        )
                     }
                     is PartData.FormItem -> {
-                        MultiPartContentValue(it.name ?: "", StringValue(it.value), boundary, specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}")
+                        MultiPartContentValue(
+                            it.name ?: "",
+                            StringValue(it.value),
+                            boundary,
+                            specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}"
+                        )
                     }
                     is PartData.BinaryItem -> {
                         val content = it.provider().asStream().use { input ->
@@ -272,7 +359,12 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             output.toString()
                         }
 
-                        MultiPartContentValue(it.name ?: "", StringValue(content), boundary, specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}")
+                        MultiPartContentValue(
+                            it.name ?: "",
+                            StringValue(content),
+                            boundary,
+                            specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}"
+                        )
                     }
                 }
             }
@@ -287,7 +379,11 @@ internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().map
 
 internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Int? = null) {
     val contentType = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
-    val textContent = TextContent(httpResponse.body.toStringLiteral(), ContentType.parse(contentType), HttpStatusCode.fromValue(httpResponse.status))
+    val textContent = TextContent(
+        httpResponse.body.toStringLiteral(),
+        ContentType.parse(contentType),
+        HttpStatusCode.fromValue(httpResponse.status)
+    )
 
     val headersControlledByEngine = HttpHeaders.UnsafeHeadersList.map { it.lowercase() }
     for ((name, value) in httpResponse.headers.filterNot { it.key.lowercase() in headersControlledByEngine }) {
@@ -295,7 +391,7 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     }
 
     runBlocking {
-        if(delayInSeconds != null) {
+        if (delayInSeconds != null) {
             delay(delayInSeconds * 1000L)
         }
 
@@ -303,12 +399,19 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
     }
 }
 
-fun getHttpResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeStubs: ThreadSafeListOfStubs, strictMode: Boolean, passThroughTargetBase: String = "", httpClientFactory: HttpClientFactory? = null): HttpStubResponse {
+fun getHttpResponse(
+    httpRequest: HttpRequest,
+    features: List<Feature>,
+    threadSafeStubs: ThreadSafeListOfStubs,
+    strictMode: Boolean,
+    passThroughTargetBase: String = "",
+    httpClientFactory: HttpClientFactory? = null
+): HttpStubResponse {
     return try {
         val (matchResults, stubResponse) = stubbedResponse(threadSafeStubs, httpRequest)
 
         stubResponse
-            ?: if(httpClientFactory != null && passThroughTargetBase.isNotBlank()) {
+            ?: if (httpClientFactory != null && passThroughTargetBase.isNotBlank()) {
                 passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory)
             } else {
                 if (strictMode)
@@ -325,12 +428,16 @@ fun getHttpResponse(httpRequest: HttpRequest, features: List<Feature>, threadSaf
 
 const val QONTRACT_SOURCE_HEADER = "X-$APPLICATION_NAME-Source"
 
-fun passThroughResponse(httpRequest: HttpRequest, passThroughUrl: String, httpClientFactory: HttpClientFactory): HttpStubResponse {
+fun passThroughResponse(
+    httpRequest: HttpRequest,
+    passThroughUrl: String,
+    httpClientFactory: HttpClientFactory
+): HttpStubResponse {
     val response = httpClientFactory.client(passThroughUrl).execute(httpRequest)
     return HttpStubResponse(response.copy(headers = response.headers.plus(QONTRACT_SOURCE_HEADER to "proxy")))
 }
 
-object StubAndRequestMismatchMessages: MismatchMessages {
+object StubAndRequestMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
         return "Stub expected $expected but request contained $actual"
     }
@@ -351,7 +458,12 @@ private fun stubbedResponse(
     val matchResults = threadSafeStubs.matchResults { stubs ->
         stubs.map {
             val (requestPattern, _, resolver) = it
-            Pair(requestPattern.matches(httpRequest, resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages)), it)
+            Pair(
+                requestPattern.matches(
+                    httpRequest,
+                    resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages)
+                ), it
+            )
         }
     }
 
@@ -365,7 +477,7 @@ private fun stubbedResponse(
     return Pair(matchResults, stubResponse)
 }
 
-object ContractAndRequestsMismatch: MismatchMessages {
+object ContractAndRequestsMismatch : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
         return "Contract expected $expected but request contained $actual"
     }
@@ -375,7 +487,9 @@ object ContractAndRequestsMismatch: MismatchMessages {
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the contract was not found in the request"
+        return "${
+            keyLabel.lowercase().capitalizeFirstChar()
+        } named $keyName in the contract was not found in the request"
     }
 }
 
@@ -398,18 +512,32 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
 
             HttpStubResponse(httpFailureResponse)
         }
-        else -> HttpStubResponse(fakeResponse.successResponse?.build()?.withRandomResultHeader()!!, contractPath = fakeResponse.feature.path)
+        else -> HttpStubResponse(
+            fakeResponse.successResponse?.build()?.withRandomResultHeader()!!,
+            contractPath = fakeResponse.feature.path
+        )
     }
 }
 
-private fun strictModeHttp400Response(httpRequest: HttpRequest, matchResults: List<Pair<Result, HttpStubData>>): HttpResponse {
+private fun strictModeHttp400Response(
+    httpRequest: HttpRequest,
+    matchResults: List<Pair<Result, HttpStubData>>
+): HttpResponse {
     val failureResults = matchResults.map { it.first }
 
     val results = Results(failureResults).withoutFluff()
-    return HttpResponse(400, headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"), body = StringValue("STRICT MODE ON\n\n${results.strictModeReport(httpRequest)}"))
+    return HttpResponse(
+        400,
+        headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
+        body = StringValue("STRICT MODE ON\n\n${results.strictModeReport(httpRequest)}")
+    )
 }
 
-fun stubResponse(httpRequest: HttpRequest, contractInfo: List<Pair<Feature, List<ScenarioStub>>>, stubs: StubDataItems): HttpResponse {
+fun stubResponse(
+    httpRequest: HttpRequest,
+    contractInfo: List<Pair<Feature, List<ScenarioStub>>>,
+    stubs: StubDataItems
+): HttpResponse {
     return try {
         when (val mock = stubs.http.find { (requestPattern, _, resolver) ->
             requestPattern.matches(httpRequest, resolver.disableOverrideUnexpectedKeycheck()) is Result.Success
@@ -447,18 +575,18 @@ fun badRequest(errorMessage: String?): HttpResponse {
 }
 
 internal fun httpResponseLog(response: HttpResponse): String =
-        "${response.toLogString("<- ")}\n<< Response At ${Date()} == "
+    "${response.toLogString("<- ")}\n<< Response At ${Date()} == "
 
 internal fun httpRequestLog(httpRequest: HttpRequest): String =
-        ">> Request Start At ${Date()}\n${httpRequest.toLogString("-> ")}"
+    ">> Request Start At ${Date()}\n${httpRequest.toLogString("-> ")}"
 
 fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String {
-    val protocol = when(keyData) {
+    val protocol = when (keyData) {
         null -> "http"
         else -> "https"
     }
 
-    val computedPortString = when(port) {
+    val computedPortString = when (port) {
         80, null -> ""
         else -> ":$port"
     }
@@ -482,14 +610,17 @@ internal fun isFetchLoadLogRequest(httpRequest: HttpRequest): Boolean =
 internal fun isExpectationCreation(httpRequest: HttpRequest) =
     isPath(httpRequest.path, "expectations") && httpRequest.method == "POST"
 
+internal fun isSseExpectationCreation(httpRequest: HttpRequest) =
+    isPath(httpRequest.path, "sse-expectations") && httpRequest.method == "POST"
+
 internal fun isStateSetupRequest(httpRequest: HttpRequest): Boolean =
     isPath(httpRequest.path, "state") && httpRequest.method == "POST"
 
 fun softCastResponseToXML(mockResponse: HttpStubData): HttpStubData =
-        mockResponse.copy(response = mockResponse.response.copy(body = softCastValueToXML(mockResponse.response.body)))
+    mockResponse.copy(response = mockResponse.response.copy(body = softCastValueToXML(mockResponse.response.body)))
 
 fun softCastValueToXML(body: Value): Value {
-    return when(body) {
+    return when (body) {
         is StringValue -> try {
             toXMLNode(body.string)
         } catch (e: Throwable) {
@@ -501,14 +632,14 @@ fun softCastValueToXML(body: Value): Value {
 
 fun stringToMockScenario(text: Value): ScenarioStub {
     val mockSpec =
-            jsonStringToValueMap(text.toStringLiteral()).also {
-                validateMock(it)
-            }
+        jsonStringToValueMap(text.toStringLiteral()).also {
+            validateMock(it)
+        }
 
     return mockFromJSON(mockSpec)
 }
 
-data class SseEvent(val data: String, val event: String? = null, val id: String? = null)
+class SseEvent(val data: String = "", val event: String? = null, val id: String? = null)
 
 suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>) {
     response.cacheControl(CacheControl.NoCache(null))

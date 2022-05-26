@@ -2,10 +2,7 @@ package `in`.specmatic.stub
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import `in`.specmatic.core.*
-import `in`.specmatic.core.log.HttpLogMessage
-import `in`.specmatic.core.log.LogMessage
-import `in`.specmatic.core.log.LogTail
-import `in`.specmatic.core.log.dontPrintToConsole
+import `in`.specmatic.core.log.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.capitalizeFirstChar
@@ -21,7 +18,6 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
 import `in`.specmatic.mock.validateMock
 import `in`.specmatic.test.HttpClient
-import io.cucumber.gherkin.internal.com.eclipsesource.json.JsonObject
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.http.*
@@ -32,18 +28,28 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.util.asStream
 import io.ktor.util.toMap
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.broadcast
-import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.io.ByteArrayOutputStream
+import java.io.Writer
 import java.util.*
 import kotlin.text.toCharArray
 
 data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "")
+
+class SSEBuffer(private val size: Int, private val buffer: MutableList<SseEvent> = mutableListOf()) {
+    fun addToBuffer(event: SseEvent) {
+        if(buffer.size < size)
+            buffer.add(event)
+    }
+
+    fun write(writer: Writer) {
+        for(event in buffer) {
+            writeEvent(event, writer)
+        }
+    }
+}
 
 class HttpStub(
     private val features: List<Feature>,
@@ -78,7 +84,14 @@ class HttpStub(
 
     override val client = HttpClient(this.endPoint)
 
-    private val sseConflatedChannel = Channel<SseEvent>(CONFLATED)
+    private val sseConflatedChannel = Channel<SseEvent>(10, BufferOverflow.DROP_OLDEST) {
+        logger.debug("Failed to deliver $it")
+    }
+
+    private val sseBuffer: SSEBuffer = SSEBuffer(3)
+
+    private val broadcastChannels: MutableList<BroadcastChannel<SseEvent>> = mutableListOf()
+    private val receiveChannels: MutableList<ReceiveChannel<SseEvent>> = mutableListOf()
 
     private val environment = applicationEngineEnvironment {
         module {
@@ -118,16 +131,32 @@ class HttpStub(
                     }
 
                     if (httpRequest.path!!.startsWith("""/features/default""")) {
-                        val channel = produce { // this: ProducerScope<SseEvent> ->
+                        val channel: BroadcastChannel<SseEvent> = produce { // this: ProducerScope<SseEvent> ->
                             while (true) {
+                                if(sseConflatedChannel.isClosedForReceive) {
+                                    logger.debug("Channel is closed for receive")
+                                    break
+                                }
+
                                 send(sseConflatedChannel.receive())
+                                logger.debug("received message and broadcast it")
                             }
                         }.broadcast()
-                        val events = channel.openSubscription()
+
+                        broadcastChannels.add(channel)
+
+                        val events: ReceiveChannel<SseEvent> = channel.openSubscription()
+                        receiveChannels.add(events)
+
                         try {
-                            call.respondSse(events)
+                            call.respondSse(events, sseBuffer)
                         } finally {
                             events.cancel()
+                            receiveChannels.remove(events)
+
+                            channel.cancel()
+                            broadcastChannels.remove(channel)
+
                         }
                     } else {
                         respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
@@ -639,23 +668,39 @@ fun stringToMockScenario(text: Value): ScenarioStub {
     return mockFromJSON(mockSpec)
 }
 
-class SseEvent(val data: String = "", val event: String? = null, val id: String? = null)
+data class SseEvent(val data: String = "", val event: String? = null, val id: String? = null)
 
-suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>) {
+suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuffer: SSEBuffer) {
     response.cacheControl(CacheControl.NoCache(null))
+
     respondTextWriter(contentType = ContentType.Text.EventStream) {
+        logger.debug("Writing out an initial response")
+        write("\n")
+        flush()
+
+        logger.debug("Writing out buffered events")
+        sseBuffer.write(this)
+
+        logger.debug("Awaiting events...")
         for (event in events) {
-            if (event.id != null) {
-                write("id: ${event.id}\n")
-            }
-            if (event.event != null) {
-                write("event: ${event.event}\n")
-            }
-            for (dataLine in event.data.lines()) {
-                write("data: $dataLine\n")
-            }
-            write("\n")
-            flush()
+            sseBuffer.addToBuffer(event)
+            writeEvent(event, this)
+
+            logger.debug("Wrote out event $event")
         }
     }
+}
+
+private fun writeEvent(event: SseEvent, writer: Writer) {
+    if (event.id != null) {
+        writer.write("id: ${event.id}\n")
+    }
+    if (event.event != null) {
+        writer.write("event: ${event.event}\n")
+    }
+    for (dataLine in event.data.lines()) {
+        writer.write("data: $dataLine\n")
+    }
+    writer.write("\n")
+    writer.flush()
 }

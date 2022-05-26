@@ -38,10 +38,19 @@ import kotlin.text.toCharArray
 
 data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "")
 
-class SSEBuffer(private val size: Int, private val buffer: MutableList<SseEvent> = mutableListOf()) {
-    fun addToBuffer(event: SseEvent) {
-        if(buffer.size < size)
+class SSEBuffer(private val buffer: MutableList<SseEvent> = mutableListOf()) {
+    fun add(event: SseEvent) {
+        val bufferIndex = event.bufferIndex ?: return
+
+        if(bufferIndex == -1) {
             buffer.add(event)
+        } else if(bufferIndex >= 0) {
+            buffer[bufferIndex] = event
+        }
+    }
+
+    fun replace(event: SseEvent, index: Int) {
+        buffer[index] = event
     }
 
     fun write(writer: Writer) {
@@ -84,11 +93,7 @@ class HttpStub(
 
     override val client = HttpClient(this.endPoint)
 
-    private val sseConflatedChannel = Channel<SseEvent>(10, BufferOverflow.DROP_OLDEST) {
-        logger.debug("Failed to deliver $it")
-    }
-
-    private val sseBuffer: SSEBuffer = SSEBuffer(3)
+    private val sseBuffer: SSEBuffer = SSEBuffer()
 
     private val broadcastChannels: MutableList<BroadcastChannel<SseEvent>> = mutableListOf()
 
@@ -133,20 +138,6 @@ class HttpStub(
                         val channel: Channel<SseEvent> = Channel(10, BufferOverflow.DROP_OLDEST)
                         val broadcastChannel = channel.broadcast()
                         broadcastChannels.add(broadcastChannel)
-
-//                        val channel: BroadcastChannel<SseEvent> = produce { // this: ProducerScope<SseEvent> ->
-//                            while (true) {
-//                                if(sseConflatedChannel.isClosedForReceive) {
-//                                    logger.debug("Channel is closed for receive")
-//                                    break
-//                                }
-//
-//                                send(sseConflatedChannel.receive())
-//                                logger.debug("received message and broadcast it")
-//                            }
-//                        }.broadcast()
-//
-//                        broadcastChannels.add(channel)
 
                         val events: ReceiveChannel<SseEvent> = broadcastChannel.openSubscription()
 
@@ -255,15 +246,18 @@ class HttpStub(
     private suspend fun handleSseExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {
             val sseEvent: SseEvent? = ObjectMapper().readValue(httpRequest.bodyString, SseEvent::class.java)
-//            sseConflatedChannel.send(sseEvent!!)
 
-            if(sseEvent != null) {
+            if(sseEvent == null) {
+                logger.debug("Read an null instead of an Sse Event from the request:\n${httpRequest.toLogString("  ")}")
+            } else if(sseEvent.bufferIndex == null) {
                 logger.debug("Broadcasting event: $sseEvent")
+
                 for (channel in broadcastChannels) {
                     channel.send(sseEvent)
                 }
             } else {
-                logger.debug("Read an null instead of an Sse Event from the request:\n${httpRequest.toLogString("  ")}")
+                logger.debug("Adding event to buffer: $sseEvent")
+                sseBuffer.add(sseEvent)
             }
 
             HttpStubResponse(HttpResponse.OK, contractPath = "")
@@ -679,7 +673,7 @@ fun stringToMockScenario(text: Value): ScenarioStub {
     return mockFromJSON(mockSpec)
 }
 
-data class SseEvent(val data: String = "", val event: String? = null, val id: String? = null)
+data class SseEvent(val data: String = "", val event: String? = null, val id: String? = null, val bufferIndex: Int? = null)
 
 suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuffer: SSEBuffer) {
     response.cacheControl(CacheControl.NoCache(null))
@@ -694,7 +688,7 @@ suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuff
 
         logger.debug("Awaiting events...")
         for (event in events) {
-            sseBuffer.addToBuffer(event)
+            sseBuffer.add(event)
             writeEvent(event, this)
 
             logger.debug("Wrote out event $event")

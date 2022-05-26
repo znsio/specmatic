@@ -91,7 +91,6 @@ class HttpStub(
     private val sseBuffer: SSEBuffer = SSEBuffer(3)
 
     private val broadcastChannels: MutableList<BroadcastChannel<SseEvent>> = mutableListOf()
-    private val receiveChannels: MutableList<ReceiveChannel<SseEvent>> = mutableListOf()
 
     private val environment = applicationEngineEnvironment {
         module {
@@ -131,31 +130,33 @@ class HttpStub(
                     }
 
                     if (httpRequest.path!!.startsWith("""/features/default""")) {
-                        val channel: BroadcastChannel<SseEvent> = produce { // this: ProducerScope<SseEvent> ->
-                            while (true) {
-                                if(sseConflatedChannel.isClosedForReceive) {
-                                    logger.debug("Channel is closed for receive")
-                                    break
-                                }
+                        val channel: Channel<SseEvent> = Channel(10, BufferOverflow.DROP_OLDEST)
+                        val broadcastChannel = channel.broadcast()
+                        broadcastChannels.add(broadcastChannel)
 
-                                send(sseConflatedChannel.receive())
-                                logger.debug("received message and broadcast it")
-                            }
-                        }.broadcast()
+//                        val channel: BroadcastChannel<SseEvent> = produce { // this: ProducerScope<SseEvent> ->
+//                            while (true) {
+//                                if(sseConflatedChannel.isClosedForReceive) {
+//                                    logger.debug("Channel is closed for receive")
+//                                    break
+//                                }
+//
+//                                send(sseConflatedChannel.receive())
+//                                logger.debug("received message and broadcast it")
+//                            }
+//                        }.broadcast()
+//
+//                        broadcastChannels.add(channel)
 
-                        broadcastChannels.add(channel)
-
-                        val events: ReceiveChannel<SseEvent> = channel.openSubscription()
-                        receiveChannels.add(events)
+                        val events: ReceiveChannel<SseEvent> = broadcastChannel.openSubscription()
 
                         try {
                             call.respondSse(events, sseBuffer)
                         } finally {
                             events.cancel()
-                            receiveChannels.remove(events)
 
                             channel.cancel()
-                            broadcastChannels.remove(channel)
+                            broadcastChannels.remove(broadcastChannel)
 
                         }
                     } else {
@@ -254,7 +255,17 @@ class HttpStub(
     private suspend fun handleSseExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {
             val sseEvent: SseEvent? = ObjectMapper().readValue(httpRequest.bodyString, SseEvent::class.java)
-            sseConflatedChannel.send(sseEvent!!)
+//            sseConflatedChannel.send(sseEvent!!)
+
+            if(sseEvent != null) {
+                logger.debug("Broadcasting event: $sseEvent")
+                for (channel in broadcastChannels) {
+                    channel.send(sseEvent)
+                }
+            } else {
+                logger.debug("Read an null instead of an Sse Event from the request:\n${httpRequest.toLogString("  ")}")
+            }
+
             HttpStubResponse(HttpResponse.OK, contractPath = "")
         } catch (e: Throwable) {
             HttpStubResponse(

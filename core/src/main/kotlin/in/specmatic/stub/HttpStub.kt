@@ -248,7 +248,7 @@ class HttpStub(
             val sseEvent: SseEvent? = ObjectMapper().readValue(httpRequest.bodyString, SseEvent::class.java)
 
             if(sseEvent == null) {
-                logger.debug("Read an null instead of an Sse Event from the request:\n${httpRequest.toLogString("  ")}")
+                logger.debug("No Sse Event was found in the request:\n${httpRequest.toLogString("  ")}")
             } else if(sseEvent.bufferIndex == null) {
                 logger.debug("Broadcasting event: $sseEvent")
 

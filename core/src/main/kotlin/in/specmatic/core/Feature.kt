@@ -44,7 +44,12 @@ fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook()): Feat
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
-        "yaml" -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path).toFeature()
+        "yaml" -> {
+            when (file.readText().contains("asyncapi")) {
+                true -> AsyncApiSpecification.fromFile(hook.readContract(file.path), file.path).toFeature()
+                false -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path).toFeature()
+            }
+        }
         "wsdl" -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw ContractException("File extension of ${file.path} not recognized")
@@ -1419,6 +1424,7 @@ internal fun lex(gherkinDocument: GherkinDocument, filePath: String = ""): Pair<
 internal fun lex(featureChildren: List<FeatureChild>, filePath: String): List<Scenario> {
     return scenarioInfos(featureChildren, filePath)
         .map { scenarioInfo ->
+            //TODO: Can we pass scenarioinfo to scenario?
             Scenario(
                 scenarioInfo.scenarioName,
                 scenarioInfo.httpRequestPattern,
@@ -1430,7 +1436,10 @@ internal fun lex(featureChildren: List<FeatureChild>, filePath: String): List<Sc
                 scenarioInfo.kafkaMessage,
                 scenarioInfo.ignoreFailure,
                 scenarioInfo.references,
-                scenarioInfo.bindings
+                scenarioInfo.bindings,
+                scenarioInfo.async,
+                scenarioInfo.channel,
+                scenarioInfo.payload,
             )
         }
 }
@@ -1450,7 +1459,15 @@ fun scenarioInfos(
     val wsdlSpecification =
         toIncludedSpecification(featureChildren, { backgroundWsdl(it) }) { WsdlSpecification(WSDLFile(it)) }
 
-    val includedSpecifications = listOfNotNull(openApiSpecification, wsdlSpecification)
+    val asyncApiSpecification =
+        toIncludedSpecification(featureChildren, { backgroundAsyncApi(it) }) {
+            AsyncApiSpecification.fromFile(
+                it,
+                filePath
+            )
+        }
+
+    val includedSpecifications = listOfNotNull(openApiSpecification, wsdlSpecification, asyncApiSpecification)
 
     val scenarioInfosBelongingToIncludedSpecifications =
         includedSpecifications.mapNotNull { it.toScenarioInfos() }.flatten()
@@ -1459,6 +1476,7 @@ fun scenarioInfos(
         lexScenario(
             feature.background.steps
                 .filter { !it.text.contains("openapi", true) }
+                .filter { !it.text.contains("asyncapi", true) }
                 .filter { !it.text.contains("wsdl", true) },
             listOf(),
             emptyList(),
@@ -1469,7 +1487,7 @@ fun scenarioInfos(
     } ?: ScenarioInfo()
 
     val specmaticScenarioInfos = scenarios(featureChildren).map { featureChild ->
-        if (featureChild.scenario.name.isBlank() && openApiSpecification == null && wsdlSpecification == null)
+        if (featureChild.scenario.name.isBlank() && openApiSpecification == null && wsdlSpecification == null && asyncApiSpecification == null)
             throw ContractException("Error at line ${featureChild.scenario.location.line}: scenario name must not be empty")
 
         val backgroundInfoCopy = backgroundInfo.copy(scenarioName = featureChild.scenario.name)
@@ -1506,6 +1524,15 @@ private fun backgroundOpenApi(featureChildren: List<FeatureChild>): Step? {
         background.background.steps.firstOrNull {
             it.keyword.contains("Given", true)
                     && it.text.contains("openapi", true)
+        }
+    }
+}
+
+private fun backgroundAsyncApi(featureChildren: List<FeatureChild>): Step? {
+    return backgroundScenario(featureChildren)?.let { background ->
+        background.background.steps.firstOrNull {
+            it.keyword.contains("Given", true)
+                    && it.text.contains("asyncapi", true)
         }
     }
 }

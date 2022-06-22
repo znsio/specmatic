@@ -43,6 +43,10 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.2.2'
 
     implementation 'io.swagger.parser.v3:swagger-parser:2.0.0'
+    implementation 'com.asyncapi:asyncapi-core:1.0.0-EAP-1'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.3'
+    implementation 'org.apache.activemq:activemq-core:5.7.0'
+    implementation 'org.apache.activemq:artemis-core-client:2.23.0'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 

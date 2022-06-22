@@ -56,7 +56,7 @@ class HTTPStubEngine {
 internal fun hasHttpScenarios(behaviours: List<Feature>): Boolean {
     return behaviours.any {
         it.scenarios.any { scenario ->
-            scenario.kafkaMessagePattern == null
+            scenario.kafkaMessagePattern == null // && !scenario.async
         }
     }
 }

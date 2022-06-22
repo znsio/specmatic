@@ -7,6 +7,7 @@ import `in`.specmatic.core.log.*
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.stub.ContractStub
 import `in`.specmatic.stub.HttpClientFactory
+import `in`.specmatic.stub.JMSStub
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import picocli.CommandLine.*
@@ -18,12 +19,16 @@ import java.util.concurrent.Callable
 class StubCommand : Callable<Unit> {
     var httpStub: ContractStub? = null
     var kafkaStub: QontractKafka? = null
+    var jmsStub: JMSStub? = null
 
     @Autowired
     private var httpStubEngine: HTTPStubEngine = HTTPStubEngine()
 
     @Autowired
     private var kafkaStubEngine: KafkaStubEngine = KafkaStubEngine()
+
+    @Autowired
+    private var jmsStubEngine: JMSStubEngine = JMSStubEngine()
 
     @Autowired
     private var stubLoaderEngine: StubLoaderEngine = StubLoaderEngine()
@@ -160,6 +165,7 @@ class StubCommand : Callable<Unit> {
 
         httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, httpClientFactory, workingDirectory)
         kafkaStub = kafkaStubEngine.runKafkaStub(stubData, kafkaHost, kafkaPort.toInt(), startKafka)
+        jmsStub = jmsStubEngine.runJMSStub(stubData)
 
         LogTail.storeSnapshot()
     }

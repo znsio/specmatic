@@ -1,26 +1,58 @@
 package `in`.specmatic.stub
 
 import `in`.specmatic.conversions.OpenApiSpecification
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
-import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
+import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
+import io.mockk.InternalPlatformDsl.toStr
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
+import org.testcontainers.shaded.okhttp3.MediaType
+import org.testcontainers.shaded.okhttp3.OkHttpClient
+import org.testcontainers.shaded.okhttp3.Request
+import org.testcontainers.shaded.okhttp3.RequestBody
 import java.security.KeyStore
 import java.util.*
-import `in`.specmatic.stubResponse
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.assertDoesNotThrow
 import java.util.function.Consumer
 
 internal class HttpStubKtTest {
+    @Test
+    fun `SSE test`() {
+        val gherkin = """
+Feature: Test
+  Scenario: Test
+    When POST /
+    And request-body (number)
+    Then status 200
+""".trim()
+
+        val feature = parseGherkinStringToFeature(gherkin)
+
+        HttpStub(feature).use {
+            val body = RequestBody.create(MediaType.parse("application/json"), """{
+"event": "features",
+"id": "332f8278",
+"data": "[{\"id\":\"b5bf7f9e-9391-40a4-8808-61ad73f800e9\",\"key\":\"FT01\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":true},{\"id\":\"8b6002e8-e97a-4ebe-8cae-ac68fb99fc33\",\"key\":\"FT02\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":false}]"
+}""")
+            val request = Request.Builder().url(it.endPoint + "/_specmatic/sse-expectations").addHeader("Content-Type", "application/json").post(body).build()
+            val call = OkHttpClient().newCall(request)
+            val response = call.execute()
+
+            println(response.toStr())
+            println(response.body()?.string())
+            assertThat(response.code()).isEqualTo(200)
+        }
+    }
+
     @Test
     fun `in strict mode the stub replies with an explanation of what broke instead of a randomly generated response`() {
         val gherkin = """

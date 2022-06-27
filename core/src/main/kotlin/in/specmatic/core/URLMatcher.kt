@@ -52,8 +52,9 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         pathPattern.zip(pathParts).forEach { (urlPathPattern, token) ->
             try {
                 val parsedValue = urlPathPattern.tryParse(token, resolver)
-                when (val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)) {
-                    is Failure -> return when (urlPathPattern.key) {
+                val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)
+                if (result is Failure) {
+                    return when (urlPathPattern.key) {
                         null -> result.breadCrumb("PATH ($uri)")
                         else -> result.breadCrumb("PATH ($uri)").breadCrumb(urlPathPattern.key)
                     }

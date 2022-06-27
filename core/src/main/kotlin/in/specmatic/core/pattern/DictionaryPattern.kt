@@ -16,8 +16,9 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         sampleData.jsonObject.forEach { (key, value) ->
             try {
                 val parsedKey = keyPattern.parse(key, resolver)
-                when (val result = resolver.matchesPattern(null, keyPattern, parsedKey)) {
-                    is Result.Failure -> return result.breadCrumb(key)
+                val result = resolver.matchesPattern(null, keyPattern, parsedKey)
+                if (result is Result.Failure) {
+                    return result.breadCrumb(key)
                 }
             } catch(e: ContractException) {
                 return e.failure().breadCrumb(key)
@@ -28,8 +29,10 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
                     is StringValue -> valuePattern.parse(value.string, resolver)
                     else -> value
                 }
-                when (val result = resolver.matchesPattern(null, valuePattern, parsedValue)) {
-                    is Result.Failure -> return result.breadCrumb(key)
+
+                val result = resolver.matchesPattern(null, valuePattern, parsedValue)
+                if (result is Result.Failure) {
+                    return result.breadCrumb(key)
                 }
             } catch(e: ContractException) {
                 return e.failure().breadCrumb(key)

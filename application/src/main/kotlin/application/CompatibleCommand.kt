@@ -39,7 +39,7 @@ open class SystemObjects {
 
 open class JUnitWrapper {
     companion object {
-        var resultsList: List<Results> = mutableListOf()
+        var resultsList: List<Results> = emptyList()
     }
 
     @TestFactory
@@ -47,6 +47,24 @@ open class JUnitWrapper {
         return resultsList.reduce { acc, item -> acc.plus(item) }.withoutFluff().results.map { result ->
             DynamicTest.dynamicTest(result.scenario?.name ?: "") {
                 ResultAssert.assertThat(result).isSuccess()
+            }
+        }
+    }
+}
+
+open class JUnitBackwardCompatibilityTestRunner {
+    companion object {
+        var tests: List<BackwardCompatibilityTest> = emptyList()
+        var results: MutableList<Results> = mutableListOf()
+    }
+    @TestFactory
+    fun contractAsTest(): Collection<DynamicTest> {
+        return tests.map { test ->
+            DynamicTest.dynamicTest(test.name) {
+                val testResults = Results(test.execute())
+
+                results.add(testResults)
+                ResultAssert.assertThat(testResults.toResultIfAny()).isSuccess()
             }
         }
     }
@@ -78,13 +96,30 @@ class GitCompatibleCommand : Callable<Int> {
         }
 
         return try {
-            val (returnCode, resultsList) = backwardCompatibleOnFileOrDirectory(contractPath, fileOperations) {
-                backwardCompatibleFile(it, fileOperations, gitCommand)
+            val (exitCode, results) = backwardCompatibleOnFileOrDirectory(contractPath, fileOperations) { path ->
+                val testGenerationOutcome = generateFileBackwardCompatibilityTests(path, fileOperations, gitCommand)
+
+                testGenerationOutcome.onSuccess { tests ->
+                    JUnitBackwardCompatibilityTestRunner.tests = tests
+
+                    val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
+                        .selectors(DiscoverySelectors.selectClass(JUnitBackwardCompatibilityTestRunner::class.java))
+                        .build()
+
+                    junitLauncher.discover(request)
+
+                    if(junitReportDirName.isNotBlank()) {
+                        val reportListener = LegacyXmlReportGeneratingListener(Paths.get(junitReportDirName), PrintWriter(System.out, true))
+                        junitLauncher.registerTestExecutionListeners(reportListener)
+                    }
+
+                    junitLauncher.execute(request)
+
+                    Outcome(JUnitBackwardCompatibilityTestRunner.results.first())
+                }
             }
 
-            writeJUnitReport(resultsList, junitReportDirName)
-
-            returnCode
+            exitCode
         } catch(e: Throwable) {
             logger.log(e)
             1
@@ -121,11 +156,32 @@ class GitCompatibleCommand : Callable<Int> {
             logger = Verbose()
 
         return try {
-            val (returnCode, resultsList) = backwardCompatibleOnFileOrDirectory(path, fileOperations) {
-                backwardCompatibleCommit(it, newerCommit, olderCommit, gitCommand)
+            val (returnCode, resultsList) = backwardCompatibleOnFileOrDirectory(path, fileOperations) { path ->
+//                backwardCompatibleCommit(path, newerCommit, olderCommit, gitCommand)
+
+                val testGenerationOutcome = generateCommitBackwardCompatibleTests(path, newerCommit, olderCommit, gitCommand)
+
+                testGenerationOutcome.onSuccess { tests ->
+                    JUnitBackwardCompatibilityTestRunner.tests = tests
+
+                    val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
+                        .selectors(DiscoverySelectors.selectClass(JUnitBackwardCompatibilityTestRunner::class.java))
+                        .build()
+
+                    junitLauncher.discover(request)
+
+                    if(junitReportDirName.isNotBlank()) {
+                        val reportListener = LegacyXmlReportGeneratingListener(Paths.get(junitReportDirName), PrintWriter(System.out, true))
+                        junitLauncher.registerTestExecutionListeners(reportListener)
+                    }
+
+                    junitLauncher.execute(request)
+
+                    Outcome(JUnitBackwardCompatibilityTestRunner.results.reduce { acc, item -> acc.plus(item) })
+                }
             }
 
-            writeJUnitReport(resultsList, junitReportDirName)
+//            writeJUnitReport(resultsList, junitReportDirName)
 
             returnCode
         } catch(e: Throwable) {
@@ -207,6 +263,27 @@ internal fun compatibilityReport(results: Results, resultMessage: String): Strin
     return "$countsMessage$resultReport$resultMessage".trim()
 }
 
+internal fun generateFileBackwardCompatibilityTests(
+    contractPath: String,
+    fileOperations: FileOperations,
+    git: GitCommand): Outcome<List<BackwardCompatibilityTest>> {
+
+    return try {
+        logger.debug("Newer version of $contractPath")
+
+        val newerFeature = parseContract(logger.debug(fileOperations.read(contractPath)), contractPath)
+        val result = getOlderFeature(contractPath, git)
+
+        result.onSuccess { olderFeature ->
+            Outcome(generateBackwardCompatibilityTests(olderFeature, newerFeature))
+        }
+    } catch(e: NonZeroExitError) {
+        Outcome(emptyList(), "Could not find $contractPath at HEAD")
+    } catch(e: FileNotFoundException) {
+        Outcome(emptyList(), "Could not find $contractPath on the file system")
+    }
+}
+
 internal fun backwardCompatibleFile(
     contractPath: String,
     fileOperations: FileOperations,
@@ -245,6 +322,28 @@ internal fun backwardCompatibleCommit(
             null -> Outcome(Results())
             else -> olderCommitOutcome.onSuccess { olderGherkin ->
                 Outcome(testBackwardCompatibility(parseContract(olderGherkin, contractPath), parseContract(newerGherkin, contractPath)))
+            }
+        }
+    }
+}
+
+internal fun generateCommitBackwardCompatibleTests(
+    contractPath: String,
+    newerCommit: String,
+    olderCommit: String,
+    git: GitCommand,
+): Outcome<List<BackwardCompatibilityTest>> {
+    val (gitRoot, relativeContractPath) = git.relativeGitPath(contractPath)
+
+    val partial = getFileContentAtSpecifiedCommit(gitRoot)(relativeContractPath)(contractPath)
+
+    return partial(newerCommit).onSuccess { newerGherkin ->
+        val olderCommitOutcome = partial(olderCommit)
+
+        when(olderCommitOutcome.result) {
+            null -> Outcome(emptyList())
+            else -> olderCommitOutcome.onSuccess { olderGherkin ->
+                Outcome(generateBackwardCompatibilityTests(parseContract(olderGherkin, contractPath), parseContract(newerGherkin, contractPath)))
             }
         }
     }

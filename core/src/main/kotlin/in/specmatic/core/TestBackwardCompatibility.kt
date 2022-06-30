@@ -12,6 +12,23 @@ fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results 
     }.distinct()
 }
 
+class BackwardCompatibilityTest(private val olderScenario: Scenario, private val newerContract: Feature) {
+    val name: String
+        get() {
+            return olderScenario.name
+        }
+
+    fun execute(): List<Result> {
+        return testBackwardCompatibility(olderScenario, newerContract)
+    }
+}
+
+fun generateBackwardCompatibilityTests(older: Feature, newerContract: Feature): List<BackwardCompatibilityTest> {
+    return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.map { olderScenario ->
+        BackwardCompatibilityTest(olderScenario, newerContract)
+    }
+}
+
 fun testBackwardCompatibility(
     oldScenario: Scenario,
     newFeature_: Feature

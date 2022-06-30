@@ -1,5 +1,6 @@
 package application
 
+import application.test.ContractExecutionListener
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.conversions.wsdlContentToFeature
 import `in`.specmatic.core.*
@@ -9,6 +10,14 @@ import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.test.ResultAssert
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.TestFactory
+import org.junit.platform.engine.discovery.DiscoverySelectors
+import org.junit.platform.launcher.Launcher
+import org.junit.platform.launcher.LauncherDiscoveryRequest
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
+import org.junit.platform.reporting.legacy.xml.LegacyXmlReportGeneratingListener
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -16,6 +25,8 @@ import picocli.CommandLine
 import picocli.CommandLine.*
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.PrintWriter
+import java.nio.file.Paths
 import java.util.concurrent.Callable
 
 @Configuration
@@ -23,6 +34,21 @@ open class SystemObjects {
     @Bean
     open fun getSystemGit(): GitCommand {
         return SystemGit()
+    }
+}
+
+open class JUnitWrapper {
+    companion object {
+        var resultsList: List<Results> = mutableListOf()
+    }
+
+    @TestFactory
+    fun contractAsTest(): Collection<DynamicTest> {
+        return resultsList.reduce { acc, item -> acc.plus(item) }.withoutFluff().results.map { result ->
+            DynamicTest.dynamicTest(result.scenario?.name ?: "") {
+                ResultAssert.assertThat(result).isSuccess()
+            }
+        }
     }
 }
 
@@ -36,8 +62,12 @@ class GitCompatibleCommand : Callable<Int> {
     @Autowired
     lateinit var fileOperations: FileOperations
 
+    @Autowired
+    lateinit var junitLauncher: Launcher
+
     @Command(name = "file", description = ["Compare file in working tree against HEAD"])
     fun file(@Parameters(paramLabel = "contractPath", defaultValue = ".") contractPath: String,
+             @Option(names = ["--junitReportDir"], required = false, defaultValue = "") junitReportDirName: String,
              @Option(names = ["--debug"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
             logger = Verbose(CompositePrinter())
@@ -48,27 +78,56 @@ class GitCompatibleCommand : Callable<Int> {
         }
 
         return try {
-            backwardCompatibleOnFileOrDirectory(contractPath, fileOperations) {
+            val (returnCode, resultsList) = backwardCompatibleOnFileOrDirectory(contractPath, fileOperations) {
                 backwardCompatibleFile(it, fileOperations, gitCommand)
             }
+
+            writeJUnitReport(resultsList, junitReportDirName)
+
+            returnCode
         } catch(e: Throwable) {
             logger.log(e)
             1
         }
     }
 
+    private fun writeJUnitReport(
+        resultsList: List<Results>,
+        junitReportDirName: String
+    ) {
+        JUnitWrapper.resultsList = resultsList
+
+        val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
+            .selectors(DiscoverySelectors.selectClass(JUnitWrapper::class.java))
+            .build()
+
+        junitLauncher.discover(request)
+
+        if(junitReportDirName.isNotBlank()) {
+            val reportListener = LegacyXmlReportGeneratingListener(Paths.get(junitReportDirName), PrintWriter(System.out, true))
+            junitLauncher.registerTestExecutionListeners(reportListener)
+        }
+
+        junitLauncher.execute(request)
+    }
+
     @Command(name = "commits", description = ["Compare file in newer commit against older commit"])
     fun commits(@Parameters(paramLabel = "contractPath", defaultValue = ".") path: String,
                 @Parameters(paramLabel = "newerCommit") newerCommit: String,
                 @Parameters(paramLabel = "olderCommit") olderCommit: String,
+                @Option(names = ["--junitReportDir"], required = false, defaultValue = "") junitReportDirName: String,
                 @Option(names = ["--debug"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
             logger = Verbose()
 
         return try {
-            backwardCompatibleOnFileOrDirectory(path, fileOperations) {
+            val (returnCode, resultsList) = backwardCompatibleOnFileOrDirectory(path, fileOperations) {
                 backwardCompatibleCommit(it, newerCommit, olderCommit, gitCommand)
             }
+
+            writeJUnitReport(resultsList, junitReportDirName)
+
+            returnCode
         } catch(e: Throwable) {
             logger.log(e)
             1
@@ -95,35 +154,39 @@ private fun backwardCompatibleOnFileOrDirectory(
     path: String,
     fileOperations: FileOperations,
     fn: (String) -> Outcome<Results>
-): Int {
+): Pair<Int, List<Results>> {
     return when {
         fileOperations.isFile(path) -> {
-            val output = checkCompatibility {
-                fn(path)
-            }
+            val outcome: Outcome<Results> = fn(path)
+
+            val results = outcome.result
+
+            val output = checkCompatibility(outcome)
 
             println(output.message)
-            output.exitCode
+
+            Pair(output.exitCode, listOfNotNull(results))
         }
         fileOperations.isDirectory(path) -> {
             val file = File(path)
             val outputs = file.walkTopDown().filter {
                 it.extension in CONTRACT_EXTENSIONS
             }.map {
-                Pair(it.path, checkCompatibility {
-                    fn(it.path)
-                })
+                val results = fn(it.path)
+                Triple(it.path, checkCompatibility(results), results)
             }.toList()
 
             if(outputs.isEmpty()) {
                 logger.log("No contract files were found")
-                0
+                Pair(0, emptyList())
             } else {
                 logger.log(outputs.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (path, output) ->
                     """$path:${System.lineSeparator()}${output.message.prependIndent("  ")}"""
                 })
 
-                outputs.map { (_, output) -> output.exitCode }.find { it != 0 } ?: 0
+                val returnCode: Int = outputs.map { (_, output) -> output.exitCode }.find { it != 0 } ?: 0
+
+                Pair(returnCode, outputs.map { it.third.result }.filterNotNull())
             }
         }
         else -> {
@@ -215,9 +278,8 @@ internal fun compatibilityMessage(results: Outcome<Results>): CompatibilityOutpu
     }
 }
 
-internal fun checkCompatibility(compatibilityCheck: () -> Outcome<Results>): CompatibilityOutput =
+internal fun checkCompatibility(results: Outcome<Results>): CompatibilityOutput =
     try {
-        val results = compatibilityCheck()
         compatibilityMessage(results)
     } catch(e: Throwable) {
         CompatibilityOutput(1, "Could not run backwad compatibility check, got exception\n${exceptionCauseMessage(e)}")

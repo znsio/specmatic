@@ -11,7 +11,6 @@ import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.value.xmlNode
 import `in`.specmatic.test.ResultAssert
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -56,8 +55,17 @@ open class JUnitBackwardCompatibilityTestRunner {
                 val testResults = Results(test.execute())
 
                 results.add(testResults)
-                ResultAssert.assertThat(testResults.toResultIfAny()).isSuccess()
+                ResultAssert.assertThat(withoutFluff(testResults).distinct().toResultIfAny()).isSuccess()
             }
+        }
+    }
+
+    private fun withoutFluff(testResults: Results): Results {
+        val resultsFluff1 = testResults.withoutFluff(1)
+
+        return when {
+            resultsFluff1.hasResults() -> resultsFluff1
+            else -> testResults
         }
     }
 }

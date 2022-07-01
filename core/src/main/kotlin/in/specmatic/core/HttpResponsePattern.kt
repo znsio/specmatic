@@ -49,6 +49,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
     private fun matchStatus(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Pair<HttpResponse, Resolver>> {
         val (response, _) = parameters
 
+        //TODO: Compare Status
         return when (response.status) {
             status -> MatchSuccess(parameters)
             else -> MatchFailure(mismatchResult("status $status", "status ${response.status}").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))

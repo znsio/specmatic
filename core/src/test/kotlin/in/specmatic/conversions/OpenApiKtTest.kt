@@ -203,6 +203,44 @@ Background:
     }
 
     @Test
+    fun `should report error when the application accepts null for a non-nullable parameter`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-non-nullable-parameter.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    return HttpResponse(201, "hello world", headers)
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(results.report()).isEqualTo("""
+In scenario "POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  Negative Scenario
+        """.trimIndent())
+    }
+
+    @Test
     fun `should report error in test with both OpenAPI and Gherkin scenario names`() {
         val flags = mutableMapOf<String, Boolean>()
 
@@ -855,7 +893,7 @@ Background:
             reportText
         )
 
-        assertThat(countMatches(results.report(), reportText)).isEqualTo(3)
+        assertThat(countMatches(results.report(), reportText)).isEqualTo(6)
     }
 
     @Test
@@ -918,7 +956,7 @@ Background:
             reportText
         )
 
-        assertThat(countMatches(results.report(), reportText)).isEqualTo(3)
+        assertThat(countMatches(results.report(), reportText)).isEqualTo(6)
     }
 
     @Test
@@ -981,7 +1019,7 @@ Background:
             expectedReport
         )
 
-        assertThat(countMatches(results.report(), expectedReport)).isEqualTo(3)
+        assertThat(countMatches(results.report(), expectedReport)).isEqualTo(6)
     }
 
     fun countMatches(string: String, pattern: String): Int {

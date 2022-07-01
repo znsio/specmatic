@@ -53,6 +53,10 @@ data class NumberPattern(
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return listOf(NullPattern)
+    }
+
     override fun parse(value: String, resolver: Resolver): Value {
         return NumberValue(convertToNumber(value))
     }

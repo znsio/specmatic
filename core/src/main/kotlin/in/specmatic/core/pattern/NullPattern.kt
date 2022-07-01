@@ -21,6 +21,9 @@ object NullPattern : Pattern, ScalarType {
     override fun generate(resolver: Resolver): Value = NullValue
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return newBasedOn(row, resolver)
+    }
 
     override fun parse(value: String, resolver: Resolver): Value =
         when(value.trim()) {

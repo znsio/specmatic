@@ -420,6 +420,62 @@ data class HttpRequestPattern(
     fun testDescription(): String {
         return "$method ${urlMatcher.toString()}"
     }
+
+    fun negativeBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
+        return attempt(breadCrumb = "REQUEST") {
+            val newURLMatchers = urlMatcher?.newBasedOn(row, resolver) ?: listOf<URLMatcher?>(null)
+            val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
+                body.let {
+                    if(it is DeferredPattern && row.containsField(it.pattern)) {
+                        val example = row.getField(it.pattern)
+                        listOf(ExactValuePattern(it.parse(example, resolver)))
+                    }
+                    else if(it.typeAlias?.let { isPatternToken(it) } == true && row.containsField(it.typeAlias!!)) {
+                        val example = row.getField(it.typeAlias!!)
+                        listOf(ExactValuePattern(it.parse(example, resolver)))
+                    }
+                    else if(it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
+                        val referredType = "(${it.referredType})"
+                        val example = row.getField(referredType)
+                        listOf(ExactValuePattern(it.parse(example, resolver)))
+                    } else if(row.containsField("(REQUEST-BODY)")) {
+                        val example = row.getField("(REQUEST-BODY)")
+                        val value = it.parse(example, resolver)
+                        val result = body.matches(value, resolver)
+                        if(result is Failure)
+                            throw ContractException(result.toFailureReport())
+
+                        listOf(ExactValuePattern(value))
+                    } else {
+                        body.negativeBasedOn(row, resolver)
+                    }
+                }
+            }
+
+            val newHeadersPattern = headersPattern.newBasedOn(row, resolver)
+            val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
+            val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
+
+            newURLMatchers.flatMap { newURLMatcher ->
+                newBodies.flatMap { newBody ->
+                    newHeadersPattern.flatMap { newHeadersPattern ->
+                        newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
+                            newFormDataPartLists.map { newFormDataPartList ->
+                                HttpRequestPattern(
+                                    headersPattern = newHeadersPattern,
+                                    urlMatcher = newURLMatcher,
+                                    method = method,
+                                    body = newBody,
+                                    formFieldsPattern = newFormFieldsPattern,
+                                    multiPartFormDataPattern = newFormDataPartList
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 fun missingParam(missingValue: String): ContractException {

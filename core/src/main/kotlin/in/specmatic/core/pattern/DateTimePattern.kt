@@ -7,6 +7,7 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import javax.validation.constraints.Null
 
 object DateTimePattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result = when (sampleData) {
@@ -22,6 +23,9 @@ object DateTimePattern : Pattern, ScalarType {
     override fun newBasedOn(row: Row, resolver: Resolver): List<DateTimePattern> = listOf(this)
 
     override fun newBasedOn(resolver: Resolver): List<DateTimePattern> = listOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return listOf(NullPattern)
+    }
 
     override fun parse(value: String, resolver: Resolver): StringValue =
             attempt {

@@ -19,6 +19,10 @@ data class URLPathPattern(override val pattern: Pattern, override val key: Strin
     override fun newBasedOn(resolver: Resolver): List<URLPathPattern> =
             pattern.newBasedOn(resolver).map { URLPathPattern(it, key) }
 
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return newBasedOn(row, resolver)
+    }
+
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {

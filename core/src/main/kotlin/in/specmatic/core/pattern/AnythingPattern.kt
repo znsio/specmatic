@@ -5,6 +5,7 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 
+//TODO: Does this include Null?
 object AnythingPattern: Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return Result.Success()
@@ -19,6 +20,10 @@ object AnythingPattern: Pattern {
     }
 
     override fun newBasedOn(resolver: Resolver): List<Pattern> {
+        return listOf(this)
+    }
+
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         return listOf(this)
     }
 

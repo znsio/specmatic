@@ -5,6 +5,7 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.Value
 
+//TODO: Not sure what this means
 data class RestPattern(override val pattern: Pattern, override val typeAlias: String? = null) : Pattern {
     private val listPattern = ListPattern(pattern)
 
@@ -14,6 +15,10 @@ data class RestPattern(override val pattern: Pattern, override val typeAlias: St
     override fun generate(resolver: Resolver): Value = listPattern.generate(resolver)
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = pattern.newBasedOn(row, resolver).map { RestPattern(it) }
     override fun newBasedOn(resolver: Resolver): List<Pattern> = pattern.newBasedOn(resolver).map { RestPattern(it) }
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return listOf(this)
+    }
+
     override fun parse(value: String, resolver: Resolver): Value = listPattern.parse(value, resolver)
 
     override fun patternSet(resolver: Resolver): List<Pattern> =

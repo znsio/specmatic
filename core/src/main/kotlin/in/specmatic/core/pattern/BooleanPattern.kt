@@ -20,6 +20,10 @@ object BooleanPattern : Pattern, ScalarType {
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return listOf(NullPattern)
+    }
+
     override fun parse(value: String, resolver: Resolver): Value = when (value) {
         !in listOf("true", "false") -> throw ContractException(mismatchResult(BooleanPattern, value, resolver.mismatchMessages).toFailureReport())
         else -> BooleanValue(value.toBoolean())

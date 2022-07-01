@@ -65,6 +65,10 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
         return allOrNothingCombinationIn.map { toTabularPattern(it) }
     }
 
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return this.newBasedOn(row, resolver)
+    }
+
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         val thisResolverWithNullType = withNullPattern(thisResolver)
@@ -86,6 +90,18 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
         attempt(breadCrumb = key) {
             newBasedOn(row, key, pattern, resolver)
         }
+    }
+
+    return patternList(patternCollection)
+}
+
+fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
+    val patternCollection = patternMap.mapValues { (key, pattern) ->
+        pattern.negativeBasedOn(row, resolver).map { negativePattern ->
+            attempt(breadCrumb = key) {
+                newBasedOn(row, key, negativePattern, resolver)
+            }
+        }.flatten()
     }
 
     return patternList(patternCollection)

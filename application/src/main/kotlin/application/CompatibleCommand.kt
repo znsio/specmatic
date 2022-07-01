@@ -37,26 +37,12 @@ open class SystemObjects {
     }
 }
 
-open class JUnitWrapper {
-    companion object {
-        var resultsList: List<Results> = emptyList()
-    }
-
-    @TestFactory
-    fun contractAsTest(): Collection<DynamicTest> {
-        return resultsList.reduce { acc, item -> acc.plus(item) }.withoutFluff().results.map { result ->
-            DynamicTest.dynamicTest(result.scenario?.name ?: "") {
-                ResultAssert.assertThat(result).isSuccess()
-            }
-        }
-    }
-}
-
 open class JUnitBackwardCompatibilityTestRunner {
     companion object {
         var tests: List<BackwardCompatibilityTest> = emptyList()
         var results: MutableList<Results> = mutableListOf()
     }
+
     @TestFactory
     fun contractAsTest(): Collection<DynamicTest> {
         return tests.map { test ->
@@ -115,7 +101,7 @@ class GitCompatibleCommand : Callable<Int> {
 
                     junitLauncher.execute(request)
 
-                    Outcome(JUnitBackwardCompatibilityTestRunner.results.first())
+                    Outcome(JUnitBackwardCompatibilityTestRunner.results.firstOrNull() ?: Results())
                 }
             }
 
@@ -124,26 +110,6 @@ class GitCompatibleCommand : Callable<Int> {
             logger.log(e)
             1
         }
-    }
-
-    private fun writeJUnitReport(
-        resultsList: List<Results>,
-        junitReportDirName: String
-    ) {
-        JUnitWrapper.resultsList = resultsList
-
-        val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
-            .selectors(DiscoverySelectors.selectClass(JUnitWrapper::class.java))
-            .build()
-
-        junitLauncher.discover(request)
-
-        if(junitReportDirName.isNotBlank()) {
-            val reportListener = LegacyXmlReportGeneratingListener(Paths.get(junitReportDirName), PrintWriter(System.out, true))
-            junitLauncher.registerTestExecutionListeners(reportListener)
-        }
-
-        junitLauncher.execute(request)
     }
 
     @Command(name = "commits", description = ["Compare file in newer commit against older commit"])
@@ -157,8 +123,6 @@ class GitCompatibleCommand : Callable<Int> {
 
         return try {
             val (returnCode, resultsList) = backwardCompatibleOnFileOrDirectory(path, fileOperations) { path ->
-//                backwardCompatibleCommit(path, newerCommit, olderCommit, gitCommand)
-
                 val testGenerationOutcome = generateCommitBackwardCompatibleTests(path, newerCommit, olderCommit, gitCommand)
 
                 testGenerationOutcome.onSuccess { tests ->

@@ -35,6 +35,9 @@ def junit_version = "5.8.2"
 def jgit_version = "5.13.0.202109080827-r"
 
 dependencies {
+    implementation 'org.assertj:assertj-core:3.21.0'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+
     implementation('info.picocli:picocli-spring-boot-starter:4.6.3') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }

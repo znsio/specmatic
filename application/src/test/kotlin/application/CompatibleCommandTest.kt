@@ -1,8 +1,6 @@
 package application
 
 import com.ninjasquad.springmockk.MockkBean
-import io.mockk.every
-import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -11,6 +9,8 @@ import picocli.CommandLine
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.NonZeroExitError
+import io.mockk.*
+import org.junit.jupiter.api.BeforeEach
 import java.io.FileNotFoundException
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, CompatibleCommand::class])
@@ -72,8 +72,18 @@ internal class CompatibleCommandTest {
         assertThat(exitCode).isOne()
     }
 
+    @BeforeEach
+    fun beforeEach() {
+        clearAllMocks()
+//        val contractGitCommand = mockk<GitCommand>()
+//        clearMocks(contractGitCommand)
+//        clearMocks(fileOperations)
+    }
+
     private fun setupHEADcompatibilityCheck(oldContract: String, newContract: String) {
         val contractGitCommand = mockk<GitCommand>()
+        clearMocks(contractGitCommand)
+        clearMocks(fileOperations)
         every { contractGitCommand.show("HEAD", relativeContractPath) }.returns(oldContract)
 
         every { gitCommand.fileIsInGitDir(contractPath) }.returns(true)

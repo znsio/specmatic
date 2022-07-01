@@ -1,5 +1,6 @@
 package application
 
+import application.test.ContractExecutionListener
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.conversions.wsdlContentToFeature
 import `in`.specmatic.core.*
@@ -9,6 +10,14 @@ import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.test.ResultAssert
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.TestFactory
+import org.junit.platform.engine.discovery.DiscoverySelectors
+import org.junit.platform.launcher.Launcher
+import org.junit.platform.launcher.LauncherDiscoveryRequest
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
+import org.junit.platform.reporting.legacy.xml.LegacyXmlReportGeneratingListener
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -16,6 +25,8 @@ import picocli.CommandLine
 import picocli.CommandLine.*
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.PrintWriter
+import java.nio.file.Paths
 import java.util.concurrent.Callable
 
 @Configuration
@@ -23,6 +34,25 @@ open class SystemObjects {
     @Bean
     open fun getSystemGit(): GitCommand {
         return SystemGit()
+    }
+}
+
+open class JUnitBackwardCompatibilityTestRunner {
+    companion object {
+        var tests: List<BackwardCompatibilityTest> = emptyList()
+        var results: MutableList<Results> = mutableListOf()
+    }
+
+    @TestFactory
+    fun contractAsTest(): Collection<DynamicTest> {
+        return tests.map { test ->
+            DynamicTest.dynamicTest(test.name) {
+                val testResults = Results(test.execute())
+
+                results.add(testResults)
+                ResultAssert.assertThat(testResults.toResultIfAny()).isSuccess()
+            }
+        }
     }
 }
 
@@ -36,8 +66,12 @@ class GitCompatibleCommand : Callable<Int> {
     @Autowired
     lateinit var fileOperations: FileOperations
 
+    @Autowired
+    lateinit var junitLauncher: Launcher
+
     @Command(name = "file", description = ["Compare file in working tree against HEAD"])
     fun file(@Parameters(paramLabel = "contractPath", defaultValue = ".") contractPath: String,
+             @Option(names = ["--junitReportDir"], required = false, defaultValue = "") junitReportDirName: String,
              @Option(names = ["--debug"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
             logger = Verbose(CompositePrinter())
@@ -48,9 +82,30 @@ class GitCompatibleCommand : Callable<Int> {
         }
 
         return try {
-            backwardCompatibleOnFileOrDirectory(contractPath, fileOperations) {
-                backwardCompatibleFile(it, fileOperations, gitCommand)
+            val (exitCode, results) = backwardCompatibleOnFileOrDirectory(contractPath, fileOperations) { path ->
+                val testGenerationOutcome = generateFileBackwardCompatibilityTests(path, fileOperations, gitCommand)
+
+                testGenerationOutcome.onSuccess { tests ->
+                    JUnitBackwardCompatibilityTestRunner.tests = tests
+
+                    val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
+                        .selectors(DiscoverySelectors.selectClass(JUnitBackwardCompatibilityTestRunner::class.java))
+                        .build()
+
+                    junitLauncher.discover(request)
+
+                    if(junitReportDirName.isNotBlank()) {
+                        val reportListener = LegacyXmlReportGeneratingListener(Paths.get(junitReportDirName), PrintWriter(System.out, true))
+                        junitLauncher.registerTestExecutionListeners(reportListener)
+                    }
+
+                    junitLauncher.execute(request)
+
+                    Outcome(JUnitBackwardCompatibilityTestRunner.results.firstOrNull() ?: Results())
+                }
             }
+
+            exitCode
         } catch(e: Throwable) {
             logger.log(e)
             1
@@ -61,14 +116,38 @@ class GitCompatibleCommand : Callable<Int> {
     fun commits(@Parameters(paramLabel = "contractPath", defaultValue = ".") path: String,
                 @Parameters(paramLabel = "newerCommit") newerCommit: String,
                 @Parameters(paramLabel = "olderCommit") olderCommit: String,
+                @Option(names = ["--junitReportDir"], required = false, defaultValue = "") junitReportDirName: String,
                 @Option(names = ["--debug"], required = false, defaultValue = "false") verbose: Boolean): Int {
         if(verbose)
             logger = Verbose()
 
         return try {
-            backwardCompatibleOnFileOrDirectory(path, fileOperations) {
-                backwardCompatibleCommit(it, newerCommit, olderCommit, gitCommand)
+            val (returnCode, resultsList) = backwardCompatibleOnFileOrDirectory(path, fileOperations) { path ->
+                val testGenerationOutcome = generateCommitBackwardCompatibleTests(path, newerCommit, olderCommit, gitCommand)
+
+                testGenerationOutcome.onSuccess { tests ->
+                    JUnitBackwardCompatibilityTestRunner.tests = tests
+
+                    val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
+                        .selectors(DiscoverySelectors.selectClass(JUnitBackwardCompatibilityTestRunner::class.java))
+                        .build()
+
+                    junitLauncher.discover(request)
+
+                    if(junitReportDirName.isNotBlank()) {
+                        val reportListener = LegacyXmlReportGeneratingListener(Paths.get(junitReportDirName), PrintWriter(System.out, true))
+                        junitLauncher.registerTestExecutionListeners(reportListener)
+                    }
+
+                    junitLauncher.execute(request)
+
+                    Outcome(JUnitBackwardCompatibilityTestRunner.results.reduce { acc, item -> acc.plus(item) })
+                }
             }
+
+//            writeJUnitReport(resultsList, junitReportDirName)
+
+            returnCode
         } catch(e: Throwable) {
             logger.log(e)
             1
@@ -95,35 +174,39 @@ private fun backwardCompatibleOnFileOrDirectory(
     path: String,
     fileOperations: FileOperations,
     fn: (String) -> Outcome<Results>
-): Int {
+): Pair<Int, List<Results>> {
     return when {
         fileOperations.isFile(path) -> {
-            val output = checkCompatibility {
-                fn(path)
-            }
+            val outcome: Outcome<Results> = fn(path)
+
+            val results = outcome.result
+
+            val output = checkCompatibility(outcome)
 
             println(output.message)
-            output.exitCode
+
+            Pair(output.exitCode, listOfNotNull(results))
         }
         fileOperations.isDirectory(path) -> {
             val file = File(path)
             val outputs = file.walkTopDown().filter {
                 it.extension in CONTRACT_EXTENSIONS
             }.map {
-                Pair(it.path, checkCompatibility {
-                    fn(it.path)
-                })
+                val results = fn(it.path)
+                Triple(it.path, checkCompatibility(results), results)
             }.toList()
 
             if(outputs.isEmpty()) {
                 logger.log("No contract files were found")
-                0
+                Pair(0, emptyList())
             } else {
                 logger.log(outputs.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (path, output) ->
                     """$path:${System.lineSeparator()}${output.message.prependIndent("  ")}"""
                 })
 
-                outputs.map { (_, output) -> output.exitCode }.find { it != 0 } ?: 0
+                val returnCode: Int = outputs.map { (_, output) -> output.exitCode }.find { it != 0 } ?: 0
+
+                Pair(returnCode, outputs.map { it.third.result }.filterNotNull())
             }
         }
         else -> {
@@ -142,6 +225,27 @@ internal fun compatibilityReport(results: Results, resultMessage: String): Strin
     }
 
     return "$countsMessage$resultReport$resultMessage".trim()
+}
+
+internal fun generateFileBackwardCompatibilityTests(
+    contractPath: String,
+    fileOperations: FileOperations,
+    git: GitCommand): Outcome<List<BackwardCompatibilityTest>> {
+
+    return try {
+        logger.debug("Newer version of $contractPath")
+
+        val newerFeature = parseContract(logger.debug(fileOperations.read(contractPath)), contractPath)
+        val result = getOlderFeature(contractPath, git)
+
+        result.onSuccess { olderFeature ->
+            Outcome(generateBackwardCompatibilityTests(olderFeature, newerFeature))
+        }
+    } catch(e: NonZeroExitError) {
+        Outcome(emptyList(), "Could not find $contractPath at HEAD")
+    } catch(e: FileNotFoundException) {
+        Outcome(emptyList(), "Could not find $contractPath on the file system")
+    }
 }
 
 internal fun backwardCompatibleFile(
@@ -187,6 +291,28 @@ internal fun backwardCompatibleCommit(
     }
 }
 
+internal fun generateCommitBackwardCompatibleTests(
+    contractPath: String,
+    newerCommit: String,
+    olderCommit: String,
+    git: GitCommand,
+): Outcome<List<BackwardCompatibilityTest>> {
+    val (gitRoot, relativeContractPath) = git.relativeGitPath(contractPath)
+
+    val partial = getFileContentAtSpecifiedCommit(gitRoot)(relativeContractPath)(contractPath)
+
+    return partial(newerCommit).onSuccess { newerGherkin ->
+        val olderCommitOutcome = partial(olderCommit)
+
+        when(olderCommitOutcome.result) {
+            null -> Outcome(emptyList())
+            else -> olderCommitOutcome.onSuccess { olderGherkin ->
+                Outcome(generateBackwardCompatibilityTests(parseContract(olderGherkin, contractPath), parseContract(newerGherkin, contractPath)))
+            }
+        }
+    }
+}
+
 internal fun parseContract(content: String, path: String): Feature {
     return when(val extension = File(path).extension) {
         "yaml" -> OpenApiSpecification.fromYAML(content, path).toFeature()
@@ -215,9 +341,8 @@ internal fun compatibilityMessage(results: Outcome<Results>): CompatibilityOutpu
     }
 }
 
-internal fun checkCompatibility(compatibilityCheck: () -> Outcome<Results>): CompatibilityOutput =
+internal fun checkCompatibility(results: Outcome<Results>): CompatibilityOutput =
     try {
-        val results = compatibilityCheck()
         compatibilityMessage(results)
     } catch(e: Throwable) {
         CompatibilityOutput(1, "Could not run backwad compatibility check, got exception\n${exceptionCauseMessage(e)}")

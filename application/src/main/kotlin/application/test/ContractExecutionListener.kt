@@ -35,7 +35,7 @@ class ContractExecutionListener : TestExecutionListener {
     }
 
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
-        if (listOf("SpecmaticJUnitSupport", "contractAsTest()", "JUnit Jupiter").any {
+        if (listOf("SpecmaticJUnitSupport", "contractAsTest()", "JUnit Jupiter", "JUnitWrapper", "JUnitBackwardCompatibilityTestRunner").any {
                     testIdentifier!!.displayName.contains(it)
                 }) {
                     if(testExecutionResult?.status != TestExecutionResult.Status.SUCCESSFUL)

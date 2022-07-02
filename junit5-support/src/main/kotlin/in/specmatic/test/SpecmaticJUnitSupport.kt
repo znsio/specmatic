@@ -57,7 +57,7 @@ open class SpecmaticJUnitSupport {
     }
 
     @TestFactory
-    fun contractAsTest(): Collection<DynamicTest> {
+    fun contractTests(): Collection<DynamicTest> {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
         val givenConfigFile = System.getProperty(CONFIG_FILE_NAME)

@@ -49,7 +49,7 @@ open class JUnitBackwardCompatibilityTestRunner {
     }
 
     @TestFactory
-    fun contractAsTest(): Collection<DynamicTest> {
+    fun backwardCompatibilityTests(): Collection<DynamicTest> {
         return tests.map { test ->
             DynamicTest.dynamicTest(test.name) {
                 val testResults = Results(test.execute())

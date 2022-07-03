@@ -245,16 +245,27 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         }
                     }
 
-                    specmaticExampleRows.map { specmaticExampleRow: Row ->
-                        toHttpRequestPatterns(
-                            specmaticPath, httpMethod, operation
-                        ).map { httpRequestPattern: HttpRequestPattern ->
-                            val scenarioName =
-                                scenarioName(operation, response, httpRequestPattern, specmaticExampleRow)
+                    toHttpRequestPatterns(
+                        specmaticPath, httpMethod, operation
+                    ).map { httpRequestPattern: HttpRequestPattern ->
+                        val scenarioName =
+                            scenarioName(operation, response, httpRequestPattern, null)
 
-                            scenarioInfo(operation, scenarioName, httpRequestPattern, httpResponsePattern, specmaticExampleRow = specmaticExampleRow)
+                        specmaticExampleRows.forEach { row ->
+                            httpRequestPattern.newBasedOn(row, Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch))
                         }
-                    }.flatten()
+
+                        val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
+
+                        ScenarioInfo(
+                            scenarioName = scenarioName,
+                            patterns = patterns.toMap(),
+                            httpRequestPattern = httpRequestPattern,
+                            httpResponsePattern = httpResponsePattern,
+                            ignoreFailure = ignoreFailure,
+                            examples = if(specmaticExampleRows.isNotEmpty()) listOf(Examples(specmaticExampleRows.first().columnNames, specmaticExampleRows)) else emptyList()
+                        )
+                    }
                 }.flatten()
             }.flatten()
         }.flatten()
@@ -305,15 +316,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     ) = ScenarioInfo(
         scenarioName = scenarioName,
         patterns = patterns,
-        httpRequestPattern = when (specmaticExampleRow.columnNames.isEmpty()) {
-            true -> httpRequestPattern
-            else -> httpRequestPattern.newBasedOn(specmaticExampleRow, Resolver(newPatterns = patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch))[0]
-        },
-        httpResponsePattern = when (specmaticExampleRow.columnNames.isEmpty()) {
-            true -> httpResponsePattern
-            else -> httpResponsePattern
-        },
-        ignoreFailure = ignoreFailure
+        httpRequestPattern = httpRequestPattern,
+        httpResponsePattern = httpResponsePattern,
+        ignoreFailure = ignoreFailure,
     )
 
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {

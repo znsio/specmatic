@@ -31,7 +31,7 @@ merge of your pull request!
 
 <!-- to check an item, place an "x" in the box like so: "- [x] Documentation" -->
 
-- [ ] Documentation added to the README.md OR link to PR on https://github.com/qontract/qontract-documentation
+- [ ] Documentation added to the README.md OR link to PR on https://github.com/specmatic/specmatic-documentation
 - [ ] Tests
 - [ ] Sonar Quality Gate
 

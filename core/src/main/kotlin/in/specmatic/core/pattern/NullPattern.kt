@@ -25,12 +25,14 @@ object NullPattern : Pattern, ScalarType {
         return newBasedOn(row, resolver)
     }
 
-    override fun parse(value: String, resolver: Resolver): Value =
-        when(value.trim()) {
+    override fun parse(value: String, resolver: Resolver): Value {
+        if (resolver.isNegative) return NullValue
+        return when(value.trim()) {
             NULL_TYPE -> NullValue
             "" -> NullValue
             else -> throw ContractException("Failed to parse $value: it is not null.")
         }
+    }
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         return encompasses(this, otherPattern, thisResolver, otherResolver, typeStack)

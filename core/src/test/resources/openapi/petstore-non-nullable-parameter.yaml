@@ -50,7 +50,11 @@ components:
       type: object
       required:
         - name
+        - tag
       properties:
         name:
+          type: string
+          nullable: false
+        tag:
           type: string
           nullable: false

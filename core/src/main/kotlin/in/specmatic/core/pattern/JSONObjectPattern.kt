@@ -83,6 +83,17 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
+//        forEachKeyCombinationIn(pattern.minus("..."), row) { pattern ->
+//            (0 until pattern.size).map { keyIndex ->
+//                pattern.toList().mapIndexed { index, pair ->
+//                    pair.first to when (index == keyIndex) {
+//                        true -> negativeBasedOn(pattern, row, resolverWithNullType)
+//                        else -> newBasedOn(row, pair.first, pair.second, resolver)
+//                    }
+//                }
+//            }
+//            negativeBasedOn(pattern, row, resolverWithNullType)
+//        }
         return forEachKeyCombinationIn(pattern.minus("..."), row) { pattern ->
             negativeBasedOn(pattern, row, resolverWithNullType)
         }.map { toJSONObjectPattern(it) }

@@ -176,7 +176,7 @@ data class Scenario(
 
         return try {
             val result = httpResponsePattern.matches(httpResponse, resolver)
-            if (this.isNegative && result is Result.Success) {
+            if (this.isNegative && result is Result.Success /* httpRespnse.status non between 400 and 499 */) {
                 return Result.Failure("Negative Scenario").updateScenario(this)
             }
             result.updateScenario(this)
@@ -213,7 +213,7 @@ data class Scenario(
                 attempt {
                     when (isNegative) {
                         false -> httpRequestPattern.newBasedOn(row, resolver)
-                        else -> httpRequestPattern.negativeBasedOn(row, resolver)
+                        else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
                     }.map { newHttpRequestPattern ->
                         Scenario(
                             name,

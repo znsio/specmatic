@@ -212,10 +212,17 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/petstore-non-nullable-parameter.yaml
+  
+  Scenario: get by tag
+    When POST /pets
+    Then status 201
+    Examples:
+      | tag     | name |
+      | testing | test |
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.executeTests(
+        val results = feature.copy(enableNegativeTesting = true).executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["${request.path} executed"] = true
@@ -224,6 +231,8 @@ Background:
                             put("Content-Type", "application/json")
                         }
                     }
+                    val petParameters = ObjectMapper().readValue(request.bodyString, Map::class.java)
+                    if (petParameters["name"] == null) return HttpResponse(403, "name cannot be null", headers)
                     return HttpResponse(201, "hello world", headers)
                 }
 
@@ -893,7 +902,7 @@ Background:
             reportText
         )
 
-        assertThat(countMatches(results.report(), reportText)).isEqualTo(6)
+        assertThat(countMatches(results.report(), reportText)).isEqualTo(3)
     }
 
     @Test
@@ -956,7 +965,7 @@ Background:
             reportText
         )
 
-        assertThat(countMatches(results.report(), reportText)).isEqualTo(6)
+        assertThat(countMatches(results.report(), reportText)).isEqualTo(3)
     }
 
     @Test
@@ -1019,7 +1028,7 @@ Background:
             expectedReport
         )
 
-        assertThat(countMatches(results.report(), expectedReport)).isEqualTo(6)
+        assertThat(countMatches(results.report(), expectedReport)).isEqualTo(3)
     }
 
     fun countMatches(string: String, pattern: String): Int {

@@ -28,6 +28,7 @@ import io.swagger.v3.oas.models.media.*
 import io.swagger.v3.oas.models.parameters.*
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
+import org.apache.commons.lang3.BooleanUtils
 import java.io.File
 import java.net.URI
 
@@ -69,7 +70,8 @@ data class Feature(
     val name: String,
     val testVariables: Map<String, String> = emptyMap(),
     val testBaseURLs: Map<String, String> = emptyMap(),
-    val path: String = ""
+    val path: String = "",
+    val enableNegativeTesting: Boolean = BooleanUtils.toBoolean(System.getProperty("ENABLE_NEGATIVE_TESTING")?:"false")
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
@@ -271,10 +273,16 @@ data class Feature(
         }
         val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->
             positiveScenarios.filter { it.isA2xxScenario() }.none {
-                it.httpRequestPattern.matches(negativeSecenario.httpRequestPattern.generate(Resolver()), Resolver()) is Result.Success
+                it.httpRequestPattern.matches(
+                    negativeSecenario.httpRequestPattern.generate(Resolver()),
+                    Resolver()
+                ) is Result.Success
             }
         }
-        return positiveScenarios + negativeScenariosToConsider
+        return if (enableNegativeTesting)
+            positiveScenarios + negativeScenariosToConsider
+        else
+            positiveScenarios
     }
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =

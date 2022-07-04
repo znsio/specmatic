@@ -7,7 +7,8 @@ import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.*
 import io.cucumber.messages.types.TableRow
 
-fun toTabularPattern(jsonContent: String, typeAlias: String? = null): TabularPattern = toTabularPattern(stringToPatternMap(jsonContent), typeAlias)
+fun toTabularPattern(jsonContent: String, typeAlias: String? = null): TabularPattern =
+    toTabularPattern(stringToPatternMap(jsonContent), typeAlias)
 
 fun toTabularPattern(map: Map<String, Pattern>, typeAlias: String? = null): TabularPattern {
     val missingKeyStrategy: UnexpectedKeyCheck = when ("...") {
@@ -18,24 +19,30 @@ fun toTabularPattern(map: Map<String, Pattern>, typeAlias: String? = null): Tabu
     return TabularPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
-data class TabularPattern(override val pattern: Map<String, Pattern>, private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
+data class TabularPattern(
+    override val pattern: Map<String, Pattern>,
+    private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys,
+    override val typeAlias: String? = null
+) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)
 
         val resolverWithNullType = withNullPattern(resolver).withUnexpectedKeyCheck(unexpectedKeyCheck)
 
-        val keyErrors: List<Result.Failure> = resolverWithNullType.findKeyErrorList(pattern, sampleData.jsonObject).map {
-            it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
-        }
+        val keyErrors: List<Result.Failure> =
+            resolverWithNullType.findKeyErrorList(pattern, sampleData.jsonObject).map {
+                it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
+            }
 
-        val results: List<Result.Failure> = mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
-            resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
-        }.filterIsInstance<Result.Failure>()
+        val results: List<Result.Failure> =
+            mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
+                resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
+            }.filterIsInstance<Result.Failure>()
 
         val failures = keyErrors.plus(results)
 
-        return if(failures.isEmpty())
+        return if (failures.isEmpty())
             Result.Success()
         else
             Result.Failure.fromFailures(failures)
@@ -70,14 +77,36 @@ data class TabularPattern(override val pattern: Map<String, Pattern>, private va
     }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+    override fun encompasses(
+        otherPattern: Pattern,
+        thisResolver: Resolver,
+        otherResolver: Resolver,
+        typeStack: TypeStack
+    ): Result {
         val thisResolverWithNullType = withNullPattern(thisResolver)
         val otherResolverWithNullType = withNullPattern(otherResolver)
 
         return when (otherPattern) {
-            is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
-            is TabularPattern -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
-            is JSONObjectPattern -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
+            is ExactValuePattern -> otherPattern.fitsWithin(
+                listOf(this),
+                otherResolverWithNullType,
+                thisResolverWithNullType,
+                typeStack
+            )
+            is TabularPattern -> mapEncompassesMap(
+                pattern,
+                otherPattern.pattern,
+                thisResolverWithNullType,
+                otherResolverWithNullType,
+                typeStack
+            )
+            is JSONObjectPattern -> mapEncompassesMap(
+                pattern,
+                otherPattern.pattern,
+                thisResolverWithNullType,
+                otherResolverWithNullType,
+                typeStack
+            )
             else -> Result.Failure("Expected json type, got ${otherPattern.typeName}")
         }
     }
@@ -96,15 +125,38 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
 }
 
 fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
-    val patternCollection = patternMap.mapValues { (key, pattern) ->
-        pattern.negativeBasedOn(row, resolver).map { negativePattern ->
+    val combos: List<Map<String, List<Pattern>>> = (0 until patternMap.size).map { keyIndex ->
+        var index = 0
+        patternMap.mapValues { (key, pattern) ->
             attempt(breadCrumb = key) {
-                newBasedOn(row, key, negativePattern, resolver)
+                val patterns = when (index == keyIndex) {
+                    true -> pattern.negativeBasedOn(row, resolver).map { negativePattern ->
+                        attempt(breadCrumb = "Setting $key to null for negative test scenario") {
+                            newBasedOn(row, key, negativePattern, resolver)
+                        }
+                    }.flatten()
+                    else -> newBasedOn(row, key, pattern, resolver)
+                }
+                index += 1
+                patterns
             }
-        }.flatten()
+//            pair.first to when (index == keyIndex) {
+//                true -> pair.second.negativeBasedOn(row, resolver).map { negativePattern ->
+//                    newBasedOn(row, pair.first, negativePattern, resolver)
+//                }.flatten()
+//                else -> newBasedOn(row, pair.first, pair.second, resolver)
+//            }
+        }
+    }
+    val patternCollection: Map<String, List<Pattern>> = patternMap.mapValues { (key, pattern) ->
+        attempt(breadCrumb = key) {
+            pattern.negativeBasedOn(row, resolver).map { negativePattern ->
+                newBasedOn(row, key, negativePattern, resolver)
+            }.flatten()
+        }
     }
 
-    return patternList(patternCollection)
+    return combos.map { patternList(it) }.flatten()
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<String, Pattern>> {
@@ -134,7 +186,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
                 }
             } else {
                 val parsedRowValue = attempt("Format error in example of \"$keyWithoutOptionality\"") {
-                    pattern.parse(rowValue, resolver)
+                    resolver.parse(pattern, rowValue)
                 }
 
                 when (val matchResult = pattern.matches(parsedRowValue, resolver)) {
@@ -152,10 +204,12 @@ fun newBasedOn(pattern: Pattern, resolver: Resolver): List<Pattern> {
 }
 
 fun key(pattern: Pattern, key: String): String {
-    return withoutOptionality(when (pattern) {
-        is Keyed -> pattern.key ?: key
-        else -> key
-    })
+    return withoutOptionality(
+        when (pattern) {
+            is Keyed -> pattern.key ?: key
+            else -> key
+        }
+    )
 }
 
 fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): List<Map<String, ValueType>> {
@@ -165,12 +219,12 @@ fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): Li
     val key = patternCollection.keys.first()
 
     return (patternCollection[key] ?: throw ContractException("key $key should not be empty in $patternCollection"))
-            .flatMap { pattern ->
-                val subLists = patternList(patternCollection - key)
-                subLists.map { generatedPatternMap ->
-                    generatedPatternMap.plus(Pair(key, pattern))
-                }
+        .flatMap { pattern ->
+            val subLists = patternList(patternCollection - key)
+            subLists.map { generatedPatternMap ->
+                generatedPatternMap.plus(Pair(key, pattern))
             }
+        }
 }
 
 fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): List<Map<String, ValueType>> {
@@ -189,21 +243,30 @@ fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): 
     }.toList()
 }
 
-private fun <ValueType> keyCombinations(patternCollection: Map<String, List<ValueType>>,
-                                        optionalSelector: (String, List<ValueType>) -> Pair<String, ValueType>): Map<String, ValueType> {
+private fun <ValueType> keyCombinations(
+    patternCollection: Map<String, List<ValueType>>,
+    optionalSelector: (String, List<ValueType>) -> Pair<String, ValueType>
+): Map<String, ValueType> {
     return patternCollection.map { (key, value) ->
         optionalSelector(key, value)
     }.toMap()
 }
 
-fun <ValueType> forEachKeyCombinationIn(patternMap: Map<String, ValueType>, row: Row, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> =
-        keySets(patternMap.keys.toList(), row).map { keySet ->
-            patternMap.filterKeys { key -> key in keySet }
-        }.map { newPattern ->
-            creator(newPattern)
-        }.flatten()
+fun <ValueType> forEachKeyCombinationIn(
+    patternMap: Map<String, ValueType>,
+    row: Row,
+    creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
+): List<Map<String, ValueType>> =
+    keySets(patternMap.keys.toList(), row).map { keySet ->
+        patternMap.filterKeys { key -> key in keySet }
+    }.map { newPattern ->
+        creator(newPattern)
+    }.flatten()
 
-fun <ValueType> allOrNothingCombinationIn(patternMap: Map<String, ValueType>, creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>): List<Map<String, ValueType>> {
+fun <ValueType> allOrNothingCombinationIn(
+    patternMap: Map<String, ValueType>,
+    creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
+): List<Map<String, ValueType>> {
     val keyLists = if (patternMap.keys.any { isOptional(it) }) {
         listOf(patternMap.keys, patternMap.keys.filter { k -> !isOptional(k) })
     } else {
@@ -240,9 +303,9 @@ internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {
 }
 
 fun rowsToTabularPattern(rows: List<TableRow>, typeAlias: String? = null) =
-        toTabularPattern(rows.map { it.cells }.associate { (key, value) ->
-            key.value to toJSONPattern(value.value)
-        }, typeAlias)
+    toTabularPattern(rows.map { it.cells }.associate { (key, value) ->
+        key.value to toJSONPattern(value.value)
+    }, typeAlias)
 
 fun toJSONPattern(value: String): Pattern {
     return value.trim().let {

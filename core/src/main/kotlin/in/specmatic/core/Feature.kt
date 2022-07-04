@@ -252,14 +252,29 @@ data class Feature(
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> {
-        return scenarios.map {
-            try {
-                ScenarioTest(it.newBasedOn(suggestions))
-            } catch (e: Throwable) {
-                ScenarioTestGenerationFailure(it, e)
+        val negativeScenarios =
+            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions) }.flatMap {
+                it.geqnerateTestScenarios(testVariables, testBaseURLs)
             }
-        }.flatMap {
+        val positiveScenarios = scenarios.map { it.newBasedOn(suggestions) }.flatMap {
             it.generateTestScenarios(testVariables, testBaseURLs)
+        }
+        val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->
+            positiveScenarios.filter { it.isA2xxScenario() }.none {
+                it.httpRequestPattern.matches(
+                    negativeSecenario.httpRequestPattern.generate(Resolver()),
+                    Resolver()
+                ) is Result.Success
+            }
+        }
+
+        val testScenarios = if (enableNegativeTesting)
+            positiveScenarios + negativeScenariosToConsider
+        else
+            positiveScenarios
+
+        return testScenarios.map {
+            ScenarioTest(it)
         }
     }
 

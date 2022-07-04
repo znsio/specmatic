@@ -254,7 +254,7 @@ data class Feature(
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> {
         val negativeScenarios =
             scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions) }.flatMap {
-                it.geqnerateTestScenarios(testVariables, testBaseURLs)
+                it.generateTestScenarios(testVariables, testBaseURLs)
             }
         val positiveScenarios = scenarios.map { it.newBasedOn(suggestions) }.flatMap {
             it.generateTestScenarios(testVariables, testBaseURLs)

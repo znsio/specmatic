@@ -178,7 +178,7 @@ data class Scenario(
             return if (is4xxResponse(httpResponse))
                 Result.Success().updateScenario(this)
             else
-                Result.Failure("Negative Scenario").updateScenario(this)
+                Result.Failure("Expected 4xx status, but received ${httpResponse.status}", breadCrumb = "RESPONSE.STATUS").updateScenario(this)
         }
 
         try {

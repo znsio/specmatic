@@ -3,6 +3,7 @@ package `in`.specmatic.core
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import java.net.URI
 
@@ -445,7 +446,16 @@ data class HttpRequestPattern(
                         if(result is Failure)
                             throw ContractException(result.toFailureReport())
 
-                        listOf(ExactValuePattern(value))
+                        if(value is JSONObjectValue) {
+                            val jsonValues = jsonObjectToValues(value)
+                            val jsonValeuRow = Row(
+                                columnNames = jsonValues.map { it.first }.toList(),
+                                values = jsonValues.map { it.second }.toList())
+
+                            body.negativeBasedOn(jsonValeuRow, resolver)
+                        } else {
+                            listOf(ExactValuePattern(value))
+                        }
                     } else {
                         body.negativeBasedOn(row, resolver)
                     }
@@ -475,6 +485,21 @@ data class HttpRequestPattern(
                 }
             }
         }
+    }
+
+    private fun jsonObjectToValues(value: JSONObjectValue): List<Pair<String, String>> {
+        val valueMap = value.jsonObject
+
+        return valueMap.entries.map { (key, value) ->
+            when(value) {
+                is JSONObjectValue -> {
+                    jsonObjectToValues(value)
+                }
+                else -> {
+                    listOf(Pair(key, value.toStringLiteral()))
+                }
+            }
+        }.flatten()
     }
 }
 

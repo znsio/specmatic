@@ -247,7 +247,9 @@ Background:
 In scenario "POST /pets. Response: pet response"
 API: POST /pets -> 201
 
-  Negative Scenario
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
         """.trimIndent())
     }
 

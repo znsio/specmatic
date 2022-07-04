@@ -140,12 +140,6 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
                 index += 1
                 patterns
             }
-//            pair.first to when (index == keyIndex) {
-//                true -> pair.second.negativeBasedOn(row, resolver).map { negativePattern ->
-//                    newBasedOn(row, pair.first, negativePattern, resolver)
-//                }.flatten()
-//                else -> newBasedOn(row, pair.first, pair.second, resolver)
-//            }
         }
     }
     val patternCollection: Map<String, List<Pattern>> = patternMap.mapValues { (key, pattern) ->

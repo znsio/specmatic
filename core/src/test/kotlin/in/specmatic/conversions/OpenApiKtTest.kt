@@ -241,6 +241,8 @@ Background:
             }
         )
 
+        assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(2)
+        assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(1)
         assertThat(results.report()).isEqualTo("""
 In scenario "POST /pets. Response: pet response"
 API: POST /pets -> 201

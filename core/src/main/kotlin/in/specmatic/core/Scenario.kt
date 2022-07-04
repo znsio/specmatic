@@ -174,16 +174,21 @@ data class Scenario(
     fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Result {
         val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages)
 
-        return try {
-            val result = httpResponsePattern.matches(httpResponse, resolver)
-            if (this.isNegative && result is Result.Success /* httpRespnse.status non between 400 and 499 */) {
-                return Result.Failure("Negative Scenario").updateScenario(this)
-            }
-            result.updateScenario(this)
+        if (this.isNegative) {
+            return if (is4xxResponse(httpResponse))
+                Result.Success().updateScenario(this)
+            else
+                Result.Failure("Negative Scenario").updateScenario(this)
+        }
+
+        try {
+            return httpResponsePattern.matches(httpResponse, resolver).updateScenario(this)
         } catch (exception: Throwable) {
             return Result.Failure("Exception: ${exception.message}")
         }
     }
+
+    private fun is4xxResponse(httpResponse: HttpResponse) = (400..499).contains(httpResponse.status)
 
     object ContractAndRowValueMismatch : MismatchMessages {
         override fun mismatchMessage(expected: String, actual: String): String {

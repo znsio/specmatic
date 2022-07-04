@@ -13,6 +13,7 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Disabled
 import java.util.*
 import java.util.function.Consumer
 import kotlin.collections.HashMap

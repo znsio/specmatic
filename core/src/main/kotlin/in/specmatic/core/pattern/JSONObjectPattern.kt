@@ -62,42 +62,23 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
             Result.Failure.fromFailures(failures)
     }
 
-    override fun generate(resolver: Resolver): JSONObjectValue {
-        val resolverWithNullType = withNullPattern(resolver)
-        return JSONObjectValue(generate(pattern, resolverWithNullType))
-    }
+    override fun generate(resolver: Resolver): JSONObjectValue =
+        JSONObjectValue(generate(pattern, withNullPattern(resolver)))
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> {
-        val resolverWithNullType = withNullPattern(resolver)
-        return forEachKeyCombinationIn(pattern.minus("..."), row) { pattern ->
-            newBasedOn(pattern, row, resolverWithNullType)
+    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> =
+        forEachKeyCombinationIn(pattern.minus("..."), row) { pattern ->
+            newBasedOn(pattern, row, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it) }
-    }
 
-    override fun newBasedOn(resolver: Resolver): List<JSONObjectPattern> {
-        val resolverWithNullType = withNullPattern(resolver)
-        return allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
-            newBasedOn(pattern, resolverWithNullType)
+    override fun newBasedOn(resolver: Resolver): List<JSONObjectPattern> =
+        allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
+            newBasedOn(pattern, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it) }
-    }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        val resolverWithNullType = withNullPattern(resolver)
-//        forEachKeyCombinationIn(pattern.minus("..."), row) { pattern ->
-//            (0 until pattern.size).map { keyIndex ->
-//                pattern.toList().mapIndexed { index, pair ->
-//                    pair.first to when (index == keyIndex) {
-//                        true -> negativeBasedOn(pattern, row, resolverWithNullType)
-//                        else -> newBasedOn(row, pair.first, pair.second, resolver)
-//                    }
-//                }
-//            }
-//            negativeBasedOn(pattern, row, resolverWithNullType)
-//        }
-        return forEachKeyCombinationIn(pattern.minus("..."), row) { pattern ->
-            negativeBasedOn(pattern, row, resolverWithNullType)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> =
+        forEachKeyCombinationIn(pattern.minus("..."), row) { pattern ->
+            negativeBasedOn(pattern, row, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it) }
-    }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
     override fun hashCode(): Int = pattern.hashCode()

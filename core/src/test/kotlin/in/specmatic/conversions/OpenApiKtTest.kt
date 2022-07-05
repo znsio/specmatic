@@ -241,6 +241,7 @@ Background:
             }
         )
 
+        assertThat(results.results.size).isEqualTo(3)
         assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(2)
         assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(1)
         assertThat(results.report()).isEqualTo("""

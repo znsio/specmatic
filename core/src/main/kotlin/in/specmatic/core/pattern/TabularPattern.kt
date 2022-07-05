@@ -125,11 +125,11 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
 }
 
 fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
-    val combos: List<Map<String, List<Pattern>>> = (0 until patternMap.size).map { keyIndex ->
-        var index = 0
-        patternMap.mapValues { (key, pattern) ->
+    val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
+    return eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
+        patterns.mapValues { (key, pattern) ->
             attempt(breadCrumb = key) {
-                val patterns = when (index == keyIndex) {
+                when (key == keyToNegate) {
                     true -> pattern.negativeBasedOn(row, resolver).map { negativePattern ->
                         attempt(breadCrumb = "Setting $key to null for negative test scenario") {
                             newBasedOn(row, key, negativePattern, resolver)
@@ -137,20 +137,9 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
                     }.flatten()
                     else -> newBasedOn(row, key, pattern, resolver)
                 }
-                index += 1
-                patterns
             }
         }
-    }
-    val patternCollection: Map<String, List<Pattern>> = patternMap.mapValues { (key, pattern) ->
-        attempt(breadCrumb = key) {
-            pattern.negativeBasedOn(row, resolver).map { negativePattern ->
-                newBasedOn(row, key, negativePattern, resolver)
-            }.flatten()
-        }
-    }
-
-    return combos.map { patternList(it) }.flatten()
+    }.values.toList().map { patternList(it) }.flatten()
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<String, Pattern>> {

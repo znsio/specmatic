@@ -4,10 +4,7 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.mapZip
-import `in`.specmatic.core.value.KafkaMessage
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.True
-import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.*
 import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTest
 import `in`.specmatic.test.ScenarioTestGenerationFailure
@@ -39,7 +36,8 @@ data class Scenario(
     val ignoreFailure: Boolean = false,
     val references: Map<String, References> = emptyMap(),
     val bindings: Map<String, String> = emptyMap(),
-    val isNegative: Boolean = false
+    val isNegative: Boolean = false,
+    val is4xxDefined: Boolean = false
 ) {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -175,8 +173,12 @@ data class Scenario(
         val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages)
 
         if (this.isNegative) {
-            return if (is4xxResponse(httpResponse))
-                Result.Success().updateScenario(this)
+            return if (is4xxResponse(httpResponse)) {
+                if(is4xxDefined)
+                    Result.Success().updateScenario(this)
+                else
+                    Result.Failure("Received ${httpResponse.status}, but the specification does not contain a 4xx response, hence unable to verify this response", breadCrumb = "RESPONSE.STATUS").updateScenario(this)
+            }
             else
                 Result.Failure("Expected 4xx status, but received ${httpResponse.status}", breadCrumb = "RESPONSE.STATUS").updateScenario(this)
         }
@@ -460,7 +462,7 @@ data class Scenario(
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
-    fun negativeBasedOn(suggestions: List<Scenario>) = Scenario(
+    fun negativeBasedOn(suggestions: List<Scenario>, is4xxDefined: Boolean = false) = Scenario(
         "-ve: ${this.name}",
         this.httpRequestPattern,
         this.httpResponsePattern,
@@ -472,7 +474,8 @@ data class Scenario(
         this.ignoreFailure,
         this.references,
         bindings,
-        isNegative = true
+        isNegative = true,
+        is4xxDefined = is4xxDefined
     )
 }
 
@@ -526,7 +529,13 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
 
         val result = when (response.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "success")) {
             "failure" -> Result.Failure(response.body.toStringLiteral()).updateScenario(testScenario)
-            else -> testScenario.matches(response, ContractAndResponseMismatch)
+            else -> {
+                if(response.body is JSONObjectValue && ignorable(response.body)) {
+                    Result.Success()
+                } else {
+                    testScenario.matches(response, ContractAndResponseMismatch)
+                }
+            }
         }
 
         result.withBindings(testScenario.bindings, response)
@@ -534,4 +543,10 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
         Result.Failure(exceptionCauseMessage(exception))
             .also { failure -> failure.updateScenario(testScenario) }
     }
+}
+
+fun ignorable(body: JSONObjectValue): Boolean {
+    return body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED"
+            && (body.findFirstChildByPath("resultStatus.errorCode")?.toStringLiteral() == "INVALID_REQUEST"
+                || body.findFirstChildByPath("resultStatus.exceptionType")?.toStringLiteral() == "NO_DATA_FOUND")
 }

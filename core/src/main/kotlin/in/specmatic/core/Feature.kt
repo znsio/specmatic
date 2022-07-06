@@ -253,7 +253,7 @@ data class Feature(
 
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> {
         val negativeScenarios =
-            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions) }.flatMap {
+            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions, has4xx(it)) }.flatMap {
                 it.generateTestScenarios(testVariables, testBaseURLs)
             }
         val positiveScenarios = scenarios.map { it.newBasedOn(suggestions) }.flatMap {
@@ -275,6 +275,13 @@ data class Feature(
 
         return testScenarios.map {
             ScenarioTest(it)
+        }
+    }
+
+    private fun has4xx(scenario: Scenario): Boolean {
+        return scenarios.any {
+            it.httpRequestPattern.urlMatcher!!.path == scenario.httpRequestPattern.urlMatcher!!.path
+                    && it.httpResponsePattern.status.toString().startsWith("4")
         }
     }
 

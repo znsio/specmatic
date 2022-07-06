@@ -461,7 +461,7 @@ data class Scenario(
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
     fun negativeBasedOn(suggestions: List<Scenario>) = Scenario(
-        this.name,
+        "-ve: ${this.name}",
         this.httpRequestPattern,
         this.httpResponsePattern,
         this.expectedFacts,

@@ -269,6 +269,29 @@ fun <ValueType> allOrNothingCombinationIn(
     return flatten
 }
 
+fun <ValueType> allOrNothingCombinationIn(
+    patternMap: Map<String, ValueType>, row: Row,
+    creator: (Map<String, ValueType>, Row) -> List<Map<String, ValueType>>
+): List<Map<String, ValueType>> {
+    val keyLists = if (patternMap.keys.any { isOptional(it) }) {
+        listOf(patternMap.keys, patternMap.keys.filter { k -> !isOptional(k) })
+    } else {
+        listOf(patternMap.keys)
+    }
+
+    val keySets: List<Map<String, ValueType>> = keyLists.map { keySet ->
+        patternMap.filterKeys { key -> key in keySet }
+    }
+
+    val keySetValues: List<List<Map<String, ValueType>>> = keySets.map { newPattern ->
+        creator(newPattern, row)
+    }
+
+    val flatten: List<Map<String, ValueType>> = keySetValues.flatten()
+
+    return flatten
+}
+
 internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {
     if (listOfKeys.isEmpty())
         return listOf(listOfKeys)

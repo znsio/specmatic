@@ -76,8 +76,8 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         }.map { toJSONObjectPattern(it) }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> =
-        forEachKeyCombinationIn(pattern.minus("..."), row) { pattern ->
-            negativeBasedOn(pattern, row, withNullPattern(resolver))
+        allOrNothingCombinationIn(pattern.minus("..."), row) { pattern, anotherRow ->
+            negativeBasedOn(pattern, anotherRow, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it) }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)

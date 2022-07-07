@@ -296,39 +296,46 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
         return responses.orEmpty().map { (status, response) ->
-            val headersMap = response.headers.orEmpty().map { (headerName, header) ->
-                toSpecmaticParamName(header.required != true, headerName) to toSpecmaticPattern(
-                    header.schema, emptyList()
-                )
-            }.toMap()
-            when (val content = response.content) {
-                null -> listOf(
-                    Triple(
-                        response, MediaType(), HttpResponsePattern(
-                            headersPattern = HttpHeadersPattern(headersMap), status = when (status) {
-                                "default" -> -1
-                                else -> status.toInt()
-                            }
-                        )
-                    )
-                )
-                else -> content.map { (contentType, mediaType) ->
-                    Triple(
-                        response, mediaType, HttpResponsePattern(
-                            headersPattern = HttpHeadersPattern(
-                                headersMap
-                            ), status = when (status) {
-                                "default" -> 400
-                                else -> status.toInt()
-                            }, body = when (contentType) {
-                                "application/xml" -> toXMLPattern(mediaType)
-                                else -> toSpecmaticPattern(mediaType)
-                            }
-                        )
-                    )
-                }
-            }
+            val headersMap = openAPIHeadersToSpecmatic(response)
+            openAPIResponseToSpecmatic(response, status, headersMap)
         }.flatten()
+    }
+
+    private fun openAPIHeadersToSpecmatic(response: ApiResponse) =
+        response.headers.orEmpty().map { (headerName, header) ->
+            toSpecmaticParamName(header.required != true, headerName) to toSpecmaticPattern(
+                header.schema, emptyList()
+            )
+        }.toMap()
+
+    private fun openAPIResponseToSpecmatic(
+        response: ApiResponse,
+        status: String,
+        headersMap: Map<String, Pattern>
+    ): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
+        if(status == "default") return emptyList()
+
+        if(response.content == null) {
+            val responsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(headersMap),
+                status = status.toInt()
+            )
+
+            listOf(Triple(response, MediaType(), responsePattern))
+        }
+
+        return response.content.map { (contentType, mediaType) ->
+            val responsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(headersMap),
+                status = status.toInt(),
+                body = when (contentType) {
+                    "application/xml" -> toXMLPattern(mediaType)
+                    else -> toSpecmaticPattern(mediaType)
+                }
+            )
+
+            Triple(response, mediaType, responsePattern)
+        }
     }
 
     private fun toHttpRequestPatterns(

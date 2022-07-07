@@ -185,30 +185,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     ).map { httpRequestPattern: HttpRequestPattern ->
                         val scenarioName = scenarioName(operation, response, httpRequestPattern, null)
 
-                        scenarioInfo(operation, scenarioName, httpRequestPattern, httpResponsePattern)
+                        val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
+                        ScenarioInfo(
+                            scenarioName = scenarioName,
+                            patterns = patterns.toMap(),
+                            httpRequestPattern = httpRequestPattern,
+                            httpResponsePattern = httpResponsePattern,
+                            ignoreFailure = ignoreFailure,
+                        )
                     }
                 }.flatten()
             }.flatten()
         }.flatten()
-    }
-
-    private fun scenarioInfo(
-        operation: Operation,
-        scenarioName: String,
-        httpRequestPattern: HttpRequestPattern,
-        httpResponsePattern: HttpResponsePattern,
-        specmaticExampleRow: Row = Row(),
-    ): ScenarioInfo {
-        val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
-
-        return scenarioInfo(
-            scenarioName,
-            httpRequestPattern,
-            httpResponsePattern,
-            patterns = this.patterns.toMap(),
-            ignoreFailure = ignoreFailure,
-            specmaticExampleRow = specmaticExampleRow
-        )
     }
 
     private fun scenarioName(
@@ -305,21 +293,6 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }.toMap()
 
     private fun openApiPaths() = openApi.paths.orEmpty()
-
-    private fun scenarioInfo(
-        scenarioName: String,
-        httpRequestPattern: HttpRequestPattern,
-        httpResponsePattern: HttpResponsePattern,
-        specmaticExampleRow: Row = Row(),
-        patterns: Map<String, Pattern>,
-        ignoreFailure: Boolean = false
-    ) = ScenarioInfo(
-        scenarioName = scenarioName,
-        patterns = patterns,
-        httpRequestPattern = httpRequestPattern,
-        httpResponsePattern = httpResponsePattern,
-        ignoreFailure = ignoreFailure,
-    )
 
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
         return responses.orEmpty().map { (status, response) ->

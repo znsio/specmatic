@@ -555,7 +555,7 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
 }
 
 fun ignorable(body: JSONObjectValue): Boolean {
-    return body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED"
-            && (body.findFirstChildByPath("resultStatus.errorCode")?.toStringLiteral() == "INVALID_REQUEST"
-                || body.findFirstChildByPath("resultStatus.exceptionType")?.toStringLiteral() == "NO_DATA_FOUND")
+    return System.getenv("DAP_RESPONSE") == "true" &&
+        (body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED" &&
+            (body.findFirstChildByPath("resultStatus.errorCode")?.toStringLiteral() == "INVALID_REQUEST"))
 }

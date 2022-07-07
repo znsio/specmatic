@@ -71,7 +71,9 @@ data class Feature(
     val testVariables: Map<String, String> = emptyMap(),
     val testBaseURLs: Map<String, String> = emptyMap(),
     val path: String = "",
-    val enableNegativeTesting: Boolean = BooleanUtils.toBoolean(System.getenv("ENABLE_NEGATIVE_TESTING") ?: System.getProperty("ENABLE_NEGATIVE_TESTING") ?: "false")
+    val enableNegativeTesting: Boolean = BooleanUtils.toBoolean(
+        System.getenv("ENABLE_NEGATIVE_TESTING") ?: System.getProperty("ENABLE_NEGATIVE_TESTING") ?: "false"
+    )
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
@@ -256,7 +258,7 @@ data class Feature(
             scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions, has4xx(it)) }.flatMap {
                 it.generateTestScenarios(testVariables, testBaseURLs)
             }
-        val positiveScenarios = scenarios.map { it.newBasedOn(suggestions) }.flatMap {
+        val positiveScenarios = scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario}.map { it.newBasedOn(suggestions) }.flatMap {
             it.generateTestScenarios(testVariables, testBaseURLs)
         }
         val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->
@@ -287,12 +289,13 @@ data class Feature(
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
         val negativeScenarios =
-            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions) }.flatMap {
+            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions, has4xx(it)) }.flatMap {
                 it.generateTestScenarios(testVariables, testBaseURLs)
             }
-        val positiveScenarios = scenarios.map { it.newBasedOn(suggestions) }.flatMap {
-            it.generateTestScenarios(testVariables, testBaseURLs)
-        }
+        val positiveScenarios =
+            scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map { it.newBasedOn(suggestions) }.flatMap {
+                it.generateTestScenarios(testVariables, testBaseURLs)
+            }
         val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->
             positiveScenarios.filter { it.isA2xxScenario() }.none {
                 it.httpRequestPattern.matches(
@@ -1301,7 +1304,7 @@ private fun lexScenario(
         else -> false
     }
 
-    return if (includedSpecifications.isEmpty() || backgroundScenarioInfo == null) {
+    val scenarioInfo = if (includedSpecifications.isEmpty() || backgroundScenarioInfo == null) {
         scenarioInfoWithExamples(
             parsedScenarioInfo,
             backgroundScenarioInfo ?: ScenarioInfo(),
@@ -1319,6 +1322,8 @@ private fun lexScenario(
 
         scenarioInfoWithExamples(matchingScenario, backgroundScenarioInfo, examplesList, ignoreFailure)
     }
+
+    return scenarioInfo.copy(isGherkinScenario = true)
 }
 
 private fun listOfDatatableRows(it: Step) = it.dataTable?.rows ?: mutableListOf()
@@ -1527,7 +1532,8 @@ internal fun lex(featureChildren: List<FeatureChild>, filePath: String): List<Sc
                 scenarioInfo.kafkaMessage,
                 scenarioInfo.ignoreFailure,
                 scenarioInfo.references,
-                scenarioInfo.bindings
+                scenarioInfo.bindings,
+                scenarioInfo.isGherkinScenario
             )
         }
 }

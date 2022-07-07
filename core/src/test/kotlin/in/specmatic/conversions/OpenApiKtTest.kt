@@ -114,7 +114,7 @@ Scenario: zero should return not found
         )
 
         assertThat(flags["/hello/0 executed"]).isTrue
-        assertThat(flags.size).isEqualTo(3)
+        assertThat(flags.size).isEqualTo(2)
         assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
 
@@ -156,7 +156,7 @@ Background:
 
         assertThat(flags["/hello/0 executed"]).isTrue
         assertThat(flags["/hello/15 executed"]).isTrue
-        assertThat(flags.size).isEqualTo(3)
+        assertThat(flags.size).isEqualTo(2)
         assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
 
@@ -198,7 +198,7 @@ Background:
 
         assertThat(flags["/hello/0 executed"]).isTrue
         assertThat(flags["/hello/15 executed"]).isTrue
-        assertThat(flags.size).isEqualTo(3)
+        assertThat(flags.size).isEqualTo(2)
         assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
 
@@ -213,7 +213,7 @@ Feature: Hello world
 Background:
   Given openapi openapi/petstore-non-nullable-parameter.yaml
   
-  Scenario: get by tag
+  Scenario: create pet
     When POST /pets
     Then status 201
     Examples:
@@ -232,7 +232,7 @@ Background:
                         }
                     }
                     val petParameters = ObjectMapper().readValue(request.bodyString, Map::class.java)
-                    if (petParameters["name"] == null) return HttpResponse(403, "name cannot be null", headers)
+                    if (petParameters["name"] == null) return HttpResponse(422, "name cannot be null", headers)
                     return HttpResponse(201, "hello world", headers)
                 }
 
@@ -245,7 +245,7 @@ Background:
         assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(2)
         assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(1)
         assertThat(results.report()).isEqualTo("""
-In scenario "POST /pets. Response: pet response"
+In scenario "-ve: POST /pets. Response: pet response"
 API: POST /pets -> 201
 
   >> RESPONSE.STATUS
@@ -739,7 +739,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.executeTests(
+        val results = feature.copy(enableNegativeTesting = false).executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val flagKey = "${request.path} ${request.method} executed"

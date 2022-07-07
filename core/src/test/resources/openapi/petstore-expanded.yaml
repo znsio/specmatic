@@ -133,6 +133,12 @@ paths:
               schema:
                 type: number
                 format: double
+        400:
+          description: invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         default:
           description: unexpected error
           content:

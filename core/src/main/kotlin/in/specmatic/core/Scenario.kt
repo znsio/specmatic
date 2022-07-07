@@ -9,6 +9,7 @@ import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTest
 import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
+import org.apache.kafka.common.protocol.types.Field.Bool
 
 object ContractAndStubMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
@@ -36,6 +37,7 @@ data class Scenario(
     val ignoreFailure: Boolean = false,
     val references: Map<String, References> = emptyMap(),
     val bindings: Map<String, String> = emptyMap(),
+    val isGherkinScenario: Boolean = false,
     val isNegative: Boolean = false,
     val is4xxDefined: Boolean = false
 ) {
@@ -234,7 +236,9 @@ data class Scenario(
                             ignoreFailure,
                             references,
                             bindings,
-                            isNegative
+                            isGherkinScenario,
+                            isNegative,
+                            is4xxDefined
                         )
                     }
                 }
@@ -253,7 +257,9 @@ data class Scenario(
                         ignoreFailure,
                         references,
                         bindings,
-                        isNegative
+                        isGherkinScenario,
+                        isNegative,
+                        is4xxDefined
                     )
                 }
             }
@@ -455,7 +461,9 @@ data class Scenario(
             this.ignoreFailure,
             scenario.references,
             bindings,
-            isNegative
+            isGherkinScenario,
+            isNegative,
+            is4xxDefined
         )
 
     fun newBasedOn(suggestions: List<Scenario>) =
@@ -474,6 +482,7 @@ data class Scenario(
         this.ignoreFailure,
         this.references,
         bindings,
+        this.isGherkinScenario,
         isNegative = true,
         is4xxDefined = is4xxDefined
     )

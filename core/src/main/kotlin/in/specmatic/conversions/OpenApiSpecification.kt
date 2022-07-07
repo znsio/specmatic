@@ -88,7 +88,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             scenarioInfosWithExamples.none { scenarioInfoWithExample ->
                 scenarioInfoWithExample.matchesSignature(scenarioInfo)
             }
-        }.plus(scenarioInfosWithExamples)
+        }.plus(scenarioInfosWithExamples).filter { it.httpResponsePattern.status > 0 }
     }
 
     override fun matches(
@@ -306,7 +306,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     Triple(
                         response, MediaType(), HttpResponsePattern(
                             headersPattern = HttpHeadersPattern(headersMap), status = when (status) {
-                                "default" -> 400
+                                "default" -> -1
                                 else -> status.toInt()
                             }
                         )

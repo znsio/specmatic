@@ -8,7 +8,7 @@ import org.junit.jupiter.api.BeforeAll
 class HttpStubShouldRunOverTCP {
     @Karate.Test
     fun fakeShouldServeSingleFeatureContract(): Karate {
-        return Karate().relativeTo(javaClass).feature("classpath:ContractFakeShouldRunOverTCP.feature")
+        return Karate.run("classpath:ContractFakeShouldRunOverTCP.feature").relativeTo(javaClass)
     }
 
     companion object {

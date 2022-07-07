@@ -321,7 +321,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 status = status.toInt()
             )
 
-            listOf(Triple(response, MediaType(), responsePattern))
+            return listOf(Triple(response, MediaType(), responsePattern))
         }
 
         return response.content.map { (contentType, mediaType) ->

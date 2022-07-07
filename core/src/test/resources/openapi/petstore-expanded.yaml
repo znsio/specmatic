@@ -183,7 +183,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Pet'
-        default:
+        '400':
           description: unexpected error
           content:
             application/json:

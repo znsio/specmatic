@@ -55,7 +55,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         return when (response.status) {
             status -> {
                 if(System.getenv("DAP_RESPONSE") == "true" && response.status.toString().startsWith("2") && body is JSONObjectValue && body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED")
-                    MatchFailure(mismatchResult("status $status and resultStatus.status == \"success\"", "status ${response.status} and resultStatus.status == \"${body.findFirstChildByPath("resultStatus.status")?.toStringLiteral()}\"").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
+                    MatchFailure(mismatchResult("status $status and resultStatus.status == \"SUCCESS\"", "status ${response.status} and resultStatus.status == \"${body.findFirstChildByPath("resultStatus.status")?.toStringLiteral()}\"").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
                 else
                     MatchSuccess(parameters)
             }

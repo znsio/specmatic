@@ -54,9 +54,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         return attempt(breadCrumb = "[]") { pattern.newBasedOn(resolverWithEmptyType).map { ListPattern(it) } }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(this)
-    }
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value)
 

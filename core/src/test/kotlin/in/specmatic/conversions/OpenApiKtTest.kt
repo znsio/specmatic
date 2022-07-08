@@ -217,6 +217,74 @@ Background:
     Examples:
       | tag     | name | optional      |
       | testing | test | test-optional |
+
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val results = feature.copy(enableNegativeTesting = true).executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    val petParameters = ObjectMapper().readValue(request.bodyString, Map::class.java)
+                    if (petParameters["name"] == null) return HttpResponse(422, "name cannot be null", headers)
+                    return HttpResponse(201, "hello world", headers)
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(results.results.size).isEqualTo(7)
+        assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(4)
+        assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(3)
+        assertThat(results.report()).isEqualTo("""
+In scenario "-ve: POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
+
+In scenario "-ve: POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
+
+In scenario "-ve: POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should report error when the application accepts null for a non-nullable parameter given example row with the entire request body`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-non-nullable-parameter.yaml
+  
+  Scenario: create pet
+    When POST /pets
+    Then status 201
+    Examples:
+      | (RESPONSE-BODY)                                                 |
+      | {"tag": "testing", "name": "test", "optional": "test-optional"} |
+
         """.trimIndent(), sourceSpecPath
         )
 

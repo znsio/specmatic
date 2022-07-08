@@ -59,7 +59,7 @@ data class TabularPattern(
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
-        return forEachKeyCombinationIn(pattern, row) { pattern ->
+        return allOrNothingCombinationIn(pattern) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
         }.map { toTabularPattern(it) }
     }

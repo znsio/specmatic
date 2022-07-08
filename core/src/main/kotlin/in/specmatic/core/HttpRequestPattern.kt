@@ -356,7 +356,11 @@ data class HttpRequestPattern(
                         if(result is Failure)
                             throw ContractException(result.toFailureReport())
 
-                        listOf(ExactValuePattern(value))
+                        val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
+
+                        val requestsFromFlattenedRow: List<Pattern> = body.newBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+
+                        requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
                     } else {
                         body.newBasedOn(row, resolver)
                     }
@@ -446,7 +450,7 @@ data class HttpRequestPattern(
                         if(result is Failure)
                             throw ContractException(result.toFailureReport())
 
-                        if(value is JSONObjectValue) {
+                        val originalRequest = if(value is JSONObjectValue) {
                             val jsonValues = jsonObjectToValues(value)
                             val jsonValeuRow = Row(
                                 columnNames = jsonValues.map { it.first }.toList(),
@@ -456,6 +460,12 @@ data class HttpRequestPattern(
                         } else {
                             listOf(ExactValuePattern(value))
                         }
+
+                        val flattenedRequests: List<Pattern> = body.newBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+
+                        flattenedRequests.plus(originalRequest)
+
+                        body.negativeBasedOn(row.flattenRequestBodyIntoRow(), resolver)
                     } else {
                         body.negativeBasedOn(row, resolver)
                     }
@@ -486,21 +496,21 @@ data class HttpRequestPattern(
             }
         }
     }
+}
 
-    private fun jsonObjectToValues(value: JSONObjectValue): List<Pair<String, String>> {
-        val valueMap = value.jsonObject
+fun jsonObjectToValues(value: JSONObjectValue): List<Pair<String, String>> {
+    val valueMap = value.jsonObject
 
-        return valueMap.entries.map { (key, value) ->
-            when(value) {
-                is JSONObjectValue -> {
-                    jsonObjectToValues(value)
-                }
-                else -> {
-                    listOf(Pair(key, value.toStringLiteral()))
-                }
+    return valueMap.entries.map { (key, value) ->
+        when(value) {
+            is JSONObjectValue -> {
+                jsonObjectToValues(value)
             }
-        }.flatten()
-    }
+            else -> {
+                listOf(Pair(key, value.toStringLiteral()))
+            }
+        }
+    }.flatten()
 }
 
 fun missingParam(missingValue: String): ContractException {

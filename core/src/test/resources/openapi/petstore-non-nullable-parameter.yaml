@@ -64,3 +64,6 @@ components:
         tag:
           type: string
           nullable: false
+        optional:
+          type: string
+          nullable: false

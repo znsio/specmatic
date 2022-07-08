@@ -1,5 +1,6 @@
 package `in`.specmatic.conversions
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
@@ -8,7 +9,6 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
-import com.fasterxml.jackson.annotation.JsonProperty
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -30,8 +30,6 @@ import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
 import java.io.File
 import java.net.URI
 import java.util.function.Consumer
-import java.util.regex.Pattern
-
 
 internal class OpenApiKtTest {
     companion object {
@@ -217,8 +215,8 @@ Background:
     When POST /pets
     Then status 201
     Examples:
-      | tag     | name |
-      | testing | test |
+      | tag     | name | optional      |
+      | testing | test | test-optional |
         """.trimIndent(), sourceSpecPath
         )
 
@@ -241,10 +239,24 @@ Background:
             }
         )
 
-        assertThat(results.results.size).isEqualTo(3)
-        assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(2)
-        assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(1)
+        assertThat(results.results.size).isEqualTo(7)
+        assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(4)
+        assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(3)
         assertThat(results.report()).isEqualTo("""
+In scenario "-ve: POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
+
+In scenario "-ve: POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
+
 In scenario "-ve: POST /pets. Response: pet response"
 API: POST /pets -> 201
 
@@ -790,10 +802,15 @@ Background:
                                     )
                                 }
                                 "POST" -> {
-                                    assertThat(request.bodyString).isEqualTo(
+                                    assertThat(request.bodyString).containsAnyOf(
                                         """
                                         {
                                             "tag": "testing",
+                                            "name": "test"
+                                        }
+                                    """.trimIndent(),
+                                        """
+                                        {
                                             "name": "test"
                                         }
                                     """.trimIndent()
@@ -832,7 +849,7 @@ Background:
             }
         )
 
-        assertThat(flags["/pets POST executed"]).isEqualTo(1)
+        assertThat(flags["/pets POST executed"]).isEqualTo(2)
         assertThat(flags["/pets GET executed"]).isEqualTo(12)
         assertThat(flags["/petIds GET executed"]).isEqualTo(4)
         assertThat(flags["/pets/0 GET executed"]).isEqualTo(1)
@@ -1040,15 +1057,12 @@ Background:
         var index = 0
         var count = 0
 
-        while (true)
-        {
+        while (true) {
             index = string.indexOf(pattern, index)
-            index += if (index != -1)
-            {
+            index += if (index != -1) {
                 count++
                 pattern.length
-            }
-            else {
+            } else {
                 return count
             }
         }

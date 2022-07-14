@@ -40,30 +40,12 @@ paths:
                 type: string
 components:
   schemas:
-    Pet:
-      type: object
-      required:
-        - id
-        - name
-      properties:
-        name:
-          type: string
-        id:
-          type: integer
-          format: int64
-
     NewPet:
       type: object
-      required:
-        - name
-        - tag
       properties:
         name:
           type: string
-          nullable: false
+          nullable: true
         tag:
           type: string
-          nullable: false
-        optional:
-          type: number
-          nullable: false
+          nullable: true

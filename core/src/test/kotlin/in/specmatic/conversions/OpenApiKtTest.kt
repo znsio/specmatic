@@ -201,7 +201,7 @@ Background:
     }
 
     @Test
-    fun `should report error when the application accepts null for a non-nullable parameter`() {
+    fun `should report error when the application accepts null or other data types for a non-nullable parameter`() {
         val flags = mutableMapOf<String, Boolean>()
 
         val feature = parseGherkinStringToFeature(
@@ -215,8 +215,8 @@ Background:
     When POST /pets
     Then status 201
     Examples:
-      | tag     | name | optional      |
-      | testing | test | test-optional |
+      | tag     | name | optional |
+      | testing | test | 99999999 |
 
         """.trimIndent(), sourceSpecPath
         )
@@ -232,6 +232,14 @@ Background:
                     }
                     val petParameters = ObjectMapper().readValue(request.bodyString, Map::class.java)
                     if (petParameters["name"] == null) return HttpResponse(422, "name cannot be null", headers)
+                    if (petParameters["optional"] != null) {
+                        try {
+                            Integer.parseInt(petParameters["optional"].toString())
+                        } catch (numberFormatException: java.lang.NumberFormatException) {
+                            flags["Non-numeric value sent for a number"] = true
+                            throw numberFormatException
+                        }
+                    }
                     return HttpResponse(201, "hello world", headers)
                 }
 
@@ -240,31 +248,57 @@ Background:
             }
         )
 
-        assertThat(results.results.size).isEqualTo(7)
-        assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(4)
-        assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(3)
-        assertThat(results.report()).isEqualTo("""
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
+        assertThat(results.results.size).isEqualTo(12)
+        assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(4)
+        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(8)
+        assertThat(flags["Non-numeric value sent for a number"]).isTrue
+    }
 
-  >> RESPONSE.STATUS
+    @Test
+    fun `should generate all combinations under positive scenarios`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-with-optional-and-nullable-parameters.yaml
   
-     Expected 4xx status, but received 201
+  #Scenario: create pet
+  #  When POST /pets
+  #  Then status 201
+  #  Examples:
+  #    | tag     | name | optional |
+  #    | testing | test | 99999999 |
 
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
+        """.trimIndent(), sourceSpecPath
+        )
 
-  >> RESPONSE.STATUS
-  
-     Expected 4xx status, but received 201
+        val results = feature.copy(enableNegativeTesting = true).executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    val petParameters = ObjectMapper().readValue(request.bodyString, Map::class.java)
+                    return if (petParameters.size != 2 || petParameters.values.contains(null))
+                        HttpResponse(422, "all keys and their values should be present", headers)
+                    else
+                        HttpResponse(201, "hello world", headers)
+                }
 
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
 
-  >> RESPONSE.STATUS
-  
-     Expected 4xx status, but received 201
-        """.trimIndent())
+        assertThat(results.results.size).isEqualTo(5)
+        assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(1)
+        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(4)
     }
 
     @Test
@@ -307,10 +341,11 @@ Background:
             }
         )
 
-        assertThat(results.results.size).isEqualTo(7)
+        assertThat(results.results.size).isEqualTo(12)
         assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(4)
-        assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(3)
-        assertThat(results.report()).isEqualTo("""
+        assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(8)
+        assertThat(results.report()).isEqualTo(
+            """
 In scenario "-ve: POST /pets. Response: pet response"
 API: POST /pets -> 201
 
@@ -331,7 +366,43 @@ API: POST /pets -> 201
   >> RESPONSE.STATUS
   
      Expected 4xx status, but received 201
-        """.trimIndent())
+
+In scenario "-ve: POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
+
+In scenario "-ve: POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
+
+In scenario "-ve: POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
+
+In scenario "-ve: POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
+
+In scenario "-ve: POST /pets. Response: pet response"
+API: POST /pets -> 201
+
+  >> RESPONSE.STATUS
+  
+     Expected 4xx status, but received 201
+        """.trimIndent()
+        )
     }
 
     @Test
@@ -819,7 +890,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.copy(enableNegativeTesting = false).executeTests(
+        val results = feature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val flagKey = "${request.path} ${request.method} executed"
@@ -940,7 +1011,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.executeTests(
+        val results = feature.copy(enableNegativeTesting = false).executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val flagKey = "${request.path} ${request.method} executed"

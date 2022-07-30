@@ -9,7 +9,7 @@ object Flags {
         return System.getenv(customResponseName) == "true" || System.getProperty(customResponseName) == "true"
     }
 
-    fun enableNegativeTesting() = BooleanUtils.toBoolean(
+    fun negativeTestingEnabled() = BooleanUtils.toBoolean(
         System.getenv("ENABLE_NEGATIVE_TESTING") ?: System.getProperty("ENABLE_NEGATIVE_TESTING") ?: "false"
     )
 }

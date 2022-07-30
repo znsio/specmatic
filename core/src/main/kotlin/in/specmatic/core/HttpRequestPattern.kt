@@ -356,11 +356,16 @@ data class HttpRequestPattern(
                         if(result is Failure)
                             throw ContractException(result.toFailureReport())
 
-                        val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
+                        if(Flags.negativeTestingEnabled()) {
+                            val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
 
-                        val requestsFromFlattenedRow: List<Pattern> = body.newBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+                            val requestsFromFlattenedRow: List<Pattern> =
+                                body.newBasedOn(row.flattenRequestBodyIntoRow(), resolver)
 
-                        requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
+                            requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
+                        } else {
+                            listOf(ExactValuePattern(value))
+                        }
                     } else {
                         body.newBasedOn(row, resolver)
                     }

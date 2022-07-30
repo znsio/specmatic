@@ -71,7 +71,7 @@ data class Feature(
     val testVariables: Map<String, String> = emptyMap(),
     val testBaseURLs: Map<String, String> = emptyMap(),
     val path: String = "",
-    val enableNegativeTesting: Boolean = Flags.enableNegativeTesting()
+    val enableNegativeTesting: Boolean = Flags.negativeTestingEnabled()
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {

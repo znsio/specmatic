@@ -9,7 +9,6 @@ import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTest
 import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
-import org.apache.kafka.common.protocol.types.Field.Bool
 
 object ContractAndStubMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {

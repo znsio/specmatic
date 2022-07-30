@@ -13,7 +13,6 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTest
-import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
@@ -28,7 +27,6 @@ import io.swagger.v3.oas.models.media.*
 import io.swagger.v3.oas.models.parameters.*
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
-import org.apache.commons.lang3.BooleanUtils
 import java.io.File
 import java.net.URI
 

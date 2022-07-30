@@ -555,7 +555,7 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
 }
 
 fun ignorable(body: JSONObjectValue): Boolean {
-    return System.getenv("DAP_RESPONSE") == "true" &&
+    return Flags.customResponse() &&
         (body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED" &&
             (body.findFirstChildByPath("resultStatus.errorCode")?.toStringLiteral() == "INVALID_REQUEST"))
 }

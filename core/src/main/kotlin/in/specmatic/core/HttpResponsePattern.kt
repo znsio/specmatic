@@ -5,6 +5,13 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.stub.softCastValueToXML
 
+object Flags {
+    private const val customResponseName = "CUSTOM_RESPONSE"
+    fun customResponse(): Boolean {
+        return System.getenv(customResponseName) == "true" || System.getProperty(customResponseName) == "true"
+    }
+}
+
 data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = EmptyStringPattern) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
@@ -54,7 +61,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
 
         return when (response.status) {
             status -> {
-                if(System.getenv("DAP_RESPONSE") == "true" && response.status.toString().startsWith("2") && body is JSONObjectValue && body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED")
+                if(Flags.customResponse() && response.status.toString().startsWith("2") && body is JSONObjectValue && body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED")
                     MatchFailure(mismatchResult("status $status and resultStatus.status == \"SUCCESS\"", "status ${response.status} and resultStatus.status == \"${body.findFirstChildByPath("resultStatus.status")?.toStringLiteral()}\"").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
                 else
                     MatchSuccess(parameters)

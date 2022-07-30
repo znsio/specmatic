@@ -450,7 +450,7 @@ data class Scenario(
 
     fun newBasedOn(scenario: Scenario): Scenario =
         Scenario(
-            if(System.getenv("ENABLE_NEGATIVE_TESTING") == "true") "+ve: ${this.name}" else this.name,
+            if(Flags.enableNegativeTesting()) "+ve: ${this.name}" else this.name,
             this.httpRequestPattern,
             this.httpResponsePattern,
             this.expectedFacts,

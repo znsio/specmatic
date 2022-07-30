@@ -5,13 +5,6 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.stub.softCastValueToXML
 
-object Flags {
-    private const val customResponseName = "CUSTOM_RESPONSE"
-    fun customResponse(): Boolean {
-        return System.getenv(customResponseName) == "true" || System.getProperty(customResponseName) == "true"
-    }
-}
-
 data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = EmptyStringPattern) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 

@@ -5204,10 +5204,9 @@ components:
             })
         }
 
-        assertThat(results).hasSize(2)
+        assertThat(results).hasSize(1)
 
         assertThat(results[0]).isInstanceOf(Result.Success::class.java)
-        assertThat(results[1]).isInstanceOf(Result.Success::class.java)
     }
 
     @Test

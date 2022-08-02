@@ -1,12 +1,24 @@
 package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.References
+import `in`.specmatic.core.jsonObjectToValues
+import `in`.specmatic.core.value.JSONObjectValue
 
 const val DEREFERENCE_PREFIX = "$"
 const val FILENAME_PREFIX = "@"
 
 data class Row(val columnNames: List<String> = emptyList(), val values: List<String> = emptyList(), val variables: Map<String, String> = emptyMap(), val references: Map<String, References> = emptyMap()) {
     private val cells = columnNames.zip(values.map { it }).toMap().toMutableMap()
+
+    fun flattenRequestBodyIntoRow(): Row {
+        val jsonValue = parsedJSON(this.getField("(REQUEST-BODY)"))
+        if(jsonValue !is JSONObjectValue)
+            throw ContractException("Only JSON objects are supported as request body examples")
+
+        val values: List<Pair<String, String>> = jsonObjectToValues(jsonValue)
+
+        return Row(columnNames = values.map { it.first }, values = values.map { it.second })
+    }
 
     fun stringForOpenAPIError(): String {
         return columnNames.zip(values).joinToString(", ") { (key, value) ->

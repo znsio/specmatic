@@ -67,6 +67,10 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         }
     }
 
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return listOf(this)
+    }
+
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value)
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result =

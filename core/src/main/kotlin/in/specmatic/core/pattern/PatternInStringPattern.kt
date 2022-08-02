@@ -28,6 +28,10 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern(
     override fun newBasedOn(resolver: Resolver): List<Pattern> =
             pattern.newBasedOn(resolver).map { PatternInStringPattern(it) }
 
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return listOf(NullPattern)
+    }
+
     override fun parse(value: String, resolver: Resolver): Value = StringValue(pattern.parse(value, resolver).toStringLiteral())
 
     override fun patternSet(resolver: Resolver): List<PatternInStringPattern> =

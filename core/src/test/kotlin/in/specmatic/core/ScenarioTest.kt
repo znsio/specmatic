@@ -541,7 +541,6 @@ paths:
             println(msg)
 
             assertThat(msg).contains("Contract expected")
-            assertThat(msg).contains("found value")
         })
     }
 
@@ -587,7 +586,7 @@ paths:
 
         val contractTestScenarios = contract.generateContractTestScenarios(emptyList())
 
-        val result: Result = executeTest(contractTestScenarios.single(), object: TestExecutor {
+        val result: Result = executeTest(contractTestScenarios.first(), object: TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 return HttpResponse.OK("abc")
             }

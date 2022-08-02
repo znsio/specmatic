@@ -53,6 +53,8 @@ data class AnyPattern(
     override fun newBasedOn(resolver: Resolver): List<Pattern> =
         pattern.flatMap { it.newBasedOn(resolver) }
 
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)
+
     override fun parse(value: String, resolver: Resolver): Value =
         pattern.asSequence().map {
             try {

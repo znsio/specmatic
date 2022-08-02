@@ -880,7 +880,7 @@ paths:
 
                   >> REQUEST.HEADERS.X-Value
                   
-                     ${ContractAndStubMismatchMessages.mismatchMessage("number", """string: "data" """.trim())}
+                     ${ContractAndStubMismatchMessages.mismatchMessage("number", """"data" """.trim())}
                 """.trimIndent())
         })
     }

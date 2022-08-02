@@ -41,6 +41,6 @@ internal class ResultKtTest {
     @Test
     fun `mismatch for non-null`() {
         val result = valueError(StringValue("test"))
-        assertThat(result).isEqualTo("string: \"test\"")
+        assertThat(result).isEqualTo("\"test\"")
     }
 }

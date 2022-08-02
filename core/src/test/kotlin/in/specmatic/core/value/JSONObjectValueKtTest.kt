@@ -15,4 +15,10 @@ internal class JSONObjectValueKtTest {
         val newName = UseExampleDeclarations().getNewName("name", emptyList())
         assertThat(newName).isEqualTo("name")
     }
+
+    @Test
+    fun `format for rendering a JSON object in a snippet`() {
+        val value = JSONObjectValue(mapOf("id" to NumberValue(10)))
+        assertThat(value.valueErrorSnippet()).startsWith("JSON object ")
+    }
 }

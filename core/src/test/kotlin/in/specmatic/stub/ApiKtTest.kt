@@ -377,7 +377,7 @@ sample.json didn't match math.$CONTRACT_EXTENSION
   
       >> RESPONSE.BODY
   
-         ${ContractAndStubMismatchMessages.mismatchMessage("number", """string: "not a number"""")}
+         ${ContractAndStubMismatchMessages.mismatchMessage("number", """"not a number"""")}
 """.trim()
 
         assertThat(stdout).contains(expectedOnStandardOutput)

@@ -54,13 +54,13 @@ internal class NumberPatternTest {
     fun `should not match when number is shorter than minLength`() {
         val result = NumberPattern(minLength = 4).matches(NumberValue(123), Resolver())
         assertThat(result.isTrue()).isFalse
-        assertThat(result.reportString()).isEqualTo("""Expected number with minLength 4, actual was number: 123""")
+        assertThat(result.reportString()).isEqualTo("""Expected number with minLength 4, actual was 123 (number)""")
     }
 
     @Test
     fun `should not match when number is longer than maxLength`() {
         val result = NumberPattern(maxLength = 3).matches(NumberValue(1234), Resolver())
         assertThat(result.isTrue()).isFalse
-        assertThat(result.reportString()).isEqualTo("""Expected number with maxLength 3, actual was number: 1234""")
+        assertThat(result.reportString()).isEqualTo("""Expected number with maxLength 3, actual was 1234 (number)""")
     }
 }

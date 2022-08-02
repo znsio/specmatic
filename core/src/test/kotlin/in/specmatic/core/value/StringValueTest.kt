@@ -21,4 +21,9 @@ internal class StringValueTest {
         StringValue("data") shouldMatch  pattern
         EmptyString shouldMatch  pattern
     }
+
+    @Test
+    fun `value to be shown in a snippet should be quoted but type not mentioned`() {
+        assertThat(StringValue("test").valueErrorSnippet()).isEqualTo("\"test\"")
+    }
 }

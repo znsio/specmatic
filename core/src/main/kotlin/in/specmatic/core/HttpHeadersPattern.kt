@@ -7,6 +7,13 @@ data class HttpHeadersPattern(
     val pattern: Map<String, Pattern> = emptyMap(),
     val ancestorHeaders: Map<String, Pattern>? = null
 ) {
+    init {
+        val uniqueHeaders = pattern.keys.map { it.lowercase() }.distinct()
+        if(uniqueHeaders.size < pattern.size) {
+            throw ContractException("Headers are not unique: ${pattern.keys.joinToString(", ")}")
+        }
+    }
+
     fun matches(headers: Map<String, String>, resolver: Resolver): Result {
         val result = headers to resolver to
                 ::matchEach otherwise
@@ -27,7 +34,7 @@ data class HttpHeadersPattern(
             else -> withoutContentTypeGeneratedByQontract(headers, pattern)
         }
 
-        val keyErrors: List<KeyError> = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).findKeyErrorList(
+        val keyErrors: List<KeyError> = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).findKeyErrorListCaseInsensitive(
             pattern,
             headersWithRelevantKeys.mapValues { StringValue(it.value) }
         )
@@ -40,7 +47,7 @@ data class HttpHeadersPattern(
             it.missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(it.name)
         }
 
-        val results: List<Result?> = this.pattern.map { (key, pattern) ->
+        val results: List<Result?> = this.pattern.mapKeys { it.key }.map { (key, pattern) ->
             val keyWithoutOptionality = withoutOptionality(key)
             val sampleValue = headersWithRelevantKeys[keyWithoutOptionality]
 
@@ -88,13 +95,15 @@ data class HttpHeadersPattern(
         headers: Map<String, String>,
         ancestorHeaders: Map<String, Pattern>
     ): Map<String, String> {
-        return headers.filterKeys { key ->
-            val headerWithoutOptionality = withoutOptionality(key)
-            ancestorHeaders.containsKey(headerWithoutOptionality) || ancestorHeaders.containsKey("$headerWithoutOptionality?")
-        }.filterNot { entry ->
-            val headerWithoutOptionality = withoutOptionality(entry.key)
+        val ancestorHeadersLowerCase = ancestorHeaders.mapKeys { it.key.lowercase() }
 
-            isStandardHeader(headerWithoutOptionality) && "${headerWithoutOptionality}?" in ancestorHeaders
+        return headers.filterKeys { key ->
+            val headerWithoutOptionality = withoutOptionality(key).lowercase()
+            ancestorHeadersLowerCase.containsKey(headerWithoutOptionality) || ancestorHeadersLowerCase.containsKey("$headerWithoutOptionality?")
+        }.filterNot { entry ->
+            val headerWithoutOptionality = withoutOptionality(entry.key).lowercase()
+
+            isStandardHeader(headerWithoutOptionality) && "${headerWithoutOptionality}?" in ancestorHeadersLowerCase
         }
     }
 
@@ -198,7 +207,7 @@ private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resol
         StringValue(sampleValue)
     }
 
-private val standardCommonHTTPHeaders = setOf("A-IM", "Accept", "Accept-Charset", "Accept-Datetime", "Accept-Encoding", "Accept-Language", "Access-Control-Request-Method,", "Access-Control-Request-Headers", "Authorization", "Cache-Control", "Connection", "Content-Encoding", "Content-Length", "Content-MD5", "Content-Type", "Cookie", "Date", "Expect", "Forwarded", "From", "Host", "HTTP2-Settings", "If-Match", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Origin", "Pragma", "Prefer", "Proxy-Authorization", "Range", "Referer", "TE", "Trailer", "Transfer-Encoding", "User-Agent", "Upgrade", "Via", "Warning")
+private val standardCommonHTTPHeaders = setOf("A-IM", "Accept", "Accept-Charset", "Accept-Datetime", "Accept-Encoding", "Accept-Language", "Access-Control-Request-Method,", "Access-Control-Request-Headers", "Authorization", "Cache-Control", "Connection", "Content-Encoding", "Content-Length", "Content-MD5", "Content-Type", "Cookie", "Date", "Expect", "Forwarded", "From", "Host", "HTTP2-Settings", "If-Match", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Origin", "Pragma", "Prefer", "Proxy-Authorization", "Range", "Referer", "TE", "Trailer", "Transfer-Encoding", "User-Agent", "Upgrade", "Via", "Warning").map { it.lowercase() }
 
 fun isStandardHeader(header: String): Boolean = withoutOptionality(header) in standardCommonHTTPHeaders
 

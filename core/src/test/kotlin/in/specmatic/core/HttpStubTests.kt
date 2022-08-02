@@ -418,7 +418,7 @@ Scenario: JSON API to get account details with fact check
                     
                       >> RESPONSE.BODY[0].rating
                       
-                         ${ContractAndStubMismatchMessages.mismatchMessage("(1 or 2 or 3)", "number: 4")}
+                         ${ContractAndStubMismatchMessages.mismatchMessage("(1 or 2 or 3)", "4 (number)")}
                 """.trimIndent()
                 )
             }

@@ -2,6 +2,7 @@ package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.capitalizeFirstChar
+import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 
 fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results {
@@ -9,6 +10,23 @@ fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results 
         val scenarioResults: List<Result> = testBackwardCompatibility(olderScenario, newerBehaviour)
         results.copy(results = results.results.plus(scenarioResults))
     }.distinct()
+}
+
+class BackwardCompatibilityTest(private val olderScenario: Scenario, private val newerContract: Feature) {
+    val name: String
+        get() {
+            return olderScenario.name
+        }
+
+    fun execute(): List<Result> {
+        return testBackwardCompatibility(olderScenario, newerContract)
+    }
+}
+
+fun generateBackwardCompatibilityTests(older: Feature, newerContract: Feature): List<BackwardCompatibilityTest> {
+    return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.map { olderScenario ->
+        BackwardCompatibilityTest(olderScenario, newerContract)
+    }
 }
 
 fun testBackwardCompatibility(
@@ -29,30 +47,35 @@ fun testBackwardCompatibility(
 
         try {
             val request = oldScenario.generateHttpRequest()
-            val requestMatchResults: List<Pair<Scenario, Result>> = newFeature.lookupScenariosWithDeepMatch(request).map { (scenario, result) ->
-                Pair(scenario, result.updateScenario(scenario))
-            }
 
-            if(requestMatchResults.isEmpty())
-                listOf(Result.Failure("Old API \"${oldScenario.testDescription()}\" did not match any API in the new contract"))
-            else {
-                val responseMatchResults: List<Result> = requestMatchResults.map { (newerScenario, _) ->
-                    val newerResponsePattern = newerScenario.httpResponsePattern
-                    oldScenario.httpResponsePattern.encompasses(
-                        newerResponsePattern,
-                        oldScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
-                        newerScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
-                    ).also {
-                        it.scenario = newerScenario
-                    }
+            val wholeMatchResults: List<Pair<Result, Result>> = newFeature.lookupScenariosWithDeepMatch(request).map { (scenario, result) ->
+                Pair(scenario, result.updateScenario(scenario))
+            }.filterNot { (_, result) ->
+                result is Result.Failure && result.isFluffy()
+            }.map { (newerScenario, requestResult) ->
+                val newerResponsePattern = newerScenario.httpResponsePattern
+                val responseResult = oldScenario.httpResponsePattern.encompasses(
+                    newerResponsePattern,
+                    oldScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
+                    newerScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
+                ).also {
+                    it.scenario = newerScenario
                 }
 
-                val requestFailures = requestMatchResults.map { (_, result) -> result }.filterIsInstance<Result.Failure>()
-                val responseFailures = responseMatchResults.filterIsInstance<Result.Failure>()
+                if(responseResult.isFluffy())
+                    null
+                else
+                    Pair(requestResult, responseResult)
+            }.filterNotNull()
 
-                val allFailures: List<Result.Failure> = requestFailures.plus(responseFailures)
-
-                allFailures.ifEmpty { listOf(Result.Success()) }
+            if(wholeMatchResults.isEmpty())
+                listOf(Result.Failure("""This API exists in the old contract but not in the new contract""").updateScenario(oldScenario))
+            else if (wholeMatchResults.any { it.first is Result.Success && it.second is Result.Success })
+                listOf(Result.Success())
+            else {
+                wholeMatchResults.map {
+                    it.toList()
+                }.flatten().filterIsInstance<Result.Failure>()
             }
         } catch (contractException: ContractException) {
             listOf(contractException.failure())
@@ -66,7 +89,14 @@ fun testBackwardCompatibility(
 
 object NewAndOldContractRequestMismatches: MismatchMessages {
     override fun valueMismatchFailure(expected: String, actual: Value?, mismatchMessages: MismatchMessages): Result.Failure {
-        return mismatchResult(expected, actual?.type()?.typeName ?: "null", mismatchMessages)
+        return mismatchResult(expected, nullOrValue(actual), mismatchMessages)
+    }
+
+    private fun nullOrValue(actual: Value?): String {
+        return when (actual) {
+            is NullValue -> "nullable"
+            else -> actual?.type()?.typeName ?: "null"
+        }
     }
 
     override fun mismatchMessage(expected: String, actual: String): String {

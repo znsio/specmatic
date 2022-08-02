@@ -88,7 +88,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             scenarioInfosWithExamples.none { scenarioInfoWithExample ->
                 scenarioInfoWithExample.matchesSignature(scenarioInfo)
             }
-        }.plus(scenarioInfosWithExamples)
+        }.plus(scenarioInfosWithExamples).filter { it.httpResponsePattern.status > 0 }
     }
 
     override fun matches(
@@ -185,7 +185,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     ).map { httpRequestPattern: HttpRequestPattern ->
                         val scenarioName = scenarioName(operation, response, httpRequestPattern, null)
 
-                        scenarioInfo(scenarioName, httpRequestPattern, httpResponsePattern, patterns = this.patterns.toMap())
+                        val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
+                        ScenarioInfo(
+                            scenarioName = scenarioName,
+                            patterns = patterns.toMap(),
+                            httpRequestPattern = httpRequestPattern,
+                            httpResponsePattern = httpResponsePattern,
+                            ignoreFailure = ignoreFailure,
+                        )
                     }
                 }.flatten()
             }.flatten()
@@ -226,18 +233,27 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         }
                     }
 
-                    specmaticExampleRows.map { specmaticExampleRow: Row ->
-                        toHttpRequestPatterns(
-                            specmaticPath, httpMethod, operation
-                        ).map { httpRequestPattern: HttpRequestPattern ->
-                            val scenarioName =
-                                scenarioName(operation, response, httpRequestPattern, specmaticExampleRow)
+                    toHttpRequestPatterns(
+                        specmaticPath, httpMethod, operation
+                    ).map { httpRequestPattern: HttpRequestPattern ->
+                        val scenarioName =
+                            scenarioName(operation, response, httpRequestPattern, null)
 
-                            scenarioInfo(
-                                scenarioName, httpRequestPattern, httpResponsePattern, specmaticExampleRow, this.patterns.toMap()
-                            )
+                        specmaticExampleRows.forEach { row ->
+                            httpRequestPattern.newBasedOn(row, Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch))
                         }
-                    }.flatten()
+
+                        val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
+
+                        ScenarioInfo(
+                            scenarioName = scenarioName,
+                            patterns = patterns.toMap(),
+                            httpRequestPattern = httpRequestPattern,
+                            httpResponsePattern = httpResponsePattern,
+                            ignoreFailure = ignoreFailure,
+                            examples = if(specmaticExampleRows.isNotEmpty()) listOf(Examples(specmaticExampleRows.first().columnNames, specmaticExampleRows)) else emptyList()
+                        )
+                    }
                 }.flatten()
             }.flatten()
         }.flatten()
@@ -278,60 +294,48 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     private fun openApiPaths() = openApi.paths.orEmpty()
 
-    private fun scenarioInfo(
-        scenarioName: String,
-        httpRequestPattern: HttpRequestPattern,
-        httpResponsePattern: HttpResponsePattern,
-        specmaticExampleRow: Row = Row(),
-        patterns: Map<String, Pattern>
-    ) = ScenarioInfo(
-        scenarioName = scenarioName,
-        patterns = patterns,
-        httpRequestPattern = when (specmaticExampleRow.columnNames.isEmpty()) {
-            true -> httpRequestPattern
-            else -> httpRequestPattern.newBasedOn(specmaticExampleRow, Resolver(newPatterns = patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch))[0]
-        },
-        httpResponsePattern = when (specmaticExampleRow.columnNames.isEmpty()) {
-            true -> httpResponsePattern
-            else -> httpResponsePattern
-        }
-    )
-
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
         return responses.orEmpty().map { (status, response) ->
-            val headersMap = response.headers.orEmpty().map { (headerName, header) ->
-                toSpecmaticParamName(header.required != true, headerName) to toSpecmaticPattern(
-                    header.schema, emptyList()
-                )
-            }.toMap()
-            when (val content = response.content) {
-                null -> listOf(
-                    Triple(
-                        response, MediaType(), HttpResponsePattern(
-                            headersPattern = HttpHeadersPattern(headersMap), status = when (status) {
-                                "default" -> 400
-                                else -> status.toInt()
-                            }
-                        )
-                    )
-                )
-                else -> content.map { (contentType, mediaType) ->
-                    Triple(
-                        response, mediaType, HttpResponsePattern(
-                            headersPattern = HttpHeadersPattern(
-                                headersMap
-                            ), status = when (status) {
-                                "default" -> 400
-                                else -> status.toInt()
-                            }, body = when (contentType) {
-                                "application/xml" -> toXMLPattern(mediaType)
-                                else -> toSpecmaticPattern(mediaType)
-                            }
-                        )
-                    )
-                }
-            }
+            val headersMap = openAPIHeadersToSpecmatic(response)
+            openAPIResponseToSpecmatic(response, status, headersMap)
         }.flatten()
+    }
+
+    private fun openAPIHeadersToSpecmatic(response: ApiResponse) =
+        response.headers.orEmpty().map { (headerName, header) ->
+            toSpecmaticParamName(header.required != true, headerName) to toSpecmaticPattern(
+                header.schema, emptyList()
+            )
+        }.toMap()
+
+    private fun openAPIResponseToSpecmatic(
+        response: ApiResponse,
+        status: String,
+        headersMap: Map<String, Pattern>
+    ): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
+        if(status == "default") return emptyList()
+
+        if(response.content == null) {
+            val responsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(headersMap),
+                status = status.toInt()
+            )
+
+            return listOf(Triple(response, MediaType(), responsePattern))
+        }
+
+        return response.content.map { (contentType, mediaType) ->
+            val responsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(headersMap),
+                status = status.toInt(),
+                body = when (contentType) {
+                    "application/xml" -> toXMLPattern(mediaType)
+                    else -> toSpecmaticPattern(mediaType)
+                }
+            )
+
+            Triple(response, mediaType, responsePattern)
+        }
     }
 
     private fun toHttpRequestPatterns(

@@ -168,10 +168,13 @@ data class Feature(
         })
     }
 
-    fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results =
-        generateContractTestScenarios(suggestions).fold(Results()) { results, scenario ->
+    fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results {
+        val testScenarios = generateContractTestScenarios(suggestions)
+
+        return testScenarios.fold(Results()) { results, scenario ->
             Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
         }
+    }
 
     fun executeTests(
         testExecutorFn: TestExecutor,

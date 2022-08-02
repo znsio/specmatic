@@ -4,10 +4,12 @@ import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.git.SystemGit
 import io.ktor.util.*
 import io.ktor.utils.io.streams.*
+import io.mockk.clearAllMocks
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.jgit.api.Git
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -102,7 +104,11 @@ internal class BundleCommandTestE2E {
     @Autowired
     lateinit var bundleCommand: BundleCommand
 
-    @Disabled
+    @BeforeEach
+    fun setupEachTest() {
+        clearAllMocks()
+    }
+
     @Test
     fun `basic stub bundle command functionality`(@TempDir tempDir: File) {
         val bundleTestData = BundleTestData(tempDir)
@@ -136,7 +142,6 @@ internal class BundleCommandTestE2E {
         assertThat(entries).hasSize(2)
     }
 
-    @Disabled
     @Test
     fun `bundle is generated with shifted base`(@TempDir tempDir: File) {
         val bundleTestData = BundleTestData(tempDir)
@@ -161,6 +166,7 @@ internal class BundleCommandTestE2E {
             }
 
             println(entries)
+
             assertThat(entries).anySatisfy(Consumer {
                 assertThat(it.first).contains("test.yaml")
                 assertThat(it.second).contains("dummy contract content")
@@ -180,7 +186,6 @@ internal class BundleCommandTestE2E {
         }
     }
 
-    @Disabled
     @Test
     fun `test bundle is generated`(@TempDir tempDir: File) {
         val bundleTestData = BundleTestData(tempDir)

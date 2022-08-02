@@ -31,6 +31,10 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
         }
     }
 
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return listOf(this)
+    }
+
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {

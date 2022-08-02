@@ -17,7 +17,6 @@ repositories {
 }
 
 def ktor_version = "1.6.8"
-def karate_version = "0.9.6"
 def jgit_version = "5.13.0.202109080827-r"
 
 def junit_version = "5.8.2"
@@ -51,9 +50,7 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
     testImplementation 'org.json:json:20220320'
-    testImplementation "com.intuit.karate:karate-core:$karate_version"
-    testImplementation "com.intuit.karate:karate-apache:$karate_version"
-    testImplementation "com.intuit.karate:karate-junit5:$karate_version"
+    testImplementation "com.intuit.karate:karate-junit5:1.1.0"
     testImplementation 'org.springframework:spring-web:5.3.21'
     testImplementation 'io.mockk:mockk:1.12.4'
     testImplementation 'org.assertj:assertj-core:3.23.1'

@@ -384,6 +384,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         }
     }
 
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return newBasedOn(row, resolver)
+    }
+
     private fun dereferenceType(resolver: Resolver): XMLPattern {
         if (!hasType()) {
             return this

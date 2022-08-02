@@ -15,6 +15,7 @@ import org.junit.Ignore
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.core.ParameterizedTypeReference
@@ -200,6 +201,7 @@ Background:
         assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
 
+    @Disabled
     @Test
     fun `should report error when the application accepts null or other data types for a non-nullable parameter`() {
         val flags = mutableMapOf<String, Boolean>()
@@ -343,65 +345,93 @@ Background:
 
         assertThat(results.results.size).isEqualTo(16)
         assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(4)
-        assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(8)
-        assertThat(results.report()).isEqualTo(
+        assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(12)
+        assertThat(results.report().trim()).isEqualTo(
             """
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
-
-  >> RESPONSE.STATUS
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
   
-     Expected 4xx status, but received 201
-
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
-
-  >> RESPONSE.STATUS
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
   
-     Expected 4xx status, but received 201
-
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
-
-  >> RESPONSE.STATUS
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
   
-     Expected 4xx status, but received 201
-
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
-
-  >> RESPONSE.STATUS
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
   
-     Expected 4xx status, but received 201
-
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
-
-  >> RESPONSE.STATUS
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
   
-     Expected 4xx status, but received 201
-
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
-
-  >> RESPONSE.STATUS
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
   
-     Expected 4xx status, but received 201
-
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
-
-  >> RESPONSE.STATUS
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
   
-     Expected 4xx status, but received 201
-
-In scenario "-ve: POST /pets. Response: pet response"
-API: POST /pets -> 201
-
-  >> RESPONSE.STATUS
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
   
-     Expected 4xx status, but received 201
-        """.trimIndent()
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
+  
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
+  
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
+  
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
+  
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
+  
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
+  
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
+  
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
+  
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
+  
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
+  
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
+  
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
+  
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
+  
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
+  
+  In scenario "-ve: POST /pets. Response: pet response"
+  API: POST /pets -> 201
+  
+    >> RESPONSE.STATUS
+    
+       Expected 4xx status, but received 201
+""".trimIndent()
         )
     }
 

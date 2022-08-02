@@ -1,31 +1,78 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.pattern.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.pattern.NumberPattern
-import `in`.specmatic.core.pattern.Row
-import `in`.specmatic.core.pattern.StringPattern
-import `in`.specmatic.core.pattern.stringToPattern
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import io.ktor.util.reflect.*
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
+import java.util.function.Consumer
 import kotlin.collections.HashMap
 
 internal class HttpHeadersPatternTest {
     @Test
-    fun `should exact match`() {
+    fun `should match a header`() {
         val httpHeaders = HttpHeadersPattern(mapOf("key" to stringToPattern("value", "key")))
         val headers: HashMap<String, String> = HashMap()
         headers["key"] = "value"
+
+        val result = httpHeaders.matches(headers, Resolver())
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `header name match should be case insensitive`() {
+        val httpHeaders = HttpHeadersPattern(mapOf("key" to stringToPattern("value", "key")))
+        val headers: HashMap<String, String> = HashMap()
+        headers["KEY"] = "value"
+
+        val result = httpHeaders.matches(headers, Resolver())
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `ancestor header name match should be case insensitive`() {
+        val httpHeaders = HttpHeadersPattern(mapOf("key" to stringToPattern("value", "key")), mapOf("key" to stringToPattern("value", "key")))
+        val headers: HashMap<String, String> = HashMap()
+        headers["KEY"] = "value"
+
+        val result = httpHeaders.matches(headers, Resolver())
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `unexpected header match should be case insensitive`() {
+        val httpHeaders = HttpHeadersPattern(mapOf("key" to stringToPattern("value", "key")))
+        val headers: HashMap<String, String> = HashMap()
+        headers["key"] = "value"
+        headers["unexpected"] = "value"
         assertThat(httpHeaders.matches(headers, Resolver()) is Result.Success).isTrue()
     }
 
     @Test
+    fun `should not accept duplicate headers with different case`() {
+        assertThatThrownBy {
+            HttpHeadersPattern(mapOf("key" to stringToPattern("value", "key"), "KEY" to stringToPattern("value", "KEY")))
+        }.satisfies(Consumer {
+            assertThat(it).instanceOf(ContractException::class)
+        })
+    }
+
+    @Test
     fun `should pattern match a numeric string`() {
-        val httpHeaders = HttpHeadersPattern(mapOf("key" to stringToPattern("(number)", "key")))
+        val httpHeaders = HttpHeadersPattern(mapOf("key" to stringToPattern("(number)", "key"), "expected" to stringToPattern("(number)", "expected")))
         val headers: HashMap<String, String> = HashMap()
         headers["key"] = "123"
+        headers["Expected"] = "123"
         assertThat(httpHeaders.matches(headers, Resolver()) is Result.Success).isTrue()
     }
 

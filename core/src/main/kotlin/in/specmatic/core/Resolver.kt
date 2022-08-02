@@ -88,6 +88,10 @@ data class Resolver(
         }
     }
 
+    fun findKeyErrorListCaseInsensitive(pattern: Map<String, Pattern>, actual: Map<String, StringValue>): List<KeyError> {
+        return findKeyErrorCheck.validateAllCaseInsensitive(pattern, actual)
+    }
+
     fun parse(pattern: Pattern, rowValue: String): Value {
         return pattern.parse(rowValue, this)
     }

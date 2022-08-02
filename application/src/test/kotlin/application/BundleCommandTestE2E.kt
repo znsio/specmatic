@@ -4,10 +4,12 @@ import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.git.SystemGit
 import io.ktor.util.*
 import io.ktor.utils.io.streams.*
+import io.mockk.clearAllMocks
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.jgit.api.Git
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -101,6 +103,11 @@ internal class BundleCommandTestE2E {
 
     @Autowired
     lateinit var bundleCommand: BundleCommand
+
+    @BeforeEach
+    fun setupEachTest() {
+        clearAllMocks()
+    }
 
     @Test
     fun `basic stub bundle command functionality`(@TempDir tempDir: File) {

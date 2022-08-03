@@ -19,7 +19,7 @@ repositories {
 def ktor_version = "1.6.8"
 def jgit_version = "5.13.0.202109080827-r"
 
-def junit_version = "5.8.2"
+def junit_version = "5.9.0"
 def testcontainers_version = "1.16.3"
 
 dependencies {

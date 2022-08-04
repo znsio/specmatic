@@ -15,7 +15,7 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.toParams
-import io.ktor.client.features.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
@@ -80,7 +80,7 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
                     val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
                         this.method = HttpMethod.Post
                         this.contentType(ContentType.Application.Json)
-                        this.body = valueMapToPlainJsonString(serverState)
+                        this.setBody(valueMapToPlainJsonString(serverState))
                     }
 
                     endTime = Date()

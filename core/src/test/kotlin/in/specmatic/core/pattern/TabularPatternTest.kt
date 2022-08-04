@@ -10,6 +10,7 @@ import `in`.specmatic.shouldNotMatch
 import `in`.specmatic.stub.HttpStub
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.fail
 import org.springframework.web.client.RestTemplate
 import java.net.URI
+import java.util.function.Consumer
 
 class TabularPatternTest {
     @Test
@@ -320,7 +322,7 @@ Feature: test feature
         assertThat(result.toReport().toString()).isEqualTo(
             """>> REQUEST.BODY.name
 
-   Expected string, actual was json object: {
+   Expected string, actual was JSON object {
        "firstname": "Jane",
        "lastname": "Doe"
    }"""
@@ -492,6 +494,33 @@ Feature: Recursive test
             assertThat(reportText.indexOf(">> person_address")).isLessThan(reportText.indexOf(">> id"))
             assertThat(reportText.indexOf(">> address")).isLessThan(reportText.indexOf(">> id"))
         }
+    }
+
+    @Test
+    fun `when parsing an empty string should use custom error messages`() {
+        val type = TabularPattern(emptyMap())
+
+        val testMismatchMessages = object : MismatchMessages {
+            override fun mismatchMessage(expected: String, actual: String): String {
+                return "custom mismatch message"
+            }
+
+            override fun unexpectedKey(keyLabel: String, keyName: String): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+                TODO("Not yet implemented")
+            }
+
+        }
+
+        assertThatThrownBy {
+            type.parse("", Resolver(mismatchMessages = testMismatchMessages))
+        }.satisfies(Consumer {
+            it as ContractException
+            assertThat(it.report()).contains("custom mismatch message")
+        })
     }
 }
 

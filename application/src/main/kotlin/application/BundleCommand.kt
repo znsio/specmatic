@@ -31,7 +31,7 @@ class StubBundle(private val _bundlePath: String?, private val config: Specmatic
     }
 
     override fun ancillaryEntries(pathData: ContractPathData): List<ZipperEntry> {
-        val customImplicitStubBaseEntries: List<ZipperEntry> = customImplicitStubBase?.let { zipperEntriesFromCustomImplicitBase(pathData, it) } ?: emptyList()
+        val customImplicitStubBaseEntries: List<ZipperEntry> = customImplicitStubBase()?.let { zipperEntriesFromCustomImplicitBase(pathData, it) } ?: emptyList()
         val defaultBaseEntries = zipperEntriesFromDefaultBase(pathData)
 
         return dedup(defaultBaseEntries.plus(customImplicitStubBaseEntries))
@@ -173,6 +173,7 @@ fun pathDataToZipperEntry(bundle: Bundle, pathData: ContractPathData, fileOperat
     val relativePath = contractFile.relativeTo(base).path
     val zipEntryName = "${base.name}/$relativePath"
 
+    logger.debug("Reading contract ${pathData.path} (Canonical path: ${File(pathData.path).canonicalPath})")
     val contractEntry = ZipperEntry(zipEntryName, fileOperations.readBytes(pathData.path))
     val ancillaryEntries = bundle.ancillaryEntries(pathData)
 

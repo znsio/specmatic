@@ -8,7 +8,7 @@ import `in`.specmatic.stub.HttpStub
 internal class APITestsUseContractAsMock {
     @Karate.Test
     fun anAPITestShouldBeAbleToMockOutAService(): Karate {
-        return Karate().relativeTo(javaClass).feature("classpath:APITestsUseContractAsMock.feature")
+        return Karate.run("classpath:APITestsUseContractAsMock.feature").relativeTo(javaClass)
     }
 
     companion object {

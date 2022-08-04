@@ -256,7 +256,7 @@ Pet:
     fun `should resolve ref nested types to Deferred Pattern`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
         val scenarioInfos = openApiSpecification.toScenarioInfos()
-        val nestedTypeWithRef = scenarioInfos.first().patterns["(NestedTypeWithRef)"]
+        val nestedTypeWithRef = scenarioInfos[4].patterns["(NestedTypeWithRef)"]
         assertThat(containsDeferredPattern(nestedTypeWithRef!!)).isTrue
     }
 
@@ -5205,9 +5205,8 @@ components:
         }
 
         assertThat(results).hasSize(1)
-        println(results.single().reportString())
 
-        assertThat(results.single()).isInstanceOf(Result.Success::class.java)
+        assertThat(results[0]).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -5472,5 +5471,56 @@ components:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         assertThat(feature.scenarios.first().ignoreFailure).isFalse()
+    }
+
+    @Test
+    fun `should be able to accept expectations when examples are provided and should not hardcode the request to the specific examples`() {
+        val contractString = """
+                openapi: 3.0.3
+                info:
+                  title: test
+                  version: '1.0'
+                paths:
+                  '/users':
+                    post:
+                      responses:
+                        '200':
+                          description: OK
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                200_OK:
+                                  value: success
+                      requestBody:
+                        content:
+                          application/json:
+                            examples:
+                                200_OK:
+                                  value:
+                                    id: "abc123"
+                            schema:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                              required:
+                                - id
+            """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
+        val match: List<Pair<Scenario, Result>> = feature.lookupScenariosWithDeepMatch(
+            HttpRequest(
+                "POST",
+                "/users",
+                body = parsedJSONObject("""{"id": "xyz789"}""")
+            )
+        )
+
+        val result = match.single().second
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 }

@@ -145,7 +145,7 @@ internal class JSONObjectPatternTest {
 
         assertNotNull(patterns.find { pattern ->
             val result = pattern.matches(JSONObjectValue(mapOf("id" to StringValue("abc"))), Resolver())
-            result is Result.Failure && result.toMatchFailureDetails() == MatchFailureDetails(listOf("id"), listOf("""Expected number, actual was string: "abc""""))
+            result is Result.Failure && result.toMatchFailureDetails() == MatchFailureDetails(listOf("id"), listOf("""Expected number, actual was "abc""""))
         })
     }
 
@@ -343,11 +343,11 @@ internal class JSONObjectPatternTest {
             assertThat(it.toFailureReport().toString()).isEqualTo("""
                 >> id
 
-                   Expected number, actual was string: "abc123"
+                   Expected number, actual was "abc123"
 
                 >> address.flat
 
-                   Expected number, actual was string: "10"
+                   Expected number, actual was "10"
             """.trimIndent().trim())
         })
     }

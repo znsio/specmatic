@@ -71,7 +71,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
                 try {
                     val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract))
 
-                    val implicitDataDirs = listOf(implicitContractDataDir(contractPath.path)).plus(if(customImplicitStubBase != null) listOf(implicitContractDataDir(contractPath.path, customImplicitStubBase)) else emptyList())
+                    val implicitDataDirs = listOf(implicitContractDataDir(contractPath.path)).plus(if(customImplicitStubBase() != null) listOf(implicitContractDataDir(contractPath.path, customImplicitStubBase())) else emptyList())
 
                     val stubData = when {
                         implicitDataDirs.any { it.isDirectory } -> {
@@ -274,8 +274,8 @@ private fun filesInDir(implicitDataDir: File): List<File>? {
 fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
     val defaultImplicitDirs: List<String> = implicitContractDataDirs(contractPaths)
 
-    val completeList = if(customImplicitStubBase != null) {
-        defaultImplicitDirs.plus(implicitContractDataDirs(contractPaths, customImplicitStubBase))
+    val completeList = if(customImplicitStubBase() != null) {
+        defaultImplicitDirs.plus(implicitContractDataDirs(contractPaths, customImplicitStubBase()))
     } else
         defaultImplicitDirs
 
@@ -285,7 +285,7 @@ fun createStubFromContracts(contractPaths: List<String>, host: String = "localho
 fun implicitContractDataDirs(contractPaths: List<String>, customBase: String? = null) =
         contractPaths.map { implicitContractDataDir(it, customBase).absolutePath }
 
-val customImplicitStubBase: String? = System.getenv("SPECMATIC_CUSTOM_IMPLICIT_STUB_BASE") ?: System.getProperty("customImplicitStubBase")
+fun customImplicitStubBase(): String? = System.getenv("SPECMATIC_CUSTOM_IMPLICIT_STUB_BASE") ?: System.getProperty("customImplicitStubBase")
 
 fun implicitContractDataDir(contractPath: String, customBase: String? = null): File {
     val contractFile = File(contractPath)

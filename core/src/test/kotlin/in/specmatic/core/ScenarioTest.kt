@@ -13,6 +13,7 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Disabled
 import java.util.*
 import java.util.function.Consumer
 import kotlin.collections.HashMap
@@ -540,7 +541,6 @@ paths:
             println(msg)
 
             assertThat(msg).contains("Contract expected")
-            assertThat(msg).contains("found value")
         })
     }
 
@@ -586,7 +586,7 @@ paths:
 
         val contractTestScenarios = contract.generateContractTestScenarios(emptyList())
 
-        val result: Result = executeTest(contractTestScenarios.single(), object: TestExecutor {
+        val result: Result = executeTest(contractTestScenarios.first(), object: TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 return HttpResponse.OK("abc")
             }

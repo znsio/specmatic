@@ -3,6 +3,7 @@ package `in`.specmatic.core
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import java.net.URI
 
@@ -355,7 +356,16 @@ data class HttpRequestPattern(
                         if(result is Failure)
                             throw ContractException(result.toFailureReport())
 
-                        listOf(ExactValuePattern(value))
+                        if(Flags.negativeTestingEnabled()) {
+                            val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
+
+                            val requestsFromFlattenedRow: List<Pattern> =
+                                body.newBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+
+                            requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
+                        } else {
+                            listOf(ExactValuePattern(value))
+                        }
                     } else {
                         body.newBasedOn(row, resolver)
                     }
@@ -420,6 +430,92 @@ data class HttpRequestPattern(
     fun testDescription(): String {
         return "$method ${urlMatcher.toString()}"
     }
+
+    fun negativeBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
+        return attempt(breadCrumb = "REQUEST") {
+            val newURLMatchers = urlMatcher?.newBasedOn(row, resolver) ?: listOf<URLMatcher?>(null)
+            val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
+                body.let {
+                    if(it is DeferredPattern && row.containsField(it.pattern)) {
+                        val example = row.getField(it.pattern)
+                        listOf(ExactValuePattern(it.parse(example, resolver)))
+                    }
+                    else if(it.typeAlias?.let { isPatternToken(it) } == true && row.containsField(it.typeAlias!!)) {
+                        val example = row.getField(it.typeAlias!!)
+                        listOf(ExactValuePattern(it.parse(example, resolver)))
+                    }
+                    else if(it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
+                        val referredType = "(${it.referredType})"
+                        val example = row.getField(referredType)
+                        listOf(ExactValuePattern(it.parse(example, resolver)))
+                    } else if(row.containsField("(REQUEST-BODY)")) {
+                        val example = row.getField("(REQUEST-BODY)")
+                        val value = it.parse(example, resolver)
+                        val result = body.matches(value, resolver)
+                        if(result is Failure)
+                            throw ContractException(result.toFailureReport())
+
+                        val originalRequest = if(value is JSONObjectValue) {
+                            val jsonValues = jsonObjectToValues(value)
+                            val jsonValeuRow = Row(
+                                columnNames = jsonValues.map { it.first }.toList(),
+                                values = jsonValues.map { it.second }.toList())
+
+                            body.negativeBasedOn(jsonValeuRow, resolver)
+                        } else {
+                            listOf(ExactValuePattern(value))
+                        }
+
+                        val flattenedRequests: List<Pattern> = body.newBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+
+                        flattenedRequests.plus(originalRequest)
+
+                        body.negativeBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+                    } else {
+                        body.negativeBasedOn(row, resolver)
+                    }
+                }
+            }
+
+            val newHeadersPattern = headersPattern.newBasedOn(row, resolver)
+            val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
+            val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
+
+            newURLMatchers.flatMap { newURLMatcher ->
+                newBodies.flatMap { newBody ->
+                    newHeadersPattern.flatMap { newHeadersPattern ->
+                        newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
+                            newFormDataPartLists.map { newFormDataPartList ->
+                                HttpRequestPattern(
+                                    headersPattern = newHeadersPattern,
+                                    urlMatcher = newURLMatcher,
+                                    method = method,
+                                    body = newBody,
+                                    formFieldsPattern = newFormFieldsPattern,
+                                    multiPartFormDataPattern = newFormDataPartList
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun jsonObjectToValues(value: JSONObjectValue): List<Pair<String, String>> {
+    val valueMap = value.jsonObject
+
+    return valueMap.entries.map { (key, value) ->
+        when(value) {
+            is JSONObjectValue -> {
+                jsonObjectToValues(value)
+            }
+            else -> {
+                listOf(Pair(key, value.toStringLiteral()))
+            }
+        }
+    }.flatten()
 }
 
 fun missingParam(missingValue: String): ContractException {

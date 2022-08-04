@@ -11,6 +11,8 @@ import `in`.specmatic.core.pattern.*
 data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
     override val httpContentType = "text/plain"
 
+    override fun valueErrorSnippet(): String = displayableValue()
+
     @OptIn(InternalAPI::class)
     override fun displayableValue(): String = toStringLiteral().quote()
     override fun toStringLiteral() = string

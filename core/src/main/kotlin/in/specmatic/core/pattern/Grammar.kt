@@ -248,8 +248,14 @@ fun parsedJSON(content: String, mismatchMessages: MismatchMessages = DefaultMism
             } catch (e: Throwable) {
                 throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}")
             }
-            else -> throw ContractException(mismatchMessages.mismatchMessage("json value", content))
+            else -> throw ContractException(mismatchMessages.mismatchMessage("json value", stringInErrorMessage(content)))
         }
+    }
+}
+
+fun stringInErrorMessage(value: String): String {
+    return value.ifBlank {
+        "an empty string"
     }
 }
 
@@ -261,7 +267,7 @@ fun parsedJSONObject(content: String, mismatchMessages: MismatchMessages = Defau
             } catch (e: Throwable) {
                 throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}")
             }
-            else -> throw ContractException(mismatchMessages.mismatchMessage("json object", content))
+            else -> throw ContractException(mismatchMessages.mismatchMessage("json object", stringInErrorMessage(content)))
         }
     }
 }
@@ -274,7 +280,7 @@ fun parsedJSONArray(content: String, mismatchMessages: MismatchMessages = Defaul
             } catch (e: Throwable) {
                 throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}")
             }
-            else -> throw ContractException(mismatchMessages.mismatchMessage("json array", content))
+            else -> throw ContractException(mismatchMessages.mismatchMessage("json array", stringInErrorMessage(content)))
         }
     }
 }

@@ -11,7 +11,8 @@ data class Resolver(
     val newPatterns: Map<String, Pattern> = emptyMap(),
     val findKeyErrorCheck: KeyCheck = DefaultKeyCheck,
     val context: Map<String, String> = emptyMap(),
-    val mismatchMessages: MismatchMessages = DefaultMismatchMessages
+    val mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+    val isNegative: Boolean = false
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -85,5 +86,13 @@ data class Resolver(
                 }
             }
         }
+    }
+
+    fun findKeyErrorListCaseInsensitive(pattern: Map<String, Pattern>, actual: Map<String, StringValue>): List<KeyError> {
+        return findKeyErrorCheck.validateAllCaseInsensitive(pattern, actual)
+    }
+
+    fun parse(pattern: Pattern, rowValue: String): Value {
+        return pattern.parse(rowValue, this)
     }
 }

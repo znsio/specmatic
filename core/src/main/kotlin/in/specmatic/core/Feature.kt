@@ -13,7 +13,6 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTest
-import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
@@ -69,19 +68,24 @@ data class Feature(
     val name: String,
     val testVariables: Map<String, String> = emptyMap(),
     val testBaseURLs: Map<String, String> = emptyMap(),
-    val path: String = ""
+    val path: String = "",
+    val enableNegativeTesting: Boolean = Flags.negativeTestingEnabled()
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
             val resultList = lookupScenario(httpRequest, scenarios)
             return matchingScenario(resultList)?.generateHttpResponse(serverState)
-                ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff().generateErrorHttpResponse(httpRequest)
+                ?: Results(resultList.map { it.second }.toMutableList()).withoutFluff()
+                    .generateErrorHttpResponse(httpRequest)
         } finally {
             serverState = emptyMap()
         }
     }
 
-    fun stubResponse(httpRequest: HttpRequest, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Pair<ResponseBuilder?, Results> {
+    fun stubResponse(
+        httpRequest: HttpRequest,
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+    ): Pair<ResponseBuilder?, Results> {
         try {
             val scenarioSequence = scenarios.asSequence()
 
@@ -102,7 +106,7 @@ data class Feature(
             val resultList = lookupAllScenarios(httpRequest, scenarios, NewAndOldContractRequestMismatches)
 
             val successes = lookupAllSuccessfulScenarios(resultList)
-            if(successes.isNotEmpty())
+            if (successes.isNotEmpty())
                 return successes
 
             val deepMatchingErrors = allDeeplyMatchingScenarios(resultList)
@@ -125,7 +129,7 @@ data class Feature(
 
     private fun allDeeplyMatchingScenarios(resultList: List<Pair<Scenario, Result>>): List<Pair<Scenario, Result>> {
         return resultList.filter {
-            when(val result = it.second) {
+            when (val result = it.second) {
                 is Result.Success -> true
                 is Result.Failure -> !result.isFluffy()
             }
@@ -138,7 +142,11 @@ data class Feature(
         }?.first
     }
 
-    private fun lookupScenario(httpRequest: HttpRequest, scenarios: List<Scenario>, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Sequence<Pair<Scenario, Result>> {
+    private fun lookupScenario(
+        httpRequest: HttpRequest,
+        scenarios: List<Scenario>,
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+    ): Sequence<Pair<Scenario, Result>> {
         val scenarioSequence = scenarios.asSequence()
 
         val localCopyOfServerState = serverState
@@ -147,7 +155,11 @@ data class Feature(
         })
     }
 
-    private fun lookupAllScenarios(httpRequest: HttpRequest, scenarios: List<Scenario>, mismatchMessages: MismatchMessages = DefaultMismatchMessages): List<Pair<Scenario, Result>> {
+    private fun lookupAllScenarios(
+        httpRequest: HttpRequest,
+        scenarios: List<Scenario>,
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+    ): List<Pair<Scenario, Result>> {
         val scenarioSequence = scenarios
 
         val localCopyOfServerState = serverState
@@ -156,10 +168,13 @@ data class Feature(
         })
     }
 
-    fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results =
-        generateContractTestScenarios(suggestions).fold(Results()) { results, scenario ->
+    fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results {
+        val testScenarios = generateContractTestScenarios(suggestions)
+
+        return testScenarios.fold(Results()) { results, scenario ->
             Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
         }
+    }
 
     fun executeTests(
         testExecutorFn: TestExecutor,
@@ -177,10 +192,19 @@ data class Feature(
     }
 
     fun matches(request: HttpRequest, response: HttpResponse): Boolean {
-        return scenarios.firstOrNull { it.matches(request, serverState) is Result.Success && it.matches(response) is Result.Success } != null
+        return scenarios.firstOrNull {
+            it.matches(
+                request,
+                serverState
+            ) is Result.Success && it.matches(response) is Result.Success
+        } != null
     }
 
-    fun matchingStub(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages): HttpStubData {
+    fun matchingStub(
+        request: HttpRequest,
+        response: HttpResponse,
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+    ): HttpStubData {
         try {
             val results = scenarios.map { scenario ->
                 try {
@@ -215,7 +239,11 @@ data class Feature(
             return results.find {
                 it.first != null
             }?.let { it.first as HttpStubData }
-                ?: throw NoMatchingScenario(failureResults(results).withoutFluff(), msg = null, cachedMessage = failureResults(results).withoutFluff().report(request))
+                ?: throw NoMatchingScenario(
+                    failureResults(results).withoutFluff(),
+                    msg = null,
+                    cachedMessage = failureResults(results).withoutFluff().report(request)
+                )
         } finally {
             serverState = emptyMap()
         }
@@ -225,21 +253,61 @@ data class Feature(
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> {
-        return scenarios.map {
-            try {
-                ScenarioTest(it.newBasedOn(suggestions))
-            } catch (e: Throwable) {
-                ScenarioTestGenerationFailure(it, e)
+        val negativeScenarios =
+            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions, has4xx(it)) }.flatMap {
+                it.generateTestScenarios(testVariables, testBaseURLs)
             }
-        }.flatMap {
+        val positiveScenarios = scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario}.map { it.newBasedOn(suggestions) }.flatMap {
             it.generateTestScenarios(testVariables, testBaseURLs)
+        }
+        val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->
+            positiveScenarios.filter { it.isA2xxScenario() }.none {
+                it.httpRequestPattern.matches(
+                    negativeSecenario.httpRequestPattern.generate(Resolver()),
+                    Resolver()
+                ) is Result.Success
+            }
+        }
+
+        val testScenarios = if (enableNegativeTesting)
+            positiveScenarios + negativeScenariosToConsider
+        else
+            positiveScenarios
+
+        return testScenarios.map {
+            ScenarioTest(it)
         }
     }
 
-    fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> =
-        scenarios.map { it.newBasedOn(suggestions) }.flatMap {
-            it.generateTestScenarios(testVariables, testBaseURLs)
+    private fun has4xx(scenario: Scenario): Boolean {
+        return scenarios.any {
+            it.httpRequestPattern.urlMatcher!!.path == scenario.httpRequestPattern.urlMatcher!!.path
+                    && it.httpResponsePattern.status.toString().startsWith("4")
         }
+    }
+
+    fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
+        val negativeScenarios =
+            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions, has4xx(it)) }.flatMap {
+                it.generateTestScenarios(testVariables, testBaseURLs)
+            }
+        val positiveScenarios =
+            scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map { it.newBasedOn(suggestions) }.flatMap {
+                it.generateTestScenarios(testVariables, testBaseURLs)
+            }
+        val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->
+            positiveScenarios.filter { it.isA2xxScenario() }.none {
+                it.httpRequestPattern.matches(
+                    negativeSecenario.httpRequestPattern.generate(Resolver()),
+                    Resolver()
+                ) is Result.Success
+            }
+        }
+        return if (enableNegativeTesting)
+            positiveScenarios + negativeScenariosToConsider
+        else
+            positiveScenarios
+    }
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->
@@ -261,8 +329,15 @@ data class Feature(
         ?: Result.Failure("No match found, couldn't check the message")
     }
 
-    fun matchingStub(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages = DefaultMismatchMessages): HttpStubData =
-        matchingStub(scenarioStub.request, scenarioStub.response, mismatchMessages).copy(delayInSeconds = scenarioStub.delayInSeconds)
+    fun matchingStub(
+        scenarioStub: ScenarioStub,
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+    ): HttpStubData =
+        matchingStub(
+            scenarioStub.request,
+            scenarioStub.response,
+            mismatchMessages
+        ).copy(delayInSeconds = scenarioStub.delayInSeconds)
 
     fun clearServerState() {
         serverState = emptyMap()
@@ -314,11 +389,11 @@ data class Feature(
     }
 
     private fun convergeRequestPayload(baseScenario: Scenario, newScenario: Scenario): Scenario {
-        if(baseScenario.httpRequestPattern.multiPartFormDataPattern.isNotEmpty())
+        if (baseScenario.httpRequestPattern.multiPartFormDataPattern.isNotEmpty())
             TODO("Multipart requests not yet supported")
 
-        return if(baseScenario.httpRequestPattern.formFieldsPattern.size == 1) {
-            if(newScenario.httpRequestPattern.formFieldsPattern.size != 1)
+        return if (baseScenario.httpRequestPattern.formFieldsPattern.size == 1) {
+            if (newScenario.httpRequestPattern.formFieldsPattern.size != 1)
                 throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with different form fields")
 
             val baseRawPattern = baseScenario.httpRequestPattern.formFieldsPattern.values.first()
@@ -327,18 +402,18 @@ data class Feature(
             val newRawPattern = newScenario.httpRequestPattern.formFieldsPattern.values.first()
             val resolvedNewPattern = resolvedHop(newRawPattern, newScenario.resolver)
 
-            if(isObjectType(resolvedBasePattern) && !isObjectType(resolvedNewPattern))
+            if (isObjectType(resolvedBasePattern) && !isObjectType(resolvedNewPattern))
                 throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with multiple payload types")
 
             val converged: Pattern = when {
                 resolvedBasePattern.pattern is String && builtInPatterns.contains(resolvedBasePattern.pattern) -> {
-                    if(resolvedBasePattern.pattern != resolvedNewPattern.pattern)
+                    if (resolvedBasePattern.pattern != resolvedNewPattern.pattern)
                         throw ContractException("Cannot converge ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} because there are multiple types of request payloads")
 
                     resolvedBasePattern
                 }
                 baseRawPattern is DeferredPattern -> {
-                    if(baseRawPattern.pattern == newRawPattern.pattern && isObjectType(resolvedBasePattern))
+                    if (baseRawPattern.pattern == newRawPattern.pattern && isObjectType(resolvedBasePattern))
                         baseRawPattern
                     else
                         throw ContractException("Cannot converge different types ${baseRawPattern.pattern} and ${newRawPattern.pattern} found in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")
@@ -352,8 +427,14 @@ data class Feature(
                     formFieldsPattern = mapOf(baseScenario.httpRequestPattern.formFieldsPattern.keys.first() to converged)
                 )
             )
-        } else if(baseScenario.httpRequestPattern.formFieldsPattern.isNotEmpty()) {
-            TODO("Form fields with non-json-object values (${baseScenario.httpRequestPattern.formFieldsPattern.values.joinToString(", ") { it.typeAlias ?: if(it.pattern is String) it.pattern.toString() else it.typeName }})")
+        } else if (baseScenario.httpRequestPattern.formFieldsPattern.isNotEmpty()) {
+            TODO(
+                "Form fields with non-json-object values (${
+                    baseScenario.httpRequestPattern.formFieldsPattern.values.joinToString(
+                        ", "
+                    ) { it.typeAlias ?: if (it.pattern is String) it.pattern.toString() else it.typeName }
+                })"
+            )
         } else {
             val baseRequestBody = baseScenario.httpRequestPattern.body
             val newRequestBody = newScenario.httpRequestPattern.body
@@ -462,7 +543,11 @@ data class Feature(
 
             var scenario = rawScenario
 
-            if(scenario.httpRequestPattern.body.let { it is DeferredPattern && it.pattern == "(RequestBody)" && isJSONPayload(it.resolvePattern(scenario.resolver)) }) {
+            if (scenario.httpRequestPattern.body.let {
+                    it is DeferredPattern && it.pattern == "(RequestBody)" && isJSONPayload(
+                        it.resolvePattern(scenario.resolver)
+                    )
+                }) {
                 val requestBody = scenario.httpRequestPattern.body as DeferredPattern
                 val oldTypeName = requestBody.pattern
                 val newTypeName = "(${prefix}_${withoutPatternDelimiters(oldTypeName)})"
@@ -479,7 +564,11 @@ data class Feature(
                 )
             }
 
-            if(scenario.httpResponsePattern.body.let { it is DeferredPattern && it.pattern == "(ResponseBody)" && isJSONPayload(it.resolvePattern(scenario.resolver)) }) {
+            if (scenario.httpResponsePattern.body.let {
+                    it is DeferredPattern && it.pattern == "(ResponseBody)" && isJSONPayload(
+                        it.resolvePattern(scenario.resolver)
+                    )
+                }) {
                 val responseBody = scenario.httpResponsePattern.body as DeferredPattern
                 val oldTypeName = responseBody.pattern
                 val newTypeName = "(${prefix}_${withoutPatternDelimiters(oldTypeName)})"
@@ -506,7 +595,7 @@ data class Feature(
                         && it.httpResponsePattern.status == scenario.httpResponsePattern.status
             }
 
-            if(scenarioWithSameURLAndPath == null)
+            if (scenarioWithSameURLAndPath == null)
                 acc.plus(scenario)
             else {
                 val combined = combine(scenarioWithSameURLAndPath, scenario)
@@ -520,7 +609,7 @@ data class Feature(
             val existingPathItem = acc.find { it.first == pathName }?.second
             val pathItem = existingPathItem ?: PathItem()
 
-            val operation = when(scenario.httpRequestPattern.method!!) {
+            val operation = when (scenario.httpRequestPattern.method!!) {
                 "GET" -> pathItem.get
                 "POST" -> pathItem.post
                 "PUT" -> pathItem.put
@@ -557,7 +646,7 @@ data class Feature(
 
             val requestBodySchema: Pair<String, MediaType>? = requestBodySchema(requestBodyType, scenario)
 
-            if(requestBodySchema != null) {
+            if (requestBodySchema != null) {
                 operation.requestBody = RequestBody().apply {
                     this.content = Content().apply {
                         this[requestBodySchema.first] = requestBodySchema.second
@@ -581,19 +670,23 @@ data class Feature(
                 Pair(withoutOptionality(key), header)
             }.toMap()
 
-            if(openApiResponseHeaders.isNotEmpty()) {
+            if (openApiResponseHeaders.isNotEmpty()) {
                 apiResponse.headers = openApiResponseHeaders
             }
 
-            if(scenario.httpResponsePattern.body !is EmptyStringPattern) {
+            if (scenario.httpResponsePattern.body !is EmptyStringPattern) {
                 apiResponse.content = Content().apply {
                     val responseBodyType = scenario.httpResponsePattern.body
 
                     val responseBodySchema: Pair<String, MediaType>? = when {
-                        isJSONPayload(responseBodyType) || responseBodyType is DeferredPattern && isJSONPayload(responseBodyType.resolvePattern(scenario.resolver))-> {
+                        isJSONPayload(responseBodyType) || responseBodyType is DeferredPattern && isJSONPayload(
+                            responseBodyType.resolvePattern(scenario.resolver)
+                        ) -> {
                             jsonMediaType(responseBodyType)
                         }
-                        responseBodyType is XMLPattern || responseBodyType is DeferredPattern && responseBodyType.resolvePattern(scenario.resolver) is XMLPattern -> {
+                        responseBodyType is XMLPattern || responseBodyType is DeferredPattern && responseBodyType.resolvePattern(
+                            scenario.resolver
+                        ) is XMLPattern -> {
                             throw ContractException("XML not supported yet")
                         }
                         else -> {
@@ -603,7 +696,7 @@ data class Feature(
                         }
                     }
 
-                    if(responseBodySchema != null)
+                    if (responseBodySchema != null)
                         this.addMediaType(responseBodySchema.first, responseBodySchema.second)
                 }
             }
@@ -627,20 +720,19 @@ data class Feature(
         }.flatten().fold(emptyMap<String, Pattern>()) { acc, entry ->
             val key = withoutPatternDelimiters(entry.key).trimEnd('_')
 
-            if(acc.contains(key) && isObjectType(acc.getValue(key))) {
+            if (acc.contains(key) && isObjectType(acc.getValue(key))) {
                 val converged: Map<String, Pattern> = objectStructure(acc.getValue(key))
                 val new: Map<String, Pattern> = objectStructure(entry.value)
 
                 acc.plus(key to TabularPattern(convergePatternMap(converged, new)))
-            }
-            else {
+            } else {
                 acc.plus(key to entry.value)
             }
         }.mapKeys {
             withoutPatternDelimiters(it.key)
         }
 
-        if(schemas.isNotEmpty()) {
+        if (schemas.isNotEmpty()) {
             openAPI.components = Components()
             openAPI.components.schemas = schemas.mapValues {
                 toOpenApiSchema(it.value)
@@ -738,7 +830,7 @@ data class Feature(
         val withoutBrackets = withoutPatternDelimiters(descriptor)
         val modifiersTrimmed = withoutBrackets.trimEnd('*', '?')
 
-        val (base, modifiers) = if(withoutBrackets == modifiersTrimmed)
+        val (base, modifiers) = if (withoutBrackets == modifiersTrimmed)
             Pair(withoutBrackets, "")
         else {
             val modifiers = withoutBrackets.substring(modifiersTrimmed.length)
@@ -765,7 +857,7 @@ data class Feature(
             cleanedKey in map2 || "${cleanedKey}?" in map2
         }.mapKeys { entry ->
             val cleanedKey = withoutOptionality(entry.key)
-            if(isOptional(entry.key) || "${cleanedKey}?" in map2) {
+            if (isOptional(entry.key) || "${cleanedKey}?" in map2) {
                 "${cleanedKey}?"
             } else
                 cleanedKey
@@ -773,26 +865,28 @@ data class Feature(
             val (type1Descriptor, type1) = getTypeAndDescriptor(map1, entry.key)
             val (type2Descriptor, type2) = getTypeAndDescriptor(map2, entry.key)
 
-            if(type1Descriptor != type2Descriptor) {
+            if (type1Descriptor != type2Descriptor) {
                 val typeDescriptors = listOf(type1Descriptor, type2Descriptor).sorted()
                 val cleanedUpDescriptors = typeDescriptors.map { cleanupDescriptor(it) }
 
-                if(isEmptyOrNull(type1) || isEmptyOrNull(type2)) {
-                    val type = if(isEmptyOrNull(type1)) type2 else type1
+                if (isEmptyOrNull(type1) || isEmptyOrNull(type2)) {
+                    val type = if (isEmptyOrNull(type1)) type2 else type1
 
-                    if(type is DeferredPattern) {
-                        val descriptor = if(isEmptyOrNull(type1)) type2Descriptor else type1Descriptor
+                    if (type is DeferredPattern) {
+                        val descriptor = if (isEmptyOrNull(type1)) type2Descriptor else type1Descriptor
                         val withoutBrackets = withoutPatternDelimiters(descriptor)
-                        val newPattern = withoutBrackets.removeSuffix("?").let {"($it)"}
+                        val newPattern = withoutBrackets.removeSuffix("?").let { "($it)" }
 
                         AnyPattern(listOf(NullPattern, type.copy(pattern = newPattern)))
                     } else {
                         AnyPattern(listOf(NullPattern, type))
                     }
-                }
-                else if(cleanedUpDescriptors.first() == cleanedUpDescriptors.second()) {
+                } else if (cleanedUpDescriptors.first() == cleanedUpDescriptors.second()) {
                     entry.value
-                } else if(withoutPatternDelimiters(cleanedUpDescriptors.second()).trimEnd('?') == withoutPatternDelimiters(cleanedUpDescriptors.first())) {
+                } else if (withoutPatternDelimiters(cleanedUpDescriptors.second()).trimEnd('?') == withoutPatternDelimiters(
+                        cleanedUpDescriptors.first()
+                    )
+                ) {
                     val type: Pattern = listOf(map1, map2).map {
                         getTypeAndDescriptor(it, entry.key)
                     }.map {
@@ -800,8 +894,7 @@ data class Feature(
                     }.toMap().getValue(cleanedUpDescriptors.second())
 
                     type
-                }
-                else {
+                } else {
                     logger.log("Found conflicting values for the same key ${entry.key} ($type1Descriptor, $type2Descriptor).")
                     entry.value
                 }
@@ -856,17 +949,18 @@ data class Feature(
             isArrayOfNullables(pattern) -> {
                 ArraySchema().apply {
                     this.items = Schema<Any>().apply {
-                        val typeAlias = ((pattern as ListPattern).pattern as AnyPattern).pattern.first { !isEmptyOrNull(it) }.let {
-                            if(it.pattern is String && builtInPatterns.contains(it.pattern.toString()))
-                                it.pattern as String
-                            else
-                                it.typeAlias?.let { typeAlias ->
-                                    if(!typeAlias.startsWith("("))
-                                        "($typeAlias)"
-                                    else
-                                        typeAlias
-                                } ?: throw ContractException("Unknown type: $it")
-                        }
+                        val typeAlias =
+                            ((pattern as ListPattern).pattern as AnyPattern).pattern.first { !isEmptyOrNull(it) }.let {
+                                if (it.pattern is String && builtInPatterns.contains(it.pattern.toString()))
+                                    it.pattern as String
+                                else
+                                    it.typeAlias?.let { typeAlias ->
+                                        if (!typeAlias.startsWith("("))
+                                            "($typeAlias)"
+                                        else
+                                            typeAlias
+                                    } ?: throw ContractException("Unknown type: $it")
+                            }
 
                         setSchemaType(typeAlias, this)
                         this.nullable = true
@@ -911,14 +1005,16 @@ data class Feature(
                 val innerPattern: Pattern = pattern.pattern.first { !isEmptyOrNull(it) }
 
                 when {
-                    innerPattern.pattern is String && innerPattern.pattern in builtInPatterns -> toOpenApiSchema(builtInPatterns.getValue(innerPattern.pattern as String))
+                    innerPattern.pattern is String && innerPattern.pattern in builtInPatterns -> toOpenApiSchema(
+                        builtInPatterns.getValue(innerPattern.pattern as String)
+                    )
                     else -> toOpenApiSchema(innerPattern)
                 }.apply {
                     this.nullable = true
                 }
             }
             pattern is ListPattern -> {
-                if(pattern.pattern is DeferredPattern) {
+                if (pattern.pattern is DeferredPattern) {
                     ArraySchema().apply {
                         this.items = Schema<Any>().apply {
                             setSchemaType(pattern.pattern.typeAlias!!, this)
@@ -951,7 +1047,7 @@ data class Feature(
                     this.items = StringSchema()
                 }
             pattern is JSONArrayPattern && pattern.pattern.isNotEmpty() -> {
-                if(pattern.pattern.all { it == pattern.pattern.first() })
+                if (pattern.pattern.all { it == pattern.pattern.first() })
                     ArraySchema().apply {
                         this.items = toOpenApiSchema(pattern.pattern.first())
                     }
@@ -975,21 +1071,24 @@ data class Feature(
 
     private fun listInnerTypeDescriptor(it: ListPattern): String {
         return it.pattern.typeAlias
-            ?: when(val innerPattern = it.pattern.pattern) {
+            ?: when (val innerPattern = it.pattern.pattern) {
                 is String -> innerPattern
                 else -> throw ContractException("Type alias not found for type ${it.typeName}")
             }
     }
 
     private fun isNullableDeferred(pattern: Pattern): Boolean {
-        return isNullable(pattern) && pattern is AnyPattern && pattern.pattern.first { it.pattern != "(empty)" && it.pattern != "(null)" }.let {
-            it is DeferredPattern && withPatternDelimiters(withoutPatternDelimiters(it.pattern).removeSuffix("*").removeSuffix("?").removeSuffix("*")) !in builtInPatterns
-        }
+        return isNullable(pattern) && pattern is AnyPattern && pattern.pattern.first { it.pattern != "(empty)" && it.pattern != "(null)" }
+            .let {
+                it is DeferredPattern && withPatternDelimiters(
+                    withoutPatternDelimiters(it.pattern).removeSuffix("*").removeSuffix("?").removeSuffix("*")
+                ) !in builtInPatterns
+            }
     }
 
     private fun setSchemaType(type: String, schema: Schema<Any>) {
         val cleanedUpType = withoutPatternDelimiters(type)
-        if(builtInPatterns.contains(type))
+        if (builtInPatterns.contains(type))
             schema.type = cleanedUpType
         else
             schema.`$ref` = cleanedUpType.trimEnd('_')
@@ -1002,7 +1101,7 @@ data class Feature(
         pattern is ListPattern && pattern.pattern is AnyPattern && isNullable(pattern.pattern)
 
     private fun isEmptyOrNull(pattern: Pattern): Boolean {
-        return when(pattern) {
+        return when (pattern) {
             is DeferredPattern -> pattern.typeAlias in listOf("(empty)", "(null)")
             is LookupRowPattern -> isEmptyOrNull(pattern.pattern)
             else -> pattern in listOf(EmptyStringPattern, NullPattern)
@@ -1204,7 +1303,7 @@ private fun lexScenario(
         else -> false
     }
 
-    return if (includedSpecifications.isEmpty() || backgroundScenarioInfo == null) {
+    val scenarioInfo = if (includedSpecifications.isEmpty() || backgroundScenarioInfo == null) {
         scenarioInfoWithExamples(
             parsedScenarioInfo,
             backgroundScenarioInfo ?: ScenarioInfo(),
@@ -1222,6 +1321,8 @@ private fun lexScenario(
 
         scenarioInfoWithExamples(matchingScenario, backgroundScenarioInfo, examplesList, ignoreFailure)
     }
+
+    return scenarioInfo.copy(isGherkinScenario = true)
 }
 
 private fun listOfDatatableRows(it: Step) = it.dataTable?.rows ?: mutableListOf()
@@ -1430,7 +1531,8 @@ internal fun lex(featureChildren: List<FeatureChild>, filePath: String): List<Sc
                 scenarioInfo.kafkaMessage,
                 scenarioInfo.ignoreFailure,
                 scenarioInfo.references,
-                scenarioInfo.bindings
+                scenarioInfo.bindings,
+                scenarioInfo.isGherkinScenario
             )
         }
 }

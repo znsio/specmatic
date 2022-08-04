@@ -4,7 +4,7 @@ import `in`.specmatic.core.ExampleDeclarations
 import `in`.specmatic.core.pattern.Pattern
 
 interface Value {
-    fun valueErrorSnippet(): String = "${this.displayableType()}: ${this.displayableValue()}"
+    fun valueErrorSnippet(): String = "${this.displayableValue()} (${this.displayableType()})"
 
     val httpContentType: String
 

@@ -67,13 +67,13 @@ Examples:
     """.trim()
 
         val contract = parseGherkinStringToFeature(gherkin)
-        val flags = mutableMapOf<String, Int>()
+        val optionals = mutableListOf<Int>()
 
         val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val requestBody = request.body
                 if (requestBody is JSONObjectValue) {
-                    flags["optional"] = requestBody.jsonObject.getOrDefault("optional", 0).toString().toInt()
+                    optionals.add(requestBody.jsonObject.getOrDefault("optional", 0).toString().toInt())
                 }
 
                 return HttpResponse.OK
@@ -83,7 +83,9 @@ Examples:
             }
         })
 
-        assertEquals(10, flags["optional"])
+        assertThat(optionals).contains(10)
+        assertThat(optionals).contains(0)
+        assertThat(optionals).hasSize(2)
         assertTrue(results.success(), results.report())
     }
 

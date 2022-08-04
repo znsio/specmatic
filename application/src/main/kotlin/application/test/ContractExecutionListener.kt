@@ -35,7 +35,7 @@ class ContractExecutionListener : TestExecutionListener {
     }
 
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
-        if (listOf("SpecmaticJUnitSupport", "contractAsTest()", "JUnit Jupiter").any {
+        if (listOf("SpecmaticJUnitSupport", "backwardCompatibilityTest()", "contractTest()", "JUnit Jupiter", "JUnitBackwardCompatibilityTestRunner").any {
                     testIdentifier!!.displayName.contains(it)
                 }) {
                     if(testExecutionResult?.status != TestExecutionResult.Status.SUCCESSFUL)
@@ -84,13 +84,14 @@ class ContractExecutionListener : TestExecutionListener {
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
         org.fusesource.jansi.AnsiConsole.systemInstall()
 
-        colorPrinter.printFinalSummary(TestSummary(success, aborted, failure))
-
         if (failedLog.isNotEmpty()) {
             println()
             colorPrinter.printFailureTitle("Unsuccessful scenarios:")
             println(failedLog.joinToString(System.lineSeparator()) { it.prependIndent("  ") })
+            println()
         }
+
+        colorPrinter.printFinalSummary(TestSummary(success, aborted, failure))
     }
 
     fun exitProcess() {

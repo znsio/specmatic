@@ -4,9 +4,9 @@ BRANCH=`git rev-parse --abbrev-ref HEAD`
 
 if [ $BRANCH != "main" ]
 then
-	echo Current branch is $BRANCH.
+	echo Error: Current branch is $BRANCH.
 	echo
-	echo You should only release from main.
+	echo To fix this, trigger this release from the main branch.
 	exit 1
 else
 	echo √ Release is being done from main
@@ -17,17 +17,22 @@ GITDIFF=`git diff --stat`
 if [ ! -z "$GITDIFF" ]
 then
 	echo
-	echo Git working tree is dirty, please commit all changes before releasing an new version.
+	echo Error: Git working tree is dirty.
+	echo
+	echo To fix this, commit all changes, then trigger the release again.
 	exit 1
 else
-	echo √ Work tree is clean
+	echo √ Working tree is clean
 fi
 
 if [ -z "$1" ]
 then
 	echo
-	echo Provide the version to be published as the first argument.
-	echo Current version is `cat version.properties`
+	echo Error: version argument is missing
+	echo
+	echo Provide the version to be published as the first argument to this script.
+	echo
+	echo The current version in version.properties is $(cat version.properties).
 	exit 1
 fi
 
@@ -36,10 +41,12 @@ OUTPUT=`git rev-parse $1 2>&1`
 if [ $? = "0" ]
 then
 	echo
-	echo This tag already exists, most likely because a release with this version has already been done.
+	echo Error: This tag already exists, most likely because a release with this version has already been done.
+	echo
+	echo To fix this, increment the version in version.properties, commit and push the change, and try again.
 	exit 1
 else
-	echo √ Tag $1 does not exist
+	echo √ Tag $1 does not yet exist
 fi
 
 set -e
@@ -49,11 +56,17 @@ ACTUAL_VERSION=`cat version.properties | sed s/version=//g`
 if [ "$1" != $ACTUAL_VERSION ]
 then
 	echo
-	echo The specified version $1 does not match the version declared in version.properties which is $ACTUAL_VERSION.
+	echo Error: The specified version $1 does not match the version declared in version.properties which is $ACTUAL_VERSION.
+	echo
+	echo This check is intended to make sure that you are intentionally releasing the right version.
+	echo
+	echo The version that you are passing to this script must match that in version.properties.
 	exit 1
 else
 	echo √ Specified version matches ./version.properties
 fi
+
+echo
 
 echo Building and publishing
 ./gradlew clean build publish

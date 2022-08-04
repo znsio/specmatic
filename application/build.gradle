@@ -31,12 +31,12 @@ repositories {
 }
 
 def ktor_version = "1.6.8"
-def junit_version = "5.8.2"
+def junit_version = "5.9.0"
 def jgit_version = "5.13.0.202109080827-r"
 
 dependencies {
     implementation 'org.assertj:assertj-core:3.23.1'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
 
     implementation('info.picocli:picocli-spring-boot-starter:4.6.3') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
@@ -53,7 +53,7 @@ dependencies {
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
     implementation 'org.slf4j:slf4j-nop:1.7.36'
-    implementation 'org.apache.kafka:kafka-clients:3.2.0'
+    implementation 'org.apache.kafka:kafka-clients:3.2.1'
 
     implementation 'org.apache.ant:ant-junit:1.10.12'
 

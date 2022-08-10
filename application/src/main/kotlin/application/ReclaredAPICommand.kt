@@ -34,15 +34,11 @@ class ReDeclaredAPICommand: Callable<Unit> {
             git.show(newerVersion, relativeContractFile.path)
         }
 
-        val newContract = OpenApiSpecification.fromYAML(newerContractYaml, "")
-        val newContractPaths = newContract.toFeature().scenarios.map { it.httpRequestPattern.urlMatcher!!.path }
+        val newContractPaths = urlPaths(newerContractYaml)
 
         val newPaths = if(git.exists(olderVersion, relativeContractFile.path)) {
             val olderContractYaml = git.show(olderVersion, relativeContractFile.path)
-
-            val oldContract = OpenApiSpecification.fromYAML(olderContractYaml, "")
-            val oldContractPaths = oldContract.toFeature().scenarios.map { it.httpRequestPattern.urlMatcher!!.path }
-
+            val oldContractPaths = urlPaths(olderContractYaml)
             newContractPaths.filter { it !in oldContractPaths }
         } else {
             newContractPaths
@@ -64,6 +60,12 @@ class ReDeclaredAPICommand: Callable<Unit> {
             println("Path $newPath already exists in the following contracts:")
             println(contracts.joinToString("\n") { "- $it" })
         }
+    }
+
+    private fun urlPaths(newerContractYaml: String): List<String> {
+        val newContract = OpenApiSpecification.fromYAML(newerContractYaml, "")
+        val newContractPaths = newContract.toFeature().scenarios.map { it.httpRequestPattern.urlMatcher!!.path }
+        return newContractPaths
     }
 
     private fun listOfAllContractFiles(dir: File): List<File> {

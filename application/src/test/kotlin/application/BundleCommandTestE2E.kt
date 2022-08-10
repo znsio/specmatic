@@ -1,6 +1,7 @@
 package application
 
 import `in`.specmatic.core.Configuration
+import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import io.ktor.util.*
 import io.ktor.utils.io.streams.*
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
 import java.io.File
+import java.io.FileFilter
 import java.io.FileInputStream
 import java.util.function.Consumer
 import java.util.zip.ZipEntry
@@ -95,7 +97,22 @@ internal class BundleCommandTestE2E {
         @JvmStatic
         fun tearDown() {
             Configuration.globalConfigFileName = configFilename
+            cleanupSpecmaticDirectories(File("."))
         }
+
+        fun cleanupSpecmaticDirectories(dir: File) {
+            val dirs = dir.absoluteFile.listFiles()!!.filter { it.isDirectory }
+
+            dirs.filter { isSpecmaticDir(it) }.forEach {
+                it.deleteRecursively()
+            }
+
+            dirs.filter { !isSpecmaticDir(it) && it.name != ".git" }.forEach {
+                cleanupSpecmaticDirectories(it)
+            }
+        }
+
+        private fun isSpecmaticDir(it: File) = it.name == ".specmatic" || it.name == ".spec"
     }
 
     @Autowired

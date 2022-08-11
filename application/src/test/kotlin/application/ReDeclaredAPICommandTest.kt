@@ -155,6 +155,24 @@ internal class ReDeclaredAPICommandTest {
             assertThat(newPaths).hasSize(1)
             assertThat(newPaths).contains("/pet/(id:number)")
         }
+
+        @Test
+        fun `from committed file`() {
+            val contractFile = mockk<CanonicalFile>()
+            every { contractFile.relativeTo(any()) } returns File(".")
+
+            val git = mockk<GitCommand>()
+            every { git.gitRoot() } returns "/git/root"
+            every { git.exists("HEAD", any()) } returns true
+            every { git.show("HEAD", any()) } returns oldContractYaml
+            every { git.show("newerCommit", any()) } returns newContractYaml
+
+            val contractToCheck = ContractToCheck(contractFile, git)
+
+            val newPaths = contractToCheck.getNewPathsInContract("HEAD", "newerCommit")
+            assertThat(newPaths).hasSize(1)
+            assertThat(newPaths).contains("/pet/(id:number)")
+        }
     }
 
     @Test

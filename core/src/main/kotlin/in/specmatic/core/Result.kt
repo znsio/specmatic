@@ -4,7 +4,6 @@ import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.Value
-import org.junit.internal.runners.statements.Fail
 
 sealed class Result {
     var scenario: Scenario? = null
@@ -45,7 +44,7 @@ sealed class Result {
         return this
     }
 
-    abstract fun isTrue(): Boolean
+    abstract fun isSuccess(): Boolean
 
     abstract fun ifSuccess(function: () -> Result): Result
     abstract fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result
@@ -135,11 +134,11 @@ sealed class Result {
             }
         }
 
-        override fun isTrue() = false
+        override fun isSuccess() = false
     }
 
     data class Success(val variables: Map<String, String> = emptyMap()) : Result() {
-        override fun isTrue() = true
+        override fun isSuccess() = true
         override fun ifSuccess(function: () -> Result) = function()
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
             return this.copy(variables = response.export(bindings))

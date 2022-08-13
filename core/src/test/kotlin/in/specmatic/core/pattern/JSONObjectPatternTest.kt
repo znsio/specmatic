@@ -7,6 +7,7 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import java.util.function.Consumer
 
@@ -17,20 +18,6 @@ internal class JSONObjectPatternTest {
             is JSONObjectValue -> assertTrue("id" in result.jsonObject)
             else -> throw Exception("Wrong type, got ${result.javaClass}, expected JSONObjectValue")
         }
-    }
-
-    @Test
-    fun `Given an optional key, the suffix should remain in place in an object generated using newBasedOn`() {
-        val newPatterns = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(Row(), Resolver())
-        val newPattern = newPatterns.first {
-            it != toJSONObjectPattern(emptyMap())
-        }
-
-        val objectWithId = parsedValue("""{"id": 10}""")
-        val emptyObject = parsedValue("""{}""")
-
-        assertTrue(newPattern.matches(objectWithId, Resolver()).isTrue())
-        assertTrue(newPattern.matches(emptyObject, Resolver()).isTrue())
     }
 
     @Test

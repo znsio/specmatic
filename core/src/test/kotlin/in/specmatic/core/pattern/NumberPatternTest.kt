@@ -47,20 +47,20 @@ internal class NumberPatternTest {
     @Test
     fun `should match number of any length when min and max are not specified`() {
         val randomNumber = RandomStringUtils.randomNumeric((1..9).random()).toInt()
-        assertThat(NumberPattern().matches(NumberValue(randomNumber), Resolver()).isTrue()).isTrue
+        assertThat(NumberPattern().matches(NumberValue(randomNumber), Resolver()).isSuccess()).isTrue
     }
 
     @Test
     fun `should not match when number is shorter than minLength`() {
         val result = NumberPattern(minLength = 4).matches(NumberValue(123), Resolver())
-        assertThat(result.isTrue()).isFalse
+        assertThat(result.isSuccess()).isFalse
         assertThat(result.reportString()).isEqualTo("""Expected number with minLength 4, actual was 123 (number)""")
     }
 
     @Test
     fun `should not match when number is longer than maxLength`() {
         val result = NumberPattern(maxLength = 3).matches(NumberValue(1234), Resolver())
-        assertThat(result.isTrue()).isFalse
+        assertThat(result.isSuccess()).isFalse
         assertThat(result.reportString()).isEqualTo("""Expected number with maxLength 3, actual was 1234 (number)""")
     }
 }

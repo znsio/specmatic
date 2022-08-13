@@ -61,7 +61,11 @@ data class TabularPattern(
         val resolverWithNullType = withNullPattern(resolver)
         return allOrNothingCombinationIn(pattern) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
-        }.map { toTabularPattern(it) }
+        }.map {
+            toTabularPattern(it.mapKeys { (key, _) ->
+                withoutOptionality(key)
+            })
+        }
     }
 
     override fun newBasedOn(resolver: Resolver): List<Pattern> {
@@ -164,7 +168,8 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
     return when {
         row.containsField(keyWithoutOptionality) -> {
             val rowValue = row.getField(keyWithoutOptionality)
-            if (isPatternToken(rowValue)) {
+
+            val fromExamples = if (isPatternToken(rowValue)) {
                 val rowPattern = resolver.getPattern(rowValue)
 
                 attempt(breadCrumb = key) {
@@ -183,6 +188,20 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
                     else -> listOf(ExactValuePattern(parsedRowValue))
                 }
             }
+
+            fromExamples
+
+//            if(Flags.negativeTestingEnabled()) {
+//                val vanilla = pattern.newBasedOn(Row(), resolver)
+//
+//                val remainder = vanilla.filterNot { vanillaType ->
+//                    fromExamples.any { item -> vanillaType.encompasses(item, resolver, resolver) is Result.Success }
+//                }
+//
+//                fromExamples.plus(remainder)
+//            } else {
+//                fromExamples
+//            }
         }
         else -> pattern.newBasedOn(row, resolver)
     }

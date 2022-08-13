@@ -66,7 +66,7 @@ data class Scenario(
                                     key,
                                     pattern,
                                     pattern.parse(actualStateValue.toString(), resolver)
-                                ).isTrue()
+                                ).isSuccess()
                             } catch (e: Exception) {
                                 false
                             }
@@ -159,7 +159,7 @@ data class Scenario(
 
         try {
             if (resolver.matchesPattern(key, expectedPattern, expectedPattern.parse(actualValue.toString(), resolver))
-                    .isTrue()
+                    .isSuccess()
             )
                 code()
         } catch (e: Throwable) {

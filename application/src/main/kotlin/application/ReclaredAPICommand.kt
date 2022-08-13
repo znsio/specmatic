@@ -4,84 +4,92 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Feature
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
+import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
 
-class ContractToCheck(private val contractFile: CanonicalFile, val git: GitCommand) {
-    constructor(contractFilePath: String, git: GitCommand): this(CanonicalFile(contractFilePath), git)
-
-    fun fetchAllOtherContracts() =
-        listOfAllContractFiles(File(git.gitRoot())).filterNot { it.path == contractFile.path }
-            .map { Pair(OpenApiSpecification.fromYAML(it.readText(), it.path).toFeature(), it.path) }
-
-    fun getNewPathsInContract(
-        olderVersion: String,
-        newerVersion: String,
-    ): List<String> {
-        val gitRoot = File(git.gitRoot())
-
-        val relativeContractFile = contractFile.relativeTo(gitRoot)
-
-        val newerContractYaml = if (newerVersion.isBlank()) {
-            contractFile.readText()
-        } else {
-            git.show(newerVersion, relativeContractFile.path)
-        }
-
-        val newContractPaths = urlPaths(newerContractYaml)
-
-        return if (git.exists(olderVersion, relativeContractFile.path)) {
-            val olderContractYaml = git.show(olderVersion, relativeContractFile.path)
-            val oldContractPaths = urlPaths(olderContractYaml)
-            newContractPaths.filter { it !in oldContractPaths }
-        } else {
-            newContractPaths
-        }
+fun fetchAllContracts(git: GitCommand): List<Pair<Feature, String>> =
+    listOfAllContractFiles(File(git.gitRoot())).mapNotNull {
+        loadContractData(it)
     }
+
+fun loadContractData(it: File) = try {
+    Pair(OpenApiSpecification.fromYAML(it.readText(), it.path).toFeature(), it.path)
+} catch (e: Throwable) {
+    logger.debug(exceptionCauseMessage(e))
+    null
 }
 
 @CommandLine.Command(name = "redeclared",
     mixinStandardHelpOptions = true,
     description = ["Checks if new APIs in this file have been re-declared"])
 class ReDeclaredAPICommand: Callable<Unit> {
-    @CommandLine.Parameters(index = "0", description = ["Contract to validate"])
-    lateinit var contractFilePath: String
+    @CommandLine.Command(name = "file", description = ["Check the specified contract for re-declarations"])
+    fun file(@CommandLine.Parameters(paramLabel = "contractPath") contractFilePath: String): Int {
+        val redeclarations = findReDeclaredContracts(ContractToCheck(contractFilePath, SystemGit()))
 
-    @CommandLine.Option(names = ["--older"], description = ["Older version"], defaultValue = "HEAD")
-    lateinit var olderVersion: String
-
-    @CommandLine.Option(names = ["--newer"], description = ["Newer version"], defaultValue = "")
-    lateinit var newerVersion: String
-
-    override fun call() {
-        val newPathToContractMap = findRedeclaredContracts(ContractToCheck(contractFilePath, SystemGit()), olderVersion, newerVersion)
-
-        newPathToContractMap.forEach { (newPath, contracts) ->
-            println("Path $newPath already exists in the following contracts:")
-            println(contracts.joinToString("\n") { "- $it" })
+        redeclarations.forEach { (newPath, contracts) ->
+            logger.log("Path $newPath already exists in the following contracts:")
+            logger.log(contracts.joinToString("\n") { "- $it" })
         }
+
+        return if(redeclarations.isNotEmpty())
+            1
+        else
+            0
     }
 
+    @CommandLine.Command(name = "entire-repo", description = ["Check all contracts in the repo for re-declarations"])
+    fun entireRepo(): Int {
+        val contracts: List<Pair<Feature, String>> = fetchAllContracts(SystemGit())
+
+        val redeclarations = findReDeclarationsAmongstContracts(contracts)
+
+        redeclarations.forEach { (newPath, contracts) ->
+            logger.log("Path $newPath already exists in the following contracts:")
+            logger.log(contracts.joinToString("\n") { "- $it" })
+            logger.newLine()
+        }
+
+        logger.log("Count of APIs re-declared: ${redeclarations.size}")
+
+        return if(redeclarations.isNotEmpty())
+            1
+        else
+            0
+    }
+
+    @CommandLine.Option(names = ["--entire-repo"], description = ["Check all contracts for redeclaration instead of a single contract"], defaultValue = "false")
+    var entireRepo: Boolean = false
+
+    override fun call() {
+        CommandLine(GitCompatibleCommand()).usage(System.out)
+    }
 }
 
-data class Redeclaration(val apiURLPath: String, val contractsContainingAPI: List<String>)
+data class ReDeclarations(val apiURLPath: String, val contractsContainingAPI: List<String>)
 
-fun findRedeclaredContracts(
+fun findReDeclarationsAmongstContracts(contracts: List<Pair<Feature, String>>): Map<String, List<Pair<String, String>>> =
+    contracts.flatMap { (feature, filePath) ->
+        pathsFromFeature(feature).map { urlPath -> Pair(urlPath, filePath) }
+    }.groupBy { (urlPath, _) -> urlPath }.filter { (_, filePaths) -> filePaths.size > 1 }
+
+fun findReDeclaredContracts(
     contractToCheck: ContractToCheck,
-    olderVersion: String,
-    newerVersion: String,
-): List<Redeclaration> {
-    val newPaths = contractToCheck.getNewPathsInContract(olderVersion, newerVersion)
+): List<ReDeclarations> {
+    val paths: List<String> = contractToCheck.getPathsInContract() ?: emptyList()
     val contracts: List<Pair<Feature, String>> = contractToCheck.fetchAllOtherContracts()
 
-    return newPathToContractMap(newPaths, contracts)
+    return findRedeclarations(paths, contracts)
 }
 
-fun newPathToContractMap(
+fun findRedeclarations(
     newPaths: List<String>,
     contracts: List<Pair<Feature, String>>
-): List<Redeclaration> {
+): List<ReDeclarations> {
     val newPathToContractMap = newPaths.map { newPath ->
         val matchingContracts = contracts.filter { (feature, _) ->
             feature.scenarios.map { it.httpRequestPattern.urlMatcher!!.path }.any { scenarioPath ->
@@ -89,15 +97,24 @@ fun newPathToContractMap(
             }
         }.map { it.second }
 
-        Redeclaration(newPath, matchingContracts)
+        ReDeclarations(newPath, matchingContracts)
     }
+
     return newPathToContractMap
 }
 
-fun urlPaths(newerContractYaml: String): List<String> {
-    val newContract = OpenApiSpecification.fromYAML(newerContractYaml, "")
-    return newContract.toFeature().scenarios.map { it.httpRequestPattern.urlMatcher!!.path }
+fun urlPaths(newerContractYaml: String): List<String>? {
+    return try {
+        val newContract = OpenApiSpecification.fromYAML(newerContractYaml, "").toFeature()
+        pathsFromFeature(newContract)
+    } catch(e: ContractException) {
+        logger.debug(exceptionCauseMessage(e))
+        null
+    }
 }
+
+private fun pathsFromFeature(newContract: Feature) =
+    newContract.scenarios.map { it.httpRequestPattern.urlMatcher!!.path }.sorted().distinct()
 
 open class CanonicalFile(val file: File) {
     val path: String = file.path

@@ -1,13 +1,10 @@
 package application
 
 import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.git.GitCommand
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.io.File
 
 internal class ReDeclaredAPICommandTest {
     val oldContractYaml = """
@@ -136,57 +133,37 @@ internal class ReDeclaredAPICommandTest {
                       nullable: true
         """.trimIndent()
 
-    @Nested
-    inner class GetNewPaths {
-        @Test
-        fun `from uncommitted file`() {
-            val contractFile = mockk<CanonicalFile>()
-            every { contractFile.readText() } returns newContractYaml
-            every { contractFile.relativeTo(any()) } returns File(".")
-
-            val git = mockk<GitCommand>()
-            every { git.gitRoot() } returns "/git/root"
-            every { git.exists("HEAD", any()) } returns true
-            every { git.show("HEAD", any()) } returns oldContractYaml
-
-            val contractToCheck = ContractToCheck(contractFile, git)
-
-            val newPaths = contractToCheck.getNewPathsInContract("HEAD", "")
-            assertThat(newPaths).hasSize(1)
-            assertThat(newPaths).contains("/pet/(id:number)")
-        }
-
-        @Test
-        fun `from committed file`() {
-            val contractFile = mockk<CanonicalFile>()
-            every { contractFile.relativeTo(any()) } returns File(".")
-
-            val git = mockk<GitCommand>()
-            every { git.gitRoot() } returns "/git/root"
-            every { git.exists("HEAD", any()) } returns true
-            every { git.show("HEAD", any()) } returns oldContractYaml
-            every { git.show("newerCommit", any()) } returns newContractYaml
-
-            val contractToCheck = ContractToCheck(contractFile, git)
-
-            val newPaths = contractToCheck.getNewPathsInContract("HEAD", "newerCommit")
-            assertThat(newPaths).hasSize(1)
-            assertThat(newPaths).contains("/pet/(id:number)")
-        }
-    }
-
     @Test
-    fun `should identify redeclared contracts`() {
+    fun `should identify APIs in one contract that have been redeclared in others`() {
         val contractToCheck = mockk<ContractToCheck>()
-        every { contractToCheck.getNewPathsInContract("v1", "v2") } returns listOf("/pets")
+        every { contractToCheck.getPathsInContract() } returns listOf("/pets")
         every { contractToCheck.fetchAllOtherContracts() } returns listOf(Pair(OpenApiSpecification.fromYAML(oldContractYaml, "/contract.yaml").toFeature(), "/contract.yaml"))
 
-        val redeclaredContracts = findRedeclaredContracts(contractToCheck, "v1", "v2")
+        val redeclaredContracts = findReDeclaredContracts(contractToCheck)
 
         assertThat(redeclaredContracts).hasSize(1)
         assertThat(redeclaredContracts.single().apiURLPath).isEqualTo("/pets")
 
         assertThat(redeclaredContracts.single().contractsContainingAPI).hasSize(1)
         assertThat(redeclaredContracts.single().contractsContainingAPI.single()).isEqualTo("/contract.yaml")
+    }
+
+    @Test
+    fun `should identify re-declared APIs across a list of contracts`() {
+        val reDeclarations: Map<String, List<Pair<String, String>>> = findReDeclarationsAmongstContracts(
+            listOf(
+                Pair(OpenApiSpecification.fromYAML(oldContractYaml, "/old.yaml").toFeature(), "/old.yaml"),
+                Pair(OpenApiSpecification.fromYAML(newContractYaml, "/new.yaml").toFeature(), "/new.yaml"),
+            )
+        )
+
+        assertThat(reDeclarations).hasSize(1)
+
+        val entries = reDeclarations.entries.first().value
+
+        assertThat(entries).hasSize(2)
+        assertThat(entries).allMatch { it.first == "/pets" }
+        assertThat(entries).anyMatch { it.second == "/old.yaml" }
+        assertThat(entries).anyMatch { it.second == "/new.yaml" }
     }
 }

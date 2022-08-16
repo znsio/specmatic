@@ -25,7 +25,7 @@ class ProxyCommand : Callable<Unit> {
     var port: Int = 9000
 
     @Parameters(description = ["Store data from the proxy interactions into this dir"], index = "0")
-    lateinit var proxyQontractDataDir: String
+    lateinit var proxySpecmaticDataDir: String
 
     @Option(names = ["--httpsKeyStore"], description = ["Run the proxy on https using a key in this store"])
     var keyStoreFile = ""
@@ -45,12 +45,12 @@ class ProxyCommand : Callable<Unit> {
     var proxy: Proxy? = null
 
     override fun call() {
-        validatedProxySettings(targetBaseURL, proxyQontractDataDir)
+        validatedProxySettings(targetBaseURL, proxySpecmaticDataDir)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
         val keyStoreData = certInfo.getHttpsCert()
 
-        proxy = Proxy(host, port, targetBaseURL, proxyQontractDataDir, keyStoreData)
+        proxy = Proxy(host, port, targetBaseURL, proxySpecmaticDataDir, keyStoreData)
         addShutdownHook()
 
         val protocol = keyStoreData?.let { "https" } ?: "http"
@@ -59,11 +59,11 @@ class ProxyCommand : Callable<Unit> {
         while(true) sleep(10000)
     }
 
-    private fun validatedProxySettings(unknownProxyTarget: String?, proxyQontractDataDir: String?) {
-        if(unknownProxyTarget == null && proxyQontractDataDir == null) return
+    private fun validatedProxySettings(unknownProxyTarget: String?, proxySpecmaticDataDir: String?) {
+        if(unknownProxyTarget == null && proxySpecmaticDataDir == null) return
 
-        if(unknownProxyTarget != null && proxyQontractDataDir != null) {
-            val dataDirFile = File(proxyQontractDataDir)
+        if(unknownProxyTarget != null && proxySpecmaticDataDir != null) {
+            val dataDirFile = File(proxySpecmaticDataDir)
             if(!dataDirFile.exists()) {
                 try {
                     dataDirFile.mkdirs()
@@ -72,7 +72,7 @@ class ProxyCommand : Callable<Unit> {
                 }
             } else {
                 if(dataDirFile.listFiles()?.isNotEmpty() == true) {
-                    exitWithMessage("This data directory $proxyQontractDataDir must be empty if it exists")
+                    exitWithMessage("This data directory $proxySpecmaticDataDir must be empty if it exists")
                 }
             }
         }

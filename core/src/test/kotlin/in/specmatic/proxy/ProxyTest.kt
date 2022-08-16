@@ -1,5 +1,6 @@
 package `in`.specmatic.proxy
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.http.client.SimpleClientHttpRequestFactory
@@ -41,7 +42,7 @@ internal class ProxyTest {
             override fun writeText(path: String, content: String) {
                 receivedPaths.add(path)
 
-                if(path.endsWith(".$CONTRACT_EXTENSION"))
+                if(path.endsWith(".yaml"))
                     receivedContract = content
                 else
                     receivedStub = content
@@ -61,10 +62,10 @@ internal class ProxyTest {
             }
         }
 
-        assertThat(receivedContract?.trim()).startsWith("Feature:")
-        assertThatCode { parseGherkinStringToFeature(receivedContract ?: "") }.doesNotThrowAnyException()
+        assertThat(receivedContract?.trim()).startsWith("openapi:")
+        assertThatCode { OpenApiSpecification.fromYAML(receivedContract!!, "") }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.$CONTRACT_EXTENSION", "stub0.json"))
+        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.yaml", "stub0.json"))
     }
 
     @Test
@@ -87,7 +88,7 @@ internal class ProxyTest {
             override fun writeText(path: String, content: String) {
                 receivedPaths.add(path)
 
-                if(path.endsWith(".$CONTRACT_EXTENSION"))
+                if(path.endsWith(".yaml"))
                     receivedContract = content
                 else
                     receivedStub = content
@@ -104,9 +105,9 @@ internal class ProxyTest {
             }
         }
 
-        assertThat(receivedContract?.trim()).startsWith("Feature:")
-        assertThatCode { parseGherkinStringToFeature(receivedContract ?: "") }.doesNotThrowAnyException()
+        assertThat(receivedContract?.trim()).startsWith("openapi:")
+        assertThatCode { OpenApiSpecification.fromYAML(receivedContract!!, "") }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.$CONTRACT_EXTENSION", "stub0.json"))
+        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.yaml", "stub0.json"))
     }
 }

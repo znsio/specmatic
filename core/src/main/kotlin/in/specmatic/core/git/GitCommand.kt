@@ -23,4 +23,5 @@ interface GitCommand {
     fun fileIsInGitDir(newerContractPath: String): Boolean
     fun inGitRootOf(contractPath: String): GitCommand
     fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit
+    fun exists(treeish: String, relativePath: String): Boolean
 }

@@ -1,5 +1,6 @@
 package `in`.specmatic.proxy
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -11,6 +12,7 @@ import `in`.specmatic.stub.httpResponseLog
 import `in`.specmatic.stub.ktorHttpRequestToHttpRequest
 import `in`.specmatic.stub.respondToKtorHttpResponse
 import `in`.specmatic.test.HttpClient
+import io.swagger.v3.core.util.Yaml
 import java.io.Closeable
 import java.net.URI
 import java.net.URL
@@ -118,15 +120,16 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
         server.stop(0, 0)
 
         val gherkin = toGherkinFeature("New feature", stubs)
+        val featureFileName = "proxy_generated.yaml"
+        val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
 
         if(stubs.isEmpty()) {
             println("No stubs were recorded. No contract will be written.")
         } else {
             proxyQontractDataDir.createDirectory()
 
-            val featureFileName = "proxy_generated.$CONTRACT_EXTENSION"
             println("Writing contract to $featureFileName")
-            proxyQontractDataDir.writeText(featureFileName, gherkin)
+            proxyQontractDataDir.writeText(featureFileName, Yaml.pretty(openApi))
 
             stubs.mapIndexed { index, namedStub ->
                 val fileName = "stub$index.json"

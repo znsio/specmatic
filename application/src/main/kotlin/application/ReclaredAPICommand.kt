@@ -31,8 +31,13 @@ class ReDeclaredAPICommand: Callable<Unit> {
     fun file(@CommandLine.Parameters(paramLabel = "contractPath") contractFilePath: String): Int {
         val redeclarations = findReDeclaredContracts(ContractToCheck(contractFilePath, SystemGit()))
 
+        if(redeclarations.isNotEmpty()) {
+            logger.log("Some APIs in $contractFilePath have been declared in other files as well.")
+            logger.newLine()
+        }
+
         redeclarations.forEach { (newPath, contracts) ->
-            logger.log("Path $newPath already exists in the following contracts:")
+            logger.log(newPath)
             logger.log(contracts.joinToString("\n") { "- $it" })
         }
 
@@ -48,8 +53,13 @@ class ReDeclaredAPICommand: Callable<Unit> {
 
         val redeclarations = findReDeclarationsAmongstContracts(contracts)
 
+        if(redeclarations.isNotEmpty()) {
+            logger.log("Some APIs have been declared in multiple files.")
+            logger.newLine()
+        }
+
         redeclarations.forEach { (newPath, contracts) ->
-            logger.log("Path $newPath already exists in the following contracts:")
+            logger.log(newPath)
             logger.log(contracts.joinToString("\n") { "- $it" })
             logger.newLine()
         }

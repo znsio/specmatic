@@ -104,7 +104,7 @@ data class AnyPattern(
                         .first().typeName)
                 "($concreteTypeName?)"
             } else
-                "(${pattern.joinToString(" or ") { inner -> withoutPatternDelimiters(inner.typeName) }})"
+                "(${pattern.joinToString(" or ") { inner -> withoutPatternDelimiters(inner.typeName).let { if(it == "null") "\"null\"" else it}  }})"
         }
 }
 

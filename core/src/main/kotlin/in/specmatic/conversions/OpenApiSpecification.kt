@@ -619,7 +619,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 XMLPattern(xmlTypeData)
             }
             is ArraySchema -> {
-                val repeatingSchema = schema.items
+                val repeatingSchema = schema.items as Schema<Any>
 
                 val repeatingType = when (repeatingSchema.type) {
                     in primitiveOpenAPITypes -> {

@@ -7,16 +7,25 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.NoMatchingScenario
-import `in`.specmatic.stub.*
+import `in`.specmatic.stub.HttpStubData
+import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import io.ktor.util.reflect.*
-import io.swagger.util.Yaml
+import io.swagger.v3.core.util.Yaml
+import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.Ignore
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+
+fun openAPIToString(openAPI: OpenAPI): String {
+    return Yaml.pretty(openAPI)
+}
 
 internal class OpenApiSpecificationTest {
     companion object {
@@ -27,7 +36,7 @@ internal class OpenApiSpecificationTest {
     }
 
     fun portableComparisonAcrossBuildEnvironments(actual: String, expected: String) {
-        assertThat(actual.trimIndent().replace("\"", "")).isEqualTo(expected.trimIndent().replace("\"", ""))
+        assertThat(actual.trimIndent().replace("\"", "")).isEqualTo(expected.removePrefix("---").trimIndent().replace("\"", ""))
     }
 
     @BeforeEach
@@ -218,7 +227,7 @@ Pet:
         """.trimIndent()
 
         val gherkinToOpenAPI = parseGherkinStringToFeature(gherkin).toOpenApi()
-        val yamlFromGherkin = Yaml.mapper().writeValueAsString(gherkinToOpenAPI)
+        val yamlFromGherkin = openAPIToString(gherkinToOpenAPI)
         println(yamlFromGherkin)
         val spec = OpenApiSpecification.fromYAML(yamlFromGherkin, "")
         val feature = spec.toFeature()
@@ -310,7 +319,7 @@ Pet:
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: #/components/schemas/Data
+                          ${"$"}ref: '#/components/schemas/Data'
                   responses:
                     200:
                       description: Test
@@ -322,9 +331,9 @@ Pet:
                   - person2
                   properties:
                     person1:
-                      ${"$"}ref: #/components/schemas/Person
+                      ${"$"}ref: '#/components/schemas/Person'
                     person2:
-                      ${"$"}ref: #/components/schemas/Person
+                      ${"$"}ref: '#/components/schemas/Person'
                 Person:
                   required:
                   - id
@@ -334,7 +343,7 @@ Pet:
                   """.trimIndent()
 
         portableComparisonAcrossBuildEnvironments(
-            Yaml.mapper().writeValueAsString(parseGherkinStringToFeature(gherkin).toOpenApi()), yaml
+            openAPIToString(parseGherkinStringToFeature(gherkin).toOpenApi()), yaml
         )
     }
 
@@ -353,7 +362,7 @@ Scenario: Get product by id
 """.trim()
         )
         val openAPI = feature.toOpenApi()
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -417,7 +426,7 @@ Scenario: Get product by id
             """.trimIndent()
         )
         val openAPI = feature.toOpenApi()
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -470,7 +479,7 @@ Scenario: Get product by id
             """.trimIndent()
         )
         val openAPI = feature.toOpenApi()
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -495,7 +504,7 @@ Scenario: Get product by id
                             id:
                               type: "string"
                             address:
-                              ${"$"}ref: "#/components/schemas/Address"
+                              ${"$"}ref: '#/components/schemas/Address'
                   responses:
                     200:
                       description: "Add person by id"
@@ -550,7 +559,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -577,7 +586,7 @@ Scenario: Get product by id
                             address:
                               type: "array"
                               items:
-                                ${"$"}ref: "#/components/schemas/Address"
+                                ${"$"}ref: '#/components/schemas/Address'
                   responses:
                     200:
                       description: "Get person by id"
@@ -617,7 +626,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: "#/components/schemas/Address"
+                          ${"$"}ref: '#/components/schemas/Address'
                   responses:
                     200:
                       description: "Get person by id"
@@ -683,7 +692,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -711,7 +720,7 @@ Scenario: Get product by id
                               oneOf:
                               - properties: {}
                                 nullable: true
-                              - ${"$"}ref: "#/components/schemas/Address"
+                              - ${"$"}ref: '#/components/schemas/Address'
                   responses:
                     200:
                       description: "Get person by id"
@@ -762,7 +771,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -834,7 +843,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -901,7 +910,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -929,7 +938,7 @@ Scenario: Get product by id
                               type: "array"
                               nullable: true
                               items:
-                                ${"$"}ref: "#/components/schemas/Address"
+                                ${"$"}ref: '#/components/schemas/Address'
                   responses:
                     200:
                       description: "Get person by id"
@@ -984,7 +993,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1011,7 +1020,7 @@ Scenario: Get product by id
                             address:
                               type: "array"
                               items:
-                                ${"$"}ref: "#/components/schemas/Address"
+                                ${"$"}ref: '#/components/schemas/Address'
                                 nullable: true
                   responses:
                     200:
@@ -1065,7 +1074,7 @@ Scenario: Get product by id
             )
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1087,7 +1096,7 @@ Scenario: Get product by id
                           - "person"
                           properties:
                             person:
-                              ${"$"}ref: "#/components/schemas/Person"
+                              ${"$"}ref: '#/components/schemas/Person'
                         encoding:
                           person:
                             contentType: "application/json"
@@ -1117,7 +1126,7 @@ Scenario: Get product by id
                     id:
                       type: "string"
                     address:
-                      ${"$"}ref: "#/components/schemas/Address"
+                      ${"$"}ref: '#/components/schemas/Address'
             """.trimIndent()
         )
     }
@@ -1150,7 +1159,7 @@ Scenario: Get product by id
             )
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1218,7 +1227,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1236,7 +1245,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: "#/components/schemas/Person"
+                          ${"$"}ref: '#/components/schemas/Person'
                   responses:
                     200:
                       description: "Add Person"
@@ -1317,7 +1326,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1337,7 +1346,7 @@ Scenario: Get product by id
                       content:
                         application/json:
                           schema:
-                            ${"$"}ref: "#/components/schemas/Person"
+                            ${"$"}ref: '#/components/schemas/Person'
               /person2:
                 get:
                   summary: "Add Person Details"
@@ -1348,7 +1357,7 @@ Scenario: Get product by id
                       content:
                         application/json:
                           schema:
-                            ${"$"}ref: "#/components/schemas/Person"
+                            ${"$"}ref: '#/components/schemas/Person'
             components:
               schemas:
                 Person:
@@ -1387,7 +1396,7 @@ Scenario: Get product by id
             )
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1437,7 +1446,7 @@ Scenario: Get product by id
             )
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1489,7 +1498,7 @@ Scenario: Get product by id
             )
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1541,7 +1550,7 @@ Scenario: Get product by id
             )
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1592,7 +1601,7 @@ Scenario: Get product by id
             )
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1647,7 +1656,7 @@ Scenario: Get product by id
             )
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1706,7 +1715,7 @@ Scenario: Get product by id
             )
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1760,7 +1769,7 @@ Scenario: Get product by id
             )
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1815,7 +1824,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1840,7 +1849,7 @@ Scenario: Get product by id
                       content:
                         application/json:
                           schema:
-                            ${"$"}ref: "#/components/schemas/Person"
+                            ${"$"}ref: '#/components/schemas/Person'
             components:
               schemas:
                 Person:
@@ -1880,7 +1889,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1900,7 +1909,7 @@ Scenario: Get product by id
                       content:
                         application/json:
                           schema:
-                            ${"$"}ref: "#/components/schemas/Person"
+                            ${"$"}ref: '#/components/schemas/Person'
             components:
               schemas:
                 Person:
@@ -1942,7 +1951,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -1960,7 +1969,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: "#/components/schemas/Person"
+                          ${"$"}ref: '#/components/schemas/Person'
                   responses:
                     200:
                       description: "Add Person"
@@ -2009,7 +2018,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2027,7 +2036,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: "#/components/schemas/Person"
+                          ${"$"}ref: '#/components/schemas/Person'
                   responses:
                     200:
                       description: "Add Person"
@@ -2078,7 +2087,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2096,7 +2105,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: "#/components/schemas/Person"
+                          ${"$"}ref: '#/components/schemas/Person'
                   responses:
                     200:
                       description: "Add Person"
@@ -2152,7 +2161,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2214,7 +2223,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2292,7 +2301,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2377,7 +2386,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2451,7 +2460,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2537,7 +2546,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2607,7 +2616,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2629,7 +2638,7 @@ Scenario: Get product by id
                           - "Data"
                           properties:
                             Data:
-                              ${"$"}ref: "#/components/schemas/Record"
+                              ${"$"}ref: '#/components/schemas/Record'
                         encoding:
                           Data:
                             contentType: "application/json"
@@ -2689,7 +2698,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2736,7 +2745,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2801,7 +2810,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2819,7 +2828,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: #/components/schemas/Data1_RequestBody
+                          ${"$"}ref: '#/components/schemas/Data1_RequestBody'
                   responses:
                     200:
                       description: API 1
@@ -2831,7 +2840,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: #/components/schemas/Data2_RequestBody
+                          ${"$"}ref: '#/components/schemas/Data2_RequestBody'
                   responses:
                     200:
                       description: API 2
@@ -2897,7 +2906,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2915,7 +2924,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: #/components/schemas/Data_RequestBody
+                          ${"$"}ref: '#/components/schemas/Data_RequestBody'
                   responses:
                     200:
                       description: API 1
@@ -2978,7 +2987,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -2996,7 +3005,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: #/components/schemas/Data_RequestBody
+                          ${"$"}ref: '#/components/schemas/Data_RequestBody'
                   responses:
                     200:
                       description: API 1
@@ -3016,7 +3025,7 @@ Scenario: Get product by id
                       oneOf:
                       - properties: {}
                         nullable: true
-                      - ${"$"}ref: #/components/schemas/Hello
+                      - ${"$"}ref: '#/components/schemas/Hello'
             """.trimIndent()
         )
     }
@@ -3067,7 +3076,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -3085,7 +3094,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: #/components/schemas/Data_RequestBody
+                          ${"$"}ref: '#/components/schemas/Data_RequestBody'
                   responses:
                     200:
                       description: API 1
@@ -3105,7 +3114,7 @@ Scenario: Get product by id
                       oneOf:
                       - properties: {}
                         nullable: true
-                      - ${"$"}ref: #/components/schemas/Hello
+                      - ${"$"}ref: '#/components/schemas/Hello'
             """.trimIndent()
         )
     }
@@ -3156,7 +3165,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -3174,7 +3183,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: #/components/schemas/Data_RequestBody
+                          ${"$"}ref: '#/components/schemas/Data_RequestBody'
                   responses:
                     200:
                       description: API 1
@@ -3194,7 +3203,7 @@ Scenario: Get product by id
                       oneOf:
                       - properties: {}
                         nullable: true
-                      - ${"$"}ref: #/components/schemas/Hello
+                      - ${"$"}ref: '#/components/schemas/Hello'
             """.trimIndent()
         )
     }
@@ -3225,7 +3234,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -3280,7 +3289,7 @@ Scenario: Get product by id
             ).isTrue
         }
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
         portableComparisonAcrossBuildEnvironments(
             openAPIYaml,
             """
@@ -3298,7 +3307,7 @@ Scenario: Get product by id
                     content:
                       application/json:
                         schema:
-                          ${"$"}ref: #/components/schemas/Data
+                          ${"$"}ref: '#/components/schemas/Data'
                   responses:
                     200:
                       description: API
@@ -3313,14 +3322,14 @@ Scenario: Get product by id
                     data:
                       type: array
                       items:
-                        ${"$"}ref: #/components/schemas/Data
+                        ${"$"}ref: '#/components/schemas/Data'
             """.trimIndent()
         )
     }
 
     @Test
     fun `clone request pattern with example of body type should pick up the example`() {
-        val openAPI = Yaml.mapper().writeValueAsString(
+        val openAPI = openAPIToString(
             parseGherkinStringToFeature(
                 """
             Feature: API
@@ -3517,7 +3526,7 @@ components:
         val feature = parseGherkinStringToFeature(gherkin)
         val openAPI = feature.toOpenApi()
 
-        val openAPIYaml = Yaml.mapper().writeValueAsString(openAPI)
+        val openAPIYaml = openAPIToString(openAPI)
 
         println(openAPIYaml)
 
@@ -5362,7 +5371,7 @@ components:
                             address:
                               oneOf:
                               - nullable: true
-                              - ${'$'}ref: "#/components/schemas/Address"
+                              - ${'$'}ref: '#/components/schemas/Address'
                   responses:
                     "200":
                       description: "Test"

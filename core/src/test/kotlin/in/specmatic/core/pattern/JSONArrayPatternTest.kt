@@ -37,7 +37,7 @@ internal class JSONArrayPatternTest {
         val value = parsedValue("[1,2]")
         val pattern = parsedPattern("""[1,2,3]""")
 
-        assertFalse(pattern.matches(value, Resolver()).isTrue())
+        assertFalse(pattern.matches(value, Resolver()).isSuccess())
 
     }
 

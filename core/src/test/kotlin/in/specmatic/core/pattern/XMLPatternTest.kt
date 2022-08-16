@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
@@ -14,7 +13,6 @@ import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.w3c.dom.Document
 import java.util.function.Consumer
 
 private const val isOptional: String = "$OCCURS_ATTRIBUTE_NAME=\"$OPTIONAL_ATTRIBUTE_VALUE\""
@@ -658,7 +656,7 @@ internal class XMLPatternTest {
             val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
 
             val xmlNode = parsedValue("<person><name>Jill</name></person>")
-            assertThat(resolver.matchesPattern(null, personType, xmlNode).isTrue()).isTrue
+            assertThat(resolver.matchesPattern(null, personType, xmlNode).isSuccess()).isTrue
         }
 
         @Test
@@ -669,7 +667,7 @@ internal class XMLPatternTest {
             val resolver = Resolver(newPatterns = mapOf("(Name)" to nameType))
 
             val xmlNode = parsedValue("<person><name>Jill</name></person>")
-            assertThat(resolver.matchesPattern(null, personType, xmlNode).isTrue()).isTrue
+            assertThat(resolver.matchesPattern(null, personType, xmlNode).isSuccess()).isTrue
         }
     }
 

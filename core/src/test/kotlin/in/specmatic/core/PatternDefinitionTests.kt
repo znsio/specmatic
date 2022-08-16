@@ -208,7 +208,7 @@ class PatternDefinitionTests {
 
         val value = parsedValue(jsonString)
         val pattern = parsedPattern(jsonPattern, null)
-        assertTrue(pattern.matches(value, Resolver()).isTrue())
+        assertTrue(pattern.matches(value, Resolver()).isSuccess())
     }
 
     @Test

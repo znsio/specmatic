@@ -62,7 +62,7 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
                 specmaticScenarioInfo.httpRequestPattern.generate(
                     Resolver()
                 ), Resolver()
-            ).isTrue()
+            ).isSuccess()
         }
 
         return when {
@@ -83,7 +83,7 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
                 specmaticScenarioInfo.httpResponsePattern.generateResponse(
                     Resolver()
                 ), Resolver()
-            ).isTrue()
+            ).isSuccess()
         }
 
         return when {

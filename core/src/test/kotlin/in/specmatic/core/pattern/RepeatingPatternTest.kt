@@ -30,7 +30,7 @@ Given pattern Id
         val resolver = Resolver(newPatterns = mapOf("(Id)" to idPattern))
 
         val idArrayPattern = parsedPattern("(Id*)")
-        assertTrue(idArrayPattern.matches(value, resolver).isTrue())
+        assertTrue(idArrayPattern.matches(value, resolver).isSuccess())
     }
 
     @Test

@@ -125,8 +125,8 @@ Given pattern Id
 
         val resolver = Resolver(emptyMap(), false, mapOf("(Ids)" to idsPattern, "(Id)" to idPattern))
 
-        assertTrue(idsPattern.matches(value, resolver).isTrue())
-        assertTrue(resolver.matchesPattern(null, resolver.getPattern("(Ids)"), value).isTrue())
+        assertTrue(idsPattern.matches(value, resolver).isSuccess())
+        assertTrue(resolver.matchesPattern(null, resolver.getPattern("(Ids)"), value).isSuccess())
     }
 
     @Test
@@ -146,8 +146,8 @@ Given pattern Ids
 
         val resolver = Resolver(emptyMap(), false, mapOf("(Ids)" to idsPattern))
 
-        assertTrue(idsPattern.matches(value, resolver).isTrue())
-        assertTrue(resolver.matchesPattern(null, resolver.getPattern("(Ids)"), value).isTrue())
+        assertTrue(idsPattern.matches(value, resolver).isSuccess())
+        assertTrue(resolver.matchesPattern(null, resolver.getPattern("(Ids)"), value).isSuccess())
     }
 
     @Test

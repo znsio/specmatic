@@ -267,36 +267,42 @@ Feature: Hello world
 Background:
   Given openapi openapi/petstore-with-optional-and-nullable-parameters.yaml
   
-  #Scenario: create pet
-  #  When POST /pets
-  #  Then status 201
-  #  Examples:
-  #    | tag     | name | optional |
-  #    | testing | test | 99999999 |
-
+  Scenario: create pet
+    When POST /pets
+    Then status 201
+    Examples:
+      | tag     | name |
+      | testing | test |
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.copy(enableNegativeTesting = true).executeTests(
-            object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    flags["${request.path} executed"] = true
-                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
-                        init {
-                            put("Content-Type", "application/json")
-                        }
-                    }
-                    val petParameters = ObjectMapper().readValue(request.bodyString, Map::class.java)
-                    return if (petParameters.size != 2 || petParameters.values.contains(null))
-                        HttpResponse(422, "all keys and their values should be present", headers)
-                    else
-                        HttpResponse(201, "hello world", headers)
-                }
+        val results = try {
+            System.setProperty(Flags.negativeTestingFlag, "true")
 
-                override fun setServerState(serverState: Map<String, Value>) {
+            feature.copy(enableNegativeTesting = true).executeTests(
+                object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        flags["${request.path} executed"] = true
+                        val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                            init {
+                                put("Content-Type", "application/json")
+                            }
+                        }
+                        val petParameters = ObjectMapper().readValue(request.bodyString, Map::class.java)
+                        return if (petParameters.size != 2 || petParameters.values.contains(null))
+                            HttpResponse(422, "all keys and their values should be present", headers)
+                        else
+                            HttpResponse(201, "hello world", headers)
+                    }
+
+                    override fun setServerState(serverState: Map<String, Value>) {
+                    }
                 }
-            }
-        )
+            )
+        }
+        finally {
+            System.clearProperty(Flags.negativeTestingFlag)
+        }
 
         assertThat(results.results.size).isEqualTo(5)
         assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(1)

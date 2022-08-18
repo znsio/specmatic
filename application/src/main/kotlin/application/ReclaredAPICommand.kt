@@ -60,7 +60,7 @@ class ReDeclaredAPICommand: Callable<Unit> {
 
         redeclarations.forEach { (newPath, contracts) ->
             logger.log(newPath)
-            logger.log(contracts.joinToString("\n") { path -> "- $path" })
+            logger.log(contracts.joinToString("\n"))
             logger.newLine()
         }
 

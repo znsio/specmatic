@@ -60,7 +60,7 @@ class ReDeclaredAPICommand: Callable<Unit> {
 
         redeclarations.forEach { (newPath, contracts) ->
             logger.log(newPath)
-            logger.log(contracts.joinToString("\n") { "- $it" })
+            logger.log(contracts.joinToString("\n") { path -> "- $path" })
             logger.newLine()
         }
 
@@ -82,10 +82,17 @@ class ReDeclaredAPICommand: Callable<Unit> {
 
 data class ReDeclarations(val apiURLPath: String, val contractsContainingAPI: List<String>)
 
-fun findReDeclarationsAmongstContracts(contracts: List<Pair<Feature, String>>): Map<String, List<Pair<String, String>>> =
-    contracts.flatMap { (feature, filePath) ->
+fun findReDeclarationsAmongstContracts(contracts: List<Pair<Feature, String>>): Map<String, List<String>> {
+    val declarations = contracts.flatMap { (feature, filePath) ->
         pathsFromFeature(feature).map { urlPath -> Pair(urlPath, filePath) }
-    }.groupBy { (urlPath, _) -> urlPath }.filter { (_, filePaths) -> filePaths.size > 1 }
+    }.groupBy { (urlPath, _) -> urlPath }
+
+    val multipleDeclarations = declarations.filter { (_, filePaths) -> filePaths.size > 1 }
+
+    return multipleDeclarations.mapValues { (_, value) ->
+        value.map { (_, path) -> path }
+    }
+}
 
 fun findReDeclaredContracts(
     contractToCheck: ContractToCheck,

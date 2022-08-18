@@ -150,7 +150,7 @@ internal class ReDeclaredAPICommandTest {
 
     @Test
     fun `should identify re-declared APIs across a list of contracts`() {
-        val reDeclarations: Map<String, List<Pair<String, String>>> = findReDeclarationsAmongstContracts(
+        val reDeclarations: Map<String, List<String>> = findReDeclarationsAmongstContracts(
             listOf(
                 Pair(OpenApiSpecification.fromYAML(oldContractYaml, "/old.yaml").toFeature(), "/old.yaml"),
                 Pair(OpenApiSpecification.fromYAML(newContractYaml, "/new.yaml").toFeature(), "/new.yaml"),
@@ -159,11 +159,12 @@ internal class ReDeclaredAPICommandTest {
 
         assertThat(reDeclarations).hasSize(1)
 
-        val entries = reDeclarations.entries.first().value
+        assertThat(reDeclarations).containsKey("/pets")
 
-        assertThat(entries).hasSize(2)
-        assertThat(entries).allMatch { it.first == "/pets" }
-        assertThat(entries).anyMatch { it.second == "/old.yaml" }
-        assertThat(entries).anyMatch { it.second == "/new.yaml" }
+        val contractsDeclaringPets = reDeclarations.getValue("/pets")
+
+        assertThat(contractsDeclaringPets).hasSize(2)
+        assertThat(contractsDeclaringPets).contains("/old.yaml")
+        assertThat(contractsDeclaringPets).contains("/new.yaml")
     }
 }

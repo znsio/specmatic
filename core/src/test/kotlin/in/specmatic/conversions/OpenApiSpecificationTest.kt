@@ -1023,7 +1023,7 @@ Scenario: Get product by id
                                 oneOf:
                                 - properties: {}
                                   nullable: true
-                                - ${"$"}ref: "#/components/schemas/Address"
+                                - ${"$"}ref: '#/components/schemas/Address'
                   responses:
                     200:
                       description: "Get person by id"

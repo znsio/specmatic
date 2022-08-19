@@ -13,6 +13,7 @@ import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.mock.mockFromJSON
+import io.swagger.v3.core.util.Yaml
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -53,10 +54,16 @@ fun convertStub(path: String, userSpecifiedOutFile: String?) {
     val inputFile = File(path)
     val stub = mockFromJSON(jsonStringToValueMap(inputFile.readText()))
     val gherkin = toGherkinFeature(NamedStub("New scenario", stub))
+    val openApiYAML = gherkinToOpenApiYAML(gherkin)
 
-    val outFile = userSpecifiedOutFile ?: "${inputFile.nameWithoutExtension}.$CONTRACT_EXTENSION"
+    val outFile = userSpecifiedOutFile ?: "${inputFile.nameWithoutExtension}.yaml"
 
-    writeOut(gherkin, outFile)
+    writeOut(openApiYAML, outFile)
+}
+
+private fun gherkinToOpenApiYAML(gherkin: String): String {
+    val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
+    return Yaml.pretty(openApi)
 }
 
 fun convertPostman(path: String, userSpecifiedOutPath: String?) {
@@ -67,15 +74,14 @@ fun convertPostman(path: String, userSpecifiedOutPath: String?) {
 
     when (contracts.size) {
         1 -> {
-            val outPath = userSpecifiedOutPath ?: "${inputFile.nameWithoutExtension}.${CONTRACT_EXTENSION}"
-
-            writeOut(contracts.first().gherkin, outPath, toFragment(contracts.first().baseURLInfo))
+            val outPath = userSpecifiedOutPath ?: "${inputFile.nameWithoutExtension}.yaml"
+            writeOut(gherkinToOpenApiYAML(contracts.first().gherkin), outPath, toFragment(contracts.first().baseURLInfo))
         }
         else -> {
             for (contract in contracts) {
                 val (_, gherkin, baseURLInfo, _) = contract
-                val outFilePath = userSpecifiedOutPath ?: "${inputFile.nameWithoutExtension}.${CONTRACT_EXTENSION}"
-                writeOut(gherkin, outFilePath, toFragment(baseURLInfo))
+                val outFilePath = userSpecifiedOutPath ?: "${inputFile.nameWithoutExtension}.yaml"
+                writeOut(gherkinToOpenApiYAML(gherkin), outFilePath, toFragment(baseURLInfo))
             }
         }
     }

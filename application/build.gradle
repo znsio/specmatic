@@ -32,7 +32,7 @@ repositories {
 
 def ktor_version = "1.6.8"
 def junit_version = "5.9.0"
-def jgit_version = "5.13.0.202109080827-r"
+def jgit_version = "6.2.0.202206071550-r"
 
 dependencies {
     implementation 'org.assertj:assertj-core:3.23.1'

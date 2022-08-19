@@ -367,7 +367,24 @@ data class HttpRequestPattern(
                             listOf(ExactValuePattern(value))
                         }
                     } else {
-                        body.newBasedOn(row, resolver)
+
+                        if(Flags.negativeTestingEnabled()) {
+                            val vanilla = body.newBasedOn(Row(), resolver)
+                            val fromExamples = body.newBasedOn(row, resolver)
+                            val remainingVanilla = vanilla.filterNot { vanillaType ->
+                                fromExamples.any { typeFromExamples ->
+                                    vanillaType.encompasses(
+                                        typeFromExamples,
+                                        resolver,
+                                        resolver
+                                    ).isSuccess()
+                                }
+                            }
+
+                            fromExamples.plus(remainingVanilla)
+                        } else {
+                            body.newBasedOn(row, resolver)
+                        }
                     }
                 }
             }

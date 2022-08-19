@@ -112,7 +112,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 specmaticScenarioInfo.httpRequestPattern.generate(
                     Resolver()
                 ), Resolver()
-            ).isTrue()
+            ).isSuccess()
         }
 
         return when {

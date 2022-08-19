@@ -31,7 +31,7 @@ data class HttpStubData(
         val externalCommandResponse = HttpResponse.fromJSON(responseMap)
         val responseMatches = responsePattern.matches(externalCommandResponse, resolver.copy(mismatchMessages = ContractExternalResponseMismatch))
         return when {
-            !responseMatches.isTrue() -> {
+            !responseMatches.isSuccess() -> {
                 val errorMessage =
                     """Response returned by ${response.externalisedResponseCommand} not in line with specification for ${httpRequest.method} ${httpRequest.path}:\n${responseMatches.reportString()}"""
                 logger.log(errorMessage)

@@ -39,7 +39,7 @@ data class Resolver(
         if (mockMode
                 && sampleValue is StringValue
                 && isPatternToken(sampleValue.string)
-                && pattern.encompasses(getPattern(sampleValue.string), this, this).isTrue())
+                && pattern.encompasses(getPattern(sampleValue.string), this, this).isSuccess())
             return Result.Success()
 
         return pattern.matches(sampleValue, this).ifSuccess {

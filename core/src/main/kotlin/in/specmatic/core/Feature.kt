@@ -948,7 +948,7 @@ data class Feature(
             pattern is JSONObjectPattern -> jsonObjectToSchema(pattern)
             isArrayOfNullables(pattern) -> {
                 ArraySchema().apply {
-                    this.items = Schema<Any>().apply {
+                    val arrayItemSchema = Schema<Any>().apply {
                         val typeAlias =
                             ((pattern as ListPattern).pattern as AnyPattern).pattern.first { !isEmptyOrNull(it) }.let {
                                 if (it.pattern is String && builtInPatterns.contains(it.pattern.toString()))
@@ -963,8 +963,9 @@ data class Feature(
                             }
 
                         setSchemaType(typeAlias, this)
-                        this.nullable = true
                     }
+
+                    this.items = nullableSchemaAsOneOf(arrayItemSchema)
                 }
             }
             isArrayOrNull(pattern) -> {
@@ -985,19 +986,11 @@ data class Feature(
                 val innerPattern: Pattern = pattern.pattern.first { !isEmptyOrNull(it) }
                 innerPattern as DeferredPattern
 
-                val schemas = mutableListOf<Schema<Any>>()
-
-                schemas.add(Schema<Any>().apply {
-                    this.nullable = true
-                    this.properties = emptyMap()
-                })
-                schemas.add(Schema<Any>().apply {
+                val typeSchema = Schema<Any>().apply {
                     this.`$ref` = withoutPatternDelimiters(innerPattern.pattern).trimEnd('_')
-                })
-
-                ComposedSchema().apply {
-                    this.oneOf = schemas
                 }
+
+                nullableSchemaAsOneOf(typeSchema)
             }
             isNullable(pattern) -> {
                 pattern as AnyPattern
@@ -1023,8 +1016,7 @@ data class Feature(
                 } else if (isArrayOfNullables(pattern)) {
                     ArraySchema().apply {
                         val innerPattern: Pattern = (pattern.pattern as AnyPattern).pattern.first { it !is NullPattern }
-                        this.items = toOpenApiSchema(innerPattern)
-                        this.items.nullable = true
+                        this.items = nullableSchemaAsOneOf(toOpenApiSchema(innerPattern))
                     }
                 } else {
                     ArraySchema().apply {
@@ -1067,6 +1059,17 @@ data class Feature(
         }
 
         return schema as Schema<Any>;
+    }
+
+    private fun nullableSchemaAsOneOf(typeSchema: Schema<Any>): ComposedSchema {
+        val nullableSchema = Schema<Any>().apply {
+            this.nullable = true
+            this.properties = emptyMap()
+        }
+
+        return ComposedSchema().apply {
+            this.oneOf = listOf(nullableSchema, typeSchema)
+        }
     }
 
     private fun listInnerTypeDescriptor(it: ListPattern): String {

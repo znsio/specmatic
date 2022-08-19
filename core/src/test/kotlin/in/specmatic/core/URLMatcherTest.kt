@@ -227,7 +227,7 @@ internal class URLMatcherTest {
         val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern()), pathToPattern("/"), "/")
 
         val result = matcher.matches(URI("/"), emptyMap(), Resolver())
-        assertThat(result.isTrue()).isFalse()
+        assertThat(result.isSuccess()).isFalse()
     }
 
     @Test
@@ -235,6 +235,6 @@ internal class URLMatcherTest {
         val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern(), "string" to StringPattern()), pathToPattern("/"), "/")
 
         val result = matcher.matches(URI("/"), mapOf("name" to "Archie"), Resolver())
-        assertThat(result.isTrue()).isFalse()
+        assertThat(result.isSuccess()).isFalse()
     }
 }

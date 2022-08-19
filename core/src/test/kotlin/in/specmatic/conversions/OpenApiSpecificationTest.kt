@@ -1020,8 +1020,10 @@ Scenario: Get product by id
                             address:
                               type: "array"
                               items:
-                                ${"$"}ref: '#/components/schemas/Address'
-                                nullable: true
+                                oneOf:
+                                - properties: {}
+                                  nullable: true
+                                - ${"$"}ref: "#/components/schemas/Address"
                   responses:
                     200:
                       description: "Get person by id"
@@ -2122,8 +2124,10 @@ Scenario: Get product by id
                     address:
                       type: "array"
                       items:
-                        type: "string"
-                        nullable: true
+                        oneOf:
+                        - properties: {}
+                          nullable: true
+                        - type: "string"
             """.trimIndent()
         )
     }

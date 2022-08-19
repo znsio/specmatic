@@ -36,12 +36,12 @@ fun optionalPattern(pattern: Pattern): AnyPattern = AnyPattern(listOf(DeferredPa
 
 infix fun Value.shouldMatch(pattern: Pattern) {
     val result = pattern.matches(this, Resolver())
-    if(!result.isTrue()) println(toReport(result))
+    if(!result.isSuccess()) println(toReport(result))
     assertThat(result).isInstanceOf(Result.Success::class.java)
 }
 
 infix fun Value.shouldNotMatch(pattern: Pattern) {
-    assertFalse(pattern.matches(this, Resolver()).isTrue())
+    assertFalse(pattern.matches(this, Resolver()).isSuccess())
 }
 
 fun emptyPattern() = DeferredPattern("(empty)")

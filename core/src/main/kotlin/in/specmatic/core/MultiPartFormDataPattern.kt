@@ -123,7 +123,7 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
             fileNameFromPath(patternFilePath) != fileNameFromPath(value.filename)
         }
         else ->
-            !filename.matches(StringValue(value.filename), resolver).isTrue()
+            !filename.matches(StringValue(value.filename), resolver).isSuccess()
     }
 
     @OptIn(ExperimentalPathApi::class)

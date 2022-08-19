@@ -4,10 +4,15 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Feature
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
+import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.value.JSONArrayValue
+import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.StringValue
 import picocli.CommandLine
+import picocli.CommandLine.Option
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -47,24 +52,44 @@ class ReDeclaredAPICommand: Callable<Unit> {
             0
     }
 
+    class JSONArrayLogMessage(val json: JSONArrayValue): LogMessage {
+        override fun toJSONObject(): JSONObjectValue {
+            return JSONObjectValue(mapOf("list" to json))
+        }
+
+        override fun toLogString(): String {
+            return json.displayableValue()
+        }
+
+    }
+
     @CommandLine.Command(name = "entire-repo", description = ["Check all contracts in the repo for re-declarations"])
-    fun entireRepo(): Int {
+    fun entireRepo(@Option(names = ["--json"]) json: Boolean): Int {
         val contracts: List<Pair<Feature, String>> = fetchAllContracts(SystemGit())
 
         val redeclarations = findReDeclarationsAmongstContracts(contracts)
 
-        if(redeclarations.isNotEmpty()) {
-            logger.log("Some APIs have been declared in multiple files.")
-            logger.newLine()
-        }
+        if(json) {
+            val redeclarationsJSON = JSONArrayValue(redeclarations.map { (api, files) ->
+                val jsonFileList = JSONArrayValue(files.map { StringValue(it) })
+                JSONObjectValue(mapOf("api" to StringValue(api), "files" to jsonFileList))
+            })
 
-        redeclarations.forEach { (newPath, contracts) ->
-            logger.log(newPath)
-            logger.log(contracts.joinToString("\n"))
-            logger.newLine()
-        }
+            logger.log(JSONArrayLogMessage(redeclarationsJSON))
+        } else {
+            if(redeclarations.isNotEmpty()) {
+                logger.log("Some APIs have been declared in multiple files.")
+                logger.newLine()
+            }
 
-        logger.log("Count of APIs re-declared: ${redeclarations.size}")
+            redeclarations.forEach { (newPath, contracts) ->
+                logger.log(newPath)
+                logger.log(contracts.joinToString("\n"))
+                logger.newLine()
+            }
+
+            logger.log("Count of APIs re-declared: ${redeclarations.size}")
+        }
 
         return if(redeclarations.isNotEmpty())
             1

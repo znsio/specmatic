@@ -30,7 +30,7 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "1.6.8"
+def ktor_version = "2.0.0"
 def junit_version = "5.9.0"
 def jgit_version = "5.13.0.202109080827-r"
 
@@ -68,7 +68,7 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation('org.springframework.boot:spring-boot-starter-test:2.7.1') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:2.7.3') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }

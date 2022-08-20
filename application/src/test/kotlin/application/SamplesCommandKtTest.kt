@@ -6,13 +6,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Contract
-import `in`.specmatic.core.log.JSONConsoleLogPrinter
-import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.log.*
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.stub.HttpStub
+import org.junit.jupiter.api.AfterAll
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
@@ -30,10 +30,16 @@ internal class SamplesCommandKtTest {
 
     lateinit var qontractFile: File
 
+    companion object {
+        @AfterAll
+        fun tearDown() {
+            resetLogger()
+        }
+    }
+
     @Test
     fun `samples function should generate sample given the input`() {
-        logger.printer.printers.clear()
-        logger.printer.printers.add(JSONConsoleLogPrinter)
+        logger = NonVerbose(CompositePrinter(listOf(JSONConsoleLogPrinter)))
 
         val (data, _) = captureStandardOutput {
             val gherkin = qontractFile.readText().trim()
@@ -48,8 +54,7 @@ internal class SamplesCommandKtTest {
 
     @Test
     fun `command should generate sample given the input`() {
-        logger.printer.printers.clear()
-        logger.printer.printers.add(JSONConsoleLogPrinter)
+        logger = NonVerbose(CompositePrinter(listOf(JSONConsoleLogPrinter)))
 
         val (data, _) = captureStandardOutput {
             val command = SamplesCommand()

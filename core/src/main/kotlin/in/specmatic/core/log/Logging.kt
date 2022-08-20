@@ -1,6 +1,10 @@
 package `in`.specmatic.core.log
 
-var logger: LogStrategy = NonVerbose(CompositePrinter())
+var logger: LogStrategy = newLogger()
+fun newLogger(): LogStrategy = NonVerbose(CompositePrinter())
+fun resetLogger() {
+    logger = NonVerbose(CompositePrinter())
+}
 
 fun logException(fn: ()-> Unit): Int {
     return try {

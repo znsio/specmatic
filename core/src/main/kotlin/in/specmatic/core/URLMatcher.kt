@@ -11,6 +11,22 @@ import java.net.URI
 const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"
 
 data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
+    fun encompasses(otherURLMatcher: URLMatcher, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if(this.matches(HttpRequest("GET", URI.create(otherURLMatcher.path)), thisResolver) is Success)
+            return Success()
+
+        val mismatchedPartResults = this.pathPattern.zip(otherURLMatcher.pathPattern).map { (thisPathItem, otherPathItem) ->
+            thisPathItem.pattern.encompasses(otherPathItem, thisResolver, otherResolver)
+        }
+
+        val failures = mismatchedPartResults.filterIsInstance<Failure>()
+
+        if(failures.isEmpty())
+            return Success()
+
+        return Result.fromFailures(failures)
+    }
+
     fun matches(uri: URI, sampleQuery: Map<String, String> = emptyMap(), resolver: Resolver = Resolver()): Result {
         val httpRequest = HttpRequest(path = uri.path, queryParams = sampleQuery)
         return matches(httpRequest, resolver)

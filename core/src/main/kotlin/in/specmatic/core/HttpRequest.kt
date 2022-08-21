@@ -24,6 +24,9 @@ const val FORM_FIELDS_JSON_KEY = "form-fields"
 const val MULTIPART_FORMDATA_JSON_KEY = "multipart-formdata"
 
 fun urlToQueryParams(uri: URI): Map<String, String> {
+    if(uri.query == null)
+        return emptyMap()
+
     return uri.query.split("&").map {
         val parts = it.split("=".toRegex(), 2)
         Pair(parts[0], parts[1])

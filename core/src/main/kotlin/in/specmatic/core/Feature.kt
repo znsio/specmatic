@@ -4,6 +4,7 @@ import `in`.specmatic.conversions.*
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.MappedURLType
@@ -366,13 +367,54 @@ data class Feature(
     }
 
     fun combine(baseScenario: Scenario, newScenario: Scenario): Scenario {
-        return convergeHeaders(baseScenario, newScenario).let { convergedScenario ->
+        return convergeURLMatcher(baseScenario, newScenario).let { convergedScenario ->
+            convergeHeaders(convergedScenario, newScenario)
+        }.let { convergedScenario ->
             convergeQueryParameters(convergedScenario, newScenario)
         }.let { convergedScenario ->
             convergeRequestPayload(convergedScenario, newScenario)
         }.let { convergedScenario ->
             convergeResponsePayload(convergedScenario, newScenario)
         }
+    }
+
+    private fun convergeURLMatcher(baseScenario: Scenario, newScenario: Scenario): Scenario {
+        if (baseScenario.httpRequestPattern.urlMatcher!!.encompasses(
+                newScenario.httpRequestPattern.urlMatcher!!,
+                baseScenario.resolver,
+                newScenario.resolver
+            ) is Result.Success
+        )
+            return baseScenario
+
+        val basePathParts = baseScenario.httpRequestPattern.urlMatcher.pathPattern
+        val newPathParts = newScenario.httpRequestPattern.urlMatcher.pathPattern
+
+        val convergedPathPattern: List<URLPathPattern> = basePathParts.zip(newPathParts).map { (base, new) ->
+            if(base.pattern.encompasses(new.pattern, baseScenario.resolver, newScenario.resolver) is Result.Success)
+                base
+            else {
+                if(isInteger(base) && isInteger(new))
+                    URLPathPattern(NumberPattern(), key = "id")
+                else
+                    throw ContractException("Can't figure out how to converge these URLs: ${baseScenario.httpRequestPattern.urlMatcher.path}, ${newScenario.httpRequestPattern.urlMatcher.path}")
+            }
+        }
+
+        val convergedPath: String = convergedPathPattern.joinToString("/") {
+            when (it.pattern) {
+                is ExactValuePattern -> it.pattern.pattern.toStringLiteral()
+                else -> "(${it.key}:${it.pattern.typeName})"
+            }
+        }.let { if(it.startsWith("/")) it else "/$it"}
+
+        val convergedURLMatcher: URLMatcher = baseScenario.httpRequestPattern.urlMatcher.copy(pathPattern = convergedPathPattern, path = convergedPath)
+
+        return baseScenario.copy(
+            httpRequestPattern =  baseScenario.httpRequestPattern.copy(
+                urlMatcher = convergedURLMatcher
+            )
+        )
     }
 
     private fun convergeResponsePayload(baseScenario: Scenario, newScenario: Scenario): Scenario {
@@ -515,6 +557,35 @@ data class Feature(
         )
     }
 
+    fun toOpenAPIURLPrefixMap(urls: List<String>, mappedURLType: MappedURLType): Map<String, String> {
+        val normalisedURL = urls.map { url ->
+            url.removeSuffix("/").removePrefix("http://").removePrefix("https://").split("/").joinToString("/") {
+                if(it.toIntOrNull() != null)
+                    "1"
+                else
+                    it
+            }.let { if(it.startsWith("/")) it else "/$it"}
+        }.distinct()
+
+        val minLength = normalisedURL.map {
+            it.split("/").size
+        }.minOrNull() ?: throw ContractException("No schema namespaces found")
+
+        val segmentCount = 1.until(minLength + 1).first { length ->
+            val segments = normalisedURL.map { url ->
+                url.split("/").filterNot { it.isEmpty() }.takeLast(length).joinToString("_")
+            }
+
+            segments.toSet().size == urls.size
+        }
+
+        val prefixes = normalisedURL.map { url ->
+            url.split("/").filterNot { it.isEmpty() }.takeLast(segmentCount).joinToString("_") { it.capitalizeFirstChar() }
+        }
+
+        return urls.zip(prefixes).toMap()
+    }
+
     fun toOpenApi(): OpenAPI {
         val openAPI = OpenAPI()
         openAPI.info = Info().also {
@@ -530,9 +601,14 @@ data class Feature(
             throw ContractException("Scenario ${it.name} has no path")
         }
 
-        fun normalize(url: String): String = url.replace('{', '_').replace('}', '_')
+        fun normalize(url: String): String = url.replace('{', '_').replace('}', '_').split("/").joinToString("/") {
+            if(it.toIntOrNull() != null)
+                "1"
+            else
+                it
+        }.let { if(it.startsWith("/")) it else "/$it"}
 
-        val urlPrefixMap = toURLPrefixMap(scenarios.mapNotNull {
+        val urlPrefixMap = toOpenAPIURLPrefixMap(scenarios.mapNotNull {
             it.httpRequestPattern.urlMatcher?.path
         }.map {
             normalize(it)
@@ -588,17 +664,17 @@ data class Feature(
             scenario
         }
 
-        val rawCombinedScenarios = payloadAdjustedScenarios.fold(emptyList<Scenario>()) { acc, scenario ->
-            val scenarioWithSameURLAndPath = acc.find {
-                it.httpRequestPattern.urlMatcher?.path == scenario.httpRequestPattern.urlMatcher?.path
-                        && it.httpRequestPattern.method == scenario.httpRequestPattern.method
-                        && it.httpResponsePattern.status == scenario.httpResponsePattern.status
+        val rawCombinedScenarios = payloadAdjustedScenarios.fold(emptyList<Scenario>()) { acc, payloadAdjustedScenario ->
+            val scenarioWithSameURLAndPath = acc.find { alreadyCombinedScenario: Scenario ->
+                similarURLPath(alreadyCombinedScenario, payloadAdjustedScenario)
+                        && alreadyCombinedScenario.httpRequestPattern.method == payloadAdjustedScenario.httpRequestPattern.method
+                        && alreadyCombinedScenario.httpResponsePattern.status == payloadAdjustedScenario.httpResponsePattern.status
             }
 
             if (scenarioWithSameURLAndPath == null)
-                acc.plus(scenario)
+                acc.plus(payloadAdjustedScenario)
             else {
-                val combined = combine(scenarioWithSameURLAndPath, scenario)
+                val combined = combine(scenarioWithSameURLAndPath, payloadAdjustedScenario)
                 acc.minus(scenarioWithSameURLAndPath).plus(combined)
             }
         }
@@ -1675,3 +1751,23 @@ private fun addCommentsToExamples(examples: ExampleDeclarations, stub: NamedStub
 private fun List<String>.second(): String {
     return this[1]
 }
+
+fun similarURLPath(baseScenario: Scenario, newScenario: Scenario): Boolean {
+    if(baseScenario.httpRequestPattern.urlMatcher?.encompasses(newScenario.httpRequestPattern.urlMatcher!!, baseScenario.resolver, newScenario.resolver) is Result.Success)
+        return true
+
+    val basePathParts = baseScenario.httpRequestPattern.urlMatcher!!.pathPattern
+    val newPathParts = newScenario.httpRequestPattern.urlMatcher!!.pathPattern
+
+    if(basePathParts.size != newPathParts.size)
+        return false
+
+    return basePathParts.zip(newPathParts).all { (base, new) ->
+        isInteger(base) && isInteger(new) ||
+                base.pattern.encompasses(new.pattern, baseScenario.resolver, newScenario.resolver) is Result.Success
+    }
+}
+
+fun isInteger(
+    base: URLPathPattern
+) = base.pattern is ExactValuePattern && base.pattern.pattern.toStringLiteral().toIntOrNull() != null

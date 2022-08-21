@@ -5610,4 +5610,71 @@ components:
               """.trimIndent()
         )
     }
+
+    @Test
+    fun `a single API with an ID in the URL should be turn into a URL matcher with an id path param`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: API
+            
+            Scenario: API 1
+              Given type RequestBody
+              | hello | (string) |
+              When POST /data/10
+              And request-body (RequestBody)
+              Then status 200
+            """.trimIndent()
+        )
+        val openAPI = feature.toOpenApi()
+
+        with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            assertThat(
+                this.matches(
+                    HttpRequest(
+                        "POST",
+                        "/data/30",
+                        body = parsedJSON("""{"hello": "Jill"}""")
+                    ), HttpResponse.OK
+                )
+            ).isTrue
+        }
+
+        val openAPIYaml = openAPIToString(openAPI)
+        portableComparisonAcrossBuildEnvironments(
+            openAPIYaml,
+            """
+            ---
+            openapi: 3.0.1
+            info:
+              title: API
+              version: 1
+            paths:
+              /data/{id}:
+                post:
+                  summary: API 1
+                  parameters:
+                  - name: id
+                    in: path
+                    required: true
+                    schema:
+                      type: number
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/1_RequestBody'
+                  responses:
+                    200:
+                      description: API 1
+            components:
+              schemas:
+                1_RequestBody:
+                  required:
+                  - hello
+                  properties:
+                    hello:
+                      type: string
+              """.trimIndent()
+        )
+    }
 }

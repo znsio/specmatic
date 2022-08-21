@@ -635,7 +635,8 @@ data class Feature(
                 scenario = scenario.copy(
                     patterns = newTypes,
                     httpRequestPattern = scenario.httpRequestPattern.copy(
-                        body = newRequestBody
+                        body = newRequestBody,
+                        urlMatcher = numberTemplatized(scenario.httpRequestPattern.urlMatcher)
                     )
                 )
             }
@@ -822,6 +823,27 @@ data class Feature(
         }
 
         return openAPI
+    }
+
+    private fun numberTemplatized(urlMatcher: URLMatcher?): URLMatcher? {
+        if(urlMatcher!!.pathPattern.any { it.pattern !is ExactValuePattern })
+            return urlMatcher
+
+        val numberTemplatizedPathPattern: List<URLPathPattern> = urlMatcher.pathPattern.map { type ->
+            if(isInteger(type))
+                URLPathPattern(NumberPattern(), key = "id")
+            else
+                type
+        }
+
+        val numberTemplatizedPath: String = numberTemplatizedPathPattern.joinToString("/") {
+            when (it.pattern) {
+                is ExactValuePattern -> it.pattern.pattern.toStringLiteral()
+                else -> "(${it.key}:${it.pattern.typeName})"
+            }
+        }.let { if(it.startsWith("/")) it else "/$it"}
+
+        return urlMatcher.copy(pathPattern = numberTemplatizedPathPattern, path = numberTemplatizedPath)
     }
 
     private fun requestBodySchema(

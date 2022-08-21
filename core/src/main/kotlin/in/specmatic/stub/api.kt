@@ -83,8 +83,13 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
                                 printDataFiles(stubDataFiles)
 
                                 stubDataFiles.map {
-                                    Pair(it.path, stringToMockScenario(StringValue(it.readText())))
-                                }
+                                    try {
+                                        Pair(it.path, stringToMockScenario(StringValue(it.readText())))
+                                    } catch(e: Throwable) {
+                                        logger.log(e, "    Could not load stub file ${it.canonicalPath}")
+                                        null
+                                    }
+                                }.filterNotNull()
                             }
                         }
                         else -> emptyList()
@@ -92,7 +97,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
 
                     loadContractStubs(listOf(Pair(contractPath.path, feature)), stubData)
                 } catch(e: Throwable) {
-                    logger.log(e, "Could not load ${contractPath.canonicalPath}")
+                    logger.log(e, "    Could not load ${contractPath.canonicalPath}")
                     emptyList()
                 }
             }
@@ -132,7 +137,14 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
     }.filter { it.extension == "json" }
     printDataFiles(dataFiles)
 
-    val mockData = dataFiles.map { Pair(it.path, stringToMockScenario(StringValue(it.readText()))) }
+    val mockData = dataFiles.mapNotNull {
+        try {
+            Pair(it.path, stringToMockScenario(StringValue(it.readText())))
+        } catch (e: Throwable) {
+            logger.log(e, "    Could not load stub file ${it.canonicalPath}")
+            null
+        }
+    }
 
     return loadContractStubs(features, mockData)
 }

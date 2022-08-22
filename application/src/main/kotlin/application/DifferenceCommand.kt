@@ -9,7 +9,7 @@ import picocli.CommandLine.Parameters
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
-@Command(name = "difference",
+@Command(name = "similar",
         mixinStandardHelpOptions = true,
         description = ["Show the difference between two contracts"])
 class DifferenceCommand : Callable<Unit> {
@@ -46,9 +46,9 @@ fun difference(olderContract: Feature, newerContract: Feature): CompatibilityRep
             findDifferences(olderContract, newerContract).let { results ->
                 when {
                     results.failureCount > 0 -> {
-                        IncompatibleReport(results)
+                        IncompatibleReport(results, "The two contracts are not similar.")
                     }
-                    else -> CompatibleReport
+                    else -> CompatibleReport("The two contracts are similar.")
                 }
             }
         } catch(e: ContractException) {

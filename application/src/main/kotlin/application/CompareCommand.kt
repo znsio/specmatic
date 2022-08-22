@@ -48,7 +48,7 @@ fun backwardCompatible(olderContract: Feature, newerContract: Feature): Compatib
                     results.failureCount > 0 -> {
                         IncompatibleReport(results)
                     }
-                    else -> CompatibleReport
+                    else -> CompatibleReport()
                 }
             }
         } catch(e: ContractException) {

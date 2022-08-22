@@ -5,6 +5,7 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.log.logException
 import `in`.specmatic.core.pattern.ContractException
 import picocli.CommandLine.Command
+import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
@@ -18,6 +19,9 @@ class CompareCommand : Callable<Unit> {
 
     @Parameters(index = "1", description = ["Newer contract file path"])
     lateinit var newerContractFilePath: String
+
+    @Option(names = ["--mirror"], required = false)
+    var mirror: Boolean = false
 
     override fun call() {
         if(!olderContractFilePath.isContractFile()) {
@@ -34,9 +38,18 @@ class CompareCommand : Callable<Unit> {
             val olderContract = olderContractFilePath.loadContract()
             val newerContract = newerContractFilePath.loadContract()
 
+            if(mirror)
+                logger.log("Comparing older with newer...")
             val report = backwardCompatible(olderContract, newerContract)
             println(report.message())
-            exitProcess(report.exitCode)
+
+            if(!mirror)
+                exitProcess(report.exitCode)
+
+            logger.newLine()
+            logger.log("Comparing newer with older...")
+            val mirrorReport = backwardCompatible(newerContract, olderContract)
+            println(mirrorReport.message())
         }
     }
 }

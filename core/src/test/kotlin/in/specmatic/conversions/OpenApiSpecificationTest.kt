@@ -5523,7 +5523,7 @@ components:
             """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
-        val match: List<Pair<Scenario, Result>> = feature.lookupScenariosWithDeepMatch(
+        val match: List<Pair<Scenario, Result>> = feature.backwardCompatibleLookup(
             HttpRequest(
                 "POST",
                 "/users",

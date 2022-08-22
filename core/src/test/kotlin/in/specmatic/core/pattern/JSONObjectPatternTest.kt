@@ -137,6 +137,7 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
+    @Disabled
     fun `should ignore extra keys given the ellipsis key`() {
         val value = parsedValue("""{"expected": 10, "unexpected": 20}""")
         val pattern = parsedPattern("""{"expected": "(number)", "...": ""}""")

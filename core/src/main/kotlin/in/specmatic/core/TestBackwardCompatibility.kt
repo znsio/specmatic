@@ -48,7 +48,7 @@ fun testBackwardCompatibility(
         try {
             val request = oldScenario.generateHttpRequest()
 
-            val wholeMatchResults: List<Pair<Result, Result>> = newFeature.lookupScenariosWithDeepMatch(request).map { (scenario, result) ->
+            val wholeMatchResults: List<Pair<Result, Result>> = newFeature.backwardCompatibleLookup(request).map { (scenario, result) ->
                 Pair(scenario, result.updateScenario(scenario))
             }.filterNot { (_, result) ->
                 result is Result.Failure && result.isFluffy()

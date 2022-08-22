@@ -8,7 +8,6 @@ import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.MappedURLType
-import `in`.specmatic.core.wsdl.parser.toURLPrefixMap
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
@@ -102,9 +101,9 @@ data class Feature(
         }
     }
 
-    fun lookupScenariosWithDeepMatch(httpRequest: HttpRequest): List<Pair<Scenario, Result>> {
+    fun backwardCompatibleLookup(httpRequest: HttpRequest): List<Pair<Scenario, Result>> {
         try {
-            val resultList = lookupAllScenarios(httpRequest, scenarios, NewAndOldContractRequestMismatches)
+            val resultList = lookupAllScenarios(httpRequest, scenarios, NewAndOldContractRequestMismatches, IgnoreUnexpectedKeys)
 
             val successes = lookupAllSuccessfulScenarios(resultList)
             if (successes.isNotEmpty())
@@ -159,13 +158,12 @@ data class Feature(
     private fun lookupAllScenarios(
         httpRequest: HttpRequest,
         scenarios: List<Scenario>,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck? = null
     ): List<Pair<Scenario, Result>> {
-        val scenarioSequence = scenarios
-
         val localCopyOfServerState = serverState
-        return scenarioSequence.zip(scenarioSequence.map {
-            it.matches(httpRequest, localCopyOfServerState, mismatchMessages)
+        return scenarios.zip(scenarios.map {
+            it.matches(httpRequest, localCopyOfServerState, mismatchMessages, unexpectedKeyCheck)
         })
     }
 

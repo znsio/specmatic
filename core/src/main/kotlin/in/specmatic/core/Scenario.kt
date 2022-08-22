@@ -78,9 +78,17 @@ data class Scenario(
     fun matches(
         httpRequest: HttpRequest,
         serverState: Map<String, Value>,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck? = null
     ): Result {
-        val resolver = Resolver(serverState, false, patterns).copy(mismatchMessages = mismatchMessages)
+        val resolver = Resolver(serverState, false, patterns).copy(mismatchMessages = mismatchMessages).let {
+            if(unexpectedKeyCheck != null) {
+                val keyCheck = it.findKeyErrorCheck
+                it.copy(findKeyErrorCheck = keyCheck.copy(unexpectedKeyCheck = unexpectedKeyCheck))
+            }
+            else
+                it
+        }
         return matches(httpRequest, serverState, resolver, resolver)
     }
 
@@ -170,8 +178,13 @@ data class Scenario(
     fun generateHttpRequest(): HttpRequest =
         scenarioBreadCrumb(this) { httpRequestPattern.generate(Resolver(expectedFacts, false, patterns)) }
 
-    fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Result {
-        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages)
+    fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
+        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages).let {
+            if(unexpectedKeyCheck != null)
+                it.copy(findKeyErrorCheck = it.findKeyErrorCheck.copy(unexpectedKeyCheck = unexpectedKeyCheck))
+            else
+                it
+        }
 
         if (this.isNegative) {
             return if (is4xxResponse(httpResponse)) {
@@ -184,10 +197,10 @@ data class Scenario(
                 Result.Failure("Expected 4xx status, but received ${httpResponse.status}", breadCrumb = "RESPONSE.STATUS").updateScenario(this)
         }
 
-        try {
-            return httpResponsePattern.matches(httpResponse, resolver).updateScenario(this)
+        return try {
+            httpResponsePattern.matches(httpResponse, resolver).updateScenario(this)
         } catch (exception: Throwable) {
-            return Result.Failure("Exception: ${exception.message}")
+            Result.Failure("Exception: ${exception.message}")
         }
     }
 
@@ -541,7 +554,7 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
                 if(response.body is JSONObjectValue && ignorable(response.body)) {
                     Result.Success()
                 } else {
-                    testScenario.matches(response, ContractAndResponseMismatch)
+                    testScenario.matches(response, ContractAndResponseMismatch, ValidateUnexpectedKeys)
                 }
             }
         }

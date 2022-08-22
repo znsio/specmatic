@@ -11,6 +11,7 @@ import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import org.xml.sax.SAXException
@@ -1080,6 +1081,7 @@ Feature: Contract
     }
 
     @Test
+    @Disabled
     fun `should match a response with extra keys given the existence of the ellipsis key`() {
         val gherkin = """
 Feature: Contract

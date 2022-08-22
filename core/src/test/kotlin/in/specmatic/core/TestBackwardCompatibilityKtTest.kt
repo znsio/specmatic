@@ -1893,6 +1893,34 @@ paths:
         assertThat(reportText).doesNotContain("API: POST /data2 -> 200")
         assertThat(reportText).contains("API: POST /data3 -> 200")
     }
+
+    @Test
+    fun `removing a key in the request should be backward compatible`() {
+        val older = parseGherkinStringToFeature("""
+            Feature: test
+              Scenario: test
+                When POST /data
+                And request-body
+                | id | (number) |
+                | name | (string) |
+                Then status 200
+        """.trimIndent())
+
+        val newer = parseGherkinStringToFeature("""
+            Feature: test
+              Scenario: test
+                When POST /data
+                And request-body
+                | id | (number) |
+                Then status 200
+        """.trimIndent())
+
+        val result = testBackwardCompatibility(older, newer)
+        val reportText = result.report().also { println(it) }
+
+        println(reportText)
+        assertThat(result.success()).isTrue
+    }
 }
 
 private fun String.openAPIToContract(): Feature {

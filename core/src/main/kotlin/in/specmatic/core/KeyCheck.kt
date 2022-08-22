@@ -3,9 +3,9 @@ package `in`.specmatic.core
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.value.StringValue
 
-class KeyCheck(val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
+data class KeyCheck(val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
                var unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys,
-               private val overrideUnexpectedKeyCheck: OverrideUnexpectedKeyCheck? = ::overrideUnexpectedKeyCheck
+               val overrideUnexpectedKeyCheck: OverrideUnexpectedKeyCheck? = ::overrideUnexpectedKeyCheck
 ) {
     fun disableOverrideUnexpectedKeycheck(): KeyCheck {
         return KeyCheck(patternKeyCheck, unexpectedKeyCheck, null)

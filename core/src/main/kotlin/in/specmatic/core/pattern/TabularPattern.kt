@@ -28,7 +28,7 @@ data class TabularPattern(
         if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)
 
-        val resolverWithNullType = withNullPattern(resolver).withUnexpectedKeyCheck(unexpectedKeyCheck)
+        val resolverWithNullType = withNullPattern(resolver)
 
         val keyErrors: List<Result.Failure> =
             resolverWithNullType.findKeyErrorList(pattern, sampleData.jsonObject).map {

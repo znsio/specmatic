@@ -130,6 +130,16 @@ data class HttpHeadersPattern(
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
     }
 
+    fun generateWithAll(resolver: Resolver): Map<String, String> {
+        return attempt(breadCrumb = "HEADERS") {
+            pattern.mapValues { (key, pattern) ->
+                attempt(breadCrumb = key) {
+                    pattern.generateWithAll(resolver).toStringLiteral()
+                }
+            }
+        }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
+    }
+
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> =
         forEachKeyCombinationIn(pattern, row) { pattern ->
             newBasedOn(pattern, row, resolver)

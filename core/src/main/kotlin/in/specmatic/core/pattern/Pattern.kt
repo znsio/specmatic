@@ -16,6 +16,7 @@ interface Pattern {
     }
 
     fun generate(resolver: Resolver): Value
+    fun generateWithAll(resolver: Resolver) = generate(resolver)
     fun newBasedOn(row: Row, resolver: Resolver): List<Pattern>
     fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern>
     fun newBasedOn(resolver: Resolver): List<Pattern>

@@ -21,6 +21,11 @@ fun fetchAllContracts(git: GitCommand): List<Pair<Feature, String>> =
         loadContractData(it)
     }
 
+fun fetchAllContracts(directory: String): List<Pair<Feature, String>> =
+    listOfAllContractFiles(File(directory)).mapNotNull {
+        loadContractData(it)
+    }
+
 fun loadContractData(it: File) = try {
     Pair(OpenApiSpecification.fromYAML(it.readText(), it.path).toFeature(), it.path)
 } catch (e: Throwable) {
@@ -64,37 +69,45 @@ class ReDeclaredAPICommand: Callable<Unit> {
     }
 
     @CommandLine.Command(name = "entire-repo", description = ["Check all contracts in the repo for re-declarations"])
-    fun entireRepo(@Option(names = ["--json"]) json: Boolean): Int {
-        val contracts: List<Pair<Feature, String>> = fetchAllContracts(SystemGit())
+    fun entireRepo(@Option(names = ["--json"]) json: Boolean, @Option(names = ["--baseDirectory"]) suppliedBaseDirectory: String? = null, @Option(names = ["--systemLevel"]) systemLevel: Int = 0): Int {
+        val baseDirectory = suppliedBaseDirectory ?: SystemGit().gitRoot()
+        val contracts: List<Pair<Feature, String>> = fetchAllContracts(baseDirectory)
 
-        val redeclarations = findReDeclarationsAmongstContracts(contracts)
+        val reDeclarations = findReDeclarationsAmongstContracts(contracts, baseDirectory, systemLevel)
 
-        if(json) {
-            val redeclarationsJSON = JSONArrayValue(redeclarations.map { (api, files) ->
+        logRedeclarations(json, reDeclarations)
+
+        return if(reDeclarations.isNotEmpty())
+            1
+        else
+            0
+    }
+
+    private fun logRedeclarations(
+        json: Boolean,
+        reDeclarations: Map<String, List<String>>
+    ) {
+        if (json) {
+            val reDeclarationsJSON = JSONArrayValue(reDeclarations.map { (api, files) ->
                 val jsonFileList = JSONArrayValue(files.map { StringValue(it) })
                 JSONObjectValue(mapOf("api" to StringValue(api), "files" to jsonFileList))
             })
 
-            logger.log(JSONArrayLogMessage(redeclarationsJSON))
+            logger.log(JSONArrayLogMessage(reDeclarationsJSON))
         } else {
-            if(redeclarations.isNotEmpty()) {
+            if (reDeclarations.isNotEmpty()) {
                 logger.log("Some APIs have been declared in multiple files.")
                 logger.newLine()
             }
 
-            redeclarations.forEach { (newPath, contracts) ->
+            reDeclarations.forEach { (newPath, contracts) ->
                 logger.log(newPath)
                 logger.log(contracts.joinToString("\n"))
                 logger.newLine()
             }
 
-            logger.log("Count of APIs re-declared: ${redeclarations.size}")
+            logger.log("Count of APIs re-declared: ${reDeclarations.size}")
         }
-
-        return if(redeclarations.isNotEmpty())
-            1
-        else
-            0
     }
 
     @CommandLine.Option(names = ["--entire-repo"], description = ["Check all contracts for redeclaration instead of a single contract"], defaultValue = "false")
@@ -107,16 +120,34 @@ class ReDeclaredAPICommand: Callable<Unit> {
 
 data class ReDeclarations(val apiURLPath: String, val contractsContainingAPI: List<String>)
 
-fun findReDeclarationsAmongstContracts(contracts: List<Pair<Feature, String>>): Map<String, List<String>> {
+fun findReDeclarationsAmongstContracts(contracts: List<Pair<Feature, String>>, baseDirectory: String = "", systemLevel: Int = 0): Map<String, List<String>> {
     val declarations = contracts.flatMap { (feature, filePath) ->
         pathsFromFeature(feature).map { urlPath -> Pair(urlPath, filePath) }
-    }.groupBy { (urlPath, _) -> urlPath }
-
-    val multipleDeclarations = declarations.filter { (_, filePaths) -> filePaths.size > 1 }
-
-    return multipleDeclarations.mapValues { (_, value) ->
+    }.groupBy { (urlPath, _) -> urlPath }.mapValues { (_, value) ->
         value.map { (_, path) -> path }
     }
+
+    val multipleDeclarations = declarations.filter { (_, filePaths) -> filePaths.size > 1 }.let { reDeclarations ->
+        if(systemLevel > 0) {
+            val canonicalBase = File(baseDirectory).canonicalFile
+
+            reDeclarations.filterValues { paths ->
+                val distinctPathLevels: List<String> = paths.map {
+                    val relativePathParts = File(it).canonicalFile.parentFile.relativeTo(canonicalBase).path.removePrefix("/").split("/")
+
+                    (0 until systemLevel).mapNotNull { level ->
+                        relativePathParts.getOrNull(level)
+                    }.joinToString("/")
+                }.distinct()
+
+                distinctPathLevels.size == 1
+            }
+        } else {
+            reDeclarations
+        }
+    }
+
+    return multipleDeclarations
 }
 
 fun findReDeclaredContracts(

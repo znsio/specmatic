@@ -164,11 +164,11 @@ object ContractResponseComparisonMismatches : MismatchMessages {
     }
 
     override fun mismatchMessage(expected: String, actual: String): String {
-        return "  This is $expected in the new contract, $actual in the old contract"
+        return "  This is $expected in the old contract, $actual in the new contract."
     }
 
     override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "  The older contract didn't have $keyLabel $keyName."
+        return "  The newer contract didn't have $keyLabel $keyName."
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {

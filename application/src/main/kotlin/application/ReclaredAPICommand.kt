@@ -69,11 +69,13 @@ class ReDeclaredAPICommand: Callable<Unit> {
     }
 
     @CommandLine.Command(name = "entire-repo", description = ["Check all contracts in the repo for re-declarations"])
-    fun entireRepo(@Option(names = ["--json"]) json: Boolean, @Option(names = ["--baseDirectory"]) suppliedBaseDirectory: String? = null, @Option(names = ["--systemLevel"]) systemLevel: Int = 0): Int {
+    fun entireRepo(@Option(names = ["--json"]) json: Boolean, @Option(names = ["--baseDirectory"]) suppliedBaseDirectory: String? = null, @Option(names = ["--systemLevel"]) systemLevel: Int = 0, @Option(names = ["--ignoreAPI"]) ignoreAPIs: List<String> = emptyList()): Int {
         val baseDirectory = suppliedBaseDirectory ?: SystemGit().gitRoot()
         val contracts: List<Pair<Feature, String>> = fetchAllContracts(baseDirectory)
 
-        val reDeclarations = findReDeclarationsAmongstContracts(contracts, baseDirectory, systemLevel)
+        val reDeclarations: Map<String, List<String>> = findReDeclarationsAmongstContracts(contracts, baseDirectory, systemLevel).filterKeys {
+            it !in ignoreAPIs
+        }
 
         logRedeclarations(json, reDeclarations)
 

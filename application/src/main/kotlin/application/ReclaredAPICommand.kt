@@ -87,8 +87,12 @@ class ReDeclaredAPICommand: Callable<Unit> {
         json: Boolean,
         reDeclarations: Map<String, List<String>>
     ) {
+        val sorted = reDeclarations.entries.sortedBy { (api, _) ->
+            api
+        }
+
         if (json) {
-            val reDeclarationsJSON = JSONArrayValue(reDeclarations.map { (api, files) ->
+            val reDeclarationsJSON = JSONArrayValue(sorted.map { (api, files) ->
                 val jsonFileList = JSONArrayValue(files.map { StringValue(it) })
                 JSONObjectValue(mapOf("api" to StringValue(api), "files" to jsonFileList))
             })
@@ -100,7 +104,7 @@ class ReDeclaredAPICommand: Callable<Unit> {
                 logger.newLine()
             }
 
-            reDeclarations.forEach { (newPath, contracts) ->
+            sorted.forEach { (newPath, contracts) ->
                 logger.log(newPath)
                 logger.log(contracts.joinToString("\n"))
                 logger.newLine()
@@ -118,7 +122,7 @@ class ReDeclaredAPICommand: Callable<Unit> {
     }
 }
 
-data class ReDeclarations(val apiURLPath: String, val contractsContainingAPI: List<String>)
+data class APIReDeclarations(val apiURLPath: String, val contractsContainingAPI: List<String>)
 
 fun findReDeclarationsAmongstContracts(contracts: List<Pair<Feature, String>>, baseDirectory: String = "", systemLevel: Int = 0): Map<String, List<String>> {
     val declarations = contracts.flatMap { (feature, filePath) ->
@@ -152,7 +156,7 @@ fun findReDeclarationsAmongstContracts(contracts: List<Pair<Feature, String>>, b
 
 fun findReDeclaredContracts(
     contractToCheck: ContractToCheck,
-): List<ReDeclarations> {
+): List<APIReDeclarations> {
     val paths: List<String> = contractToCheck.getPathsInContract() ?: emptyList()
     val contracts: List<Pair<Feature, String>> = contractToCheck.fetchAllOtherContracts()
 
@@ -162,7 +166,7 @@ fun findReDeclaredContracts(
 fun findRedeclarations(
     newPaths: List<String>,
     contracts: List<Pair<Feature, String>>
-): List<ReDeclarations> {
+): List<APIReDeclarations> {
     val newPathToContractMap = newPaths.map { newPath ->
         val matchingContracts = contracts.filter { (feature, _) ->
             feature.scenarios.map { it.httpRequestPattern.urlMatcher!!.path }.any { scenarioPath ->
@@ -170,7 +174,7 @@ fun findRedeclarations(
             }
         }.map { it.second }
 
-        ReDeclarations(newPath, matchingContracts)
+        APIReDeclarations(newPath, matchingContracts)
     }
 
     return newPathToContractMap

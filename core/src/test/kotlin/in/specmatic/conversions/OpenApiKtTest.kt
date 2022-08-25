@@ -5,6 +5,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
@@ -1370,6 +1371,22 @@ Scenario: zero should return not found
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
         assertThat(executed).isTrue
+    }
+
+    @Test
+    fun `default response should be used to match an unexpected response status code and body`() {
+        val openAPISpec = """
+            Feature: With default
+            
+            Background:
+              Given openapi openapi/with_default.yaml            
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+
+        val result = feature.matches(HttpRequest("GET", "/hello/10"), HttpResponse(500, body = parsedJSONObject("""{"data": "information"}""")))
+
+        assertThat(result).isTrue
     }
 }
 

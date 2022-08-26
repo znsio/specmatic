@@ -30,6 +30,17 @@ import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
 import java.net.URI
 
+class BadRequestOrDefault(private val badRequestResponses: Map<Int, HttpResponsePattern>, private val defaultResponse: HttpResponsePattern?) {
+    fun matches(httpResponse: HttpResponse, resolver: Resolver): Result =
+        when(httpResponse.status) {
+            in badRequestResponses -> badRequestResponses.getValue(httpResponse.status).matches(httpResponse, resolver)
+            else -> defaultResponse?.matches(httpResponse, resolver) ?: Result.Failure("Neither is the status code declared nor is there a default response.")
+        }
+
+    fun supports(httpResponse: HttpResponse): Boolean =
+        httpResponse.status in badRequestResponses || defaultResponse != null
+}
+
 fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook()): Feature {
     return parseContractFileToFeature(File(contractPath), hook)
 }
@@ -263,9 +274,26 @@ data class Feature(
         }
     }
 
+    private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
+        val badRequestResponses = scenarios.filter {
+            it.httpRequestPattern.urlMatcher!!.path == scenario.httpRequestPattern.urlMatcher!!.path
+                    && it.httpResponsePattern.status.toString().startsWith("4")
+        }.associate { it.httpResponsePattern.status to it.httpResponsePattern }
+
+        val defaultResponse: HttpResponsePattern? = scenarios.find {
+            it.httpRequestPattern.urlMatcher!!.path == scenario.httpRequestPattern.urlMatcher!!.path
+                    && it.httpResponsePattern.status == DEFAULT_RESPONSE_CODE
+        }?.httpResponsePattern
+
+        if(badRequestResponses.isEmpty() && defaultResponse == null)
+            return null
+
+        return BadRequestOrDefault(badRequestResponses, defaultResponse)
+    }
+
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
         val negativeScenarios =
-            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions, has4xx(it)) }.flatMap {
+            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions, has4xx(it), getBadRequestsOrDefault(it)) }.flatMap {
                 it.generateTestScenarios(testVariables, testBaseURLs)
             }
         val positiveScenarios =

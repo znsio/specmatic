@@ -38,7 +38,8 @@ data class Scenario(
     val bindings: Map<String, String> = emptyMap(),
     val isGherkinScenario: Boolean = false,
     val isNegative: Boolean = false,
-    val is4xxDefined: Boolean = false
+    val is4xxDefined: Boolean = false,
+    val badRequestOrDefault: BadRequestOrDefault? = null
 ) {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -188,8 +189,8 @@ data class Scenario(
 
         if (this.isNegative) {
             return if (is4xxResponse(httpResponse)) {
-                if(is4xxDefined)
-                    Result.Success().updateScenario(this)
+                if(badRequestOrDefault != null && badRequestOrDefault.supports(httpResponse))
+                    badRequestOrDefault.matches(httpResponse, resolver).updateScenario(this)
                 else
                     Result.Failure("Received ${httpResponse.status}, but the specification does not contain a 4xx response, hence unable to verify this response", breadCrumb = "RESPONSE.STATUS").updateScenario(this)
             }
@@ -250,7 +251,8 @@ data class Scenario(
                             bindings,
                             isGherkinScenario,
                             isNegative,
-                            is4xxDefined
+                            is4xxDefined,
+                            badRequestOrDefault
                         )
                     }
                 }
@@ -482,7 +484,7 @@ data class Scenario(
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
-    fun negativeBasedOn(suggestions: List<Scenario>, is4xxDefined: Boolean = false) = Scenario(
+    fun negativeBasedOn(suggestions: List<Scenario>, is4xxDefined: Boolean = false, badRequestOrDefault: BadRequestOrDefault?) = Scenario(
         "-ve: ${this.name}",
         this.httpRequestPattern,
         this.httpResponsePattern,
@@ -496,7 +498,8 @@ data class Scenario(
         bindings,
         this.isGherkinScenario,
         isNegative = true,
-        is4xxDefined = is4xxDefined
+        is4xxDefined = is4xxDefined,
+        badRequestOrDefault
     )
 }
 

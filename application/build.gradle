@@ -52,7 +52,7 @@ dependencies {
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
-    implementation 'org.slf4j:slf4j-nop:1.7.36'
+    implementation 'org.slf4j:slf4j-nop:2.0.0'
     implementation 'org.apache.kafka:kafka-clients:3.2.1'
 
     implementation 'org.apache.ant:ant-junit:1.10.12'

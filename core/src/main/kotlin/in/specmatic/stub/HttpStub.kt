@@ -29,9 +29,11 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
 import io.ktor.util.asStream
 import io.ktor.util.toMap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.Writer
 import java.util.*
@@ -684,8 +686,10 @@ suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuff
 
     respondTextWriter(contentType = ContentType.Text.EventStream) {
         logger.debug("Writing out an initial response")
-        write("\n")
-        flush()
+        withContext(Dispatchers.IO) {
+            write("\n")
+            flush()
+        }
 
         logger.debug("Writing out buffered events")
         sseBuffer.write(this)

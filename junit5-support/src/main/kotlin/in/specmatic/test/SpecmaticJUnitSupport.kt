@@ -33,6 +33,7 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NAME = "filterName"
 
         val testsNames = mutableListOf<String>()
+        val taintedSuccesses: MutableList<Result.Success> = mutableListOf()
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -118,6 +119,10 @@ open class SpecmaticJUnitSupport {
                 testsNames.add(testScenario.testDescription())
 
                 val result: Result = invoker.execute(testScenario, timeout)
+
+                if(result is Result.Success && result.taint.isNotEmpty()) {
+                    taintedSuccesses.add(result)
+                }
 
                 when {
                     result.shouldBeIgnored() -> {

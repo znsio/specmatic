@@ -316,7 +316,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         if(response.content == null) {
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap),
-                status = status.toInt()
+                status = status.toIntOrNull() ?: DEFAULT_RESPONSE_CODE
             )
 
             return listOf(Triple(response, MediaType(), responsePattern))

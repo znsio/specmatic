@@ -1,6 +1,7 @@
 package application.test
 
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.test.SpecmaticJUnitSupport
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
@@ -84,14 +85,30 @@ class ContractExecutionListener : TestExecutionListener {
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
         org.fusesource.jansi.AnsiConsole.systemInstall()
 
+        if(SpecmaticJUnitSupport.taintedSuccesses.isNotEmpty()) {
+            println()
+            colorPrinter.printFailureTitle("Tainted Successes (successes where the response matched the default):")
+            println()
+
+            SpecmaticJUnitSupport.taintedSuccesses.forEach { result ->
+                println("  " + (result.scenario?.testDescription() ?: "Unknown Scenario"))
+                println(result.taint.joinToString("\n") { "    $it" })
+            }
+
+            println()
+
+        }
+
+
+
         if (failedLog.isNotEmpty()) {
             println()
-            colorPrinter.printFailureTitle("Unsuccessful scenarios:")
+            colorPrinter.printFailureTitle("Unsuccessful Scenarios:")
             println(failedLog.joinToString(System.lineSeparator()) { it.prependIndent("  ") })
             println()
         }
 
-        colorPrinter.printFinalSummary(TestSummary(success, aborted, failure))
+        colorPrinter.printFinalSummary(TestSummary(success, SpecmaticJUnitSupport.taintedSuccesses.size, aborted, failure))
     }
 
     fun exitProcess() {

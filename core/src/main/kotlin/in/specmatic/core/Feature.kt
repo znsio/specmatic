@@ -34,7 +34,7 @@ class BadRequestOrDefault(private val badRequestResponses: Map<Int, HttpResponse
     fun matches(httpResponse: HttpResponse, resolver: Resolver): Result =
         when(httpResponse.status) {
             in badRequestResponses -> badRequestResponses.getValue(httpResponse.status).matches(httpResponse, resolver)
-            else -> defaultResponse?.matches(httpResponse, resolver) ?: Result.Failure("Neither is the status code declared nor is there a default response.")
+            else -> defaultResponse?.matches(httpResponse, resolver)?.tainted("HTTP response with status ${httpResponse.status} matched the default response, but ideally a status ${httpResponse.status} should be explicitly declared") ?: Result.Failure("Neither is the status code declared nor is there a default response.")
         }
 
     fun supports(httpResponse: HttpResponse): Boolean =

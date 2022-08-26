@@ -251,32 +251,10 @@ data class Feature(
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
-    fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> {
-        val negativeScenarios =
-            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions, has4xx(it)) }.flatMap {
-                it.generateTestScenarios(testVariables, testBaseURLs)
-            }
-        val positiveScenarios = scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario}.map { it.newBasedOn(suggestions) }.flatMap {
-            it.generateTestScenarios(testVariables, testBaseURLs)
-        }
-        val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->
-            positiveScenarios.filter { it.isA2xxScenario() }.none {
-                it.httpRequestPattern.matches(
-                    negativeSecenario.httpRequestPattern.generate(Resolver()),
-                    Resolver()
-                ) is Result.Success
-            }
-        }
-
-        val testScenarios = if (enableNegativeTesting)
-            positiveScenarios + negativeScenariosToConsider
-        else
-            positiveScenarios
-
-        return testScenarios.map {
+    fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
+        generateContractTestScenarios(suggestions).map {
             ScenarioTest(it)
         }
-    }
 
     private fun has4xx(scenario: Scenario): Boolean {
         return scenarios.any {
@@ -291,7 +269,9 @@ data class Feature(
                 it.generateTestScenarios(testVariables, testBaseURLs)
             }
         val positiveScenarios =
-            scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map { it.newBasedOn(suggestions) }.flatMap {
+            scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
+                it.newBasedOn(suggestions)
+            }.flatMap {
                 it.generateTestScenarios(testVariables, testBaseURLs)
             }
         val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->

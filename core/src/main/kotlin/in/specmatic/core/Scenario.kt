@@ -38,7 +38,6 @@ data class Scenario(
     val bindings: Map<String, String> = emptyMap(),
     val isGherkinScenario: Boolean = false,
     val isNegative: Boolean = false,
-    val is4xxDefined: Boolean = false,
     val badRequestOrDefault: BadRequestOrDefault? = null
 ) {
     constructor(scenarioInfo: ScenarioInfo) : this(
@@ -251,7 +250,6 @@ data class Scenario(
                             bindings,
                             isGherkinScenario,
                             isNegative,
-                            is4xxDefined,
                             badRequestOrDefault
                         )
                     }
@@ -272,8 +270,7 @@ data class Scenario(
                         references,
                         bindings,
                         isGherkinScenario,
-                        isNegative,
-                        is4xxDefined
+                        isNegative
                     )
                 }
             }
@@ -476,8 +473,7 @@ data class Scenario(
             scenario.references,
             bindings,
             isGherkinScenario,
-            isNegative,
-            is4xxDefined
+            isNegative
         )
 
     fun newBasedOn(suggestions: List<Scenario>) =
@@ -498,7 +494,6 @@ data class Scenario(
         bindings,
         this.isGherkinScenario,
         isNegative = true,
-        is4xxDefined = is4xxDefined,
         badRequestOrDefault
     )
 }

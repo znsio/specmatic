@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.exceptionCauseMessage
@@ -546,22 +547,33 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
 
         val response = testExecutor.execute(request)
 
-        val result = when (response.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "success")) {
-            "failure" -> Result.Failure(response.body.toStringLiteral()).updateScenario(testScenario)
-            else -> {
-                if(response.body is JSONObjectValue && ignorable(response.body)) {
-                    Result.Success()
-                } else {
-                    testScenario.matches(response, ContractAndResponseMismatch, ValidateUnexpectedKeys)
-                }
-            }
-        }
+        val result = testResult(response, testScenario)
 
         result.withBindings(testScenario.bindings, response)
     } catch (exception: Throwable) {
         Result.Failure(exceptionCauseMessage(exception))
             .also { failure -> failure.updateScenario(testScenario) }
     }
+}
+
+private fun testResult(
+    response: HttpResponse,
+    testScenario: Scenario
+): Result {
+
+    val result = when {
+        response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
+            .updateScenario(testScenario)
+        response.body is JSONObjectValue && ignorable(response.body) -> Result.Success()
+        else -> testScenario.matches(response, ContractAndResponseMismatch, ValidateUnexpectedKeys)
+    }.also { result ->
+        if (result is Result.Success && result.isPartialSuccess()) {
+            logger.log("    PARTIAL SUCCESS: ${result.partialSuccessMessage}")
+            logger.newLine()
+        }
+    }
+
+    return result
 }
 
 fun ignorable(body: JSONObjectValue): Boolean {

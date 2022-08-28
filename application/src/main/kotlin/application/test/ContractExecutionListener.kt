@@ -85,14 +85,15 @@ class ContractExecutionListener : TestExecutionListener {
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
         org.fusesource.jansi.AnsiConsole.systemInstall()
 
-        if(SpecmaticJUnitSupport.taintedSuccesses.isNotEmpty()) {
+        if(SpecmaticJUnitSupport.partialSuccesses.isNotEmpty()) {
             println()
-            colorPrinter.printFailureTitle("Tainted Successes (successes where the response matched the default):")
+            colorPrinter.printFailureTitle("Partial Successes:")
             println()
 
-            SpecmaticJUnitSupport.taintedSuccesses.forEach { result ->
+            SpecmaticJUnitSupport.partialSuccesses.filter { it.partialSuccessMessage != null} .forEach { result ->
                 println("  " + (result.scenario?.testDescription() ?: "Unknown Scenario"))
-                println(result.taint.joinToString("\n") { "    $it" })
+                println("    " + result.partialSuccessMessage!!)
+                println()
             }
 
             println()
@@ -108,7 +109,7 @@ class ContractExecutionListener : TestExecutionListener {
             println()
         }
 
-        colorPrinter.printFinalSummary(TestSummary(success, SpecmaticJUnitSupport.taintedSuccesses.size, aborted, failure))
+        colorPrinter.printFinalSummary(TestSummary(success, SpecmaticJUnitSupport.partialSuccesses.size, aborted, failure))
     }
 
     fun exitProcess() {

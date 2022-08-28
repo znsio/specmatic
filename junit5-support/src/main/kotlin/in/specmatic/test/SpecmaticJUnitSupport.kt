@@ -33,7 +33,7 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NAME = "filterName"
 
         val testsNames = mutableListOf<String>()
-        val taintedSuccesses: MutableList<Result.Success> = mutableListOf()
+        val partialSuccesses: MutableList<Result.Success> = mutableListOf()
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -120,8 +120,8 @@ open class SpecmaticJUnitSupport {
 
                 val result: Result = invoker.execute(testScenario, timeout)
 
-                if(result is Result.Success && result.taint.isNotEmpty()) {
-                    taintedSuccesses.add(result)
+                if(result is Result.Success && result.isPartialSuccess()) {
+                    partialSuccesses.add(result)
                 }
 
                 when {

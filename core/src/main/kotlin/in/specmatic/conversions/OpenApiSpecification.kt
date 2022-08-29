@@ -53,7 +53,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         fun fromYAML(yamlContent: String, filePath: String): OpenApiSpecification {
-            val parseResult: SwaggerParseResult = OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences())
+            val parseResult: SwaggerParseResult = OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), filePath)
             val openApi: OpenAPI? = parseResult.openAPI
 
             if(openApi == null) {

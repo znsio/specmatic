@@ -65,6 +65,9 @@ sealed class Result {
         }
     }
 
+    abstract fun partialSuccess(message: String): Result
+    abstract fun isPartialSuccess(): Boolean
+
     data class FailureCause(val message: String="", var cause: Failure? = null)
 
     data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
@@ -93,6 +96,12 @@ sealed class Result {
         override fun shouldBeIgnored(): Boolean {
             return this.scenario?.ignoreFailure == true
         }
+
+        override fun partialSuccess(message: String): Result {
+            return this
+        }
+
+        override fun isPartialSuccess(): Boolean = false
 
         fun reason(errorMessage: String) = Failure(errorMessage, this)
         override fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
@@ -137,7 +146,7 @@ sealed class Result {
         override fun isSuccess() = false
     }
 
-    data class Success(val variables: Map<String, String> = emptyMap()) : Result() {
+    data class Success(val variables: Map<String, String> = emptyMap(), val partialSuccessMessage: String? = null) : Result() {
         override fun isSuccess() = true
         override fun ifSuccess(function: () -> Result) = function()
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
@@ -153,6 +162,11 @@ sealed class Result {
         }
 
         override fun shouldBeIgnored(): Boolean = false
+        override fun partialSuccess(message: String): Result {
+            return this.copy(partialSuccessMessage = message)
+        }
+
+        override fun isPartialSuccess(): Boolean = partialSuccessMessage != null
     }
 }
 

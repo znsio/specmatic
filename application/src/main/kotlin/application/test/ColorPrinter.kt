@@ -6,11 +6,11 @@ import org.junit.platform.launcher.TestIdentifier
 
 class ColorPrinter: ContractExecutionPrinter {
     override fun printFinalSummary(testSummary: TestSummary) {
-        val (_, aborted, failure) = testSummary
+        val (_, partialSuccesses, aborted) = testSummary
 
         val color = when {
-            failure > 0 -> Ansi.ansi().fgBrightRed()
-            aborted > 0 -> Ansi.ansi().fgYellow()
+            aborted > 0 -> Ansi.ansi().fgBrightRed()
+            partialSuccesses > 0 -> Ansi.ansi().fgYellow()
             else -> Ansi.ansi().fgGreen()
         }
 

@@ -5,6 +5,9 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.parsedJSONObject
+import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
@@ -1370,6 +1373,92 @@ Scenario: zero should return not found
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
         assertThat(executed).isTrue
+    }
+
+    @Test
+    fun `default response should be used to match an unexpected response status code and body in stub`() {
+        val openAPISpec = """
+            Feature: With default
+            
+            Background:
+              Given openapi openapi/with_default.yaml
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+
+        val result = feature.matches(HttpRequest("GET", "/hello/10"), HttpResponse(500, body = parsedJSONObject("""{"data": "information"}""")))
+
+        assertThat(result).isTrue
+    }
+
+    @Test
+    fun `default response should be used to match an unexpected response status code and body in a negative test`() {
+        val openAPISpec = """
+            Feature: With default
+            
+            Background:
+              Given openapi openapi/post_with_default.yaml
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+
+        try {
+            System.setProperty(Flags.negativeTestingFlag, "true")
+
+            val results: Results = feature.copy(enableNegativeTesting = true).executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val jsonBody = request.body as JSONObjectValue
+                    if(jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
+                        return HttpResponse(200, body = StringValue("it worked"))
+
+                    return HttpResponse(400, body = parsedJSONObject("""{"data": "information"}"""))
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            println(results.report())
+
+            assertThat(results.success()).isTrue
+        } finally {
+            System.clearProperty(Flags.negativeTestingFlag)
+        }
+    }
+
+    @Test
+    fun `400 response in the contract should be used to match a 400 status response in a negative test even when a default response has been declared`() {
+        val openAPISpec = """
+            Feature: With default
+            
+            Background:
+              Given openapi openapi/post_with_default_and_400.yaml
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+
+        try {
+            System.setProperty(Flags.negativeTestingFlag, "true")
+
+            val results: Results = feature.copy(enableNegativeTesting = true).executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val jsonBody = request.body as JSONObjectValue
+                    if(jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
+                        return HttpResponse(200, body = StringValue("it worked"))
+
+                    return HttpResponse(400, body = parsedJSONObject("""{"error_in_400": "message"}"""))
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            println(results.report())
+
+            assertThat(results.success()).isTrue
+        } finally {
+            System.clearProperty(Flags.negativeTestingFlag)
+        }
     }
 }
 

@@ -264,12 +264,21 @@ class HttpStub(
             }
 
             HttpStubResponse(HttpResponse.OK, contractPath = "")
-        } catch (e: Throwable) {
+        } catch(e: ContractException) {
             HttpStubResponse(
                 HttpResponse(
                     status = 400,
                     headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
-                    body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)
+                    body = exceptionCauseMessage(e)
+                )
+            )
+        }
+        catch (e: Throwable) {
+            HttpStubResponse(
+                HttpResponse(
+                    status = 400,
+                    headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
+                    body = exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString()
                 )
             )
         }

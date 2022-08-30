@@ -24,6 +24,7 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
+import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.asStream
@@ -101,6 +102,8 @@ class HttpStub(
 
     private val environment = applicationEngineEnvironment {
         module {
+            install(DoubleReceive)
+
             install(CORS) {
                 allowMethod(HttpMethod.Options)
                 allowMethod(HttpMethod.Get)
@@ -162,8 +165,11 @@ class HttpStub(
                     httpLogMessage.addResponse(response)
                     respondToKtorHttpResponse(call, response)
                 } catch (e: Throwable) {
+                    httpLogMessage.addRequest(defensivelyExtractedRequestForLogging(call))
+
                     val response = badRequest(exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
                     httpLogMessage.addResponse(response)
+
                     respondToKtorHttpResponse(call, response)
                 }
 
@@ -185,6 +191,31 @@ class HttpStub(
                 this.port = port
             }
         }
+    }
+
+    private suspend fun defensivelyExtractedRequestForLogging(call: ApplicationCall): HttpRequest {
+        val request = HttpRequest().let {
+            try {
+                it.copy(method = call.request.httpMethod.toString())
+            } catch (e: Throwable) {
+                it
+            }
+        }.let {
+            try {
+                it.copy(path = call.request.path())
+            } catch (e: Throwable) {
+                it
+            }
+        }.let {
+            val requestHeaders = call.request.headers.toMap().mapValues { it.value[0] }
+            it.copy(headers = requestHeaders)
+        }.let {
+            val queryParams = toParams(call.request.queryParameters)
+            it.copy(queryParams = queryParams)
+        }.let {
+            it.copy(body = StringValue(call.receiveText()))
+        }
+        return request
     }
 
     private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {

@@ -137,14 +137,15 @@ class HttpStub(
                     }
 
                     if (httpRequest.path!!.startsWith("""/features/default""")) {
+                        logger.log("Incoming subscription on URL path ${httpRequest.path} ")
                         val channel: Channel<SseEvent> = Channel(10, BufferOverflow.DROP_OLDEST)
-                        val broadcastChannel = channel.broadcast()
+                        val broadcastChannel: BroadcastChannel<SseEvent> = channel.broadcast()
                         broadcastChannels.add(broadcastChannel)
 
                         val events: ReceiveChannel<SseEvent> = broadcastChannel.openSubscription()
 
                         try {
-                            call.respondSse(events, sseBuffer)
+                            call.respondSse(events, sseBuffer, httpRequest)
                         } finally {
                             events.cancel()
 
@@ -275,7 +276,7 @@ class HttpStub(
         catch (e: Throwable) {
             HttpStubResponse(
                 HttpResponse(
-                    status = 400,
+                    status = 500,
                     headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
                     body = exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString()
                 )
@@ -689,25 +690,26 @@ fun stringToMockScenario(text: Value): ScenarioStub {
 
 data class SseEvent(val data: String = "", val event: String? = null, val id: String? = null, val bufferIndex: Int? = null)
 
-suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuffer: SSEBuffer) {
+suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuffer: SSEBuffer, httpRequest: HttpRequest) {
     response.cacheControl(CacheControl.NoCache(null))
 
     respondTextWriter(contentType = ContentType.Text.EventStream) {
-        logger.debug("Writing out an initial response")
+        logger.log("Writing out an initial response for subscription to ${httpRequest.path!!}")
         withContext(Dispatchers.IO) {
             write("\n")
             flush()
         }
 
-        logger.debug("Writing out buffered events")
+        logger.log("Writing out buffered events for subscription to ${httpRequest.path}")
         sseBuffer.write(this)
 
-        logger.debug("Awaiting events...")
+        logger.log("Awaiting events...")
         for (event in events) {
             sseBuffer.add(event)
-            writeEvent(event, this)
+            logger.log("Writing out event for subscription to ${httpRequest.path}")
+            logger.log("Event details: $event")
 
-            logger.debug("Wrote out event $event")
+            writeEvent(event, this)
         }
     }
 }

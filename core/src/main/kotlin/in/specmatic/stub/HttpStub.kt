@@ -719,7 +719,7 @@ fun stringToMockScenario(text: Value): ScenarioStub {
     return mockFromJSON(mockSpec)
 }
 
-data class SseEvent(val data: String = "", val event: String? = null, val id: String? = null, val bufferIndex: Int? = null)
+data class SseEvent(val data: String? = "", val event: String? = null, val id: String? = null, val bufferIndex: Int? = null)
 
 suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuffer: SSEBuffer, httpRequest: HttpRequest) {
     response.cacheControl(CacheControl.NoCache(null))
@@ -752,9 +752,12 @@ private fun writeEvent(event: SseEvent, writer: Writer) {
     if (event.event != null) {
         writer.write("event: ${event.event}\n")
     }
-    for (dataLine in event.data.lines()) {
-        writer.write("data: $dataLine\n")
+    if(event.data != null) {
+        for (dataLine in event.data.lines()) {
+            writer.write("data: $dataLine\n")
+        }
     }
+
     writer.write("\n")
     writer.flush()
 }

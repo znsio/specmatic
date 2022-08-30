@@ -166,7 +166,6 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
     fun buildRequest(httpRequestBuilder: HttpRequestBuilder) {
         httpRequestBuilder.method = HttpMethod.parse(method as String)
 
-//        val listOfExcludedHeaders = HttpHeaders.UnsafeHeadersList.map { it.lowercase() }
         val listOfExcludedHeaders: List<String> = HttpHeaders.UnsafeHeadersList.plus(arrayOf(
             HttpHeaders.ContentLength,
             HttpHeaders.ContentType,

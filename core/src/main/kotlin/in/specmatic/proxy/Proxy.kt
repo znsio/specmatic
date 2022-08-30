@@ -5,6 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import `in`.specmatic.core.*
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.httpRequestLog
@@ -32,33 +33,52 @@ class Proxy(host: String, port: Int, baseURL: String, private val proxyQontractD
     private val environment = applicationEngineEnvironment {
         module {
             intercept(ApplicationCallPipeline.Call) {
-                val httpRequest = ktorHttpRequestToHttpRequest(call)
+                try {
+                    val httpRequest = ktorHttpRequestToHttpRequest(call)
 
-                when(httpRequest.method?.uppercase()) {
-                    "CONNECT" -> {
-                        val errorResponse = HttpResponse(400, "CONNECT is not supported")
-                        println(listOf(httpRequestLog(httpRequest), httpResponseLog(errorResponse)).joinToString(System.lineSeparator()))
-                        respondToKtorHttpResponse(call, errorResponse)
+                    when (httpRequest.method?.uppercase()) {
+                        "CONNECT" -> {
+                            val errorResponse = HttpResponse(400, "CONNECT is not supported")
+                            println(
+                                listOf(httpRequestLog(httpRequest), httpResponseLog(errorResponse)).joinToString(
+                                    System.lineSeparator()
+                                )
+                            )
+                            respondToKtorHttpResponse(call, errorResponse)
+                        }
+
+                        else -> try {
+                            val client = HttpClient(proxyURL(httpRequest, baseURL))
+
+                            val requestToSend = targetHost?.let {
+                                httpRequest.withHost(targetHost)
+                            } ?: httpRequest
+
+                            val httpResponse = client.execute(requestToSend)
+
+                            val name =
+                                "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams)}"
+                            stubs.add(NamedStub(name, ScenarioStub(httpRequest, httpResponse)))
+
+                            respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
+                        } catch (e: Throwable) {
+                            logger.log(e)
+                            val errorResponse =
+                                HttpResponse(500, exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
+                            respondToKtorHttpResponse(call, errorResponse)
+                            logger.debug(
+                                listOf(
+                                    httpRequestLog(httpRequest),
+                                    httpResponseLog(errorResponse)
+                                ).joinToString(System.lineSeparator())
+                            )
+                        }
                     }
-                    else -> try {
-                        val client = HttpClient(proxyURL(httpRequest, baseURL))
-
-                        val requestToSend = targetHost?.let {
-                            httpRequest.withHost(targetHost)
-                        } ?: httpRequest
-
-                        val httpResponse = client.execute(requestToSend)
-
-                        val name = "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams)}"
-                        stubs.add(NamedStub(name, ScenarioStub(httpRequest, httpResponse)))
-
-                        respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
-                    } catch(e: Throwable) {
-                        println(exceptionCauseMessage(e))
-                        val errorResponse = HttpResponse(500, exceptionCauseMessage(e))
-                        respondToKtorHttpResponse(call, errorResponse)
-                        println(listOf(httpRequestLog(httpRequest), httpResponseLog(errorResponse)).joinToString(System.lineSeparator()))
-                    }
+                } catch (e: Throwable) {
+                    logger.log(e)
+                    val errorResponse =
+                        HttpResponse(500, exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
+                    respondToKtorHttpResponse(call, errorResponse)
                 }
             }
         }

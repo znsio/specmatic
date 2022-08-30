@@ -18,15 +18,14 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
 import `in`.specmatic.mock.validateMock
 import `in`.specmatic.test.HttpClient
-import io.ktor.server.application.*
-import io.ktor.server.plugins.*
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
+import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
 import io.ktor.util.asStream
 import io.ktor.util.toMap
 import kotlinx.coroutines.Dispatchers
@@ -162,7 +161,7 @@ class HttpStub(
                     httpLogMessage.addResponse(response)
                     respondToKtorHttpResponse(call, response)
                 } catch (e: Throwable) {
-                    val response = badRequest(exceptionCauseMessage(e))
+                    val response = badRequest(exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
                     httpLogMessage.addResponse(response)
                     respondToKtorHttpResponse(call, response)
                 }

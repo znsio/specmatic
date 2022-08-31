@@ -36,6 +36,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.Writer
+import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
 
@@ -164,10 +165,15 @@ class HttpStub(
                     val response = badRequest(e.report())
                     httpLogMessage.addResponse(response)
                     respondToKtorHttpResponse(call, response)
-                } catch (e: Throwable) {
+                } catch (e: CouldNotParseRequest) {
                     httpLogMessage.addRequest(defensivelyExtractedRequestForLogging(call))
 
-                    val response = badRequest(exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
+                    val response = badRequest("Could not parse request")
+                    httpLogMessage.addResponse(response)
+
+                    respondToKtorHttpResponse(call, response)
+                } catch (e: Throwable) {
+                    val response = internalServerError(exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
                     httpLogMessage.addResponse(response)
 
                     respondToKtorHttpResponse(call, response)
@@ -193,7 +199,7 @@ class HttpStub(
         }
     }
 
-    private suspend fun defensivelyExtractedRequestForLogging(call: ApplicationCall): HttpRequest {
+    private fun defensivelyExtractedRequestForLogging(call: ApplicationCall): HttpRequest {
         val request = HttpRequest().let {
             try {
                 it.copy(method = call.request.httpMethod.toString())
@@ -214,7 +220,7 @@ class HttpStub(
             it.copy(queryParams = queryParams)
         }.let {
             val bodyOrError = try {
-                call.receiveText()
+                receiveText(call)
             } catch (e: Throwable) {
                 "Could not get body. Got exception: ${exceptionCauseMessage(e)}\n\n${e.stackTraceToString()}"
             }
@@ -384,20 +390,26 @@ class HttpStub(
     }
 }
 
+class CouldNotParseRequest(val innerException: Throwable): Exception(exceptionCauseMessage(innerException))
+
 internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
-    val (body, formFields, multiPartFormData) = bodyFromCall(call)
+    try {
+        val (body, formFields, multiPartFormData) = bodyFromCall(call)
 
-    val requestHeaders = call.request.headers.toMap().mapValues { it.value[0] }
+        val requestHeaders = call.request.headers.toMap().mapValues { it.value[0] }
 
-    return HttpRequest(
-        method = call.request.httpMethod.value,
-        path = call.request.path(),
-        headers = requestHeaders,
-        body = body,
-        queryParams = toParams(call.request.queryParameters),
-        formFields = formFields,
-        multiPartFormData = multiPartFormData
-    )
+        return HttpRequest(
+            method = call.request.httpMethod.value,
+            path = call.request.path(),
+            headers = requestHeaders,
+            body = body,
+            queryParams = toParams(call.request.queryParameters),
+            formFields = formFields,
+            multiPartFormData = multiPartFormData
+        )
+    } catch(e: Throwable) {
+        throw CouldNotParseRequest(e)
+    }
 }
 
 private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<String, String>, List<MultiPartFormDataValue>> {
@@ -457,7 +469,18 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
 
             Triple(EmptyString, emptyMap(), parts)
         }
-        else -> Triple(parsedValue(call.receiveText()), emptyMap(), emptyList())
+        else -> Triple(parsedValue(receiveText(call)), emptyMap(), emptyList())
+    }
+}
+
+fun receiveText(call: ApplicationCall): String {
+    return runBlocking {
+        if(call.request.contentCharset() == null) {
+            val byteArray: ByteArray = call.receive<ByteArray>()
+            String(byteArray, Charset.forName("UTF-8"))
+        } else {
+            call.receiveText()
+        }
     }
 }
 
@@ -658,6 +681,10 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<Scenari
 
 fun badRequest(errorMessage: String?): HttpResponse {
     return HttpResponse(HttpStatusCode.BadRequest.value, errorMessage, mapOf(SPECMATIC_RESULT_HEADER to "failure"))
+}
+
+fun internalServerError(errorMessage: String?): HttpResponse {
+    return HttpResponse(HttpStatusCode.InternalServerError.value, errorMessage, mapOf(SPECMATIC_RESULT_HEADER to "failure"))
 }
 
 internal fun httpResponseLog(response: HttpResponse): String =

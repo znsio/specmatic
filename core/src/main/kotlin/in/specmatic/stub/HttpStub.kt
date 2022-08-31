@@ -199,7 +199,7 @@ class HttpStub(
         }
     }
 
-    private fun defensivelyExtractedRequestForLogging(call: ApplicationCall): HttpRequest {
+    private suspend fun defensivelyExtractedRequestForLogging(call: ApplicationCall): HttpRequest {
         val request = HttpRequest().let {
             try {
                 it.copy(method = call.request.httpMethod.toString())
@@ -473,15 +473,13 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
     }
 }
 
-fun receiveText(call: ApplicationCall): String {
-    return runBlocking {
-        if(call.request.contentCharset() == null) {
+suspend fun receiveText(call: ApplicationCall): String {
+    return if(call.request.contentCharset() == null) {
             val byteArray: ByteArray = call.receive()
             String(byteArray, Charset.forName("UTF-8"))
         } else {
             call.receiveText()
         }
-    }
 }
 
 internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }

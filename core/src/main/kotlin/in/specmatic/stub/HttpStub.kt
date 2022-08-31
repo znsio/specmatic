@@ -476,7 +476,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
 fun receiveText(call: ApplicationCall): String {
     return runBlocking {
         if(call.request.contentCharset() == null) {
-            val byteArray: ByteArray = call.receive<ByteArray>()
+            val byteArray: ByteArray = call.receive()
             String(byteArray, Charset.forName("UTF-8"))
         } else {
             call.receiveText()

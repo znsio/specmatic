@@ -213,7 +213,13 @@ class HttpStub(
             val queryParams = toParams(call.request.queryParameters)
             it.copy(queryParams = queryParams)
         }.let {
-            it.copy(body = StringValue(call.receiveText()))
+            val bodyOrError = try {
+                call.receiveText()
+            } catch (e: Throwable) {
+                "Could not get body. Got exception: ${exceptionCauseMessage(e)}\n\n${e.stackTraceToString()}"
+            }
+
+            it.copy(body = StringValue(bodyOrError))
         }
         return request
     }

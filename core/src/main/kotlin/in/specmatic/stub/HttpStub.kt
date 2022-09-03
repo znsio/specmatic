@@ -484,7 +484,7 @@ suspend fun receiveText(call: ApplicationCall): String {
 
 internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
 
-internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Int? = null) {
+internal suspend fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Int? = null) {
     val contentType = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
     val textContent = TextContent(
         httpResponse.body.toStringLiteral(),
@@ -497,13 +497,11 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
         call.response.headers.append(name, value)
     }
 
-    runBlocking {
-        if (delayInSeconds != null) {
-            delay(delayInSeconds * 1000L)
-        }
-
-        call.respond(textContent)
+    if (delayInSeconds != null) {
+        delay(delayInSeconds * 1000L)
     }
+
+    call.respond(textContent)
 }
 
 fun getHttpResponse(

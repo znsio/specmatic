@@ -1,5 +1,8 @@
 package application
 
+import com.arakelian.jq.ImmutableJqLibrary
+import com.arakelian.jq.ImmutableJqRequest
+import com.arakelian.jq.JqLibrary
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.logger
@@ -13,6 +16,7 @@ import picocli.CommandLine
 import java.io.File
 import java.net.URI
 import java.util.concurrent.Callable
+
 
 @CommandLine.Command(name = "validate-for-stubs", mixinStandardHelpOptions = true)
 class ValidateForStubs : Callable<Unit> {
@@ -30,7 +34,7 @@ class ValidateForStubs : Callable<Unit> {
 
         val urlMatchers: List<Pair<URLMatcher, Resolver>> = findMatchingURLMatchers(feature)
 
-        val stubList = parsedJSONArray(File("http-json.log").readText())
+        val stubList = parsedJSONArray(File(logDirPath).readText())
 
         val stubsMatchingURLs: Sequence<Pair<ScenarioStub, ScenarioStub>> = stubList.list.asSequence().mapNotNull {
             val log = it as JSONObjectValue

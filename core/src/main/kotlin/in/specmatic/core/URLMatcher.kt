@@ -32,6 +32,13 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         return matches(httpRequest, resolver)
     }
 
+    fun matchesPath(path: String, resolver: Resolver): Result {
+        return HttpRequest(path = path) to resolver to
+                ::matchesPath otherwise
+                ::handleError toResult
+                :: returnResult
+    }
+
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
         return httpRequest to resolver to
                 ::matchesPath then

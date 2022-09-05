@@ -1,8 +1,5 @@
 package application
 
-import com.arakelian.jq.ImmutableJqLibrary
-import com.arakelian.jq.ImmutableJqRequest
-import com.arakelian.jq.JqLibrary
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.logger
@@ -16,7 +13,6 @@ import picocli.CommandLine
 import java.io.File
 import java.net.URI
 import java.util.concurrent.Callable
-
 
 @CommandLine.Command(name = "validate-for-stubs", mixinStandardHelpOptions = true)
 class ValidateForStubs : Callable<Unit> {
@@ -34,76 +30,104 @@ class ValidateForStubs : Callable<Unit> {
 
         val urlMatchers: List<Pair<URLMatcher, Resolver>> = findMatchingURLMatchers(feature)
 
-        val stubList = parsedJSONArray(File(logDirPath).readText())
+        val requestLogs = parsedJSONArray(File(logDirPath).readText())
 
-        val stubsMatchingURLs: Sequence<Pair<ScenarioStub, ScenarioStub>> = stubList.list.asSequence().mapNotNull {
+        val stubsMatchingURLs: List<Pair<ScenarioStub, ScenarioStub>> = requestLogs.list.mapNotNull {
             val log = it as JSONObjectValue
 
-            val pathLog = log.findFirstChildByPath("http-request.path")
-            val stubRequestPathLog = if(log.findFirstChildByPath("http-request.path")?.toStringLiteral() in listOf("/_specmatic/expectations", "/_qontract/expectations"))
-                                            log.findFirstChildByPath("http-request.body.http-request.path") else null
-
-            if (stubRequestPathLog != null) {
-                matchExpectationLog(stubRequestPathLog, log, urlMatchers)?.let { Pair(mockFromJSON(log.jsonObject), it) }
+            when (val path = log.findFirstChildByPath("http-request.path")?.toStringLiteral()) {
+                in listOf(
+                    "/_specmatic/expectations",
+                    "/_qontract/expectations"
+                ) -> {
+                    log.findFirstChildByPath("http-request.body.http-request.path")?.let { stubRequestPathLog ->
+                        stubFromExpectationLog(log, stubRequestPathLog, urlMatchers)
+                    }
+                }
+                null -> null
+                else -> {
+                    stubFromRequestLog(path, urlMatchers, log)?.let { Pair(mockFromJSON(log.jsonObject), it) }
+                }
             }
-            else if (pathLog != null) {
-                matchTopLevelLog(pathLog, urlMatchers, log)?.let { Pair(mockFromJSON(log.jsonObject), it) }
-            }
-            else
-                null
         }
 
-        val matchFailures: Sequence<Triple<Result, ScenarioStub, ScenarioStub>> = stubsMatchingURLs.map { (container, matchingScenario) ->
+        val matchResults = stubsMatchingURLs.map { (container, matchingScenario) ->
             try {
                 feature.matchingStub(matchingScenario.request, matchingScenario.response)
                 Triple(Result.Success(), container, matchingScenario)
             } catch(e: NoMatchingScenario) {
                 Triple(e.results.toResultIfAny(), container, matchingScenario)
             }
-        }.filter {
+        }
+
+
+        val matchFailures: List<Triple<Result, ScenarioStub, ScenarioStub>> = matchResults.filter {
             it.first is Result.Failure
         }
 
-        if(matchFailures.firstOrNull() == null)
+        val countOfSuccessfulMatches = matchResults.size - matchFailures.size
+
+        if(matchFailures.isEmpty())
             logger.log("The contract is compatible with all stubs")
         else {
             logger.log("The contract is not compatible with the following:")
             matchFailures.forEach { (result, container, _) ->
+                logger.log("--------------------")
                 logger.log(container.toJSON().toStringLiteral())
                 logger.log(result.reportString())
                 logger.newLine()
-                logger.newLine()
             }
         }
+
+        logger.newLine()
+        logger.log("Matched ${matchResults.size}, Succeeded: $countOfSuccessfulMatches, Failed: ${matchFailures.size}")
+        logger.newLine()
     }
 
-    private fun matchExpectationLog(
+    private fun stubFromExpectationLog(
+        log: JSONObjectValue,
+        stubRequestPathLog: Value,
+        urlMatchers: List<Pair<URLMatcher, Resolver>>
+    ): Pair<ScenarioStub, ScenarioStub>? {
+        return if (log.findFirstChildByPath("http-response.status")?.toStringLiteral() == "200")
+            stubFromExpectationLog(stubRequestPathLog, log, urlMatchers)?.let {
+                Pair(
+                    mockFromJSON(log.jsonObject),
+                    it
+                )
+            }
+        else
+            null
+    }
+
+    private fun stubFromExpectationLog(
         stubRequestPathLog: Value,
         log: JSONObjectValue,
         urlMatchers: List<Pair<URLMatcher, Resolver>>
     ): ScenarioStub? {
         val path = stubRequestPathLog.toStringLiteral()
+
         val body = log.findFirstChildByPath("http-request.body") as JSONObjectValue
-        return if (urlMatchers.any { (matcher, resolver) ->
-                matcher.matches(HttpRequest(path = path), resolver) is Result.Success
+
+        if (urlMatchers.any { (matcher, resolver) ->
+                matcher.matchesPath(path, resolver) is Result.Success
             })
-            mockFromJSON(body.jsonObject)
-        else
-            null
+            return mockFromJSON(body.jsonObject)
+
+        return null
     }
 
-    private fun matchTopLevelLog(
-        pathLog: Value,
+    private fun stubFromRequestLog(
+        path: String,
         urlMatchers: List<Pair<URLMatcher, Resolver>>,
         log: JSONObjectValue
     ): ScenarioStub? {
-        val path = pathLog.toStringLiteral()
-        return if (urlMatchers.any { (matcher, resolver) ->
+        if (urlMatchers.any { (matcher, resolver) ->
                 matcher.matches(HttpRequest(path = path), resolver) is Result.Success
             })
-            mockFromJSON(log.jsonObject)
-        else
-            null
+            return mockFromJSON(log.jsonObject)
+
+        return null
     }
 
     private fun findMatchingURLMatchers(feature: Feature): List<Pair<URLMatcher, Resolver>> {

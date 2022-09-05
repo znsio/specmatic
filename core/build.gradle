@@ -16,7 +16,7 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.0.0"
+def ktor_version = "2.1.0"
 def jgit_version = "5.13.0.202109080827-r"
 def junit_version = "5.9.0"
 def testcontainers_version = "1.16.3"
@@ -28,6 +28,7 @@ dependencies {
     implementation "io.ktor:ktor-client-core-jvm:$ktor_version"
     implementation "io.ktor:ktor-client-apache:$ktor_version"
     implementation "io.ktor:ktor-server-cors:$ktor_version"
+    implementation("io.ktor:ktor-server-double-receive:$ktor_version")
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.4.0"
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.7.10"

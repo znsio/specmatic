@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.exceptionCauseMessage
@@ -38,7 +39,7 @@ data class Scenario(
     val bindings: Map<String, String> = emptyMap(),
     val isGherkinScenario: Boolean = false,
     val isNegative: Boolean = false,
-    val is4xxDefined: Boolean = false
+    val badRequestOrDefault: BadRequestOrDefault? = null
 ) {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -188,8 +189,8 @@ data class Scenario(
 
         if (this.isNegative) {
             return if (is4xxResponse(httpResponse)) {
-                if(is4xxDefined)
-                    Result.Success().updateScenario(this)
+                if(badRequestOrDefault != null && badRequestOrDefault.supports(httpResponse))
+                    badRequestOrDefault.matches(httpResponse, resolver).updateScenario(this)
                 else
                     Result.Failure("Received ${httpResponse.status}, but the specification does not contain a 4xx response, hence unable to verify this response", breadCrumb = "RESPONSE.STATUS").updateScenario(this)
             }
@@ -250,7 +251,7 @@ data class Scenario(
                             bindings,
                             isGherkinScenario,
                             isNegative,
-                            is4xxDefined
+                            badRequestOrDefault
                         )
                     }
                 }
@@ -270,8 +271,7 @@ data class Scenario(
                         references,
                         bindings,
                         isGherkinScenario,
-                        isNegative,
-                        is4xxDefined
+                        isNegative
                     )
                 }
             }
@@ -474,15 +474,14 @@ data class Scenario(
             scenario.references,
             bindings,
             isGherkinScenario,
-            isNegative,
-            is4xxDefined
+            isNegative
         )
 
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
-    fun negativeBasedOn(suggestions: List<Scenario>, is4xxDefined: Boolean = false) = Scenario(
+    fun negativeBasedOn(suggestions: List<Scenario>, is4xxDefined: Boolean = false, badRequestOrDefault: BadRequestOrDefault?) = Scenario(
         "-ve: ${this.name}",
         this.httpRequestPattern,
         this.httpResponsePattern,
@@ -496,7 +495,7 @@ data class Scenario(
         bindings,
         this.isGherkinScenario,
         isNegative = true,
-        is4xxDefined = is4xxDefined
+        badRequestOrDefault
     )
 }
 
@@ -548,22 +547,33 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
 
         val response = testExecutor.execute(request)
 
-        val result = when (response.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "success")) {
-            "failure" -> Result.Failure(response.body.toStringLiteral()).updateScenario(testScenario)
-            else -> {
-                if(response.body is JSONObjectValue && ignorable(response.body)) {
-                    Result.Success()
-                } else {
-                    testScenario.matches(response, ContractAndResponseMismatch, ValidateUnexpectedKeys)
-                }
-            }
-        }
+        val result = testResult(response, testScenario)
 
         result.withBindings(testScenario.bindings, response)
     } catch (exception: Throwable) {
         Result.Failure(exceptionCauseMessage(exception))
             .also { failure -> failure.updateScenario(testScenario) }
     }
+}
+
+private fun testResult(
+    response: HttpResponse,
+    testScenario: Scenario
+): Result {
+
+    val result = when {
+        response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
+            .updateScenario(testScenario)
+        response.body is JSONObjectValue && ignorable(response.body) -> Result.Success()
+        else -> testScenario.matches(response, ContractAndResponseMismatch, ValidateUnexpectedKeys)
+    }.also { result ->
+        if (result is Result.Success && result.isPartialSuccess()) {
+            logger.log("    PARTIAL SUCCESS: ${result.partialSuccessMessage}")
+            logger.newLine()
+        }
+    }
+
+    return result
 }
 
 fun ignorable(body: JSONObjectValue): Boolean {

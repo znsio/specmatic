@@ -18,22 +18,25 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
 import `in`.specmatic.mock.validateMock
 import `in`.specmatic.test.HttpClient
-import io.ktor.server.application.*
-import io.ktor.server.plugins.*
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
+import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
+import io.ktor.server.plugins.doublereceive.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
 import io.ktor.util.asStream
 import io.ktor.util.toMap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.Writer
+import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
 
@@ -100,6 +103,8 @@ class HttpStub(
 
     private val environment = applicationEngineEnvironment {
         module {
+            install(DoubleReceive)
+
             install(CORS) {
                 allowMethod(HttpMethod.Options)
                 allowMethod(HttpMethod.Get)
@@ -136,14 +141,15 @@ class HttpStub(
                     }
 
                     if (httpRequest.path!!.startsWith("""/features/default""")) {
+                        logger.log("Incoming subscription on URL path ${httpRequest.path} ")
                         val channel: Channel<SseEvent> = Channel(10, BufferOverflow.DROP_OLDEST)
-                        val broadcastChannel = channel.broadcast()
+                        val broadcastChannel: BroadcastChannel<SseEvent> = channel.broadcast()
                         broadcastChannels.add(broadcastChannel)
 
                         val events: ReceiveChannel<SseEvent> = broadcastChannel.openSubscription()
 
                         try {
-                            call.respondSse(events, sseBuffer)
+                            call.respondSse(events, sseBuffer, httpRequest)
                         } finally {
                             events.cancel()
 
@@ -159,9 +165,17 @@ class HttpStub(
                     val response = badRequest(e.report())
                     httpLogMessage.addResponse(response)
                     respondToKtorHttpResponse(call, response)
-                } catch (e: Throwable) {
-                    val response = badRequest(exceptionCauseMessage(e))
+                } catch (e: CouldNotParseRequest) {
+                    httpLogMessage.addRequest(defensivelyExtractedRequestForLogging(call))
+
+                    val response = badRequest("Could not parse request")
                     httpLogMessage.addResponse(response)
+
+                    respondToKtorHttpResponse(call, response)
+                } catch (e: Throwable) {
+                    val response = internalServerError(exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
+                    httpLogMessage.addResponse(response)
+
                     respondToKtorHttpResponse(call, response)
                 }
 
@@ -183,6 +197,37 @@ class HttpStub(
                 this.port = port
             }
         }
+    }
+
+    private suspend fun defensivelyExtractedRequestForLogging(call: ApplicationCall): HttpRequest {
+        val request = HttpRequest().let {
+            try {
+                it.copy(method = call.request.httpMethod.toString())
+            } catch (e: Throwable) {
+                it
+            }
+        }.let {
+            try {
+                it.copy(path = call.request.path())
+            } catch (e: Throwable) {
+                it
+            }
+        }.let {
+            val requestHeaders = call.request.headers.toMap().mapValues { it.value[0] }
+            it.copy(headers = requestHeaders)
+        }.let {
+            val queryParams = toParams(call.request.queryParameters)
+            it.copy(queryParams = queryParams)
+        }.let {
+            val bodyOrError = try {
+                receiveText(call)
+            } catch (e: Throwable) {
+                "Could not get body. Got exception: ${exceptionCauseMessage(e)}\n\n${e.stackTraceToString()}"
+            }
+
+            it.copy(body = StringValue(bodyOrError))
+        }
+        return request
     }
 
     private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
@@ -262,12 +307,21 @@ class HttpStub(
             }
 
             HttpStubResponse(HttpResponse.OK, contractPath = "")
-        } catch (e: Throwable) {
+        } catch(e: ContractException) {
             HttpStubResponse(
                 HttpResponse(
                     status = 400,
                     headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
-                    body = StringValue(e.localizedMessage ?: e.message ?: e.javaClass.name)
+                    body = exceptionCauseMessage(e)
+                )
+            )
+        }
+        catch (e: Throwable) {
+            HttpStubResponse(
+                HttpResponse(
+                    status = 500,
+                    headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
+                    body = exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString()
                 )
             )
         }
@@ -336,20 +390,26 @@ class HttpStub(
     }
 }
 
+class CouldNotParseRequest(val innerException: Throwable): Exception(exceptionCauseMessage(innerException))
+
 internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
-    val (body, formFields, multiPartFormData) = bodyFromCall(call)
+    try {
+        val (body, formFields, multiPartFormData) = bodyFromCall(call)
 
-    val requestHeaders = call.request.headers.toMap().mapValues { it.value[0] }
+        val requestHeaders = call.request.headers.toMap().mapValues { it.value[0] }
 
-    return HttpRequest(
-        method = call.request.httpMethod.value,
-        path = call.request.path(),
-        headers = requestHeaders,
-        body = body,
-        queryParams = toParams(call.request.queryParameters),
-        formFields = formFields,
-        multiPartFormData = multiPartFormData
-    )
+        return HttpRequest(
+            method = call.request.httpMethod.value,
+            path = call.request.path(),
+            headers = requestHeaders,
+            body = body,
+            queryParams = toParams(call.request.queryParameters),
+            formFields = formFields,
+            multiPartFormData = multiPartFormData
+        )
+    } catch(e: Throwable) {
+        throw CouldNotParseRequest(e)
+    }
 }
 
 private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<String, String>, List<MultiPartFormDataValue>> {
@@ -409,13 +469,22 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
 
             Triple(EmptyString, emptyMap(), parts)
         }
-        else -> Triple(parsedValue(call.receiveText()), emptyMap(), emptyList())
+        else -> Triple(parsedValue(receiveText(call)), emptyMap(), emptyList())
     }
+}
+
+suspend fun receiveText(call: ApplicationCall): String {
+    return if(call.request.contentCharset() == null) {
+            val byteArray: ByteArray = call.receive()
+            String(byteArray, Charset.forName("UTF-8"))
+        } else {
+            call.receiveText()
+        }
 }
 
 internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
 
-internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Int? = null) {
+internal suspend fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Int? = null) {
     val contentType = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
     val textContent = TextContent(
         httpResponse.body.toStringLiteral(),
@@ -428,13 +497,11 @@ internal fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: Http
         call.response.headers.append(name, value)
     }
 
-    runBlocking {
-        if (delayInSeconds != null) {
-            delay(delayInSeconds * 1000L)
-        }
-
-        call.respond(textContent)
+    if (delayInSeconds != null) {
+        delay(delayInSeconds * 1000L)
     }
+
+    call.respond(textContent)
 }
 
 fun getHttpResponse(
@@ -612,6 +679,10 @@ fun badRequest(errorMessage: String?): HttpResponse {
     return HttpResponse(HttpStatusCode.BadRequest.value, errorMessage, mapOf(SPECMATIC_RESULT_HEADER to "failure"))
 }
 
+fun internalServerError(errorMessage: String?): HttpResponse {
+    return HttpResponse(HttpStatusCode.InternalServerError.value, errorMessage, mapOf(SPECMATIC_RESULT_HEADER to "failure"))
+}
+
 internal fun httpResponseLog(response: HttpResponse): String =
     "${response.toLogString("<- ")}\n<< Response At ${Date()} == "
 
@@ -677,25 +748,28 @@ fun stringToMockScenario(text: Value): ScenarioStub {
     return mockFromJSON(mockSpec)
 }
 
-data class SseEvent(val data: String = "", val event: String? = null, val id: String? = null, val bufferIndex: Int? = null)
+data class SseEvent(val data: String? = "", val event: String? = null, val id: String? = null, val bufferIndex: Int? = null)
 
-suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuffer: SSEBuffer) {
+suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuffer: SSEBuffer, httpRequest: HttpRequest) {
     response.cacheControl(CacheControl.NoCache(null))
 
     respondTextWriter(contentType = ContentType.Text.EventStream) {
-        logger.debug("Writing out an initial response")
-        write("\n")
-        flush()
+        logger.log("Writing out an initial response for subscription to ${httpRequest.path!!}")
+        withContext(Dispatchers.IO) {
+            write("\n")
+            flush()
+        }
 
-        logger.debug("Writing out buffered events")
+        logger.log("Writing out buffered events for subscription to ${httpRequest.path}")
         sseBuffer.write(this)
 
-        logger.debug("Awaiting events...")
+        logger.log("Awaiting events...")
         for (event in events) {
             sseBuffer.add(event)
-            writeEvent(event, this)
+            logger.log("Writing out event for subscription to ${httpRequest.path}")
+            logger.log("Event details: $event")
 
-            logger.debug("Wrote out event $event")
+            writeEvent(event, this)
         }
     }
 }
@@ -707,9 +781,12 @@ private fun writeEvent(event: SseEvent, writer: Writer) {
     if (event.event != null) {
         writer.write("event: ${event.event}\n")
     }
-    for (dataLine in event.data.lines()) {
-        writer.write("data: $dataLine\n")
+    if(event.data != null) {
+        for (dataLine in event.data.lines()) {
+            writer.write("data: $dataLine\n")
+        }
     }
+
     writer.write("\n")
     writer.flush()
 }

@@ -17,8 +17,10 @@ class LogDirectory(directory: File, prefix: String, tag: String, extension: Stri
         val name = "$prefix-${currentDate.toFileNameString()}${logFileNameSuffix(tag, extension)}"
 
         file = directory.resolve(name)
-        if(!file.exists())
+        if(!file.exists()) {
             file.createNewFile()
+            println("Logging to file ${file.canonicalFile}")
+        }
     }
 
     override fun appendText(text: String) {

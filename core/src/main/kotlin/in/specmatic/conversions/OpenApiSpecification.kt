@@ -53,7 +53,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         fun fromYAML(yamlContent: String, filePath: String): OpenApiSpecification {
-            val parseResult: SwaggerParseResult = OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences())
+            val parseResult: SwaggerParseResult = OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), filePath)
             val openApi: OpenAPI? = parseResult.openAPI
 
             if(openApi == null) {
@@ -313,12 +313,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         status: String,
         headersMap: Map<String, Pattern>
     ): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
-        if(status == "default") return emptyList()
-
         if(response.content == null) {
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap),
-                status = status.toInt()
+                status = status.toIntOrNull() ?: DEFAULT_RESPONSE_CODE
             )
 
             return listOf(Triple(response, MediaType(), responsePattern))
@@ -327,7 +325,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return response.content.map { (contentType, mediaType) ->
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap),
-                status = status.toInt(),
+                status = if(status == "default") 1000 else status.toInt(),
                 body = when (contentType) {
                     "application/xml" -> toXMLPattern(mediaType)
                     else -> toSpecmaticPattern(mediaType)

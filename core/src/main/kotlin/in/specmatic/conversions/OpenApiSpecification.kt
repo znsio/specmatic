@@ -395,7 +395,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             doSecurityRequirementsMatch(openApi.security, apiKeySecuritySchemeName)) {
                                 when(apiKeySecurityScheme.`in`) {
                                     SecurityScheme.In.HEADER ->
-                                        headersMap[apiKeySecurityScheme.name] = StringPattern()
+                                        headersMap["${apiKeySecurityScheme.name}?"] = StringPattern()
                                     SecurityScheme.In.QUERY ->
                                         securityQueryParams.add(apiKeySecurityScheme.name)
                                     else ->

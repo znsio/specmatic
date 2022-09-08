@@ -68,6 +68,11 @@ fi
 
 echo
 
+echo Pushing to remote
+git push
+
+echo
+
 echo Building and publishing
 ./gradlew clean build publish
 

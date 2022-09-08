@@ -1,6 +1,6 @@
 package `in`.specmatic.core
 
-class FailureReport(val contractPath: String?, val scenarioMessage: String?, val scenario: Scenario?, val matchFailureDetailList: List<MatchFailureDetails>): Report {
+class FailureReport(val contractPath: String?, val scenarioMessage: String?, val scenario: ScenarioDetailsForResult?, val matchFailureDetailList: List<MatchFailureDetails>): Report {
     override fun toText(): String {
         val contractLine = contractPathDetails()
         val scenarioDetails = scenarioDetails(scenario) ?: ""
@@ -56,11 +56,11 @@ class FailureReport(val contractPath: String?, val scenarioMessage: String?, val
         return "Error from contract $contractPath\n\n"
     }
 
-    private fun scenarioDetails(scenario: Scenario?): String? {
+    private fun scenarioDetails(scenario: ScenarioDetailsForResult?): String? {
         return scenario?.let {
             val scenarioLine = """${scenarioMessage ?: "In scenario"} "${scenario.name}""""
             val urlLine =
-                "API: ${scenario.httpRequestPattern.method} ${scenario.httpRequestPattern.urlMatcher?.path} -> ${scenario.httpResponsePattern.status}"
+                "API: ${scenario.method} ${scenario.path} -> ${scenario.status}"
 
             "$scenarioLine${System.lineSeparator()}$urlLine"
         }

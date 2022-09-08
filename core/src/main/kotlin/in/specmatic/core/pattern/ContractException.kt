@@ -3,8 +3,9 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.FailureReport
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.Scenario
+import `in`.specmatic.core.ScenarioDetailsForResult
 
-data class ContractException(val errorMessage: String = "", val breadCrumb: String = "", val exceptionCause: ContractException? = null, val scenario: Scenario? = null) : Exception(errorMessage) {
+data class ContractException(val errorMessage: String = "", val breadCrumb: String = "", val exceptionCause: ContractException? = null, val scenario: ScenarioDetailsForResult? = null) : Exception(errorMessage) {
     constructor(failureReport: FailureReport): this(failureReport.toText())
 
     fun failure(): Result.Failure =
@@ -36,7 +37,7 @@ fun <ReturnType> attempt(f: ()->ReturnType): ReturnType {
     }
 }
 
-inline fun <ReturnType> scenarioBreadCrumb(scenario: Scenario, f: ()->ReturnType): ReturnType {
+inline fun <ReturnType> scenarioBreadCrumb(scenario: ScenarioDetailsForResult, f: ()->ReturnType): ReturnType {
     try {
         return f()
     } catch(e: ContractException) {

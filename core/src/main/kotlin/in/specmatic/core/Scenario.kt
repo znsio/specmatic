@@ -25,8 +25,26 @@ object ContractAndStubMismatchMessages : MismatchMessages {
     }
 }
 
+interface ScenarioDetailsForResult {
+    val ignoreFailure: Boolean
+    val name: String
+    val method: String
+    val path: String
+    val status: Int
+    val requestTestDescription: String
+    fun testDescription(): String {
+        val scenarioDescription = StringBuilder()
+        scenarioDescription.append("Scenario: ")
+        when {
+            name.isNotEmpty() -> scenarioDescription.append("$name ")
+        }
+
+        return scenarioDescription.append(requestTestDescription).toString()
+    }
+}
+
 data class Scenario(
-    val name: String,
+    override val name: String,
     val httpRequestPattern: HttpRequestPattern,
     val httpResponsePattern: HttpResponsePattern,
     val expectedFacts: Map<String, Value>,
@@ -34,13 +52,13 @@ data class Scenario(
     val patterns: Map<String, Pattern>,
     val fixtures: Map<String, Value>,
     val kafkaMessagePattern: KafkaMessagePattern? = null,
-    val ignoreFailure: Boolean = false,
+    override val ignoreFailure: Boolean = false,
     val references: Map<String, References> = emptyMap(),
     val bindings: Map<String, String> = emptyMap(),
     val isGherkinScenario: Boolean = false,
     val isNegative: Boolean = false,
-    val badRequestOrDefault: BadRequestOrDefault? = null
-) {
+    val badRequestOrDefault: BadRequestOrDefault? = null,
+): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
         scenarioInfo.httpRequestPattern,
@@ -54,6 +72,23 @@ data class Scenario(
         scenarioInfo.references,
         scenarioInfo.bindings
     )
+
+    override val requestTestDescription: String
+        get() = httpRequestPattern.testDescription()
+    override val method: String
+        get() {
+            return httpRequestPattern.method ?: ""
+        }
+
+    override val path: String
+        get() {
+            return httpRequestPattern.urlMatcher?.path ?: ""
+        }
+
+    override val status: Int
+        get() {
+            return httpResponsePattern.status
+        }
 
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
         expectedFacts.keys == actualState.keys &&
@@ -447,7 +482,7 @@ data class Scenario(
             }
         }
 
-    fun testDescription(): String {
+    override fun testDescription(): String {
         val scenarioDescription = StringBuilder()
         scenarioDescription.append("Scenario: ")
         when {

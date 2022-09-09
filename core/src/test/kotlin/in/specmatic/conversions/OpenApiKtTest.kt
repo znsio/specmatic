@@ -687,7 +687,7 @@ Background:
     }
 
     @Test
-    fun `should generate stub that returns authenticates with api key in header and query`() {
+    fun `should generate stub that authenticates with api key in header and query`() {
         createStubFromContracts(listOf("src/test/resources/openapi/apiKeyAuth.yaml")).use {
             val requestWithHeader = HttpRequest(
                 method = "GET",
@@ -724,7 +724,7 @@ Background:
   Given openapi openapi/unsupported-authentication.yaml
         """.trimIndent(), sourceSpecPath
             )
-        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer and api key authentication (header, query) scheme at the moment") }
+        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer and api key authentication (header, query) security schemes at the moment") }
     }
 
     @Test
@@ -738,7 +738,7 @@ Background:
   Given openapi openapi/apiKeyAuthCookie.yaml
         """.trimIndent(), sourceSpecPath
             )
-        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer and api key authentication (header, query) scheme at the moment") }
+        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer and api key authentication (header, query) security schemes at the moment") }
     }
 
     @Test

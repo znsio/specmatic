@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenAPISecurityScheme
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
@@ -11,20 +12,25 @@ private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
 private const val FORM_FIELDS_BREADCRUMB = "FORM-FIELDS"
 const val CONTENT_TYPE = "Content-Type"
 
+data class HeaderMatchParams(val request: HttpRequest, val headersResolver: Resolver?, val defaultResolver: Resolver, val failures: List<Failure>)
+
 data class HttpRequestPattern(
     val headersPattern: HttpHeadersPattern = HttpHeadersPattern(),
     val urlMatcher: URLMatcher? = null,
     val method: String? = null,
     val body: Pattern = EmptyStringPattern,
     val formFieldsPattern: Map<String, Pattern> = emptyMap(),
-    val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList()
+    val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList(),
+    val securitySchemes: List<OpenAPISecurityScheme> = emptyList()
 ) {
     fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null): Result {
         val result = incomingHttpRequest to resolver to
-                ::matchUrl then
+                ::matchPath then
                 ::matchMethod then
-                { (request, defaultResolver) ->
-                    matchHeaders(Triple(request, headersResolver, defaultResolver))
+                ::matchSecurityScheme then
+                ::matchQuery then
+                { (request, defaultResolver, failures) ->
+                    matchHeaders(HeaderMatchParams(request, headersResolver, defaultResolver, failures))
                 } then
                 ::matchFormFields then
                 ::matchMultiPartFormData then
@@ -37,6 +43,18 @@ data class HttpRequestPattern(
             is Failure -> result.breadCrumb("REQUEST")
             else -> result
         }
+    }
+
+    private fun matchSecurityScheme(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
+        val (httpRequest, resolver, failures) = parameters
+
+        if(securitySchemes.isEmpty())
+            return MatchSuccess(Triple(httpRequest, resolver, failures))
+
+        val matchingSecurityScheme = securitySchemes.find { it.matches(httpRequest) }
+            ?: return MatchSuccess(Triple(httpRequest, resolver, failures.plus(Failure("No auth params were found in the request"))))
+
+        return MatchSuccess(Triple(matchingSecurityScheme.removeParam(httpRequest), resolver, failures))
     }
 
     fun matchesSignature(other: HttpRequestPattern): Boolean =
@@ -120,12 +138,12 @@ data class HttpRequestPattern(
             MatchSuccess(Triple(httpRequest, resolver, allFailures))
     }
 
-    private fun matchHeaders(parameters: Triple<HttpRequest, Resolver?, Resolver>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
-        val (httpRequest, headersResolver, defaultResolver) = parameters
+    private fun matchHeaders(parameters: HeaderMatchParams): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
+        val (httpRequest, headersResolver, defaultResolver, failures) = parameters
         val headers = httpRequest.headers
         return when (val result = this.headersPattern.matches(headers, headersResolver ?: defaultResolver)) {
-            is Failure -> MatchSuccess(Triple(httpRequest, defaultResolver, listOf(result)))
-            else -> MatchSuccess(Triple(httpRequest, defaultResolver, emptyList()))
+            is Failure -> MatchSuccess(Triple(httpRequest, defaultResolver, failures.plus(result)))
+            else -> MatchSuccess(Triple(httpRequest, defaultResolver, failures))
         }
     }
 
@@ -150,29 +168,36 @@ data class HttpRequestPattern(
         }
     }
 
-    private fun matchMethod(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
-        val (httpRequest, _) = parameters
+    private fun matchMethod(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
+        val (httpRequest, resolver) = parameters
         method.let {
             return if (it != httpRequest.method)
                 MatchFailure(mismatchResult(method ?: "", httpRequest.method ?: "").breadCrumb("METHOD"))
             else
-                MatchSuccess(parameters)
+                MatchSuccess(Triple(httpRequest, resolver, emptyList()))
         }
     }
 
-    private fun matchUrl(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
+    private fun matchPath(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
-        urlMatcher.let {
-            val result = urlMatcher!!.matches(
-                URI(httpRequest.path!!),
-                httpRequest.queryParams,
-                resolver
-            )
-            return if (result is Failure)
-                MatchFailure(result.breadCrumb("URL"))
-            else
-                MatchSuccess(parameters)
-        }
+
+        val result = urlMatcher!!.matchesPath(httpRequest.path!!, resolver)
+
+        return if (result is Failure)
+            MatchFailure(result)
+        else
+            MatchSuccess(parameters)
+    }
+
+    private fun matchQuery(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
+        val (httpRequest, resolver, failures) = parameters
+
+        val result = urlMatcher!!.matchesQuery(httpRequest, resolver)
+
+        return if (result is Failure)
+            MatchSuccess(Triple(httpRequest, resolver, failures.plus(result.breadCrumb("QUERY-PARAMS"))))
+        else
+            MatchSuccess(parameters)
     }
 
     fun generate(request: HttpRequest, resolver: Resolver): HttpRequestPattern {
@@ -317,6 +342,10 @@ data class HttpRequestPattern(
                 )
             }
 
+            newRequest = securitySchemes.fold(newRequest) { request, securityScheme ->
+                securityScheme.addTo(request)
+            }
+
             val multipartData = attempt(breadCrumb = "MULTIPART DATA") {
                 multiPartFormDataPattern.mapIndexed { index, multiPartFormDataPattern ->
                     attempt(breadCrumb = "[$index]") { multiPartFormDataPattern.generate(resolver) }
@@ -397,8 +426,8 @@ data class HttpRequestPattern(
                 newBodies.flatMap { newBody ->
                     newHeadersPattern.flatMap { newHeadersPattern ->
                         newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
-                            newFormDataPartLists.map { newFormDataPartList ->
-                                HttpRequestPattern(
+                            newFormDataPartLists.flatMap { newFormDataPartList ->
+                                val newRequestPattern = HttpRequestPattern(
                                     headersPattern = newHeadersPattern,
                                     urlMatcher = newURLMatcher,
                                     method = method,
@@ -406,6 +435,13 @@ data class HttpRequestPattern(
                                     formFieldsPattern = newFormFieldsPattern,
                                     multiPartFormDataPattern = newFormDataPartList
                                 )
+
+                                when(securitySchemes) {
+                                    emptyList<OpenAPISecurityScheme>() -> listOf(newRequestPattern)
+                                    else -> securitySchemes.map {
+                                        newRequestPattern.copy(securitySchemes = listOf(it))
+                                    }
+                                }
                             }
                         }
                     }
@@ -427,8 +463,8 @@ data class HttpRequestPattern(
                 newBodies.flatMap { newBody ->
                     newHeadersPattern.flatMap { newHeadersPattern ->
                         newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
-                            newFormDataPartLists.map { newFormDataPartList ->
-                                HttpRequestPattern(
+                            newFormDataPartLists.flatMap { newFormDataPartList ->
+                                val newRequestPattern = HttpRequestPattern(
                                     headersPattern = newHeadersPattern,
                                     urlMatcher = newURLMatcher,
                                     method = method,
@@ -436,6 +472,13 @@ data class HttpRequestPattern(
                                     formFieldsPattern = newFormFieldsPattern,
                                     multiPartFormDataPattern = newFormDataPartList
                                 )
+
+                                when(securitySchemes) {
+                                    emptyList<OpenAPISecurityScheme>() -> listOf(newRequestPattern)
+                                    else -> securitySchemes.map {
+                                        newRequestPattern.copy(securitySchemes = listOf(it))
+                                    }
+                                }
                             }
                         }
                     }
@@ -502,8 +545,8 @@ data class HttpRequestPattern(
                 newBodies.flatMap { newBody ->
                     newHeadersPattern.flatMap { newHeadersPattern ->
                         newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
-                            newFormDataPartLists.map { newFormDataPartList ->
-                                HttpRequestPattern(
+                            newFormDataPartLists.flatMap { newFormDataPartList ->
+                                val newRequestPattern = HttpRequestPattern(
                                     headersPattern = newHeadersPattern,
                                     urlMatcher = newURLMatcher,
                                     method = method,
@@ -511,6 +554,13 @@ data class HttpRequestPattern(
                                     formFieldsPattern = newFormFieldsPattern,
                                     multiPartFormDataPattern = newFormDataPartList
                                 )
+
+                                when(securitySchemes) {
+                                    emptyList<OpenAPISecurityScheme>() -> listOf(newRequestPattern)
+                                    else -> securitySchemes.map {
+                                        newRequestPattern.copy(securitySchemes = listOf(it))
+                                    }
+                                }
                             }
                         }
                     }

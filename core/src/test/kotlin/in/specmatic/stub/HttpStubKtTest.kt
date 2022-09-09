@@ -201,7 +201,7 @@ Scenario: Square of a number
         val strictResponse = stubResponse(request, listOf(feature), listOf(stubData), true)
         assertResponseFailure(strictResponse, """STRICT MODE ON
 
->> REQUEST.URL.QUERY-PARAMS.status
+>> REQUEST.QUERY-PARAMS.status
 
    ${StubAndRequestMismatchMessages.expectedKeyWasMissing("query param", "status")}""")
     }

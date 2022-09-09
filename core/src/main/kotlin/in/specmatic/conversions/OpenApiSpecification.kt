@@ -360,6 +360,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         path: String, httpMethod: String, operation: Operation
     ): List<HttpRequestPattern> {
 
+        val contractSecuritySchemes: Map<String, OpenAPISecurityScheme> = openApi.components?.securitySchemes?.mapValues { (_, scheme) ->
+            toSecurityScheme(scheme)
+        } ?: emptyMap()
+
         val parameters = operation.parameters
 
         val headersMap = parameters.orEmpty().filterIsInstance(HeaderParameter::class.java).map {
@@ -368,48 +372,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
         val securityQueryParams = mutableSetOf<String>()
 
-        if (openApi.components != null && !openApi.components.securitySchemes.isNullOrEmpty()) {
-            if (openApi.components.securitySchemes.toList().any { securityScheme ->
-                    notBearerAuth(securityScheme) && unsupportedApiKeyAuth(securityScheme)
-            })
-                throw ContractException("Specmatic only supports bearer and api key authentication (header, query) scheme at the moment")
-
-            val bearerAuthSecuritySchemeName = openApi.components.securitySchemes.toList().findLast { securityScheme ->
-                securityScheme.second.scheme == BEARER_SECURITY_SCHEME
-            }?.first
-
-            if (!bearerAuthSecuritySchemeName.isNullOrEmpty()) {
-                if (doSecurityRequirementsMatch(
-                        operation.security, bearerAuthSecuritySchemeName
-                    ) || doSecurityRequirementsMatch(
-                        openApi.security, bearerAuthSecuritySchemeName
-                    )
-                ) headersMap[AUTHORIZATION] = StringPattern()
-            }
-
-            openApi.components.securitySchemes.toList().filter { securityScheme ->
-                securityScheme.second.type == SecurityScheme.Type.APIKEY
-            }.forEach { (apiKeySecuritySchemeName, apiKeySecurityScheme) ->
-                if(!apiKeySecuritySchemeName.isNullOrEmpty()) {
-                    if(doSecurityRequirementsMatch(operation.security, apiKeySecuritySchemeName) ||
-                            doSecurityRequirementsMatch(openApi.security, apiKeySecuritySchemeName)) {
-                                when(apiKeySecurityScheme.`in`) {
-                                    SecurityScheme.In.HEADER ->
-                                        headersMap["${apiKeySecurityScheme.name}?"] = StringPattern()
-                                    SecurityScheme.In.QUERY ->
-                                        securityQueryParams.add(apiKeySecurityScheme.name)
-                                    else ->
-                                        throw ContractException("Only Header and Query API Key security schemes are supported at the moment")
-                                }
-                            }
-                }
-            }
-        }
+        val operationSecuritySchemes: List<OpenAPISecurityScheme> =
+            operationSecuritySchemes(operation, contractSecuritySchemes)
 
         val urlMatcher = toURLMatcherWithOptionalQueryParams(path, securityQueryParams)
         val headersPattern = HttpHeadersPattern(headersMap)
         val requestPattern = HttpRequestPattern(
-            urlMatcher = urlMatcher, method = httpMethod, headersPattern = headersPattern
+            urlMatcher = urlMatcher, method = httpMethod, headersPattern = headersPattern, securitySchemes = operationSecuritySchemes
         )
 
         return when (operation.requestBody) {
@@ -445,6 +414,36 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 }
             }
         }
+    }
+
+    private fun operationSecuritySchemes(
+        operation: Operation,
+        contractSecuritySchemes: Map<String, OpenAPISecurityScheme>
+    ): List<OpenAPISecurityScheme> {
+        val globalSecurityRequirements: List<String> =
+            openApi.security?.map { it.keys.toList() }?.flatten() ?: emptyList()
+        val operationSecurityRequirements: List<String> =
+            operation.security?.map { it.keys.toList() }?.flatten() ?: emptyList()
+        val operationSecurityRequirementsSuperSet: List<String> =
+            globalSecurityRequirements.plus(operationSecurityRequirements).distinct()
+        val operationSecuritySchemes: List<OpenAPISecurityScheme> =
+            contractSecuritySchemes.filter { (name, scheme) -> name in operationSecurityRequirementsSuperSet }.values.toList()
+        return operationSecuritySchemes
+    }
+
+    private fun toSecurityScheme(securityScheme: SecurityScheme): OpenAPISecurityScheme {
+        if(securityScheme.scheme == BEARER_SECURITY_SCHEME)
+            return BearerSecurityScheme()
+
+        if(securityScheme.type == SecurityScheme.Type.APIKEY) {
+            if(securityScheme.`in` == SecurityScheme.In.HEADER)
+                return APIKeyInHeaderSecurityScheme(securityScheme.name)
+
+            if(securityScheme.`in` == SecurityScheme.In.QUERY)
+                return APIKeyInQueryParamSecurityScheme(securityScheme.name)
+        }
+
+        throw ContractException("Specmatic only supports bearer and api key authentication (header, query) security schemes at the moment")
     }
 
     private fun unsupportedApiKeyAuth(securityScheme: Pair<String, SecurityScheme>): Boolean {

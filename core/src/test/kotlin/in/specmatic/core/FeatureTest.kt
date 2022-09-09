@@ -214,7 +214,7 @@ class FeatureTest {
             In scenario "Get account balance"
             API: GET /balance -> 200
             
-              >> REQUEST.URL.QUERY-PARAMS.account-id
+              >> REQUEST.QUERY-PARAMS.account-id
               
                  Expected number, actual was "abc"
             """.trimIndent())

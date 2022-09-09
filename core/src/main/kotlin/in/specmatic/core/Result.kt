@@ -6,7 +6,7 @@ import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.Value
 
 sealed class Result {
-    var scenario: Scenario? = null
+    var scenario: ScenarioDetailsForResult? = null
     var contractPath: String? = null
 
     companion object {
@@ -39,7 +39,7 @@ sealed class Result {
         }
     }
 
-    fun updateScenario(scenario: Scenario): Result {
+    fun updateScenario(scenario: ScenarioDetailsForResult): Result {
         this.scenario = scenario
         return this
     }

@@ -4,7 +4,7 @@ import org.apache.commons.lang3.BooleanUtils
 
 object Flags {
     private const val customResponseName = "CUSTOM_RESPONSE"
-    const val negativeTestingFlag = "ENABLE_NEGATIVE_TESTING"
+    const val negativeTestingFlag = "SPECMATIC_GENERATIVE_TESTS"
 
     fun customResponse(): Boolean {
         return System.getenv(customResponseName) == "true" || System.getProperty(customResponseName) == "true"

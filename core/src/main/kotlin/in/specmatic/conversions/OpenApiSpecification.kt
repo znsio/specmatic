@@ -228,7 +228,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         when {
                             requestExamples.isNotEmpty() -> Row(
                                 requestExamples.keys.toList(),
-                                requestExamples.values.toList().map { it.toString() })
+                                requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" })
                             else -> Row()
                         }
                     }
@@ -239,8 +239,28 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         val scenarioName =
                             scenarioName(operation, response, httpRequestPattern, null)
 
+                        val scenarioDetails = object: ScenarioDetailsForResult {
+                            override val ignoreFailure: Boolean
+                                get() = false
+                            override val name: String
+                                get() = scenarioName
+                            override val method: String
+                                get() = httpRequestPattern.method ?: ""
+                            override val path: String
+                                get() = httpRequestPattern.urlMatcher?.path ?: ""
+                            override val status: Int
+                                get() = httpResponsePattern.status
+                            override val requestTestDescription: String
+                                get() = httpRequestPattern.testDescription()
+                        }
+
                         specmaticExampleRows.forEach { row ->
-                            httpRequestPattern.newBasedOn(row, Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch))
+                            scenarioBreadCrumb(scenarioDetails) {
+                                httpRequestPattern.newBasedOn(
+                                    row,
+                                    Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch)
+                                )
+                            }
                         }
 
                         val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")

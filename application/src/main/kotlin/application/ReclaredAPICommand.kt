@@ -2,7 +2,6 @@ package application
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Feature
-import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.log.logger
@@ -15,11 +14,6 @@ import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.io.File
 import java.util.concurrent.Callable
-
-fun fetchAllContracts(git: GitCommand): List<Pair<Feature, String>> =
-    listOfAllContractFiles(File(git.gitRoot())).mapNotNull {
-        loadContractData(it)
-    }
 
 fun fetchAllContracts(directory: String): List<Pair<Feature, String>> =
     listOfAllContractFiles(File(directory)).mapNotNull {
@@ -115,9 +109,6 @@ class ReDeclaredAPICommand: Callable<Unit> {
             logger.log("Count of APIs re-declared: ${reDeclarations.size}")
         }
     }
-
-    @CommandLine.Option(names = ["--entire-repo"], description = ["Check all contracts for redeclaration instead of a single contract"], defaultValue = "false")
-    var entireRepo: Boolean = false
 
     override fun call() {
         CommandLine(GitCompatibleCommand()).usage(System.out)

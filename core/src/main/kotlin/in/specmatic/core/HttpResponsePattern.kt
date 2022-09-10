@@ -23,6 +23,19 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         }
     }
 
+    fun generateResponseWithAll(resolver: Resolver): HttpResponse {
+        return attempt(breadCrumb = "RESPONSE") {
+            val value = softCastValueToXML(body.generateWithAll(resolver))
+            val headers = headersPattern.generateWithAll(resolver).plus(SPECMATIC_RESULT_HEADER to "success").let { headers ->
+                when {
+                    !headers.containsKey("Content-Type") -> headers.plus("Content-Type" to value.httpContentType)
+                    else -> headers
+                }
+            }
+            HttpResponse(status, headers, value)
+        }
+    }
+
     fun matches(response: HttpResponse, resolver: Resolver): Result {
         val result = response to resolver to
                 ::matchStatus then

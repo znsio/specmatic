@@ -2,7 +2,6 @@ package application
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Feature
-import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.log.logger
@@ -15,11 +14,6 @@ import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.io.File
 import java.util.concurrent.Callable
-
-fun fetchAllContracts(git: GitCommand): List<Pair<Feature, String>> =
-    listOfAllContractFiles(File(git.gitRoot())).mapNotNull {
-        loadContractData(it)
-    }
 
 fun fetchAllContracts(directory: String): List<Pair<Feature, String>> =
     listOfAllContractFiles(File(directory)).mapNotNull {
@@ -69,11 +63,13 @@ class ReDeclaredAPICommand: Callable<Unit> {
     }
 
     @CommandLine.Command(name = "entire-repo", description = ["Check all contracts in the repo for re-declarations"])
-    fun entireRepo(@Option(names = ["--json"]) json: Boolean, @Option(names = ["--baseDirectory"]) suppliedBaseDirectory: String? = null, @Option(names = ["--systemLevel"]) systemLevel: Int = 0): Int {
+    fun entireRepo(@Option(names = ["--json"]) json: Boolean, @Option(names = ["--baseDirectory"]) suppliedBaseDirectory: String? = null, @Option(names = ["--systemLevel"]) systemLevel: Int = 0, @Option(names = ["--ignoreAPI"]) ignoreAPIs: List<String> = emptyList()): Int {
         val baseDirectory = suppliedBaseDirectory ?: SystemGit().gitRoot()
         val contracts: List<Pair<Feature, String>> = fetchAllContracts(baseDirectory)
 
-        val reDeclarations = findReDeclarationsAmongstContracts(contracts, baseDirectory, systemLevel)
+        val reDeclarations: Map<String, List<String>> = findReDeclarationsAmongstContracts(contracts, baseDirectory, systemLevel).filterKeys {
+            it !in ignoreAPIs
+        }
 
         logRedeclarations(json, reDeclarations)
 
@@ -87,8 +83,12 @@ class ReDeclaredAPICommand: Callable<Unit> {
         json: Boolean,
         reDeclarations: Map<String, List<String>>
     ) {
+        val sorted = reDeclarations.entries.sortedBy { (api, _) ->
+            api
+        }
+
         if (json) {
-            val reDeclarationsJSON = JSONArrayValue(reDeclarations.map { (api, files) ->
+            val reDeclarationsJSON = JSONArrayValue(sorted.map { (api, files) ->
                 val jsonFileList = JSONArrayValue(files.map { StringValue(it) })
                 JSONObjectValue(mapOf("api" to StringValue(api), "files" to jsonFileList))
             })
@@ -100,7 +100,7 @@ class ReDeclaredAPICommand: Callable<Unit> {
                 logger.newLine()
             }
 
-            reDeclarations.forEach { (newPath, contracts) ->
+            sorted.forEach { (newPath, contracts) ->
                 logger.log(newPath)
                 logger.log(contracts.joinToString("\n"))
                 logger.newLine()
@@ -110,15 +110,12 @@ class ReDeclaredAPICommand: Callable<Unit> {
         }
     }
 
-    @CommandLine.Option(names = ["--entire-repo"], description = ["Check all contracts for redeclaration instead of a single contract"], defaultValue = "false")
-    var entireRepo: Boolean = false
-
     override fun call() {
         CommandLine(GitCompatibleCommand()).usage(System.out)
     }
 }
 
-data class ReDeclarations(val apiURLPath: String, val contractsContainingAPI: List<String>)
+data class APIReDeclarations(val apiURLPath: String, val contractsContainingAPI: List<String>)
 
 fun findReDeclarationsAmongstContracts(contracts: List<Pair<Feature, String>>, baseDirectory: String = "", systemLevel: Int = 0): Map<String, List<String>> {
     val declarations = contracts.flatMap { (feature, filePath) ->
@@ -152,7 +149,7 @@ fun findReDeclarationsAmongstContracts(contracts: List<Pair<Feature, String>>, b
 
 fun findReDeclaredContracts(
     contractToCheck: ContractToCheck,
-): List<ReDeclarations> {
+): List<APIReDeclarations> {
     val paths: List<String> = contractToCheck.getPathsInContract() ?: emptyList()
     val contracts: List<Pair<Feature, String>> = contractToCheck.fetchAllOtherContracts()
 
@@ -162,7 +159,7 @@ fun findReDeclaredContracts(
 fun findRedeclarations(
     newPaths: List<String>,
     contracts: List<Pair<Feature, String>>
-): List<ReDeclarations> {
+): List<APIReDeclarations> {
     val newPathToContractMap = newPaths.map { newPath ->
         val matchingContracts = contracts.filter { (feature, _) ->
             feature.scenarios.map { it.httpRequestPattern.urlMatcher!!.path }.any { scenarioPath ->
@@ -170,7 +167,7 @@ fun findRedeclarations(
             }
         }.map { it.second }
 
-        ReDeclarations(newPath, matchingContracts)
+        APIReDeclarations(newPath, matchingContracts)
     }
 
     return newPathToContractMap

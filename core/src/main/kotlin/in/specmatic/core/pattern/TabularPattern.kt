@@ -57,6 +57,17 @@ data class TabularPattern(
         })
     }
 
+    override fun generateWithAll(resolver: Resolver): Value {
+        return attempt(breadCrumb = "HEADERS") {
+            JSONObjectValue(pattern.filterNot { it.key == "..." }.mapKeys {
+                attempt(breadCrumb = it.key) {
+                    withoutOptionality(it.key)
+                }
+            }.mapValues {
+                it.value.generateWithAll(resolver)
+            })
+        }
+    }
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
         return allOrNothingCombinationIn(pattern) { pattern ->

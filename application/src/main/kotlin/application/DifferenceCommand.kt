@@ -5,23 +5,19 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.log.logException
 import `in`.specmatic.core.pattern.ContractException
 import picocli.CommandLine.Command
-import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
-@Command(name = "compare",
+@Command(name = "similar",
         mixinStandardHelpOptions = true,
-        description = ["Checks if two contracts are equivalent"])
-class CompareCommand : Callable<Unit> {
+        description = ["Show the difference between two contracts"])
+class DifferenceCommand : Callable<Unit> {
     @Parameters(index = "0", description = ["Older contract file path"])
     lateinit var olderContractFilePath: String
 
     @Parameters(index = "1", description = ["Newer contract file path"])
     lateinit var newerContractFilePath: String
-
-    @Option(names = ["--mirror"], required = false)
-    var mirror: Boolean = false
 
     override fun call() {
         if(!olderContractFilePath.isContractFile()) {
@@ -38,30 +34,21 @@ class CompareCommand : Callable<Unit> {
             val olderContract = olderContractFilePath.loadContract()
             val newerContract = newerContractFilePath.loadContract()
 
-            if(mirror)
-                logger.log("Comparing older with newer...")
-            val report = backwardCompatible(olderContract, newerContract)
+            val report = difference(olderContract, newerContract)
             println(report.message())
-
-            if(!mirror)
-                exitProcess(report.exitCode)
-
-            logger.newLine()
-            logger.log("Comparing newer with older...")
-            val mirrorReport = backwardCompatible(newerContract, olderContract)
-            println(mirrorReport.message())
+            exitProcess(report.exitCode)
         }
     }
 }
 
-fun backwardCompatible(olderContract: Feature, newerContract: Feature): CompatibilityReport =
+fun difference(olderContract: Feature, newerContract: Feature): CompatibilityReport =
         try {
-            testBackwardCompatibility(olderContract, newerContract).let { results ->
+            findDifferences(olderContract, newerContract).let { results ->
                 when {
                     results.failureCount > 0 -> {
-                        IncompatibleReport(results)
+                        IncompatibleReport(results, "The two contracts are not similar.")
                     }
-                    else -> CompatibleReport()
+                    else -> CompatibleReport("The two contracts are similar.")
                 }
             }
         } catch(e: ContractException) {

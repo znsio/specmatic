@@ -12,6 +12,13 @@ fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results 
     }.distinct()
 }
 
+fun findDifferences(older: Feature, newerBehaviour: Feature): Results {
+    return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
+        val scenarioResults: List<Result> = findDifferences(olderScenario, newerBehaviour)
+        results.copy(results = results.results.plus(scenarioResults))
+    }.distinct()
+}
+
 class BackwardCompatibilityTest(private val olderScenario: Scenario, private val newerContract: Feature) {
     val name: String
         get() {
@@ -48,25 +55,26 @@ fun testBackwardCompatibility(
         try {
             val request = oldScenario.generateHttpRequest()
 
-            val wholeMatchResults: List<Pair<Result, Result>> = newFeature.backwardCompatibleLookup(request).map { (scenario, result) ->
-                Pair(scenario, result.updateScenario(scenario))
-            }.filterNot { (_, result) ->
-                result is Result.Failure && result.isFluffy()
-            }.map { (newerScenario, requestResult) ->
-                val newerResponsePattern = newerScenario.httpResponsePattern
-                val responseResult = oldScenario.httpResponsePattern.encompasses(
-                    newerResponsePattern,
-                    oldScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
-                    newerScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
-                ).also {
-                    it.scenario = newerScenario
-                }
+            val wholeMatchResults: List<Pair<Result, Result>> =
+                newFeature.backwardCompatibleLookup(request).map { (scenario, result) ->
+                    Pair(scenario, result.updateScenario(scenario))
+                }.filterNot { (_, result) ->
+                    result is Result.Failure && result.isFluffy()
+                }.mapNotNull { (newerScenario, requestResult) ->
+                    val newerResponsePattern = newerScenario.httpResponsePattern
+                    val responseResult = oldScenario.httpResponsePattern.encompasses(
+                        newerResponsePattern,
+                        oldScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
+                        newerScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
+                    ).also {
+                        it.scenario = newerScenario
+                    }
 
-                if(responseResult.isFluffy())
-                    null
-                else
-                    Pair(requestResult, responseResult)
-            }.filterNotNull()
+                    if (responseResult.isFluffy())
+                        null
+                    else
+                        Pair(requestResult, responseResult)
+                }
 
             if(wholeMatchResults.isEmpty())
                 listOf(Result.Failure("""This API exists in the old contract but not in the new contract""").updateScenario(oldScenario))
@@ -85,6 +93,88 @@ fun testBackwardCompatibility(
             listOf(Result.Failure("Exception: ${throwable.localizedMessage}"))
         }
     }
+}
+
+fun findDifferences(
+    oldScenario: Scenario,
+    newFeature_: Feature
+): List<Result> {
+    val newFeature = newFeature_.copy()
+
+    return if (oldScenario.kafkaMessagePattern != null) {
+        val scenarioMatchResults =
+            newFeature.lookupKafkaScenario(oldScenario.kafkaMessagePattern, oldScenario.resolver)
+
+        val result = Results(scenarioMatchResults.map { it.second }.toMutableList()).toResultIfAny()
+
+        listOf(result)
+    } else {
+        newFeature.setServerState(oldScenario.expectedFacts)
+
+        try {
+            val request = oldScenario.generateHttpRequest()
+
+            val wholeMatchResults: List<Pair<Result, Result>> =
+                newFeature.backwardCompatibleLookup(request).map { (scenario, result) ->
+                    Pair(scenario, result.updateScenario(scenario))
+                }.filterNot { (_, result) ->
+                    result is Result.Failure && result.isFluffy()
+                }.mapNotNull { (newerScenario, requestResult) ->
+                    val newerResponsePattern = newerScenario.httpResponsePattern
+                    val newerResponse = newerResponsePattern.generateResponseWithAll(newerScenario.resolver)
+
+                    val responseResult = oldScenario.httpResponsePattern.matches(newerResponse, oldScenario.resolver.copy(mismatchMessages = ContractResponseComparisonMismatches))
+
+                    if (responseResult.isFluffy())
+                        null
+                    else
+                        Pair(requestResult, responseResult)
+                }
+
+            if(wholeMatchResults.isEmpty())
+                listOf(Result.Failure("""This API exists in the old contract but not in the new contract""").updateScenario(oldScenario))
+            else if (wholeMatchResults.any { it.first is Result.Success && it.second is Result.Success })
+                listOf(Result.Success())
+            else {
+                wholeMatchResults.map {
+                    val failures: List<Result.Failure> = it.toList().filterIsInstance<Result.Failure>()
+                    Result.fromFailures(failures).updateScenario(oldScenario)
+                }
+            }
+        } catch (contractException: ContractException) {
+            listOf(contractException.failure())
+        } catch (stackOverFlowException: StackOverflowError) {
+            listOf(Result.Failure("Exception: Stack overflow error, most likely caused by a recursive definition. Please report this with a sample contract as a bug!"))
+        } catch (throwable: Throwable) {
+            listOf(Result.Failure("Exception: ${throwable.localizedMessage}"))
+        }
+    }
+}
+
+object ContractResponseComparisonMismatches : MismatchMessages {
+    override fun valueMismatchFailure(expected: String, actual: Value?, mismatchMessages: MismatchMessages): Result.Failure {
+        return mismatchResult(expected, nullOrValue(actual), mismatchMessages)
+    }
+
+    private fun nullOrValue(actual: Value?): String {
+        return when (actual) {
+            is NullValue -> "nullable"
+            else -> actual?.type()?.typeName ?: "null"
+        }
+    }
+
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "  This is $expected in the old contract, $actual in the new contract."
+    }
+
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        return "  The newer contract didn't have $keyLabel $keyName."
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        return "  The older contract had $keyLabel $keyName, which is missing in the new contract."
+    }
+
 }
 
 object NewAndOldContractRequestMismatches: MismatchMessages {

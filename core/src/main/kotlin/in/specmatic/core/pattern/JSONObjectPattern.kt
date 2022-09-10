@@ -37,6 +37,18 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         }
     }
 
+    override fun generateWithAll(resolver: Resolver): Value {
+        return attempt(breadCrumb = "HEADERS") {
+            JSONObjectValue(pattern.filterNot { it.key == "..." }.mapKeys {
+                attempt(breadCrumb = it.key) {
+                    withoutOptionality(it.key)
+                }
+            }.mapValues {
+                it.value.generateWithAll(resolver)
+            })
+        }
+    }
+
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return JSONArrayValue(valueList)
     }

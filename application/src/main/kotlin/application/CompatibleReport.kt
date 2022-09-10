@@ -1,8 +1,8 @@
 package application
 
-object CompatibleReport: CompatibilityReport {
+class CompatibleReport(val msg: String = "The newer contract is backward compatible."): CompatibilityReport {
     override fun message(): String {
-        return "The newer contract is backward compatible."
+        return msg
     }
 
     override val exitCode: Int = 0

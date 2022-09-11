@@ -35,7 +35,7 @@ then
 	echo To fix this, commit all changes, then trigger the release again.
 	exit 1
 else
-	echo √ Working tree is clean
+	echo √ All files have been committed
 fi
 
 if [ -z "$1" ]

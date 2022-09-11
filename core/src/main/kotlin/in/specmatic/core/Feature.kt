@@ -267,13 +267,6 @@ data class Feature(
             ScenarioTest(it, Flags.generativeTestingEnabled())
         }
 
-    private fun has4xx(scenario: Scenario): Boolean {
-        return scenarios.any {
-            it.httpRequestPattern.urlMatcher!!.path == scenario.httpRequestPattern.urlMatcher!!.path
-                    && it.httpResponsePattern.status.toString().startsWith("4")
-        }
-    }
-
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
         val badRequestResponses = scenarios.filter {
             it.httpRequestPattern.urlMatcher!!.path == scenario.httpRequestPattern.urlMatcher!!.path

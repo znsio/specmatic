@@ -6,13 +6,15 @@ object Flags {
     private const val customResponseName = "CUSTOM_RESPONSE"
     const val negativeTestingFlag = "SPECMATIC_GENERATIVE_TESTS"
 
-    fun customResponse(): Boolean {
-        return System.getenv(customResponseName) == "true" || System.getProperty(customResponseName) == "true"
+    private fun flagValue(flagName: String): String? {
+        return System.getenv(flagName) ?: System.getProperty(flagName)
     }
 
-    fun negativeTestingEnabled(): Boolean {
-        return BooleanUtils.toBoolean(
-            System.getenv(negativeTestingFlag) ?: System.getProperty(negativeTestingFlag) ?: "false"
-        )
+    fun customResponse(): Boolean {
+        return flagValue(customResponseName) == "true"
+    }
+
+    fun generativeTestingEnabled(): Boolean {
+        return BooleanUtils.toBoolean(flagValue(negativeTestingFlag) ?: "false")
     }
 }

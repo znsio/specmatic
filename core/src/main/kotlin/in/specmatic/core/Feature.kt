@@ -80,7 +80,7 @@ data class Feature(
     val testVariables: Map<String, String> = emptyMap(),
     val testBaseURLs: Map<String, String> = emptyMap(),
     val path: String = "",
-    val enableNegativeTesting: Boolean = Flags.negativeTestingEnabled()
+    val generativeTestingEnabled: Boolean = Flags.generativeTestingEnabled()
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
@@ -293,14 +293,14 @@ data class Feature(
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
         val negativeScenarios =
-            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(suggestions, has4xx(it), getBadRequestsOrDefault(it)) }.flatMap {
+            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(getBadRequestsOrDefault(it)) }.flatMap {
                 it.generateTestScenarios(testVariables, testBaseURLs)
             }
         val positiveScenarios =
             scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
                 it.newBasedOn(suggestions)
             }.flatMap {
-                it.generateTestScenarios(testVariables, testBaseURLs, enableNegativeTesting)
+                it.generateTestScenarios(testVariables, testBaseURLs, generativeTestingEnabled)
             }
         val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->
             positiveScenarios.filter { it.isA2xxScenario() }.none {
@@ -310,7 +310,7 @@ data class Feature(
                 ) is Result.Success
             }
         }
-        return if (enableNegativeTesting)
+        return if (generativeTestingEnabled)
             positiveScenarios + negativeScenariosToConsider
         else
             positiveScenarios

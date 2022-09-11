@@ -498,7 +498,7 @@ data class Scenario(
 
     fun newBasedOn(scenario: Scenario): Scenario =
         Scenario(
-            if(Flags.negativeTestingEnabled()) "+ve: ${this.name}" else this.name,
+            if(Flags.generativeTestingEnabled()) "+ve: ${this.name}" else this.name,
             this.httpRequestPattern,
             this.httpResponsePattern,
             this.expectedFacts,
@@ -517,7 +517,7 @@ data class Scenario(
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
-    fun negativeBasedOn(suggestions: List<Scenario>, is4xxDefined: Boolean = false, badRequestOrDefault: BadRequestOrDefault?) = Scenario(
+    fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?) = Scenario(
         "-ve: ${this.name}",
         this.httpRequestPattern,
         this.httpResponsePattern,

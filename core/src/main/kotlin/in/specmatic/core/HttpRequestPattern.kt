@@ -6,7 +6,6 @@ import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
-import java.net.URI
 
 private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
 private const val FORM_FIELDS_BREADCRUMB = "FORM-FIELDS"
@@ -385,7 +384,7 @@ data class HttpRequestPattern(
                         if(result is Failure)
                             throw ContractException(result.toFailureReport())
 
-                        if(Flags.negativeTestingEnabled()) {
+                        if(Flags.generativeTestingEnabled()) {
                             val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
 
                             val requestsFromFlattenedRow: List<Pattern> =
@@ -397,7 +396,7 @@ data class HttpRequestPattern(
                         }
                     } else {
 
-                        if(Flags.negativeTestingEnabled()) {
+                        if(Flags.generativeTestingEnabled()) {
                             val vanilla = body.newBasedOn(Row(), resolver)
                             val fromExamples = body.newBasedOn(row, resolver)
                             val remainingVanilla = vanilla.filterNot { vanillaType ->

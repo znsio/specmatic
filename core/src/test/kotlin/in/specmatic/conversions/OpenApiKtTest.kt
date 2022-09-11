@@ -226,7 +226,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.copy(enableNegativeTesting = true).executeTests(
+        val results = feature.copy(generativeTestingEnabled = true).executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["${request.path} executed"] = true
@@ -282,7 +282,7 @@ Background:
         val results = try {
             System.setProperty(Flags.negativeTestingFlag, "true")
 
-            feature.copy(enableNegativeTesting = true).executeTests(
+            feature.copy(generativeTestingEnabled = true).executeTests(
                 object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         flags["${request.path} executed"] = true
@@ -333,7 +333,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.copy(enableNegativeTesting = true).executeTests(
+        val results = feature.copy(generativeTestingEnabled = true).executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["${request.path} executed"] = true
@@ -1050,7 +1050,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.copy(enableNegativeTesting = false).executeTests(
+        val results = feature.copy(generativeTestingEnabled = false).executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val flagKey = "${request.path} ${request.method} executed"
@@ -1405,7 +1405,7 @@ Scenario: zero should return not found
         try {
             System.setProperty(Flags.negativeTestingFlag, "true")
 
-            val results: Results = feature.copy(enableNegativeTesting = true).executeTests(object : TestExecutor {
+            val results: Results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
                     if(jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
@@ -1440,7 +1440,7 @@ Scenario: zero should return not found
         try {
             System.setProperty(Flags.negativeTestingFlag, "true")
 
-            val results: Results = feature.copy(enableNegativeTesting = true).executeTests(object : TestExecutor {
+            val results: Results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
                     if(jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)

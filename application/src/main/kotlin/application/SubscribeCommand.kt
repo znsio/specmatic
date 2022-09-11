@@ -1,5 +1,6 @@
 package application
 
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.git.NonZeroExitError
@@ -15,7 +16,7 @@ import kotlin.system.exitProcess
 class SubscribeCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
-        val workingDirectory = userHome.resolve(".$CONTRACT_EXTENSION/repos")
+        val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
         val manifestFile = File(globalConfigFileName)
         val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }

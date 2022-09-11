@@ -2,6 +2,7 @@
 
 package application
 
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import picocli.CommandLine
@@ -114,7 +115,7 @@ class TestBundle(private val _bundlePath: String?, private val config: Specmatic
 
 @CommandLine.Command(name = "bundle",
         mixinStandardHelpOptions = true,
-        description = ["Generate a zip file of all stub contracts in $CONTRACT_EXTENSION.json"])
+        description = ["Generate a zip file of all stub contracts in $APPLICATION_NAME_LOWER_CASE.json"])
 class BundleCommand : Callable<Unit> {
     @CommandLine.Option(names = ["--bundlePath"], description = ["Path in which to create the bundle"], required = false)
     var bundlePath: String? = null

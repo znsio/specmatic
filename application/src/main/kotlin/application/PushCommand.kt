@@ -22,7 +22,7 @@ private const val pipelineKeyInQontracConfig = "pipeline"
 class PushCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
-        val workingDirectory = userHome.resolve(".$CONTRACT_EXTENSION/repos")
+        val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
         val manifestFile = File(globalConfigFileName)
         val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }

@@ -1,6 +1,7 @@
 package application
 
 import com.ninjasquad.springmockk.MockkBean
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -31,14 +32,14 @@ internal class BundleCommandTest {
     @Test
     fun `the command should compress all stub commands in the config into a zip file`() {
         val file = mockk<File>()
-        val contractPath = "/Users/jane_doe/.$CONTRACT_EXTENSION/repos/git-repo/com/example/api_1.$CONTRACT_EXTENSION"
+        val contractPath = "/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/com/example/api_1.$CONTRACT_EXTENSION"
         val bytes = "123".encodeToByteArray()
 
-        every { specmaticConfig.contractStubPathData() }.returns(listOf(ContractPathData("/Users/jane_doe/.$CONTRACT_EXTENSION/repos/git-repo/", contractPath)))
+        every { specmaticConfig.contractStubPathData() }.returns(listOf(ContractPathData("/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/", contractPath)))
         every { fileOperations.readBytes(contractPath) }.returns(bytes)
 
         val files = listOf(file)
-        val stubFilePath = "/Users/jane_doe/.$CONTRACT_EXTENSION/repos/git-repo/com/example/api_1_data/stub.json"
+        val stubFilePath = "/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/com/example/api_1_data/stub.json"
 
         every { file.isFile } returns(true)
         every { file.name } returns("stub.json")
@@ -46,7 +47,7 @@ internal class BundleCommandTest {
         every { fileOperations.isJSONFile(file) } returns(true)
         every { fileOperations.readBytes(stubFilePath) }.returns(bytes)
 
-        every { fileOperations.files("/Users/jane_doe/.$CONTRACT_EXTENSION/repos/git-repo/com/example/api_1_data") }.returns(files)
+        every { fileOperations.files("/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/com/example/api_1_data") }.returns(files)
         justRun { zipper.compress("./bundle.zip", listOf(ZipperEntry("git-repo/com/example/api_1.$CONTRACT_EXTENSION", bytes), ZipperEntry("git-repo/com/example/api_1_data/stub.json", bytes))) }
 
         CommandLine(bundleCommand, factory).execute()

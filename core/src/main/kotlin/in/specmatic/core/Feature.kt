@@ -300,7 +300,7 @@ data class Feature(
             scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
                 it.newBasedOn(suggestions)
             }.flatMap {
-                it.generateTestScenarios(testVariables, testBaseURLs)
+                it.generateTestScenarios(testVariables, testBaseURLs, enableNegativeTesting)
             }
         val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->
             positiveScenarios.filter { it.isA2xxScenario() }.none {

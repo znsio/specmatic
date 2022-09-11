@@ -70,7 +70,7 @@ data class TabularPattern(
     }
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
-        return allOrNothingCombinationIn(pattern) { pattern ->
+        return allOrNothingCombinationIn(pattern, if(resolver.enableNegativeTesting) Row() else row) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
         }.map {
             toTabularPattern(it.mapKeys { (key, _) ->
@@ -284,10 +284,14 @@ fun <ValueType> forEachKeyCombinationIn(
 
 fun <ValueType> allOrNothingCombinationIn(
     patternMap: Map<String, ValueType>,
+    row: Row = Row(),
     creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
 ): List<Map<String, ValueType>> {
     val keyLists = if (patternMap.keys.any { isOptional(it) }) {
-        listOf(patternMap.keys, patternMap.keys.filter { k -> !isOptional(k) })
+        val nothingList: Set<String> = patternMap.keys.filter { k -> !isOptional(k) || row.containsField(withoutOptionality(k)) }.toSet()
+        val allList: Set<String> = patternMap.keys
+
+        listOf(allList, nothingList).distinct()
     } else {
         listOf(patternMap.keys)
     }

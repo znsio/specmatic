@@ -1,0 +1,28 @@
+openapi: 3.0.1
+info:
+  title: Test
+  version: 1.0.0
+paths:
+  /data:
+    post:
+      summary: Test
+      description: Test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: integer
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Test
+          content:
+            text/plain:
+              schema:
+                type: string

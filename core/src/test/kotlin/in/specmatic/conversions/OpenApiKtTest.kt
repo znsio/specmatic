@@ -1027,7 +1027,7 @@ Background:
             }
         )
 
-        assertThat(flags["/pets POST executed"]).isEqualTo(2)
+        assertThat(flags["/pets POST executed"]).isEqualTo(1)
         assertThat(flags["/pets GET executed"]).isEqualTo(12)
         assertThat(flags["/petIds GET executed"]).isEqualTo(4)
         assertThat(flags["/pets/0 GET executed"]).isEqualTo(1)

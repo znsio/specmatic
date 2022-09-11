@@ -84,8 +84,7 @@ Examples:
         })
 
         assertThat(optionals).contains(10)
-        assertThat(optionals).contains(0)
-        assertThat(optionals).hasSize(2)
+        assertThat(optionals).hasSize(1)
         assertTrue(results.success(), results.report())
     }
 

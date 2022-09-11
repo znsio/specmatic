@@ -70,7 +70,7 @@ data class TabularPattern(
     }
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
-        return allOrNothingCombinationIn(pattern, if(resolver.enableNegativeTesting) Row() else row) { pattern ->
+        return allOrNothingCombinationIn(pattern, if(resolver.generativeTestingEnabled) Row() else row) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
         }.map {
             toTabularPattern(it.mapKeys { (key, _) ->

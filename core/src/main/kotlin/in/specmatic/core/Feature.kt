@@ -264,7 +264,7 @@ data class Feature(
 
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
         generateContractTestScenarios(suggestions).map {
-            ScenarioTest(it)
+            ScenarioTest(it, Flags.generativeTestingEnabled())
         }
 
     private fun has4xx(scenario: Scenario): Boolean {

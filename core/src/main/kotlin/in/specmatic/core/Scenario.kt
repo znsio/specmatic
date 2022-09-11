@@ -260,8 +260,8 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, enableNegativeTesting: Boolean = false): List<Scenario> {
-        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndRowValueMismatch, enableNegativeTesting = enableNegativeTesting)
+    private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false): List<Scenario> {
+        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndRowValueMismatch, generativeTestingEnabled = generativeTestingEnabled)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
@@ -379,7 +379,8 @@ data class Scenario(
 
     fun generateContractTests(
         variables: Map<String, String> = emptyMap(),
-        testBaseURLs: Map<String, String> = emptyMap()
+        testBaseURLs: Map<String, String> = emptyMap(),
+        generativeTestingEnabled: Boolean = false
     ): List<ContractTest> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -395,7 +396,7 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 try {
-                    newBasedOn(row).map { ScenarioTest(it) }
+                    newBasedOn(row, generativeTestingEnabled).map { ScenarioTest(it, generativeTestingEnabled) }
                 } catch (e: Throwable) {
                     listOf(ScenarioTestGenerationFailure(this, e))
                 }

@@ -6,12 +6,12 @@ import `in`.specmatic.stub.testKafkaMessages
 import kotlin.system.exitProcess
 import `in`.specmatic.core.executeTest
 
-class ScenarioTest(val scenario: Scenario) : ContractTest {
+class ScenarioTest(val scenario: Scenario, private val generativeTestingEnabled: Boolean = false) : ContractTest {
     override fun generateTestScenarios(
         testVariables: Map<String, String>,
         testBaseURLs: Map<String, String>
     ): List<ContractTest> {
-        return scenario.generateContractTests(testVariables, testBaseURLs)
+        return scenario.generateContractTests(testVariables, testBaseURLs, generativeTestingEnabled)
     }
 
     override fun testDescription(): String {

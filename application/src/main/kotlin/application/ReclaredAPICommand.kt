@@ -12,6 +12,7 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import picocli.CommandLine
 import picocli.CommandLine.Option
+import picocli.CommandLine.defaultFactory
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -63,12 +64,14 @@ class ReDeclaredAPICommand: Callable<Unit> {
     }
 
     @CommandLine.Command(name = "entire-repo", description = ["Check all contracts in the repo for re-declarations"])
-    fun entireRepo(@Option(names = ["--json"]) json: Boolean, @Option(names = ["--baseDirectory"]) suppliedBaseDirectory: String? = null, @Option(names = ["--systemLevel"]) systemLevel: Int = 0, @Option(names = ["--ignoreAPI"]) ignoreAPIs: List<String> = emptyList()): Int {
+    fun entireRepo(@Option(names = ["--json"]) json: Boolean, @Option(names = ["--baseDirectory"]) suppliedBaseDirectory: String? = null, @Option(names = ["--systemLevel"]) systemLevel: Int = 0, @Option(names = ["--ignoreAPI"]) ignoreAPIs: List<String>? = emptyList()): Int {
         val baseDirectory = suppliedBaseDirectory ?: SystemGit().gitRoot()
         val contracts: List<Pair<Feature, String>> = fetchAllContracts(baseDirectory)
 
+        val ignorableAPIs = ignoreAPIs ?: emptyList()
+
         val reDeclarations: Map<String, List<String>> = findReDeclarationsAmongstContracts(contracts, baseDirectory, systemLevel).filterKeys {
-            it !in ignoreAPIs
+            it !in ignorableAPIs
         }
 
         logRedeclarations(json, reDeclarations)

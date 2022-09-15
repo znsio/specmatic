@@ -24,4 +24,5 @@ interface GitCommand {
     fun inGitRootOf(contractPath: String): GitCommand
     fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit
     fun exists(treeish: String, relativePath: String): Boolean
+    fun getCurrentBranch(): String
 }

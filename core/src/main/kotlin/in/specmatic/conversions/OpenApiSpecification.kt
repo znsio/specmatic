@@ -62,7 +62,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 parseResult.messages.filterNotNull().let {
                     if(it.isNotEmpty()) {
                         val parserMessages = parseResult.messages.joinToString(System.lineSeparator())
-                        logger.log("Parser errors:\n${parserMessages.prependIndent("  ")}")
+                        logger.log("Error parsing file $filePath")
+                        logger.log(parserMessages.prependIndent("  "))
                     }
                 }
 
@@ -76,6 +77,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     val patterns = mutableMapOf<String, Pattern>()
+
+    fun isOpenAPI31(): Boolean {
+        return openApi.openapi.startsWith("3.1")
+    }
 
     fun toFeature(): Feature {
         val name = File(openApiFile).name

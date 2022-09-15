@@ -5,6 +5,8 @@ import `in`.specmatic.core.git.GitCommand
 import java.io.File
 
 class ContractToCheck(private val contractFile: CanonicalFile, private val git: GitCommand) {
+    val path: String = contractFile.path
+
     constructor(contractFilePath: String, git: GitCommand): this(CanonicalFile(contractFilePath), git)
 
     fun fetchAllOtherContracts(): List<Pair<Feature, String>> =
@@ -14,5 +16,5 @@ class ContractToCheck(private val contractFile: CanonicalFile, private val git: 
             loadContractData(it)
         }
 
-    fun getPathsInContract(): List<String>? = urlPaths(contractFile.readText())
+    fun getPathsInContract(): List<String>? = urlPaths(contractFile.readText(), contractFile.file.canonicalPath)
 }

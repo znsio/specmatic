@@ -12,7 +12,6 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import picocli.CommandLine
 import picocli.CommandLine.Option
-import picocli.CommandLine.defaultFactory
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -72,6 +71,27 @@ class ReDeclaredAPICommand: Callable<Unit> {
 
         val reDeclarations: Map<String, List<String>> = findReDeclarationsAmongstContracts(contracts, baseDirectory, systemLevel).filterKeys {
             it !in ignorableAPIs
+        }
+
+        logRedeclarations(json, reDeclarations)
+
+        return if(reDeclarations.isNotEmpty())
+            1
+        else
+            0
+    }
+
+    @CommandLine.Command(name = "branch", description = ["Check all new or updated contracts in the branch for re-declarations"])
+    fun branch(@Option(names = ["--json"]) json: Boolean, @Option(names = ["--main-branch"], defaultValue = "master") mainBranch: String): Int {
+        val relativePaths = SystemGit().getChangesFromMainBranch(mainBranch).filter { File(it).exists() }.filter { it.endsWith("yaml") }
+        val reDeclarations = relativePaths.flatMap {
+            findReDeclaredContracts(ContractToCheck(it, SystemGit()))
+        }.groupBy {
+            it.apiURLPath
+        }.mapValues {
+            it.value.flatMap { it.contractsContainingAPI }.distinct()
+        }.filter {
+            it.value.size > 1
         }
 
         logRedeclarations(json, reDeclarations)
@@ -153,10 +173,15 @@ fun findReDeclarationsAmongstContracts(contracts: List<Pair<Feature, String>>, b
 fun findReDeclaredContracts(
     contractToCheck: ContractToCheck,
 ): List<APIReDeclarations> {
-    val paths: List<String> = contractToCheck.getPathsInContract() ?: emptyList()
-    val contracts: List<Pair<Feature, String>> = contractToCheck.fetchAllOtherContracts()
+    return try {
+        val paths: List<String> = contractToCheck.getPathsInContract() ?: emptyList()
+        val contracts: List<Pair<Feature, String>> = contractToCheck.fetchAllOtherContracts()
 
-    return findRedeclarations(paths, contracts)
+        findRedeclarations(paths, contracts)
+    } catch(e: Throwable) {
+        logger.log("Unhandled exception caught when parsing contract contra${contractToCheck.path}")
+        emptyList()
+    }
 }
 
 fun findRedeclarations(
@@ -176,9 +201,15 @@ fun findRedeclarations(
     return newPathToContractMap
 }
 
-fun urlPaths(newerContractYaml: String): List<String>? {
+fun urlPaths(newerContractYaml: String, contractPath: String): List<String>? {
     return try {
-        val newContract = OpenApiSpecification.fromYAML(newerContractYaml, "").toFeature()
+        val specification = OpenApiSpecification.fromYAML(newerContractYaml, contractPath)
+        if(specification.isOpenAPI31()) {
+            logger.log("$contractPath is written using OpenAPI 3.1, which is not yet supported")
+            return emptyList()
+        }
+
+        val newContract = specification.toFeature()
         pathsFromFeature(newContract)
     } catch(e: ContractException) {
         logger.debug(exceptionCauseMessage(e))

@@ -5,6 +5,13 @@ import `in`.specmatic.core.git.SystemGit
 import java.io.File
 
 abstract class FakeGit: GitCommand {
+    override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit {
+        TODO("Not yet implemented")
+    }
+    override fun getCurrentBranch(): String {
+        TODO("Not yet implemented")
+    }
+
     override fun add(): SystemGit {
         TODO("Not yet implemented")
     }

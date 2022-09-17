@@ -9,13 +9,18 @@ import java.util.concurrent.Callable
 
 @CommandLine.Command(name = "merge", description = ["Merge the specified contracts"], mixinStandardHelpOptions = true)
 class MergeCommand: Callable<Unit> {
-    @CommandLine.Parameters(index = "0..*")
+    @CommandLine.Parameters
     var contractFiles: List<File> = emptyList()
 
     @CommandLine.Option(names = ["--merged-contract"])
     var outputFile: File = File("new-contract.yaml")
 
     override fun call() {
+        if(contractFiles.isEmpty()) {
+            logger.log("No contracts were specified.")
+            return
+        }
+
         val contracts: List<Feature> = contractFiles.map {
             try {
                 parseContract(it.readText(), it.canonicalPath)
@@ -26,7 +31,7 @@ class MergeCommand: Callable<Unit> {
             }
         }
 
-        val mergedFeature = Feature(scenarios = contracts.flatMap { it.scenarios }, name = "New Contract")
+        val mergedFeature = Feature(scenarios = contracts.flatMap { it.scenarios }, name = contracts.first().name)
         val openApi = mergedFeature.toOpenApi()
 
         logger.log("Writing merged contract file to ${outputFile.path}")

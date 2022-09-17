@@ -111,26 +111,39 @@ class ReDeclaredAPICommand: Callable<Unit> {
         }
 
         if (json) {
-            val reDeclarationsJSON = JSONArrayValue(sorted.map { (api, files) ->
-                val jsonFileList = JSONArrayValue(files.map { StringValue(it) })
-                JSONObjectValue(mapOf("api" to StringValue(api), "files" to jsonFileList))
-            })
-
-            logger.log(JSONArrayLogMessage(reDeclarationsJSON))
+            printJSON(sorted)
         } else {
-            if (reDeclarations.isNotEmpty()) {
-                logger.log("Some APIs have been declared in multiple files.")
-                logger.newLine()
-            }
-
-            sorted.forEach { (newPath, contracts) ->
-                logger.log(newPath)
-                logger.log(contracts.joinToString("\n"))
-                logger.newLine()
-            }
-
-            logger.log("Count of APIs re-declared: ${reDeclarations.size}")
+            printText(reDeclarations, sorted)
         }
+    }
+
+    private fun printText(
+        reDeclarations: Map<String, List<String>>,
+        sorted: List<Map.Entry<String, List<String>>>
+    ) {
+        if (reDeclarations.isNotEmpty()) {
+            logger.log("Some APIs have been declared in multiple files.")
+            logger.newLine()
+        }
+
+        sorted.forEach { (newPath, contracts) ->
+            logger.log(newPath)
+            logger.log(contracts.joinToString("\n"))
+            if(contracts.map { File(it).readText() }.distinct().size == 1)
+                logger.log("NOTE: These files are exact duplicates")
+            logger.newLine()
+        }
+
+        logger.log("Count of APIs re-declared: ${reDeclarations.size}")
+    }
+
+    private fun printJSON(sorted: List<Map.Entry<String, List<String>>>) {
+        val reDeclarationsJSON = JSONArrayValue(sorted.map { (api, files) ->
+            val jsonFileList = JSONArrayValue(files.map { StringValue(it) })
+            JSONObjectValue(mapOf("api" to StringValue(api), "files" to jsonFileList))
+        })
+
+        logger.log(JSONArrayLogMessage(reDeclarationsJSON))
     }
 
     override fun call() {

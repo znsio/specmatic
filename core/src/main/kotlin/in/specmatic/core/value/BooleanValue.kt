@@ -24,6 +24,9 @@ data class BooleanValue(val booleanValue: Boolean) : Value, ScalarValue {
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
             primitiveTypeDeclarationWithoutKey(exampleKey, types, exampleDeclarations, displayableType(), booleanValue.toString())
 
+    override val nativeValue: Boolean
+        get() = booleanValue
+
     override fun toString() = booleanValue.toString()
 }
 

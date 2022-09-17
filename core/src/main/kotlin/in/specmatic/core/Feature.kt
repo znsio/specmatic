@@ -1154,8 +1154,16 @@ data class Feature(
             pattern is PatternInStringPattern -> {
                 StringSchema()
             }
+            pattern is AnyPattern && pattern.pattern.map { it.javaClass }.distinct().size == 1 && pattern.pattern.filterIsInstance<ExactValuePattern>().map { it.pattern }.filterIsInstance<ScalarValue>().isNotEmpty() && pattern.pattern.first() is ExactValuePattern -> {
+                val specmaticType = (pattern.pattern.first() as ExactValuePattern).pattern.type()
+                val values = pattern.pattern.filterIsInstance<ExactValuePattern>().map { it.pattern }.filterIsInstance<ScalarValue>().map { it.nativeValue }
+
+                toOpenApiSchema(specmaticType).also {
+                    it.enum = values
+                }
+            }
             else ->
-                TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}")
+                TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}, ${pattern.javaClass.name}")
         }
 
         return schema as Schema<Any>;

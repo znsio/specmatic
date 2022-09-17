@@ -24,5 +24,8 @@ object NullValue : Value, ScalarValue {
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
             primitiveTypeDeclarationWithoutKey(exampleKey, types, exampleDeclarations, displayableType(), "(null)")
 
+    override val nativeValue: Any?
+        get() = null
+
     override fun toString() = ""
 }

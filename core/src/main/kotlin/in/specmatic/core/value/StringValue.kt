@@ -43,6 +43,9 @@ data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
             primitiveTypeDeclarationWithoutKey(exampleKey, types, exampleDeclarations, displayableType(), string)
 
+    override val nativeValue: String
+        get() = string
+
     override fun toString() = string
 
     fun isPatternToken(): Boolean = isPatternToken(string.trim())

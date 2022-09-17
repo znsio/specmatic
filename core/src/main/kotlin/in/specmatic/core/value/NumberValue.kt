@@ -24,5 +24,8 @@ data class NumberValue(val number: Number) : Value, ScalarValue {
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> =
             primitiveTypeDeclarationWithoutKey(exampleKey, types, exampleDeclarations, displayableType(), number.toString())
 
+    override val nativeValue: Number
+        get() = number
+
     override fun toString() = number.toString()
 }

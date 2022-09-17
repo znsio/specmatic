@@ -17,7 +17,13 @@ class MergeCommand: Callable<Unit> {
 
     override fun call() {
         val contracts: List<Feature> = contractFiles.map {
-            parseContract(it.readText(), it.canonicalPath)
+            try {
+                parseContract(it.readText(), it.canonicalPath)
+            } catch(e: Throwable) {
+                println("Exception loading contract ${it.canonicalPath}")
+                e.printStackTrace()
+                return
+            }
         }
 
         val mergedFeature = Feature(scenarios = contracts.flatMap { it.scenarios }, name = "New Contract")

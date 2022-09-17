@@ -794,7 +794,8 @@ data class Feature(
         val schemas: Map<String, Pattern> = payloadAdjustedScenarios.map {
             it.patterns.entries
         }.flatten().fold(emptyMap<String, Pattern>()) { acc, entry ->
-            val key = withoutPatternDelimiters(entry.key).trimEnd('_')
+//            val key = withoutPatternDelimiters(entry.key).trimEnd('_')
+            val key = withoutPatternDelimiters(entry.key)
 
             if (acc.contains(key) && isObjectType(acc.getValue(key))) {
                 val converged: Map<String, Pattern> = objectStructure(acc.getValue(key))
@@ -1084,7 +1085,8 @@ data class Feature(
                 innerPattern as DeferredPattern
 
                 val typeSchema = Schema<Any>().apply {
-                    this.`$ref` = withoutPatternDelimiters(innerPattern.pattern).trimEnd('_')
+//                    this.`$ref` = withoutPatternDelimiters(innerPattern.pattern).trimEnd('_')
+                    this.`$ref` = withoutPatternDelimiters(innerPattern.pattern)
                 }
 
                 nullableSchemaAsOneOf(typeSchema)
@@ -1129,7 +1131,8 @@ data class Feature(
                 this.nullable = true
             }
             pattern is DeferredPattern -> Schema<Any>().apply {
-                this.`$ref` = withoutPatternDelimiters(pattern.pattern).trimEnd('_')
+//                this.`$ref` = withoutPatternDelimiters(pattern.pattern).trimEnd('_')
+                this.`$ref` = withoutPatternDelimiters(pattern.pattern)
             }
             pattern is JSONArrayPattern && pattern.pattern.isEmpty() ->
                 ArraySchema().apply {
@@ -1191,7 +1194,8 @@ data class Feature(
         if (builtInPatterns.contains(type))
             schema.type = cleanedUpType
         else
-            schema.`$ref` = cleanedUpType.trimEnd('_')
+//            schema.`$ref` = cleanedUpType.trimEnd('_')
+            schema.`$ref` = cleanedUpType
     }
 
     private fun isArrayOrNull(pattern: Pattern): Boolean =

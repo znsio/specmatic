@@ -8,10 +8,10 @@
     <types>
         <schema targetNamespace="http://example.com/stockquote.xsd"
                 xmlns="http://www.w3.org/2000/10/XMLSchema">
-            <element name="TradePriceRequest">
+            <element name="TradePriceRequest" >
                 <complexType>
                     <all>
-                        <element name="tickerSymbol" type="string"/>
+                        <element name="tickerSymbol" type="string" nillable="true"/>
                     </all>
                 </complexType>
             </element>

@@ -29,5 +29,4 @@ internal class ParseMessageStructureFromWSDLTypeTest {
 
         assertThat(parsed).isEqualTo(expected)
     }
-
 }

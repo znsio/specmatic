@@ -31,6 +31,11 @@ fun getQontractAttributes(element: XMLNode): Map<String, StringValue> {
         elementIsOptional(element) -> mapOf(OCCURS_ATTRIBUTE_NAME to StringValue(OPTIONAL_ATTRIBUTE_VALUE))
         multipleElementsCanExist(element) -> mapOf(OCCURS_ATTRIBUTE_NAME to StringValue(MULTIPLE_ATTRIBUTE_VALUE))
         else -> emptyMap()
+    }.let {
+        if(element.attributes["nillable"]?.toStringLiteral()?.lowercase() == "true")
+            it.plus(NILLABLE_ATTRIBUTE_NAME to StringValue("true"))
+        else
+            it
     }
 }
 

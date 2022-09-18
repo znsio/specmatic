@@ -4,7 +4,7 @@ Feature: StockQuoteService
         Given type GetLastTradePriceInput
         """
         <SPECMATIC_TYPE>
-            <tickerSymbol>(string)</tickerSymbol>
+            <tickerSymbol specmatic_nillable="true">(string)</tickerSymbol>
         </SPECMATIC_TYPE>
         """
         And type GetLastTradePriceOutput

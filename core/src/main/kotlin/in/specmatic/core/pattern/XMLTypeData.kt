@@ -2,10 +2,7 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.XMLNode
-import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
-import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
-import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME_LEGACY
-import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
+import `in`.specmatic.core.wsdl.parser.message.*
 
 data class XMLTypeData(val name: String = "", val realName: String, val attributes: Map<String, Pattern> = emptyMap(), val nodes: List<Pattern> = emptyList()) {
     fun getAttributeValue(name: String): String? =
@@ -69,6 +66,12 @@ data class XMLTypeData(val name: String = "", val realName: String, val attribut
             "optional" -> NodeOccurrence.Optional
             "multiple" -> NodeOccurrence.Multiple
             else -> NodeOccurrence.Once
+        }
+    }
+
+    fun isNillable(): Boolean {
+        return attributes[NILLABLE_ATTRIBUTE_NAME].let {
+            it is ExactValuePattern && it.pattern.toStringLiteral().lowercase() == "true"
         }
     }
 }

@@ -1004,4 +1004,16 @@ internal class XMLPatternTest {
 
         assertThat(matchResult).isInstanceOf(Result.Success::class.java)
     }
+
+    @Test
+    fun `a nillable node should match a node with no child nodes`() {
+        val type = XMLPattern("<account specmatic_nillable=\"true\"><id>(number)</id></account>")
+        val value = toXMLNode("""<account />""")
+
+        val matchResult = type.matches(value, Resolver())
+
+        println(matchResult.reportString())
+
+        assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+    }
 }

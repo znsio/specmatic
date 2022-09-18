@@ -102,6 +102,11 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         if (sampleData !is XMLNode)
             return Failure("Expected xml, got ${sampleData?.displayableType()}").breadCrumb(pattern.name)
 
+        if(pattern.isNillable()) {
+            if(sampleData.childNodes.isEmpty())
+                return Success()
+        }
+
         val matchingType = if (this.pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)) {
             val typeName = this.pattern.getAttributeValue(TYPE_ATTRIBUTE_NAME)
             val xmlType = (resolver.getPattern("($typeName)") as XMLPattern)

@@ -435,10 +435,17 @@ data class HttpRequestPattern(
                                     multiPartFormDataPattern = newFormDataPartList
                                 )
 
-                                when(securitySchemes) {
-                                    emptyList<OpenAPISecurityScheme>() -> listOf(newRequestPattern)
-                                    else -> securitySchemes.map {
-                                        newRequestPattern.copy(securitySchemes = listOf(it))
+                                if(securitySchemes.isEmpty()) {
+                                    listOf(newRequestPattern)
+                                } else {
+                                    val schemeInRow = securitySchemes.find { it.isInRow(row) }
+
+                                    if(schemeInRow != null) {
+                                        listOf(schemeInRow.addTo(newRequestPattern, row))
+                                    } else {
+                                        securitySchemes.map {
+                                            newRequestPattern.copy(securitySchemes = listOf(it))
+                                        }
                                     }
                                 }
                             }

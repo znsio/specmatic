@@ -38,7 +38,7 @@ dependencies {
     implementation "org.testcontainers:testcontainers:$testcontainers_version"
     implementation "org.testcontainers:kafka:$testcontainers_version"
 
-    implementation 'org.apache.kafka:kafka-clients:3.2.1'
+    implementation 'org.apache.kafka:kafka-clients:3.2.3'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.4'
 
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.2'

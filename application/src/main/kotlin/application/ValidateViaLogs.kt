@@ -14,12 +14,12 @@ import java.io.File
 import java.net.URI
 import java.util.concurrent.Callable
 
-@CommandLine.Command(name = "validate-for-stubs", mixinStandardHelpOptions = true)
-class ValidateForStubs : Callable<Unit> {
+@CommandLine.Command(name = "validate-via-logs", description = ["Validate a contract against log files to ensure that the contract matches all valid logs, stubs and requests"], mixinStandardHelpOptions = true)
+class ValidateViaLogs : Callable<Unit> {
     @CommandLine.Parameters(index = "0", description = ["Contract path"])
     lateinit var contractPath: String
 
-    @CommandLine.Parameters(index = "1", description = ["Log dir path"])
+    @CommandLine.Parameters(index = "1", description = ["Log directory path"])
     lateinit var logDirPath: String
 
     @CommandLine.Parameters(index = "2", description = ["urlPathFilter"])
@@ -40,9 +40,7 @@ class ValidateForStubs : Callable<Unit> {
                     "/_specmatic/expectations",
                     "/_qontract/expectations"
                 ) -> {
-                    log.findFirstChildByPath("http-request.body.http-request.path")?.let { stubRequestPathLog ->
-                        stubFromExpectationLog(log, stubRequestPathLog, urlMatchers)
-                    }
+                    stubFromExpectationLog(log, urlMatchers)
                 }
                 null -> null
                 else -> {
@@ -86,18 +84,24 @@ class ValidateForStubs : Callable<Unit> {
 
     private fun stubFromExpectationLog(
         log: JSONObjectValue,
-        stubRequestPathLog: Value,
         urlMatchers: List<Pair<URLMatcher, Resolver>>
     ): Pair<ScenarioStub, ScenarioStub>? {
-        return if (log.findFirstChildByPath("http-response.status")?.toStringLiteral() == "200")
-            stubFromExpectationLog(stubRequestPathLog, log, urlMatchers)?.let {
-                Pair(
-                    mockFromJSON(log.jsonObject),
-                    it
-                )
-            }
-        else
-            null
+        val status = log.findFirstChildByPath("http-response.status")?.toStringLiteral()
+
+        if(status != "200")
+            return null
+
+        log.findFirstChildByPath("http-request.body.http-request.path")?.let { stubRequestPathLog ->
+            if (log.findFirstChildByPath("http-response.status")?.toStringLiteral() == "200")
+                return stubFromExpectationLog(stubRequestPathLog, log, urlMatchers)?.let {
+                    Pair(
+                        mockFromJSON(log.jsonObject),
+                        it
+                    )
+                }
+        }
+
+        return null
     }
 
     private fun stubFromExpectationLog(
@@ -122,6 +126,12 @@ class ValidateForStubs : Callable<Unit> {
         urlMatchers: List<Pair<URLMatcher, Resolver>>,
         log: JSONObjectValue
     ): ScenarioStub? {
+        val headers = log.findFirstChildByPath("http-response.headers") as JSONObjectValue?
+        val specmaticResult = headers?.jsonObject?.get("X-Specmatic-Result")?.toStringLiteral()
+
+        if(specmaticResult != "success")
+            return null
+
         if (urlMatchers.any { (matcher, resolver) ->
                 matcher.matches(HttpRequest(path = path), resolver) is Result.Success
             })

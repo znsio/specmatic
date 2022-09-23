@@ -242,7 +242,7 @@ class WSDLConversionTests {
             Feature: simpleService
             
                 Scenario: SimpleOperation
-                    Given type SimpleOperationInput
+                    Given type SimpleOperation_SOAPPayload_Input
                     ""${'"'}
                     <SPECMATIC_TYPE>
                       <Id>(number)</Id>
@@ -256,7 +256,7 @@ class WSDLConversionTests {
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
                       <soapenv:Header specmatic_occurs="optional"/>
                       <soapenv:Body>
-                        <Person specmatic_type="SimpleOperationInput"/>
+                        <Person specmatic_type="SimpleOperation_SOAPPayload_Input"/>
                       </soapenv:Body>
                     </soapenv:Envelope>
                     ""${'"'}
@@ -338,7 +338,7 @@ class WSDLConversionTests {
             Feature: simpleService
             
                 Scenario: SimpleOperation
-                    Given type SimpleOperationInput
+                    Given type SimpleOperation_SOAPPayload_Input
                     ""${'"'}
                     <SPECMATIC_TYPE>
                       <Id>(number)</Id>
@@ -352,7 +352,7 @@ class WSDLConversionTests {
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
                       <soapenv:Header specmatic_occurs="optional"/>
                       <soapenv:Body>
-                        <SimpleRequest specmatic_type="SimpleOperationInput"/>
+                        <SimpleRequest specmatic_type="SimpleOperation_SOAPPayload_Input"/>
                       </soapenv:Body>
                     </soapenv:Envelope>
                     ""${'"'}
@@ -535,7 +535,7 @@ class WSDLConversionTests {
             Feature: simpleService
             
                 Scenario: SimpleOperation
-                    Given type SimpleOperationInput
+                    Given type SimpleOperation_SOAPPayload_Input
                     ""${'"'}
                     <SPECMATIC_TYPE>
                       <Id>(number)</Id>
@@ -549,7 +549,7 @@ class WSDLConversionTests {
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
                       <soapenv:Header specmatic_occurs="optional"/>
                       <soapenv:Body>
-                        <SimpleRequest specmatic_type="SimpleOperationInput"/>
+                        <SimpleRequest specmatic_type="SimpleOperation_SOAPPayload_Input"/>
                       </soapenv:Body>
                     </soapenv:Envelope>
                     ""${'"'}
@@ -577,7 +577,7 @@ class WSDLConversionTests {
                 Feature: simpleService
                 
                     Scenario: SimpleOperation
-                        Given type SimpleOperationInput
+                        Given type SimpleOperation_SOAPPayload_Input
                         ""${'"'}
                         <SPECMATIC_TYPE>
                           <Id>(number)</Id>
@@ -591,7 +591,7 @@ class WSDLConversionTests {
                         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
                           <soapenv:Header specmatic_occurs="optional"/>
                           <soapenv:Body>
-                            <SimpleRequest specmatic_type="SimpleOperationInput"/>
+                            <SimpleRequest specmatic_type="SimpleOperation_SOAPPayload_Input"/>
                           </soapenv:Body>
                         </soapenv:Envelope>
                         ""${'"'}
@@ -692,7 +692,7 @@ class WSDLConversionTests {
                           <Name>(string)</Name>
                         </SPECMATIC_TYPE>
                         ""${'"'}
-                        And type SimpleOperationInput
+                        And type SimpleOperation_SOAPPayload_Input
                         ""${'"'}
                         <SPECMATIC_TYPE>
                           <Person specmatic_type="qr_PersonType" specmatic_occurs="multiple"/>
@@ -705,7 +705,7 @@ class WSDLConversionTests {
                         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
                           <soapenv:Header specmatic_occurs="optional"/>
                           <soapenv:Body>
-                            <SimpleRequest specmatic_type="SimpleOperationInput"/>
+                            <SimpleRequest specmatic_type="SimpleOperation_SOAPPayload_Input"/>
                           </soapenv:Body>
                         </soapenv:Envelope>
                         ""${'"'}
@@ -740,7 +740,7 @@ class WSDLConversionTests {
                           <Name>(string)</Name>
                         </SPECMATIC_TYPE>
                         ""${'"'}
-                        And type SimpleOperationInput
+                        And type SimpleOperation_SOAPPayload_Input
                         ""${'"'}
                         <SPECMATIC_TYPE>
                           <Person specmatic_type="qr_PersonType" specmatic_occurs="optional"/>
@@ -753,7 +753,7 @@ class WSDLConversionTests {
                         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
                           <soapenv:Header specmatic_occurs="optional"/>
                           <soapenv:Body>
-                            <SimpleRequest specmatic_type="SimpleOperationInput"/>
+                            <SimpleRequest specmatic_type="SimpleOperation_SOAPPayload_Input"/>
                           </soapenv:Body>
                         </soapenv:Envelope>
                         ""${'"'}
@@ -989,7 +989,7 @@ class WSDLConversionTests {
             Feature: simpleService
             
                 Scenario: SimpleOperation
-                    Given type SimpleOperationInput
+                    Given type SimpleOperation_SOAPPayload_Input
                     ""${'"'}
                     <SPECMATIC_TYPE>
                       <Id>(number)</Id>
@@ -1003,7 +1003,7 @@ class WSDLConversionTests {
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
                       <soapenv:Header specmatic_occurs="optional"/>
                       <soapenv:Body>
-                        <SimpleRequest specmatic_type="SimpleOperationInput"/>
+                        <SimpleRequest specmatic_type="SimpleOperation_SOAPPayload_Input"/>
                       </soapenv:Body>
                     </soapenv:Envelope>
                     ""${'"'}
@@ -1101,7 +1101,7 @@ class WSDLConversionTests {
                       <last>(string)</last>
                     </SPECMATIC_TYPE>
                     ""${'"'}
-                    And type SimpleOperationInput
+                    And type SimpleOperation_SOAPPayload_Input
                     ""${'"'}
                     <SPECMATIC_TYPE>
                       <Id>(number)</Id>
@@ -1115,7 +1115,7 @@ class WSDLConversionTests {
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
                       <soapenv:Header specmatic_occurs="optional"/>
                       <soapenv:Body>
-                        <SimpleRequest specmatic_type="SimpleOperationInput"/>
+                        <SimpleRequest specmatic_type="SimpleOperation_SOAPPayload_Input"/>
                       </soapenv:Body>
                     </soapenv:Envelope>
                     ""${'"'}

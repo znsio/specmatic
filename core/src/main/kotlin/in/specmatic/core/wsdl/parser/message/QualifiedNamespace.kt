@@ -1,9 +1,11 @@
 package `in`.specmatic.core.wsdl.parser.message
 
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.XMLNode
 import `in`.specmatic.core.value.localName
 import `in`.specmatic.core.value.namespacePrefix
 import `in`.specmatic.core.wsdl.parser.WSDL
+import `in`.specmatic.core.wsdl.parser.namespaceOrSchemaNamespace
 
 class QualifiedNamespace(
     val element: XMLNode,
@@ -37,7 +39,7 @@ class QualifiedNamespace(
                 element.fullyQualifiedName(wsdl)
             }
 
-            val mappedPrefix = wsdl.mapNamespaceToPrefix(fullyQualifiedName.namespace)
+            val mappedPrefix = wsdl.mapNamespaceToPrefix(namespaceOrSchemaNamespace(fullyQualifiedName.namespace, schema) ?: throw ContractException("Could not find namespace prefix for $nodeName"))
 
             return "${mappedPrefix}:${nodeName.localName()}"
         }

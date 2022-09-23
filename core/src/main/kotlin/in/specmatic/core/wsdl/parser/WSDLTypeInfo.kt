@@ -15,6 +15,14 @@ data class WSDLTypeInfo(val nodes: List<XMLValue> = emptyList(), val types: Map<
         }
     }
 
+    fun plus(otherWSDLTypeInfo: WSDLTypeInfo): WSDLTypeInfo {
+        return WSDLTypeInfo(
+            this.nodes.plus(otherWSDLTypeInfo.nodes),
+            this.types.plus(otherWSDLTypeInfo.types),
+            this.namespacePrefixes.plus(otherWSDLTypeInfo.namespacePrefixes)
+        )
+    }
+
     val nodeTypeInfo: XMLNode
         get() {
             return XMLNode(TYPE_NODE_NAME, emptyMap(), nodes)

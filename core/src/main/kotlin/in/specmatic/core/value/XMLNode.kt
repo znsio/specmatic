@@ -82,7 +82,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         }
     }
 
-    override fun addSchema(schema: XMLNode): XMLValue {
+    override fun addSchema(schema: XMLNode): XMLNode {
         return copy(schema = schema, childNodes = childNodes.map {
             it.addSchema(schema)
         })

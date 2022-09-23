@@ -25,7 +25,7 @@ internal class ParseMessageStructureFromWSDLTypeTest {
                 <tickerSymbol specmatic_nillable="true">(string)</tickerSymbol>
             </$TYPE_NODE_NAME>
         """.trimIndent())
-        val expected = MessageTypeProcessingComplete(SoapPayloadType(mapOf("GetLastTradePriceInput" to xmlType), ComplexTypedSOAPPayload(SOAPMessageType.Input, "TradePriceRequest", "GetLastTradePriceInput", emptyMap())))
+        val expected = MessageTypeProcessingComplete(SoapPayloadType(mapOf("GetLastTradePrice_SOAPPayload_Input" to xmlType), ComplexTypedSOAPPayload(SOAPMessageType.Input, "TradePriceRequest", "GetLastTradePrice_SOAPPayload_Input", emptyMap())))
 
         assertThat(parsed).isEqualTo(expected)
     }

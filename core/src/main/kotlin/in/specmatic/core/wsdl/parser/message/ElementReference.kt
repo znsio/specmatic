@@ -9,8 +9,9 @@ data class ElementReference(val child: XMLNode, val wsdl: WSDL) : ChildElementTy
         val fullyQualifiedName = child.fullyQualifiedNameFromAttribute("ref")
         val qontractTypeName = wsdlTypeReference.replace(':', '_')
 
-        val resolvedChild = wsdl.getSOAPElement(fullyQualifiedName)
-//        val resolvedChild = wsdl.getSOAPElement(wsdlTypeReference)
+        val otherRefAttributes = child.attributes.minus("ref")
+
+        val resolvedChild = wsdl.getSOAPElement(fullyQualifiedName, child.schema, otherRefAttributes)
         return Pair(qontractTypeName, resolvedChild)
     }
 }

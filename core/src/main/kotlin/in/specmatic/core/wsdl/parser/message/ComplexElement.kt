@@ -60,15 +60,6 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
     private fun eliminateAnnotations(childNodes: List<XMLNode>) =
         childNodes.filterNot { it.name == "annotation" }
 
-    private fun complexTypeChildNode(child: XMLNode, wsdl: WSDL, parentTypeName: String): ComplexTypeChild {
-        return when(child.name) {
-            "element" -> ElementInComplexType(child, wsdl, parentTypeName)
-            "sequence", "all" -> CollectionOfChildrenInComplexType(child, wsdl, parentTypeName)
-            "complexContent" -> ComplexTypeExtension(child, wsdl, parentTypeName)
-            else -> throw ContractException("Couldn't recognize child node $child")
-        }
-    }
-
     override fun getSOAPPayload(
         soapMessageType: SOAPMessageType,
         nodeNameForSOAPBody: String,
@@ -96,11 +87,12 @@ internal fun generateChildren(parentTypeName: String, complexType: XMLNode, exis
 private fun eliminateAnnotations(childNodes: List<XMLNode>) =
     childNodes.filterNot { it.name == "annotation" }
 
-private fun complexTypeChildNode(child: XMLNode, wsdl: WSDL, parentTypeName: String): ComplexTypeChild {
+fun complexTypeChildNode(child: XMLNode, wsdl: WSDL, parentTypeName: String): ComplexTypeChild {
     return when(child.name) {
         "element" -> ElementInComplexType(child, wsdl, parentTypeName)
         "sequence", "all" -> CollectionOfChildrenInComplexType(child, wsdl, parentTypeName)
         "complexContent" -> ComplexTypeExtension(child, wsdl, parentTypeName)
+        "simpleContent" -> SimpleTypeExtension(child, wsdl)
         else -> throw ContractException("Couldn't recognize child node $child")
     }
 }

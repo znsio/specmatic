@@ -13,7 +13,7 @@ data class ParseMessageWithElementRef(private val wsdl: WSDL, private val fullyQ
     override fun execute(): MessageTypeInfoParser {
         val topLevelElement = wsdl.getSOAPElement(fullyQualifiedName)
 
-        val qontractTypeName = "${operationName.replace(":", "_")}${soapMessageType.messageTypeName.capitalizeFirstChar()}"
+        val qontractTypeName = "${operationName.replace(":", "_")}_SOAPPayload_${soapMessageType.messageTypeName.capitalizeFirstChar()}"
 
         val typeInfo = topLevelElement.getGherkinTypes(qontractTypeName, existingTypes, emptySet())
 

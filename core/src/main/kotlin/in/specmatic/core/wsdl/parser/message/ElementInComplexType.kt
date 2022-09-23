@@ -19,6 +19,7 @@ class ElementInComplexType(
 
         val newList: List<XMLValue> = wsdlTypeInfo.nodes.plus(typeInfo.nodes)
         val newTypes = wsdlTypeInfo.types.plus(typeInfo.types)
+
         return WSDLTypeInfo(newList, newTypes, typeInfo.namespacePrefixes)
     }
 }

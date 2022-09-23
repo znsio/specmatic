@@ -5,10 +5,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.core.wsdl.parser.WSDL
-import java.io.File
 
 class WSDLTest {
     @Test
@@ -16,13 +14,12 @@ class WSDLTest {
         val (wsdlContent, expectedGherkin) = readContracts("stockquote")
 
         val wsdl = WSDL(toXMLNode(wsdlContent), "")
+        val gherkinFromWSDL: String = wsdl.convertToGherkin().trim()
+        val featureFromWSDL = parseGherkinStringToFeature(gherkinFromWSDL)
 
-        val generatedGherkin: String = wsdl.convertToGherkin().trim()
+        val featureFromExpectedGherkin = parseGherkinStringToFeature(expectedGherkin)
 
-        val expectedFeature = parseGherkinStringToFeature(generatedGherkin)
-        val generatedFeature = parseGherkinStringToFeature(expectedGherkin)
-
-        assertThat(generatedFeature).isEqualTo(expectedFeature)
+        assertThat(featureFromWSDL).isEqualTo(featureFromExpectedGherkin)
     }
 
     @Test

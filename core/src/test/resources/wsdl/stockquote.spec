@@ -1,13 +1,13 @@
 Feature: StockQuoteService
 
     Scenario: GetLastTradePrice
-        Given type GetLastTradePriceInput
+        Given type GetLastTradePrice_SOAPPayload_Input
         """
         <SPECMATIC_TYPE>
             <tickerSymbol specmatic_nillable="true">(string)</tickerSymbol>
         </SPECMATIC_TYPE>
         """
-        And type GetLastTradePriceOutput
+        And type GetLastTradePrice_SOAPPayload_Output
         """
         <SPECMATIC_TYPE>
             <price>(number)</price>
@@ -17,10 +17,10 @@ Feature: StockQuoteService
         And request-header SOAPAction "http://example.com/GetLastTradePrice"
         And request-body
         """
-        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><TradePriceRequest specmatic_type="GetLastTradePriceInput"/></soapenv:Body></soapenv:Envelope>
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><TradePriceRequest specmatic_type="GetLastTradePrice_SOAPPayload_Input"/></soapenv:Body></soapenv:Envelope>
         """
         Then status 200
         And response-body
         """
-        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><TradePrice specmatic_type="GetLastTradePriceOutput"/></soapenv:Body></soapenv:Envelope>
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><TradePrice specmatic_type="GetLastTradePrice_SOAPPayload_Output"/></soapenv:Body></soapenv:Envelope>
         """

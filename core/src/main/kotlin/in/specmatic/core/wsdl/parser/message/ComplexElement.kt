@@ -13,7 +13,7 @@ import `in`.specmatic.core.wsdl.payload.ComplexTypedSOAPPayload
 import `in`.specmatic.core.wsdl.payload.SOAPPayload
 
 data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL, val namespaceQualification: NamespaceQualification? = null): WSDLElement {
-    override fun getGherkinTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
+    override fun deriveSpecmaticTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
         if(qontractTypeName in typeStack)
             return WSDLTypeInfo(types = existingTypes)
 
@@ -33,7 +33,7 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
         val qualification = namespaceQualification ?: wsdl.getQualification(element, wsdlTypeReference)
 
         val inPlaceNode = toXMLNode("<${qualification.nodeName} $TYPE_ATTRIBUTE_NAME=\"$qontractTypeName\"/>").let {
-            it.copy(attributes = it.attributes.plus(getQontractAttributes(element)))
+            it.copy(attributes = it.attributes.plus(deriveSpecmaticAttributes(element)))
         }
 
         val types = existingTypes

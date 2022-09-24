@@ -15,7 +15,7 @@ class ElementInComplexType(
         val wsdlElement = wsdl.getWSDLElementType(parentTypeName, element)
         val (qontractTypeName, soapElement) = wsdlElement.getWSDLElement()
 
-        val typeInfo = soapElement.getGherkinTypes(qontractTypeName, existingTypes, typeStack)
+        val typeInfo = soapElement.deriveSpecmaticTypes(qontractTypeName, existingTypes, typeStack)
 
         val newList: List<XMLValue> = wsdlTypeInfo.nodes.plus(typeInfo.nodes)
         val newTypes = wsdlTypeInfo.types.plus(typeInfo.types)

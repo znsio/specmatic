@@ -19,7 +19,7 @@ internal class ComplexElementTest {
 
         val complexElement = ComplexElement("ns0:PersonRequest", element, mockk())
         val preExistingTypes = mapOf("Name" to XMLPattern("<name>(string)</name>"))
-        val wsdlTypeInfo = complexElement.getGherkinTypes("PersonRequest", preExistingTypes, setOf("PersonRequest"))
+        val wsdlTypeInfo = complexElement.deriveSpecmaticTypes("PersonRequest", preExistingTypes, setOf("PersonRequest"))
 
         assertThat(wsdlTypeInfo).isEqualTo(WSDLTypeInfo(types = preExistingTypes))
     }
@@ -47,7 +47,7 @@ internal class ComplexElementTest {
         } returns InlineType("TypeName", toXMLNode("<element name=\"data\" type=\"xsd:string\" />").withPrimitiveNamespace(), wsdl)
 
         val complexElement = ComplexElement("ns0:PersonRequest", element, wsdl)
-        val wsdlTypeInfo = complexElement.getGherkinTypes("PersonRequest", emptyMap(), emptySet())
+        val wsdlTypeInfo = complexElement.deriveSpecmaticTypes("PersonRequest", emptyMap(), emptySet())
 
         val expected = WSDLTypeInfo(listOf(toXMLNode("<Person $TYPE_ATTRIBUTE_NAME=\"PersonRequest\"/>")), mapOf("PersonRequest" to XMLPattern("<$TYPE_NODE_NAME><data>(string)</data></$TYPE_NODE_NAME>")))
         assertThat(wsdlTypeInfo).isEqualTo(expected)

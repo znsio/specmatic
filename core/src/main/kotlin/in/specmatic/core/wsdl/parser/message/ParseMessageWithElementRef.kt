@@ -15,7 +15,7 @@ data class ParseMessageWithElementRef(private val wsdl: WSDL, private val fullyQ
 
         val qontractTypeName = "${operationName.replace(":", "_")}_SOAPPayload_${soapMessageType.messageTypeName.capitalizeFirstChar()}"
 
-        val typeInfo = topLevelElement.getGherkinTypes(qontractTypeName, existingTypes, emptySet())
+        val typeInfo = topLevelElement.deriveSpecmaticTypes(qontractTypeName, existingTypes, emptySet())
 
         val namespaces: Map<String, String> = wsdl.getNamespaces(typeInfo)
         val nodeNameForSOAPBody = (typeInfo.nodes.first() as XMLNode).realName
@@ -26,7 +26,7 @@ data class ParseMessageWithElementRef(private val wsdl: WSDL, private val fullyQ
     }
 }
 
-fun getQontractAttributes(element: XMLNode): Map<String, StringValue> {
+fun deriveSpecmaticAttributes(element: XMLNode): Map<String, StringValue> {
     return when {
         elementIsOptional(element) -> mapOf(OCCURS_ATTRIBUTE_NAME to StringValue(OPTIONAL_ATTRIBUTE_VALUE))
         multipleElementsCanExist(element) -> mapOf(OCCURS_ATTRIBUTE_NAME to StringValue(MULTIPLE_ATTRIBUTE_VALUE))

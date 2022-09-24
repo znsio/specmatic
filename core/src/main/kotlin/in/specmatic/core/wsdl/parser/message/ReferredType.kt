@@ -25,12 +25,12 @@ data class ReferredType(val wsdlTypeReference: String, val element: XMLNode, val
           } ?: ComplexElement(wsdlTypeReference, element, wsdl)
       }
 
-    override fun getGherkinTypes(
+    override fun deriveSpecmaticTypes(
         qontractTypeName: String,
         existingTypes: Map<String, XMLPattern>,
         typeStack: Set<String>
     ): WSDLTypeInfo {
-        return elementType.getGherkinTypes(qontractTypeName, existingTypes, typeStack)
+        return elementType.deriveSpecmaticTypes(qontractTypeName, existingTypes, typeStack)
     }
 
     override fun getSOAPPayload(

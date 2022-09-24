@@ -13,7 +13,7 @@ import `in`.specmatic.core.wsdl.payload.SOAPPayload
 import `in`.specmatic.core.wsdl.payload.SimpleTypedSOAPPayload
 
 data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL) : WSDLElement {
-    override fun getGherkinTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
+    override fun deriveSpecmaticTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
         return createSimpleType(element, wsdl).let { (nodes, prefix) ->
             if(prefix != null) {
                 WSDLTypeInfo(nodes = nodes, existingTypes, setOf(prefix))
@@ -48,7 +48,7 @@ fun createSimpleType(element: XMLNode, wsdl: WSDL, actualElement: XMLNode? = nul
 
     val resolvedElement = actualElement ?: element
 
-    val qontractAttributes = getQontractAttributes(resolvedElement)
+    val qontractAttributes = deriveSpecmaticAttributes(resolvedElement)
     val fqname = resolvedElement.fullyQualifiedName(wsdl)
     val prefix = fqname.prefix.ifBlank { null }
 

@@ -66,6 +66,19 @@ internal class StringPatternTest {
         assertThat(result.reportString()).isEqualTo("""Expected string with maxLength 3, actual was "test"""")
     }
 
+    @Test
+    fun `should not match when String is not as per regular expression`() {
+        val result = StringPattern(regexPattern = "^[a-z]*$").matches(StringValue("Test"), Resolver())
+        assertThat(result.isSuccess()).isFalse
+        assertThat(result.reportString()).isEqualTo("""Expected string that matches regex /^[a-z]*$/, actual was "Test"""")
+    }
+
+    @Test
+    fun `should match when String is as per regular expression`() {
+        val result = StringPattern(regexPattern = "^[a-z]*$").matches(StringValue("test"), Resolver())
+        assertThat(result.isSuccess()).isTrue
+    }
+
     companion object {
         @JvmStatic
         fun lengthTestValues(): Stream<Arguments> {
@@ -86,10 +99,22 @@ internal class StringPatternTest {
 
     @ParameterizedTest
     @MethodSource("lengthTestValues")
-    fun `generate string value of appropriate length matching minLength and maxLength parameters`(min: Int?, max: Int?, length: Int) {
+    fun `generate string value of appropriate length matching minLength and maxLength parameters`(
+        min: Int?,
+        max: Int?,
+        length: Int
+    ) {
         val result = StringPattern(minLength = min, maxLength = max).generate(Resolver()) as StringValue
 
         assertThat(result.string.length).isEqualTo(length)
+    }
+
+    @Test
+    fun `generate string value as per regex pattern`() {
+        val result =
+            StringPattern(regexPattern = "^[0-8]*$", minLength = 8, maxLength = 11).generate(Resolver()) as StringValue
+        assertThat(Regex("^[0-8]*$").matches(result.toStringLiteral())).isTrue
+        assertThat(result.toStringLiteral().length).isBetween(8, 11)
     }
 
     @Test

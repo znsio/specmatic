@@ -12,7 +12,6 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
-import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -303,8 +302,7 @@ Background:
                     }
                 }
             )
-        }
-        finally {
+        } finally {
             System.clearProperty(Flags.negativeTestingFlag)
         }
 
@@ -762,7 +760,7 @@ Feature: Authenticated
         )
 
         val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object: TestExecutor {
+        val result = executeTest(contractTests.single(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers).containsEntry("X-API-KEY", "abc123")
                 return HttpResponse.OK("success")
@@ -797,7 +795,7 @@ Feature: Authenticated
         )
 
         val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object: TestExecutor {
+        val result = executeTest(contractTests.single(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers).containsEntry("Authorization", "Bearer abc123")
                 return HttpResponse.OK("success")
@@ -832,7 +830,7 @@ Feature: Authenticated
         )
 
         val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object: TestExecutor {
+        val result = executeTest(contractTests.single(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.queryParams).containsEntry("apiKey", "abc123")
                 return HttpResponse.OK("success")
@@ -858,11 +856,38 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
+        HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            try {
+                restTemplate.postForObject(
+                    URI.create("http://localhost:9000/pets"),
+                    NewPet("Scooby", "golden"),
+                    Pet::class.java
+                )
+                throw AssertionError("Should not allow upper case alphabets")
+            } catch (e: HttpClientErrorException) {
+                assertThat(e.statusCode).isEqualTo(BAD_REQUEST)
+                assertThat(e.message).contains("""Contract expected string that matches regex /^[a-z]*${'$'}/ but request contained "Scooby"""")
+            }
+        }
+    }
+
+    @Test
+    fun `should verify regex pattern on strings`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
         val petResponse = HttpStub(feature).use {
             val restTemplate = RestTemplate()
             restTemplate.postForObject(
                 URI.create("http://localhost:9000/pets"),
-                NewPet("scooby", "golden"),
+                NewPet("Scooby", "golden"),
                 Pet::class.java
             )
         }
@@ -1275,7 +1300,7 @@ Background:
     }
 
     @Test
-    fun `should report errors when a string is not as per restrictions`() {
+    fun `should report errors when a string is not as per length restrictions`() {
         val flags = mutableMapOf<String, Int>().withDefault { 0 }
 
         val feature = parseGherkinStringToFeature(
@@ -1329,6 +1354,69 @@ Background:
               >> RESPONSE.BODY.name
               
                  ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "\"small\"")}
+            """.trimIndent()
+        assertThat(results.report()).contains(
+            expectedReport
+        )
+
+        assertThat(countMatches(results.report(), expectedReport)).isEqualTo(3)
+    }
+
+    @Test
+    fun `should report errors when a string is not as per regular expression restrictions`() {
+        val flags = mutableMapOf<String, Int>().withDefault { 0 }
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val flagKey = "${request.path} ${request.method} executed"
+                    flags[flagKey] = flags.getValue(flagKey) + 1
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    val pet = Pet("UpperCase", "golden", 1, "retriever", 2)
+                    return when {
+                        request.path == "/pets" -> {
+                            when (request.method) {
+                                "POST" -> {
+                                    HttpResponse(
+                                        201,
+                                        ObjectMapper().writeValueAsString(pet),
+                                        headers
+                                    )
+                                }
+                                else -> HttpResponse(400, "", headers)
+                            }
+                        }
+                        else -> HttpResponse(400, "", headers)
+                    }
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            },
+            scenarioNames = listOf("create a pet. Response: pet response")
+        )
+
+        assertFalse(results.success())
+        val expectedReport = """
+            In scenario "create a pet. Response: pet response"
+            API: POST /pets -> 201
+            
+              >> RESPONSE.BODY.name
+              
+                 Contract expected string that matches regex /^[a-z]*${'$'}/ but response contained "UpperCase"
             """.trimIndent()
         assertThat(results.report()).contains(
             expectedReport
@@ -1492,7 +1580,10 @@ Scenario: zero should return not found
 
         val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
 
-        val result = feature.matches(HttpRequest("GET", "/hello/10"), HttpResponse(500, body = parsedJSONObject("""{"data": "information"}""")))
+        val result = feature.matches(
+            HttpRequest("GET", "/hello/10"),
+            HttpResponse(500, body = parsedJSONObject("""{"data": "information"}"""))
+        )
 
         assertThat(result).isTrue
     }
@@ -1514,7 +1605,7 @@ Scenario: zero should return not found
             val results: Results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
-                    if(jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
+                    if (jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
                         return HttpResponse(200, body = StringValue("it worked"))
 
                     return HttpResponse(400, body = parsedJSONObject("""{"data": "information"}"""))
@@ -1549,7 +1640,7 @@ Scenario: zero should return not found
             val results: Results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
-                    if(jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
+                    if (jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
                         return HttpResponse(200, body = StringValue("it worked"))
 
                     return HttpResponse(400, body = parsedJSONObject("""{"error_in_400": "message"}"""))

@@ -223,6 +223,7 @@ components:
               type: string
               minLength: 6
               maxLength: 12
+              pattern: '^[a-z]*$'
             tag:
               $ref: '#/components/schemas/Tag'
             id:

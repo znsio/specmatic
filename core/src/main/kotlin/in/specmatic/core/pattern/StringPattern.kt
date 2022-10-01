@@ -1,9 +1,9 @@
 package `in`.specmatic.core.pattern
 
+import com.mifmif.common.regex.Generex
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
-import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
@@ -15,7 +15,8 @@ private const val INFINITY = 999999999
 data class StringPattern(
     override val typeAlias: String? = null,
     val minLength: Int? = null,
-    val maxLength: Int? = null
+    val maxLength: Int? = null,
+    val regexPattern: String? = null
 ) : Pattern, ScalarType {
     init {
         require(minLength?.let { maxLength?.let { minLength <= maxLength } }
@@ -33,6 +34,12 @@ data class StringPattern(
                     "string with maxLength $maxLength",
                     sampleData, resolver.mismatchMessages
                 )
+                if (regexPattern != null && !Regex(regexPattern).matches(sampleData.toStringLiteral()))
+                    return mismatchResult(
+                        """string that matches regex /$regexPattern/""",
+                        sampleData,
+                        resolver.mismatchMessages
+                    )
                 return Result.Success()
             }
             else -> mismatchResult("string", sampleData, resolver.mismatchMessages)
@@ -58,8 +65,12 @@ data class StringPattern(
             maxLength != null && 5 > maxLength -> maxLength
             else -> 5
         }
-    
-    override fun generate(resolver: Resolver): Value = StringValue(randomString(randomStringLength))
+
+    override fun generate(resolver: Resolver): Value {
+        if (regexPattern != null)
+            return StringValue(Generex(regexPattern.removePrefix("^").removeSuffix("$")).random(randomStringLength))
+        return StringValue(randomString(randomStringLength))
+    }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)

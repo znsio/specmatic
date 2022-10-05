@@ -883,17 +883,19 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val petResponse = HttpStub(feature).use {
+        HttpStub(feature).use {
             val restTemplate = RestTemplate()
-            restTemplate.postForObject(
-                URI.create("http://localhost:9000/pets"),
-                NewPet("Scooby", "golden"),
-                Pet::class.java
-            )
+            try {
+                restTemplate.postForObject(
+                    URI.create("http://localhost:9000/pets"),
+                    NewPet("Scooby", "golden"),
+                    Pet::class.java
+                )
+                throw AssertionError("Should not allow upper case alphabets in name")
+            } catch (e: HttpClientErrorException) {
+                assertThat(e.statusCode).isEqualTo(BAD_REQUEST)
+            }
         }
-
-        assertThat(petResponse).isInstanceOf(Pet::class.java)
-        assertThat(petResponse).isNotNull
     }
 
     @Test

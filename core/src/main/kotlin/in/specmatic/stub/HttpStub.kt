@@ -29,11 +29,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.asStream
 import io.ktor.util.toMap
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.Writer
 import java.nio.charset.Charset
@@ -150,12 +147,16 @@ class HttpStub(
 
                         try {
                             call.respondSse(events, sseBuffer, httpRequest)
-                        } finally {
-                            events.cancel()
 
-                            channel.cancel()
                             broadcastChannels.remove(broadcastChannel)
 
+                            close(events, channel, "Events handle was already closed after handling all events", "Channel was already handled after handling all events")
+                        } catch(e: Throwable) {
+                            logger.log(e, "Exception in the SSE module")
+
+                            broadcastChannels.remove(broadcastChannel)
+
+                            close(events, channel, "Events handle threw an exception on closing", "Channel through an exception on closing")
                         }
                     } else {
                         respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
@@ -196,6 +197,25 @@ class HttpStub(
                 this.host = host
                 this.port = port
             }
+        }
+    }
+
+    private fun close(
+        events: ReceiveChannel<SseEvent>,
+        channel: Channel<SseEvent>,
+        eventsError: String,
+        channelError: String
+    ) {
+        try {
+            events.cancel()
+        } catch (e: Exception) {
+            logger.log("$eventsError (${exceptionCauseMessage(e)})")
+        }
+
+        try {
+            channel.cancel()
+        } catch (e: Exception) {
+            logger.log("$channelError (${exceptionCauseMessage(e)}")
         }
     }
 

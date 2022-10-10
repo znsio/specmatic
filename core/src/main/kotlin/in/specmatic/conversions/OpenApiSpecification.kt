@@ -393,7 +393,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             else -> operation.requestBody.content.map { (contentType, mediaType) ->
                 when (contentType.lowercase()) {
                     "multipart/form-data" -> {
-                        val partSchemas = mediaType.schema
+                        val partSchemas = if (mediaType.schema.`$ref` == null) {
+                            mediaType.schema
+                        } else {
+                            resolveReferenceToSchema(mediaType.schema.`$ref`).second
+                        }
 
                         val parts: List<MultiPartFormDataPattern> = partSchemas.properties.map { (partName, partSchema) ->
                             val partContentType = mediaType.encoding?.get(partName)?.contentType

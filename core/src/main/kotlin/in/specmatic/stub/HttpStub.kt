@@ -512,7 +512,7 @@ internal suspend fun respondToKtorHttpResponse(call: ApplicationCall, httpRespon
         HttpStatusCode.fromValue(httpResponse.status)
     )
 
-    val headersControlledByEngine = HttpHeaders.UnsafeHeadersList.map { it.lowercase() }
+    val headersControlledByEngine = listOfExcludedHeaders().map { it.lowercase() }
     for ((name, value) in httpResponse.headers.filterNot { it.key.lowercase() in headersControlledByEngine }) {
         call.response.headers.append(name, value)
     }

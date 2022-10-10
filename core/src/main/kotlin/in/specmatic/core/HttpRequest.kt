@@ -15,7 +15,6 @@ import java.io.File
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
-import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
@@ -166,12 +165,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
     fun buildRequest(httpRequestBuilder: HttpRequestBuilder) {
         httpRequestBuilder.method = HttpMethod.parse(method as String)
 
-        val listOfExcludedHeaders: List<String> = HttpHeaders.UnsafeHeadersList.plus(arrayOf(
-            HttpHeaders.ContentLength,
-            HttpHeaders.ContentType,
-            HttpHeaders.TransferEncoding,
-            HttpHeaders.Upgrade
-        )).distinct().map { it.lowercase() }
+        val listOfExcludedHeaders: List<String> = listOfExcludedHeaders()
 
         headers
             .map {Triple(it.key.trim(), it.key.trim().lowercase(), it.value.trim())}
@@ -436,3 +430,12 @@ fun formFieldsToGherkin(formFields: Map<String, String>, types: Map<String, Patt
 
     return Triple(formFieldClauses, newTypes, exampleDeclarations.plus(newExamples))
 }
+
+fun listOfExcludedHeaders(): List<String> = HttpHeaders.UnsafeHeadersList.plus(
+    arrayOf(
+        HttpHeaders.ContentLength,
+        HttpHeaders.ContentType,
+        HttpHeaders.TransferEncoding,
+        HttpHeaders.Upgrade
+    )
+).distinct().map { it.lowercase() }

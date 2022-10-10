@@ -4537,11 +4537,7 @@ components:
                           csv:
                             contentType: text/csv
                         schema:
-                          required:
-                          - "csv"
-                          properties:
-                            csv:
-                              type: "string"
+                          ${'$'}ref: '#/components/schemas/CsvContent'
                   responses:
                     200:
                       description: "Get product by id"
@@ -4549,6 +4545,15 @@ components:
                         text/plain:
                           schema:
                             type: "string"
+            components:
+              schemas:
+                CsvContent:
+                  type: object
+                  required:
+                    - "csv"
+                  properties:
+                    csv:
+                      type: "string"
             """.trimIndent()
 
         val openAPIFile = tempDir.resolve("data.yaml")

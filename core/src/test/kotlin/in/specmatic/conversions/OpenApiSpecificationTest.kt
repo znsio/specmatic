@@ -4531,13 +4531,7 @@ components:
                   summary: "Save data"
                   parameters: []
                   requestBody:
-                    content:
-                      multipart/form-data:
-                        encoding:
-                          csv:
-                            contentType: text/csv
-                        schema:
-                          ${'$'}ref: '#/components/schemas/CsvContent'
+                    ${'$'}ref: '#/components/requestBodies/SaveData'
                   responses:
                     200:
                       description: "Get product by id"
@@ -4546,6 +4540,15 @@ components:
                           schema:
                             type: "string"
             components:
+              requestBodies:
+                SaveData:
+                  content:
+                      multipart/form-data:
+                        encoding:
+                          csv:
+                            contentType: text/csv
+                        schema:
+                          ${'$'}ref: '#/components/schemas/CsvContent'
               schemas:
                 CsvContent:
                   type: object

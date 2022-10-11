@@ -21,6 +21,7 @@ import io.swagger.v3.oas.models.media.*
 import io.swagger.v3.oas.models.parameters.HeaderParameter
 import io.swagger.v3.oas.models.parameters.PathParameter
 import io.swagger.v3.oas.models.parameters.QueryParameter
+import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.oas.models.security.SecurityRequirement
@@ -28,7 +29,6 @@ import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.parser.OpenAPIV3Parser
 import io.swagger.v3.parser.core.models.ParseOptions
 import io.swagger.v3.parser.core.models.SwaggerParseResult
-import org.apache.http.HttpHeaders.AUTHORIZATION
 import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
@@ -390,35 +390,43 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             null -> listOf(
                 requestPattern
             )
-            else -> operation.requestBody.content.map { (contentType, mediaType) ->
-                when (contentType.lowercase()) {
-                    "multipart/form-data" -> {
-                        val partSchemas = if (mediaType.schema.`$ref` == null) {
-                            mediaType.schema
-                        } else {
-                            resolveReferenceToSchema(mediaType.schema.`$ref`).second
+            else -> {
+                val requestBody = if (operation.requestBody.`$ref` == null) {
+                    operation.requestBody
+                } else {
+                    resolveReferenceToRequestBody(operation.requestBody.`$ref`).second
+                }
+
+                requestBody.content.map { (contentType, mediaType) ->
+                    when (contentType.lowercase()) {
+                        "multipart/form-data" -> {
+                            val partSchemas = if (mediaType.schema.`$ref` == null) {
+                                mediaType.schema
+                            } else {
+                                resolveReferenceToSchema(mediaType.schema.`$ref`).second
+                            }
+
+                            val parts: List<MultiPartFormDataPattern> = partSchemas.properties.map { (partName, partSchema) ->
+                                val partContentType = mediaType.encoding?.get(partName)?.contentType
+                                val partNameWithPresence = if(partSchemas.required?.contains(partName) == true)
+                                    partName
+                                else
+                                    "$partName?"
+
+                                MultiPartContentPattern(partNameWithPresence, toSpecmaticPattern(partSchema, emptyList()), partContentType)
+                            }
+
+                            requestPattern.copy(multiPartFormDataPattern = parts)
                         }
-
-                        val parts: List<MultiPartFormDataPattern> = partSchemas.properties.map { (partName, partSchema) ->
-                            val partContentType = mediaType.encoding?.get(partName)?.contentType
-                            val partNameWithPresence = if(partSchemas.required?.contains(partName) == true)
-                                partName
-                            else
-                                "$partName?"
-
-                            MultiPartContentPattern(partNameWithPresence, toSpecmaticPattern(partSchema, emptyList()), partContentType)
+                        "application/x-www-form-urlencoded" -> {
+                            requestPattern.copy(formFieldsPattern = toFormFields(mediaType))
                         }
-
-                        requestPattern.copy(multiPartFormDataPattern = parts)
-                    }
-                    "application/x-www-form-urlencoded" -> {
-                        requestPattern.copy(formFieldsPattern = toFormFields(mediaType))
-                    }
-                    "application/xml" -> {
-                        requestPattern.copy(body = toXMLPattern(mediaType))
-                    }
-                    else -> {
-                        requestPattern.copy(body = toSpecmaticPattern(mediaType))
+                        "application/xml" -> {
+                            requestPattern.copy(body = toXMLPattern(mediaType))
+                        }
+                        else -> {
+                            requestPattern.copy(body = toSpecmaticPattern(mediaType))
+                        }
                     }
                 }
             }
@@ -798,14 +806,26 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun resolveReferenceToSchema(component: String): Pair<String, Schema<Any>> {
-        if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
-        val componentName = componentNameFromReference(component)
+        val componentName = extractComponentName(component)
         val schema = openApi.components.schemas[componentName] ?: ObjectSchema().also { it.properties = emptyMap() }
 
         return componentName to schema as Schema<Any>
     }
 
-    private fun componentNameFromReference(component: String) = component.removePrefix("#/components/schemas/")
+    private fun resolveReferenceToRequestBody(component: String): Pair<String, RequestBody> {
+        val componentName = extractComponentName(component)
+        val requestBody = openApi.components.requestBodies[componentName] ?: RequestBody()
+
+        return componentName to requestBody
+    }
+
+    private fun extractComponentName(component: String): String {
+        if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
+        val componentName = componentNameFromReference(component)
+        return componentName
+    }
+
+    private fun componentNameFromReference(component: String) = component.substringAfterLast("/")
 
     private fun toSpecmaticPath(openApiPath: String, operation: Operation): String {
         val parameters = operation.parameters ?: return openApiPath

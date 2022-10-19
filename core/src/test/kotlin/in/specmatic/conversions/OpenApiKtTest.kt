@@ -2,6 +2,7 @@ package `in`.specmatic.conversions
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import `in`.specmatic.core.*
+import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
@@ -12,7 +13,6 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
-import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -22,10 +22,11 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.core.ParameterizedTypeReference
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
+import org.springframework.http.*
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
@@ -35,6 +36,8 @@ import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
 import java.io.File
 import java.net.URI
 import java.util.function.Consumer
+import java.util.stream.Stream
+
 
 internal class OpenApiKtTest {
     companion object {
@@ -55,6 +58,14 @@ Scenario: zero should return not found
         @JvmStatic
         fun setup() {
             logger = Verbose()
+        }
+
+        @JvmStatic
+        fun multiPartFileUploadSpecs(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of("openapi/helloMultipart.yaml", ".*"),
+                Arguments.of("openapi/helloMultipartWithExamples.yaml", "input.txt"),
+            )
         }
     }
 
@@ -303,8 +314,7 @@ Background:
                     }
                 }
             )
-        }
-        finally {
+        } finally {
             System.clearProperty(Flags.negativeTestingFlag)
         }
 
@@ -762,7 +772,7 @@ Feature: Authenticated
         )
 
         val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object: TestExecutor {
+        val result = executeTest(contractTests.single(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers).containsEntry("X-API-KEY", "abc123")
                 return HttpResponse.OK("success")
@@ -775,6 +785,99 @@ Feature: Authenticated
         })
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @ParameterizedTest
+    @MethodSource("multiPartFileUploadSpecs")
+    fun `should generate test with multipart file upload`(openApiFile: String, fileName: String) {
+        val contract: Feature = parseGherkinStringToFeature(
+            """
+Feature: multipart file upload
+
+  Background:
+    Given openapi $openApiFile
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val contractTests = contract.generateContractTestScenarios(emptyList())
+        val result = executeTest(contractTests.single(), object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val multipartFileValues = request.multiPartFormData.filterIsInstance<MultiPartFileValue>()
+                assertThat(multipartFileValues.size).isEqualTo(1)
+                assertThat(multipartFileValues.first().name).isEqualTo("fileName")
+                assertThat(multipartFileValues.first().filename).matches(fileName)
+                return HttpResponse.OK("success")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+
+        })
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should generate stub that accepts file upload data`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/helloMultipart.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            val body: MultiValueMap<String, Any> = LinkedMultiValueMap()
+            body.add("orderId", 1)
+            body.add("userId", 2)
+            val filePair: MultiValueMap<String, String> = LinkedMultiValueMap()
+            val contentDisposition = ContentDisposition
+                .builder("form-data")
+                .name("fileName")
+                .filename("input.txt")
+                .build()
+            filePair.add(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+            val fileEntity = HttpEntity("test".toByteArray(), filePair)
+            body.add("fileName", fileEntity)
+            val headers = HttpHeaders()
+            headers.contentType = MediaType.MULTIPART_FORM_DATA
+            val requestEntity = HttpEntity(body, headers)
+            val response: ResponseEntity<String> = restTemplate
+                .postForEntity(URI.create("http://localhost:9000/hello"), requestEntity, String::class.java)
+            assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+        }
+    }
+
+    @Test
+    fun `should generate stub that that returns error when multipart content is not a file`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/helloMultipart.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            val body: MultiValueMap<String, Any> = LinkedMultiValueMap()
+            body.add("orderId", 1)
+            body.add("userId", 2)
+            body.add("fileName", "not a file")
+            val headers = HttpHeaders()
+            headers.contentType = MediaType.MULTIPART_FORM_DATA
+            val requestEntity = HttpEntity(body, headers)
+            val httpClientErrorException = assertThrows<HttpClientErrorException> {
+                restTemplate
+                    .postForEntity(URI.create("http://localhost:9000/hello"), requestEntity, String::class.java)
+            }
+            assertThat(httpClientErrorException.message).contains("The contract expected a file, but got content instead.")
+        }
     }
 
     @Test
@@ -797,7 +900,7 @@ Feature: Authenticated
         )
 
         val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object: TestExecutor {
+        val result = executeTest(contractTests.single(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers).containsEntry("Authorization", "Bearer abc123")
                 return HttpResponse.OK("success")
@@ -832,7 +935,7 @@ Feature: Authenticated
         )
 
         val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object: TestExecutor {
+        val result = executeTest(contractTests.single(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.queryParams).containsEntry("apiKey", "abc123")
                 return HttpResponse.OK("success")
@@ -1492,7 +1595,10 @@ Scenario: zero should return not found
 
         val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
 
-        val result = feature.matches(HttpRequest("GET", "/hello/10"), HttpResponse(500, body = parsedJSONObject("""{"data": "information"}""")))
+        val result = feature.matches(
+            HttpRequest("GET", "/hello/10"),
+            HttpResponse(500, body = parsedJSONObject("""{"data": "information"}"""))
+        )
 
         assertThat(result).isTrue
     }
@@ -1514,7 +1620,7 @@ Scenario: zero should return not found
             val results: Results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
-                    if(jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
+                    if (jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
                         return HttpResponse(200, body = StringValue("it worked"))
 
                     return HttpResponse(400, body = parsedJSONObject("""{"data": "information"}"""))
@@ -1549,7 +1655,7 @@ Scenario: zero should return not found
             val results: Results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
-                    if(jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
+                    if (jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
                         return HttpResponse(200, body = StringValue("it worked"))
 
                     return HttpResponse(400, body = parsedJSONObject("""{"error_in_400": "message"}"""))

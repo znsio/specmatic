@@ -11,6 +11,7 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
+import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
 import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
 import io.swagger.v3.oas.models.OpenAPI
@@ -53,14 +54,15 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         fun fromYAML(yamlContent: String, filePath: String): OpenApiSpecification {
-            val parseResult: SwaggerParseResult = OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), filePath)
+            val parseResult: SwaggerParseResult =
+                OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), filePath)
             val openApi: OpenAPI? = parseResult.openAPI
 
-            if(openApi == null) {
+            if (openApi == null) {
                 logger.debug("Failed to parse OpenAPI from file $filePath\n\n$yamlContent")
 
                 parseResult.messages.filterNotNull().let {
-                    if(it.isNotEmpty()) {
+                    if (it.isNotEmpty()) {
                         val parserMessages = parseResult.messages.joinToString(System.lineSeparator())
                         logger.log("Error parsing file $filePath")
                         logger.log(parserMessages.prependIndent("  "))
@@ -228,12 +230,21 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                         val requestBodyExample: Map<String, Any> = requestBodyExample(operation, exampleName)
 
-                        val requestExamples = parameterExamples.plus(requestBodyExample)
+                        val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
+                            if (value.toString().contains("externalValue")) "${key}_filename" to value
+                            else key to value
+                        }.toMap()
 
                         when {
                             requestExamples.isNotEmpty() -> Row(
-                                requestExamples.keys.toList(),
-                                requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" })
+                                requestExamples.keys.toList().map { keyName: String -> keyName },
+                                requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
+                                    .map { valueString: String ->
+                                        if (valueString.contains("externalValue")) {
+                                            ObjectMapper().readValue(valueString, Map::class.java).values.first()
+                                                .toString()
+                                        } else valueString
+                                    })
                             else -> Row()
                         }
                     }
@@ -244,7 +255,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         val scenarioName =
                             scenarioName(operation, response, httpRequestPattern, null)
 
-                        val scenarioDetails = object: ScenarioDetailsForResult {
+                        val scenarioDetails = object : ScenarioDetailsForResult {
                             override val ignoreFailure: Boolean
                                 get() = false
                             override val name: String
@@ -276,7 +287,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             httpRequestPattern = httpRequestPattern,
                             httpResponsePattern = httpResponsePattern,
                             ignoreFailure = ignoreFailure,
-                            examples = if(specmaticExampleRows.isNotEmpty()) listOf(Examples(specmaticExampleRows.first().columnNames, specmaticExampleRows)) else emptyList()
+                            examples = if (specmaticExampleRows.isNotEmpty()) listOf(
+                                Examples(
+                                    specmaticExampleRows.first().columnNames,
+                                    specmaticExampleRows
+                                )
+                            ) else emptyList()
                         )
                     }
                 }.flatten()
@@ -292,8 +308,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             operation.requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName)?.value
 
         val requestBodyExample: Map<String, Any> = if (requestExampleValue != null) {
-            if(operation.requestBody?.content?.entries?.first()?.key == "application/x-www-form-urlencoded" || operation.requestBody?.content?.entries?.first()?.key == "multipart/form-data") {
-                val jsonExample = attempt("Could not parse example $exampleName for operation \"${operation.summary}\"") {  parsedJSON(requestExampleValue.toString()) as JSONObjectValue }
+            if (operation.requestBody?.content?.entries?.first()?.key == "application/x-www-form-urlencoded" || operation.requestBody?.content?.entries?.first()?.key == "multipart/form-data") {
+                val jsonExample =
+                    attempt("Could not parse example $exampleName for operation \"${operation.summary}\"") {
+                        parsedJSON(requestExampleValue.toString()) as JSONObjectValue
+                    }
                 jsonExample.jsonObject.map { (key, value) ->
                     key to value.toString()
                 }.toMap()
@@ -338,7 +357,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         status: String,
         headersMap: Map<String, Pattern>
     ): List<Triple<ApiResponse, MediaType, HttpResponsePattern>> {
-        if(response.content == null) {
+        if (response.content == null) {
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap),
                 status = status.toIntOrNull() ?: DEFAULT_RESPONSE_CODE
@@ -350,7 +369,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return response.content.map { (contentType, mediaType) ->
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap),
-                status = if(status == "default") 1000 else status.toInt(),
+                status = if (status == "default") 1000 else status.toInt(),
                 body = when (contentType) {
                     "application/xml" -> toXMLPattern(mediaType)
                     else -> toSpecmaticPattern(mediaType)
@@ -365,9 +384,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         path: String, httpMethod: String, operation: Operation
     ): List<HttpRequestPattern> {
 
-        val contractSecuritySchemes: Map<String, OpenAPISecurityScheme> = openApi.components?.securitySchemes?.mapValues { (_, scheme) ->
-            toSecurityScheme(scheme)
-        } ?: emptyMap()
+        val contractSecuritySchemes: Map<String, OpenAPISecurityScheme> =
+            openApi.components?.securitySchemes?.mapValues { (_, scheme) ->
+                toSecurityScheme(scheme)
+            } ?: emptyMap()
 
         val parameters = operation.parameters
 
@@ -383,7 +403,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         val urlMatcher = toURLMatcherWithOptionalQueryParams(path, securityQueryParams)
         val headersPattern = HttpHeadersPattern(headersMap)
         val requestPattern = HttpRequestPattern(
-            urlMatcher = urlMatcher, method = httpMethod, headersPattern = headersPattern, securitySchemes = operationSecuritySchemes
+            urlMatcher = urlMatcher,
+            method = httpMethod,
+            headersPattern = headersPattern,
+            securitySchemes = operationSecuritySchemes
         )
 
         return when (operation.requestBody) {
@@ -406,15 +429,28 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 resolveReferenceToSchema(mediaType.schema.`$ref`).second
                             }
 
-                            val parts: List<MultiPartFormDataPattern> = partSchemas.properties.map { (partName, partSchema) ->
-                                val partContentType = mediaType.encoding?.get(partName)?.contentType
-                                val partNameWithPresence = if(partSchemas.required?.contains(partName) == true)
-                                    partName
-                                else
-                                    "$partName?"
+                            val parts: List<MultiPartFormDataPattern> =
+                                partSchemas.properties.map { (partName, partSchema) ->
+                                    val partContentType = mediaType.encoding?.get(partName)?.contentType
+                                    val partNameWithPresence = if (partSchemas.required?.contains(partName) == true)
+                                        partName
+                                    else
+                                        "$partName?"
 
-                                MultiPartContentPattern(partNameWithPresence, toSpecmaticPattern(partSchema, emptyList()), partContentType)
-                            }
+                                    if (partSchema is BinarySchema) {
+                                        MultiPartFilePattern(
+                                            partNameWithPresence,
+                                            toSpecmaticPattern(partSchema, emptyList()),
+                                            partContentType
+                                        )
+                                    } else {
+                                        MultiPartContentPattern(
+                                            partNameWithPresence,
+                                            toSpecmaticPattern(partSchema, emptyList()),
+                                            partContentType
+                                        )
+                                    }
+                                }
 
                             requestPattern.copy(multiPartFormDataPattern = parts)
                         }
@@ -449,14 +485,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun toSecurityScheme(securityScheme: SecurityScheme): OpenAPISecurityScheme {
-        if(securityScheme.scheme == BEARER_SECURITY_SCHEME)
+        if (securityScheme.scheme == BEARER_SECURITY_SCHEME)
             return BearerSecurityScheme()
 
-        if(securityScheme.type == SecurityScheme.Type.APIKEY) {
-            if(securityScheme.`in` == SecurityScheme.In.HEADER)
+        if (securityScheme.type == SecurityScheme.Type.APIKEY) {
+            if (securityScheme.`in` == SecurityScheme.In.HEADER)
                 return APIKeyInHeaderSecurityScheme(securityScheme.name)
 
-            if(securityScheme.`in` == SecurityScheme.In.QUERY)
+            if (securityScheme.`in` == SecurityScheme.In.QUERY)
                 return APIKeyInQueryParamSecurityScheme(securityScheme.name)
         }
 
@@ -503,6 +539,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 null -> NumberPattern()
                 else -> toEnum(schema, patternName) { enumValue -> NumberValue(enumValue.toString().toInt()) }
             }
+            is BinarySchema -> BinaryPattern()
             is NumberSchema -> NumberPattern()
             is UUIDSchema -> StringPattern()
             is DateTimeSchema -> DateTimePattern
@@ -548,8 +585,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             else -> {
                 if (schema.nullable == true && schema.additionalProperties == null && schema.`$ref` == null) {
                     NullPattern
-                }
-                else if (schema.additionalProperties != null) {
+                } else if (schema.additionalProperties != null) {
                     toDictionaryPattern(schema, typeStack, patternName)
                 } else {
                     when (schema.`$ref`) {

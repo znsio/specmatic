@@ -7,9 +7,7 @@ import `in`.specmatic.core.value.BinaryValue
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import org.apache.commons.lang3.ArrayUtils
 import org.apache.commons.lang3.RandomUtils
-import java.io.File
 
 data class BinaryPattern(
     override val typeAlias: String? = null,
@@ -17,7 +15,7 @@ data class BinaryPattern(
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (sampleData) {
-            is BinaryValue -> return Result.Success()
+            is StringValue -> return Result.Success()
             else -> mismatchResult("string", sampleData, resolver.mismatchMessages)
         }
     }

@@ -30,6 +30,13 @@ paths:
                 fileName:
                   type: string
                   format: binary
+            examples:
+              200_OKAY:
+                value:
+                  orderId: 1
+                  userId: 2
+                  fileName:
+                    externalValue: "input.txt"
       responses:
         '200':
           description: Says hello
@@ -37,3 +44,6 @@ paths:
             application/json:
               schema:
                 type: string
+              examples:
+                200_OKAY:
+                  value: {string}

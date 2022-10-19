@@ -12,7 +12,6 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
-import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -765,6 +764,35 @@ Feature: Authenticated
         val result = executeTest(contractTests.single(), object: TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.headers).containsEntry("X-API-KEY", "abc123")
+                return HttpResponse.OK("success")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+
+        })
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should generate test with multipart file upload`() {
+        val contract: Feature = parseGherkinStringToFeature(
+            """
+Feature: multipart file upload
+
+  Background:
+    Given openapi openapi/helloMultipart.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val contractTests = contract.generateContractTestScenarios(emptyList())
+        val result = executeTest(contractTests.single(), object: TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val multipartFileValues = request.multiPartFormData.filterIsInstance<MultiPartFileValue>()
+                assertThat(multipartFileValues.size).isEqualTo(1)
+                assertThat(multipartFileValues.first().name).isEqualTo("fileName")
                 return HttpResponse.OK("success")
             }
 

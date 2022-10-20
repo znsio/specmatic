@@ -43,7 +43,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
 
         val resolvedTypes = pattern.map { resolvedHop(it, resolverWithNumberType) }
 
-        return resolvedTypes.mapIndexed { index, patternValue ->
+        return resolvedTypes.asSequence().mapIndexed { index, patternValue ->
             when {
                 patternValue is RestPattern -> {
                     val rest = when (index) {
@@ -52,7 +52,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
                     }
                     patternValue.matches(JSONArrayValue(rest), resolverWithNumberType).breadCrumb("[$index...${sampleData.list.lastIndex}]")
                 }
-                index == sampleData.list.size ->
+                index >= sampleData.list.size ->
                     Result.Failure("Expected an array of length ${pattern.size}, actual length ${sampleData.list.size}")
                 else -> {
                     val sampleValue = sampleData.list[index]

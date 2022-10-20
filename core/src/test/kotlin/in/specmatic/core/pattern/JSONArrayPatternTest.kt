@@ -11,6 +11,7 @@ import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertFalse
 
 internal class JSONArrayPatternTest {
@@ -176,5 +177,19 @@ Feature: Recursive test
         val result = testBackwardCompatibility(feature, feature)
         println(result.report())
         assertThat(result.success()).isTrue()
+    }
+
+    @Test
+    fun `json array pattern matching value with pattern minus 1 elements elements should throw ContractException`() {
+        val type = JSONArrayPattern(listOf(StringPattern(), StringPattern()))
+        val result = type.matches(JSONArrayValue(listOf(StringValue("test"))), Resolver())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `json array pattern matching value with pattern minus 2 elements elements should throw ContractException`() {
+        val type = JSONArrayPattern(listOf(StringPattern(), StringPattern(), StringPattern()))
+        val result = type.matches(JSONArrayValue(listOf(StringValue("test"))), Resolver())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
     }
 }

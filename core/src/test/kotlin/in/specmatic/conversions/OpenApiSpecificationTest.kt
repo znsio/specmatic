@@ -3312,6 +3312,50 @@ components:
     }
 
     @Test
+    fun `support dictionary object type in request body with inline data structure`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  name:
+                    type: string
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+        println(openAPI)
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request =
+            HttpRequest("POST", "/data", body = parsedValue("""{"10": {"name": "Jill"}, "20": {"name": "Jack"}}"""))
+        val response = HttpResponse.OK
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("POST")
+        assertThat(stub.response.status).isEqualTo(200)
+    }
+
+    @Test
     fun `support dictionary object type as JSON value`() {
         val openAPI =
             """
@@ -3364,6 +3408,47 @@ components:
         assertThat(stub.requestType.method).isEqualTo("POST")
         assertThat(stub.response.status).isEqualTo(200)
 
+    }
+
+    @Test
+    fun `support dictionary object type in request body with inline fixed keys`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+        println(openAPI)
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request =
+            HttpRequest("POST", "/data", body = parsedValue("""{"10": "Jill", "20": "Jack"}"""))
+        val response = HttpResponse.OK
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("POST")
+        assertThat(stub.response.status).isEqualTo(200)
     }
 
     @Test

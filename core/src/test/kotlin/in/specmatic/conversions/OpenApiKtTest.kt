@@ -13,6 +13,7 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
+import io.ktor.http.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -27,17 +28,23 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.*
+import org.springframework.http.ContentDisposition
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
+import org.testcontainers.shaded.okhttp3.MediaType.*
+import org.testcontainers.shaded.okhttp3.OkHttpClient
+import org.testcontainers.shaded.okhttp3.Request
+import org.testcontainers.shaded.okhttp3.RequestBody
 import java.io.File
 import java.net.URI
 import java.util.function.Consumer
 import java.util.stream.Stream
-
 
 internal class OpenApiKtTest {
     companion object {
@@ -975,6 +982,33 @@ Background:
     }
 
     @Test
+    fun `should generate stub with http patch and non primitive request and response data types`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/petstore-expanded.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val petResponse = HttpStub(feature).use {
+            val requestBody = RequestBody.create(
+                parse("application/json"), ObjectMapper().writeValueAsString(Pet("scooby", "golden", 1, "retriever", 1))
+            )
+            val request =
+                Request.Builder().url("http://localhost:9000/pets/1").addHeader("Content-Type", "application/json")
+                    .patch(requestBody).build()
+            val call = OkHttpClient().newCall(request)
+            call.execute()
+        }
+
+        assertThat(petResponse.isSuccessful).isTrue
+        assertThat(petResponse.code()).isEqualTo(200)
+        assertThat(ObjectMapper().readValue(petResponse.body()?.string(), Pet::class.java)).isNotNull
+    }
+
+    @Test
     fun `should validate with cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
             """
@@ -1169,6 +1203,13 @@ Background:
                                 204,
                                 headers
                             )
+                            "PATCH" -> {
+                                HttpResponse(
+                                    200,
+                                    ObjectMapper().writeValueAsString(pet),
+                                    headers
+                                )
+                            }
                             else -> HttpResponse(400, "", headers)
                         }
                         request.path == "/pets" -> {
@@ -1242,7 +1283,8 @@ Background:
         assertThat(flags["/pets/0 GET executed"]).isEqualTo(1)
         assertThat(flags.keys.filter { it.matches(Regex("""\/pets\/[0-9]+ GET executed""")) }.size).isEqualTo(2)
         assertThat(flags.keys.any { it.matches(Regex("""\/pets\/[0-9]+ DELETE executed""")) }).isNotNull
-        assertThat(flags.size).isEqualTo(6)
+        assertThat(flags.keys.filter { it.matches(Regex("""\/pets\/[0-9]+ PATCH executed""")) }.size).isEqualTo(7)
+        assertThat(flags.size).isEqualTo(13)
         assertTrue(results.success(), results.report())
     }
 

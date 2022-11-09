@@ -64,9 +64,13 @@ class CsvStringPattern(override val pattern: Pattern) : Pattern {
         return JSONArrayValue(valueList)
     }
 
+    override fun toString(): String {
+        return typeName
+    }
+
     override val typeAlias: String?
         get() = null
 
     override val typeName: String
-        get() = "CSV"
+        get() = "(csv/${pattern.typeName})"
 }

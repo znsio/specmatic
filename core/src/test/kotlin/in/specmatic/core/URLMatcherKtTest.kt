@@ -28,5 +28,11 @@ internal class URLMatcherKtTest {
         fun `key presence errors should appear before value errors`() {
             assertThat(resultText.indexOf(">> QUERY-PARAMS.hi")).isLessThan(resultText.indexOf(">> QUERY-PARAMS.hello"))
         }
+
+        @Test
+        fun `should correctly stringize a url matching having a query param with an array type`() {
+            val matcher = URLMatcher(mapOf("data" to CsvStringPattern(NumberPattern())), emptyList(), "/")
+            assertThat(matcher.toString()).isEqualTo("/?data=(csv/number)")
+        }
     }
 }

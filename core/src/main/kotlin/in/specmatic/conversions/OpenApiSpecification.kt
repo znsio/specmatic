@@ -872,8 +872,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         val queryParameters = parameters.filterIsInstance(QueryParameter::class.java).joinToString("&") {
-            val specmaticPattern =
+            val specmaticPattern = if(it.schema.type == "array") {
+                CsvString(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList()))
+            } else {
                 toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name)
+            }
             val patternName = when {
                 it.schema.enum != null -> specmaticPattern.run { "($typeAlias)" }
                 else -> specmaticPattern

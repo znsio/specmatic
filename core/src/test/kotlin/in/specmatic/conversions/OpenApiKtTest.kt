@@ -1672,6 +1672,41 @@ Scenario: zero should return not found
             System.clearProperty(Flags.negativeTestingFlag)
         }
     }
+
+    @Test
+    fun `should read array in query params as CsvString type`() {
+        val openApiSpecification = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers: []
+paths:
+  /hello:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: query
+          name: data
+          schema:
+            type: array
+            items:
+              type: integer
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+        """.trimIndent(), "")
+
+        val contract = openApiSpecification.toFeature()
+        val result: Result = contract.scenarios.first().matches(HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3")), emptyMap())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
 }
 
 data class Pet(

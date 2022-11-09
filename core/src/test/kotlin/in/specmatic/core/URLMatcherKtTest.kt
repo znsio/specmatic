@@ -1,6 +1,6 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.pattern.CsvString
+import `in`.specmatic.core.pattern.CsvStringPattern
 import `in`.specmatic.core.pattern.NumberPattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested

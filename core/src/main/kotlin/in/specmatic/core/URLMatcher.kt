@@ -194,13 +194,13 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     override fun toString(): String {
-        val url = StringBuilder()
-        url.append(path)
-        if (queryPattern.isNotEmpty()) url.append("?")
-        url.append(queryPattern.mapKeys { it.key.removeSuffix("?") }.map { (key, value) ->
-            "$key=$value"
-        }.toList().joinToString(separator = "&"))
-        return url.toString()
+        val stringizedQuery = if(queryPattern.isNotEmpty()) {
+            "?" + queryPattern.mapKeys { it.key.removeSuffix("?") }.map { (key, value) ->
+                "$key=$value"
+            }.toList().joinToString(separator = "&")
+        } else ""
+
+        return path + stringizedQuery
     }
 
     fun toOpenApiPath(): String {

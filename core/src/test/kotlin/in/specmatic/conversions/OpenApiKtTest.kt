@@ -10,18 +10,16 @@ import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -1706,6 +1704,49 @@ paths:
         val contract = openApiSpecification.toFeature()
         val result: Result = contract.scenarios.first().matches(HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3")), emptyMap())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should stub out CsvString type`() {
+        val openApiSpecification = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers: []
+paths:
+  /hello:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: query
+          name: data
+          schema:
+            type: array
+            items:
+              type: integer
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+        """.trimIndent(), "")
+
+        val contract = openApiSpecification.toFeature()
+        val request = HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3"))
+        val stub = contract.matchingStub(request, HttpResponse.OK)
+
+        assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+
+        HttpStub(listOf(contract), listOf(stub)).use {
+            assertDoesNotThrow {
+                it.createStub(ScenarioStub(request, HttpResponse.OK))
+            }
+        }
     }
 }
 

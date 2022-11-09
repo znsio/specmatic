@@ -1,6 +1,6 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.pattern.CsvStringPattern
+import `in`.specmatic.core.pattern.CsvPattern
 import `in`.specmatic.core.pattern.NumberPattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
@@ -31,7 +31,7 @@ internal class URLMatcherKtTest {
 
         @Test
         fun `should correctly stringize a url matching having a query param with an array type`() {
-            val matcher = URLMatcher(mapOf("data" to CsvStringPattern(NumberPattern())), emptyList(), "/")
+            val matcher = URLMatcher(mapOf("data" to CsvPattern(NumberPattern())), emptyList(), "/")
             assertThat(matcher.toString()).isEqualTo("/?data=(csv/number)")
         }
     }

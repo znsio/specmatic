@@ -165,7 +165,7 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                 if(container != "csv")
                     throw ContractException("$container is not supported")
 
-                CsvStringPattern(parsedPattern(type, null, typeAlias))
+                CsvPattern(parsedPattern(type, null, typeAlias))
             }
             it.isEmpty() -> EmptyStringPattern
             it.startsWith("{") -> toJSONObjectPattern(it, typeAlias = typeAlias)

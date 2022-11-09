@@ -7,7 +7,7 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 
-class CsvStringPattern(override val pattern: Pattern) : Pattern {
+class CsvPattern(override val pattern: Pattern) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is StringValue)
             return resolver.mismatchMessages.valueMismatchFailure("CSV string", sampleData)
@@ -54,7 +54,7 @@ class CsvStringPattern(override val pattern: Pattern) : Pattern {
         otherResolver: Resolver,
         typeStack: TypeStack
     ): Result {
-        if(otherPattern !is CsvStringPattern)
+        if(otherPattern !is CsvPattern)
             return Result.Failure(thisResolver.mismatchMessages.mismatchMessage(this.typeName, otherPattern.typeName))
 
         return this.pattern.encompasses(otherPattern.pattern, thisResolver, otherResolver, typeStack)

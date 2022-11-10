@@ -160,7 +160,7 @@ fun stringToPattern(patternValue: String, key: String?): Pattern =
 fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = null): Pattern {
     return rawContent.trim().let {
         when {
-            it.contains("/") -> {
+            isPatternToken(it) && it.contains("/") -> {
                 val (container, type) = withoutPatternDelimiters(it).split("/")
                 if(container != "csv")
                     throw ContractException("$container is not supported")

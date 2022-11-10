@@ -101,7 +101,7 @@ paths:
     @Test
     fun `should read array in query params as CsvString type`() {
         val result: Result = contract.scenarios.first().matches(HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3")), emptyMap())
-        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result).isInstanceOf(Success::class.java)
     }
 
     @Test

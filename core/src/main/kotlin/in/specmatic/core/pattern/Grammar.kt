@@ -165,7 +165,9 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                 if(container != "csv")
                     throw ContractException("$container is not supported")
 
-                CsvPattern(parsedPattern(type, null, typeAlias))
+                val typeString = "($type)"
+                val innerPattern = builtInPatterns[typeString] ?: DeferredPattern(typeString)
+                CsvPattern(innerPattern)
             }
             it.isEmpty() -> EmptyStringPattern
             it.startsWith("{") -> toJSONObjectPattern(it, typeAlias = typeAlias)

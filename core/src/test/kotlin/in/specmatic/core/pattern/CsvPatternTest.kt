@@ -1,9 +1,14 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.core.Resolver
+import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.value.Value
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.HttpStub
+import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -63,5 +68,151 @@ internal class CsvPatternTest {
             assertThat(it.first()).isInstanceOf(CsvPattern::class.java)
             assertThat(it.first().pattern).isInstanceOf(NumberPattern::class.java)
         })
+    }
+
+    private val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers: []
+paths:
+  /hello:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: query
+          name: data
+          schema:
+            type: array
+            items:
+              type: integer
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+        """.trimIndent(), "").toFeature()
+
+    @Test
+    fun `should read array in query params as CsvString type`() {
+        val result: Result = contract.scenarios.first().matches(HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3")), emptyMap())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `should stub out CsvString type`() {
+        val request = HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3"))
+        val stub = contract.matchingStub(request, HttpResponse.OK)
+
+        assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+
+        HttpStub(listOf(contract), listOf(stub)).use {
+            assertDoesNotThrow {
+                it.createStub(ScenarioStub(request, HttpResponse.OK))
+            }
+        }
+    }
+
+    @Test
+    fun `should generate tests with CsvString type`() {
+        val params = mutableListOf<String>()
+        var count = 0
+
+        contract.executeTests(object: TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                count ++
+                params.addAll(request.queryParams.keys)
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+
+        })
+
+        assertThat(params).isEqualTo(listOf("data"))
+        assertThat(count).isEqualTo(2)
+    }
+
+    @Test
+    fun `old and new are backward compatible when the csv type has not changed`() {
+        val result = testBackwardCompatibility(contract, contract)
+
+        assertThat(result.success()).isTrue()
+    }
+
+    @Test
+    fun `old and new are NOT backward compatible when the csv type has changed`() {
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers: []
+paths:
+  /hello:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: query
+          name: data
+          schema:
+            type: array
+            items:
+              type: boolean
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(contract, newContract)
+
+        assertThat(result.success()).isFalse()
+    }
+
+    @Test
+    fun `old and new are NOT backward compatible when the entire type has changed`() {
+        val newContract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers: []
+paths:
+  /hello:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: query
+          name: data
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+        """.trimIndent(), "").toFeature()
+
+        val result = testBackwardCompatibility(contract, newContract)
+
+        assertThat(result.success()).isFalse()
     }
 }

@@ -231,7 +231,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         val requestBodyExample: Map<String, Any> = requestBodyExample(operation, exampleName)
 
                         val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
-                            if (value.toString().contains("externalValue")) "${key}_filename" to value
+                            if (value?.toString().orEmpty().contains("externalValue")) "${key}_filename" to value
                             else key to value
                         }.toMap()
 

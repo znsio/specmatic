@@ -10,6 +10,7 @@ import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
@@ -17,12 +18,9 @@ import io.ktor.http.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource

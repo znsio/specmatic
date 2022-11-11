@@ -61,7 +61,8 @@ data class Resolver(
             isPatternToken(patternValue) -> {
                 val resolvedPattern = patterns[patternValue] ?: parsedPattern(patternValue, null)
                 when {
-                    resolvedPattern is DeferredPattern && resolvedPattern.pattern == patternValue -> throw ContractException("Type $patternValue does not exist")
+                    resolvedPattern is DeferredPattern && resolvedPattern.pattern == patternValue ->
+                        throw ContractException("Type $patternValue does not exist")
                     else -> resolvedPattern
                 }
             }

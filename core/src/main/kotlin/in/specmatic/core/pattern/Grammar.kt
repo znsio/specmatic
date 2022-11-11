@@ -160,6 +160,15 @@ fun stringToPattern(patternValue: String, key: String?): Pattern =
 fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = null): Pattern {
     return rawContent.trim().let {
         when {
+            isPatternToken(it) && it.contains("/") -> {
+                val (container, type) = withoutPatternDelimiters(it).split("/")
+                if(container != "csv")
+                    throw ContractException("$container is not supported")
+
+                val typeString = "($type)"
+                val innerPattern = builtInPatterns[typeString] ?: DeferredPattern(typeString)
+                CsvPattern(innerPattern)
+            }
             it.isEmpty() -> EmptyStringPattern
             it.startsWith("{") -> toJSONObjectPattern(it, typeAlias = typeAlias)
             it.startsWith("[") -> JSONArrayPattern(it, typeAlias = typeAlias)

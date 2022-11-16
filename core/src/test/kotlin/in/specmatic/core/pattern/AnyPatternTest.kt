@@ -181,4 +181,11 @@ internal class AnyPatternTest {
             assertThat(resultText).contains("02")
         }
     }
+
+    @Test
+    fun `parse operation of Nullable type implemented with AnyPattern should return a string`() {
+        val type = AnyPattern(listOf(NullPattern, StringPattern()))
+        val parsedValue = type.parse("22B Baker Street", Resolver(isNegative = true))
+        assertThat(parsedValue.toStringLiteral()).isEqualTo("22B Baker Street")
+    }
 }

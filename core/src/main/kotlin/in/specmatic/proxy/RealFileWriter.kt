@@ -13,4 +13,11 @@ class RealFileWriter(private val dataDir: File): FileWriter {
         dataDir.resolve(path).writeText(content)
     }
 
+    override fun subDirectory(path: String): FileWriter {
+        return RealFileWriter(dataDir.resolve(path))
+    }
+
+    override fun fileName(path: String): String {
+        return dataDir.resolve(path).path
+    }
 }

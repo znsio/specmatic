@@ -9,19 +9,21 @@ import io.ktor.util.reflect.*
 import java.net.URI
 
 const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"
+const val OMIT = "OMIT"
 
 data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
     fun encompasses(otherURLMatcher: URLMatcher, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if(this.matches(HttpRequest("GET", URI.create(otherURLMatcher.path)), thisResolver) is Success)
+        if (this.matches(HttpRequest("GET", URI.create(otherURLMatcher.path)), thisResolver) is Success)
             return Success()
 
-        val mismatchedPartResults = this.pathPattern.zip(otherURLMatcher.pathPattern).map { (thisPathItem, otherPathItem) ->
-            thisPathItem.pattern.encompasses(otherPathItem, thisResolver, otherResolver)
-        }
+        val mismatchedPartResults =
+            this.pathPattern.zip(otherURLMatcher.pathPattern).map { (thisPathItem, otherPathItem) ->
+                thisPathItem.pattern.encompasses(otherPathItem, thisResolver, otherResolver)
+            }
 
         val failures = mismatchedPartResults.filterIsInstance<Failure>()
 
-        if(failures.isEmpty())
+        if (failures.isEmpty())
             return Success()
 
         return Result.fromFailures(failures)
@@ -36,7 +38,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         return HttpRequest(path = path) to resolver to
                 ::matchesPath otherwise
                 ::handleError toResult
-                :: returnResult
+                ::returnResult
     }
 
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
@@ -157,7 +159,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val optionalQueryParams = queryPattern
 
-            forEachKeyCombinationIn(optionalQueryParams, row) { entry ->
+            forEachKeyCombinationIn(row.withoutOmittedKeys(optionalQueryParams), row) { entry ->
                 newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver)
             }
         }
@@ -194,7 +196,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     override fun toString(): String {
-        val stringizedQuery = if(queryPattern.isNotEmpty()) {
+        val stringizedQuery = if (queryPattern.isNotEmpty()) {
             "?" + queryPattern.mapKeys { it.key.removeSuffix("?") }.map { (key, value) ->
                 "$key=$value"
             }.toList().joinToString(separator = "&")
@@ -217,7 +219,10 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 internal fun toURLMatcherWithOptionalQueryParams(url: String, apiKeyQueryParams: Set<String> = emptySet()): URLMatcher =
     toURLMatcherWithOptionalQueryParams(URI.create(url), apiKeyQueryParams)
 
-internal fun toURLMatcherWithOptionalQueryParams(urlPattern: URI, apiKeyQueryParams: Set<String> = emptySet()): URLMatcher {
+internal fun toURLMatcherWithOptionalQueryParams(
+    urlPattern: URI,
+    apiKeyQueryParams: Set<String> = emptySet()
+): URLMatcher {
     val path = urlPattern.path
 
     val pathPattern = pathToPattern(urlPattern.rawPath)
@@ -291,7 +296,7 @@ internal fun matchesQuery(
 
     val failures = keyErrorList.plus(results).filterIsInstance<Failure>()
 
-    return if(failures.isNotEmpty())
+    return if (failures.isNotEmpty())
         Failure.fromFailures(failures)
     else
         Success()

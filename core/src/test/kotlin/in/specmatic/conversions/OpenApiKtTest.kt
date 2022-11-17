@@ -1611,8 +1611,8 @@ Scenario: zero should return not found
         val result = executeTest(feature.scenarios.first(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 executed = true
-                assertThat(request.queryParams).containsKey("id")
-                return HttpResponse.OK
+                return if (request.queryParams.containsKey("id")) HttpResponse.OK
+                else HttpResponse.ERROR_400
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -1621,6 +1621,43 @@ Scenario: zero should return not found
         })
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
+        assertThat(executed).isTrue
+    }
+
+    @Test
+    fun `should not send query params that have been explicitly omitted in examples`() {
+        val openAPISpec = """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/helloWithQueryParams.yaml            
+
+Scenario: zero should return not found
+  When GET /hello
+  Then status 200
+  Examples:
+      | id   |
+      | OMIT |
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+
+        var executed = false
+
+        val results = feature.copy(generativeTestingEnabled = true).executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    executed = true
+                    return if (!request.queryParams.containsKey("id")) HttpResponse.OK
+                    else HttpResponse.ERROR_400
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(results.success()).isTrue
         assertThat(executed).isTrue
     }
 

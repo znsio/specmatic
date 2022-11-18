@@ -1,9 +1,8 @@
 package application
 
 import picocli.CommandLine.*
-import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import `in`.specmatic.core.log.StringLog
+import `in`.specmatic.core.log.*
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.proxy.Proxy
@@ -42,9 +41,15 @@ class ProxyCommand : Callable<Unit> {
     @Option(names = ["--httpsPassword"], description = ["Key password if any"])
     var keyPassword = "forgotten"
 
+    @Option(names = ["--debug"], description = ["Write verbose logs to console for debugging"])
+    var debugLog = false
+
     var proxy: Proxy? = null
 
     override fun call() {
+        if(debugLog)
+            logger = Verbose()
+
         validatedProxySettings(targetBaseURL, proxySpecmaticDataDir)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
@@ -86,6 +91,8 @@ class ProxyCommand : Callable<Unit> {
                     proxy?.close()
                 } catch (e: InterruptedException) {
                     currentThread().interrupt()
+                } catch (e: Throwable) {
+                    logger.log(e)
                 }
             }
         })

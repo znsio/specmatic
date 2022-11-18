@@ -285,29 +285,32 @@ data class Feature(
     }
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
-        val negativeScenarios =
-            scenarios.filter { it.isA2xxScenario() }.map { it.negativeBasedOn(getBadRequestsOrDefault(it)) }.flatMap {
-                it.generateTestScenarios(testVariables, testBaseURLs)
-            }
-        val positiveScenarios =
-            scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
-                it.newBasedOn(suggestions)
-            }.flatMap {
-                it.generateTestScenarios(testVariables, testBaseURLs, generativeTestingEnabled)
-            }
-        val negativeScenariosToConsider = negativeScenarios.filter { negativeSecenario ->
-            positiveScenarios.filter { it.isA2xxScenario() }.none {
-                it.httpRequestPattern.matches(
-                    negativeSecenario.httpRequestPattern.generate(Resolver()),
-                    Resolver()
-                ) is Result.Success
-            }
-        }
         return if (generativeTestingEnabled)
-            positiveScenarios + negativeScenariosToConsider
+            positiveTestScenarios(suggestions) + negativeTestScenarios()
         else
-            positiveScenarios
+            positiveTestScenarios(suggestions)
     }
+
+    fun positiveTestScenarios(suggestions: List<Scenario>) =
+        scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
+            it.newBasedOn(suggestions)
+        }.flatMap {
+            it.generateTestScenarios(testVariables, testBaseURLs, generativeTestingEnabled)
+        }
+
+    fun negativeTestScenarios() =
+        scenarios.filter {
+            it.isA2xxScenario()
+        }.map { scenario ->
+            val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
+            val negativeTestScenarios = negativeScenario.generateTestScenarios(testVariables, testBaseURLs)
+
+            negativeTestScenarios.filterNot { negativeTestScenario ->
+                val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
+                scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
+            }
+
+        }.flatten()
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->

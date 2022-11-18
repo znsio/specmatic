@@ -55,8 +55,11 @@ data class AnyPattern(
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)
 
-    override fun parse(value: String, resolver: Resolver): Value =
-        pattern.asSequence().map {
+    override fun parse(value: String, resolver: Resolver): Value {
+        val resolvedTypes = pattern.map { resolvedHop(it, resolver) }
+        val nonNullTypesFirst = resolvedTypes.filterNot { it is NullPattern }.plus(resolvedTypes.filterIsInstance<NullPattern>())
+
+        return nonNullTypesFirst.asSequence().map {
             try {
                 it.parse(value, resolver)
             } catch (e: Throwable) {
@@ -69,6 +72,7 @@ data class AnyPattern(
                 ) { it.typeName }
             }."
         )
+    }
 
     override fun patternSet(resolver: Resolver): List<Pattern> =
         this.pattern.flatMap { it.patternSet(resolver) }

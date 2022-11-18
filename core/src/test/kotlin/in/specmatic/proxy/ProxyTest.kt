@@ -47,6 +47,14 @@ internal class ProxyTest {
                 else
                     receivedStub = content
             }
+
+            override fun subDirectory(path: String): FileWriter {
+                return this
+            }
+
+            override fun fileName(path: String): String {
+                return super.fileName(path)
+            }
         }
 
         HttpStub(simpleFeature).use {
@@ -92,6 +100,10 @@ internal class ProxyTest {
                     receivedContract = content
                 else
                     receivedStub = content
+            }
+
+            override fun subDirectory(path: String): FileWriter {
+                return this
             }
         }
 

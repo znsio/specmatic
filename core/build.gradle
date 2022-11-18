@@ -31,7 +31,7 @@ dependencies {
     implementation("io.ktor:ktor-server-double-receive:$ktor_version")
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.4.1"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.7.20"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.7.21"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
@@ -39,13 +39,13 @@ dependencies {
     implementation "org.testcontainers:kafka:$testcontainers_version"
 
     implementation 'org.apache.kafka:kafka-clients:3.3.1'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.4.2'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.0'
 
-    implementation 'io.swagger.parser.v3:swagger-parser:2.1.7'
+    implementation 'io.swagger.parser.v3:swagger-parser:2.1.9'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.34.0'
+    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.0'
     testImplementation 'org.assertj:assertj-core:3.23.1'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"

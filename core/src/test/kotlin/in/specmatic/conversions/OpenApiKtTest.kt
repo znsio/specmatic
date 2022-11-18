@@ -1611,7 +1611,7 @@ Scenario: zero should return not found
         val result = executeTest(feature.scenarios.first(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 executed = true
-                return if (request.queryParams.containsKey("id")) HttpResponse.OK
+                return if (request.queryParams.keys.containsAll(listOf("name", "message"))) HttpResponse.OK
                 else HttpResponse.ERROR_400
             }
 
@@ -1636,8 +1636,9 @@ Scenario: zero should return not found
   When GET /hello
   Then status 200
   Examples:
-      | id   |
-      | OMIT |
+      | message | name |
+      | hello   | Hari |
+      | hello   | OMIT |
         """.trimIndent()
 
         val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
@@ -1648,7 +1649,14 @@ Scenario: zero should return not found
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     executed = true
-                    return if (!request.queryParams.containsKey("id")) HttpResponse.OK
+                    return if (request.queryParams.size == 2 && request.queryParams.values.containsAll(
+                            listOf(
+                                "hello",
+                                "Hari"
+                            )
+                        )
+                    ) HttpResponse.OK
+                    else if (request.queryParams.size == 1 && request.queryParams.values.containsAll(listOf("hello"))) HttpResponse.OK
                     else HttpResponse.ERROR_400
                 }
 
@@ -1658,6 +1666,7 @@ Scenario: zero should return not found
         )
 
         assertThat(results.success()).isTrue
+        assertThat(results.successCount).isEqualTo(2)
         assertThat(executed).isTrue
     }
 

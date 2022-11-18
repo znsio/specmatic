@@ -20,22 +20,18 @@ paths:
             type: string
           required: true
           description: Greeting Message
-          examples:
-            200_OKAY:
-              value: 'hello'
-            200_OKAY_id_only:
-              value: 'hello'
         - in: query
           name: name
           schema:
             type: string
           required: true
           description: Name of person to greet
-          examples:
-            200_OKAY:
-              value: 'Hari'
-            200_OKAY_id_only:
-              value: OMIT
+        - in: query
+          name: another_message
+          schema:
+            type: string
+          required: true
+          description: additional message
       responses:
         '200':
           description: Says hello
@@ -43,11 +39,6 @@ paths:
             application/json:
               schema:
                 type: string
-              examples:
-                200_OKAY:
-                  value: 'hello Hari'
-                200_OKAY_id_only:
-                  value: 'hello'
         '404':
           description: Not Found
           content:

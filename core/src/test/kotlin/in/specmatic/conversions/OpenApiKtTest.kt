@@ -1643,21 +1643,13 @@ Scenario: zero should return not found
 
         val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
 
-        var executed = false
+        val queryParameters: MutableList<Map<String, String>> = mutableListOf()
 
         val results = feature.copy(generativeTestingEnabled = true).executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    executed = true
-                    return if (request.queryParams.size == 2 && request.queryParams.values.containsAll(
-                            listOf(
-                                "hello",
-                                "Hari"
-                            )
-                        )
-                    ) HttpResponse.OK
-                    else if (request.queryParams.size == 1 && request.queryParams.values.containsAll(listOf("hello"))) HttpResponse.OK
-                    else HttpResponse.ERROR_400
+                    queryParameters.add(request.queryParams)
+                    return HttpResponse.OK
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {
@@ -1666,8 +1658,16 @@ Scenario: zero should return not found
         )
 
         assertThat(results.success()).isTrue
-        assertThat(results.successCount).isEqualTo(2)
-        assertThat(executed).isTrue
+        assertThat(queryParameters.size).isEqualTo(4)
+        assertThat(queryParameters.map { it.keys }).containsAll(
+            listOf(
+                setOf("message"),
+                setOf("message", "name"),
+                setOf("message", "name", "another_message"),
+                setOf("message", "another_message"),
+            )
+        )
+        assertThat(queryParameters.map { it.values.toList() }).containsAll(listOf(listOf("hello", "Hari"), listOf("hello")))
     }
 
     @Test

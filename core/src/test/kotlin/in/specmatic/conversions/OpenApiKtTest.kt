@@ -1611,8 +1611,8 @@ Scenario: zero should return not found
         val result = executeTest(feature.scenarios.first(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 executed = true
-                assertThat(request.queryParams).containsKey("id")
-                return HttpResponse.OK
+                return if (request.queryParams.keys.containsAll(listOf("name", "message"))) HttpResponse.OK
+                else HttpResponse.ERROR_400
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -1622,6 +1622,52 @@ Scenario: zero should return not found
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
         assertThat(executed).isTrue
+    }
+
+    @Test
+    fun `should not send query params that have been explicitly omitted in examples`() {
+        val openAPISpec = """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/helloWithQueryParams.yaml            
+
+Scenario: zero should return not found
+  When GET /hello
+  Then status 200
+  Examples:
+      | message | name |
+      | hello   | Hari |
+      | hello   | OMIT |
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+
+        val queryParameters: MutableList<Map<String, String>> = mutableListOf()
+
+        val results = feature.copy(generativeTestingEnabled = true).executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    queryParameters.add(request.queryParams)
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(results.success()).isTrue
+        assertThat(queryParameters.size).isEqualTo(4)
+        assertThat(queryParameters.map { it.keys }).containsAll(
+            listOf(
+                setOf("message"),
+                setOf("message", "name"),
+                setOf("message", "name", "another_message"),
+                setOf("message", "another_message"),
+            )
+        )
+        assertThat(queryParameters.map { it.values.toList() }).containsAll(listOf(listOf("hello", "Hari"), listOf("hello")))
     }
 
     @Test

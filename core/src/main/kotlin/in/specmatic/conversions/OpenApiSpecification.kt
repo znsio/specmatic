@@ -2,6 +2,7 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
+import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
@@ -53,7 +54,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             return OpenApiSpecification(openApiFile, openApi)
         }
 
-        fun fromYAML(yamlContent: String, filePath: String): OpenApiSpecification {
+        fun fromYAML(yamlContent: String, filePath: String, loggerForErrors: LogStrategy = logger): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), filePath)
             val openApi: OpenAPI? = parseResult.openAPI
@@ -61,18 +62,26 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             if (openApi == null) {
                 logger.debug("Failed to parse OpenAPI from file $filePath\n\n$yamlContent")
 
-                parseResult.messages.filterNotNull().let {
-                    if (it.isNotEmpty()) {
-                        val parserMessages = parseResult.messages.joinToString(System.lineSeparator())
-                        logger.log("Error parsing file $filePath")
-                        logger.log(parserMessages.prependIndent("  "))
-                    }
-                }
+                printMessages(parseResult, filePath, loggerForErrors)
 
                 throw ContractException("Could not parse contract $filePath, please validate the syntax using https://editor.swagger.io")
+            } else if (parseResult.messages?.isNotEmpty() == true) {
+                logger.log("The OpenAPI file $filePath was read successfully but with some issues")
+
+                printMessages(parseResult, filePath, loggerForErrors)
             }
 
             return OpenApiSpecification(filePath, openApi)
+        }
+
+        private fun printMessages(parseResult: SwaggerParseResult, filePath: String, loggerForErrors: LogStrategy) {
+            parseResult.messages.filterNotNull().let {
+                if (it.isNotEmpty()) {
+                    val parserMessages = parseResult.messages.joinToString(System.lineSeparator())
+                    loggerForErrors.log("Error parsing file $filePath")
+                    loggerForErrors.log(parserMessages.prependIndent("  "))
+                }
+            }
         }
 
         private fun resolveExternalReferences(): ParseOptions = ParseOptions().also { it.isResolve = true }

@@ -1,7 +1,11 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.log.CompositePrinter
+import `in`.specmatic.core.log.LogMessage
+import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -5620,5 +5624,186 @@ paths:
                       type: string
               """.trimIndent()
         )
+    }
+
+    @Test
+    fun `should log messages from the parser when parsing fails`() {
+        val contractHasBadDescriptionInResponseSchema = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /hello/{id}:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Numeric ID
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+              description: Says hello
+                type: string
+        """.trimIndent()
+
+        val testLogger = object: LogStrategy {
+            val messages = mutableListOf<String>()
+            override val printer: CompositePrinter
+                get() = TODO("Not yet implemented")
+
+            override fun keepReady(msg: LogMessage) {
+                TODO("Not yet implemented")
+            }
+
+            override fun exceptionString(e: Throwable, msg: String?): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun ofTheException(e: Throwable, msg: String?): LogMessage {
+                TODO("Not yet implemented")
+            }
+
+            override fun log(e: Throwable, msg: String?) {
+                TODO("Not yet implemented")
+            }
+
+            override fun log(msg: String) {
+                messages.add(msg)
+            }
+
+            override fun log(msg: LogMessage) {
+                TODO("Not yet implemented")
+            }
+
+            override fun newLine() {
+                TODO("Not yet implemented")
+            }
+
+            override fun debug(msg: String): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun debug(msg: LogMessage) {
+                TODO("Not yet implemented")
+            }
+
+            override fun debug(e: Throwable, msg: String?) {
+                TODO("Not yet implemented")
+            }
+
+        }
+
+        ignoreButLogException {
+            OpenApiSpecification.fromYAML(contractHasBadDescriptionInResponseSchema, "", testLogger)
+        }
+
+        assertThat(testLogger.messages).isNotEmpty
+    }
+
+    @Test
+    fun `should log messages from the parser when parsing does not fail`() {
+        val contractHasBadDescriptionInResponseSchema = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      requestBody:
+        content:
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        """.trimIndent()
+
+        val testLogger = object: LogStrategy {
+            val messages = mutableListOf<String>()
+            override val printer: CompositePrinter
+                get() = TODO("Not yet implemented")
+
+            override fun keepReady(msg: LogMessage) {
+                TODO("Not yet implemented")
+            }
+
+            override fun exceptionString(e: Throwable, msg: String?): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun ofTheException(e: Throwable, msg: String?): LogMessage {
+                TODO("Not yet implemented")
+            }
+
+            override fun log(e: Throwable, msg: String?) {
+                TODO("Not yet implemented")
+            }
+
+            override fun log(msg: String) {
+                println(msg)
+                messages.add(msg)
+            }
+
+            override fun log(msg: LogMessage) {
+                TODO("Not yet implemented")
+            }
+
+            override fun newLine() {
+                TODO("Not yet implemented")
+            }
+
+            override fun debug(msg: String): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun debug(msg: LogMessage) {
+                TODO("Not yet implemented")
+            }
+
+            override fun debug(e: Throwable, msg: String?) {
+                TODO("Not yet implemented")
+            }
+
+        }
+
+        ignoreButLogException {
+            OpenApiSpecification.fromYAML(contractHasBadDescriptionInResponseSchema, "", testLogger)
+        }
+
+        assertThat(testLogger.messages).isNotEmpty
+    }
+
+    private fun ignoreButLogException(function: () -> OpenApiSpecification) {
+        try {
+            function()
+        } catch(e: Throwable) {
+            println(exceptionCauseMessage(e))
+        }
     }
 }

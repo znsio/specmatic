@@ -9,7 +9,7 @@ import io.ktor.util.reflect.*
 import java.net.URI
 
 const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"
-const val OMIT = "OMIT"
+val OMIT = listOf("(OMIT)", "(omit)")
 
 data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
     fun encompasses(otherURLMatcher: URLMatcher, thisResolver: Resolver, otherResolver: Resolver): Result {

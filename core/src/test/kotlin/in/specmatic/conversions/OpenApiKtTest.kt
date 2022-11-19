@@ -1638,7 +1638,7 @@ Scenario: zero should return not found
   Examples:
       | message | name |
       | hello   | Hari |
-      | hello   | OMIT |
+      | hello   | (omit) |
         """.trimIndent()
 
         val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)

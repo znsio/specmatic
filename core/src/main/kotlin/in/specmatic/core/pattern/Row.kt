@@ -60,6 +60,6 @@ data class Row(
     fun containsField(key: String): Boolean = cells.containsKey(key)
 
     fun withoutOmittedKeys(keys: Map<String, Pattern>) = keys.filter {
-        !this.containsField(withoutOptionality(it.key)) || this.getField(withoutOptionality(it.key)) != OMIT
+        !this.containsField(withoutOptionality(it.key)) || this.getField(withoutOptionality(it.key)) !in OMIT
     }
 }

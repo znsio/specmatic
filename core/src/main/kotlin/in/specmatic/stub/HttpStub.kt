@@ -96,7 +96,7 @@ class HttpStub(
 
     private val sseBuffer: SSEBuffer = SSEBuffer()
 
-    private val broadcastChannels: Vector<BroadcastChannel<SseEvent>> = Vector()
+    private val broadcastChannels: Vector<BroadcastChannel<SseEvent>> = Vector(50, 10)
 
     private val environment = applicationEngineEnvironment {
         module {

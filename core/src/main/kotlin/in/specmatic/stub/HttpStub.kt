@@ -96,7 +96,7 @@ class HttpStub(
 
     private val sseBuffer: SSEBuffer = SSEBuffer()
 
-    private val broadcastChannels: MutableList<BroadcastChannel<SseEvent>> = mutableListOf()
+    private val broadcastChannels: Vector<BroadcastChannel<SseEvent>> = Vector()
 
     private val environment = applicationEngineEnvironment {
         module {
@@ -208,13 +208,13 @@ class HttpStub(
     ) {
         try {
             events.cancel()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logger.log("$eventsError (${exceptionCauseMessage(e)})")
         }
 
         try {
             channel.cancel()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logger.log("$channelError (${exceptionCauseMessage(e)}")
         }
     }

@@ -508,19 +508,6 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         throw ContractException("Specmatic only supports bearer and api key authentication (header, query) security schemes at the moment")
     }
 
-    private fun unsupportedApiKeyAuth(securityScheme: Pair<String, SecurityScheme>): Boolean {
-        return (securityScheme.second.type != SecurityScheme.Type.APIKEY
-                || securityScheme.second.`in` !in listOf(SecurityScheme.In.HEADER, SecurityScheme.In.QUERY))
-    }
-
-    private fun notBearerAuth(securityScheme: Pair<String, SecurityScheme>): Boolean {
-        return securityScheme.second.scheme != BEARER_SECURITY_SCHEME
-    }
-
-    private fun doSecurityRequirementsMatch(
-        securityRequirements: MutableList<SecurityRequirement>?, securitySchemeName: String
-    ) = securityRequirements != null && securityRequirements.toList().any { it.keys.contains(securitySchemeName) }
-
     private fun toFormFields(mediaType: MediaType) =
         mediaType.schema.properties.map { (formFieldName, formFieldValue) ->
             formFieldName to toSpecmaticPattern(

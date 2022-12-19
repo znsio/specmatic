@@ -1567,7 +1567,8 @@ fun toFormDataPart(step: StepInfo, contractFilePath: String): MultiPartFormDataP
             MultiPartContentPattern(name, parsedPattern(content))
         }
         else -> {
-            MultiPartContentPattern(name, ExactValuePattern(parsedValue(content)))
+            MultiPartContentPattern(name, parsedPattern(content.trim()))
+//            MultiPartContentPattern(name, ExactValuePattern(parsedValue(content)))
         }
     }
 }

@@ -453,7 +453,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                         MultiPartFileValue(
                             it.name ?: "",
                             it.originalFileName ?: "",
-                            "${it.contentType?.contentType}/${it.contentType?.contentSubtype}",
+                            it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" },
                             null,
                             content,
                             boundary
@@ -464,7 +464,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             it.name ?: "",
                             StringValue(it.value),
                             boundary,
-                            specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}"
+                            specifiedContentType = it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
                         )
                     }
                     is PartData.BinaryItem -> {
@@ -478,7 +478,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             it.name ?: "",
                             StringValue(content),
                             boundary,
-                            specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}"
+                            specifiedContentType = it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
                         )
                     }
                     else -> {

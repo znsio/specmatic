@@ -29,14 +29,14 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
             }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
-            MultiPartContentValue(name, content.generate(resolver), specifiedContentType = contentType ?: "")
+            MultiPartContentValue(name, content.generate(resolver), specifiedContentType = contentType)
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
         if(withoutOptionality(name) != value.name)
             return Failure("The contract expected a part name to be $name, but got ${value.name}", failureReason = FailureReason.PartNameMisMatch)
 
-        if(contentType != null && contentType != value.contentType)
-            return Failure("Expected $contentType, but got ${value.contentType}")
+//        if(contentType != null && value.contentType != null && contentType != value.contentType)
+//            return Failure("Expected $contentType, but got ${value.contentType}")
 
         return when(value) {
             is MultiPartFileValue -> {
@@ -85,7 +85,7 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
             value !is MultiPartFileValue -> Failure("The contract expected a file, but got content instead.")
             name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}.", failureReason = FailureReason.PartNameMisMatch)
             filenameMismatch(value, resolver) -> filenameMismatchError(value, resolver)
-            contentType != null && value.contentType != contentType -> Failure("The contract expected ${contentType.let { "content type $contentType" }}, but got ${value.contentType?.let { "content type $value.contentType" } ?: "no content type."}.")
+//            contentType != null && value.contentType != null && value.contentType != contentType -> Failure("The contract expected ${contentType.let { "content type $contentType" }}, but got ${value.contentType?.let { "content type $value.contentType" } ?: "no content type."}.")
             contentEncoding != null && value.contentEncoding != contentEncoding -> {
                 val contentEncodingMessage = contentEncoding.let { "content encoding $contentEncoding" }
                 val receivedContentEncodingMessage = value.contentEncoding?.let { "content encoding ${value.contentEncoding}" }

@@ -22,7 +22,7 @@ def junit_version = "5.9.1"
 def testcontainers_version = "1.16.3"
 
 dependencies {
-    implementation 'io.cucumber:gherkin:22.0.0'
+    implementation 'io.cucumber:gherkin:26.0.1'
     implementation "io.ktor:ktor-server-netty:$ktor_version"
     implementation "io.ktor:ktor-server-core:$ktor_version"
     implementation "io.ktor:ktor-client-core-jvm:$ktor_version"

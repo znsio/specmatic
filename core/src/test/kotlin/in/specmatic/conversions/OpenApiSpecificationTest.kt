@@ -20,10 +20,7 @@ import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.Ignore
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
@@ -4846,6 +4843,7 @@ paths:
             assertThat(testStatus).isEqualTo("test ran")
         }
 
+        @Disabled
         @Test
         fun `support for multipart form data stub and validate contentType`(@TempDir tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
@@ -4955,6 +4953,7 @@ paths:
             assertThat(testStatus).isEqualTo("test ran")
         }
 
+        @Disabled
         @Test
         fun `support for multipart form data non-file stub and validate content type`(@TempDir tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")

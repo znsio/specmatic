@@ -96,7 +96,7 @@ class HttpStub(
 
     private val sseBuffer: SSEBuffer = SSEBuffer()
 
-    private val broadcastChannels: MutableList<BroadcastChannel<SseEvent>> = mutableListOf()
+    private val broadcastChannels: Vector<BroadcastChannel<SseEvent>> = Vector(50, 10)
 
     private val environment = applicationEngineEnvironment {
         module {
@@ -208,13 +208,13 @@ class HttpStub(
     ) {
         try {
             events.cancel()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logger.log("$eventsError (${exceptionCauseMessage(e)})")
         }
 
         try {
             channel.cancel()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logger.log("$channelError (${exceptionCauseMessage(e)}")
         }
     }
@@ -453,7 +453,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                         MultiPartFileValue(
                             it.name ?: "",
                             it.originalFileName ?: "",
-                            "${it.contentType?.contentType}/${it.contentType?.contentSubtype}",
+                            it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" },
                             null,
                             content,
                             boundary
@@ -464,7 +464,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             it.name ?: "",
                             StringValue(it.value),
                             boundary,
-                            specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}"
+                            specifiedContentType = it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
                         )
                     }
                     is PartData.BinaryItem -> {
@@ -478,7 +478,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             it.name ?: "",
                             StringValue(content),
                             boundary,
-                            specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}"
+                            specifiedContentType = it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
                         )
                     }
                     else -> {

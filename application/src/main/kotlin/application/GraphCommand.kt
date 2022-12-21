@@ -11,6 +11,7 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exitWithMessage
 import picocli.CommandLine
 import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 import java.util.concurrent.Callable
 
 @CommandLine.Command(name = "graph",
@@ -18,7 +19,7 @@ import java.util.concurrent.Callable
     description = ["Dependency graph"])
 class GraphCommand: Callable<Unit> {
     @CommandLine.Command(name = "consumers", description = ["Display a list of services depending on contracts in this repo"])
-    fun consumers(@Option(names = ["--verbose"], description = ["Print verbose logs"]) verbose: Boolean = false) {
+    fun consumers(@Option(names = ["--verbose"], description = ["Print verbose logs"]) verbose: Boolean = false, @Option(names = ["--azureBaseURL"], description = ["Azure base URL"], required = true) azureBaseURL: String) {
         if(verbose)
             logger = Verbose(CompositePrinter())
 
@@ -37,7 +38,7 @@ class GraphCommand: Callable<Unit> {
                 """.trimMargin())
 
         val collection = repository.collectionName
-        val azure = AzureAPI(azureAuthToken, "https://devops.jio.com", collection)
+        val azure = AzureAPI(azureAuthToken, azureBaseURL, collection)
 
         logger.log("Dependency projects")
         logger.log("-------------------")

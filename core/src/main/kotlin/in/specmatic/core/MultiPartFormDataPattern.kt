@@ -124,7 +124,12 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
         return when(filename) {
             is ExactValuePattern -> {
                 val patternFilePath = filename.pattern.toStringLiteral()
-                val bytes = File(patternFilePath).readBytes()
+                val bytes = File(patternFilePath).canonicalFile.also {
+                    if(!it.exists()) {
+                        println(it.canonicalFile.path + " does not exist")
+                        throw Exception(it.canonicalFile.path + " does not exist")
+                    }
+                }.readBytes()
                 val contentBytes = value.content.bytes
                 !bytes.contentEquals(contentBytes)
             }

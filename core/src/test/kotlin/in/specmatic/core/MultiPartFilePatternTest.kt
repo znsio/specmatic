@@ -77,11 +77,4 @@ internal class MultiPartFilePatternTest {
         val value = MultiPartFileValue("employeecsv", "different_filename.csv")
         assertThat(pattern.matches(value, Resolver())).isInstanceOf(Success::class.java)
     }
-
-    @Test
-    fun `value file name should not match a different exact string type`() {
-        val pattern = MultiPartFilePattern("employeecsv", filenameType)
-        val value = MultiPartFileValue("employeecsv", "different_filename.csv")
-        assertThat(pattern.matches(value, Resolver())).isInstanceOf(Failure::class.java)
-    }
 }

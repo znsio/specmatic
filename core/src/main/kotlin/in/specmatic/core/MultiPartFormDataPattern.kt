@@ -4,6 +4,8 @@ import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.StringValue
+import java.io.File
+import java.util.*
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
 import kotlin.io.path.name
@@ -84,7 +86,8 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
         return when {
             value !is MultiPartFileValue -> Failure("The contract expected a file, but got content instead.")
             name != value.name -> Failure("The contract expected a part name to be $name, but got ${value.name}.", failureReason = FailureReason.PartNameMisMatch)
-            filenameMismatch(value, resolver) -> filenameMismatchError(value, resolver)
+            fileContentMismatch(value, resolver) -> fileContentMismatchError(value, resolver)
+            //TODO: Fix below comment
 //            contentType != null && value.contentType != null && value.contentType != contentType -> Failure("The contract expected ${contentType.let { "content type $contentType" }}, but got ${value.contentType?.let { "content type $value.contentType" } ?: "no content type."}.")
             contentEncoding != null && value.contentEncoding != contentEncoding -> {
                 val contentEncodingMessage = contentEncoding.let { "content encoding $contentEncoding" }
@@ -97,13 +100,13 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
         }
     }
 
-    private fun filenameMismatchError(
+    private fun fileContentMismatchError(
         value: MultiPartFileValue,
         resolver: Resolver
     ) = when(filename) {
         is ExactValuePattern -> {
             Failure(
-                "In the part named $name, the contract expected the filename to end with ${filename.typeName}, but got ${value.filename}.",
+                "In the part named $name, the contents in request did not match the value in file ${filename.pattern.toStringLiteral()}",
                 failureReason = FailureReason.PartNameMisMatch
             )
         }
@@ -114,16 +117,20 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
         )
     }
 
-    private fun filenameMismatch(
+    private fun fileContentMismatch(
         value: MultiPartFileValue,
         resolver: Resolver
-    ) = when(filename) {
-        is ExactValuePattern -> {
-            val patternFilePath = filename.pattern.toStringLiteral()
-            fileNameFromPath(patternFilePath) != fileNameFromPath(value.filename)
+    ): Boolean {
+        return when(filename) {
+            is ExactValuePattern -> {
+                val patternFilePath = filename.pattern.toStringLiteral()
+                val bytes = File(patternFilePath).readBytes()
+                val contentBytes = value.content.bytes
+                !bytes.contentEquals(contentBytes)
+            }
+            else ->
+                !filename.matches(StringValue(value.filename), resolver).isSuccess()
         }
-        else ->
-            !filename.matches(StringValue(value.filename), resolver).isSuccess()
     }
 
     @OptIn(ExperimentalPathApi::class)

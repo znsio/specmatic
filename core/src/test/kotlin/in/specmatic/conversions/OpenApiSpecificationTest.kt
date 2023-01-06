@@ -5470,7 +5470,7 @@ paths:
             """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
-        val match: List<Pair<Scenario, Result>> = feature.backwardCompatibleLookup(
+        val match: List<Pair<Scenario, Result>> = feature.compatibilityLookup(
             HttpRequest(
                 "POST",
                 "/users",

@@ -172,10 +172,10 @@ sealed class Result {
 
 enum class FailureReason(val fluffLevel: Int) {
     PartNameMisMatch(0),
-    URLPathMisMatch(2),
-    SOAPActionMismatch(2),
     StatusMismatch(1),
-    RequestMismatchButStatusAlsoWrong(1)
+    RequestMismatchButStatusAlsoWrong(1),
+    URLPathMisMatch(2),
+    SOAPActionMismatch(2)
 }
 
 fun Result.breadCrumb(breadCrumb: String): Result =

@@ -112,9 +112,9 @@ data class Feature(
         }
     }
 
-    fun backwardCompatibleLookup(httpRequest: HttpRequest): List<Pair<Scenario, Result>> {
+    fun compatibilityLookup(httpRequest: HttpRequest, mismatchMessages: MismatchMessages = NewAndOldContractRequestMismatches): List<Pair<Scenario, Result>> {
         try {
-            val resultList = lookupAllScenarios(httpRequest, scenarios, NewAndOldContractRequestMismatches, IgnoreUnexpectedKeys)
+            val resultList = lookupAllScenarios(httpRequest, scenarios, mismatchMessages, IgnoreUnexpectedKeys)
 
             val successes = lookupAllSuccessfulScenarios(resultList)
             if (successes.isNotEmpty())
@@ -124,7 +124,7 @@ data class Feature(
 
             return when {
                 deepMatchingErrors.isNotEmpty() -> deepMatchingErrors
-                scenarios.isEmpty() -> throw ContractException("The contract is empty.")
+                scenarios.isEmpty() -> throw EmptyContract()
                 else -> emptyList()
             }
         } finally {
@@ -1238,6 +1238,10 @@ data class Feature(
 
         return schema
     }
+}
+
+class EmptyContract : Throwable() {
+
 }
 
 private fun toFixtureInfo(rest: String): Pair<String, Value> {

@@ -56,7 +56,7 @@ fun testBackwardCompatibility(
             val request = oldScenario.generateHttpRequest()
 
             val wholeMatchResults: List<Pair<Result, Result>> =
-                newFeature.backwardCompatibleLookup(request).map { (scenario, result) ->
+                newFeature.compatibilityLookup(request).map { (scenario, result) ->
                     Pair(scenario, result.updateScenario(scenario))
                 }.filterNot { (_, result) ->
                     result is Result.Failure && result.isFluffy()
@@ -85,7 +85,11 @@ fun testBackwardCompatibility(
                     it.toList()
                 }.flatten().filterIsInstance<Result.Failure>()
             }
-        } catch (contractException: ContractException) {
+        } catch(emptyContract: EmptyContract) {
+            val atThisFilePath = if(newFeature.path.isNotEmpty()) " at ${newFeature.path}" else ""
+            listOf(Result.Failure("The contract$atThisFilePath had no operations"))
+        }
+        catch (contractException: ContractException) {
             listOf(contractException.failure())
         } catch (stackOverFlowException: StackOverflowError) {
             listOf(Result.Failure("Exception: Stack overflow error, most likely caused by a recursive definition. Please report this with a sample contract as a bug!"))
@@ -115,7 +119,7 @@ fun findDifferences(
             val request = oldScenario.generateHttpRequest()
 
             val wholeMatchResults: List<Pair<Result, Result>> =
-                newFeature.backwardCompatibleLookup(request).map { (scenario, result) ->
+                newFeature.compatibilityLookup(request).map { (scenario, result) ->
                     Pair(scenario, result.updateScenario(scenario))
                 }.filterNot { (_, result) ->
                     result is Result.Failure && result.isFluffy()
@@ -141,6 +145,9 @@ fun findDifferences(
                     Result.fromFailures(failures).updateScenario(oldScenario)
                 }
             }
+        } catch(emptyContract: EmptyContract) {
+            val atThisFilePath = if(newFeature.path.isNotEmpty()) " at ${newFeature.path}" else ""
+            listOf(Result.Failure("The contract$atThisFilePath had no operations"))
         } catch (contractException: ContractException) {
             listOf(contractException.failure())
         } catch (stackOverFlowException: StackOverflowError) {

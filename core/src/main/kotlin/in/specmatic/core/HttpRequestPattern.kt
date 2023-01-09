@@ -6,6 +6,7 @@ import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
+import io.ktor.util.*
 
 private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
 private const val FORM_FIELDS_BREADCRUMB = "FORM-FIELDS"
@@ -228,8 +229,8 @@ data class HttpRequestPattern(
                 requestType.copy(
                     headersPattern = HttpHeadersPattern(
                         toTypeMap(
-                            request.headers,
-                            headersPattern.pattern,
+                            toLowerCaseKeys(request.headers) as Map<String, String>,
+                            toLowerCaseKeys(headersPattern.pattern) as Map<String, Pattern>,
                             resolver
                         )
                     )
@@ -264,6 +265,9 @@ data class HttpRequestPattern(
             }
         }
     }
+
+    private fun toLowerCaseKeys(map: Map<String, Any?>) =
+        map.map { (key, value) -> key.toLowerCasePreservingASCIIRules() to value }.toMap()
 
     private fun toTypeMap(
         values: Map<String, String>,

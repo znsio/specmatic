@@ -350,6 +350,15 @@ internal class HttpRequestPatternTest {
         assertThat(reportText).contains(">> REQUEST.BODY.id")
     }
 
+    @Test
+    fun `should lower case header keys while loading stub data`()  {
+        val type = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("http://helloworld.com/data"), headersPattern = HttpHeadersPattern(mapOf("x-data" to StringPattern())), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
+        val request = HttpRequest("POST", "/data", headers = mapOf("X-Data" to "abc123"), body = parsedJSON("""{"id": "abc123"}"""))
+
+        val httpRequestPattern = type.generate(request, Resolver())
+        assertThat(httpRequestPattern.headersPattern.pattern["x-data"].toString()).isEqualTo("abc123")
+    }
+
     @Nested
     inner class FormFieldMatchReturnsAllErrors {
         val request = HttpRequest(method = "POST", path = "/", formFields = mapOf("hello" to "abc123"))

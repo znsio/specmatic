@@ -237,4 +237,10 @@ internal class URLMatcherTest {
         val result = matcher.matches(URI("/"), mapOf("name" to "Archie"), Resolver())
         assertThat(result.isSuccess()).isFalse()
     }
+
+    @Test
+    fun `should stringify date time query param to date time pattern`() {
+        val urlMatcher = URLMatcher(mapOf("before" to DateTimePattern), pathToPattern("/pets"), "/pets")
+        assertThat(urlMatcher.toString()).isEqualTo("/pets?before=(datetime)")
+    }
 }

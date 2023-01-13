@@ -591,8 +591,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                             val (componentName, referredSchema) = resolveReferenceToSchema(component)
                             val cyclicReference =
-                                patternName.isNotEmpty() && patternName == componentName && typeStack.contains(
-                                    patternName
+                                typeStack.contains(
+                                    componentName
                                 ) && referredSchema.instanceOf(ObjectSchema::class)
                             when {
                                 cyclicReference -> DeferredPattern("(${patternName})")

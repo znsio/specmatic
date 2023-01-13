@@ -47,6 +47,8 @@ object DateTimePattern : Pattern, ScalarType {
     override val typeName: String = "datetime"
 
     override val pattern = "(datetime)"
+
+    override fun toString() = pattern
 }
 
 fun currentDate() = StringValue(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME))

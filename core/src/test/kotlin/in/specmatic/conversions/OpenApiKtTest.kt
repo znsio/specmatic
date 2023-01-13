@@ -1021,6 +1021,21 @@ Background:
         assertThat(result.success()).isTrue()
     }
 
+    @Test
+    fun `should validate with indirect cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
+    }
+
     //TODO:
     @Ignore
     fun `should generate stub with cyclic reference in open api`() {
@@ -1759,6 +1774,15 @@ Scenario: zero should return not found
         }
     }
 }
+
+data class CycleRoot(
+    @JsonProperty("direct-cycle") val directCycle: CycleRoot,
+    @JsonProperty("intermediate-node") val intermediateNode: CycleIntermediateNode,
+)
+
+data class CycleIntermediateNode(
+    @JsonProperty("indirect-cycle") val indirectCycle: CycleRoot,
+)
 
 data class Pet(
     @JsonProperty("name") val name: String,

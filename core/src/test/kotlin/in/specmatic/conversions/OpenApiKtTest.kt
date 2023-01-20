@@ -1291,7 +1291,7 @@ Background:
         )
 
         assertThat(flags["/pets POST executed"]).isEqualTo(1)
-        assertThat(flags["/pets GET executed"]).isEqualTo(12)
+        assertThat(flags["/pets GET executed"]).isEqualTo(24)
         assertThat(flags["/petIds GET executed"]).isEqualTo(4)
         assertThat(flags["/pets/0 GET executed"]).isEqualTo(1)
         assertThat(flags.keys.filter { it.matches(Regex("""\/pets\/[0-9]+ GET executed""")) }.size).isEqualTo(2)

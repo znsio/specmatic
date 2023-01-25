@@ -572,10 +572,17 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
                     patterns["(${patternName})"] = jsonObjectPattern
                     jsonObjectPattern
-                } else if (nullableOneOf(schema)) {
-                    AnyPattern(listOf(NullPattern, toSpecmaticPattern(nonNullSchema(schema), typeStack, patternName)))
+                } else if (schema.anyOf != null) {
+                    throw UnsupportedOperationException("Specmatic does not support anyOf")
                 } else {
-                    throw UnsupportedOperationException("Specmatic does not support anyOf. Only allOf is supported, or oneOf for specifying nullable refs.")
+                    val nonNullableSchemaPatterns = schema.oneOf
+                        .filter { it.nullable != true }
+                        .map { toSpecmaticPattern(it, typeStack, patternName) }
+
+                    if (nonNullableSchemaPatterns.isEmpty())
+                        throw UnsupportedOperationException("Specmatic supports oneOf for at least one non-nullable ref")
+
+                    AnyPattern(listOf(NullPattern, *nonNullableSchemaPatterns.toTypedArray()))
                 }
             }
             else -> {
@@ -772,14 +779,6 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return DictionaryPattern(
             StringPattern(), toSpecmaticPattern(valueSchema, typeStack, valueSchemaTypeName, false)
         )
-    }
-
-    private fun nonNullSchema(schema: ComposedSchema): Schema<Any> {
-        return schema.oneOf.first { it.nullable != true }
-    }
-
-    private fun nullableOneOf(schema: ComposedSchema): Boolean {
-        return schema.oneOf.find { it.nullable != true } != null
     }
 
     private fun toJsonObjectPattern(

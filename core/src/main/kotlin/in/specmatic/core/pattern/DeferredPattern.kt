@@ -15,11 +15,15 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
     override fun matches(sampleData: Value?, resolver: Resolver) =
             resolver.matchesPattern(key, resolver.getPattern(pattern), sampleData ?: EmptyString)
 
-    override fun generate(resolver: Resolver) =
+    override fun generate(resolver: Resolver): Value {
+        val resolvedPattern = resolvePattern(resolver)
+        return resolver.withCyclePrevention(resolvedPattern) { cyclePreventedResolver ->
             when (key) {
-                null -> resolver.getPattern(pattern).generate(resolver)
-                else -> resolver.generate(key, resolver.getPattern(pattern))
+                null -> resolvedPattern.generate(cyclePreventedResolver)
+                else -> cyclePreventedResolver.generate(key, resolvedPattern)
             }
+        }
+    }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         return resolver.getPattern(pattern).newBasedOn(row, resolver)

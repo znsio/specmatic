@@ -195,12 +195,15 @@ private fun keyCombinations(values: List<List<Pattern?>>,
 
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
         jsonPattern.mapIndexed { index, pattern ->
-            when (pattern) {
-                is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
-                    val list = pattern.generate(resolver) as ListValue
-                    list.list
+            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                when (pattern) {
+                    is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
+                        val list = pattern.generate(cyclePreventedResolver) as ListValue
+                        list.list
+                    }
+
+                    else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(cyclePreventedResolver)) }
                 }
-                else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(resolver)) }
             }
         }.flatten()
 

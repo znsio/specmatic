@@ -44,8 +44,8 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
 
     override fun generate(resolver: Resolver): Value {
         return JSONObjectValue((1..randomNumber(RANDOM_NUMBER_CEILING)).fold(emptyMap()) { obj, _ ->
-            val key = keyPattern.generate(resolver).toStringLiteral()
-            val value = valuePattern.generate(resolver)
+            val key = resolver.withCyclePrevention(keyPattern, keyPattern::generate).toStringLiteral()
+            val value = resolver.withCyclePrevention(valuePattern, valuePattern::generate)
 
             obj.plus(key to value)
         })

@@ -53,7 +53,7 @@ data class TabularPattern(
     override fun generate(resolver: Resolver): JSONObjectValue {
         val resolverWithNullType = withNullPattern(resolver)
         return JSONObjectValue(pattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
-            attempt(breadCrumb = key) { resolverWithNullType.generate(key, pattern) }
+            attempt(breadCrumb = key) { resolverWithNullType.withCyclePrevention(pattern) {it.generate(key, pattern)} }
         })
     }
 

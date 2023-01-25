@@ -10,7 +10,6 @@ import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
@@ -1022,18 +1021,94 @@ Background:
     }
 
     @Test
-    fun `should validate with indirect cyclic reference in open api`() {
+    fun `should validate and generate with indirect required non-nullable cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
             """
 Feature: Hello world
 
 Background:
-  Given openapi openapi/circular-reference.yaml
+  Given openapi openapi/circular-reference-non-nullable.yaml
         """.trimIndent(), sourceSpecPath
         )
 
         val result = testBackwardCompatibility(feature, feature)
         assertThat(result.success()).isTrue()
+
+        val resp = HttpStub(feature).use {
+            val request =
+                Request.Builder().url("http://localhost:9000/demo/circular-reference-non-nullable")
+                    .addHeader("Content-Type", "application/json")
+                    .get().build()
+            val call = OkHttpClient().newCall(request)
+            call.execute()
+        }
+
+        assertThat(resp.isSuccessful).isFalse
+        assertThat(resp.code()).isEqualTo(400)
+        val body = resp.body()?.string()
+        assertThat(body).contains("Invalid pattern cycle")
+    }
+
+    @Test
+    @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
+    fun `should validate and generate with indirect optional non-nullable cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-optional-non-nullable.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
+
+        val resp = HttpStub(feature).use {
+            val request =
+                Request.Builder().url("http://localhost:9000/demo/circular-reference-optional-non-nullable")
+                    .addHeader("Content-Type", "application/json")
+                    .get().build()
+            val call = OkHttpClient().newCall(request)
+            call.execute()
+        }
+
+        val body = resp.body()?.string()
+        assertThat(resp.isSuccessful).withFailMessage("Response unexpectedly failed. body=$body").isTrue
+        assertThat(resp.code()).isEqualTo(200)
+        val deserialized = ObjectMapper().readValue(body, OptionalCycleRoot::class.java)
+        assertThat(deserialized).isNotNull
+    }
+
+    @Test
+    @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
+    fun `should validate and generate with indirect nullable cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-nullable.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
+
+        val resp = HttpStub(feature).use {
+            val request =
+                Request.Builder().url("http://localhost:9000/demo/circular-reference-nullable")
+                    .addHeader("Content-Type", "application/json")
+                    .get().build()
+            val call = OkHttpClient().newCall(request)
+            call.execute()
+        }
+
+        val body = resp.body()?.string()
+        assertThat(resp.isSuccessful).withFailMessage("Response unexpectedly failed. body=$body").isTrue
+        assertThat(resp.code()).isEqualTo(200)
+        val deserialized = ObjectMapper().readValue(body, NullableCycleHolder::class.java)
+        assertThat(deserialized).isNotNull
     }
 
     //TODO:
@@ -1776,12 +1851,30 @@ Scenario: zero should return not found
 }
 
 data class CycleRoot(
-    @JsonProperty("direct-cycle") val directCycle: CycleRoot,
     @JsonProperty("intermediate-node") val intermediateNode: CycleIntermediateNode,
 )
 
 data class CycleIntermediateNode(
     @JsonProperty("indirect-cycle") val indirectCycle: CycleRoot,
+)
+
+data class OptionalCycleRoot(
+    @JsonProperty("intermediate-node") val intermediateNode: OptionalCycleIntermediateNode,
+)
+
+data class OptionalCycleIntermediateNode(
+    @JsonProperty("indirect-cycle") val indirectCycle: OptionalCycleRoot?,
+)
+
+data class NullableCycleHolder(
+    @JsonProperty("contents") val contents: NullableCycleRoot?,
+)
+data class NullableCycleRoot(
+    @JsonProperty("intermediate-node") val intermediateNode: NullableCycleIntermediateNode,
+)
+
+data class NullableCycleIntermediateNode(
+    @JsonProperty("indirect-cycle") val indirectCycle: NullableCycleRoot?,
 )
 
 data class Pet(

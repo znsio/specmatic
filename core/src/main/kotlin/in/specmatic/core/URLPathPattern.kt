@@ -10,8 +10,13 @@ data class URLPathPattern(override val pattern: Pattern, override val key: Strin
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
             resolver.matchesPattern(key, pattern, sampleData ?: NullValue)
 
-    override fun generate(resolver: Resolver): Value =
-            if(key != null) resolver.generate(key, pattern) else pattern.generate(resolver)
+    override fun generate(resolver: Resolver): Value {
+        return resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+            if (key != null)
+                cyclePreventedResolver.generate(key, pattern)
+            else pattern.generate(cyclePreventedResolver)
+        }
+    }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<URLPathPattern> =
             pattern.newBasedOn(row, resolver).map { URLPathPattern(it, key) }

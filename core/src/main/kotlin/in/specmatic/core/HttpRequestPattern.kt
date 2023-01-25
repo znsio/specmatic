@@ -319,9 +319,11 @@ data class HttpRequestPattern(
 
             val body = body
             attempt(breadCrumb = "BODY") {
-                body.generate(resolver).let { value ->
-                    newRequest = newRequest.updateBody(value)
-                    newRequest = newRequest.updateHeader(CONTENT_TYPE, value.httpContentType)
+                resolver.withCyclePrevention(body) {cyclePreventedResolver ->
+                    body.generate(cyclePreventedResolver).let { value ->
+                        newRequest = newRequest.updateBody(value)
+                        newRequest = newRequest.updateHeader(CONTENT_TYPE, value.httpContentType)
+                    }
                 }
             }
 
@@ -330,10 +332,9 @@ data class HttpRequestPattern(
             val formFieldsValue = attempt(breadCrumb = "FORM FIELDS") {
                 formFieldsPattern.mapValues { (key, pattern) ->
                     attempt(breadCrumb = key) {
-                        resolver.generate(
-                            key,
-                            pattern
-                        ).toString()
+                        resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                            cyclePreventedResolver.generate(key, pattern)
+                        }.toString()
                     }
                 }
             }

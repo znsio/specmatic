@@ -75,5 +75,6 @@ data class KafkaMessagePattern(val topic: String = "", val key: Pattern = EmptyS
     }
 
     fun generate(resolver: Resolver): KafkaMessage =
+            // Cycle prevention not needed because StringValue expected for both key and value
             KafkaMessage(topic, key.generate(resolver) as StringValue, value.generate(resolver) as StringValue)
 }

@@ -20,7 +20,9 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern(
         return pattern.matches(value, resolver)
     }
 
-    override fun generate(resolver: Resolver): Value = StringValue(pattern.generate(resolver).toStringLiteral())
+    override fun generate(resolver: Resolver): Value {
+        return StringValue(resolver.withCyclePrevention(pattern, pattern::generate).toStringLiteral())
+    }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
             pattern.newBasedOn(row, resolver).map { PatternInStringPattern(it) }

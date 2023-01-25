@@ -124,7 +124,7 @@ data class HttpHeadersPattern(
         return attempt(breadCrumb = "HEADERS") {
             pattern.mapValues { (key, pattern) ->
                 attempt(breadCrumb = key) {
-                    resolver.generate(key, pattern).toStringLiteral()
+                    resolver.withCyclePrevention(pattern) { it. generate(key, pattern)}.toStringLiteral()
                 }
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()

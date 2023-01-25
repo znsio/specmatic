@@ -807,6 +807,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             ) toSpecmaticParamName(
                 optional, propertyName
             ) to DeferredPattern("(${patternName})")
+            else if (schema.discriminator?.propertyName == propertyName){
+                // Ensure discriminator property exactly matches component and not just any string
+                propertyName to ExactValuePattern(StringValue(patternName))
+            }
             else {
                 val specmaticPattern = toSpecmaticPattern(
                     propertyType, typeStack.plus(patternName), patternName

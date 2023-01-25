@@ -13,7 +13,8 @@ data class Resolver(
     val context: Map<String, String> = emptyMap(),
     val mismatchMessages: MismatchMessages = DefaultMismatchMessages,
     val isNegative: Boolean = false,
-    val generativeTestingEnabled: Boolean = false
+    val generativeTestingEnabled: Boolean = false,
+    val cyclePreventionStack: MutableList<Pattern> = mutableListOf(),
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -69,9 +70,35 @@ data class Resolver(
             else -> throw ContractException("$patternValue is not a type")
         }
 
+    private fun nullable(orig: Pattern): Boolean {
+        val pattern = if (orig is DeferredPattern) orig.resolvePattern(this) else orig
+        return pattern is AnyPattern && pattern.pattern.contains(NullPattern)
+    }
+
+    private fun validateNoCycle(pattern: Pattern) {
+        val index = cyclePreventionStack.indexOf(pattern)
+        if (index > 0) {
+            // Nullables are allowed since they will eventually terminate any cycle (only consider substack with cycle)
+            val subStack = cyclePreventionStack.subList(index, cyclePreventionStack.size)
+            if (subStack.stream().noneMatch { nullable(it) }) {
+                // Terminate what would otherwise be an infinite cycle.
+                throw ContractException("Invalid cycle for non-nullable $pattern. Stack so far: $cyclePreventionStack")
+            }
+        }
+    }
+
     fun generate(factKey: String, pattern: Pattern): Value {
-        if (!factStore.has(factKey))
-            return pattern.generate(this)
+        if (!factStore.has(factKey)) {
+
+            validateNoCycle(pattern)
+
+            cyclePreventionStack.add(pattern)
+            try {
+                return pattern.generate(this)
+            } finally {
+                cyclePreventionStack.removeLast()
+            }
+        }
 
         return when(val fact = factStore.get(factKey)) {
             is StringValue ->

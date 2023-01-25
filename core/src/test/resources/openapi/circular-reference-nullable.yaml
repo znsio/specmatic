@@ -1,0 +1,39 @@
+openapi: 3.0.1
+info:
+  title: Tests circular references
+  version: "1.0"
+paths:
+  /demo/circular-reference-nullable:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NullableCycleHolder'
+
+components:
+  schemas:
+
+    # Holder to ensure at a response body is returned, even if it is empty
+    NullableCycleHolder:
+      type: object
+      properties:
+        contents:
+          $ref: '#/components/schemas/NullableCycleRoot'
+
+    NullableCycleRoot:
+      type: object
+      nullable: true
+      properties:
+        # indirect cycle via an intermediate node
+        intermediate-node:
+          $ref: '#/components/schemas/NullableCycleIntermediateNode'
+
+    NullableCycleIntermediateNode:
+      type: object
+      properties:
+        # Completes an indirect cycle back to the root
+        indirect-cycle:
+          $ref: '#/components/schemas/NullableCycleRoot'

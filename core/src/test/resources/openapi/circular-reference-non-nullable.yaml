@@ -1,9 +1,9 @@
 openapi: 3.0.1
 info:
-  title: Demonstrate circular reference bug in specmatic
+  title: Tests circular references
   version: "1.0"
 paths:
-  /demo/circular-reference:
+  /demo/circular-reference-non-nullable:
     get:
       responses:
         "200":
@@ -19,14 +19,9 @@ components:
     CycleRoot:
       type: object
       properties:
-        # A direct cycle works
-        direct-cycle:
-          $ref: '#/components/schemas/CycleRoot'
-
-        # An indirect cycle via an intermediate node does NOT work
+        # indirect cycle via an intermediate node
         intermediate-node:
           $ref: '#/components/schemas/CycleIntermediateNode'
-
 
     CycleIntermediateNode:
       type: object

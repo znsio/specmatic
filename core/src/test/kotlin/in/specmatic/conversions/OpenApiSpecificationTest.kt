@@ -5382,7 +5382,7 @@ paths:
     }
 
     @Test
-    fun `nullable ref in yaml`() {
+    fun `nullable oneOf ref in yaml`() {
         val openAPIText = """
             ---
             openapi: "3.0.1"
@@ -5399,12 +5399,13 @@ paths:
                       application/json:
                         schema:
                           required:
-                          - "address"
+                          - "location"
                           properties:
-                            address:
+                            location:
                               oneOf:
                               - nullable: true
                               - ${'$'}ref: '#/components/schemas/Address'
+                              - ${'$'}ref: '#/components/schemas/LatLong'
                   responses:
                     "200":
                       description: "Test"
@@ -5420,6 +5421,15 @@ paths:
                   properties:
                     street:
                       type: "string"
+                LatLong:
+                  required:
+                  - "latitude"
+                  - "longitude"
+                  properties:
+                    latitude:
+                      type: "number"
+                    longitude:
+                      type: "number"
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
@@ -5429,7 +5439,7 @@ paths:
                 HttpRequest(
                     "POST",
                     "/user",
-                    body = parsedJSON("""{"address": {"street": "Baker Street"}}""")
+                    body = parsedJSON("""{"location": {"street": "Baker Street"}}""")
                 ), HttpResponse.OK("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
@@ -5439,7 +5449,17 @@ paths:
                 HttpRequest(
                     "POST",
                     "/user",
-                    body = parsedJSON("""{"address": null}""")
+                    body = parsedJSON("""{"location": {"latitude": 51.523160, "longitude": -0.158070}}""")
+                ), HttpResponse.OK("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"location": null}""")
                 ), HttpResponse.OK("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")

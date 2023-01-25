@@ -3264,7 +3264,89 @@ components:
 
     }
 
-    @Test
+  @Test
+  fun `support path parameter as enum inline`() {
+    val openAPI =
+      """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /permissions/state/{state}:
+    get:
+      parameters:
+      - name: state
+        in: path
+        schema:
+          type: string
+          enum:
+          - ALLOW
+          - DENY
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+    println(openAPI)
+    val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+    val request = HttpRequest("GET", "/permissions/state/ALLOW")
+    val response = HttpResponse.OK
+
+    val stub: HttpStubData = feature.matchingStub(request, response)
+
+    println(stub.requestType)
+
+    assertThat(stub.requestType.method).isEqualTo("GET")
+    assertThat(stub.response.status).isEqualTo(200)
+  }
+
+  @Test
+  fun `support path parameter as enum reference`() {
+    val openAPI =
+      """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /permissions/state/{state}:
+    get:
+      parameters:
+      - ${'$'}ref: '#/components/parameters/stateParam'
+      responses:
+        200:
+          description: API
+components:
+  parameters:
+    stateParam:
+      name: state
+      in: path
+      schema:
+        type: string
+        enum:
+        - ALLOW
+        - DENY
+""".trimIndent()
+
+    println(openAPI)
+    val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+    val request = HttpRequest("GET", "/permissions/state/ALLOW")
+    val response = HttpResponse.OK
+
+    val stub: HttpStubData = feature.matchingStub(request, response)
+
+    println(stub.requestType)
+
+    assertThat(stub.requestType.method).isEqualTo("GET")
+    assertThat(stub.response.status).isEqualTo(200)
+  }
+
+  @Test
     fun `support dictionary object type in request body with data structure as reference`() {
         val openAPI =
             """

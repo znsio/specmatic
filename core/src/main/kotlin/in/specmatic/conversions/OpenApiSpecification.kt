@@ -862,8 +862,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
         var specmaticPath = openApiPath
         parameters.filterIsInstance(PathParameter::class.java).map {
+            val pattern = if (it.schema.enum != null) StringPattern("") else toSpecmaticPattern(it.schema, emptyList())
             specmaticPath = specmaticPath.replace(
-                "{${it.name}}", "(${it.name}:${toSpecmaticPattern(it.schema, emptyList()).typeName})"
+                "{${it.name}}", "(${it.name}:${pattern.typeName})"
             )
         }
 

@@ -628,6 +628,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun toXMLPattern(mediaType: MediaType): Pattern {
+        if (mediaType.schema is StringSchema)
+            return toSpecmaticPattern(mediaType.schema, emptyList())
+
         return toXMLPattern(mediaType.schema, typeStack = emptyList())
     }
 

@@ -4086,6 +4086,32 @@ paths:
         }
 
         @Test
+        fun `xml contract with xml as string response body`() {
+            val xmlContract = """
+            openapi: 3.0.3
+            info:
+              title: test-xml
+              version: '1.0'
+            paths:
+              '/cart':
+                get:
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/xml:
+                          schema:
+                            type: string
+        """.trimIndent()
+
+            val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
+
+            val xmlSnippet = """<products><id>10</id></products>"""
+
+            assertMatchesResponseSnippet("/cart", StringValue(xmlSnippet), xmlFeature)
+        }
+
+        @Test
         fun `xml contract with xml ref within an xml payload`() {
             val xmlContract = """
             openapi: 3.0.3
@@ -4515,10 +4541,14 @@ paths:
         }
 
         private fun assertMatchesResponseSnippet(path: String, xmlSnippet: String, xmlFeature: Feature) {
-            val request = HttpRequest("GET", path)
-            val stubData = xmlFeature.matchingStub(request, HttpResponse.OK(body = parsedValue(xmlSnippet)))
+          assertMatchesResponseSnippet(path, parsedValue(xmlSnippet), xmlFeature)
+        }
 
-            val stubMatchResult = stubData.responsePattern.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
+        private fun assertMatchesResponseSnippet(path: String, value: Value, feature: Feature) {
+            val request = HttpRequest("GET", path)
+            val stubData = feature.matchingStub(request, HttpResponse.OK(body = value))
+
+            val stubMatchResult = stubData.responsePattern.body.matches(value, feature.scenarios.first().resolver)
 
             assertThat(stubMatchResult).isInstanceOf(Result.Success::class.java)
         }

@@ -26,7 +26,6 @@ import io.swagger.v3.oas.models.parameters.QueryParameter
 import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
-import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.parser.OpenAPIV3Parser
 import io.swagger.v3.parser.core.models.ParseOptions
@@ -877,11 +876,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             } else {
                 toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name)
             }
-            val patternName = when {
-                it.schema.enum != null -> specmaticPattern.run { "($typeAlias)" }
-                else -> specmaticPattern
+
+            if (specmaticPattern is DictionaryPattern) {
+                val valPattern = specmaticPattern.valuePattern
+                val valPatternFinal = if (valPattern is AnyPattern) StringPattern("") else valPattern
+                "${specmaticPattern.keyPattern}=${valPatternFinal}"
+            } else {
+                val patternName = when {
+                    it.schema.enum != null -> specmaticPattern.run { "($typeAlias)" }
+                    else -> specmaticPattern
+                }
+                "${it.name}=$patternName"
             }
-            "${it.name}=$patternName"
         }
 
         if (queryParameters.isNotEmpty()) specmaticPath = "${specmaticPath}?${queryParameters}"

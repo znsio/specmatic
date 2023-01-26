@@ -3487,7 +3487,86 @@ paths:
 
     }
 
-    @Test
+  @Test
+  fun `support query parameter as free-form dictionary`() {
+    val openAPI =
+      """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    get:
+      parameters:
+      - name: userGroups
+        in: query
+        schema:
+          type: object
+          additionalProperties:
+            type: string
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+    println(openAPI)
+    val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+    val request = HttpRequest("GET", "/data", queryParams = mapOf("key1" to "myEnumVal1", "key2" to "myEnumVal2"))
+    val response = HttpResponse.OK
+
+    val stub: HttpStubData = feature.matchingStub(request, response)
+
+    println(stub.requestType)
+
+    assertThat(stub.requestType.method).isEqualTo("GET")
+    assertThat(stub.response.status).isEqualTo(200)
+  }
+
+  @Test
+  fun `support query parameter as free-form dictionary and enum values`() {
+    val openAPI =
+      """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    get:
+      parameters:
+      - name: userGroups
+        in: query
+        schema:
+          type: object
+          additionalProperties:
+            type: string
+            enum:
+            - myEnumVal1
+            - myEnumVal2
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+    println(openAPI)
+    val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+    val request = HttpRequest("GET", "/data", queryParams = mapOf("key1" to "val1", "key2" to "val2"))
+    val response = HttpResponse.OK
+
+    val stub: HttpStubData = feature.matchingStub(request, response)
+
+    println(stub.requestType)
+
+    assertThat(stub.requestType.method).isEqualTo("GET")
+    assertThat(stub.response.status).isEqualTo(200)
+  }
+
+  @Test
     fun `should resolve ref to another file`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE_WITH_REFERENCE)
         assertThat(openApiSpecification.toScenarioInfos().size).isEqualTo(1)

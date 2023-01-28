@@ -5466,6 +5466,89 @@ paths:
     }
 
     @Test
+    fun `non-nullable oneOf ref in yaml`() {
+        val openAPIText = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Test"
+              version: "1"
+            paths:
+              /user:
+                post:
+                  summary: "Test"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - "location"
+                          properties:
+                            location:
+                              oneOf:
+                              - ${'$'}ref: '#/components/schemas/Address'
+                              - ${'$'}ref: '#/components/schemas/LatLong'
+                  responses:
+                    "200":
+                      description: "Test"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas:
+                Address:
+                  required:
+                  - "street"
+                  properties:
+                    street:
+                      type: "string"
+                LatLong:
+                  required:
+                  - "latitude"
+                  - "longitude"
+                  properties:
+                    latitude:
+                      type: "number"
+                    longitude:
+                      type: "number"
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"location": {"street": "Baker Street"}}""")
+                ), HttpResponse.OK("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"location": {"latitude": 51.523160, "longitude": -0.158070}}""")
+                ), HttpResponse.OK("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"location": null}""")
+                ), HttpResponse.OK("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isNotEqualTo("success")
+    }
+
+    @Test
     fun `should read WIP tag in OpenAPI paths`() {
         val contractString = """
                 openapi: 3.0.3

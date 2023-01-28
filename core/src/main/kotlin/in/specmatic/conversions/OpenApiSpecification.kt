@@ -572,9 +572,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
                     patterns["(${patternName})"] = jsonObjectPattern
                     jsonObjectPattern
-                } else if (schema.anyOf != null) {
-                    throw UnsupportedOperationException("Specmatic does not support anyOf")
-                } else {
+                } else if (schema.oneOf != null) {
                     val nonNullableSchemaPatterns = schema.oneOf
                         .filter { it.nullable != true }
                         .map { toSpecmaticPattern(it, typeStack, patternName) }
@@ -582,7 +580,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     if (nonNullableSchemaPatterns.isEmpty())
                         throw UnsupportedOperationException("Specmatic supports oneOf for at least one non-nullable ref")
 
-                    AnyPattern(listOf(NullPattern, *nonNullableSchemaPatterns.toTypedArray()))
+                    val nullable = if(nullableOneOf(schema)) listOf(NullPattern) else emptyList()
+
+                    AnyPattern(nonNullableSchemaPatterns.plus(nullable))
+                } else if (schema.anyOf != null) {
+                    throw UnsupportedOperationException("Specmatic does not support anyOf")
+                } else {
+                    throw UnsupportedOperationException("Unsupported composed schema: $schema")
                 }
             }
             else -> {
@@ -632,6 +636,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 else -> AnyPattern(listOf(NullPattern, pattern))
             }
         }
+    }
+
+    private fun nullableOneOf(schema: ComposedSchema): Boolean {
+        return schema.oneOf.any { it.nullable == true }
     }
 
     private fun toXMLPattern(mediaType: MediaType): Pattern {
@@ -897,3 +905,4 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         "PATCH" to pathItem.patch
     ).filter { (_, value) -> value != null }.map { (key, value) -> key to value!! }.toMap()
 }
+

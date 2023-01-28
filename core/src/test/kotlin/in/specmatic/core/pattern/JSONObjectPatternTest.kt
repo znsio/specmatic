@@ -179,6 +179,16 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
+    fun `having a non-null value it should NOT encompass another with a nullable value of the same type`() {
+        val bigger = parsedPattern("""{"number": "(number?)"}""")
+        val smallerWithNumber = parsedPattern("""{"number": "(number)"}""")
+        val smallerWithNull = parsedPattern("""{"number": "(null)"}""")
+
+        assertThat(smallerWithNumber.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(smallerWithNull.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
     fun `having a nullable value it should encompass another with a non null value of the same type`() {
         val bigger = parsedPattern("""{"number": "(number?)"}""")
         val smallerWithNumber = parsedPattern("""{"number": "(number)"}""")

@@ -95,6 +95,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeSt
         httpRequest,
         features,
         ThreadSafeListOfStubs(threadSafeStubs.toMutableList()),
+        ThreadSafeListOfStubs(mutableListOf()),
         strictMode
     )
 }

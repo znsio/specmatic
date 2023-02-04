@@ -188,6 +188,83 @@ paths:
     }
 
     @Test
+    fun `ephemeral match precedes non-ephemeral stub match`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - item
+              properties:
+                item:
+                  type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(contract).use { stub ->
+            stub.createStub("""
+                {
+                    "http-request": {
+                        "method": "POST",
+                        "path": "/data",
+                        "body": {
+                            "item": "123"
+                        }
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "ephemeral"
+                    },
+                    "http-stub-token": "123"
+                }
+            """.trimIndent())
+
+            stub.createStub("""
+                {
+                    "http-request": {
+                        "method": "POST",
+                        "path": "/data",
+                        "body": {
+                            "item": "123"
+                        }
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "non-ephemeral"
+                    }
+                }
+            """.trimIndent())
+
+            val request = HttpRequest("POST", "/data", body = parsedJSON("""{"item": "123"}"""))
+            val firstResponse = stub.client.execute(request)
+            assertThat(firstResponse.body.toStringLiteral()).isEqualTo("ephemeral")
+
+            val secondResponse = stub.client.execute(request)
+            assertThat(secondResponse.body.toStringLiteral()).isEqualTo("non-ephemeral")
+
+            val thirdResponse = stub.client.execute(request)
+            assertThat(thirdResponse.body.toStringLiteral()).isEqualTo("non-ephemeral")
+        }
+    }
+
+    @Test
     fun `SSE test`() {
         val gherkin = """
 Feature: Test

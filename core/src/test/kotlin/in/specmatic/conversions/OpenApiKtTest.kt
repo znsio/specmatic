@@ -1682,7 +1682,7 @@ Scenario: zero should return not found
                 setOf("message", "another_message"),
             )
         )
-        assertThat(queryParameters.map { it.values.toList() }).containsAll(listOf(listOf("hello", "Hari"), listOf("hello")))
+        assertThat(queryParameters.map { it.values.toList() }).containsAll(listOf(listOf("Hari", "hello"), listOf("hello")))
     }
 
     @Test

@@ -3556,15 +3556,20 @@ paths:
         println(openAPIYaml)
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            val request = HttpRequest(
+                "GET",
+                "/"
+            )
+            val response = HttpResponse.OK(
+                body = parsedJSON("""{"10": {"name": "Jane"}}""")
+            )
+
+            val results = this.stubMatchResult(request, response, DefaultMismatchMessages)
+
             assertThat(
                 this.matches(
-                    HttpRequest(
-                        "GET",
-                        "/"
-                    ),
-                    HttpResponse.OK(
-                        body = parsedJSON("""{"10": {"name": "Jane"}}""")
-                    )
+                    request,
+                    response
                 )
             ).isTrue
         }

@@ -216,35 +216,7 @@ data class Feature(
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
         try {
-            val results = scenarios.map { scenario ->
-                try {
-                    when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
-                        is Result.Success -> Pair(
-                            scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
-                                val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
-                                val requestTypeWithAncestors =
-                                    newRequestType.copy(
-                                        headersPattern = newRequestType.headersPattern.copy(
-                                            ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
-                                        )
-                                    )
-                                HttpStubData(
-                                    response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
-                                    resolver = resolver,
-                                    requestType = requestTypeWithAncestors,
-                                    responsePattern = scenario.httpResponsePattern,
-                                    contractPath = this.path
-                                )
-                            }, Result.Success()
-                        )
-                        is Result.Failure -> {
-                            Pair(null, matchResult.updateScenario(scenario).updatePath(path))
-                        }
-                    }
-                } catch (contractException: ContractException) {
-                    Pair(null, contractException.failure().updatePath(path))
-                }
-            }
+            val results = stubMatchResult(request, response, mismatchMessages)
 
             return results.find {
                 it.first != null
@@ -257,6 +229,44 @@ data class Feature(
         } finally {
             serverState = emptyMap()
         }
+    }
+
+    fun stubMatchResult(
+        request: HttpRequest,
+        response: HttpResponse,
+        mismatchMessages: MismatchMessages
+    ): List<Pair<HttpStubData?, Result>> {
+        val results = scenarios.map { scenario ->
+            try {
+                when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
+                    is Result.Success -> Pair(
+                        scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
+                            val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
+                            val requestTypeWithAncestors =
+                                newRequestType.copy(
+                                    headersPattern = newRequestType.headersPattern.copy(
+                                        ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
+                                    )
+                                )
+                            HttpStubData(
+                                response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
+                                resolver = resolver,
+                                requestType = requestTypeWithAncestors,
+                                responsePattern = scenario.httpResponsePattern,
+                                contractPath = this.path
+                            )
+                        }, Result.Success()
+                    )
+
+                    is Result.Failure -> {
+                        Pair(null, matchResult.updateScenario(scenario).updatePath(path))
+                    }
+                }
+            } catch (contractException: ContractException) {
+                Pair(null, contractException.failure().updatePath(path))
+            }
+        }
+        return results
     }
 
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =

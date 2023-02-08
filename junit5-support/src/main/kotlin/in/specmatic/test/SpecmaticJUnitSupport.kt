@@ -37,10 +37,15 @@ open class SpecmaticJUnitSupport {
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
-        if(envName == null || envName.isBlank())
+
+        if(envName.isNullOrBlank())
             return JSONObjectValue()
 
-        val config = loadConfigJSON(File(globalConfigFileName))
+        val configFile = File(globalConfigFileName)
+        if(!configFile.exists())
+            throw ContractException("Environment name $envName was specified but config file (usually named specmatic.json) does not exist in the project root. Either avoid setting envName, or provide specmatic.json with the environment settings.")
+
+        val config = loadConfigJSON(configFile)
         val envConfig = config.findFirstChildByPath("environments.$envName") ?: return JSONObjectValue()
 
         if(envConfig !is JSONObjectValue)

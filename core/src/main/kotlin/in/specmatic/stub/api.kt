@@ -16,7 +16,7 @@ import java.io.File
 import java.time.Duration
 
 // Used by stub client code
-fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): HttpStub {
+fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): ContractStub {
     val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
     val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->
@@ -35,7 +35,7 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
-fun createStub(host: String = "localhost", port: Int = 9000): HttpStub {
+fun createStub(host: String = "localhost", port: Int = 9000): ContractStub {
     val workingDirectory = WorkingDirectory()
     val contractPaths = contractStubPaths().map { it.path }
     val stubs = loadContractStubsFromImplicitPaths(contractPaths)
@@ -46,7 +46,7 @@ fun createStub(host: String = "localhost", port: Int = 9000): HttpStub {
 }
 
 // Used by stub client code
-fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
+fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
     val contractPaths = contractStubPaths().map { it.path }
     val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
     val features = contractInfo.map { it.first }
@@ -55,7 +55,7 @@ fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int
     return HttpStub(features, httpExpectations, host, port, ::consoleLog)
 }
 
-fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
+fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
     val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)

@@ -113,7 +113,7 @@ paths:
 
         HttpStub(listOf(contract), listOf(stub)).use {
             assertDoesNotThrow {
-                it.createStub(ScenarioStub(request, HttpResponse.OK))
+                it.setExpectation(ScenarioStub(request, HttpResponse.OK))
             }
         }
     }

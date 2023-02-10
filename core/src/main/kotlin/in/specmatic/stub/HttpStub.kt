@@ -112,7 +112,7 @@ class HttpStub(
                         isExpectationCreation(httpRequest) -> handleExpectationCreationRequest(httpRequest)
                         isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
-                        isFlushEphemeralStubsRequest(httpRequest) -> handleFlushEphemeralStubsRequest(httpRequest)
+                        isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
                         else -> serveStubResponse(httpRequest)
                     }
 
@@ -179,7 +179,7 @@ class HttpStub(
         }
     }
 
-    private fun handleFlushEphemeralStubsRequest(httpRequest: HttpRequest): HttpStubResponse {
+    private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {
         val token = httpRequest.path?.removePrefix("/_specmatic/admin/$STUB_TOKEN/")
 
         threadSafeHttpStubQueue.removeWithToken(token)
@@ -187,7 +187,7 @@ class HttpStub(
         return HttpStubResponse(HttpResponse.OK)
     }
 
-    private fun isFlushEphemeralStubsRequest(httpRequest: HttpRequest): Boolean {
+    private fun isFlushTransientStubsRequest(httpRequest: HttpRequest): Boolean {
         return httpRequest.method?.toLowerCasePreservingASCIIRules() == "delete" && httpRequest.path?.startsWith("/_specmatic/admin/$STUB_TOKEN") == true
     }
 

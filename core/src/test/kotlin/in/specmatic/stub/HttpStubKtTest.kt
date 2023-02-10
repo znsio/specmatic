@@ -26,7 +26,7 @@ import java.util.function.Consumer
 
 internal class HttpStubKtTest {
     @Test
-    fun `flush ephemeral stub`() {
+    fun `flush transient stub`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
@@ -69,7 +69,7 @@ paths:
     }
 
     @Test
-    fun `ephemeral stub`() {
+    fun `transient stub`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
@@ -113,7 +113,7 @@ paths:
     }
 
     @Test
-    fun `ephemeral stub matches in reverse order`() {
+    fun `transient stub matches in reverse order`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
@@ -188,7 +188,7 @@ paths:
     }
 
     @Test
-    fun `ephemeral match precedes non-ephemeral stub match`() {
+    fun `transient match precedes non-transient stub match`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
@@ -230,7 +230,7 @@ paths:
                     },
                     "http-response": {
                         "status": 200,
-                        "body": "ephemeral"
+                        "body": "transient"
                     },
                     "http-stub-token": "123"
                 }
@@ -247,20 +247,20 @@ paths:
                     },
                     "http-response": {
                         "status": 200,
-                        "body": "non-ephemeral"
+                        "body": "non-transient"
                     }
                 }
             """.trimIndent())
 
             val request = HttpRequest("POST", "/data", body = parsedJSON("""{"item": "123"}"""))
             val firstResponse = stub.client.execute(request)
-            assertThat(firstResponse.body.toStringLiteral()).isEqualTo("ephemeral")
+            assertThat(firstResponse.body.toStringLiteral()).isEqualTo("transient")
 
             val secondResponse = stub.client.execute(request)
-            assertThat(secondResponse.body.toStringLiteral()).isEqualTo("non-ephemeral")
+            assertThat(secondResponse.body.toStringLiteral()).isEqualTo("non-transient")
 
             val thirdResponse = stub.client.execute(request)
-            assertThat(thirdResponse.body.toStringLiteral()).isEqualTo("non-ephemeral")
+            assertThat(thirdResponse.body.toStringLiteral()).isEqualTo("non-transient")
         }
     }
 

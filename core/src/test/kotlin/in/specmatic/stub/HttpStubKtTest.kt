@@ -47,7 +47,7 @@ paths:
         """.trimIndent(), "").toFeature()
 
         HttpStub(contract).use { stub ->
-            stub.createStub("""
+            stub.setExpectation("""
                 {
                     "http-request": {
                         "method": "GET",
@@ -90,7 +90,7 @@ paths:
         """.trimIndent(), "").toFeature()
 
         HttpStub(contract).use { stub ->
-            stub.createStub("""
+            stub.setExpectation("""
                 {
                     "http-request": {
                         "method": "GET",
@@ -144,7 +144,7 @@ paths:
         """.trimIndent(), "").toFeature()
 
         HttpStub(contract).use { stub ->
-            stub.createStub("""
+            stub.setExpectation("""
                 {
                     "http-request": {
                         "method": "POST",
@@ -161,7 +161,7 @@ paths:
                 }
             """.trimIndent())
 
-            stub.createStub("""
+            stub.setExpectation("""
                 {
                     "http-request": {
                         "method": "POST",
@@ -219,7 +219,7 @@ paths:
         """.trimIndent(), "").toFeature()
 
         HttpStub(contract).use { stub ->
-            stub.createStub("""
+            stub.setExpectation("""
                 {
                     "http-request": {
                         "method": "POST",
@@ -236,7 +236,7 @@ paths:
                 }
             """.trimIndent())
 
-            stub.createStub("""
+            stub.setExpectation("""
                 {
                     "http-request": {
                         "method": "POST",

@@ -271,7 +271,7 @@ class HttpStub(
                 throw ContractException("Expectation payload was empty")
 
             val mock = stringToMockScenario(httpRequest.body)
-            val stub: HttpStubData? = createStub(mock)
+            val stub: HttpStubData? = setExpectation(mock)
 
             HttpStubResponse(HttpResponse.OK, contractPath = stub?.contractPath ?: "")
         } catch (e: ContractException) {
@@ -339,13 +339,13 @@ class HttpStub(
         }
     }
 
-    // For use from Karate
-    fun createStub(json: String) {
+    // Java helper
+    override fun setExpectation(json: String) {
         val mock = stringToMockScenario(StringValue(json))
-        createStub(mock)
+        setExpectation(mock)
     }
 
-    fun createStub(stub: ScenarioStub): HttpStubData? {
+    fun setExpectation(stub: ScenarioStub): HttpStubData? {
         if (stub.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
 
         val results = features.asSequence().map { feature ->

@@ -672,7 +672,7 @@ Scenario: Square of a number
             passThroughTargetBase = "http://example.com",
             httpClientFactory = httpClientFactory
         ).use { stub ->
-            stub.createStub(ScenarioStub(HttpRequest("POST", "/", body = NumberValue(10)), HttpResponse.OK("success")))
+            stub.setExpectation(ScenarioStub(HttpRequest("POST", "/", body = NumberValue(10)), HttpResponse.OK("success")))
             val client = HttpClient(stub.endPoint)
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 

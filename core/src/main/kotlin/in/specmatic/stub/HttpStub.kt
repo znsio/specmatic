@@ -180,7 +180,7 @@ class HttpStub(
     }
 
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {
-        val token = httpRequest.path?.removePrefix("/_specmatic/admin/$STUB_TOKEN/")
+        val token = httpRequest.path?.removePrefix("/_specmatic/$TRANSIENT_MOCK/")
 
         threadSafeHttpStubQueue.removeWithToken(token)
 
@@ -188,7 +188,7 @@ class HttpStub(
     }
 
     private fun isFlushTransientStubsRequest(httpRequest: HttpRequest): Boolean {
-        return httpRequest.method?.toLowerCasePreservingASCIIRules() == "delete" && httpRequest.path?.startsWith("/_specmatic/admin/$STUB_TOKEN") == true
+        return httpRequest.method?.toLowerCasePreservingASCIIRules() == "delete" && httpRequest.path?.startsWith("/_specmatic/$TRANSIENT_MOCK") == true
     }
 
     private fun close(

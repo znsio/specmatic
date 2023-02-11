@@ -57,11 +57,11 @@ paths:
                         "status": 200,
                         "body": 10
                     },
-                    "http-stub-token": "123"
+                    "http-stub-id": "123"
                 }
             """.trimIndent())
 
-            stub.client.execute(HttpRequest("DELETE", "/_specmatic/admin/http-stub-token/123"))
+            stub.client.execute(HttpRequest("DELETE", "/_specmatic/http-stub/123"))
 
             val response = stub.client.execute(HttpRequest("GET", "/data"))
             assertThat(response.headers["X-Specmatic-Type"]).isEqualTo("random")
@@ -100,7 +100,7 @@ paths:
                         "status": 200,
                         "body": 10
                     },
-                    "http-stub-token": "123"
+                    "http-stub-id": "123"
                 }
             """.trimIndent())
 
@@ -157,7 +157,7 @@ paths:
                         "status": 200,
                         "body": "first"
                     },
-                    "http-stub-token": "123"
+                    "http-stub-id": "123"
                 }
             """.trimIndent())
 
@@ -174,7 +174,7 @@ paths:
                         "status": 200,
                         "body": "second"
                     },
-                    "http-stub-token": "123"
+                    "http-stub-id": "123"
                 }
             """.trimIndent())
 
@@ -232,7 +232,7 @@ paths:
                         "status": 200,
                         "body": "transient"
                     },
-                    "http-stub-token": "123"
+                    "http-stub-id": "123"
                 }
             """.trimIndent())
 

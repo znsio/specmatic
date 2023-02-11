@@ -22,7 +22,8 @@ const val MOCK_KAFKA_MESSAGE = "kafka-message"
 const val MOCK_HTTP_REQUEST = "http-request"
 const val MOCK_HTTP_RESPONSE = "http-response"
 const val DELAY_IN_SECONDS = "delay-in-seconds"
-const val STUB_TOKEN = "http-stub-token"
+const val TRANSIENT_MOCK = "http-stub"
+const val TRANSIENT_MOCK_ID = "$TRANSIENT_MOCK-id"
 
 val MOCK_HTTP_REQUEST_ALL_KEYS = listOf("mock-http-request", MOCK_HTTP_REQUEST)
 val MOCK_HTTP_RESPONSE_ALL_KEYS = listOf("mock-http-response", MOCK_HTTP_RESPONSE)
@@ -44,7 +45,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
             val mockResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
 
             val delayInSeconds = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
-            val stubToken: String? = getStringOrNull(STUB_TOKEN, mockSpec)
+            val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
 
             ScenarioStub(request = mockRequest, response = mockResponse, delayInSeconds = delayInSeconds, stubToken = stubToken)
         }

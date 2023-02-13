@@ -184,7 +184,7 @@ internal class HttpRequestTest {
             this.url.host = "test.com"
             this.url.port = 80
         }
-        HttpRequest("GET", "/").buildRequest(builderWithPort80, url)
+        HttpRequest("GET", "/").buildRequest(builderWithPort80, null)
         assertThat(builderWithPort80.headers.get("Host")).isEqualTo("test.com")
 
         val httpRequestBuilderWithHTTPS = HttpRequestBuilder().apply {
@@ -192,7 +192,7 @@ internal class HttpRequestTest {
             this.url.host = "test.com"
             this.url.port = 443
         }
-        HttpRequest("GET", "/").buildRequest(httpRequestBuilderWithHTTPS, url)
+        HttpRequest("GET", "/").buildRequest(httpRequestBuilderWithHTTPS, null)
         assertThat(httpRequestBuilderWithHTTPS.headers.get("Host")).isEqualTo("test.com")
     }
 
@@ -202,7 +202,7 @@ internal class HttpRequestTest {
             this.url.host = "test.com"
             this.url.port = 8080
         }
-        HttpRequest("GET", "/").buildRequest(httpRequestBuilder2, url)
+        HttpRequest("GET", "/").buildRequest(httpRequestBuilder2, null)
         assertThat(httpRequestBuilder2.headers.get("Host")).isNull()
     }
 

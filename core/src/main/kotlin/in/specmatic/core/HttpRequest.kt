@@ -164,7 +164,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         }
     }
 
-    fun buildRequest(httpRequestBuilder: HttpRequestBuilder, url: URL) {
+    fun buildRequest(httpRequestBuilder: HttpRequestBuilder, url: URL?) {
         httpRequestBuilder.method = HttpMethod.parse(method as String)
 
         val listOfExcludedHeaders: List<String> = listOfExcludedHeaders()
@@ -202,7 +202,10 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         })
     }
 
-    private fun withoutDuplicateHostHeader(headers: Map<String, String>, url: URL): Map<String, String> {
+    private fun withoutDuplicateHostHeader(headers: Map<String, String>, url: URL?): Map<String, String> {
+        if(url == null)
+            return headers
+
         if(isNotIPAddress(url.host))
             return headers - "Host"
 

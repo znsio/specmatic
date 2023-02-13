@@ -48,7 +48,7 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
         return runBlocking {
             httpClientFactory.create(timeout).use { ktorClient ->
                 val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
-                    requestWithFileContent.buildRequest(this)
+                    requestWithFileContent.buildRequest(this, url)
                 }
 
                 val outboundRequest: HttpRequest =

@@ -1,17 +1,15 @@
 package `in`.specmatic.core
 
-import io.netty.buffer.ByteBuf
 import `in`.specmatic.conversions.guessType
 import `in`.specmatic.core.GherkinSection.When
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.URIUtils.parseQuery
 import `in`.specmatic.core.value.*
-import `in`.specmatic.core.value.UseExampleDeclarations
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.http.content.*
-import sun.net.util.IPAddressUtil
+import io.netty.buffer.ByteBuf
 import java.io.File
 import java.io.UnsupportedEncodingException
 import java.net.URI

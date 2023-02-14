@@ -1,6 +1,8 @@
 package `in`.specmatic.conversions
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import `in`.specmatic.core.*
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.log.Verbose
@@ -246,6 +248,42 @@ Background:
         )
 
         assertThat(flags["/demo/circular-reference-nullable executed"]).isTrue
+        assertThat(flags.size).isEqualTo(1)
+        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
+    }
+
+    @Test
+    fun `should create tests for indirect polymorphic cyclic reference`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-polymorphic.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    assertThat(request.path).matches("""\/demo\/circular-reference-polymorphic""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    return HttpResponse(200, """{"myBase": {"@type": "MySub1", "aMyBase": {"@type": "MySub2", "myVal": "aVal"}}}""", headers)
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(flags["/demo/circular-reference-polymorphic executed"]).isTrue
         assertThat(flags.size).isEqualTo(1)
         assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
@@ -1183,6 +1221,37 @@ Background:
         assertThat(deserialized).isNotNull
     }
 
+    @Test
+    @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
+    fun `should validate and generate with polymorphic cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-polymorphic.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
+
+        val resp = HttpStub(feature).use {
+            val request =
+                Request.Builder().url("http://localhost:9000/demo/circular-reference-polymorphic")
+                    .addHeader("Content-Type", "application/json")
+                    .get().build()
+            val call = OkHttpClient().newCall(request)
+            call.execute()
+        }
+
+        val body = resp.body()?.string()
+        assertThat(resp.isSuccessful).withFailMessage("Response unexpectedly failed. body=$body").isTrue
+        assertThat(resp.code()).isEqualTo(200)
+        val deserialized = ObjectMapper().readValue(body, MyBaseHolder::class.java)
+        assertThat(deserialized).isNotNull
+    }
+
     //TODO:
     @Ignore
     fun `should generate stub with cyclic reference in open api`() {
@@ -1948,6 +2017,16 @@ data class NullableCycleRoot(
 data class NullableCycleIntermediateNode(
     @JsonProperty("indirect-cycle") val indirectCycle: NullableCycleRoot?,
 )
+
+data class MyBaseHolder(@JsonProperty("myBase") val myBase: MyBase)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@type")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = MySub1::class),
+    JsonSubTypes.Type(value = MySub2::class),
+)
+interface MyBase {}
+data class MySub1(@JsonProperty("aMyBase") val aMyBase: MyBase?): MyBase
+data class MySub2(@JsonProperty("myVal") val myVal: String): MyBase
 
 data class Pet(
     @JsonProperty("name") val name: String,

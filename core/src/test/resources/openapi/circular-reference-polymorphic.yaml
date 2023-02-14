@@ -1,0 +1,55 @@
+openapi: 3.0.1
+info:
+  title: Tests circular references in polymorphic relationships
+  version: "1.0"
+paths:
+  /demo/circular-reference-polymorphic:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyBaseHolder'
+
+components:
+  schemas:
+
+    MyBaseHolder:
+      type: object
+      properties:
+        myBase:
+          $ref: '#/components/schemas/MyBase_Polymorphic'
+      required:
+        - myBase
+
+    MyBase:
+      type: object
+      discriminator:
+        propertyName: '@type'
+      properties:
+        '@type':
+          type: string
+
+    MyBase_Polymorphic:
+      oneOf:
+        - $ref: '#/components/schemas/MySub1'
+        - $ref: '#/components/schemas/MySub2'
+
+    MySub1:
+      allOf:
+        - $ref: '#/components/schemas/MyBase'
+        - type: object
+          properties:
+            aMyBase:
+              $ref: '#/components/schemas/MyBase_Polymorphic'
+
+    MySub2:
+      allOf:
+        - $ref: '#/components/schemas/MyBase'
+        - type: object
+          properties:
+            myVal:
+              type: string
+

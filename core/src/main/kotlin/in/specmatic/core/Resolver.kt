@@ -77,7 +77,7 @@ data class Resolver(
 
     private fun validateNoCycle(pattern: Pattern) {
         val index = cyclePreventionStack.indexOf(pattern)
-        if (index > 0) {
+        if (index >= 0) {
             // Nullables are allowed since they will eventually terminate any cycle (only consider substack with cycle)
             val subStack = cyclePreventionStack.subList(index, cyclePreventionStack.size)
             if (subStack.stream().noneMatch { nullable(it) }) {

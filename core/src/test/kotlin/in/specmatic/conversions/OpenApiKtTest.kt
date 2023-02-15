@@ -1021,7 +1021,7 @@ Background:
     }
 
     @Test
-    fun `should validate and generate with indirect non-nullable cyclic reference in open api`() {
+    fun `should validate and generate with indirect required non-nullable cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
             """
 Feature: Hello world
@@ -1046,10 +1046,11 @@ Background:
         assertThat(resp.isSuccessful).isFalse
         assertThat(resp.code()).isEqualTo(400)
         val body = resp.body()?.string()
-        assertThat(body).contains("Invalid cycle")
+        assertThat(body).contains("Invalid pattern cycle")
     }
 
     @Test
+    @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
     fun `should validate and generate with indirect nullable cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
             """

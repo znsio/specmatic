@@ -22,6 +22,8 @@ components:
         # indirect cycle via an intermediate node
         intermediate-node:
           $ref: '#/components/schemas/CycleIntermediateNode'
+      required:
+        - intermediate-node
 
     CycleIntermediateNode:
       type: object
@@ -29,3 +31,5 @@ components:
         # Completes an indirect cycle back to the root
         indirect-cycle:
           $ref: '#/components/schemas/CycleRoot'
+      required:
+        - indirect-cycle

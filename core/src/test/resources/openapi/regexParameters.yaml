@@ -1,0 +1,30 @@
+openapi: 3.0.3
+info:
+  version: '1.0'
+  title: Foo API Definition
+  description: Example API to reproduce Specmatic 0.60.0 issue.
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+paths:
+  /v1/foo/{id}:
+    delete:
+      summary: Delete 'foo'
+      description: Deletes a specific product and returns status code 204.
+      operationId: foo.delete
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-000030[aA]{2}$'
+            # the regex above limits the length;
+            # however, some tools might require explicit settings:
+            minLength: 27
+            maxLength: 27
+          example: CAC10D70-0000-0000-000030AA
+          required: true
+          description: ID of the requested 'foo'
+      responses:
+        '204':
+          description: Successful operation

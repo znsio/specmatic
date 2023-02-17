@@ -1686,6 +1686,58 @@ Scenario: zero should return not found
     }
 
     @Test
+    fun `should delete 'foo' using regex pattern and {min,max}Length parameters`() {
+        val flags = mutableMapOf<String, Int>().withDefault { 0 }
+
+        val openAPISpec = """
+Feature: Foo API
+
+  Background:
+    Given openapi openapi/regexParameters.yaml
+
+  Scenario Outline: Delete foo
+    When DELETE /v1/foo/(id:string)
+    Then status 204
+    Examples:
+      | id                          |
+      | CAC10D70-0000-0000-000030AA |
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+        val pattern = "/v1/foo/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-000030[aA]{2}"
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val flagKey = "${request.path} ${request.method} executed"
+                    flags[flagKey] = flags.getValue(flagKey) + 1
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    return when {
+                        request.path!!.matches(Regex(pattern)) -> when (request.method) {
+                            "DELETE" -> HttpResponse(204, headers)
+                            else -> HttpResponse(400, "", headers)
+                        }
+                        else -> HttpResponse(400, "", headers)
+                    }
+                }
+                override fun setServerState(serverState: Map<String, Value>) {}
+            }
+        )
+
+        assertThat(flags["/v1/foo/CAC10D70-0000-0000-000030AA DELETE executed"]).isEqualTo(1)
+        assertThat(flags.keys.filter { it.matches(Regex("""$pattern DELETE executed""")) }.size).isEqualTo(1)
+        assertThat(flags.keys.filter { it.matches(Regex("""$pattern GET executed""")) }.size).isNotNull
+        assertThat(flags.keys.filter { it.matches(Regex("""$pattern POST executed""")) }.size).isNotNull
+        assertThat(flags.keys.filter { it.matches(Regex("""$pattern PUT executed""")) }.size).isNotNull
+        assertThat(flags.keys.filter { it.matches(Regex("""$pattern PATCH executed""")) }.size).isNotNull
+        assertThat(flags.size).isEqualTo(1)
+        assertTrue(results.success(), results.report())
+    }
+
+    @Test
     fun `default response should be used to match an unexpected response status code and body in stub`() {
         val openAPISpec = """
             Feature: With default

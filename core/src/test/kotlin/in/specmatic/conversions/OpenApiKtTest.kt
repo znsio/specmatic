@@ -1729,10 +1729,6 @@ Feature: Foo API
 
         assertThat(flags["/v1/foo/CAC10D70-0000-0000-000030AA DELETE executed"]).isEqualTo(1)
         assertThat(flags.keys.filter { it.matches(Regex("""$pattern DELETE executed""")) }.size).isEqualTo(1)
-        assertThat(flags.keys.filter { it.matches(Regex("""$pattern GET executed""")) }.size).isNotNull
-        assertThat(flags.keys.filter { it.matches(Regex("""$pattern POST executed""")) }.size).isNotNull
-        assertThat(flags.keys.filter { it.matches(Regex("""$pattern PUT executed""")) }.size).isNotNull
-        assertThat(flags.keys.filter { it.matches(Regex("""$pattern PATCH executed""")) }.size).isNotNull
         assertThat(flags.size).isEqualTo(1)
         assertTrue(results.success(), results.report())
     }

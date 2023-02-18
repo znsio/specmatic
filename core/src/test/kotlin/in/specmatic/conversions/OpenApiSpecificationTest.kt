@@ -5567,6 +5567,118 @@ paths:
         }.satisfies(Consumer { it.instanceOf(NoMatchingScenario::class) })
     }
 
+  // See https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/#allof
+    @Test
+    fun `oneOf with discriminator in yaml`() {
+        val openAPIText = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Test"
+              version: "1"
+            paths:
+              /pets:
+                patch:
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: "#/components/schemas/Pet_Polymorphic"
+                  responses:
+                    "200":
+                      description: "updated"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas:
+                Pet:
+                  type: object
+                  required:
+                  - pet_type
+                  properties:
+                    pet_type:
+                      type: string
+                  discriminator:
+                    propertyName: pet_type
+                Pet_Polymorphic:
+                  oneOf:
+                    - ${'$'}ref: '#/components/schemas/Cat'
+                    - ${'$'}ref: '#/components/schemas/Dog'
+                Dog:
+                  allOf:
+                  - ${'$'}ref: '#/components/schemas/Pet'
+                  - type: object
+                    properties:
+                      bark:
+                        type: boolean
+                      breed:
+                        type: string
+                        enum: [Dingo, Husky]
+                Cat:
+                  allOf:
+                  - ${'$'}ref: '#/components/schemas/Pet'
+                  - type: object
+                    properties:
+                      hunts:
+                        type: boolean
+                      age:
+                        type: integer
+        """.trimIndent()
+      val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
+
+      assertThat(
+          feature.matchingStub(
+              HttpRequest(
+                  "PATCH",
+                  "/pets",
+                  body = parsedJSON("""{"pet_type": "Cat", "age": 3}""")
+              ), HttpResponse.OK("success")
+          ).response.headers["X-Specmatic-Result"]
+      ).isEqualTo("success")
+
+      assertThat(
+          feature.matchingStub(
+              HttpRequest(
+                  "PATCH",
+                  "/pets",
+                  body = parsedJSON("""{"pet_type": "Dog", "bark": true}""")
+              ), HttpResponse.OK("success")
+          ).response.headers["X-Specmatic-Result"]
+      ).isEqualTo("success")
+
+      assertThat(
+          feature.matchingStub(
+              HttpRequest(
+                  "PATCH",
+                  "/pets",
+                  body = parsedJSON("""{"pet_type": "Dog", "bark": false, "breed": "Dingo"}""")
+              ), HttpResponse.OK("success")
+          ).response.headers["X-Specmatic-Result"]
+      ).isEqualTo("success")
+
+      assertThatThrownBy {
+        feature.matchingStub(
+          HttpRequest(
+            "PATCH",
+            "/pets",
+            body = parsedJSON("""{"age": 3}""")
+          ), HttpResponse.OK("success")
+        )
+      }.isInstanceOf(NoMatchingScenario::class.java)
+
+      assertThatThrownBy {
+        feature.matchingStub(
+          HttpRequest(
+            "PATCH",
+            "/pets",
+            body = parsedJSON("""{"pet_type": "Cat", "bark": true}""")
+          ), HttpResponse.OK("success")
+        )
+      }.isInstanceOf(NoMatchingScenario::class.java)
+    }
+
     @Test
     fun `should read WIP tag in OpenAPI paths`() {
         val contractString = """

@@ -1051,6 +1051,37 @@ Background:
 
     @Test
     @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
+    fun `should validate and generate with indirect optional non-nullable cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-optional-non-nullable.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
+
+        val resp = HttpStub(feature).use {
+            val request =
+                Request.Builder().url("http://localhost:9000/demo/circular-reference-optional-non-nullable")
+                    .addHeader("Content-Type", "application/json")
+                    .get().build()
+            val call = OkHttpClient().newCall(request)
+            call.execute()
+        }
+
+        val body = resp.body()?.string()
+        assertThat(resp.isSuccessful).withFailMessage("Response unexpectedly failed. body=$body").isTrue
+        assertThat(resp.code()).isEqualTo(200)
+        val deserialized = ObjectMapper().readValue(body, OptionalCycleRoot::class.java)
+        assertThat(deserialized).isNotNull
+    }
+
+    @Test
+    @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
     fun `should validate and generate with indirect nullable cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
             """
@@ -1825,6 +1856,14 @@ data class CycleRoot(
 
 data class CycleIntermediateNode(
     @JsonProperty("indirect-cycle") val indirectCycle: CycleRoot,
+)
+
+data class OptionalCycleRoot(
+    @JsonProperty("intermediate-node") val intermediateNode: OptionalCycleIntermediateNode,
+)
+
+data class OptionalCycleIntermediateNode(
+    @JsonProperty("indirect-cycle") val indirectCycle: OptionalCycleRoot?,
 )
 
 data class NullableCycleHolder(

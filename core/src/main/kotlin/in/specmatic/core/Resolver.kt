@@ -82,7 +82,7 @@ data class Resolver(
             val subStack = cyclePreventionStack.subList(index, cyclePreventionStack.size)
             if (subStack.stream().noneMatch { nullable(it) }) {
                 // Terminate what would otherwise be an infinite cycle.
-                throw PatternCycleException("Invalid pattern cycle", cyclePreventionStack.plus(pattern))
+                throw ContractException("Invalid pattern cycle: ${cyclePreventionStack.plus(pattern)}", isCycle = true)
             }
         }
     }

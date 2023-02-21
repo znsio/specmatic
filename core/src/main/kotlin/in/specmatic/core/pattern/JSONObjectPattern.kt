@@ -112,13 +112,14 @@ fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String,
             attempt(breadCrumb = key) {
                 try {
                     Optional.of(resolverWithNullType.generate(key, pattern))
-                } catch (e: PatternCycleException) {
-                    if (optionalProps.contains(key)) {
-                        // Handle cycle by marking this property as removable
-                        Optional.empty()
+                } catch (e: ContractException) {
+                    if (!e.isCycle || !optionalProps.contains(key)) {
+                        // Give other patterns in the cycle a chance to check for optional properties
+                        throw e
                     }
-                    // Property is required, so must throw exception
-                    else throw ContractException(e.message!!, key)
+
+                    // Handle cycle by marking this property as removable
+                    Optional.empty()
                 }
             }
         }

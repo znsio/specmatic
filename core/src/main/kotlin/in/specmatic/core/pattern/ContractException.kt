@@ -5,7 +5,13 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.Scenario
 import `in`.specmatic.core.ScenarioDetailsForResult
 
-data class ContractException(val errorMessage: String = "", val breadCrumb: String = "", val exceptionCause: ContractException? = null, val scenario: ScenarioDetailsForResult? = null) : Exception(errorMessage) {
+data class ContractException(
+    val errorMessage: String = "",
+    val breadCrumb: String = "",
+    val exceptionCause: ContractException? = null,
+    val scenario: ScenarioDetailsForResult? = null,
+    val isCycle: Boolean = exceptionCause?.isCycle?: false,
+) : Exception(errorMessage) {
     constructor(failureReport: FailureReport): this(failureReport.toText())
 
     fun failure(): Result.Failure =

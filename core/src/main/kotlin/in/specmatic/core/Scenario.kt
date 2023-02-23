@@ -207,7 +207,8 @@ data class Scenario(
             )
                 code()
         } catch (e: Throwable) {
-            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key, actual value is $actualValue")
+            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key" +
+                ", actual value is $actualValue", exceptionCause = e)
         }
     }
 

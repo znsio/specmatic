@@ -154,7 +154,8 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
         parsedJSON(configFile.readText())
     } catch (e: Throwable) {
-        throw ContractException("Error reading the $globalConfigFileName: ${exceptionCauseMessage(e)}")
+        throw ContractException("Error reading the $globalConfigFileName: ${exceptionCauseMessage(e)}",
+            exceptionCause = e)
     }
 
     if (configJson !is JSONObjectValue)

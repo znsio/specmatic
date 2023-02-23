@@ -22,6 +22,8 @@ components:
       properties:
         contents:
           $ref: '#/components/schemas/NullableCycleRoot'
+      required:
+        - contents
 
     NullableCycleRoot:
       type: object
@@ -30,6 +32,8 @@ components:
         # indirect cycle via an intermediate node
         intermediate-node:
           $ref: '#/components/schemas/NullableCycleIntermediateNode'
+      required:
+        - intermediate-node
 
     NullableCycleIntermediateNode:
       type: object
@@ -37,3 +41,5 @@ components:
         # Completes an indirect cycle back to the root
         indirect-cycle:
           $ref: '#/components/schemas/NullableCycleRoot'
+      required:
+        - indirect-cycle

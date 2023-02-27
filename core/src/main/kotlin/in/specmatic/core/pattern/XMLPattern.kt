@@ -337,17 +337,23 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                                 is XMLPattern -> {
                                     val dereferenced: XMLPattern = childPattern.dereferenceType(resolver)
 
-                                    when {
-                                        dereferenced.occurMultipleTimes() -> {
-                                            dereferenced.newBasedOn(row, resolver)
+                                    resolver.withCyclePrevention(dereferenced) { cyclePreventedResolver ->
+                                        when {
+                                            dereferenced.occurMultipleTimes() -> {
+                                                dereferenced.newBasedOn(row, cyclePreventedResolver)
+                                            }
+
+                                            dereferenced.isOptional() -> {
+                                                dereferenced.newBasedOn(row, cyclePreventedResolver).plus(null)
+                                            }
+
+                                            else -> dereferenced.newBasedOn(row, cyclePreventedResolver)
                                         }
-                                        dereferenced.isOptional() -> {
-                                            dereferenced.newBasedOn(row, resolver).plus(null)
-                                        }
-                                        else -> dereferenced.newBasedOn(row, resolver)
                                     }
                                 }
-                                else -> childPattern.newBasedOn(row, resolver)
+                                else -> resolver.withCyclePrevention(childPattern) { cyclePreventedResolver ->
+                                    childPattern.newBasedOn(row, cyclePreventedResolver)
+                                }
                             }
                         }
                     })
@@ -374,17 +380,23 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         is XMLPattern -> {
                             val dereferenced: XMLPattern = childPattern.dereferenceType(resolver)
 
-                            when {
-                                dereferenced.occurMultipleTimes() -> {
-                                    dereferenced.newBasedOn(resolver)
+                            resolver.withCyclePrevention(dereferenced) { cyclePreventedResolver ->
+                                when {
+                                    dereferenced.occurMultipleTimes() -> {
+                                        dereferenced.newBasedOn(cyclePreventedResolver)
+                                    }
+
+                                    dereferenced.isOptional() -> {
+                                        dereferenced.newBasedOn(cyclePreventedResolver).plus(null)
+                                    }
+
+                                    else -> dereferenced.newBasedOn(cyclePreventedResolver)
                                 }
-                                dereferenced.isOptional() -> {
-                                    dereferenced.newBasedOn(resolver).plus(null)
-                                }
-                                else -> dereferenced.newBasedOn(resolver)
                             }
                         }
-                        else -> childPattern.newBasedOn(resolver)
+                        else -> resolver.withCyclePrevention(childPattern) { cyclePreventedResolver ->
+                            childPattern.newBasedOn(cyclePreventedResolver)
+                        }
                     }
                 }
             })

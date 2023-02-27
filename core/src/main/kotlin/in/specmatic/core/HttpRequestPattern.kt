@@ -393,7 +393,9 @@ data class HttpRequestPattern(
                             val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
 
                             val requestsFromFlattenedRow: List<Pattern> =
-                                body.newBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+                                resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                                    body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
+                                }
 
                             requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
                         } else {
@@ -402,8 +404,12 @@ data class HttpRequestPattern(
                     } else {
 
                         if(Flags.generativeTestingEnabled()) {
-                            val vanilla = body.newBasedOn(Row(), resolver)
-                            val fromExamples = body.newBasedOn(row, resolver)
+                            val vanilla = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                                body.newBasedOn(Row(), cyclePreventedResolver)
+                            }
+                            val fromExamples = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                                body.newBasedOn(row, cyclePreventedResolver)
+                            }
                             val remainingVanilla = vanilla.filterNot { vanillaType ->
                                 fromExamples.any { typeFromExamples ->
                                     vanillaType.encompasses(
@@ -416,7 +422,9 @@ data class HttpRequestPattern(
 
                             fromExamples.plus(remainingVanilla)
                         } else {
-                            body.newBasedOn(row, resolver)
+                            resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                                body.newBasedOn(row, cyclePreventedResolver)
+                            }
                         }
                     }
                 }
@@ -464,7 +472,11 @@ data class HttpRequestPattern(
     fun newBasedOn(resolver: Resolver): List<HttpRequestPattern> {
         return attempt(breadCrumb = "REQUEST") {
             val newURLMatchers = urlMatcher?.newBasedOn(resolver) ?: listOf<URLMatcher?>(null)
-            val newBodies = attempt(breadCrumb = "BODY") { body.newBasedOn(resolver) }
+            val newBodies = attempt(breadCrumb = "BODY") {
+                resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                    body.newBasedOn(cyclePreventedResolver)
+                }
+            }
             val newHeadersPattern = headersPattern.newBasedOn(resolver)
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, resolver)
             //TODO: Backward Compatibility
@@ -537,7 +549,9 @@ data class HttpRequestPattern(
                             listOf(ExactValuePattern(value))
                         }
 
-                        val flattenedRequests: List<Pattern> = body.newBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+                        val flattenedRequests: List<Pattern> = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                            body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
+                        }
 
                         flattenedRequests.plus(originalRequest)
 

@@ -53,11 +53,23 @@ data class AnyPattern(
         }?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
-        pattern.flatMap { it.newBasedOn(row, resolver) }
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        val isNullable = pattern.any {it is NullPattern}
+        return pattern.flatMap { innerPattern ->
+            resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
+                innerPattern.newBasedOn(row, cyclePreventedResolver)
+            }?: listOf()  // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
+        }
+    }
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> =
-        pattern.flatMap { it.newBasedOn(resolver) }
+    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+        val isNullable = pattern.any {it is NullPattern}
+        return pattern.flatMap { innerPattern ->
+            resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
+                innerPattern.newBasedOn(cyclePreventedResolver)
+            }?: listOf()  // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
+        }
+    }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)
 

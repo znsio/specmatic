@@ -64,8 +64,12 @@ data class KafkaMessagePattern(val topic: String = "", val key: Pattern = EmptyS
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<KafkaMessagePattern> {
-        val newKeys = key.newBasedOn(row, resolver)
-        val newValues = value.newBasedOn(row, resolver)
+        val newKeys = resolver.withCyclePrevention(key) { cyclePreventedResolver ->
+            key.newBasedOn(row, cyclePreventedResolver)
+        }
+        val newValues = resolver.withCyclePrevention(key) { cyclePreventedResolver ->
+            value.newBasedOn(row, cyclePreventedResolver)
+        }
 
         return newKeys.flatMap { newKey ->
             newValues.map { newValue ->

@@ -19,10 +19,14 @@ data class URLPathPattern(override val pattern: Pattern, override val key: Strin
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<URLPathPattern> =
-            pattern.newBasedOn(row, resolver).map { URLPathPattern(it, key) }
+        resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+            pattern.newBasedOn(row, cyclePreventedResolver).map { URLPathPattern(it, key) }
+        }
 
     override fun newBasedOn(resolver: Resolver): List<URLPathPattern> =
-            pattern.newBasedOn(resolver).map { URLPathPattern(it, key) }
+        resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+            pattern.newBasedOn(cyclePreventedResolver).map { URLPathPattern(it, key) }
+        }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         return newBasedOn(row, resolver)

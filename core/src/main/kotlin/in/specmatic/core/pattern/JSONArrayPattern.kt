@@ -136,7 +136,9 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
 fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
     val values = jsonPattern.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
-            pattern.newBasedOn(row, resolver)
+            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(row, cyclePreventedResolver)
+            }
         }
     }
 
@@ -146,7 +148,9 @@ fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<L
 fun newBasedOn(jsonPattern: List<Pattern>, resolver: Resolver): List<List<Pattern>> {
     val values = jsonPattern.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
-            pattern.newBasedOn(resolver)
+            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(cyclePreventedResolver)
+            }
         }
     }
 

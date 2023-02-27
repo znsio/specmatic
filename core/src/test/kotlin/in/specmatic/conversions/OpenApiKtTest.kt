@@ -179,6 +179,78 @@ Background:
     }
 
     @Test
+    fun `should create tests for indirect optional non-nullable cyclic reference`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-optional-non-nullable.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    assertThat(request.path).matches("""\/demo\/circular-reference-optional-non-nullable""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    return HttpResponse(200, """{"intermediate-node": {}}""", headers)
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(flags["/demo/circular-reference-optional-non-nullable executed"]).isTrue
+        assertThat(flags.size).isEqualTo(1)
+        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
+    }
+
+    @Test
+    fun `should create tests for indirect nullable cyclic reference`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-nullable.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    assertThat(request.path).matches("""\/demo\/circular-reference-nullable""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    return HttpResponse(200, """{"contents": {"intermediate-node": {"indirect-cycle": null}}}""", headers)
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(flags["/demo/circular-reference-nullable executed"]).isTrue
+        assertThat(flags.size).isEqualTo(1)
+        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
+    }
+
+    @Test
     fun `should report errors in tests created from OpenAPI examples`() {
         val flags = mutableMapOf<String, Boolean>()
 

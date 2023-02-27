@@ -47,12 +47,20 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolverWithEmptyType).map { ListPattern(it) } }
+        return attempt(breadCrumb = "[]") {
+            resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(row, cyclePreventedResolver).map { ListPattern(it) }
+            }
+        }
     }
 
     override fun newBasedOn(resolver: Resolver): List<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") { pattern.newBasedOn(resolverWithEmptyType).map { ListPattern(it) } }
+        return attempt(breadCrumb = "[]") {
+            resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(cyclePreventedResolver).map { ListPattern(it) }
+            }
+        }
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)

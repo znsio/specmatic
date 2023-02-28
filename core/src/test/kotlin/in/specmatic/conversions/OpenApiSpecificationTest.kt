@@ -3494,6 +3494,69 @@ components:
         assertThat(stub.response.status).isEqualTo(200)
 
     }
+  @Test
+  fun `support dictionary object type with composed oneOf value`() {
+    val openAPI =
+      """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                myValues:
+                  type: object
+                  additionalProperties:
+                    oneOf:
+                    - ${"$"}ref: Person
+                    - ${"$"}ref: Alien
+      responses:
+        200:
+          description: API
+components:
+  schemas:
+    Person:
+      type: object
+      properties:
+        name:
+          type: string
+    Alien:
+      type: object
+      properties:
+        moniker:
+          type: string
+        homePlanet:
+          type: string
+""".trimIndent()
+
+    println(openAPI)
+    val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+    val request = HttpRequest(
+      "POST",
+      "/data",
+      body = parsedValue("""{"myValues": {"10": {"name": "Jill"}, "20": {"moniker": "Vin", "homePlanet": "Scadrial"}}}""")
+    )
+    val response = HttpResponse.OK
+
+    val stub: HttpStubData = feature.matchingStub(request, response)
+
+    println(stub.requestType)
+
+    assertThat(stub.requestType.method).isEqualTo("POST")
+    assertThat(stub.response.status).isEqualTo(200)
+
+  }
 
     @Test
     fun `support dictionary object type in request body with inline fixed keys`() {

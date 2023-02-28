@@ -779,7 +779,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         schema: Schema<*>, typeStack: List<String>, patternName: String
     ): DictionaryPattern {
         val valueSchema = schema.additionalProperties as Schema<Any>
-        val valueSchemaTypeName = if (valueSchema.`$ref` == null) valueSchema.types.first() else valueSchema.`$ref`
+        val valueSchemaTypeName = valueSchema.`$ref` ?: valueSchema.types?.first() ?: "";
         return DictionaryPattern(
             StringPattern(), toSpecmaticPattern(valueSchema, typeStack, valueSchemaTypeName, false)
         )

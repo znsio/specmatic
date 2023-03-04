@@ -249,7 +249,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                             ObjectMapper().readValue(valueString, Map::class.java).values.first()
                                                 .toString()
                                         } else valueString
-                                    })
+                                    },
+                                name = exampleName)
                             else -> Row()
                         }
                     }
@@ -279,7 +280,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             scenarioBreadCrumb(scenarioDetails) {
                                 httpRequestPattern.newBasedOn(
                                     row,
-                                    Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch)
+                                    Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch),
+                                    httpResponsePattern.status
                                 )
                             }
                         }

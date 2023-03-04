@@ -12,6 +12,8 @@ private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
 private const val FORM_FIELDS_BREADCRUMB = "FORM-FIELDS"
 const val CONTENT_TYPE = "Content-Type"
 
+private val invalidRequestStatuses = listOf(400, 422)
+
 data class HeaderMatchParams(val request: HttpRequest, val headersResolver: Resolver?, val defaultResolver: Resolver, val failures: List<Failure>)
 
 data class HttpRequestPattern(
@@ -364,7 +366,7 @@ data class HttpRequestPattern(
         }
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
+    fun newBasedOn(row: Row, resolver: Resolver, status: Int = 0): List<HttpRequestPattern> {
         return attempt(breadCrumb = "REQUEST") {
             val newURLMatchers = urlMatcher?.newBasedOn(row, resolver) ?: listOf<URLMatcher?>(null)
                 val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
@@ -384,9 +386,12 @@ data class HttpRequestPattern(
                     } else if(row.containsField("(REQUEST-BODY)")) {
                         val example = row.getField("(REQUEST-BODY)")
                         val value = it.parse(example, resolver)
-                        val result = body.matches(value, resolver)
-                        if(result is Failure)
-                            throw ContractException(result.toFailureReport())
+
+                        if(! isInvalidRequestResponse(status)) {
+                            val result = body.matches(value, resolver)
+                            if (result is Failure)
+                                throw ContractException(result.toFailureReport())
+                        }
 
                         if(Flags.generativeTestingEnabled()) {
                             val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
@@ -458,6 +463,10 @@ data class HttpRequestPattern(
                 }
             }
         }
+    }
+
+    private fun isInvalidRequestResponse(status: Int): Boolean {
+        return status in invalidRequestStatuses
     }
 
     fun newBasedOn(resolver: Resolver): List<HttpRequestPattern> {

@@ -261,6 +261,7 @@ data class Scenario(
     }
 
     private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false): List<Scenario> {
+        val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndRowValueMismatch, generativeTestingEnabled = generativeTestingEnabled)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)

@@ -1848,6 +1848,77 @@ components:
     }
 
     @Test
+    fun `a test marked WIP should setup the scenario to ignore failure`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: Swagger API Team
+    email: apiteam@swagger.io
+    url: http://swagger.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: http://petstore.swagger.io/api
+paths:
+  /pets:
+    post:
+      summary: create a pet
+      description: Creates a new pet in the store. Duplicates are allowed
+      operationId: addPet
+      requestBody:
+        description: Pet to add to the store
+        required: true
+        content:
+          application/json:
+            schema:
+              ${'$'}ref: '#/components/schemas/NewPet'
+            examples:
+              "[WIP] SUCCESS":
+                value:
+                  name: 'Archie'
+      responses:
+        '200':
+          description: new pet record
+          content:
+            application/json:
+              schema:
+                ${'$'}ref: '#/components/schemas/Pet'
+              examples:
+                "[WIP] SUCCESS":
+                  value:
+                    id: 10
+                    name: Archie
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        name:
+          type: string
+        id:
+          type: integer
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+""".trimIndent(), "").toFeature()
+
+        assertThat(contract.generateContractTestScenarios(emptyList()).single().ignoreFailure).isTrue
+    }
+
+    @Test
     fun `400 response in the contract should be used to match a 400 status response in a negative test even when a default response has been declared`() {
         val openAPISpec = """
             Feature: With default

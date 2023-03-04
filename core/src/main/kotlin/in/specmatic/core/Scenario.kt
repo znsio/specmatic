@@ -269,7 +269,7 @@ data class Scenario(
             null -> scenarioBreadCrumb(this) {
                 attempt {
                     when (isNegative) {
-                        false -> httpRequestPattern.newBasedOn(row, resolver)
+                        false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
                         else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
                     }.map { newHttpRequestPattern ->
                         Scenario(

@@ -1741,6 +1741,45 @@ Scenario: zero should return not found
     }
 
     @Test
+    fun `should validate enum values in URL path params`() {
+        val openAPISpec = """
+Feature: Foo API
+
+  Background:
+    Given openapi openapi/enum_in_path.yaml
+
+  Scenario Outline: Delete foo
+    When GET /v1/foo/(data:string)
+    Then status 200
+    Examples:
+      | id  |
+      | baz |
+        """.trimIndent()
+
+        val flags = mutableListOf<String>()
+
+        try {
+            val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+
+            feature.executeTests(
+                object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        flags.add("test executed")
+                        return HttpResponse.OK
+                    }
+
+                    override fun setServerState(serverState: Map<String, Value>) {}
+                }
+            )
+
+        } catch(e: Throwable) {
+
+        }
+
+        assertThat(flags).doesNotContain("test executed")
+    }
+
+    @Test
     fun `contract-invalid test should be allowed for 400 request`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: "3.0.3"

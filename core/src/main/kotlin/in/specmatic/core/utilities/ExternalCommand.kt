@@ -24,7 +24,8 @@ class ExternalCommand(
 
             out
         } catch (otherExceptions: Exception) {
-            throw ContractException("""Error running $commandWithParameters: ${otherExceptions.message}""")
+            throw ContractException("""Error running $commandWithParameters: ${otherExceptions.message}""",
+                exceptionCause = otherExceptions)
         }
     }
 }

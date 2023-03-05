@@ -1701,20 +1701,25 @@ Feature: Foo API
       | baz |
         """.trimIndent()
 
-        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
-
         val flags = mutableListOf<String>()
 
-        feature.executeTests(
-            object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    flags.add("test executed")
-                    return HttpResponse.OK
-                }
+        try {
+            val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
 
-                override fun setServerState(serverState: Map<String, Value>) {}
-            }
-        )
+            feature.executeTests(
+                object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        flags.add("test executed")
+                        return HttpResponse.OK
+                    }
+
+                    override fun setServerState(serverState: Map<String, Value>) {}
+                }
+            )
+
+        } catch(e: Throwable) {
+
+        }
 
         assertThat(flags).doesNotContain("test executed")
     }

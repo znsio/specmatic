@@ -6114,6 +6114,50 @@ paths:
         assertThat(testLogger.messages).isNotEmpty
     }
 
+    @Test
+    fun `nullable empty object should translate to null when found in oneOf`() {
+        val contract = OpenApiSpecification.fromYAML("""
+---
+openapi: "3.0.1"
+info:
+  title: "Person API"
+  version: "1"
+paths:
+  /person:
+    post:
+      summary: "Add person by id"
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+              - "address"
+              - "id"
+              properties:
+                id:
+                  type: "string"
+                address:
+                  oneOf:
+                    - properties: {}
+                      nullable: true
+                    - type: string
+      responses:
+        200:
+          description: "Add person by id"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+""".trimIndent(), "").toFeature()
+
+        val requestBodyType = contract.scenarios.first().httpRequestPattern.body as JSONObjectPattern
+        val addressType = requestBodyType.pattern["address"] as AnyPattern
+
+        assertThat(addressType.pattern).hasSize(2)
+        assertThat(NullPattern).isIn(addressType.pattern)
+        assertThat(StringPattern()).isIn(addressType.pattern)
+    }
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

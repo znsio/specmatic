@@ -571,14 +571,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
                     cacheComponentPattern(patternName, jsonObjectPattern)
                 } else if (schema.oneOf != null) {
-                    val candidatePatterns = schema.oneOf.map { componentSchema ->
+                    val candidatePatterns = schema.oneOf.filterNot { nullableEmptyObject(it) } .map { componentSchema ->
                         val (componentName, schemaToProcess) =
                             if (componentSchema.`$ref` != null) resolveReferenceToSchema(componentSchema.`$ref`)
                             else patternName to componentSchema
                         toSpecmaticPattern(schemaToProcess, typeStack.plus(patternName), componentName)
                     }
 
-                    val nullable = if(nullableOneOf(schema)) listOf(NullPattern) else emptyList()
+                    val nullable = if(schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
 
                     AnyPattern(candidatePatterns.plus(nullable))
                 } else if (schema.anyOf != null) {
@@ -644,8 +644,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return pattern
     }
 
-    private fun nullableOneOf(schema: ComposedSchema): Boolean {
-        return schema.oneOf.any { it.nullable == true }
+    private fun nullableEmptyObject(schema: Schema<*>): Boolean {
+        return schema is ObjectSchema && schema.nullable == true
     }
 
     private fun toXMLPattern(mediaType: MediaType): Pattern {

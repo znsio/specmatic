@@ -1686,6 +1686,40 @@ Scenario: zero should return not found
     }
 
     @Test
+    fun `should validate enum values in URL path params`() {
+        val openAPISpec = """
+Feature: Foo API
+
+  Background:
+    Given openapi openapi/enum_in_path.yaml
+
+  Scenario Outline: Delete foo
+    When GET /v1/foo/(data:string)
+    Then status 200
+    Examples:
+      | id  |
+      | baz |
+        """.trimIndent()
+
+        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+
+        val flags = mutableListOf<String>()
+
+        feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags.add("test executed")
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {}
+            }
+        )
+
+        assertThat(flags).doesNotContain("test executed")
+    }
+
+    @Test
     fun `should delete 'foo' using regex pattern and {min,max}Length parameters`() {
         val flags = mutableMapOf<String, Int>().withDefault { 0 }
 

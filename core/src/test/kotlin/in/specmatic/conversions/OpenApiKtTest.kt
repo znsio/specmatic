@@ -1887,7 +1887,7 @@ components:
     }
 
     @Test
-    fun `contract-invalid test should be allowed for 400 request header`() {
+    fun `contract-invalid test should be allowed for 400 query parameter`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: "3.0.3"
 info:
@@ -1986,6 +1986,108 @@ components:
             contract.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val dataHeaderValue: String? = request.headers["data"]
+
+                    if(dataHeaderValue == "hello")
+                        contractInvalidValueReceived = true
+
+                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(contractInvalidValueReceived).isTrue
+        } finally {
+            System.clearProperty(Flags.negativeTestingFlag)
+        }
+    }
+
+    @Test
+    fun `contract-invalid test should be allowed for 400 request header`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: Swagger API Team
+    email: apiteam@swagger.io
+    url: http://swagger.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: http://petstore.swagger.io/api
+paths:
+  /pets:
+    get:
+      summary: query for a pet
+      description: Queries info on a pet
+      parameters:
+        - in: query
+          name: data
+          schema:
+            type: integer
+          examples:
+            INVALID:
+              value: hello
+            SUCCESS:
+              value: 10
+      responses:
+        '200':
+          description: new pet record
+          content:
+            application/json:
+              schema:
+                ${'$'}ref: '#/components/schemas/Pet'
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+                    name: Archie
+        '400':
+          description: invalid request
+          content:
+            application/json:
+              examples:
+                INVALID:
+                  value:
+                    message: Name must be a strings
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        name:
+          type: string
+        id:
+          type: integer
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+""".trimIndent(), "").toFeature()
+
+        var contractInvalidValueReceived = false
+
+        try {
+            contract.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val dataHeaderValue: String? = request.queryParams["data"]
 
                     if(dataHeaderValue == "hello")
                         contractInvalidValueReceived = true

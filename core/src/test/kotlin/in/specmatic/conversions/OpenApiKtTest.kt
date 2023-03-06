@@ -1780,7 +1780,7 @@ Feature: Foo API
     }
 
     @Test
-    fun `contract-invalid test should be allowed for 400 request`() {
+    fun `contract-invalid test should be allowed for 400 request payload`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: "3.0.3"
 info:
@@ -1873,7 +1873,124 @@ components:
                     if(jsonBody.jsonObject["name"] is NumberValue)
                         contractInvalidValueReceived = true
 
-                    return HttpResponse(422, body = parsedJSONObject("""{"message": "invalid request"}"""))
+                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(contractInvalidValueReceived).isTrue
+        } finally {
+            System.clearProperty(Flags.negativeTestingFlag)
+        }
+    }
+
+    @Test
+    fun `contract-invalid test should be allowed for 400 request header`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: Swagger API Team
+    email: apiteam@swagger.io
+    url: http://swagger.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: http://petstore.swagger.io/api
+paths:
+  /pets:
+    post:
+      summary: create a pet
+      description: Creates a new pet in the store. Duplicates are allowed
+      operationId: addPet
+      parameters:
+        - in: header
+          name: data
+          schema:
+            type: integer
+          examples:
+            INVALID:
+              value: hello
+            SUCCESS:
+              value: 10
+      requestBody:
+        description: Pet to add to the store
+        required: true
+        content:
+          application/json:
+            schema:
+              ${'$'}ref: '#/components/schemas/NewPet'
+            examples:
+              SUCCESS:
+                value:
+                  name: 'Archie'
+              INVALID:
+                value:
+                  name: 10
+      responses:
+        '200':
+          description: new pet record
+          content:
+            application/json:
+              schema:
+                ${'$'}ref: '#/components/schemas/Pet'
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+                    name: Archie
+        '400':
+          description: invalid request
+          content:
+            application/json:
+              examples:
+                INVALID:
+                  value:
+                    message: Name must be a strings
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        name:
+          type: string
+        id:
+          type: integer
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+""".trimIndent(), "").toFeature()
+
+        var contractInvalidValueReceived = false
+
+        try {
+            contract.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val dataHeaderValue: String? = request.headers["data"]
+
+                    if(dataHeaderValue == "hello")
+                        contractInvalidValueReceived = true
+
+                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {

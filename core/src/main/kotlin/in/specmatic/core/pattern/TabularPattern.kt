@@ -180,7 +180,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
         row.containsField(keyWithoutOptionality) -> {
             val rowValue = row.getField(keyWithoutOptionality)
 
-            val fromExamples = if (isPatternToken(rowValue)) {
+            if (isPatternToken(rowValue)) {
                 val rowPattern = resolver.getPattern(rowValue)
 
                 attempt(breadCrumb = key) {
@@ -194,25 +194,11 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
                     resolver.parse(pattern, rowValue)
                 }
 
-                when (val matchResult = pattern.matches(parsedRowValue, resolver)) {
+                when (val matchResult = resolver.matchesPattern(null, pattern, parsedRowValue)) {
                     is Result.Failure -> throw ContractException(matchResult.toFailureReport())
                     else -> listOf(ExactValuePattern(parsedRowValue))
                 }
             }
-
-            fromExamples
-
-//            if(Flags.negativeTestingEnabled()) {
-//                val vanilla = pattern.newBasedOn(Row(), resolver)
-//
-//                val remainder = vanilla.filterNot { vanillaType ->
-//                    fromExamples.any { item -> vanillaType.encompasses(item, resolver, resolver) is Result.Success }
-//                }
-//
-//                fromExamples.plus(remainder)
-//            } else {
-//                fromExamples
-//            }
         }
         else -> pattern.newBasedOn(row, resolver)
     }

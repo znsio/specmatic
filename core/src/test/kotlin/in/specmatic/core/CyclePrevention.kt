@@ -35,9 +35,7 @@ class CyclePrevention {
                   type: object
                   properties:
                     key:
-                      type:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/TopLevel'
+                      ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
         val response = HttpStub(feature).use {
@@ -77,12 +75,11 @@ class CyclePrevention {
                     - key
                   properties:
                     key:
-                      type:
-                        oneOf:
-                          - type: object
-                            properties: {}
-                            nullable: true
-                          - ${'$'}ref: '#/components/schemas/NextLevel'
+                      oneOf:
+                        - type: object
+                          properties: {}
+                          nullable: true
+                        - ${'$'}ref: '#/components/schemas/NextLevel'
         """.trimIndent(), "").toFeature()
 
         val response = HttpStub(feature).use {
@@ -120,12 +117,11 @@ class CyclePrevention {
                   type: object
                   properties:
                     key:
-                      type:
-                        oneOf:
-                          - type: object
-                            properties: {}
-                            nullable: true
-                          - ${'$'}ref: '#/components/schemas/TopLevel'
+                      oneOf:
+                        - type: object
+                          properties: {}
+                          nullable: true
+                        - ${'$'}ref: '#/components/schemas/TopLevel'`
         """.trimIndent(), "").toFeature()
 
         val response = HttpStub(feature).use {
@@ -165,9 +161,7 @@ class CyclePrevention {
                   - key
                   properties:
                     key:
-                      type:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/TopLevel'
+                      ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), ""
         ).toFeature()
 
@@ -207,16 +201,13 @@ class CyclePrevention {
                     - key1
                   properties:
                     key1:
-                      type:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/NextLevel'
+                      ${'$'}ref: '#/components/schemas/NextLevel'
                 NextLevel:
                   type: object
                   properties:
                     key2:
                       type:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/TopLevel'
+                        ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
         val response = HttpStub(feature).use {
@@ -256,21 +247,18 @@ class CyclePrevention {
                     - key1
                   properties:
                     key1:
-                      type:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/NextLevel'
+                      ${'$'}ref: '#/components/schemas/NextLevel'
                 NextLevel:
                   type: object
                   required:
                     - key2
                   properties:
                     key2:
-                      type:
-                        oneOf:
-                          - type: object
-                            properties: {}
-                            nullable: true
-                          - ${'$'}ref: '#/components/schemas/TopLevel'
+                      oneOf:
+                        - type: object
+                          properties: {}
+                          nullable: true
+                        - ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
         val response = HttpStub(feature).use {
@@ -310,9 +298,7 @@ class CyclePrevention {
                     - key1
                   properties:
                     key1:
-                      type:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/NextLevel'
+                      ${'$'}ref: '#/components/schemas/NextLevel'
                 NextLevel:
                   type: object
                   properties:
@@ -361,18 +347,14 @@ class CyclePrevention {
                   - key1
                   properties:
                     key1:
-                      type:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/NextLevel'
+                      ${'$'}ref: '#/components/schemas/NextLevel'
                 NextLevel:
                   type: object
                   required:
                   - key2
                   properties:
                     key2:
-                      type:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/TopLevel'
+                      ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
         val response = HttpStub(feature).use {

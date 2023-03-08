@@ -367,7 +367,12 @@ data class HttpRequestPattern(
         }
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver, status: Int = 0): List<HttpRequestPattern> {
+    fun newBasedOn(row: Row, initialResolver: Resolver, status: Int = 0): List<HttpRequestPattern> {
+        val resolver = if(status in invalidRequestStatuses)
+            initialResolver.invalidRequestResolver()
+        else
+            initialResolver
+
         return attempt(breadCrumb = "REQUEST") {
             val newURLMatchers = urlMatcher?.newBasedOn(row, resolver) ?: listOf<URLMatcher?>(null)
                 val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {

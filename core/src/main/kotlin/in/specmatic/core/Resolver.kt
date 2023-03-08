@@ -5,6 +5,22 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.True
 import `in`.specmatic.core.value.Value
 
+val actualMatch: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = { resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value ->
+    resolver.actualPatternMatch(factKey, pattern, sampleValue)
+}
+
+val matchAnything: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = { resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value ->
+    Result.Success()
+}
+
+val actualParse: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = { resolver: Resolver, pattern: Pattern, rowValue: String ->
+    resolver.actualParse(pattern, rowValue)
+}
+
+val alwaysReturnStringValue: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = { resolver: Resolver, pattern: Pattern, rowValue: String ->
+    StringValue(rowValue)
+}
+
 data class Resolver(
     val factStore: FactStore = CheckFacts(),
     val mockMode: Boolean = false,
@@ -13,6 +29,8 @@ data class Resolver(
     val context: Map<String, String> = emptyMap(),
     val mismatchMessages: MismatchMessages = DefaultMismatchMessages,
     val isNegative: Boolean = false,
+    val patternMatchStrategy: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = actualMatch,
+    val parseStrategy: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = actualParse,
     val generativeTestingEnabled: Boolean = false,
     val cyclePreventionStack: List<Pattern> = listOf(),
 ) {
@@ -38,6 +56,10 @@ data class Resolver(
     }
 
     fun matchesPattern(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
+        return patternMatchStrategy(this, factKey, pattern, sampleValue)
+    }
+
+    fun actualPatternMatch(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
         if (mockMode
                 && sampleValue is StringValue
                 && isPatternToken(sampleValue.string)
@@ -123,6 +145,14 @@ data class Resolver(
     }
 
     fun parse(pattern: Pattern, rowValue: String): Value {
+        return parseStrategy(this, pattern, rowValue)
+    }
+
+    fun actualParse(pattern: Pattern, rowValue: String): Value {
         return pattern.parse(rowValue, this)
+    }
+
+    fun invalidRequestResolver(): Resolver {
+        return this.copy(patternMatchStrategy = matchAnything, parseStrategy = alwaysReturnStringValue)
     }
 }

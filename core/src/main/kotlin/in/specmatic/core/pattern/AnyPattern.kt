@@ -5,6 +5,7 @@ import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.EmptyString
+import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.ScalarValue
 import `in`.specmatic.core.value.Value
 
@@ -41,17 +42,34 @@ data class AnyPattern(
 
     private fun isEmpty(it: Pattern) = it.typeAlias == "(empty)" || it is NullPattern
 
-    override fun generate(resolver: Resolver): Value =
-        when (key) {
-            null -> pattern.random().generate(resolver)
-            else -> resolver.generate(key, pattern.random())
+    override fun generate(resolver: Resolver): Value {
+        val randomPattern = pattern.random()
+        val isNullable = pattern.any {it is NullPattern}
+        return resolver.withCyclePrevention(randomPattern, isNullable) { cyclePreventedResolver ->
+            when (key) {
+                null -> randomPattern.generate(cyclePreventedResolver)
+                else -> cyclePreventedResolver.generate(key, randomPattern)
+            }
+        }?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
+    }
+
+    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        val isNullable = pattern.any {it is NullPattern}
+        return pattern.flatMap { innerPattern ->
+            resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
+                innerPattern.newBasedOn(row, cyclePreventedResolver)
+            }?: listOf()  // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
         }
+    }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
-        pattern.flatMap { it.newBasedOn(row, resolver) }
-
-    override fun newBasedOn(resolver: Resolver): List<Pattern> =
-        pattern.flatMap { it.newBasedOn(resolver) }
+    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+        val isNullable = pattern.any {it is NullPattern}
+        return pattern.flatMap { innerPattern ->
+            resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
+                innerPattern.newBasedOn(cyclePreventedResolver)
+            }?: listOf()  // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
+        }
+    }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)
 

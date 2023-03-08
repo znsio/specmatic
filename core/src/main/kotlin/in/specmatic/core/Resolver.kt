@@ -13,7 +13,8 @@ data class Resolver(
     val context: Map<String, String> = emptyMap(),
     val mismatchMessages: MismatchMessages = DefaultMismatchMessages,
     val isNegative: Boolean = false,
-    val generativeTestingEnabled: Boolean = false
+    val generativeTestingEnabled: Boolean = false,
+    val cyclePreventionStack: List<Pattern> = listOf(),
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -68,6 +69,33 @@ data class Resolver(
             }
             else -> throw ContractException("$patternValue is not a type")
         }
+
+    fun <T> withCyclePrevention(pattern: Pattern, toResult: (r: Resolver) -> T) : T {
+        return withCyclePrevention(pattern, false, toResult)!!
+    }
+
+    /**
+     * Returns non-null if no cycle. If there is a cycle then ContractException(cycle=true) is thrown - unless
+     * returnNullOnCycle=true in which case null is returned. Null is never returned if returnNullOnCycle=false.
+     */
+    fun <T> withCyclePrevention(pattern: Pattern, returnNullOnCycle: Boolean = false, toResult: (r: Resolver) -> T) : T? {
+        val count = cyclePreventionStack.filter { it == pattern }.size
+        val newCyclePreventionStack = cyclePreventionStack.plus(pattern)
+
+        try {
+            if (count > 1)
+                // Terminate what would otherwise be an infinite cycle.
+                throw ContractException("Invalid pattern cycle: ${newCyclePreventionStack}", isCycle = true)
+
+            return toResult(copy(cyclePreventionStack = newCyclePreventionStack))
+        } catch (e: ContractException) {
+            if (!e.isCycle || !returnNullOnCycle)
+                throw e
+
+            // Returns null if (and only if) a cycle has been detected and returnNullOnCycle=true
+            return null
+        }
+    }
 
     fun generate(factKey: String, pattern: Pattern): Value {
         if (!factStore.has(factKey))

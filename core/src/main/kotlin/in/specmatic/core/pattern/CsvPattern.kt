@@ -28,7 +28,7 @@ class CsvPattern(override val pattern: Pattern) : Pattern {
         val max = (2..5).random()
 
         return StringValue((1..max).map {
-            pattern.generate(resolver)
+            resolver.withCyclePrevention(pattern, pattern::generate)
         }.joinToString(",") { it.toStringLiteral() })
     }
 

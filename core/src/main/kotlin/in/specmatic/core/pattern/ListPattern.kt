@@ -39,6 +39,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun generate(resolver: Resolver): Value {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
+        // Cycle prevention handled in listOf, so not duplicating it here.
         return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
             attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolverWithEmptyType) }
         }, resolverWithEmptyType)
@@ -46,12 +47,20 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolverWithEmptyType).map { ListPattern(it) } }
+        return attempt(breadCrumb = "[]") {
+            resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(row, cyclePreventedResolver).map { ListPattern(it) }
+            }
+        }
     }
 
     override fun newBasedOn(resolver: Resolver): List<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") { pattern.newBasedOn(resolverWithEmptyType).map { ListPattern(it) } }
+        return attempt(breadCrumb = "[]") {
+            resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(cyclePreventedResolver).map { ListPattern(it) }
+            }
+        }
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)
@@ -102,7 +111,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return pattern.listOf(valueList, resolverWithEmptyType)
+        return resolverWithEmptyType.withCyclePrevention(pattern) { pattern.listOf(valueList, it) }
     }
 
     override val typeName: String = "list of ${pattern.typeName}"

@@ -107,10 +107,11 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
             "/" + pathPattern.mapIndexed { index, urlPathPattern ->
                 attempt(breadCrumb = "[$index]") {
                     val key = urlPathPattern.key
-                    if (key != null) resolver.generate(
-                        key,
-                        urlPathPattern.pattern
-                    ) else urlPathPattern.pattern.generate(resolver)
+                    resolver.withCyclePrevention(urlPathPattern.pattern) { cyclePreventedResolver ->
+                        if (key != null)
+                            cyclePreventedResolver.generate(key, urlPathPattern.pattern)
+                        else urlPathPattern.pattern.generate(cyclePreventedResolver)
+                    }
                 }
             }.joinToString("/")
         }
@@ -119,7 +120,9 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     fun generateQuery(resolver: Resolver): Map<String, String> {
         return attempt(breadCrumb = "QUERY-PARAMS") {
             queryPattern.mapKeys { it.key.removeSuffix("?") }.map { (name, pattern) ->
-                attempt(breadCrumb = name) { name to resolver.generate(name, pattern).toString() }
+                attempt(breadCrumb = name) {
+                    name to resolver.withCyclePrevention(pattern) { it.generate(name, pattern) }.toString()
+                }
             }.toMap()
         }
     }

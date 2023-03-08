@@ -136,7 +136,9 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
 fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
     val values = jsonPattern.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
-            pattern.newBasedOn(row, resolver)
+            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(row, cyclePreventedResolver)
+            }
         }
     }
 
@@ -146,7 +148,9 @@ fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<L
 fun newBasedOn(jsonPattern: List<Pattern>, resolver: Resolver): List<List<Pattern>> {
     val values = jsonPattern.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
-            pattern.newBasedOn(resolver)
+            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(cyclePreventedResolver)
+            }
         }
     }
 
@@ -195,12 +199,15 @@ private fun keyCombinations(values: List<List<Pattern?>>,
 
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
         jsonPattern.mapIndexed { index, pattern ->
-            when (pattern) {
-                is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
-                    val list = pattern.generate(resolver) as ListValue
-                    list.list
+            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                when (pattern) {
+                    is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
+                        val list = pattern.generate(cyclePreventedResolver) as ListValue
+                        list.list
+                    }
+
+                    else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(cyclePreventedResolver)) }
                 }
-                else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(resolver)) }
             }
         }.flatten()
 

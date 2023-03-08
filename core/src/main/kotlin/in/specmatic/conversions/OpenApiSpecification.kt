@@ -524,7 +524,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     fun toSpecmaticPattern(
         schema: Schema<*>, typeStack: List<String>, patternName: String = "", jsonInFormData: Boolean = false
     ): Pattern {
-        val pattern = when (schema) {
+        val preExistingResult = patterns.get("($patternName)")
+        val pattern = if (preExistingResult != null && !patternName.isNullOrBlank())
+            preExistingResult
+        else if (typeStack.filter { it == patternName }.size > 1) {
+            DeferredPattern("($patternName)")
+        }
+        else when (schema) {
             is StringSchema -> when (schema.enum) {
                 null -> StringPattern(minLength = schema.minLength, maxLength = schema.maxLength)
                 else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }
@@ -568,19 +574,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
                     }.fold(emptyMap<String, Pattern>()) { acc, entry -> acc.plus(entry) }
                     val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
-                    patterns["(${patternName})"] = jsonObjectPattern
-                    jsonObjectPattern
+                    cacheComponentPattern(patternName, jsonObjectPattern)
                 } else if (schema.oneOf != null) {
-                    val nonNullableSchemaPatterns = schema.oneOf
-                        .filter { it.nullable != true }
-                        .map { toSpecmaticPattern(it, typeStack, patternName) }
+                    val candidatePatterns = schema.oneOf.filterNot { nullableEmptyObject(it) } .map { componentSchema ->
+                        val (componentName, schemaToProcess) =
+                            if (componentSchema.`$ref` != null) resolveReferenceToSchema(componentSchema.`$ref`)
+                            else patternName to componentSchema
+                        toSpecmaticPattern(schemaToProcess, typeStack.plus(componentName), componentName)
+                    }
 
-                    if (nonNullableSchemaPatterns.isEmpty())
-                        throw UnsupportedOperationException("Specmatic supports oneOf for at least one non-nullable ref")
+                    val nullable = if(schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
 
-                    val nullable = if(nullableOneOf(schema)) listOf(NullPattern) else emptyList()
-
-                    AnyPattern(nonNullableSchemaPatterns.plus(nullable))
+                    AnyPattern(candidatePatterns.plus(nullable))
                 } else if (schema.anyOf != null) {
                     throw UnsupportedOperationException("Specmatic does not support anyOf")
                 } else {
@@ -599,19 +604,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             val component: String = schema.`$ref`
 
                             val (componentName, referredSchema) = resolveReferenceToSchema(component)
-                            val cyclicReference =
-                                typeStack.contains(
-                                    componentName
-                                ) && referredSchema.instanceOf(ObjectSchema::class)
-                            when {
-                                cyclicReference -> DeferredPattern("(${patternName})")
-                                else -> {
-                                    val componentType = resolveReference(component, typeStack)
-                                    val typeName = "(${componentNameFromReference(component)})"
-                                    patterns[typeName] = componentType
-                                    DeferredPattern(typeName)
-                                }
+                            val cyclicReference = typeStack.contains(componentName)
+                            if (!cyclicReference) {
+                                val componentPattern = toSpecmaticPattern(referredSchema,
+                                    typeStack.plus(componentName), componentName)
+                                cacheComponentPattern(componentName, componentPattern)
                             }
+                            DeferredPattern("(${componentName})")
                         }
                     }
                 }
@@ -636,8 +635,22 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
     }
 
-    private fun nullableOneOf(schema: ComposedSchema): Boolean {
-        return schema.oneOf.any { it.nullable == true }
+    private fun <T : Pattern> cacheComponentPattern(componentName: String, pattern: T): T {
+        if (!componentName.isNullOrBlank() && pattern !is DeferredPattern) {
+            val typeName = "(${componentName})"
+            val prev = patterns.get(typeName)
+            if (pattern != prev) {
+                if (prev != null) {
+                    logger.debug("Replacing cached component pattern. name=$componentName, prev=$prev, new=$pattern")
+                }
+                patterns[typeName] = pattern
+            }
+        }
+        return pattern
+    }
+
+    private fun nullableEmptyObject(schema: Schema<*>): Boolean {
+        return schema is ObjectSchema && schema.nullable == true
     }
 
     private fun toXMLPattern(mediaType: MediaType): Pattern {
@@ -749,8 +762,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                     val nodeName = componentSchema.xml?.name ?: name ?: componentName
 
-                    if (typeName !in typeStack) this.patterns[typeName] =
-                        toXMLPattern(componentSchema, componentName, typeStack.plus(typeName))
+                    if (typeName !in typeStack) {
+                        val componentPattern = toXMLPattern(componentSchema, componentName, typeStack.plus(typeName))
+                        cacheComponentPattern(componentName, componentPattern)
+                    }
 
                     val xmlRefType = XMLTypeData(
                         nodeName, nodeName, mapOf(
@@ -793,36 +808,17 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         val requiredFields = schema.required.orEmpty()
         val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack)
         val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
-        patterns["(${patternName})"] = jsonObjectPattern
-        return jsonObjectPattern
+        return cacheComponentPattern(patternName, jsonObjectPattern)
     }
 
     private fun toSchemaProperties(
         schema: Schema<*>, requiredFields: List<String>, patternName: String, typeStack: List<String>
     ) = schema.properties.orEmpty().map { (propertyName, propertyType) ->
-        val optional = !requiredFields.contains(propertyName)
-        if (patternName.isNotEmpty()) {
-            if (typeStack.contains(patternName) && (propertyType.`$ref`.orEmpty()
-                    .endsWith(patternName) || (propertyType is ArraySchema && propertyType.items?.`$ref`?.endsWith(
-                    patternName
-                ) == true))
-            ) toSpecmaticParamName(
-                optional, propertyName
-            ) to DeferredPattern("(${patternName})")
-            else if (schema.discriminator?.propertyName == propertyName){
-                // Ensure discriminator property exactly matches component and not just any string
-                propertyName to ExactValuePattern(StringValue(patternName))
-            }
-            else {
-                val specmaticPattern = toSpecmaticPattern(
-                    propertyType, typeStack.plus(patternName), patternName
-                )
-                toSpecmaticParamName(optional, propertyName) to specmaticPattern
-            }
-        } else {
-            toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(
-                propertyType, typeStack
-            )
+        if (schema.discriminator?.propertyName == propertyName)
+            propertyName to ExactValuePattern(StringValue(patternName))
+        else {
+            val optional = !requiredFields.contains(propertyName)
+            toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(propertyType, typeStack)
         }
     }.toMap()
 
@@ -832,16 +828,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 null -> NullPattern
                 else -> ExactValuePattern(toSpecmaticValue(enumValue))
             }
-        }.toList(), typeAlias = patternName).also { if (patternName.isNotEmpty()) patterns["(${patternName})"] = it }
+        }.toList(), typeAlias = patternName).also {
+            cacheComponentPattern(patternName, it)
+        }
 
     private fun toSpecmaticParamName(optional: Boolean, name: String) = when (optional) {
         true -> "${name}?"
         false -> name
-    }
-
-    private fun resolveReference(component: String, typeStack: List<String>): Pattern {
-        val (componentName, referredSchema) = resolveReferenceToSchema(component)
-        return toSpecmaticPattern(referredSchema, typeStack, patternName = componentName)
     }
 
     private fun resolveReferenceToSchema(component: String): Pair<String, Schema<Any>> {

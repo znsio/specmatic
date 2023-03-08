@@ -552,7 +552,10 @@ fun newExpectedServerStateBasedOn(
 
                     when {
                         fixtures.containsKey(fieldValue) -> fixtures.getValue(fieldValue)
-                        isPatternToken(fieldValue) -> resolver.getPattern(fieldValue).generate(resolver)
+                        isPatternToken(fieldValue) -> {
+                            val fieldPattern = resolver.getPattern(fieldValue)
+                            resolver.withCyclePrevention(fieldPattern, fieldPattern::generate)
+                        }
                         else -> StringValue(fieldValue)
                     }
                 }

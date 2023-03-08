@@ -79,11 +79,11 @@ data class Resolver(
      * returnNullOnCycle=true in which case null is returned. Null is never returned if returnNullOnCycle=false.
      */
     fun <T> withCyclePrevention(pattern: Pattern, returnNullOnCycle: Boolean = false, toResult: (r: Resolver) -> T) : T? {
-        val index = cyclePreventionStack.indexOf(pattern)
+        val count = cyclePreventionStack.filter { it == pattern }.size
         val newCyclePreventionStack = cyclePreventionStack.plus(pattern)
 
         try {
-            if (index >= 0)
+            if (count > 1)
                 // Terminate what would otherwise be an infinite cycle.
                 throw ContractException("Invalid pattern cycle: ${newCyclePreventionStack}", isCycle = true)
 

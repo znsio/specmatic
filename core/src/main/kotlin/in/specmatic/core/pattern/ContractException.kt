@@ -5,7 +5,6 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.Scenario
 import `in`.specmatic.core.ScenarioDetailsForResult
 
-<<<<<<< HEAD
 fun isCycle(throwable: Throwable?): Boolean = when(throwable) {
     is ContractException -> throwable.isCycle
     else -> false

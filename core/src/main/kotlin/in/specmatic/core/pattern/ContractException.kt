@@ -5,12 +5,17 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.Scenario
 import `in`.specmatic.core.ScenarioDetailsForResult
 
+fun isCycle(throwable: Throwable?): Boolean = when(throwable) {
+    is ContractException -> throwable.isCycle
+    else -> false
+}
+
 data class ContractException(
     val errorMessage: String = "",
     val breadCrumb: String = "",
     val exceptionCause: ContractException? = null,
     val scenario: ScenarioDetailsForResult? = null,
-    val isCycle: Boolean = exceptionCause?.isCycle?: false,
+    val isCycle: Boolean = isCycle(exceptionCause)
 ) : Exception(errorMessage) {
     constructor(failureReport: FailureReport): this(failureReport.toText())
 

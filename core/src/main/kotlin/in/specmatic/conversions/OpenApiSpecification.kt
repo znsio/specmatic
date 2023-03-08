@@ -249,7 +249,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                             ObjectMapper().readValue(valueString, Map::class.java).values.first()
                                                 .toString()
                                         } else valueString
-                                    })
+                                    },
+                                name = exampleName)
                             else -> Row()
                         }
                     }
@@ -279,7 +280,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             scenarioBreadCrumb(scenarioDetails) {
                                 httpRequestPattern.newBasedOn(
                                     row,
-                                    Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch)
+                                    Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch),
+                                    httpResponsePattern.status
                                 )
                             }
                         }
@@ -794,7 +796,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         schema: Schema<*>, typeStack: List<String>, patternName: String
     ): DictionaryPattern {
         val valueSchema = schema.additionalProperties as Schema<Any>
-        val valueSchemaTypeName = if (valueSchema.`$ref` == null) valueSchema.types.first() else valueSchema.`$ref`
+        val valueSchemaTypeName = valueSchema.`$ref` ?: valueSchema.types?.first() ?: "";
         return DictionaryPattern(
             StringPattern(), toSpecmaticPattern(valueSchema, typeStack, valueSchemaTypeName, false)
         )

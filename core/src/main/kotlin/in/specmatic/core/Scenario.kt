@@ -207,7 +207,8 @@ data class Scenario(
             )
                 code()
         } catch (e: Throwable) {
-            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key, actual value is $actualValue")
+            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key" +
+                ", actual value is $actualValue", exceptionCause = e)
         }
     }
 
@@ -261,6 +262,7 @@ data class Scenario(
     }
 
     private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false): List<Scenario> {
+        val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndRowValueMismatch, generativeTestingEnabled = generativeTestingEnabled)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
@@ -269,7 +271,7 @@ data class Scenario(
             null -> scenarioBreadCrumb(this) {
                 attempt {
                     when (isNegative) {
-                        false -> httpRequestPattern.newBasedOn(row, resolver)
+                        false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
                         else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
                     }.map { newHttpRequestPattern ->
                         Scenario(

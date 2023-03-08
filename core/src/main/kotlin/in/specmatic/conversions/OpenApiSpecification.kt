@@ -525,6 +525,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         val preExistingResult = patterns.get("($patternName)")
         val pattern = if (preExistingResult != null && !patternName.isNullOrBlank())
             preExistingResult
+        else if (typeStack.filter { it == patternName }.size > 1) {
+            DeferredPattern("($patternName)")
+        }
         else when (schema) {
             is StringSchema -> when (schema.enum) {
                 null -> StringPattern(minLength = schema.minLength, maxLength = schema.maxLength)
@@ -575,7 +578,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         val (componentName, schemaToProcess) =
                             if (componentSchema.`$ref` != null) resolveReferenceToSchema(componentSchema.`$ref`)
                             else patternName to componentSchema
-                        toSpecmaticPattern(schemaToProcess, typeStack.plus(patternName), componentName)
+                        toSpecmaticPattern(schemaToProcess, typeStack.plus(componentName), componentName)
                     }
 
                     val nullable = if(schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()

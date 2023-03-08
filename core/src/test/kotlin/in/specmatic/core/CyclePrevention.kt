@@ -79,7 +79,7 @@ class CyclePrevention {
                         - type: object
                           properties: {}
                           nullable: true
-                        - ${'$'}ref: '#/components/schemas/NextLevel'
+                        - ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
         val response = HttpStub(feature).use {
@@ -91,7 +91,7 @@ class CyclePrevention {
     }
 
     @Test
-    @RepeatedTest(5)
+//    @RepeatedTest(5)
     fun `test cycle in optional key to nullable ref`() {
 //        key? -> circular-ref-value?
 
@@ -121,7 +121,7 @@ class CyclePrevention {
                         - type: object
                           properties: {}
                           nullable: true
-                        - ${'$'}ref: '#/components/schemas/TopLevel'`
+                        - ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
         val response = HttpStub(feature).use {

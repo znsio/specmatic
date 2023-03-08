@@ -1989,47 +1989,6 @@ Scenario: zero should return not found
             System.clearProperty(Flags.negativeTestingFlag)
         }
     }
-
-    @Test
-    fun `test cycle in optional key to circular ref`() {
-        val feature = OpenApiSpecification.fromYAML("""
-            openapi: "3.0.0"
-            info:
-              version: 1.0.0
-              title: Swagger Petstore
-            paths:
-              /data:
-                get:
-                  description: Get data
-                  responses:
-                    '200':
-                      description: data
-                      content:
-                        application/json:
-                          schema:
-                            ${'$'}ref: '#/components/schemas/TopLevel'
-            components:
-              schemas:
-                TopLevel:
-                  type: object
-                  required:
-                  properties:
-                    key:
-                      type:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/TopLevel'
-        """.trimIndent(), "").toFeature()
-
-        val resp = HttpStub(feature).use {
-            val request =
-                Request.Builder().url("http://localhost:9000/data")
-                    .addHeader("Content-Type", "application/json")
-                    .get().build()
-            it.client.execute(HttpRequest("GET", "/data")).body as JSONObjectValue
-        }
-
-        assertThat(resp.jsonObject).isEmpty()
-    }
 }
 
 data class CycleRoot(

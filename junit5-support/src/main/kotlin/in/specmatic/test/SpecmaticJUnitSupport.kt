@@ -11,10 +11,33 @@ import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import java.io.File
+
+class TestReport(val testReportRecords: MutableList<TestResultRecord> = mutableListOf()) {
+    fun add(testResultRecord: TestResultRecord) {
+        testReportRecords.add(testResultRecord)
+    }
+
+    fun printReport() {
+        println("COVERAGE SUMMARY")
+        println("----------------")
+        println()
+        testReportRecords.map { it.path }.distinct().forEach { path ->
+            println(path)
+
+            testReportRecords.filter { it.path == path }.map { it.responseStatus }.distinct().map { status ->
+                val count = testReportRecords.filter { it.path == path && it.responseStatus == status }.size
+
+                println("  $status: $count test(s)")
+            }
+            println()
+        }
+    }
+}
 
 open class SpecmaticJUnitSupport {
     companion object {
@@ -34,6 +57,13 @@ open class SpecmaticJUnitSupport {
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
+        val testReport: TestReport = TestReport()
+
+        @AfterAll
+        @JvmStatic
+        fun report() {
+            testReport.printReport()
+        }
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -124,6 +154,8 @@ open class SpecmaticJUnitSupport {
                 testsNames.add(testScenario.testDescription())
 
                 val result: Result = invoker.execute(testScenario, timeout)
+
+                testReport.add(testScenario.testResultRecord(result))
 
                 if(result is Result.Success && result.isPartialSuccess()) {
                     partialSuccesses.add(result)

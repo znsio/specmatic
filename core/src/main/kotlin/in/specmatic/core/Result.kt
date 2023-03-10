@@ -68,6 +68,8 @@ sealed class Result {
     abstract fun partialSuccess(message: String): Result
     abstract fun isPartialSuccess(): Boolean
 
+    abstract fun testResult(): TestResult
+
     data class FailureCause(val message: String="", var cause: Failure? = null)
 
     data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
@@ -102,6 +104,12 @@ sealed class Result {
         }
 
         override fun isPartialSuccess(): Boolean = false
+        override fun testResult(): TestResult {
+            if(shouldBeIgnored())
+                return TestResult.Error
+
+            return TestResult.Failed
+        }
 
         fun reason(errorMessage: String) = Failure(errorMessage, this)
         override fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
@@ -167,7 +175,16 @@ sealed class Result {
         }
 
         override fun isPartialSuccess(): Boolean = partialSuccessMessage != null
+        override fun testResult(): TestResult {
+            return TestResult.Success
+        }
     }
+}
+
+enum class TestResult {
+    Success,
+    Error,
+    Failed
 }
 
 enum class FailureReason(val fluffLevel: Int) {

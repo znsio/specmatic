@@ -141,51 +141,6 @@ class TestReport(private val testReportRecords: MutableList<TestResultRecord> = 
         logger.log(APICoverageReport(coveredAPIRows, missedAPIRows).toLogString())
     }
 
-    fun printReport() {
-        logger.log("API COVERAGE REPORT")
-        logger.log("-------------------")
-        logger.newLine()
-
-        testReportRecords.map { it.path }.distinct().forEach { path ->
-            val recordsForPath = testReportRecords.filter {
-                it.path == path
-            }
-
-            val groups = recordsForPath.groupBy {
-                Pair(it.method, it.responseStatus)
-            }
-
-            groups.keys.distinct().sortedBy { "${it.first}-${it.second}" }.forEach { key ->
-                val records = groups.getValue(key)
-
-                val (method, status) = key
-
-                logger.log("$method $path")
-
-                records.forEach {
-                    logger.log("  $status: ${records.size}")
-                }
-            }
-
-            logger.newLine()
-        }
-
-        val testedAPIs = testReportRecords.map { "${it.method}-${it.path}" }
-
-        val missedAPIs = applicationAPIs.filter {
-            "${it.method}-${it.path}" !in testedAPIs
-        }
-
-        if(missedAPIs.isNotEmpty()) {
-            logger.log("Untested APIS:")
-
-            missedAPIs.map {
-                it.method + " " + it.path
-            }.forEach {
-                logger.log(it)
-            }
-        }
-    }
 }
 
 open class SpecmaticJUnitSupport {

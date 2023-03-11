@@ -58,8 +58,8 @@ class APICoverageReport(private val coveredAPIRows: List<CoveredAPIRow>, private
         val tableTitle = "| ${"%-${headerTitleSize}s".format("Covered APIs")} |"
         val titleSeparator = "|-${"-".repeat(headerTitleSize)}-|"
 
-        val coveredCount = coveredAPIRows.map { it.path }.distinct().size
-        val uncoveredCount = missedAPIRows.map { it.path }.distinct().size
+        val coveredCount = coveredAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
+        val uncoveredCount = missedAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
         val total = coveredCount + uncoveredCount
 
         val summary = "$coveredCount / $total APIs covered"
@@ -98,7 +98,7 @@ class TestReport(private val testReportRecords: MutableList<TestResultRecord> = 
         applicationAPIs.addAll(apis)
     }
 
-    fun printReport2() {
+    fun printReport() {
         logger.log("COVERAGE SUMMARY")
         logger.log("----------------")
         logger.newLine()
@@ -167,7 +167,7 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
-            testReport.printReport2()
+            testReport.printReport()
         }
 
         fun queryActuator() {

@@ -2,6 +2,7 @@ package `in`.specmatic.test
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.log.ignoreLog
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.Examples
@@ -17,24 +18,172 @@ import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import java.io.File
 
-class TestReport(val testReportRecords: MutableList<TestResultRecord> = mutableListOf()) {
-    fun add(testResultRecord: TestResultRecord) {
+data class API(val method: String, val path: String)
+
+data class CoveredAPIRow(val method: String, val path: String, val status: String, val count: Int) {
+    constructor(method: String, path: String, status: Int, count: Int): this(method, path, status.toString(), count)
+
+    fun toRowString(maxPathSize: Int): String {
+        val pathFormat = "%${maxPathSize}s"
+        val methodFormat = "%${"method".length}s"
+        val statusFormat = "%${"status".length}s"
+        val countFormat = "%${"count".length}s"
+
+        return "| ${pathFormat.format(path)} | ${methodFormat.format(method)} | ${statusFormat.format(status)} | ${countFormat.format(count)} |"
+    }
+}
+
+data class MissedAPIRow(val method: String, val path: String) {
+    fun toRowString(maxPathSize: Int): String {
+        val pathFormat = "%${maxPathSize}s"
+        val methodFormat = "%${"method".length}s"
+
+        return "| ${pathFormat.format(path)} | ${methodFormat.format(method)} |"
+    }
+}
+
+class APICoverageReport(private val coveredAPIRows: List<CoveredAPIRow>, private val missedAPIRows: List<MissedAPIRow>) {
+    fun toLogString(): String {
+        val maxPathSize: Int = coveredAPIRows.map { it.path.length }.plus(missedAPIRows.map { it.path.length }).max()
+
+        val pathFormat = "%${maxPathSize}s"
+        val methodFormat = "%${"method".length}s"
+        val statusFormat = "%${"status".length}s"
+        val countFormat = "%${"count".length}s"
+
+        val tableHeader = "| ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${statusFormat.format("status")} | ${countFormat.format("count")} |"
+        val headerSeparator ="|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|-${statusFormat.format("-----")}-|-${countFormat.format("-----")}-|"
+
+        val headerTitleSize = tableHeader.length - 4
+        val tableTitle = "| ${"%-${headerTitleSize}s".format("Covered APIs")} |"
+        val titleSeparator = "|-${"-".repeat(headerTitleSize)}-|"
+
+        val coveredCount = coveredAPIRows.map { it.path }.distinct().size
+        val uncoveredCount = missedAPIRows.map { it.path }.distinct().size
+        val total = coveredCount + uncoveredCount
+
+        val summary = "$coveredCount / $total APIs covered"
+        val summaryRowFormatter = "%-${headerTitleSize}s"
+        val summaryRow = "| ${summaryRowFormatter.format(summary)} |"
+
+        val coveredRowTableString = listOf(titleSeparator, tableTitle, titleSeparator, tableHeader, headerSeparator).plus(coveredAPIRows.map { it.toRowString(maxPathSize) }).plus(titleSeparator).plus(summaryRow).plus(titleSeparator).joinToString(System.lineSeparator())
+
+        if(missedAPIRows.isNotEmpty()) {
+            val uncoveredTableHeader = "| ${pathFormat.format("path")} | ${methodFormat.format("method")} |"
+            val uncoveredHeaderSeparator ="|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|"
+
+            val uncoveredHeaderTitleSize = uncoveredTableHeader.length - 4
+            val uncoveredTableTitle = "| ${"%-${uncoveredHeaderTitleSize}s".format("Uncovered APIs")} |"
+            val uncoveredTitleSeparator = "|-${"-".repeat(uncoveredHeaderTitleSize)}-|"
+
+            val uncoveredSummary = "$uncoveredCount / $total APIs not covered"
+            val uncoveredSummaryRowFormatter = "%-${uncoveredHeaderTitleSize}s"
+            val uncoveredSummaryRow = "| ${uncoveredSummaryRowFormatter.format(uncoveredSummary)} |"
+
+            val uncoveredRowTableString = listOf(uncoveredTitleSeparator, uncoveredTableTitle, uncoveredTitleSeparator, uncoveredTableHeader, uncoveredHeaderSeparator).plus(missedAPIRows.map { it.toRowString(maxPathSize) }).plus(uncoveredTitleSeparator).plus(uncoveredSummaryRow).plus(uncoveredTitleSeparator).joinToString(System.lineSeparator())
+
+            return listOf(coveredRowTableString, uncoveredRowTableString).joinToString(System.lineSeparator().repeat(2))
+        }
+
+        return coveredRowTableString
+    }
+}
+
+class TestReport(private val testReportRecords: MutableList<TestResultRecord> = mutableListOf(), private val applicationAPIs: MutableList<API> = mutableListOf()) {
+    fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testReportRecords.add(testResultRecord)
     }
 
-    fun printReport() {
-        println("COVERAGE SUMMARY")
-        println("----------------")
-        println()
-        testReportRecords.map { it.path }.distinct().forEach { path ->
-            println(path)
+    fun addAPIs(apis: List<API>) {
+        applicationAPIs.addAll(apis)
+    }
 
-            testReportRecords.filter { it.path == path }.map { it.responseStatus }.distinct().map { status ->
-                val count = testReportRecords.filter { it.path == path && it.responseStatus == status }.size
+    fun printReport2() {
+        logger.log("COVERAGE SUMMARY")
+        logger.log("----------------")
+        logger.newLine()
 
-                println("  $status: $count test(s)")
+        val recordsWithFixedURLs = testReportRecords.map {
+            it.copy(path = it.path.replace(Regex("""\((.*):.*\)"""), "{$1}"))
+        }
+
+        val coveredAPIRows = recordsWithFixedURLs.groupBy {
+            "${it.path}-${it.method}-${it.responseStatus}"
+        }.let { sortedRecords: Map<String, List<TestResultRecord>> ->
+            sortedRecords.keys.sorted().map { key ->
+                sortedRecords.getValue(key)
             }
-            println()
+        }.let { groupedRecords: List<List<TestResultRecord>> ->
+            groupedRecords.fold(emptyList()) { acc: List<CoveredAPIRow>, record: List<TestResultRecord> ->
+                val stat = record.first().let { CoveredAPIRow(it.method, it.path, it.responseStatus, record.size) }
+                when(acc) {
+                    emptyList<CoveredAPIRow>() -> listOf(stat)
+                    else -> {
+                        val checkedPath = if(stat.path == acc.lastOrNull { it.path.isNotEmpty() }?.path) stat.copy(path = "") else stat
+                        val checkedMethod = if(checkedPath.method == acc.lastOrNull { it.method.isNotEmpty() }?.method) checkedPath.copy(method = "") else checkedPath
+
+                        acc.plus(checkedMethod)
+                    }
+                }
+            }
+        }
+
+        val testedAPIs = testReportRecords.map { "${it.method}-${it.path}" }
+
+        val missedAPIs = applicationAPIs.filter {
+            "${it.method}-${it.path}" !in testedAPIs
+        }
+
+        val missedAPIRows = missedAPIs.map { missedAPI: API ->
+            MissedAPIRow(missedAPI.method, missedAPI.path)
+        }
+
+        logger.log(APICoverageReport(coveredAPIRows, missedAPIRows).toLogString())
+    }
+
+    fun printReport() {
+        logger.log("API COVERAGE REPORT")
+        logger.log("-------------------")
+        logger.newLine()
+
+        testReportRecords.map { it.path }.distinct().forEach { path ->
+            val recordsForPath = testReportRecords.filter {
+                it.path == path
+            }
+
+            val groups = recordsForPath.groupBy {
+                Pair(it.method, it.responseStatus)
+            }
+
+            groups.keys.distinct().sortedBy { "${it.first}-${it.second}" }.forEach { key ->
+                val records = groups.getValue(key)
+
+                val (method, status) = key
+
+                logger.log("$method $path")
+
+                records.forEach {
+                    logger.log("  $status: ${records.size}")
+                }
+            }
+
+            logger.newLine()
+        }
+
+        val testedAPIs = testReportRecords.map { "${it.method}-${it.path}" }
+
+        val missedAPIs = applicationAPIs.filter {
+            "${it.method}-${it.path}" !in testedAPIs
+        }
+
+        if(missedAPIs.isNotEmpty()) {
+            logger.log("Untested APIS:")
+
+            missedAPIs.map {
+                it.method + " " + it.path
+            }.forEach {
+                logger.log(it)
+            }
         }
     }
 }
@@ -54,6 +203,7 @@ open class SpecmaticJUnitSupport {
         const val ENV_NAME = "environment"
         const val VARIABLES_FILE_NAME = "variablesFileName"
         const val FILTER_NAME = "filterName"
+        const val ENDPOINTS_API = "endpointsAPI"
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
@@ -62,12 +212,52 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
-            testReport.printReport()
+            testReport.printReport2()
+        }
+
+        fun queryActuator() {
+            val endpointsAPI = System.getProperty(ENDPOINTS_API)
+
+            if(endpointsAPI != null) {
+                val request = HttpRequest("GET")
+
+                val response = HttpClient(endpointsAPI, log = ignoreLog).execute(request)
+
+                logger.debug(response.toLogString())
+
+                val endpointData = response.body as JSONObjectValue
+                val apis: List<API> = endpointData.getJSONObject("contexts").entries.flatMap {
+                    val mappings: JSONArrayValue =
+                        (it.value as JSONObjectValue).findFirstChildByPath("mappings.dispatcherServlets.dispatcherServlet") as JSONArrayValue
+                    mappings.list.map { it as JSONObjectValue }.filter {
+                        it.findFirstChildByPath("details.handlerMethod.className")?.toStringLiteral()
+                            ?.contains("springframework") != true
+                    }.flatMap {
+                        val methods: JSONArrayValue? =
+                            it.findFirstChildByPath("details.requestMappingConditions.methods") as JSONArrayValue?
+                        val paths: JSONArrayValue? =
+                            it.findFirstChildByPath("details.requestMappingConditions.patterns") as JSONArrayValue?
+
+                        if(methods != null && paths != null) {
+                            methods.list.flatMap { method ->
+                                paths.list.map { path ->
+                                    API(method.toStringLiteral(), path.toStringLiteral())
+                                }
+                            }
+                        } else {
+                            emptyList()
+                        }
+                    }
+                }
+
+                testReport.addAPIs(apis)
+            } else {
+                logger.log("Endpoints API not found, cannot calculate actual coverage")
+            }
         }
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
-
         if(envName.isNullOrBlank())
             return JSONObjectValue()
 
@@ -149,13 +339,25 @@ open class SpecmaticJUnitSupport {
             else -> TargetBaseURL(testBaseURL)
         }
 
+        var checkedAPIs = false
+
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {
+                if(!checkedAPIs) {
+                    checkedAPIs = true
+
+                    try {
+                        queryActuator()
+                    } catch(exception: Throwable) {
+                        logger.log(exception, "Failed to query actuator with error")
+                    }
+                }
+
                 testsNames.add(testScenario.testDescription())
 
                 val result: Result = invoker.execute(testScenario, timeout)
 
-                testReport.add(testScenario.testResultRecord(result))
+                testReport.addTestReportRecords(testScenario.testResultRecord(result))
 
                 if(result is Result.Success && result.isPartialSuccess()) {
                     partialSuccesses.add(result)

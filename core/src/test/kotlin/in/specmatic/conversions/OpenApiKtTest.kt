@@ -2426,6 +2426,43 @@ components:
             System.clearProperty(Flags.negativeTestingFlag)
         }
     }
+
+    @Test
+    fun `should run test from wrapper gherkin with more constrained type in url`() {
+        val contract = parseGherkinStringToFeature("""
+            Feature: Test wrapper of constraints
+              Background:
+                Given openapi core/src/test/resources/openapi/hello_with_constraints.yaml
+                
+              Scenario: Test
+                When GET /hello/(id:string)
+                Then status 200
+                
+                Examples:
+                | id  |
+                | 123 |
+                | 234 |
+        """.trimIndent())
+
+        var testCount = 0
+
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val idValue = request.path!!.split("/").last()
+                assertThat(idValue).hasSizeGreaterThan(9)
+                assertThat(idValue).hasSizeLessThan(21)
+
+                testCount += 1
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(testCount).isEqualTo(2)
+    }
 }
 
 data class CycleRoot(

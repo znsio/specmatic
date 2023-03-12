@@ -2439,9 +2439,9 @@ components:
                 Then status 200
                 
                 Examples:
-                | id  |
-                | 123 |
-                | 234 |
+                | id         |
+                | 1234567890 |
+                | 0987654321 |
         """.trimIndent())
 
         var testCount = 0

@@ -119,12 +119,31 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun matchesPath(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
         val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
 
-        val matchingScenarioInfos = openApiScenarioInfos.filter {
-            it.httpRequestPattern.urlMatcher!!.matches(
-                specmaticScenarioInfo.httpRequestPattern.generate(
-                    Resolver()
-                ), Resolver()
-            ).isSuccess()
+        // exact + exact   -> values should be equal
+        // exact + pattern -> error
+        // pattern + exact -> pattern should match exact
+        // pattern + pattern -> both generated concrete values should be of same type
+
+        val matchingScenarioInfos = openApiScenarioInfos.filter { openApiScenarioInfo ->
+            val zipped = openApiScenarioInfo.httpRequestPattern.urlMatcher!!.pathPattern.zip(specmaticScenarioInfo.httpRequestPattern.urlMatcher!!.pathPattern)
+
+            zipped.all { (openapiURLPart: URLPathPattern, wrapperURLPart: URLPathPattern) ->
+                val openapiType = if(openapiURLPart.pattern is ExactValuePattern) "exact" else "pattern"
+                val wrapperType = if(wrapperURLPart.pattern is ExactValuePattern) "exact" else "pattern"
+
+                when(Pair(openapiType, wrapperType)) {
+                    Pair("exact", "exact") -> (openapiURLPart.pattern as ExactValuePattern).pattern.toStringLiteral() == (wrapperURLPart.pattern as ExactValuePattern).pattern.toStringLiteral()
+                    Pair("exact", "pattern") -> false
+                    Pair("pattern", "exact") -> openapiURLPart.pattern.encompasses(wrapperURLPart.pattern, Resolver(newPatterns = openApiScenarioInfo.patterns), Resolver(newPatterns = specmaticScenarioInfo.patterns)) is Result.Success
+                    Pair("pattern", "pattern") -> {
+                        val valueFromOpenapi = openapiURLPart.pattern.generate(Resolver(newPatterns = openApiScenarioInfo.patterns))
+                        val valueFromWrapper = wrapperURLPart.pattern.generate(Resolver(newPatterns = specmaticScenarioInfo.patterns))
+
+                        valueFromOpenapi.javaClass == valueFromWrapper.javaClass
+                    }
+                    else -> false
+                }
+            }
         }
 
         return when {
@@ -178,11 +197,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun updateUrlMatcher(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
         val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
 
-        return MatchSuccess(specmaticScenarioInfo to openApiScenarioInfos.map {
-            val queryPattern = it.httpRequestPattern.urlMatcher?.queryPattern ?: emptyMap()
-            val urlMatcher = specmaticScenarioInfo.httpRequestPattern.urlMatcher?.copy(queryPattern = queryPattern)
-            val httpRequestPattern = it.httpRequestPattern.copy(urlMatcher = urlMatcher)
-            it.copy(httpRequestPattern = httpRequestPattern)
+        return MatchSuccess(specmaticScenarioInfo to openApiScenarioInfos.map { openApiScenario ->
+            val queryPattern = openApiScenario.httpRequestPattern.urlMatcher?.queryPattern ?: emptyMap()
+            val zippedPathPatterns = (specmaticScenarioInfo.httpRequestPattern.urlMatcher?.pathPattern ?: emptyList()).zip(openApiScenario.httpRequestPattern.urlMatcher?.pathPattern ?: emptyList())
+
+            val pathPatterns = zippedPathPatterns.map { (fromSpecmatic, fromOpenApi) ->
+                fromOpenApi.copy(key = fromSpecmatic.key)
+            }
+
+            val urlMatcher = URLMatcher(queryPattern, pathPatterns, openApiScenario.httpRequestPattern.urlMatcher?.path ?: "")
+
+            val httpRequestPattern = openApiScenario.httpRequestPattern.copy(urlMatcher = urlMatcher)
+            openApiScenario.copy(httpRequestPattern = httpRequestPattern)
         })
     }
 

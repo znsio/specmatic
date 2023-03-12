@@ -17,11 +17,11 @@ paths:
         - in: path
           name: id
           schema:
-            type: integer
+            type: string
             minLength: 10
             maxLength: 20
           required: true
-          description: Numeric ID
+          description: Alphanumeric ID
       responses:
         '200':
           description: Says hello

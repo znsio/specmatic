@@ -125,16 +125,31 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         // pattern + pattern -> both generated concrete values should be of same type
 
         val matchingScenarioInfos = openApiScenarioInfos.filter { openApiScenarioInfo ->
-            val zipped = openApiScenarioInfo.httpRequestPattern.urlMatcher!!.pathPattern.zip(specmaticScenarioInfo.httpRequestPattern.urlMatcher!!.pathPattern)
+            val pathPatternFromOpenApi = openApiScenarioInfo.httpRequestPattern.urlMatcher!!.pathPattern
+            val pathPatternFromWrapper = specmaticScenarioInfo.httpRequestPattern.urlMatcher!!.pathPattern
+
+            if(pathPatternFromOpenApi.size != pathPatternFromWrapper.size)
+                return@filter false
+
+            val resolver = Resolver(newPatterns = openApiScenarioInfo.patterns)
+            val zipped = pathPatternFromOpenApi.zip(pathPatternFromWrapper)
 
             zipped.all { (openapiURLPart: URLPathPattern, wrapperURLPart: URLPathPattern) ->
                 val openapiType = if(openapiURLPart.pattern is ExactValuePattern) "exact" else "pattern"
                 val wrapperType = if(wrapperURLPart.pattern is ExactValuePattern) "exact" else "pattern"
 
                 when(Pair(openapiType, wrapperType)) {
-                    Pair("exact", "exact") -> (openapiURLPart.pattern as ExactValuePattern).pattern.toStringLiteral() == (wrapperURLPart.pattern as ExactValuePattern).pattern.toStringLiteral()
+                    Pair("exact", "exact") -> exactValuePatternsAreEqual(openapiURLPart, wrapperURLPart)
                     Pair("exact", "pattern") -> false
-                    Pair("pattern", "exact") -> openapiURLPart.pattern.encompasses(wrapperURLPart.pattern, Resolver(newPatterns = openApiScenarioInfo.patterns), Resolver(newPatterns = specmaticScenarioInfo.patterns)) is Result.Success
+                    Pair("pattern", "exact") -> {
+                        attempt("Error matching url ${specmaticScenarioInfo.httpRequestPattern.urlMatcher.path} to the specification") {
+                            patternMatchesExact(
+                                wrapperURLPart,
+                                openapiURLPart,
+                                resolver
+                            )
+                        }
+                    }
                     Pair("pattern", "pattern") -> {
                         val valueFromOpenapi = openapiURLPart.pattern.generate(Resolver(newPatterns = openApiScenarioInfo.patterns))
                         val valueFromWrapper = wrapperURLPart.pattern.generate(Resolver(newPatterns = specmaticScenarioInfo.patterns))
@@ -157,6 +172,29 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             else -> MatchSuccess(specmaticScenarioInfo to matchingScenarioInfos)
         }
     }
+
+    private fun patternMatchesExact(
+        wrapperURLPart: URLPathPattern,
+        openapiURLPart: URLPathPattern,
+        resolver: Resolver,
+    ): Boolean {
+        val valueFromWrapper = (wrapperURLPart.pattern as ExactValuePattern).pattern
+
+        val valueToMatch: Value =
+            if (valueFromWrapper is StringValue) {
+                openapiURLPart.pattern.parse(valueFromWrapper.toStringLiteral(), resolver)
+            } else {
+                wrapperURLPart.pattern.pattern
+            }
+
+        return openapiURLPart.pattern.matches(valueToMatch, resolver) is Result.Success
+    }
+
+    private fun exactValuePatternsAreEqual(
+        openapiURLPart: URLPathPattern,
+        wrapperURLPart: URLPathPattern
+    ) =
+        (openapiURLPart.pattern as ExactValuePattern).pattern.toStringLiteral() == (wrapperURLPart.pattern as ExactValuePattern).pattern.toStringLiteral()
 
     private fun matchesMethod(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
         val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
@@ -201,8 +239,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             val queryPattern = openApiScenario.httpRequestPattern.urlMatcher?.queryPattern ?: emptyMap()
             val zippedPathPatterns = (specmaticScenarioInfo.httpRequestPattern.urlMatcher?.pathPattern ?: emptyList()).zip(openApiScenario.httpRequestPattern.urlMatcher?.pathPattern ?: emptyList())
 
-            val pathPatterns = zippedPathPatterns.map { (fromSpecmatic, fromOpenApi) ->
-                fromOpenApi.copy(key = fromSpecmatic.key)
+            val pathPatterns = zippedPathPatterns.map { (fromWrapper, fromOpenApi) ->
+                if(fromWrapper.pattern is ExactValuePattern)
+                    fromWrapper
+                else
+                    fromOpenApi.copy(key = fromWrapper.key)
             }
 
             val urlMatcher = URLMatcher(queryPattern, pathPatterns, openApiScenario.httpRequestPattern.urlMatcher?.path ?: "")

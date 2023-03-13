@@ -9,6 +9,7 @@ import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONObject
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -620,7 +621,9 @@ Background:
                 """.trimIndent(), sourceSpecPath
             )
         }.satisfies(Consumer {
-            assertThat(it.message).isEqualTo("""Scenario: "sending string instead of number should return not found" PATH: "/hello/test" is not as per included wsdl / OpenApi spec""")
+            val errorMessage = exceptionCauseMessage(it)
+            assertThat(errorMessage).contains("""Error matching url /hello/test to the specification""")
+            assertThat(errorMessage).contains("Expected number, actual was \"test\"")
         })
     }
 
@@ -1968,8 +1971,8 @@ Feature: Foo API
     When GET /v1/foo/(data:string)
     Then status 200
     Examples:
-      | id  |
-      | baz |
+      | data |
+      | baz  |
         """.trimIndent()
 
         val flags = mutableListOf<String>()
@@ -2428,7 +2431,7 @@ components:
     }
 
     @Test
-    fun `should run test from wrapper gherkin with more constrained type in url`() {
+    fun `should run test from wrapper gherkin with unconstrained type in url`() {
         val contract = parseGherkinStringToFeature("""
             Feature: Test wrapper of constraints
               Background:
@@ -2462,6 +2465,58 @@ components:
         })
 
         assertThat(testCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `should run test from wrapper gherkin with concrete value in url matching specification type`() {
+        val contract = parseGherkinStringToFeature("""
+            Feature: Test wrapper of constraints
+              Background:
+                Given openapi core/src/test/resources/openapi/hello_with_constraints.yaml
+                
+              Scenario: Test
+                When GET /hello/1234567890
+                Then status 200
+        """.trimIndent())
+
+        var testCount = 0
+
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val idValue = request.path!!.split("/").last()
+                assertThat(idValue).hasSizeGreaterThan(9)
+                assertThat(idValue).hasSizeLessThan(21)
+
+                testCount += 1
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(testCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `should fail to run a test from wrapper gherkin with pattern url matching concrete specification value`() {
+        assertThatThrownBy {
+            parseGherkinStringToFeature(
+                """
+            Feature: Test wrapper of constraints
+              Background:
+                Given openapi core/src/test/resources/openapi/hello_with_constraints.yaml
+                
+              Scenario: Test
+                When GET /(val:string)/(id:string)
+                Then status 200
+        """.trimIndent()
+            )
+        }.satisfies(Consumer {
+            assertThat(it).isInstanceOf(ContractException::class.java)
+            assertThat(exceptionCauseMessage(it)).contains("not as per")
+        })
     }
 }
 

@@ -143,10 +143,16 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                                     is Failure -> throw ContractException(result.toFailureReport())
                                 }
                             }
-                            else -> attempt("Format error in example of \"$key\"") {
+                            else -> attempt("Format error in example of path parameter \"$key\"") {
+                                val value = urlPathPattern.parse(rowValue, resolver)
+
+                                val matchResult = urlPathPattern.matches(value, resolver)
+                                if(matchResult is Failure)
+                                    throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
+
                                 URLPathPattern(
                                     ExactValuePattern(
-                                        urlPathPattern.parse(rowValue, resolver)
+                                        value
                                     )
                                 )
                             }

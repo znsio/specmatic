@@ -578,7 +578,7 @@ data class Feature(
                     else
                         it
                 }
-            path.let { if(it.startsWith("/")) it else "/$it"}.let { if(url.endsWith("/") && ! it.endsWith("/")) "$it/" else it }
+            path.let { if(it.startsWith("/")) it else "/$it"}
         }.distinct()
 
         val minLength = normalisedURL.map {

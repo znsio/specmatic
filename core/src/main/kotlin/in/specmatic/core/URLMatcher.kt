@@ -113,7 +113,11 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                         else urlPathPattern.pattern.generate(cyclePreventedResolver)
                     }
                 }
-            }.joinToString("/")).let { if(path.endsWith("/") && ! it.endsWith("/")) "$it/" else it }
+            }.joinToString("/")).let {
+                if(path.endsWith("/") && ! it.endsWith("/")) "$it/" else it
+            }.let {
+                if(path.startsWith("/") && ! it.startsWith("/")) "$/it" else it
+            }
         }
     }
 

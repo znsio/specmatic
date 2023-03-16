@@ -104,7 +104,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
     fun generatePath(resolver: Resolver): String {
         return attempt(breadCrumb = "PATH") {
-            "/" + pathPattern.mapIndexed { index, urlPathPattern ->
+            ("/" + pathPattern.mapIndexed { index, urlPathPattern ->
                 attempt(breadCrumb = "[$index]") {
                     val key = urlPathPattern.key
                     resolver.withCyclePrevention(urlPathPattern.pattern) { cyclePreventedResolver ->
@@ -113,7 +113,11 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                         else urlPathPattern.pattern.generate(cyclePreventedResolver)
                     }
                 }
-            }.joinToString("/")
+            }.joinToString("/")).let {
+                if(path.endsWith("/") && ! it.endsWith("/")) "$it/" else it
+            }.let {
+                if(path.startsWith("/") && ! it.startsWith("/")) "$/it" else it
+            }
         }
     }
 

@@ -571,12 +571,14 @@ data class Feature(
 
     fun toOpenAPIURLPrefixMap(urls: List<String>, mappedURLType: MappedURLType): Map<String, String> {
         val normalisedURL = urls.map { url ->
-            url.removeSuffix("/").removePrefix("http://").removePrefix("https://").split("/").joinToString("/") {
-                if(it.toIntOrNull() != null)
-                    "1"
-                else
-                    it
-            }.let { if(it.startsWith("/")) it else "/$it"}
+            val path =
+                url.removeSuffix("/").removePrefix("http://").removePrefix("https://").split("/").joinToString("/") {
+                    if (it.toIntOrNull() != null)
+                        "1"
+                    else
+                        it
+                }
+            path.let { if(it.startsWith("/")) it else "/$it"}
         }.distinct()
 
         val minLength = normalisedURL.map {

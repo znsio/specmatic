@@ -174,7 +174,7 @@ data class HttpRequestPattern(
         val (httpRequest, resolver) = parameters
         method.let {
             return if (it != httpRequest.method)
-                MatchFailure(mismatchResult(method ?: "", httpRequest.method ?: "").breadCrumb("METHOD"))
+                MatchFailure(mismatchResult(method ?: "", httpRequest.method ?: "").copy(failureReason = FailureReason.MethodMismatch).breadCrumb("METHOD"))
             else
                 MatchSuccess(Triple(httpRequest, resolver, emptyList()))
         }

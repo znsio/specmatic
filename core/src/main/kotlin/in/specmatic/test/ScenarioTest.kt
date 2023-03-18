@@ -8,7 +8,7 @@ import `in`.specmatic.core.executeTest
 
 class ScenarioTest(val scenario: Scenario, private val generativeTestingEnabled: Boolean = false) : ContractTest {
     override fun testResultRecord(result: Result): TestResultRecord {
-        return TestResultRecord(scenario.path.replace(Regex("""\((.*):.*\)"""), "{$1}"), scenario.method, scenario.httpResponsePattern.status, result.testResult())
+        return TestResultRecord(scenario.path.replace(Regex("""\((.*):.*\)"""), "{$1}"), scenario.method, scenario.status, result.testResult())
     }
 
     override fun generateTestScenarios(

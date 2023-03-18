@@ -26,11 +26,11 @@ object ContractAndStubMismatchMessages : MismatchMessages {
 }
 
 interface ScenarioDetailsForResult {
+    val status: Int
     val ignoreFailure: Boolean
     val name: String
     val method: String
     val path: String
-    val status: Int
     val requestTestDescription: String
     fun testDescription(): String {
         val scenarioDescription = StringBuilder()
@@ -87,7 +87,7 @@ data class Scenario(
 
     override val status: Int
         get() {
-            return httpResponsePattern.status
+            return if(isNegative) 400 else httpResponsePattern.status
         }
 
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =

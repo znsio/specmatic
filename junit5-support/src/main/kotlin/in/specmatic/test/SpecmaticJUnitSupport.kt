@@ -315,20 +315,24 @@ open class SpecmaticJUnitSupport {
 
                 testsNames.add(testScenario.testDescription())
 
-                val result: Result = invoker.execute(testScenario, timeout)
+                try {
+                    val result: Result = invoker.execute(testScenario, timeout)
+                    testReport.addTestReportRecords(testScenario.testResultRecord(result))
 
-                testReport.addTestReportRecords(testScenario.testResultRecord(result))
-
-                if(result is Result.Success && result.isPartialSuccess()) {
-                    partialSuccesses.add(result)
-                }
-
-                when {
-                    result.shouldBeIgnored() -> {
-                        val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${result.toReport().toText().prependIndent("  ")}"
-                        throw TestAbortedException(message)
+                    if(result is Result.Success && result.isPartialSuccess()) {
+                        partialSuccesses.add(result)
                     }
-                    else -> ResultAssert.assertThat(result).isSuccess()
+
+                    when {
+                        result.shouldBeIgnored() -> {
+                            val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${result.toReport().toText().prependIndent("  ")}"
+                            throw TestAbortedException(message)
+                        }
+                        else -> ResultAssert.assertThat(result).isSuccess()
+                    }
+                } catch(e: Throwable) {
+                    testReport.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
+                    throw e
                 }
             }
         }.toList()

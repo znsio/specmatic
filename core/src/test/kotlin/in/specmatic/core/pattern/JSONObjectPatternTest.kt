@@ -113,6 +113,22 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
+    fun `Should avoid combinatorial explosion when many request properties with many possible values`() {
+        val resolver = Resolver(
+            newPatterns = (1..6).map { paramIndex ->
+                "(enum${paramIndex})" to AnyPattern((0..9).map { possibleValueIndex ->
+                    ExactValuePattern(StringValue("${paramIndex}${possibleValueIndex}"))
+                }.toList())
+            }.toMap()
+        )
+
+        val objPattern = parsedPattern("""{"p1": "(enum1)", "p2": "(enum2)", "p3": "(enum3)", "p4": "(enum4)", "p5": "(enum5)", "p6": "(enum6)"}""")
+
+        val newPatterns = objPattern.newBasedOn(Row(), resolver)
+        assertThat(newPatterns).hasSize(64)
+    }
+
+    @Test
     fun `When generating a new pattern based on a row, a concrete pattern value in the object should not become a concrete value`() {
         val resolver = Resolver()
 

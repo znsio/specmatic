@@ -556,7 +556,8 @@ data class HttpRequestPattern(
                             val jsonValues = jsonObjectToValues(value)
                             val jsonValeuRow = Row(
                                 columnNames = jsonValues.map { it.first }.toList(),
-                                values = jsonValues.map { it.second }.toList())
+                                values = jsonValues.map { it.second }.toList(),
+                                name = row.name)
 
                             body.negativeBasedOn(jsonValeuRow, resolver)
                         } else {

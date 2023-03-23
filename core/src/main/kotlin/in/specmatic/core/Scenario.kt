@@ -32,14 +32,33 @@ interface ScenarioDetailsForResult {
     val method: String
     val path: String
     val requestTestDescription: String
+    val exampleName: String?
+
     fun testDescription(): String {
         val scenarioDescription = StringBuilder()
+
+        val prefix = exampleName?.let {
+            exampleNamePrefix(it)
+        } ?: ""
+
+        scenarioDescription.append(prefix)
+
         scenarioDescription.append("Scenario: ")
-        when {
-            name.isNotEmpty() -> scenarioDescription.append("$name ")
+
+        if(name.isNotEmpty()) {
+            scenarioDescription.append("$name ")
         }
 
         return scenarioDescription.append(requestTestDescription).toString()
+    }
+
+    fun exampleNamePrefix(it: String) = if (it.startsWith("[WIP]")) {
+        val withoutWIP = it.removePrefix("[WIP]").trim()
+        "[WIP] [$withoutWIP] "
+    } else if (it.isNotBlank()) {
+        "[$it] "
+    } else {
+        ""
     }
 }
 
@@ -58,6 +77,7 @@ data class Scenario(
     val isGherkinScenario: Boolean = false,
     val isNegative: Boolean = false,
     val badRequestOrDefault: BadRequestOrDefault? = null,
+    override val exampleName: String? = null
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -288,7 +308,8 @@ data class Scenario(
                             bindings,
                             isGherkinScenario,
                             isNegative,
-                            badRequestOrDefault
+                            badRequestOrDefault,
+                            row.name
                         )
                     }
                 }
@@ -488,10 +509,16 @@ data class Scenario(
 
     override fun testDescription(): String {
         val scenarioDescription = StringBuilder()
+
+        val prefix = exampleName?.let {
+            exampleNamePrefix(it)
+        } ?: ""
+
+        scenarioDescription.append(prefix)
+
         scenarioDescription.append("Scenario: ")
-        when {
-            name.isNotEmpty() -> scenarioDescription.append("$name ")
-        }
+
+        if(name.isNotEmpty()) scenarioDescription.append("$name ")
 
         return if (kafkaMessagePattern != null)
             scenarioDescription.append(kafkaMessagePattern.topic).toString()
@@ -534,7 +561,8 @@ data class Scenario(
         bindings,
         this.isGherkinScenario,
         isNegative = true,
-        badRequestOrDefault
+        badRequestOrDefault,
+        exampleName
     )
 }
 

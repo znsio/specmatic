@@ -307,6 +307,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 get() = httpResponsePattern.status
                             override val requestTestDescription: String
                                 get() = httpRequestPattern.testDescription()
+
+                            override val exampleName: String?
+                                get() = null
                         }
 
                         specmaticExampleRows.forEach { row ->

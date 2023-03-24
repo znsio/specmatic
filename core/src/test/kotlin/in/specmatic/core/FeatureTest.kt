@@ -70,7 +70,7 @@ paths:
 """.trimIndent(), "").toFeature()
 
         val scenario: Scenario = contract.generateContractTestScenarios(emptyList()).first()
-        assertThat(scenario.testDescription()).contains("[SUCCESS]")
+        assertThat(scenario.testDescription()).contains("SUCCESS | ")
     }
 
     @Test
@@ -126,7 +126,7 @@ paths:
 """.trimIndent(), "").toFeature()
 
         val scenario: Scenario = contract.generateContractTestScenarios(emptyList()).first()
-        assertThat(scenario.testDescription()).contains("[WIP] [SUCCESS]")
+        assertThat(scenario.testDescription()).contains("[WIP] SUCCESS | ")
     }
     @DisplayName("Single Feature Contract")
     @ParameterizedTest

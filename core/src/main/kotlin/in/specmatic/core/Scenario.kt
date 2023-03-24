@@ -54,9 +54,9 @@ interface ScenarioDetailsForResult {
 
     fun exampleNamePrefix(it: String) = if (it.startsWith("[WIP]")) {
         val withoutWIP = it.removePrefix("[WIP]").trim()
-        "[WIP] [$withoutWIP] "
+        "[WIP] $withoutWIP | "
     } else if (it.isNotBlank()) {
-        "[$it] "
+        "$it | "
     } else {
         ""
     }

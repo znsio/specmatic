@@ -399,7 +399,7 @@ data class HttpRequestPattern(
                                 throw ContractException(result.toFailureReport())
                         }
 
-                        if(Flags.generativeTestingEnabled()) {
+                        if(resolver.generativeTestingEnabled) {
                             val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
 
                             val requestsFromFlattenedRow: List<Pattern> =
@@ -413,7 +413,7 @@ data class HttpRequestPattern(
                         }
                     } else {
 
-                        if(Flags.generativeTestingEnabled()) {
+                        if(resolver.generativeTestingEnabled) {
                             val vanilla = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
                                 body.newBasedOn(Row(), cyclePreventedResolver)
                             }

@@ -33,33 +33,9 @@ interface ScenarioDetailsForResult {
     val path: String
     val requestTestDescription: String
     val exampleName: String?
+    val isNegative: Boolean
 
-    fun testDescription(): String {
-        val scenarioDescription = StringBuilder()
-
-        val prefix = exampleName?.let {
-            exampleNamePrefix(it)
-        } ?: ""
-
-        scenarioDescription.append(prefix)
-
-        scenarioDescription.append("Scenario: ")
-
-        if(name.isNotEmpty()) {
-            scenarioDescription.append("$name ")
-        }
-
-        return scenarioDescription.append(requestTestDescription).toString()
-    }
-
-    fun exampleNamePrefix(it: String) = if (it.startsWith("[WIP]")) {
-        val withoutWIP = it.removePrefix("[WIP]").trim()
-        "[WIP] $withoutWIP | "
-    } else if (it.isNotBlank()) {
-        "$it | "
-    } else {
-        ""
-    }
+    fun testDescription(): String
 }
 
 data class Scenario(
@@ -75,9 +51,10 @@ data class Scenario(
     val references: Map<String, References> = emptyMap(),
     val bindings: Map<String, String> = emptyMap(),
     val isGherkinScenario: Boolean = false,
-    val isNegative: Boolean = false,
+    override val isNegative: Boolean = false,
     val badRequestOrDefault: BadRequestOrDefault? = null,
-    override val exampleName: String? = null
+    override val exampleName: String? = null,
+    val generativeTestingEnabled: Boolean = false
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -309,7 +286,8 @@ data class Scenario(
                             isGherkinScenario,
                             isNegative,
                             badRequestOrDefault,
-                            row.name
+                            row.name,
+                            generativeTestingEnabled
                         )
                     }
                 }
@@ -336,7 +314,7 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOnBackwarCompatibility(row: Row): List<Scenario> {
+    private fun newBasedOnBackwardCompatibility(row: Row): List<Scenario> {
         val resolver = Resolver(expectedFacts, false, patterns)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
@@ -380,7 +358,7 @@ data class Scenario(
     fun generateTestScenarios(
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-        enableNegativeTesting: Boolean = false
+        enableGenerativeTesting: Boolean = false
     ): List<Scenario> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -395,7 +373,7 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOn(row, enableNegativeTesting)
+                newBasedOn(row, enableGenerativeTesting)
             }
         }
     }
@@ -444,7 +422,7 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOnBackwarCompatibility(row)
+                newBasedOnBackwardCompatibility(row)
             }
         }
     }
@@ -508,27 +486,39 @@ data class Scenario(
         }
 
     override fun testDescription(): String {
-        val scenarioDescription = StringBuilder()
+        val method = this.httpRequestPattern.method
+        val path = this.httpRequestPattern.urlMatcher?.path ?: ""
+        val responseStatus = this.httpResponsePattern.status
+        val exampleIdentifier = exampleName?.trim() ?: ""
 
-        val prefix = exampleName?.let {
-            exampleNamePrefix(it)
-        } ?: ""
-
-        scenarioDescription.append(prefix)
-
-        scenarioDescription.append("Scenario: ")
-
-        if(name.isNotEmpty()) scenarioDescription.append("$name ")
-
-        return if (kafkaMessagePattern != null)
-            scenarioDescription.append(kafkaMessagePattern.topic).toString()
+        val generativePrefix = if(this.generativeTestingEnabled)
+            if(this.isNegative) "-ve " else "+ve "
         else
-            scenarioDescription.append(httpRequestPattern.testDescription()).toString()
+            ""
+
+        return "$generativePrefix Scenario: $method $path -> $responseStatus | $exampleIdentifier"
+
+//        val scenarioDescription = StringBuilder()
+//
+//        val prefix = exampleName?.let {
+//            exampleIdentifier(it)
+//        } ?: ""
+//
+//        scenarioDescription.append(prefix)
+//
+//        scenarioDescription.append("Scenario: ")
+//
+//        if(name.isNotEmpty()) scenarioDescription.append("$name ")
+//
+//        return if (kafkaMessagePattern != null)
+//            scenarioDescription.append(kafkaMessagePattern.topic).toString()
+//        else
+//            scenarioDescription.append(httpRequestPattern.testDescription()).toString()
     }
 
     fun newBasedOn(scenario: Scenario): Scenario =
         Scenario(
-            if(Flags.generativeTestingEnabled()) "+ve: ${this.name}" else this.name,
+            this.name,
             this.httpRequestPattern,
             this.httpResponsePattern,
             this.expectedFacts,
@@ -548,7 +538,7 @@ data class Scenario(
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?) = Scenario(
-        "-ve: ${this.name}",
+        this.name,
         this.httpRequestPattern,
         this.httpResponsePattern,
         this.expectedFacts,
@@ -562,7 +552,8 @@ data class Scenario(
         this.isGherkinScenario,
         isNegative = true,
         badRequestOrDefault,
-        exampleName
+        exampleName,
+        generativeTestingEnabled
     )
 }
 

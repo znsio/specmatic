@@ -310,6 +310,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                             override val exampleName: String?
                                 get() = null
+                            override val isNegative: Boolean
+                                get() = false
+
+                            override fun testDescription(): String {
+                                TODO("Not yet implemented")
+                            }
                         }
 
                         specmaticExampleRows.forEach { row ->

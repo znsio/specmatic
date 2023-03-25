@@ -489,31 +489,14 @@ data class Scenario(
         val method = this.httpRequestPattern.method
         val path = this.httpRequestPattern.urlMatcher?.path ?: ""
         val responseStatus = this.httpResponsePattern.status
-        val exampleIdentifier = exampleName?.trim() ?: ""
+        val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | ${exampleName.trim()}" }
 
         val generativePrefix = if(this.generativeTestingEnabled)
             if(this.isNegative) "-ve " else "+ve "
         else
             ""
 
-        return "$generativePrefix Scenario: $method $path -> $responseStatus | $exampleIdentifier"
-
-//        val scenarioDescription = StringBuilder()
-//
-//        val prefix = exampleName?.let {
-//            exampleIdentifier(it)
-//        } ?: ""
-//
-//        scenarioDescription.append(prefix)
-//
-//        scenarioDescription.append("Scenario: ")
-//
-//        if(name.isNotEmpty()) scenarioDescription.append("$name ")
-//
-//        return if (kafkaMessagePattern != null)
-//            scenarioDescription.append(kafkaMessagePattern.topic).toString()
-//        else
-//            scenarioDescription.append(httpRequestPattern.testDescription()).toString()
+        return "$generativePrefix Scenario: $method $path -> $responseStatus$exampleIdentifier"
     }
 
     fun newBasedOn(scenario: Scenario): Scenario =

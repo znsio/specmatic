@@ -31,9 +31,6 @@ interface ScenarioDetailsForResult {
     val name: String
     val method: String
     val path: String
-    val requestTestDescription: String
-    val exampleName: String?
-    val isNegative: Boolean
 
     fun testDescription(): String
 }
@@ -51,9 +48,9 @@ data class Scenario(
     val references: Map<String, References> = emptyMap(),
     val bindings: Map<String, String> = emptyMap(),
     val isGherkinScenario: Boolean = false,
-    override val isNegative: Boolean = false,
+    val isNegative: Boolean = false,
     val badRequestOrDefault: BadRequestOrDefault? = null,
-    override val exampleName: String? = null,
+    val exampleName: String? = null,
     val generativeTestingEnabled: Boolean = false
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
@@ -70,8 +67,6 @@ data class Scenario(
         scenarioInfo.bindings
     )
 
-    override val requestTestDescription: String
-        get() = httpRequestPattern.testDescription()
     override val method: String
         get() {
             return httpRequestPattern.method ?: ""

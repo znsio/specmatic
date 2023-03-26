@@ -305,13 +305,6 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 get() = httpRequestPattern.urlMatcher?.path ?: ""
                             override val status: Int
                                 get() = httpResponsePattern.status
-                            override val requestTestDescription: String
-                                get() = httpRequestPattern.testDescription()
-
-                            override val exampleName: String?
-                                get() = null
-                            override val isNegative: Boolean
-                                get() = false
 
                             override fun testDescription(): String {
                                 TODO("Not yet implemented")

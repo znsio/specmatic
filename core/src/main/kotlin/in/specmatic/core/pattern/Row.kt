@@ -24,7 +24,7 @@ data class Row(
 
         val values: List<Pair<String, String>> = jsonObjectToValues(jsonValue)
 
-        return Row(columnNames = values.map { it.first }, values = values.map { it.second })
+        return Row(columnNames = values.map { it.first }, values = values.map { it.second }, name = name)
     }
 
     fun stringForOpenAPIError(): String {

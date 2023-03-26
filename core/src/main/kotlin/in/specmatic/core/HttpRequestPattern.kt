@@ -399,7 +399,7 @@ data class HttpRequestPattern(
                                 throw ContractException(result.toFailureReport())
                         }
 
-                        if(Flags.generativeTestingEnabled()) {
+                        if(resolver.generativeTestingEnabled) {
                             val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
 
                             val requestsFromFlattenedRow: List<Pattern> =
@@ -413,7 +413,7 @@ data class HttpRequestPattern(
                         }
                     } else {
 
-                        if(Flags.generativeTestingEnabled()) {
+                        if(resolver.generativeTestingEnabled) {
                             val vanilla = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
                                 body.newBasedOn(Row(), cyclePreventedResolver)
                             }
@@ -556,7 +556,8 @@ data class HttpRequestPattern(
                             val jsonValues = jsonObjectToValues(value)
                             val jsonValeuRow = Row(
                                 columnNames = jsonValues.map { it.first }.toList(),
-                                values = jsonValues.map { it.second }.toList())
+                                values = jsonValues.map { it.second }.toList(),
+                                name = row.name)
 
                             body.negativeBasedOn(jsonValeuRow, resolver)
                         } else {

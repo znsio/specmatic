@@ -1,10 +1,5 @@
 package utilities
 
-import io.mockk.every
-import io.mockk.mockkConstructor
-import io.mockk.mockkStatic
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.clone
@@ -12,9 +7,15 @@ import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
+import io.mockk.every
+import io.mockk.mockkConstructor
+import io.mockk.mockkStatic
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 import java.io.File
 
 internal class UtilitiesTest {
+
     @Test
     fun `parsing multiline xml`() {
         val xml = """<line1>
@@ -66,11 +67,11 @@ internal class UtilitiesTest {
         val testPaths = contractFilePathsFrom(configFilePath, ".$CONTRACT_EXTENSION") { source -> source.testContracts }
         val stubPaths = contractFilePathsFrom(configFilePath, ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
         val expectedStubPaths = listOf(
-            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/a/1.$CONTRACT_EXTENSION"),
-            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/b/1.$CONTRACT_EXTENSION")
+                ContractPathData("/path/to/monorepo", "$currentPath/monorepo/a/1.$CONTRACT_EXTENSION"),
+                ContractPathData("/path/to/monorepo", "$currentPath/monorepo/b/1.$CONTRACT_EXTENSION")
         )
         val expectedTestPaths = listOf(
-            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/c/1.$CONTRACT_EXTENSION"),
+                ContractPathData("/path/to/monorepo", "$currentPath/monorepo/c/1.$CONTRACT_EXTENSION"),
         )
 
         assertThat(stubPaths == expectedStubPaths).isTrue
@@ -135,7 +136,7 @@ internal class UtilitiesTest {
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
-            GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
+                GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
                 GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"))
         )
         assertThat(sources == expectedSources).isTrue
@@ -154,4 +155,15 @@ internal class UtilitiesTest {
         assertThat(sources == expectedSources).isTrue
     }
 
+    @Test
+    fun `test should create a working directory if its absent `() {
+        val workingDirectoryPath = "core/src/test/kotlin/utilities/wd-test"
+        createIfDoesNotExist(workingDirectoryPath)
+        val workingDirectory = File(workingDirectoryPath)
+
+        assertThat(workingDirectory.exists()).isTrue
+
+    }
+
 }
+

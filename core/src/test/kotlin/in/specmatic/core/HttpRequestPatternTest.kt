@@ -417,4 +417,14 @@ internal class HttpRequestPatternTest {
             assertThat(reportText.indexOf(""">> REQUEST.MULTIPART-FORMDATA.data2""")).isLessThan(reportText.indexOf(""">> REQUEST.MULTIPART-FORMDATA.data1"""))
         }
     }
+
+    @Test
+    fun `should not generate test request for generative tests more than once`()  {
+        val pattern = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("http://helloworld.com/data"), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
+
+        val row: Row = Row(listOf("(REQUEST-BODY)"), listOf("""{ "id": 10 }"""))
+        val patterns = pattern.newBasedOn(row, Resolver(generativeTestingEnabled = true))
+
+        assertThat(patterns).hasSize(1)
+    }
 }

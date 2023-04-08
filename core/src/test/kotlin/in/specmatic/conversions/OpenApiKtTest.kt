@@ -414,6 +414,8 @@ Background:
                 object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         flags["${request.path} executed"] = true
+                        println("====REQUEST")
+                        println(request.toLogString())
                         val headers: HashMap<String, String> = object : HashMap<String, String>() {
                             init {
                                 put("Content-Type", "application/json")
@@ -434,9 +436,9 @@ Background:
             System.clearProperty(Flags.negativeTestingFlag)
         }
 
-        assertThat(results.results.size).isEqualTo(5)
+        assertThat(results.results.size).isEqualTo(9)
         assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(1)
-        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(4)
+        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(8)
     }
 
     @Test

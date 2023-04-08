@@ -71,7 +71,23 @@ data class AnyPattern(
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        val nullable = pattern.any { it is NullPattern }
+
+        val negativeTypes = pattern.flatMap {
+            it.negativeBasedOn(row, resolver)
+        }.let {
+            if (nullable)
+                it.filterNot { it is NullPattern }
+            else
+                it
+        }
+
+        return if(negativeTypes.all { it is ScalarType })
+            negativeTypes.distinct()
+        else
+            negativeTypes
+    }
 
     override fun parse(value: String, resolver: Resolver): Value {
         val resolvedTypes = pattern.map { resolvedHop(it, resolver) }

@@ -58,9 +58,6 @@ paths:
         val selected = selectTestsToRun("INCLUDE1", contractTests)
         assertThat(selected).hasSize(1)
         assertThat(selected.first().testDescription()).contains("INCLUDE1")
-//        assertThat(selected.map { it.testDescription() }).allMatch {
-//            it.contains("INCLUDE1")
-//        }
     }
 
     @Test

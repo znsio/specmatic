@@ -280,12 +280,7 @@ open class SpecmaticJUnitSupport {
                 }
             }
 
-            if(filterName != null) {
-                testScenarios.filter {
-                    it.testDescription().contains(filterName)
-                }
-            } else
-                testScenarios
+            selectTestsToRun(filterName, testScenarios)
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
         } catch(e: Throwable) {
@@ -409,4 +404,18 @@ private fun asJSONObjectValue(value: Value, errorMessage: String): Map<String, V
         throw ContractException(errorMessage)
 
     return value.jsonObject
+}
+
+fun selectTestsToRun(
+    filterName: String?,
+    testScenarios: List<ContractTest>
+): List<ContractTest> {
+    return if (!filterName.isNullOrBlank()) {
+        val filterNames = filterName.split(",").map { it.trim() }
+
+        testScenarios.filter { test ->
+            filterNames.any { test.testDescription().contains(it) }
+        }
+    } else
+        testScenarios
 }

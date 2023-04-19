@@ -1,5 +1,6 @@
 package `in`.specmatic.stub
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.XML_ATTR_OPTIONAL_SUFFIX
 import `in`.specmatic.core.pattern.parsedValue
@@ -611,7 +612,7 @@ Scenario: Square of a number
 
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body.toStringLiteral()).isEqualTo("it worked")
-            assertThat(response.headers[QONTRACT_SOURCE_HEADER]).isEqualTo("proxy")
+            assertThat(response.headers[SPECMATIC_SOURCE_HEADER]).isEqualTo("proxy")
         }
     }
 
@@ -643,7 +644,7 @@ Scenario: Square of a number
             val client = HttpClient(stub.endPoint)
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
-            assertThat(response.headers[QONTRACT_SOURCE_HEADER]).isEqualTo("proxy")
+            assertThat(response.headers[SPECMATIC_SOURCE_HEADER]).isEqualTo("proxy")
         }
     }
 
@@ -678,6 +679,66 @@ Scenario: Square of a number
 
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body.toStringLiteral()).isEqualTo("success")
+        }
+    }
+
+    @Test
+    fun `should stub out a request with body string matching a regex`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.1
+info:
+  title: Data API
+  version: "1"
+paths:
+  /:
+    post:
+      summary: Data
+      parameters: []
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Data
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trim(), "").toFeature()
+
+        HttpStub(contract).use { stub ->
+            val stubData = """
+                {
+                    "http-request": {
+                        "method": "POST",
+                        "path": "/",
+                        "body": "(string)",
+                        "bodyRegex": "^hello (.*)$"
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "Hi!"
+                    }
+                }
+            """.trimIndent()
+
+            val stubRequest = HttpRequest("POST", "/_specmatic/expectations", emptyMap(), StringValue(stubData))
+            val stubResponse = stub.client.execute(stubRequest)
+
+            assertThat(stubResponse.status).isEqualTo(200)
+
+            HttpRequest("POST", "/", emptyMap(), StringValue("hello world")).let { actualRequest ->
+                val actualResponse = stub.client.execute(actualRequest)
+                assertThat(actualResponse.body.toStringLiteral()).isEqualTo("Hi!")
+            }
+
+            HttpRequest("POST", "/", emptyMap(), StringValue("hi world")).let { actualRequest ->
+                val actualResponse = stub.client.execute(actualRequest)
+                assertThat(actualResponse.headers).containsEntry("X-Specmatic-Type", "random")
+            }
         }
     }
 }

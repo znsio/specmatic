@@ -25,7 +25,7 @@ data class HttpRequestPattern(
     val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList(),
     val securitySchemes: List<OpenAPISecurityScheme> = emptyList()
 ) {
-    fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null): Result {
+    fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null, requestBodyReqex: Regex? = null): Result {
         val result = incomingHttpRequest to resolver to
                 ::matchPath then
                 ::matchMethod then
@@ -37,6 +37,13 @@ data class HttpRequestPattern(
                 ::matchFormFields then
                 ::matchMultiPartFormData then
                 ::matchBody then
+                {
+                    (request, resolver, failures) ->
+                    if (requestBodyReqex?.matches(request.bodyString) == false)
+                        MatchSuccess(Triple(request, resolver, failures.plus(Result.Failure("Request did not match regex ${requestBodyReqex.toString()}"))))
+                    else
+                        MatchSuccess(Triple(request, resolver, failures))
+                } then
                 ::summarize otherwise
                 ::handleError toResult
                 ::returnResult

@@ -391,12 +391,12 @@ class HttpStub(
         return firstResult.second
     }
 
-    private fun parseRegex(requestBodyRegex: String?): Regex? {
-        return requestBodyRegex?.let {
+    private fun parseRegex(regex: String?): Regex? {
+        return regex?.let {
             try {
                 Regex(it)
             } catch(e: Throwable) {
-                throw ContractException("Couldn't parse regex", exceptionCause = e)
+                throw ContractException("Couldn't parse regex $regex", exceptionCause = e)
             }
         }
     }

@@ -24,7 +24,7 @@ const val MOCK_HTTP_RESPONSE = "http-response"
 const val DELAY_IN_SECONDS = "delay-in-seconds"
 const val TRANSIENT_MOCK = "http-stub"
 const val TRANSIENT_MOCK_ID = "$TRANSIENT_MOCK-id"
-const val REQUEST_BODY_REGEX = "requestBodyRegex"
+const val REQUEST_BODY_REGEX = "bodyRegex"
 
 val MOCK_HTTP_REQUEST_ALL_KEYS = listOf("mock-http-request", MOCK_HTTP_REQUEST)
 val MOCK_HTTP_RESPONSE_ALL_KEYS = listOf("mock-http-response", MOCK_HTTP_RESPONSE)

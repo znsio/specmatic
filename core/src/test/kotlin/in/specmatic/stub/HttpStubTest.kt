@@ -716,7 +716,7 @@ paths:
                         "method": "POST",
                         "path": "/",
                         "body": "(string)",
-                        "requestBodyRegex": "^hello (.*)$"
+                        "bodyRegex": "^hello (.*)$"
                     },
                     "http-response": {
                         "status": 200,

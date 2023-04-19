@@ -270,8 +270,8 @@ class HttpStub(
             if (httpRequest.body.toStringLiteral().isEmpty())
                 throw ContractException("Expectation payload was empty")
 
-            val mock = stringToMockScenario(httpRequest.body)
-            val stub: HttpStubData? = setExpectation(mock)
+            val mock: ScenarioStub = stringToMockScenario(httpRequest.body)
+            val stub: HttpStubData = setExpectation(mock)
 
             HttpStubResponse(HttpResponse.OK, contractPath = stub?.contractPath ?: "")
         } catch (e: ContractException) {
@@ -345,7 +345,7 @@ class HttpStub(
         setExpectation(mock)
     }
 
-    fun setExpectation(stub: ScenarioStub): HttpStubData? {
+    fun setExpectation(stub: ScenarioStub): HttpStubData {
         if (stub.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
 
         val results = features.asSequence().map { feature ->
@@ -364,7 +364,7 @@ class HttpStub(
         }
 
         val result: Pair<Pair<Result.Success, HttpStubData>?, NoMatchingScenario?>? = results.find { it.first != null }
-        val firstResult = result?.first
+        val firstResult: Pair<Result.Success, HttpStubData>? = result?.first
 
         when (firstResult) {
             null -> {
@@ -376,15 +376,29 @@ class HttpStub(
                 throw NoMatchingScenario(failureResults, cachedMessage = failureResults.report(stub.request))
             }
             else -> {
+                val requestBodyRegex = parseRegex(stub.requestBodyRegex)
+                val stubData = firstResult.second.copy(requestBodyRegex = requestBodyRegex)
+                val resultWithRequestBodyRegex = Pair(firstResult.first, stubData)
+
                 if(stub.stubToken != null) {
-                    threadSafeHttpStubQueue.addToStub(firstResult, stub)
+                    threadSafeHttpStubQueue.addToStub(resultWithRequestBodyRegex, stub)
                 } else {
-                    threadSafeHttpStubs.addToStub(firstResult, stub)
+                    threadSafeHttpStubs.addToStub(resultWithRequestBodyRegex, stub)
                 }
             }
         }
 
         return firstResult.second
+    }
+
+    private fun parseRegex(requestBodyRegex: String?): Regex? {
+        return requestBodyRegex?.let {
+            try {
+                Regex(it)
+            } catch(e: Throwable) {
+                throw ContractException("Couldn't parse regex", exceptionCause = e)
+            }
+        }
     }
 
     override fun close() {
@@ -550,7 +564,7 @@ fun getHttpResponse(
     }
 }
 
-const val QONTRACT_SOURCE_HEADER = "X-$APPLICATION_NAME-Source"
+const val SPECMATIC_SOURCE_HEADER = "X-$APPLICATION_NAME-Source"
 
 fun passThroughResponse(
     httpRequest: HttpRequest,
@@ -558,7 +572,7 @@ fun passThroughResponse(
     httpClientFactory: HttpClientFactory
 ): HttpStubResponse {
     val response = httpClientFactory.client(passThroughUrl).execute(httpRequest)
-    return HttpStubResponse(response.copy(headers = response.headers.plus(QONTRACT_SOURCE_HEADER to "proxy")))
+    return HttpStubResponse(response.copy(headers = response.headers.plus(SPECMATIC_SOURCE_HEADER to "proxy")))
 }
 
 object StubAndRequestMismatchMessages : MismatchMessages {
@@ -602,7 +616,8 @@ private fun stubThatMatchesRequest(
             Pair(
                 requestPattern.matches(
                     httpRequest,
-                    resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages)
+                    resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages),
+                    requestBodyReqex = it.requestBodyRegex
                 ), it
             )
         }
@@ -620,7 +635,8 @@ private fun stubThatMatchesRequest(
             Pair(
                 requestPattern.matches(
                     httpRequest,
-                    resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages)
+                    resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages),
+                    requestBodyReqex = it.requestBodyRegex
                 ), it
             )
         }
@@ -789,7 +805,7 @@ fun softCastValueToXML(body: Value): Value {
 }
 
 fun stringToMockScenario(text: Value): ScenarioStub {
-    val mockSpec =
+    val mockSpec: Map<String, Value> =
         jsonStringToValueMap(text.toStringLiteral()).also {
             validateMock(it)
         }

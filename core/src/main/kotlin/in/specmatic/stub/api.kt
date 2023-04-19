@@ -213,7 +213,7 @@ fun stubMatchErrorMessage(
 }
 
 fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
-    val contractInfoFromStubs = stubData.mapNotNull { (stubFile, stub) ->
+    val contractInfoFromStubs: List<Pair<Feature, List<ScenarioStub>>> = stubData.mapNotNull { (stubFile, stub) ->
         val matchResults = features.map { (qontractFile, feature) ->
             try {
                 val kafkaMessage = stub.kafkaMessage

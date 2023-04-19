@@ -400,14 +400,19 @@ data class HttpRequestPattern(
                         }
 
                         if(resolver.generativeTestingEnabled) {
-                            val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
+                            val requestBodyAsIs = ExactValuePattern(value)
+                            val rowWithRequestBodyAsIs = listOf(requestBodyAsIs)
 
                             val requestsFromFlattenedRow: List<Pattern> =
                                 resolver.withCyclePrevention(body) { cyclePreventedResolver ->
                                     body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
                                 }
 
-                            requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
+                            if(requestsFromFlattenedRow.none { it.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Result.Success}) {
+                                requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
+                            } else {
+                                requestsFromFlattenedRow
+                            }
                         } else {
                             listOf(ExactValuePattern(value))
                         }

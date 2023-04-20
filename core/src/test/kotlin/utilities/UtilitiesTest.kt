@@ -8,10 +8,14 @@ import org.junit.jupiter.api.Test
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.clone
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXMLNode
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.assertThrows
 import java.io.File
 
 internal class UtilitiesTest {
@@ -152,6 +156,29 @@ internal class UtilitiesTest {
                 GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"))
         )
         assertThat(sources == expectedSources).isTrue
+    }
+
+    @Test
+    fun given_ReadFile_When_DemoFileReturnTrimmedString() {
+        val filePath = this::class.java.classLoader.getResource("demoFile.txt")?.file
+        val fileContent = filePath?.let { readFile(it) }
+        Assertions.assertEquals("my name is nikhil", fileContent)
+    }
+
+    @Test
+    fun given_Strings_When_ZeroValidString_ReturnZeroListofStrings() {
+        val resultTantStringList =  strings(listOf<Value>())
+        Assertions.assertEquals(0, resultTantStringList.size)
+    }
+
+    @Test
+    fun given_loadConfigJSON_When_loadConfigJSON_ReturnException() {
+        assertThrows<ContractException> {
+            loadConfigJSON(File(""))
+        }.also {
+            org.assertj.core.api.Assertions.assertThat(it.message)
+                .startsWith("Error reading the")
+        }
     }
 
 }

@@ -12,7 +12,7 @@ internal class URIUtilsTest {
     }
 
     @Test
-    fun `returns empty map of path params`() {
+    fun `returns empty map when path params are null`() {
         assertThat(URIUtils.parsePathParams("")).isEqualTo(emptyMap<String, String>())
     }
 

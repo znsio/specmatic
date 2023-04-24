@@ -2,9 +2,10 @@ package `in`.specmatic.test
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
-class SpecmaticJUnitSupportKtTest {
+class TestsFilterTest {
     val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
@@ -51,18 +52,18 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-    val contractTests = contract.generateContractTests(emptyList())
+    private val contractTests = contract.generateContractTests(emptyList())
 
     @Test
     fun `should select tests containing the value of filterName in testDescription`() {
-        val selected = selectTestsToRun(contractTests, "TEST1")
+        val selected = TestsFilter("TEST1").selectTestsToRun(contractTests)
         assertThat(selected).hasSize(1)
         assertThat(selected.first().testDescription()).contains("TEST1")
     }
 
     @Test
     fun `should select tests whose testDescriptions contain any of the multiple comma separate values in filterName`() {
-        val selected = selectTestsToRun(contractTests, "TEST1, TEST2")
+        val selected = TestsFilter("TEST1, TEST2").selectTestsToRun(contractTests)
         assertThat(selected).hasSize(2)
         assertThat(selected.map { it.testDescription() }).allMatch {
             it.contains("TEST1") || it.contains("TEST2")
@@ -71,7 +72,7 @@ paths:
 
     @Test
     fun `should omit tests containing the value of filterNotName in testDescription`() {
-        val selected = selectTestsToRun(contractTests, filterNotName = "TEST1")
+        val selected = TestsFilter(filterNotName = "TEST1").selectTestsToRun(contractTests)
         assertThat(selected).hasSize(2)
         assertThat(selected.map { it.testDescription() }).allMatch {
             it.contains("TEST2") || it.contains("TEST3")
@@ -80,7 +81,8 @@ paths:
 
     @Test
     fun `should omit tests whose testDescriptions contain any of the multiple comma separate values in filterNotName`() {
-        val selected = selectTestsToRun(contractTests, filterNotName = "TEST1, TEST2")
+        val selected = TestsFilter(filterNotName = "TEST1, TEST2").selectTestsToRun(contractTests)
+        println(contractTests.map { it.testDescription() })
         assertThat(selected).hasSize(1)
         assertThat(selected.first().testDescription()).contains("TEST3")
     }

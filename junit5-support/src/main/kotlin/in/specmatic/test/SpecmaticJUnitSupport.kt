@@ -163,6 +163,7 @@ open class SpecmaticJUnitSupport {
         const val ENV_NAME = "environment"
         const val VARIABLES_FILE_NAME = "variablesFileName"
         const val FILTER_NAME = "filterName"
+        const val FILTER_NOT_NAME = "filterNotName"
         const val ENDPOINTS_API = "endpointsAPI"
 
         val testsNames = mutableListOf<String>()
@@ -248,6 +249,7 @@ open class SpecmaticJUnitSupport {
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
         val givenConfigFile = System.getProperty(CONFIG_FILE_NAME)
         val filterName: String? = System.getProperty(FILTER_NAME)
+        val filterNotName: String? = System.getProperty(FILTER_NOT_NAME)
 
         val timeout = System.getProperty(TIMEOUT, DEFAULT_TIMEOUT).toInt()
 
@@ -280,7 +282,7 @@ open class SpecmaticJUnitSupport {
                 }
             }
 
-            selectTestsToRun(filterName, testScenarios)
+            selectTestsToRun(testScenarios, filterName, filterNotName)
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
         } catch(e: Throwable) {
@@ -407,10 +409,11 @@ private fun asJSONObjectValue(value: Value, errorMessage: String): Map<String, V
 }
 
 fun selectTestsToRun(
-    filterName: String?,
-    testScenarios: List<ContractTest>
+    testScenarios: List<ContractTest>,
+    filterName: String? = null,
+    filterNotName: String? = null
 ): List<ContractTest> {
-    return if (!filterName.isNullOrBlank()) {
+    val filteredByName = if (!filterName.isNullOrBlank()) {
         val filterNames = filterName.split(",").map { it.trim() }
 
         testScenarios.filter { test ->
@@ -418,4 +421,15 @@ fun selectTestsToRun(
         }
     } else
         testScenarios
+
+    val filteredByNotName: List<ContractTest> = if(!filterNotName.isNullOrBlank()) {
+        val filterNotNames = filterNotName.split(",").map { it.trim() }
+
+        testScenarios.filterNot { test ->
+            filterNotNames.any { test.testDescription().contains(it) }
+        }
+    } else
+        filteredByName
+
+    return filteredByNotName
 }

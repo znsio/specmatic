@@ -26,6 +26,7 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
@@ -72,6 +73,9 @@ class TestCommand : Callable<Unit> {
 
     @Option(names = ["--filter-name"], description = ["Run only tests with this value in their name"], defaultValue = "")
     var filterName: String = ""
+
+    @Option(names = ["--filter-not-name"], description = ["Run only tests which do not have this value in their name"], defaultValue = "")
+    var filterNotName: String = ""
 
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
@@ -141,6 +145,10 @@ class TestCommand : Callable<Unit> {
 
         if(filterName.isNotBlank()) {
             System.setProperty(FILTER_NAME, filterName)
+        }
+
+        if(filterNotName.isNotBlank()) {
+            System.setProperty(FILTER_NOT_NAME, filterName)
         }
 
         System.setProperty("kafkaBootstrapServers", kafkaBootstrapServers)

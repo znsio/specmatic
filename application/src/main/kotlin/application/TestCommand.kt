@@ -74,7 +74,7 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--filter-name"], description = ["Run only tests with this value in their name"], defaultValue = "")
     var filterName: String = ""
 
-    @Option(names = ["--filter-not-name"], description = ["Run only tests with this value in their name"], defaultValue = "")
+    @Option(names = ["--filter-not-name"], description = ["Run only tests which do not have this value in their name"], defaultValue = "")
     var filterNotName: String = ""
 
     @Option(names = ["--env"], description = ["Environment name"])

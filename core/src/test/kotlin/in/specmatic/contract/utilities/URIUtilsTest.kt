@@ -23,4 +23,32 @@ internal class URIUtilsTest {
         Assertions.assertEquals(pathParameters["petid"], "(number)")
         Assertions.assertEquals(pathParameters["owner"], "(string)")
     }
+
+    @Test
+    @Throws(URISyntaxException::class)
+    fun shouldParseQueryToExtractSingleParam() {
+        val query = "name='Manoj'"
+        val pathParameters = parsePathParams(query)
+        Assertions.assertTrue(pathParameters.size == 1);
+        Assertions.assertEquals(pathParameters["name"], "'Manoj'")
+    }
+
+    @Test
+    @Throws(URISyntaxException::class)
+    fun shouldParseQueryToExtractMultipleParam() {
+        val query = "name='Manoj'&age=26&gender='MALE'"
+        val pathParameters = parsePathParams(query)
+        Assertions.assertTrue(pathParameters.size > 1);
+        Assertions.assertEquals(pathParameters["name"], "'Manoj'")
+        Assertions.assertEquals(pathParameters["age"], "26")
+        Assertions.assertEquals(pathParameters["gender"], "'MALE'")
+    }
+
+    @Test
+    @Throws(URISyntaxException::class)
+    fun shouldReturnEmptyMapForEmptyQuery() {
+        val query = ""
+        val pathParameters = parsePathParams(query)
+        Assertions.assertTrue(pathParameters.isEmpty());
+    }
 }

@@ -8,10 +8,14 @@ import org.junit.jupiter.api.Test
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.clone
+import `in`.specmatic.core.pattern.AnythingPattern.listOf
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXMLNode
+import junit.framework.Assert.assertEquals
+import org.junit.jupiter.api.Assertions
 import java.io.File
 
 internal class UtilitiesTest {
@@ -154,4 +158,20 @@ internal class UtilitiesTest {
         assertThat(sources == expectedSources).isTrue
     }
 
+    @Test
+    fun parseXML() {
+        val xml = """
+            <root>
+                <element>Specmatic</element>
+            </root>
+        """.trimIndent()
+        val result = parseXML(xml)
+        assertEquals("root", result.documentElement.nodeName)
+    }
+
+    @Test
+    fun given_Strings_When_ZeroValidString_ReturnZeroListofStrings() {
+        val resultTantStringList =  strings(listOf<Value>())
+        Assertions.assertEquals(0, resultTantStringList.size)
+    }
 }

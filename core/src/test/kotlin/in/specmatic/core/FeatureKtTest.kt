@@ -576,7 +576,7 @@ paths:
     }
 
     @Test
-    fun test() {
+    fun `should generate all required negative tests`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:

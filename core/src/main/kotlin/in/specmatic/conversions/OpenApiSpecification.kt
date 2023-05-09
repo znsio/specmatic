@@ -305,8 +305,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 get() = httpRequestPattern.urlMatcher?.path ?: ""
                             override val status: Int
                                 get() = httpResponsePattern.status
-                            override val requestTestDescription: String
-                                get() = httpRequestPattern.testDescription()
+
+                            override fun testDescription(): String {
+                                TODO("Not yet implemented")
+                            }
                         }
 
                         specmaticExampleRows.forEach { row ->
@@ -607,7 +609,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
                     }.fold(emptyMap<String, Pattern>()) { acc, entry -> acc.plus(entry) }
                     val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
-                    cacheComponentPattern(patternName, jsonObjectPattern)
+                    jsonObjectPattern
                 } else if (schema.oneOf != null) {
                     val candidatePatterns = schema.oneOf.filterNot { nullableEmptyObject(it) } .map { componentSchema ->
                         val (componentName, schemaToProcess) =

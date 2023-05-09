@@ -274,7 +274,7 @@ data class Feature(
 
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
         generateContractTestScenarios(suggestions).map {
-            ScenarioTest(it, Flags.generativeTestingEnabled())
+            ScenarioTest(it, generativeTestingEnabled)
         }
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
@@ -313,7 +313,7 @@ data class Feature(
             it.isA2xxScenario()
         }.map { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
-            val negativeTestScenarios = negativeScenario.generateTestScenarios(testVariables, testBaseURLs)
+            val negativeTestScenarios = negativeScenario.generateTestScenarios(testVariables, testBaseURLs, true)
 
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
@@ -350,7 +350,7 @@ data class Feature(
             scenarioStub.request,
             scenarioStub.response,
             mismatchMessages
-        ).copy(delayInSeconds = scenarioStub.delayInSeconds)
+        ).copy(delayInSeconds = scenarioStub.delayInSeconds, requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) })
 
     fun clearServerState() {
         serverState = emptyMap()

@@ -25,7 +25,7 @@ data class HttpRequestPattern(
     val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList(),
     val securitySchemes: List<OpenAPISecurityScheme> = emptyList()
 ) {
-    fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null): Result {
+    fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null, requestBodyReqex: Regex? = null): Result {
         val result = incomingHttpRequest to resolver to
                 ::matchPath then
                 ::matchMethod then
@@ -37,6 +37,13 @@ data class HttpRequestPattern(
                 ::matchFormFields then
                 ::matchMultiPartFormData then
                 ::matchBody then
+                {
+                    (request, resolver, failures) ->
+                    if (requestBodyReqex?.matches(request.bodyString) == false)
+                        MatchSuccess(Triple(request, resolver, failures.plus(Result.Failure("Request did not match regex ${requestBodyReqex.toString()}"))))
+                    else
+                        MatchSuccess(Triple(request, resolver, failures))
+                } then
                 ::summarize otherwise
                 ::handleError toResult
                 ::returnResult
@@ -399,21 +406,26 @@ data class HttpRequestPattern(
                                 throw ContractException(result.toFailureReport())
                         }
 
-                        if(Flags.generativeTestingEnabled()) {
-                            val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
+                        if(resolver.generativeTestingEnabled) {
+                            val requestBodyAsIs = ExactValuePattern(value)
+                            val rowWithRequestBodyAsIs = listOf(requestBodyAsIs)
 
                             val requestsFromFlattenedRow: List<Pattern> =
                                 resolver.withCyclePrevention(body) { cyclePreventedResolver ->
                                     body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
                                 }
 
-                            requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
+                            if(requestsFromFlattenedRow.none { it.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Result.Success}) {
+                                requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
+                            } else {
+                                requestsFromFlattenedRow
+                            }
                         } else {
                             listOf(ExactValuePattern(value))
                         }
                     } else {
 
-                        if(Flags.generativeTestingEnabled()) {
+                        if(resolver.generativeTestingEnabled) {
                             val vanilla = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
                                 body.newBasedOn(Row(), cyclePreventedResolver)
                             }
@@ -556,7 +568,8 @@ data class HttpRequestPattern(
                             val jsonValues = jsonObjectToValues(value)
                             val jsonValeuRow = Row(
                                 columnNames = jsonValues.map { it.first }.toList(),
-                                values = jsonValues.map { it.second }.toList())
+                                values = jsonValues.map { it.second }.toList(),
+                                name = row.name)
 
                             body.negativeBasedOn(jsonValeuRow, resolver)
                         } else {

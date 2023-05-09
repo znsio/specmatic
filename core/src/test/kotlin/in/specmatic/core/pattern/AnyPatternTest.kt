@@ -188,4 +188,14 @@ internal class AnyPatternTest {
         val parsedValue = type.parse("22B Baker Street", Resolver(isNegative = true))
         assertThat(parsedValue.toStringLiteral()).isEqualTo("22B Baker Street")
     }
+
+    @Test
+    fun `values for negative tests`() {
+        val negativeTypes = AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver())
+
+        val expectedTypes = listOf(NumberPattern(), BooleanPattern)
+
+        assertThat(negativeTypes).containsAll(expectedTypes)
+        assertThat(negativeTypes).hasSize(expectedTypes.size)
+    }
 }

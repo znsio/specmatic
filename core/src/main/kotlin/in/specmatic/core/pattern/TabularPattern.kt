@@ -235,15 +235,8 @@ fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): Li
     if (patternCollection.isEmpty())
         return listOf(emptyMap())
 
-    val key = patternCollection.keys.first()
-
-    return (patternCollection[key] ?: throw ContractException("key $key should not be empty in $patternCollection"))
-        .flatMap { pattern ->
-            val subLists = patternList(patternCollection - key)
-            subLists.map { generatedPatternMap ->
-                generatedPatternMap.plus(Pair(key, pattern))
-            }
-        }
+    val spec = CombinationSpec(patternCollection, Flags.maxTestRequestCombinations())
+    return spec.selectedCombinations;
 }
 
 fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): List<Map<String, ValueType>> {

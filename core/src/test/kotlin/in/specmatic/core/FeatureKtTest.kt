@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
@@ -571,6 +572,72 @@ paths:
         @Test
         fun `parsing OpenAPI spec should preserve the bindings declared in the gherkin spec`() {
             assertThat(feature.scenarios.first().bindings.contains("data"))
+        }
+    }
+
+    @Test
+    fun `should generate all required negative tests`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data1:
+                  type: string
+                data2:
+                  type: string
+              required:
+                - data1
+                - data2
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+        """.trimIndent(), "").toFeature()
+
+        val withGenerativeTestsEnabled = contract.copy(generativeTestingEnabled = true)
+
+        val tests: List<Scenario> = withGenerativeTestsEnabled.generateContractTestScenarios(emptyList())
+
+        val expectedRequestTypes: List<Pair<String, String>> = listOf(
+            Pair("(string)", "(string)"),
+            Pair("(string)", "(null)"),
+            Pair("(string)", "(number)"),
+            Pair("(string)", "(boolean)"),
+            Pair("(null)", "(string)"),
+            Pair("(number)", "(string)"),
+            Pair("(boolean)", "(string)")
+        )
+
+        val actualRequestTypes: List<Pair<String, String>> = tests.map {
+            val bodyType = it.httpRequestPattern.body as JSONObjectPattern
+            bodyType.pattern["data2"].toString()to bodyType.pattern["data1"].toString()
+        }
+
+        actualRequestTypes.forEach { keyTypesInRequest ->
+            assertThat(expectedRequestTypes).contains(keyTypesInRequest)
+        }
+
+        assertThat(actualRequestTypes.size).isEqualTo(expectedRequestTypes.size)
+
+        tests.forEach {
+            println(it.testDescription())
+            println(it.httpRequestPattern.body.toString())
+            println()
         }
     }
 

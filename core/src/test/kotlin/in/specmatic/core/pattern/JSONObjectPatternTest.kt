@@ -124,7 +124,13 @@ internal class JSONObjectPatternTest {
 
         val objPattern = parsedPattern("""{"p1": "(enum1)", "p2": "(enum2)", "p3": "(enum3)", "p4": "(enum4)", "p5": "(enum5)", "p6": "(enum6)"}""")
 
-        val newPatterns = objPattern.newBasedOn(Row(), resolver)
+
+        System.setProperty("MAX_TEST_REQUEST_COMBINATIONS", "64")
+        val newPatterns = try {
+            objPattern.newBasedOn(Row(), resolver)
+        } finally {
+            System.clearProperty("MAX_TEST_REQUEST_COMBINATIONS")
+        }
         assertThat(newPatterns).hasSize(64)
     }
 

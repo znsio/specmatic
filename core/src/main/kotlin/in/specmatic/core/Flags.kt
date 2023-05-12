@@ -20,6 +20,6 @@ object Flags {
     }
 
     fun maxTestRequestCombinations(): Int {
-        return (flagValue(maxTestRequestCombinationsFlag) ?: "64").toInt()
+        return flagValue(maxTestRequestCombinationsFlag)?.toInt() ?: Int.MAX_VALUE
     }
 }

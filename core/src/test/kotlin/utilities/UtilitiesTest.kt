@@ -154,14 +154,12 @@ internal class UtilitiesTest {
         )
         assertThat(sources == expectedSources).isTrue
     }
-
     @Test
     fun `createIfDoesNotExist creates the directory when it doesn't exist`() {
         val workingDirectoryPath = "path/to/nonexistent/directory"
-
+        val workingDirectory = File(workingDirectoryPath)
         createIfDoesNotExist(workingDirectoryPath)
 
-        val workingDirectory = File(workingDirectoryPath)
         assertTrue(workingDirectory.exists())
         assertTrue(workingDirectory.isDirectory)
     }
@@ -177,10 +175,5 @@ internal class UtilitiesTest {
         assertTrue(existingDirectory.exists())
         assertTrue(existingDirectory.isDirectory)
     }
-
-
-
-
-
 
 }

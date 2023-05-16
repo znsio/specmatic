@@ -578,7 +578,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             is NumberSchema -> NumberPattern()
             is UUIDSchema -> StringPattern()
             is DateTimeSchema -> DateTimePattern
-            is DateSchema -> StringPattern()
+            is DateSchema -> DatePattern
             is BooleanSchema -> BooleanPattern
             is ObjectSchema -> {
                 if (schema.additionalProperties != null) {

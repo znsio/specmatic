@@ -32,6 +32,7 @@ internal val builtInPatterns = mapOf(
     "(boolean)" to BooleanPattern,
     "(null)" to NullPattern,
     "(empty)" to EmptyStringPattern,
+    "(date)" to DatePattern,
     "(datetime)" to DateTimePattern,
     "(url)" to URLPattern(URLScheme.EITHER),
     "(url-http)" to URLPattern(URLScheme.HTTP),

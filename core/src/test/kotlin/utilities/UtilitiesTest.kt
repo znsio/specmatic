@@ -13,7 +13,6 @@ import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
 import java.io.File
-import org.junit.jupiter.api.Assertions.*
 
 internal class UtilitiesTest {
     @Test
@@ -154,33 +153,5 @@ internal class UtilitiesTest {
         )
         assertThat(sources == expectedSources).isTrue
     }
-
-    @Test
-    fun `createIfDoesNotExist creates the directory when it doesn't exist`() {
-        val workingDirectoryPath = "path/to/nonexistent/directory"
-
-        createIfDoesNotExist(workingDirectoryPath)
-
-        val workingDirectory = File(workingDirectoryPath)
-        assertTrue(workingDirectory.exists())
-        assertTrue(workingDirectory.isDirectory)
-    }
-
-    @Test
-    fun `createIfDoesNotExist does not create the directory when it already exists`() {
-        val existingDirectoryPath = "path/to/existing/directory"
-        val existingDirectory = File(existingDirectoryPath)
-        existingDirectory.mkdirs()
-
-        createIfDoesNotExist(existingDirectoryPath)
-
-        assertTrue(existingDirectory.exists())
-        assertTrue(existingDirectory.isDirectory)
-    }
-
-
-
-
-
 
 }

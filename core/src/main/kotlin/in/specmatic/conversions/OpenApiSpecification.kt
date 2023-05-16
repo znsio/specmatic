@@ -576,7 +576,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
             is BinarySchema -> BinaryPattern()
             is NumberSchema -> NumberPattern()
-            is UUIDSchema -> StringPattern()
+            is UUIDSchema -> UUIDPattern
             is DateTimeSchema -> DateTimePattern
             is DateSchema -> DatePattern
             is BooleanSchema -> BooleanPattern

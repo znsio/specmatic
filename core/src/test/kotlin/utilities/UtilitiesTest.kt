@@ -13,6 +13,16 @@ import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
 import java.io.File
+import org.junit.Assert.*
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
+import io.mockk.*
+import org.w3c.dom.Document
+import java.io.StringWriter
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.Transformer
+import javax.xml.transform.OutputKeys
 
 internal class UtilitiesTest {
     @Test
@@ -152,6 +162,45 @@ internal class UtilitiesTest {
                 GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"))
         )
         assertThat(sources == expectedSources).isTrue
+    }
+
+    @Test
+    fun testXmlToString() {
+        val mockTransformerFactory = mockk<TransformerFactory>()
+        val mockTransformer = mockk<Transformer>()
+        val mockConfigureTransformer = mockk<(Transformer) -> Unit>()
+
+        every { mockTransformerFactory.newTransformer() } returns mockTransformer
+
+        val document = createMockDocument()
+        val rootElement = document.createElement("root")
+        document.appendChild(rootElement)
+
+        val domSource = DOMSource(rootElement)
+
+        every { mockTransformer.setOutputProperty(any(), any()) } just Runs
+        every { mockTransformer.transform(domSource, any()) } just Runs
+        every { mockConfigureTransformer.invoke(any()) } just Runs
+
+        val output = xmlToString(domSource, mockConfigureTransformer)
+
+        assertEquals("<root/>", output)
+    }
+
+    private fun createMockDocument(): Document {
+        val documentBuilderFactory = DocumentBuilderFactory.newInstance()
+        val documentBuilder = documentBuilderFactory.newDocumentBuilder()
+        return documentBuilder.newDocument()
+    }
+    private fun xmlToString(domSource: DOMSource, configureTransformer: (Transformer) -> Unit = {}): String {
+        val writer = StringWriter()
+        val result = StreamResult(writer)
+        val tf = TransformerFactory.newInstance()
+        val transformer = tf.newTransformer()
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
+        configureTransformer(transformer)
+        transformer.transform(domSource, result)
+        return writer.toString()
     }
 
 }

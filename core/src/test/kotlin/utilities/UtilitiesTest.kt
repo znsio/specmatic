@@ -29,8 +29,8 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources with git repo when git repo already exists and is clean`() {
-        clearAllMocks()
         val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        File(".spec/repos").mkdirs()
 
         val mockGitCommand = mockk<GitCommand>()
         every { mockGitCommand.statusPorcelain() }.returns("")

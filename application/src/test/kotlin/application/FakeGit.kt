@@ -87,4 +87,8 @@ abstract class FakeGit: GitCommand {
     override fun exists(treeish: String, relativePath: String): Boolean {
         TODO("Not yet implemented")
     }
+
+    override fun statusPorcelain(): String {
+        TODO("Not yet implemented")
+    }
 }

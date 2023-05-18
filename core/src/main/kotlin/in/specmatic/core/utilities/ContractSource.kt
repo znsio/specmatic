@@ -54,16 +54,34 @@ data class GitRepo(
                 logger.log("Using contracts from ${bundleDir.path}")
                 bundleDir
             }
+
             defaultRepoDir.exists() -> {
                 logger.log("Using contracts in home dir")
                 defaultRepoDir
             }
+
             else -> {
                 val reposBaseDir = localRepoDir(workingDirectory)
-                logger.log("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
-                if (!reposBaseDir.exists())
-                    reposBaseDir.mkdirs()
-                clone(reposBaseDir, this)
+                when {
+                    reposBaseDir.exists() -> {
+                        val contractsRepoDir =  this.directoryRelativeTo(reposBaseDir)
+                        val sourceGit = getSystemGit(contractsRepoDir.path)
+                        val status = sourceGit.statusPorcelain()
+                        if(status.isEmpty()) {
+                            logger.log("Couldn't find local contracts but ${contractsRepoDir.path} already exists and is clean and has contracts")
+                            contractsRepoDir
+                        }
+                        else {
+                            logger.log("Couldn't find local contracts. Although ${contractsRepoDir.path} exists, it is not clean.\nHence cloning $gitRepositoryURL into ${reposBaseDir.path}")
+                            clone(reposBaseDir, this)
+                        }
+                    }
+                    else -> {
+                        logger.log("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
+                        reposBaseDir.mkdirs()
+                        clone(reposBaseDir, this)
+                    }
+                }
             }
         }
 

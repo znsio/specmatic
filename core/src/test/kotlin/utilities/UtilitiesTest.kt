@@ -1,8 +1,5 @@
 package utilities
 
-import io.mockk.every
-import io.mockk.mockkConstructor
-import io.mockk.mockkStatic
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.CONTRACT_EXTENSION
@@ -13,7 +10,7 @@ import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
-import io.mockk.mockk
+import io.mockk.*
 import java.io.File
 
 internal class UtilitiesTest {
@@ -32,6 +29,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources with git repo when git repo already exists and is clean`() {
+        clearAllMocks()
         val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
 
         val mockGitCommand = mockk<GitCommand>()

@@ -66,13 +66,17 @@ data class GitRepo(
 
             else -> {
                 val reposBaseDir = localRepoDir(workingDirectory)
+                val contractsRepoDir =  this.directoryRelativeTo(reposBaseDir)
                 when {
-                    reposBaseDir.exists() -> {
-                        cloneContractsRepoIfDirDoesNotExistsOrExistsAndIsDirty(reposBaseDir)
+                    !reposBaseDir.exists() -> cloneRepo(reposBaseDir, this)
+                    reposBaseDir.exists() && !contractsRepoDir.exists() -> cloneRepo(reposBaseDir, this)
+                    reposBaseDir.exists() && contractsRepoDir.exists() && isClean(contractsRepoDir) -> {
+                        logger.log("Couldn't find local contracts but ${contractsRepoDir.path} already exists and is clean and has contracts")
+                        contractsRepoDir
                     }
-
                     else -> {
-                        cloneRepo(reposBaseDir, this)
+                        logger.log("Couldn't find local contracts. Although ${contractsRepoDir.path} exists, it is not clean.\nHence cloning $gitRepositoryURL into ${reposBaseDir.path}")
+                        clone(reposBaseDir, this)
                     }
                 }
             }
@@ -83,29 +87,10 @@ data class GitRepo(
         }
     }
 
-    private fun cloneContractsRepoIfDirDoesNotExistsOrExistsAndIsDirty(reposBaseDir:File) : File {
-        val contractsRepoDir =  this.directoryRelativeTo(reposBaseDir)
-        when {
-            contractsRepoDir.exists() -> {
-                val sourceGit = getSystemGit(contractsRepoDir.path)
-                val status = sourceGit.statusPorcelain()
-                return when {
-                    status.isEmpty() -> {
-                        logger.log("Couldn't find local contracts but ${contractsRepoDir.path} already exists and is clean and has contracts")
-                        contractsRepoDir
-                    }
-                    else -> {
-                        logger.log("Couldn't find local contracts. Although ${contractsRepoDir.path} exists, it is not clean.\nHence cloning $gitRepositoryURL into ${reposBaseDir.path}")
-                        cloneRepo(reposBaseDir, this)
-                    }
-                }
-            }
-            else -> {
-                return cloneRepo(reposBaseDir, this)
-            }
-        }
+    private fun isClean(contractsRepoDir: File): Boolean {
+        val sourceGit = getSystemGit(contractsRepoDir.path)
+        return sourceGit.statusPorcelain().isEmpty()
     }
-
     private fun cloneRepo(reposBaseDir:File, gitRepo: GitRepo) : File {
         logger.log("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
         reposBaseDir.mkdirs()

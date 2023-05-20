@@ -1,6 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.JSONObjectValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.StringValue
@@ -128,6 +129,17 @@ internal class HttpHeadersPatternTest {
             assertThat(it["stringKey"]).matches("[0-9a-zA-Z]+")
             assertThat(it["serverStateKey"]).isEqualTo("serverStateValue")
         }
+    }
+
+    @Test
+    fun `should generate json object values as unformatted strings`() {
+        val httpHeaders = HttpHeadersPattern(
+            mapOf("jsonHeaderKey" to ExactValuePattern(
+                JSONObjectValue(jsonObject = mapOf("key" to StringValue("value"))))
+            )
+        )
+        val generatedValue = httpHeaders.generate(Resolver())
+        assertThat(generatedValue["jsonHeaderKey"]).isEqualTo("""{"key":"value"}""")
     }
 
     @Test

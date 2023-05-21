@@ -100,7 +100,7 @@ fun valueMapToPrettyJsonString(value: Map<String, Value>): String {
     return indentedJson.encodeToString(data)
 }
 
-fun valueMapToUnintendedJsonString(value: Map<String, Value>): String {
+fun valueMapToUnindentedJsonString(value: Map<String, Value>): String {
     val data = mapToStringElement(value)
     return unformattedJson.encodeToString(data)
 }

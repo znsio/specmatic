@@ -3,7 +3,6 @@ package `in`.specmatic.core.value
 import `in`.specmatic.core.ExampleDeclarations
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.*
-import kotlinx.serialization.encodeToString
 
 data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Value {
     override val httpContentType = "application/json"
@@ -14,7 +13,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 
     override fun displayableValue() = toStringLiteral()
     override fun toStringLiteral() = valueMapToPrettyJsonString(jsonObject)
-    fun toUnformattedStringLiteral() = valueMapToUnintendedJsonString(jsonObject)
+    fun toUnformattedStringLiteral() = valueMapToUnindentedJsonString(jsonObject)
     override fun displayableType(): String = "json object"
     override fun exactMatchElseType(): Pattern = toJSONObjectPattern(jsonObject.mapValues { it.value.exactMatchElseType() })
     override fun type(): Pattern = JSONObjectPattern()

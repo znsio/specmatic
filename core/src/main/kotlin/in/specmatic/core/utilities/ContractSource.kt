@@ -68,9 +68,8 @@ data class GitRepo(
                 val reposBaseDir = localRepoDir(workingDirectory)
                 val contractsRepoDir =  this.directoryRelativeTo(reposBaseDir)
                 when {
-                    !reposBaseDir.exists() -> cloneRepo(reposBaseDir, this)
-                    reposBaseDir.exists() && !contractsRepoDir.exists() -> cloneRepo(reposBaseDir, this)
-                    reposBaseDir.exists() && contractsRepoDir.exists() && isClean(contractsRepoDir) -> {
+                    !contractsRepoDir.exists() -> cloneRepo(reposBaseDir, this)
+                    contractsRepoDir.exists() && isClean(contractsRepoDir) -> {
                         logger.log("Couldn't find local contracts but ${contractsRepoDir.path} already exists and is clean and has contracts")
                         contractsRepoDir
                     }

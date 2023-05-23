@@ -31,7 +31,7 @@ internal class UtilitiesTest {
     }
 
     @Test
-    fun `contractFilePathsFrom sources when repos base dir does not exist OR repos base dir exists but contracts repo dir does not exist`() {
+    fun `contractFilePathsFrom sources when contracts repo dir does not exist`() {
         val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
         File(".spec").deleteRecursively()
 

@@ -741,4 +741,46 @@ paths:
             }
         }
     }
+
+    @Test
+    fun `persistent stubs should not populate the transient stub queue`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.1
+info:
+  title: Data API
+  version: "1"
+paths:
+  /:
+    post:
+      summary: Data
+      parameters: []
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Data
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trim(), "").toFeature()
+
+        HttpStub(contract, listOf(ScenarioStub(
+            HttpRequest(
+                method = "POST",
+                path = "/",
+                body = StringValue("(string)")
+            ),
+            HttpResponse(
+                status = 200,
+                body = "Hi!"
+            )))).use { stub ->
+            assertThat(stub.stubCount).isEqualTo(1)
+            assertThat(stub.transientStubCount).isEqualTo(0)
+        }
+    }
 }

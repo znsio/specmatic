@@ -743,7 +743,7 @@ paths:
     }
 
     @Test
-    fun `stubbed values should not populate the queue`() {
+    fun `persistent stubs should not populate the transient stub queue`() {
         val contract = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.1

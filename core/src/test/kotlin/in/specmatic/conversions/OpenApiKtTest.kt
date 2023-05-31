@@ -18,6 +18,7 @@ import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import io.ktor.http.*
+import io.mockk.InternalPlatformDsl.toStr
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -44,8 +45,10 @@ import org.testcontainers.shaded.okhttp3.Request
 import org.testcontainers.shaded.okhttp3.RequestBody
 import java.io.File
 import java.net.URI
+import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Stream
+import kotlin.collections.HashMap
 
 internal class OpenApiKtTest {
     companion object {
@@ -241,7 +244,11 @@ Background:
                             put("Content-Type", "application/json")
                         }
                     }
-                    return HttpResponse(200, """{"contents": {"intermediate-node": {"indirect-cycle": null}}}""", headers)
+                    return HttpResponse(
+                        200,
+                        """{"contents": {"intermediate-node": {"indirect-cycle": null}}}""",
+                        headers
+                    )
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {
@@ -277,7 +284,11 @@ Background:
                             put("Content-Type", "application/json")
                         }
                     }
-                    return HttpResponse(200, """{"myBase": {"@type": "MySub1", "aMyBase": {"@type": "MySub2", "myVal": "aVal"}}}""", headers)
+                    return HttpResponse(
+                        200,
+                        """{"myBase": {"@type": "MySub1", "aMyBase": {"@type": "MySub2", "myVal": "aVal"}}}""",
+                        headers
+                    )
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {
@@ -1298,6 +1309,11 @@ Background:
 
     @Test
     fun `should create petstore tests`() {
+        val systemPropertiesMap = System.getProperties().map { it.key.toString() to it.value.toString() }.toMap()
+        printMap("System Properties", systemPropertiesMap)
+
+        printMap("Environment Variables", System.getenv())
+
         val flags = mutableMapOf<String, Int>().withDefault { 0 }
 
         val feature = parseGherkinStringToFeature(
@@ -1340,6 +1356,7 @@ Background:
                                         ObjectMapper().writeValueAsString(Error(1, "zero is not allowed")),
                                         headers
                                     )
+
                                     else -> HttpResponse(
                                         200,
                                         ObjectMapper().writeValueAsString(pet),
@@ -1347,10 +1364,12 @@ Background:
                                     )
                                 }
                             }
+
                             "DELETE" -> HttpResponse(
                                 204,
                                 headers
                             )
+
                             "PATCH" -> {
                                 HttpResponse(
                                     200,
@@ -1358,8 +1377,10 @@ Background:
                                     headers
                                 )
                             }
+
                             else -> HttpResponse(400, "", headers)
                         }
+
                         request.path == "/pets" -> {
                             when (request.method) {
                                 "GET" -> {
@@ -1377,6 +1398,7 @@ Background:
                                         }
                                     )
                                 }
+
                                 "POST" -> {
                                     assertThat(request.bodyString).containsAnyOf(
                                         """
@@ -1397,9 +1419,11 @@ Background:
                                         headers
                                     )
                                 }
+
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
+
                         request.path == "/petIds" -> {
                             when (request.method) {
                                 "GET" -> {
@@ -1413,9 +1437,11 @@ Background:
                                         HttpResponse(403, "UnAuthorized", headers)
                                     }
                                 }
+
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
+
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1424,6 +1450,8 @@ Background:
                 }
             }
         )
+
+        printMap("Tests Executed", flags.mapValues { it.toString() })
 
         assertThat(flags["/pets POST executed"]).isEqualTo(1)
         assertThat(flags["/pets GET executed"]).isEqualTo(24)
@@ -1434,6 +1462,19 @@ Background:
         assertThat(flags.keys.filter { it.matches(Regex("""\/pets\/[0-9]+ PATCH executed""")) }.size).isEqualTo(7)
         assertThat(flags.size).isEqualTo(13)
         assertTrue(results.success(), results.report())
+    }
+
+    private fun printMap(label: String, map: Map<String, String>) {
+        val lines: List<String> = map.entries.map { (key, value) -> "${key}=${value}" }
+        printLines(label, lines)
+    }
+
+    private fun printLines(label: String, lines: List<String>) {
+        println(label)
+        println("-----------------")
+        println(lines.joinToString("\n"))
+        println("-----------------")
+        println()
     }
 
     @Test
@@ -1470,9 +1511,11 @@ Background:
                                         headers
                                     )
                                 }
+
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
+
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1538,9 +1581,11 @@ Background:
                                         headers
                                     )
                                 }
+
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
+
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1601,9 +1646,11 @@ Background:
                                         headers
                                     )
                                 }
+
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
+
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1713,6 +1760,7 @@ Background:
                             ) else return HttpResponse(400, "", headers)
 
                         }
+
                         "/services/nonJsonPayloadOnly" -> {
                             if (request.method == "POST" &&
                                 request.headers["Content-Type"] == "application/x-www-form-urlencoded" &&
@@ -1724,6 +1772,7 @@ Background:
                             ) else return HttpResponse(400, "", headers)
 
                         }
+
                         else -> return HttpResponse(400, "", headers)
                     }
                 }
@@ -1817,7 +1866,12 @@ Scenario: zero should return not found
                 setOf("message", "another_message"),
             )
         )
-        assertThat(queryParameters.map { it.values.toList() }).containsAll(listOf(listOf("Hari", "hello"), listOf("hello")))
+        assertThat(queryParameters.map { it.values.toList() }).containsAll(
+            listOf(
+                listOf("Hari", "hello"),
+                listOf("hello")
+            )
+        )
     }
 
     @Test
@@ -1906,7 +1960,7 @@ Feature: Foo API
                 }
             )
 
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
 
         }
 
@@ -1915,7 +1969,8 @@ Feature: Foo API
 
     @Test
     fun `contract-invalid test should be allowed for 400 request payload`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: "3.0.3"
 info:
   version: 1.0.0
@@ -1995,7 +2050,8 @@ components:
       properties:
         name:
           type: string
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
         var contractInvalidValueReceived = false
 
@@ -2004,7 +2060,7 @@ components:
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
 
-                    if(jsonBody.jsonObject["name"] is NumberValue)
+                    if (jsonBody.jsonObject["name"] is NumberValue)
                         contractInvalidValueReceived = true
 
                     return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
@@ -2022,7 +2078,8 @@ components:
 
     @Test
     fun `contract-invalid test should be allowed for 400 query parameter`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: "3.0.3"
 info:
   version: 1.0.0
@@ -2112,7 +2169,8 @@ components:
       properties:
         name:
           type: string
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
         var contractInvalidValueReceived = false
 
@@ -2121,7 +2179,7 @@ components:
                 override fun execute(request: HttpRequest): HttpResponse {
                     val dataHeaderValue: String? = request.headers["data"]
 
-                    if(dataHeaderValue == "hello")
+                    if (dataHeaderValue == "hello")
                         contractInvalidValueReceived = true
 
                     return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
@@ -2139,7 +2197,8 @@ components:
 
     @Test
     fun `contract-invalid test should be allowed for 400 request header`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: "3.0.3"
 info:
   version: 1.0.0
@@ -2214,7 +2273,8 @@ components:
       properties:
         name:
           type: string
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
         var contractInvalidValueReceived = false
 
@@ -2223,7 +2283,7 @@ components:
                 override fun execute(request: HttpRequest): HttpResponse {
                     val dataHeaderValue: String? = request.queryParams["data"]
 
-                    if(dataHeaderValue == "hello")
+                    if (dataHeaderValue == "hello")
                         contractInvalidValueReceived = true
 
                     return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
@@ -2241,7 +2301,8 @@ components:
 
     @Test
     fun `a test marked WIP should setup the scenario to ignore failure`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: "3.0.3"
 info:
   version: 1.0.0
@@ -2305,7 +2366,8 @@ components:
       properties:
         name:
           type: string
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
         assertThat(contract.generateContractTestScenarios(emptyList()).single().ignoreFailure).isTrue
     }
@@ -2347,7 +2409,8 @@ components:
 
     @Test
     fun `should run test from wrapper gherkin with unconstrained type in url`() {
-        val contract = parseGherkinStringToFeature("""
+        val contract = parseGherkinStringToFeature(
+            """
             Feature: Test wrapper of constraints
               Background:
                 Given openapi core/src/test/resources/openapi/hello_with_constraints.yaml
@@ -2360,7 +2423,8 @@ components:
                 | id         |
                 | 1234567890 |
                 | 0987654321 |
-        """.trimIndent())
+        """.trimIndent()
+        )
 
         var testCount = 0
 
@@ -2384,7 +2448,8 @@ components:
 
     @Test
     fun `should run test from wrapper gherkin with concrete value in url matching specification type`() {
-        val contract = parseGherkinStringToFeature("""
+        val contract = parseGherkinStringToFeature(
+            """
             Feature: Test wrapper of constraints
               Background:
                 Given openapi core/src/test/resources/openapi/hello_with_constraints.yaml
@@ -2392,7 +2457,8 @@ components:
               Scenario: Test
                 When GET /hello/1234567890
                 Then status 200
-        """.trimIndent())
+        """.trimIndent()
+        )
 
         var testCount = 0
 
@@ -2435,7 +2501,8 @@ components:
     }
 
     fun `should preserve trailing slash`() {
-val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
     openapi: "3.0.3"
     info:
       version: 1.0.0
@@ -2499,7 +2566,8 @@ val contract = OpenApiSpecification.fromYAML("""
           properties:
             name:
               type: string
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
         val paths = mutableListOf<String>()
 

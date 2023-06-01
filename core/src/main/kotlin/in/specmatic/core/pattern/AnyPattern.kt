@@ -18,17 +18,39 @@ data class AnyPattern(
 
     override fun hashCode(): Int = pattern.hashCode()
 
-    override fun matches(sampleData: Value?, resolver: Resolver): Result =
-        pattern.asSequence().map {
-            resolver.matchesPattern(key, it, sampleData ?: EmptyString)
-        }.let { results ->
-            results.find { it is Result.Success } ?: failedToFindAny2(
-                typeName,
-                sampleData,
-                getResult(results.map { it as Result.Failure }.toList()),
-                resolver.mismatchMessages
-            )
+    data class AnyPatternMatch(val pattern: Pattern, val result: Result)
+
+    override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        val matchResults = pattern.map {
+            AnyPatternMatch(it, resolver.matchesPattern(key, it, sampleData ?: EmptyString))
         }
+
+        val matchResult = matchResults.find { it.result is Result.Success }
+
+        if(matchResult != null)
+            return matchResult.result
+
+        val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }
+
+        if(resolvedPatterns.any { it is NullPattern } || resolvedPatterns.all { it is ExactValuePattern })
+            return failedToFindAny(
+                    typeName,
+                    sampleData,
+                    getResult(matchResults.map { it.result as Result.Failure }),
+                    resolver.mismatchMessages
+                )
+
+        val failuresWithUpdatedBreadcrumbs = matchResults.map {
+            Pair(it.pattern, it.result as Result.Failure)
+        }.map { (pattern, failure) ->
+            pattern.typeAlias?.let {
+                failure.breadCrumb(" (as ${withoutPatternDelimiters(it)})")
+            } ?:
+            failure
+        }
+
+        return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
+    }
 
     private fun getResult(failures: List<Result.Failure>): List<Result.Failure> = when {
         isNullablePattern() -> {
@@ -146,16 +168,7 @@ data class AnyPattern(
         }
 }
 
-private fun failedToFindAny(description: String, results: List<Result.Failure>): Result.Failure =
-    when (results.size) {
-        1 -> results[0]
-        else -> {
-            val actual = results.first().message.replace(Regex("Expected.*actual was "), "")
-            Result.Failure("""Expected $description, Actual was $actual""".trim())
-        }
-    }
-
-private fun failedToFindAny2(expected: String, actual: Value?, results: List<Result.Failure>, mismatchMessages: MismatchMessages): Result.Failure =
+private fun failedToFindAny(expected: String, actual: Value?, results: List<Result.Failure>, mismatchMessages: MismatchMessages): Result.Failure =
     when (results.size) {
         1 -> results[0]
         else -> {

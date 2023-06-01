@@ -12,6 +12,7 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.emptyPattern
 import `in`.specmatic.shouldMatch
+import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 
@@ -197,5 +198,29 @@ internal class AnyPatternTest {
 
         assertThat(negativeTypes).containsAll(expectedTypes)
         assertThat(negativeTypes).hasSize(expectedTypes.size)
+    }
+
+    @Test
+    fun `we should get deep errors errors with breadcrumbs for each possible type in a oneOf list`() {
+        val oneOf = JSONObjectPattern(mapOf("parentKey" to AnyPattern(listOf(JSONObjectPattern(mapOf("hello" to StringPattern()), typeAlias = "(TypeOne)"), JSONObjectPattern(mapOf("world" to StringPattern()), typeAlias = "(TypeTwo)")))))
+        val result = oneOf.matches(parsedJSONObject("""{ "parentKey": { "sherlock": "holmes" } }"""), Resolver()).reportString()
+
+        assertThat(result).contains("""
+>> parentKey (as TypeOne).hello
+
+   Expected key named "hello" was missing
+
+>> parentKey (as TypeOne).sherlock
+
+   Key named "sherlock" was unexpected
+
+>> parentKey (as TypeTwo).world
+
+   Expected key named "world" was missing
+
+>> parentKey (as TypeTwo).sherlock
+
+   Key named "sherlock" was unexpected
+        """.trimIndent())
     }
 }

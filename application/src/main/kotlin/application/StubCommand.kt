@@ -10,7 +10,11 @@ import `in`.specmatic.stub.HttpClientFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import picocli.CommandLine.*
+import java.io.IOException
+import java.net.InetAddress
+import java.net.ServerSocket
 import java.util.concurrent.Callable
+
 
 @Command(name = "stub",
         mixinStandardHelpOptions = true,
@@ -173,10 +177,48 @@ class StubCommand : Callable<Unit> {
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
+        port = when (isDefaultPort(port)) {
+            true -> if (portIsInUse(host, port)) findRandomFreePort() else port
+            false -> port
+        }
         httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, httpClientFactory, workingDirectory)
         kafkaStub = kafkaStubEngine.runKafkaStub(stubData, kafkaHost, kafkaPort.toInt(), startKafka)
 
         LogTail.storeSnapshot()
+    }
+
+    private fun isDefaultPort(port:Int): Boolean {
+        return DEFAULT_HTTP_STUB_PORT == port.toString()
+    }
+
+    private fun portIsInUse(host:String, port: Int): Boolean {
+        return try {
+            val ipAddress = InetAddress.getByName(host)
+            ServerSocket(port, 1, ipAddress).use {
+                false
+            }
+        } catch (e: IOException) {
+            true
+        }
+    }
+
+    private fun findRandomFreePort(): Int {
+        logger.log("Checking for a free port")
+        var port = 0
+        var serverSocket: ServerSocket? = null
+
+        try {
+            serverSocket = ServerSocket(0)
+            port = serverSocket.localPort
+        } finally {
+            serverSocket?.close()
+        }
+
+        if (port > 0) {
+            logger.log("Free port found: $port")
+            return port
+        }
+        throw RuntimeException("Could not find a free port")
     }
 
     private fun restartServer() {

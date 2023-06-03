@@ -44,7 +44,7 @@ data class AnyPattern(
             Pair(it.pattern, it.result as Result.Failure)
         }.map { (pattern, failure) ->
             pattern.typeAlias?.let {
-                failure.breadCrumb(" (as ${withoutPatternDelimiters(it)})")
+                failure.breadCrumb("(~~~${withoutPatternDelimiters(it)} object)")
             } ?:
             failure
         }

@@ -12,7 +12,6 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.emptyPattern
 import `in`.specmatic.shouldMatch
-import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 
@@ -202,25 +201,28 @@ internal class AnyPatternTest {
 
     @Test
     fun `we should get deep errors errors with breadcrumbs for each possible type in a oneOf list`() {
-        val oneOf = JSONObjectPattern(mapOf("parentKey" to AnyPattern(listOf(JSONObjectPattern(mapOf("hello" to StringPattern()), typeAlias = "(TypeOne)"), JSONObjectPattern(mapOf("world" to StringPattern()), typeAlias = "(TypeTwo)")))))
-        val result = oneOf.matches(parsedJSONObject("""{ "parentKey": { "sherlock": "holmes" } }"""), Resolver()).reportString()
+        val employeeType = JSONObjectPattern(mapOf("name" to StringPattern()), typeAlias = "(Customer)")
+        val customerType = JSONObjectPattern(mapOf("name" to StringPattern(), "manager" to StringPattern()), typeAlias = "(Employee)")
+        val eitherCustomerOrEmployeeType = AnyPattern(listOf(employeeType, customerType))
 
-        assertThat(result).contains("""
->> parentKey (as TypeOne).hello
+        val personType = JSONObjectPattern(mapOf("personInfo" to eitherCustomerOrEmployeeType))
 
-   Expected key named "hello" was missing
+        val personData = parsedJSONObject("""{ "personInfo": { "name": "Sherlock Holmes", "salutation": "Mr" } }""")
 
->> parentKey (as TypeOne).sherlock
+        val personMatchResult = personType.matches(personData, Resolver()).reportString()
 
-   Key named "sherlock" was unexpected
-
->> parentKey (as TypeTwo).world
-
-   Expected key named "world" was missing
-
->> parentKey (as TypeTwo).sherlock
-
-   Key named "sherlock" was unexpected
-        """.trimIndent())
+        assertThat(personMatchResult).contains("""
+            >> personInfo (when Customer object).salutation
+            
+               Key named "salutation" was unexpected
+            
+            >> personInfo (when Employee object).manager
+            
+               Expected key named "manager" was missing
+            
+            >> personInfo (when Employee object).salutation
+            
+               Key named "salutation" was unexpected
+       """.trimIndent())
     }
 }

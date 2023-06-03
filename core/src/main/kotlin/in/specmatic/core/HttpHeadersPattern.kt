@@ -153,7 +153,7 @@ data class HttpHeadersPattern(
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> =
-        forEachKeyCombinationIn(pattern, row) { pattern ->
+        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row) { pattern ->
             newBasedOn(pattern, row, resolver)
         }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
 

@@ -159,7 +159,6 @@ Background:
         val results = feature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    flags["${request.path} executed"] = true
                     assertThat(request.path).matches("""\/hello\/[0-9]+""")
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
@@ -167,10 +166,14 @@ Background:
                         }
                     }
                     val id = request.path!!.split('/')[2].toInt()
-                    val status = when (id) {
-                        0 -> 404
-                        else -> 200
+                    val status = when {
+                        !request.headers.containsKey("traceId") -> 400
+                        else -> when (id) {
+                            0 -> 404
+                            else -> 200
+                        }
                     }
+                    flags["${request.path} executed and returned $status"] = true
                     return HttpResponse(status, "hello world", headers)
                 }
 
@@ -179,9 +182,10 @@ Background:
             }
         )
 
-        assertThat(flags["/hello/0 executed"]).isTrue
-        assertThat(flags["/hello/15 executed"]).isTrue
-        assertThat(flags.size).isEqualTo(2)
+        assertThat(flags["/hello/0 executed and returned 404"]).isTrue
+        assertThat(flags["/hello/15 executed and returned 200"]).isTrue
+        assertThat(flags["/hello/1 executed and returned 400"]).isTrue
+        assertThat(flags.size).isEqualTo(3)
         assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
 
@@ -338,8 +342,9 @@ Background:
         )
 
         assertThat(flags["/hello/0 executed"]).isTrue
+        assertThat(flags["/hello/1 executed"]).isTrue
         assertThat(flags["/hello/15 executed"]).isTrue
-        assertThat(flags.size).isEqualTo(2)
+        assertThat(flags.size).isEqualTo(3)
         assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
     }
 
@@ -2607,6 +2612,7 @@ data class OptionalCycleIntermediateNode(
 data class NullableCycleHolder(
     @JsonProperty("contents") val contents: NullableCycleRoot?,
 )
+
 data class NullableCycleRoot(
     @JsonProperty("intermediate-node") val intermediateNode: NullableCycleIntermediateNode,
 )
@@ -2616,14 +2622,15 @@ data class NullableCycleIntermediateNode(
 )
 
 data class MyBaseHolder(@JsonProperty("myBase") val myBase: MyBase)
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@type")
 @JsonSubTypes(
     JsonSubTypes.Type(value = MySub1::class),
     JsonSubTypes.Type(value = MySub2::class),
 )
 interface MyBase {}
-data class MySub1(@JsonProperty("aMyBase") val aMyBase: MyBase?): MyBase
-data class MySub2(@JsonProperty("myVal") val myVal: String): MyBase
+data class MySub1(@JsonProperty("aMyBase") val aMyBase: MyBase?) : MyBase
+data class MySub2(@JsonProperty("myVal") val myVal: String) : MyBase
 
 data class Pet(
     @JsonProperty("name") val name: String,

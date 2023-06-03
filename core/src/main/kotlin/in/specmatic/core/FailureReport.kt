@@ -40,7 +40,7 @@ class FailureReport(val contractPath: String?, val scenarioMessage: String?, val
     private fun breadCrumbString(breadCrumbs: List<String>): String {
         return breadCrumbs
             .filter { it.isNotBlank() }
-            .joinToString(".") { it.trim() }.replace(".(as ", " (as ")
+            .joinToString(".") { it.trim() }.replace(".(~~~", " (when ")
             .let {
                 when {
                     it.isNotBlank() -> ">> $it"

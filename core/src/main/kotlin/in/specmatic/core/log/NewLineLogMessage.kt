@@ -8,6 +8,6 @@ object NewLineLogMessage: LogMessage {
     }
 
     override fun toLogString(): String {
-        return "\n"
+        return ""
     }
 }

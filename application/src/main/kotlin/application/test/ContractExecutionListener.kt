@@ -97,10 +97,7 @@ class ContractExecutionListener : TestExecutionListener {
             }
 
             println()
-
         }
-
-
 
         if (failedLog.isNotEmpty()) {
             println()

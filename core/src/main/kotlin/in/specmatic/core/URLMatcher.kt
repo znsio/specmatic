@@ -104,22 +104,29 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
     fun generatePath(resolver: Resolver): String {
         return attempt(breadCrumb = "PATH") {
-            "/" + pathPattern.mapIndexed { index, urlPathPattern ->
+            ("/" + pathPattern.mapIndexed { index, urlPathPattern ->
                 attempt(breadCrumb = "[$index]") {
                     val key = urlPathPattern.key
-                    if (key != null) resolver.generate(
-                        key,
-                        urlPathPattern.pattern
-                    ) else urlPathPattern.pattern.generate(resolver)
+                    resolver.withCyclePrevention(urlPathPattern.pattern) { cyclePreventedResolver ->
+                        if (key != null)
+                            cyclePreventedResolver.generate(key, urlPathPattern.pattern)
+                        else urlPathPattern.pattern.generate(cyclePreventedResolver)
+                    }
                 }
-            }.joinToString("/")
+            }.joinToString("/")).let {
+                if(path.endsWith("/") && ! it.endsWith("/")) "$it/" else it
+            }.let {
+                if(path.startsWith("/") && ! it.startsWith("/")) "$/it" else it
+            }
         }
     }
 
     fun generateQuery(resolver: Resolver): Map<String, String> {
         return attempt(breadCrumb = "QUERY-PARAMS") {
             queryPattern.mapKeys { it.key.removeSuffix("?") }.map { (name, pattern) ->
-                attempt(breadCrumb = name) { name to resolver.generate(name, pattern).toString() }
+                attempt(breadCrumb = name) {
+                    name to resolver.withCyclePrevention(pattern) { it.generate(name, pattern) }.toString()
+                }
             }.toMap()
         }
     }
@@ -140,10 +147,16 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
                                     is Failure -> throw ContractException(result.toFailureReport())
                                 }
                             }
-                            else -> attempt("Format error in example of \"$key\"") {
+                            else -> attempt("Format error in example of path parameter \"$key\"") {
+                                val value = urlPathPattern.parse(rowValue, resolver)
+
+                                val matchResult = urlPathPattern.matches(value, resolver)
+                                if(matchResult is Failure)
+                                    throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
+
                                 URLPathPattern(
                                     ExactValuePattern(
-                                        urlPathPattern.parse(rowValue, resolver)
+                                        value
                                     )
                                 )
                             }
@@ -213,6 +226,14 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
     fun pathParameters(): List<URLPathPattern> {
         return pathPattern.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
+    }
+
+    fun withOptionalQueryParams(apiKeyQueryParams: Set<String> = emptySet()): URLMatcher {
+        val allQueryParams = apiKeyQueryParams.associate { apiKeyQueryParam ->
+            "${apiKeyQueryParam}?" to StringPattern()
+        }.plus(this.queryPattern)
+
+        return this.copy(queryPattern = allQueryParams)
     }
 }
 

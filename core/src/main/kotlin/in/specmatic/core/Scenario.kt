@@ -26,21 +26,13 @@ object ContractAndStubMismatchMessages : MismatchMessages {
 }
 
 interface ScenarioDetailsForResult {
+    val status: Int
     val ignoreFailure: Boolean
     val name: String
     val method: String
     val path: String
-    val status: Int
-    val requestTestDescription: String
-    fun testDescription(): String {
-        val scenarioDescription = StringBuilder()
-        scenarioDescription.append("Scenario: ")
-        when {
-            name.isNotEmpty() -> scenarioDescription.append("$name ")
-        }
 
-        return scenarioDescription.append(requestTestDescription).toString()
-    }
+    fun testDescription(): String
 }
 
 data class Scenario(
@@ -58,6 +50,8 @@ data class Scenario(
     val isGherkinScenario: Boolean = false,
     val isNegative: Boolean = false,
     val badRequestOrDefault: BadRequestOrDefault? = null,
+    val exampleName: String? = null,
+    val generativeTestingEnabled: Boolean = false
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -73,8 +67,6 @@ data class Scenario(
         scenarioInfo.bindings
     )
 
-    override val requestTestDescription: String
-        get() = httpRequestPattern.testDescription()
     override val method: String
         get() {
             return httpRequestPattern.method ?: ""
@@ -87,7 +79,7 @@ data class Scenario(
 
     override val status: Int
         get() {
-            return httpResponsePattern.status
+            return if(isNegative) 400 else httpResponsePattern.status
         }
 
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
@@ -207,7 +199,8 @@ data class Scenario(
             )
                 code()
         } catch (e: Throwable) {
-            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key, actual value is $actualValue")
+            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key" +
+                ", actual value is $actualValue", exceptionCause = e)
         }
     }
 
@@ -261,6 +254,7 @@ data class Scenario(
     }
 
     private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false): List<Scenario> {
+        val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndRowValueMismatch, generativeTestingEnabled = generativeTestingEnabled)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
@@ -269,7 +263,7 @@ data class Scenario(
             null -> scenarioBreadCrumb(this) {
                 attempt {
                     when (isNegative) {
-                        false -> httpRequestPattern.newBasedOn(row, resolver)
+                        false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
                         else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
                     }.map { newHttpRequestPattern ->
                         Scenario(
@@ -286,7 +280,9 @@ data class Scenario(
                             bindings,
                             isGherkinScenario,
                             isNegative,
-                            badRequestOrDefault
+                            badRequestOrDefault,
+                            row.name,
+                            generativeTestingEnabled
                         )
                     }
                 }
@@ -313,7 +309,7 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOnBackwarCompatibility(row: Row): List<Scenario> {
+    private fun newBasedOnBackwardCompatibility(row: Row): List<Scenario> {
         val resolver = Resolver(expectedFacts, false, patterns)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
@@ -357,7 +353,7 @@ data class Scenario(
     fun generateTestScenarios(
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-        enableNegativeTesting: Boolean = false
+        enableGenerativeTesting: Boolean = false
     ): List<Scenario> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -372,7 +368,7 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOn(row, enableNegativeTesting)
+                newBasedOn(row, enableGenerativeTesting)
             }
         }
     }
@@ -421,7 +417,7 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOnBackwarCompatibility(row)
+                newBasedOnBackwardCompatibility(row)
             }
         }
     }
@@ -485,21 +481,22 @@ data class Scenario(
         }
 
     override fun testDescription(): String {
-        val scenarioDescription = StringBuilder()
-        scenarioDescription.append("Scenario: ")
-        when {
-            name.isNotEmpty() -> scenarioDescription.append("$name ")
-        }
+        val method = this.httpRequestPattern.method
+        val path = this.httpRequestPattern.urlMatcher?.path ?: ""
+        val responseStatus = this.httpResponsePattern.status
+        val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | ${exampleName.trim()}" }
 
-        return if (kafkaMessagePattern != null)
-            scenarioDescription.append(kafkaMessagePattern.topic).toString()
+        val generativePrefix = if(this.generativeTestingEnabled)
+            if(this.isNegative) "-ve " else "+ve "
         else
-            scenarioDescription.append(httpRequestPattern.testDescription()).toString()
+            ""
+
+        return "$generativePrefix Scenario: $method $path -> $responseStatus$exampleIdentifier"
     }
 
     fun newBasedOn(scenario: Scenario): Scenario =
         Scenario(
-            if(Flags.generativeTestingEnabled()) "+ve: ${this.name}" else this.name,
+            this.name,
             this.httpRequestPattern,
             this.httpResponsePattern,
             this.expectedFacts,
@@ -519,7 +516,7 @@ data class Scenario(
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?) = Scenario(
-        "-ve: ${this.name}",
+        this.name,
         this.httpRequestPattern,
         this.httpResponsePattern,
         this.expectedFacts,
@@ -532,7 +529,9 @@ data class Scenario(
         bindings,
         this.isGherkinScenario,
         isNegative = true,
-        badRequestOrDefault
+        badRequestOrDefault,
+        exampleName,
+        generativeTestingEnabled
     )
 }
 
@@ -550,7 +549,10 @@ fun newExpectedServerStateBasedOn(
 
                     when {
                         fixtures.containsKey(fieldValue) -> fixtures.getValue(fieldValue)
-                        isPatternToken(fieldValue) -> resolver.getPattern(fieldValue).generate(resolver)
+                        isPatternToken(fieldValue) -> {
+                            val fieldPattern = resolver.getPattern(fieldValue)
+                            resolver.withCyclePrevention(fieldPattern, fieldPattern::generate)
+                        }
                         else -> StringValue(fieldValue)
                     }
                 }

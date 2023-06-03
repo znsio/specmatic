@@ -4,7 +4,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.*
 
-data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null, val delayInSeconds: Int? = null) {
+data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null, val delayInSeconds: Int? = null, val stubToken: String? = null, val requestBodyRegex: String? = null) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
         if(kafkaMessage != null) {
@@ -22,6 +22,9 @@ const val MOCK_KAFKA_MESSAGE = "kafka-message"
 const val MOCK_HTTP_REQUEST = "http-request"
 const val MOCK_HTTP_RESPONSE = "http-response"
 const val DELAY_IN_SECONDS = "delay-in-seconds"
+const val TRANSIENT_MOCK = "http-stub"
+const val TRANSIENT_MOCK_ID = "$TRANSIENT_MOCK-id"
+const val REQUEST_BODY_REGEX = "bodyRegex"
 
 val MOCK_HTTP_REQUEST_ALL_KEYS = listOf("mock-http-request", MOCK_HTTP_REQUEST)
 val MOCK_HTTP_RESPONSE_ALL_KEYS = listOf("mock-http-response", MOCK_HTTP_RESPONSE)
@@ -39,14 +42,21 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     return when {
         mockSpec.contains(MOCK_KAFKA_MESSAGE) -> ScenarioStub(kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, mockSpec)))
         else -> {
-            val mockRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
-            val mockResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
+            val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
+            val mockResponse: HttpResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
 
-            val delayInSeconds = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
+            val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
+            val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
+            val requestBodyRegex: String? = getRequestBodyRegexOrNull(mockSpec)
 
-            ScenarioStub(request = mockRequest, response = mockResponse, delayInSeconds = delayInSeconds)
+            ScenarioStub(request = mockRequest, response = mockResponse, delayInSeconds = delayInSeconds, stubToken = stubToken, requestBodyRegex = requestBodyRegex)
         }
     }
+}
+
+fun getRequestBodyRegexOrNull(mockSpec: Map<String, Value>): String? {
+    val requestSpec: Map<String, Value> = getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec)
+    return requestSpec[REQUEST_BODY_REGEX]?.toStringLiteral()
 }
 
 private const val KAFKA_TOPIC_KEY = "topic"
@@ -86,3 +96,13 @@ fun getIntOrNull(key: String, mapData: Map<String, Value>): Int? {
         return data.number.toInt()
     }
 }
+
+fun getStringOrNull(key: String, mapData: Map<String, Value>): String? {
+    val data = mapData[key]
+
+    return data?.let {
+        if(data !is StringValue) throw ContractException("$key should be a number")
+        return data.string
+    }
+}
+

@@ -20,13 +20,9 @@ import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.examples.Example
 import io.swagger.v3.oas.models.media.*
-import io.swagger.v3.oas.models.parameters.HeaderParameter
-import io.swagger.v3.oas.models.parameters.PathParameter
-import io.swagger.v3.oas.models.parameters.QueryParameter
-import io.swagger.v3.oas.models.parameters.RequestBody
+import io.swagger.v3.oas.models.parameters.*
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
-import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.parser.OpenAPIV3Parser
 import io.swagger.v3.parser.core.models.ParseOptions
@@ -35,7 +31,8 @@ import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
 
-class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI) : IncludedSpecification {
+class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI) : IncludedSpecification,
+    ApiSpecification {
     companion object {
         fun fromFile(openApiFilePath: String, relativeTo: String = ""): OpenApiSpecification {
             val openApiFile = File(openApiFilePath).let { openApiFile ->
@@ -123,13 +120,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun matchesPath(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
         val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
 
-        val matchingScenarioInfos = openApiScenarioInfos.filter {
-            it.httpRequestPattern.urlMatcher!!.matches(
-                specmaticScenarioInfo.httpRequestPattern.generate(
-                    Resolver()
-                ), Resolver()
-            ).isSuccess()
-        }
+        // exact + exact   -> values should be equal
+        // exact + pattern -> error
+        // pattern + exact -> pattern should match exact
+        // pattern + pattern -> both generated concrete values should be of same type
+
+        val matchingScenarioInfos = specmaticScenarioInfo.matchesGherkinWrapperPath(openApiScenarioInfos, this)
 
         return when {
             matchingScenarioInfos.isEmpty() -> MatchFailure(
@@ -142,6 +138,29 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             else -> MatchSuccess(specmaticScenarioInfo to matchingScenarioInfos)
         }
     }
+
+    override fun patternMatchesExact(
+        wrapperURLPart: URLPathPattern,
+        openapiURLPart: URLPathPattern,
+        resolver: Resolver,
+    ): Boolean {
+        val valueFromWrapper = (wrapperURLPart.pattern as ExactValuePattern).pattern
+
+        val valueToMatch: Value =
+            if (valueFromWrapper is StringValue) {
+                openapiURLPart.pattern.parse(valueFromWrapper.toStringLiteral(), resolver)
+            } else {
+                wrapperURLPart.pattern.pattern
+            }
+
+        return openapiURLPart.pattern.matches(valueToMatch, resolver) is Result.Success
+    }
+
+    override fun exactValuePatternsAreEqual(
+        openapiURLPart: URLPathPattern,
+        wrapperURLPart: URLPathPattern
+    ) =
+        (openapiURLPart.pattern as ExactValuePattern).pattern.toStringLiteral() == (wrapperURLPart.pattern as ExactValuePattern).pattern.toStringLiteral()
 
     private fun matchesMethod(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
         val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
@@ -182,18 +201,28 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun updateUrlMatcher(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
         val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
 
-        return MatchSuccess(specmaticScenarioInfo to openApiScenarioInfos.map {
-            val queryPattern = it.httpRequestPattern.urlMatcher?.queryPattern ?: emptyMap()
-            val urlMatcher = specmaticScenarioInfo.httpRequestPattern.urlMatcher?.copy(queryPattern = queryPattern)
-            val httpRequestPattern = it.httpRequestPattern.copy(urlMatcher = urlMatcher)
-            it.copy(httpRequestPattern = httpRequestPattern)
+        return MatchSuccess(specmaticScenarioInfo to openApiScenarioInfos.map { openApiScenario ->
+            val queryPattern = openApiScenario.httpRequestPattern.urlMatcher?.queryPattern ?: emptyMap()
+            val zippedPathPatterns = (specmaticScenarioInfo.httpRequestPattern.urlMatcher?.pathPattern ?: emptyList()).zip(openApiScenario.httpRequestPattern.urlMatcher?.pathPattern ?: emptyList())
+
+            val pathPatterns = zippedPathPatterns.map { (fromWrapper, fromOpenApi) ->
+                if(fromWrapper.pattern is ExactValuePattern)
+                    fromWrapper
+                else
+                    fromOpenApi.copy(key = fromWrapper.key)
+            }
+
+            val urlMatcher = URLMatcher(queryPattern, pathPatterns, openApiScenario.httpRequestPattern.urlMatcher?.path ?: "")
+
+            val httpRequestPattern = openApiScenario.httpRequestPattern.copy(urlMatcher = urlMatcher)
+            openApiScenario.copy(httpRequestPattern = httpRequestPattern)
         })
     }
 
     private fun openApitoScenarioInfos(): List<ScenarioInfo> {
         return openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
-                val specmaticPath = toSpecmaticPath(openApiPath, operation)
+                val specmaticPath = toSpecmaticPath2(openApiPath, operation)
 
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
                     toHttpRequestPatterns(
@@ -230,7 +259,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun toScenarioInfosWithExamples(): List<ScenarioInfo> {
         return openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
-                val specmaticPath = toSpecmaticPath(openApiPath, operation)
+                val specmaticPath = toSpecmaticPath2(openApiPath, operation)
 
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
                     val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
@@ -253,7 +282,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                             ObjectMapper().readValue(valueString, Map::class.java).values.first()
                                                 .toString()
                                         } else valueString
-                                    })
+                                    },
+                                name = exampleName)
                             else -> Row()
                         }
                     }
@@ -275,15 +305,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 get() = httpRequestPattern.urlMatcher?.path ?: ""
                             override val status: Int
                                 get() = httpResponsePattern.status
-                            override val requestTestDescription: String
-                                get() = httpRequestPattern.testDescription()
+
+                            override fun testDescription(): String {
+                                TODO("Not yet implemented")
+                            }
                         }
 
                         specmaticExampleRows.forEach { row ->
                             scenarioBreadCrumb(scenarioDetails) {
                                 httpRequestPattern.newBasedOn(
                                     row,
-                                    Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch)
+                                    Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch),
+                                    httpResponsePattern.status
                                 )
                             }
                         }
@@ -390,7 +423,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun toHttpRequestPatterns(
-        path: String, httpMethod: String, operation: Operation
+        urlPathMatcher: URLMatcher, httpMethod: String, operation: Operation
     ): List<HttpRequestPattern> {
 
         val contractSecuritySchemes: Map<String, OpenAPISecurityScheme> =
@@ -409,7 +442,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         val operationSecuritySchemes: List<OpenAPISecurityScheme> =
             operationSecuritySchemes(operation, contractSecuritySchemes)
 
-        val urlMatcher = toURLMatcherWithOptionalQueryParams(path, securityQueryParams)
+        val urlMatcher = urlPathMatcher.withOptionalQueryParams(securityQueryParams)
         val headersPattern = HttpHeadersPattern(headersMap)
         val requestPattern = HttpRequestPattern(
             urlMatcher = urlMatcher,
@@ -526,7 +559,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     fun toSpecmaticPattern(
         schema: Schema<*>, typeStack: List<String>, patternName: String = "", jsonInFormData: Boolean = false
     ): Pattern {
-        val pattern = when (schema) {
+        val preExistingResult = patterns.get("($patternName)")
+        val pattern = if (preExistingResult != null && !patternName.isNullOrBlank())
+            preExistingResult
+        else if (typeStack.filter { it == patternName }.size > 1) {
+            DeferredPattern("($patternName)")
+        }
+        else when (schema) {
             is StringSchema -> when (schema.enum) {
                 null -> StringPattern(minLength = schema.minLength, maxLength = schema.maxLength)
                 else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }
@@ -570,12 +609,22 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
                     }.fold(emptyMap<String, Pattern>()) { acc, entry -> acc.plus(entry) }
                     val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
-                    patterns["(${patternName})"] = jsonObjectPattern
                     jsonObjectPattern
-                } else if (nullableOneOf(schema)) {
-                    AnyPattern(listOf(NullPattern, toSpecmaticPattern(nonNullSchema(schema), typeStack, patternName)))
+                } else if (schema.oneOf != null) {
+                    val candidatePatterns = schema.oneOf.filterNot { nullableEmptyObject(it) } .map { componentSchema ->
+                        val (componentName, schemaToProcess) =
+                            if (componentSchema.`$ref` != null) resolveReferenceToSchema(componentSchema.`$ref`)
+                            else patternName to componentSchema
+                        toSpecmaticPattern(schemaToProcess, typeStack.plus(componentName), componentName)
+                    }
+
+                    val nullable = if(schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
+
+                    AnyPattern(candidatePatterns.plus(nullable))
+                } else if (schema.anyOf != null) {
+                    throw UnsupportedOperationException("Specmatic does not support anyOf")
                 } else {
-                    throw UnsupportedOperationException("Specmatic does not support anyOf. Only allOf is supported, or oneOf for specifying nullable refs.")
+                    throw UnsupportedOperationException("Unsupported composed schema: $schema")
                 }
             }
             else -> {
@@ -590,19 +639,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             val component: String = schema.`$ref`
 
                             val (componentName, referredSchema) = resolveReferenceToSchema(component)
-                            val cyclicReference =
-                                patternName.isNotEmpty() && patternName == componentName && typeStack.contains(
-                                    patternName
-                                ) && referredSchema.instanceOf(ObjectSchema::class)
-                            when {
-                                cyclicReference -> DeferredPattern("(${patternName})")
-                                else -> {
-                                    val componentType = resolveReference(component, typeStack)
-                                    val typeName = "(${componentNameFromReference(component)})"
-                                    patterns[typeName] = componentType
-                                    DeferredPattern(typeName)
-                                }
+                            val cyclicReference = typeStack.contains(componentName)
+                            if (!cyclicReference) {
+                                val componentPattern = toSpecmaticPattern(referredSchema,
+                                    typeStack.plus(componentName), componentName)
+                                cacheComponentPattern(componentName, componentPattern)
                             }
+                            DeferredPattern("(${componentName})")
                         }
                     }
                 }
@@ -625,6 +668,24 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 else -> AnyPattern(listOf(NullPattern, pattern))
             }
         }
+    }
+
+    private fun <T : Pattern> cacheComponentPattern(componentName: String, pattern: T): T {
+        if (!componentName.isNullOrBlank() && pattern !is DeferredPattern) {
+            val typeName = "(${componentName})"
+            val prev = patterns.get(typeName)
+            if (pattern != prev) {
+                if (prev != null) {
+                    logger.debug("Replacing cached component pattern. name=$componentName, prev=$prev, new=$pattern")
+                }
+                patterns[typeName] = pattern
+            }
+        }
+        return pattern
+    }
+
+    private fun nullableEmptyObject(schema: Schema<*>): Boolean {
+        return schema is ObjectSchema && schema.nullable == true
     }
 
     private fun toXMLPattern(mediaType: MediaType): Pattern {
@@ -736,8 +797,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                     val nodeName = componentSchema.xml?.name ?: name ?: componentName
 
-                    if (typeName !in typeStack) this.patterns[typeName] =
-                        toXMLPattern(componentSchema, componentName, typeStack.plus(typeName))
+                    if (typeName !in typeStack) {
+                        val componentPattern = toXMLPattern(componentSchema, componentName, typeStack.plus(typeName))
+                        cacheComponentPattern(componentName, componentPattern)
+                    }
 
                     val xmlRefType = XMLTypeData(
                         nodeName, nodeName, mapOf(
@@ -768,18 +831,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         schema: Schema<*>, typeStack: List<String>, patternName: String
     ): DictionaryPattern {
         val valueSchema = schema.additionalProperties as Schema<Any>
-        val valueSchemaTypeName = if (valueSchema.`$ref` == null) valueSchema.types.first() else valueSchema.`$ref`
+        val valueSchemaTypeName = valueSchema.`$ref` ?: valueSchema.types?.first() ?: "";
         return DictionaryPattern(
             StringPattern(), toSpecmaticPattern(valueSchema, typeStack, valueSchemaTypeName, false)
         )
-    }
-
-    private fun nonNullSchema(schema: ComposedSchema): Schema<Any> {
-        return schema.oneOf.first { it.nullable != true }
-    }
-
-    private fun nullableOneOf(schema: ComposedSchema): Boolean {
-        return schema.oneOf.find { it.nullable != true } != null
     }
 
     private fun toJsonObjectPattern(
@@ -788,32 +843,17 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         val requiredFields = schema.required.orEmpty()
         val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack)
         val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
-        patterns["(${patternName})"] = jsonObjectPattern
-        return jsonObjectPattern
+        return cacheComponentPattern(patternName, jsonObjectPattern)
     }
 
     private fun toSchemaProperties(
         schema: Schema<*>, requiredFields: List<String>, patternName: String, typeStack: List<String>
     ) = schema.properties.orEmpty().map { (propertyName, propertyType) ->
-        val optional = !requiredFields.contains(propertyName)
-        if (patternName.isNotEmpty()) {
-            if (typeStack.contains(patternName) && (propertyType.`$ref`.orEmpty()
-                    .endsWith(patternName) || (propertyType is ArraySchema && propertyType.items?.`$ref`?.endsWith(
-                    patternName
-                ) == true))
-            ) toSpecmaticParamName(
-                optional, propertyName
-            ) to DeferredPattern("(${patternName})")
-            else {
-                val specmaticPattern = toSpecmaticPattern(
-                    propertyType, typeStack.plus(patternName), patternName
-                )
-                toSpecmaticParamName(optional, propertyName) to specmaticPattern
-            }
-        } else {
-            toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(
-                propertyType, typeStack
-            )
+        if (schema.discriminator?.propertyName == propertyName)
+            propertyName to ExactValuePattern(StringValue(patternName))
+        else {
+            val optional = !requiredFields.contains(propertyName)
+            toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(propertyType, typeStack)
         }
     }.toMap()
 
@@ -823,16 +863,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 null -> NullPattern
                 else -> ExactValuePattern(toSpecmaticValue(enumValue))
             }
-        }.toList(), typeAlias = patternName).also { if (patternName.isNotEmpty()) patterns["(${patternName})"] = it }
+        }.toList(), typeAlias = patternName).also {
+            cacheComponentPattern(patternName, it)
+        }
 
     private fun toSpecmaticParamName(optional: Boolean, name: String) = when (optional) {
         true -> "${name}?"
         false -> name
-    }
-
-    private fun resolveReference(component: String, typeStack: List<String>): Pattern {
-        val (componentName, referredSchema) = resolveReferenceToSchema(component)
-        return toSpecmaticPattern(referredSchema, typeStack, patternName = componentName)
     }
 
     private fun resolveReferenceToSchema(component: String): Pair<String, Schema<Any>> {
@@ -857,32 +894,56 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     private fun componentNameFromReference(component: String) = component.substringAfterLast("/")
 
-    private fun toSpecmaticPath(openApiPath: String, operation: Operation): String {
-        val parameters = operation.parameters ?: return openApiPath
+    private fun toSpecmaticPath2(openApiPath: String, operation: Operation): URLMatcher {
+        val parameters = operation.parameters ?: return toURLMatcherWithOptionalQueryParams(openApiPath)
 
-        var specmaticPath = openApiPath
-        parameters.filterIsInstance(PathParameter::class.java).map {
-            specmaticPath = specmaticPath.replace(
-                "{${it.name}}", "(${it.name}:${toSpecmaticPattern(it.schema, emptyList()).typeName})"
-            )
+        val pathStringParts: List<String> = openApiPath.removePrefix("/").removeSuffix("/").let {
+            if (it.isBlank())
+                emptyList()
+            else it.split("/")
+        }
+        val pathParamMap: Map<String, PathParameter> =
+            parameters.filterIsInstance(PathParameter::class.java).associateBy {
+                it.name
+            }
+
+        val pathPattern: List<URLPathPattern> = pathStringParts.map {
+            if(it.startsWith("{") && it.endsWith("}")) {
+                val paramName = it.removeSurrounding("{", "}")
+
+                pathParamMap[paramName]?.let {
+                    URLPathPattern(toSpecmaticPattern(it.schema, emptyList()), paramName)
+                } ?: throw ContractException("The path parameter in $openApiPath is not defined in the specification")
+            } else {
+                URLPathPattern(ExactValuePattern(StringValue(it)))
+            }
         }
 
-        val queryParameters = parameters.filterIsInstance(QueryParameter::class.java).joinToString("&") {
-            val specmaticPattern = if(it.schema.type == "array") {
+        val queryPattern: Map<String, Pattern> = parameters.filterIsInstance(QueryParameter::class.java).associate {
+            val specmaticPattern: Pattern = if (it.schema.type == "array") {
                 CsvPattern(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList()))
             } else {
                 toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name)
             }
-            val patternName = when {
-                it.schema.enum != null -> specmaticPattern.run { "($typeAlias)" }
-                else -> specmaticPattern
-            }
-            "${it.name}=$patternName"
+
+            "${it.name}?" to specmaticPattern
         }
 
-        if (queryParameters.isNotEmpty()) specmaticPath = "${specmaticPath}?${queryParameters}"
+        val specmaticPath = toSpecmaticFormattedPathString(parameters, openApiPath)
 
-        return specmaticPath
+        return URLMatcher(queryPattern, pathPattern, specmaticPath)
+    }
+
+    private fun toSpecmaticFormattedPathString(
+        parameters: List<Parameter>,
+        openApiPath: String
+    ): String {
+        return parameters.filterIsInstance(PathParameter::class.java).foldRight(openApiPath) { it, specmaticPath ->
+            val pattern = if (it.schema.enum != null) StringPattern("") else toSpecmaticPattern(it.schema, emptyList())
+            specmaticPath.replace(
+                "{${it.name}}", "(${it.name}:${pattern.typeName})"
+            )
+        }
     }
 
     private fun openApiOperations(pathItem: PathItem): Map<String, Operation> = mapOf<String, Operation?>(
@@ -893,3 +954,4 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         "PATCH" to pathItem.patch
     ).filter { (_, value) -> value != null }.map { (key, value) -> key to value!! }.toMap()
 }
+

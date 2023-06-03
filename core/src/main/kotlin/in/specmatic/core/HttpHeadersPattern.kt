@@ -1,7 +1,9 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.value.Value
 
 data class HttpHeadersPattern(
     val pattern: Map<String, Pattern> = emptyMap(),
@@ -9,7 +11,7 @@ data class HttpHeadersPattern(
 ) {
     init {
         val uniqueHeaders = pattern.keys.map { it.lowercase() }.distinct()
-        if(uniqueHeaders.size < pattern.size) {
+        if (uniqueHeaders.size < pattern.size) {
             throw ContractException("Headers are not unique: ${pattern.keys.joinToString(", ")}")
         }
     }
@@ -34,13 +36,17 @@ data class HttpHeadersPattern(
             else -> withoutContentTypeGeneratedByQontract(headers, pattern)
         }
 
-        val keyErrors: List<KeyError> = resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).findKeyErrorListCaseInsensitive(
-            pattern,
-            headersWithRelevantKeys.mapValues { StringValue(it.value) }
-        )
+        val keyErrors: List<KeyError> =
+            resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys).findKeyErrorListCaseInsensitive(
+                pattern,
+                headersWithRelevantKeys.mapValues { StringValue(it.value) }
+            )
 
         keyErrors.find { it.name == "SOAPAction" }?.apply {
-            return MatchFailure(this.missingKeyToResult("header", resolver.mismatchMessages).breadCrumb("SOAPAction").copy(failureReason = FailureReason.SOAPActionMismatch))
+            return MatchFailure(
+                this.missingKeyToResult("header", resolver.mismatchMessages).breadCrumb("SOAPAction")
+                    .copy(failureReason = FailureReason.SOAPActionMismatch)
+            )
         }
 
         val keyErrorResults: List<Result.Failure> = keyErrors.map {
@@ -80,16 +86,17 @@ data class HttpHeadersPattern(
 
         val failures: List<Result.Failure> = keyErrorResults.plus(results.filterIsInstance<Result.Failure>())
 
-        return if(failures.isNotEmpty())
+        return if (failures.isNotEmpty())
             MatchFailure(Result.Failure.fromFailures(failures))
         else
             MatchSuccess(parameters)
     }
 
-    private fun highlightIfSOAPActionMismatch(missingKey: String): FailureReason? = when (withoutOptionality(missingKey)) {
-        "SOAPAction" -> FailureReason.SOAPActionMismatch
-        else -> null
-    }
+    private fun highlightIfSOAPActionMismatch(missingKey: String): FailureReason? =
+        when (withoutOptionality(missingKey)) {
+            "SOAPAction" -> FailureReason.SOAPActionMismatch
+            else -> null
+        }
 
     private fun withoutIgnorableHeaders(
         headers: Map<String, String>,
@@ -124,10 +131,15 @@ data class HttpHeadersPattern(
         return attempt(breadCrumb = "HEADERS") {
             pattern.mapValues { (key, pattern) ->
                 attempt(breadCrumb = key) {
-                    resolver.generate(key, pattern).toStringLiteral()
+                    toStringLiteral(resolver.withCyclePrevention(pattern) { it.generate(key, pattern) })
                 }
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
+    }
+
+    private fun toStringLiteral(headerValue: Value) = when (headerValue) {
+        is JSONObjectValue -> headerValue.toUnformattedStringLiteral()
+        else -> headerValue.toStringLiteral()
     }
 
     fun generateWithAll(resolver: Resolver): Map<String, String> {
@@ -201,9 +213,14 @@ data class HttpHeadersPattern(
         }.breadCrumb("HEADER")
     }
 
-    private fun checkAllMissingHeaders(myRequiredKeys: List<String>, otherRequiredKeys: List<String>, resolver: Resolver): Result {
+    private fun checkAllMissingHeaders(
+        myRequiredKeys: List<String>,
+        otherRequiredKeys: List<String>,
+        resolver: Resolver
+    ): Result {
         val failures = myRequiredKeys.filter { it !in otherRequiredKeys }.map { missingFixedKey ->
-            MissingKeyError(missingFixedKey).missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(missingFixedKey)
+            MissingKeyError(missingFixedKey).missingKeyToResult("header", resolver.mismatchMessages)
+                .breadCrumb(missingFixedKey)
         }
 
         return Result.fromFailures(failures)
@@ -217,7 +234,49 @@ private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resol
         StringValue(sampleValue)
     }
 
-private val standardCommonHTTPHeaders = setOf("A-IM", "Accept", "Accept-Charset", "Accept-Datetime", "Accept-Encoding", "Accept-Language", "Access-Control-Request-Method,", "Access-Control-Request-Headers", "Authorization", "Cache-Control", "Connection", "Content-Encoding", "Content-Length", "Content-MD5", "Content-Type", "Cookie", "Date", "Expect", "Forwarded", "From", "Host", "HTTP2-Settings", "If-Match", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Origin", "Pragma", "Prefer", "Proxy-Authorization", "Range", "Referer", "TE", "Trailer", "Transfer-Encoding", "User-Agent", "Upgrade", "Via", "Warning").map { it.lowercase() }
+private val standardCommonHTTPHeaders = setOf(
+    "A-IM",
+    "Accept",
+    "Accept-Charset",
+    "Accept-Datetime",
+    "Accept-Encoding",
+    "Accept-Language",
+    "Access-Control-Request-Method,",
+    "Access-Control-Request-Headers",
+    "Authorization",
+    "Cache-Control",
+    "Connection",
+    "Content-Encoding",
+    "Content-Length",
+    "Content-MD5",
+    "Content-Type",
+    "Cookie",
+    "Date",
+    "Expect",
+    "Forwarded",
+    "From",
+    "Host",
+    "HTTP2-Settings",
+    "If-Match",
+    "If-Modified-Since",
+    "If-None-Match",
+    "If-Range",
+    "If-Unmodified-Since",
+    "Max-Forwards",
+    "Origin",
+    "Pragma",
+    "Prefer",
+    "Proxy-Authorization",
+    "Range",
+    "Referer",
+    "TE",
+    "Trailer",
+    "Transfer-Encoding",
+    "User-Agent",
+    "Upgrade",
+    "Via",
+    "Warning"
+).map { it.lowercase() }
 
 fun isStandardHeader(header: String): Boolean = withoutOptionality(header) in standardCommonHTTPHeaders
 

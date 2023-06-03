@@ -81,13 +81,17 @@ fi
 
 echo
 
+
+echo Building
+./gradlew clean build
+
 echo Pushing to remote
 git push
 
-echo
+echo Publishing
+./gradlew publish
 
-echo Building and publishing
-./gradlew clean build publish
+echo
 
 echo Tagging release $1
 git tag $1

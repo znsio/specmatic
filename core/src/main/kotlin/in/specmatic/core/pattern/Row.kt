@@ -12,7 +12,8 @@ data class Row(
     val columnNames: List<String> = emptyList(),
     val values: List<String> = emptyList(),
     val variables: Map<String, String> = emptyMap(),
-    val references: Map<String, References> = emptyMap()
+    val references: Map<String, References> = emptyMap(),
+    val name: String = ""
 ) {
     private val cells = columnNames.zip(values.map { it }).toMap().toMutableMap()
 
@@ -23,7 +24,7 @@ data class Row(
 
         val values: List<Pair<String, String>> = jsonObjectToValues(jsonValue)
 
-        return Row(columnNames = values.map { it.first }, values = values.map { it.second })
+        return Row(columnNames = values.map { it.first }, values = values.map { it.second }, name = name)
     }
 
     fun stringForOpenAPIError(): String {

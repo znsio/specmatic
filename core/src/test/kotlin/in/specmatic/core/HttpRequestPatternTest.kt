@@ -350,6 +350,15 @@ internal class HttpRequestPatternTest {
         assertThat(reportText).contains(">> REQUEST.BODY.id")
     }
 
+    @Test
+    fun `should lower case header keys while loading stub data`()  {
+        val type = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("http://helloworld.com/data"), headersPattern = HttpHeadersPattern(mapOf("x-data" to StringPattern())), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
+        val request = HttpRequest("POST", "/data", headers = mapOf("X-Data" to "abc123"), body = parsedJSON("""{"id": "abc123"}"""))
+
+        val httpRequestPattern = type.generate(request, Resolver())
+        assertThat(httpRequestPattern.headersPattern.pattern["x-data"].toString()).isEqualTo("abc123")
+    }
+
     @Nested
     inner class FormFieldMatchReturnsAllErrors {
         val request = HttpRequest(method = "POST", path = "/", formFields = mapOf("hello" to "abc123"))
@@ -407,5 +416,15 @@ internal class HttpRequestPatternTest {
         fun `presence errors appear before the payload errors`() {
             assertThat(reportText.indexOf(""">> REQUEST.MULTIPART-FORMDATA.data2""")).isLessThan(reportText.indexOf(""">> REQUEST.MULTIPART-FORMDATA.data1"""))
         }
+    }
+
+    @Test
+    fun `should not generate test request for generative tests more than once`()  {
+        val pattern = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("http://helloworld.com/data"), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
+
+        val row = Row(listOf("(REQUEST-BODY)"), listOf("""{ "id": 10 }"""))
+        val patterns = pattern.newBasedOn(row, Resolver(generativeTestingEnabled = true))
+
+        assertThat(patterns).hasSize(1)
     }
 }

@@ -12,6 +12,7 @@ import org.xml.sax.InputSource
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
@@ -154,7 +155,8 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
         parsedJSON(configFile.readText())
     } catch (e: Throwable) {
-        throw ContractException("Error reading the $globalConfigFileName: ${exceptionCauseMessage(e)}")
+        throw ContractException("Error reading the $globalConfigFileName: ${exceptionCauseMessage(e)}",
+            exceptionCause = e)
     }
 
     if (configJson !is JSONObjectValue)
@@ -272,6 +274,10 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
     logger.debug(contractPathData.joinToString(System.lineSeparator()) { it.path }.prependIndent("  "))
 
     return contractPathData
+}
+
+fun getSystemGit(path: String) : GitCommand {
+    return SystemGit(path)
 }
 
 class UncaughtExceptionHandler: Thread.UncaughtExceptionHandler {

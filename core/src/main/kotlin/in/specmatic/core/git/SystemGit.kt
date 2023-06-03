@@ -61,6 +61,10 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return execute(Configuration.gitCommand, "git", "diff", "--name-only", "master")
     }
 
+    override fun statusPorcelain(): String {
+        return execute(Configuration.gitCommand, "status", "--porcelain")
+    }
+
 
     override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
         this.also {

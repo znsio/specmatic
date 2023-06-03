@@ -1,17 +1,19 @@
 package utilities
 
-import io.mockk.every
-import io.mockk.mockkConstructor
-import io.mockk.mockkStatic
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.clone
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.mockkStatic
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 import java.io.File
 
 internal class UtilitiesTest {
@@ -29,20 +31,69 @@ internal class UtilitiesTest {
     }
 
     @Test
-    fun `contractFilePathsFrom sources with git repo`() {
+    fun `contractFilePathsFrom sources when contracts repo dir does not exist`() {
         val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        File(".spec").deleteRecursively()
 
         mockkStatic("in.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
 
         mockkStatic("in.specmatic.core.git.GitOperations")
-        every { clone(any(), any()) }.returns(File("cloneDir"))
+        every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
+
 
         val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
         val expectedContractPaths = listOf(
-                ContractPathData("cloneDir", "cloneDir/a/1.$CONTRACT_EXTENSION"),
-                ContractPathData("cloneDir", "cloneDir/b/1.$CONTRACT_EXTENSION"),
-                ContractPathData("cloneDir", "cloneDir/c/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
+        )
+        assertThat(contractPaths == expectedContractPaths).isTrue
+    }
+
+    @Test
+    fun `contractFilePathsFrom sources when contracts repo dir exists and is clean`() {
+        val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        File(".spec").deleteRecursively()
+        File(".spec/repos/repo1").mkdirs()
+
+
+        val mockGitCommand = mockk<GitCommand>()
+        every { mockGitCommand.statusPorcelain() }.returns("")
+        mockkStatic("in.specmatic.core.utilities.Utilities")
+        every { loadSources("/configFilePath") }.returns(sources)
+        every { getSystemGit(any()) }.returns(mockGitCommand)
+
+        val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+        val expectedContractPaths = listOf(
+                ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION"),
+                ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
+                ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
+        )
+        assertThat(contractPaths == expectedContractPaths).isTrue
+    }
+
+    @Test
+    fun `contractFilePathsFrom sources when contracts repo dir exists and is not clean`() {
+        val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        File(".spec").deleteRecursively()
+        File(".spec/repos/repo1").mkdirs()
+
+        val mockGitCommand = mockk<GitCommand>()
+        every { mockGitCommand.statusPorcelain() }.returns("someDir/someFile")
+        mockkStatic("in.specmatic.core.utilities.Utilities")
+        every { loadSources("/configFilePath") }.returns(sources)
+        every { getSystemGit(any()) }.returns(mockGitCommand)
+
+        mockkStatic("in.specmatic.core.git.GitOperations")
+        every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
+
+
+        val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+        val expectedContractPaths = listOf(
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
         )
         assertThat(contractPaths == expectedContractPaths).isTrue
     }

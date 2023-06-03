@@ -13,10 +13,7 @@ import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXMLNode
-import `in`.specmatic.mock.NoMatchingScenario
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.mock.mockFromJSON
-import `in`.specmatic.mock.validateMock
+import `in`.specmatic.mock.*
 import `in`.specmatic.test.HttpClient
 import io.ktor.http.*
 import io.ktor.http.content.*
@@ -27,10 +24,11 @@ import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import io.ktor.util.asStream
-import io.ktor.util.toMap
-import kotlinx.coroutines.*
+import io.ktor.util.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.Writer
 import java.nio.charset.Charset
@@ -38,28 +36,6 @@ import java.util.*
 import kotlin.text.toCharArray
 
 data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "")
-
-class SSEBuffer(private val buffer: MutableList<SseEvent> = mutableListOf()) {
-    fun add(event: SseEvent) {
-        val bufferIndex = event.bufferIndex ?: return
-
-        if(bufferIndex == -1) {
-            buffer.add(event)
-        } else if(bufferIndex >= 0) {
-            buffer[bufferIndex] = event
-        }
-    }
-
-    fun replace(event: SseEvent, index: Int) {
-        buffer[index] = event
-    }
-
-    fun write(writer: Writer) {
-        for(event in buffer) {
-            writeEvent(event, writer)
-        }
-    }
-}
 
 class HttpStub(
     private val features: List<Feature>,
@@ -90,6 +66,18 @@ class HttpStub(
     ) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.toMutableList())
+    private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(mutableListOf())
+
+    val stubCount: Int
+        get() {
+            return threadSafeHttpStubs.size
+        }
+
+    val transientStubCount: Int
+        get() {
+            return threadSafeHttpStubQueue.size
+        }
+
     val endPoint = endPointFromHostAndPort(host, port, keyData)
 
     override val client = HttpClient(this.endPoint)
@@ -134,6 +122,7 @@ class HttpStub(
                         isExpectationCreation(httpRequest) -> handleExpectationCreationRequest(httpRequest)
                         isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
+                        isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
                         else -> serveStubResponse(httpRequest)
                     }
 
@@ -198,6 +187,18 @@ class HttpStub(
                 this.port = port
             }
         }
+    }
+
+    private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {
+        val token = httpRequest.path?.removePrefix("/_specmatic/$TRANSIENT_MOCK/")
+
+        threadSafeHttpStubQueue.removeWithToken(token)
+
+        return HttpStubResponse(HttpResponse.OK)
+    }
+
+    private fun isFlushTransientStubsRequest(httpRequest: HttpRequest): Boolean {
+        return httpRequest.method?.toLowerCasePreservingASCIIRules() == "delete" && httpRequest.path?.startsWith("/_specmatic/$TRANSIENT_MOCK") == true
     }
 
     private fun close(
@@ -268,6 +269,7 @@ class HttpStub(
             httpRequest,
             features,
             threadSafeHttpStubs,
+            threadSafeHttpStubQueue,
             strictMode,
             passThroughTargetBase,
             httpClientFactory
@@ -278,8 +280,8 @@ class HttpStub(
             if (httpRequest.body.toStringLiteral().isEmpty())
                 throw ContractException("Expectation payload was empty")
 
-            val mock = stringToMockScenario(httpRequest.body)
-            val stub: HttpStubData? = createStub(mock)
+            val mock: ScenarioStub = stringToMockScenario(httpRequest.body)
+            val stub: HttpStubData = setExpectation(mock)
 
             HttpStubResponse(HttpResponse.OK, contractPath = stub?.contractPath ?: "")
         } catch (e: ContractException) {
@@ -347,13 +349,13 @@ class HttpStub(
         }
     }
 
-    // For use from Karate
-    fun createStub(json: String) {
+    // Java helper
+    override fun setExpectation(json: String) {
         val mock = stringToMockScenario(StringValue(json))
-        createStub(mock)
+        setExpectation(mock)
     }
 
-    fun createStub(stub: ScenarioStub): HttpStubData? {
+    fun setExpectation(stub: ScenarioStub): HttpStubData {
         if (stub.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
 
         val results = features.asSequence().map { feature ->
@@ -372,7 +374,7 @@ class HttpStub(
         }
 
         val result: Pair<Pair<Result.Success, HttpStubData>?, NoMatchingScenario?>? = results.find { it.first != null }
-        val firstResult = result?.first
+        val firstResult: Pair<Result.Success, HttpStubData>? = result?.first
 
         when (firstResult) {
             null -> {
@@ -383,10 +385,30 @@ class HttpStub(
                 val failureResults = Results(failures).withoutFluff()
                 throw NoMatchingScenario(failureResults, cachedMessage = failureResults.report(stub.request))
             }
-            else -> threadSafeHttpStubs.addToStub(firstResult, stub)
+            else -> {
+                val requestBodyRegex = parseRegex(stub.requestBodyRegex)
+                val stubData = firstResult.second.copy(requestBodyRegex = requestBodyRegex)
+                val resultWithRequestBodyRegex = Pair(firstResult.first, stubData)
+
+                if(stub.stubToken != null) {
+                    threadSafeHttpStubQueue.addToStub(resultWithRequestBodyRegex, stub)
+                } else {
+                    threadSafeHttpStubs.addToStub(resultWithRequestBodyRegex, stub)
+                }
+            }
         }
 
         return firstResult.second
+    }
+
+    private fun parseRegex(regex: String?): Regex? {
+        return regex?.let {
+            try {
+                Regex(it)
+            } catch(e: Throwable) {
+                throw ContractException("Couldn't parse regex $regex", exceptionCause = e)
+            }
+        }
     }
 
     override fun close() {
@@ -453,7 +475,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                         MultiPartFileValue(
                             it.name ?: "",
                             it.originalFileName ?: "",
-                            "${it.contentType?.contentType}/${it.contentType?.contentSubtype}",
+                            it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" },
                             null,
                             content,
                             boundary
@@ -464,7 +486,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             it.name ?: "",
                             StringValue(it.value),
                             boundary,
-                            specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}"
+                            specifiedContentType = it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
                         )
                     }
                     is PartData.BinaryItem -> {
@@ -478,7 +500,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             it.name ?: "",
                             StringValue(content),
                             boundary,
-                            specifiedContentType = "${it.contentType?.contentType}/${it.contentType?.contentSubtype}"
+                            specifiedContentType = it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
                         )
                     }
                     else -> {
@@ -528,12 +550,13 @@ fun getHttpResponse(
     httpRequest: HttpRequest,
     features: List<Feature>,
     threadSafeStubs: ThreadSafeListOfStubs,
+    threadSafeStubQueue: ThreadSafeListOfStubs,
     strictMode: Boolean,
     passThroughTargetBase: String = "",
     httpClientFactory: HttpClientFactory? = null
 ): HttpStubResponse {
     return try {
-        val (matchResults, stubResponse) = stubbedResponse(threadSafeStubs, httpRequest)
+        val (matchResults, stubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
         stubResponse
             ?: if (httpClientFactory != null && passThroughTargetBase.isNotBlank()) {
@@ -551,7 +574,7 @@ fun getHttpResponse(
     }
 }
 
-const val QONTRACT_SOURCE_HEADER = "X-$APPLICATION_NAME-Source"
+const val SPECMATIC_SOURCE_HEADER = "X-$APPLICATION_NAME-Source"
 
 fun passThroughResponse(
     httpRequest: HttpRequest,
@@ -559,7 +582,7 @@ fun passThroughResponse(
     httpClientFactory: HttpClientFactory
 ): HttpStubResponse {
     val response = httpClientFactory.client(passThroughUrl).execute(httpRequest)
-    return HttpStubResponse(response.copy(headers = response.headers.plus(QONTRACT_SOURCE_HEADER to "proxy")))
+    return HttpStubResponse(response.copy(headers = response.headers.plus(SPECMATIC_SOURCE_HEADER to "proxy")))
 }
 
 object StubAndRequestMismatchMessages : MismatchMessages {
@@ -578,21 +601,11 @@ object StubAndRequestMismatchMessages : MismatchMessages {
 
 private fun stubbedResponse(
     threadSafeStubs: ThreadSafeListOfStubs,
+    threadSafeStubQueue: ThreadSafeListOfStubs,
     httpRequest: HttpRequest
 ): Pair<List<Pair<Result, HttpStubData>>, HttpStubResponse?> {
-    val matchResults = threadSafeStubs.matchResults { stubs ->
-        stubs.map {
-            val (requestPattern, _, resolver) = it
-            Pair(
-                requestPattern.matches(
-                    httpRequest,
-                    resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages)
-                ), it
-            )
-        }
-    }
 
-    val mock = matchResults.find { (result, _) -> result is Result.Success }?.second
+    val (mock, matchResults) = stubThatMatchesRequest(threadSafeStubQueue, threadSafeStubs, httpRequest)
 
     val stubResponse = mock?.let {
         val softCastResponse = it.softCastResponseToXML(httpRequest).response
@@ -600,6 +613,48 @@ private fun stubbedResponse(
     }
 
     return Pair(matchResults, stubResponse)
+}
+
+private fun stubThatMatchesRequest(
+    threadSafeStubQueue: ThreadSafeListOfStubs,
+    threadSafeStubs: ThreadSafeListOfStubs,
+    httpRequest: HttpRequest
+): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
+    val queueMatchResults: List<Pair<Result, HttpStubData>> = threadSafeStubQueue.matchResults { stubs ->
+        stubs.map {
+            val (requestPattern, _, resolver) = it
+            Pair(
+                requestPattern.matches(
+                    httpRequest,
+                    resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages),
+                    requestBodyReqex = it.requestBodyRegex
+                ), it
+            )
+        }
+    }
+
+    val queueMock = queueMatchResults.findLast { (result, _) -> result is Result.Success }
+    if(queueMock != null) {
+        threadSafeStubQueue.remove(queueMock.second)
+        return Pair(queueMock.second, queueMatchResults)
+    }
+
+    val listMatchResults: List<Pair<Result, HttpStubData>> = threadSafeStubs.matchResults { stubs ->
+        stubs.map {
+            val (requestPattern, _, resolver) = it
+            Pair(
+                requestPattern.matches(
+                    httpRequest,
+                    resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages),
+                    requestBodyReqex = it.requestBodyRegex
+                ), it
+            )
+        }
+    }
+
+    val mock = listMatchResults.find { (result, _) -> result is Result.Success }
+
+    return Pair(mock?.second, listMatchResults)
 }
 
 object ContractAndRequestsMismatch : MismatchMessages {
@@ -760,7 +815,7 @@ fun softCastValueToXML(body: Value): Value {
 }
 
 fun stringToMockScenario(text: Value): ScenarioStub {
-    val mockSpec =
+    val mockSpec: Map<String, Value> =
         jsonStringToValueMap(text.toStringLiteral()).also {
             validateMock(it)
         }
@@ -794,7 +849,7 @@ suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuff
     }
 }
 
-private fun writeEvent(event: SseEvent, writer: Writer) {
+fun writeEvent(event: SseEvent, writer: Writer) {
     if (event.id != null) {
         writer.write("id: ${event.id}\n")
     }

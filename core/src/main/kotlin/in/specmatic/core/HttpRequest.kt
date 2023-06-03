@@ -1,20 +1,20 @@
 package `in`.specmatic.core
 
-import io.netty.buffer.ByteBuf
 import `in`.specmatic.conversions.guessType
 import `in`.specmatic.core.GherkinSection.When
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.URIUtils.parseQuery
 import `in`.specmatic.core.value.*
-import `in`.specmatic.core.value.UseExampleDeclarations
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.http.content.*
+import io.netty.buffer.ByteBuf
 import java.io.File
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
+import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
@@ -162,12 +162,12 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         }
     }
 
-    fun buildRequest(httpRequestBuilder: HttpRequestBuilder) {
+    fun buildRequest(httpRequestBuilder: HttpRequestBuilder, url: URL?) {
         httpRequestBuilder.method = HttpMethod.parse(method as String)
 
         val listOfExcludedHeaders: List<String> = listOfExcludedHeaders()
 
-        headers
+        withoutDuplicateHostHeader(headers, url)
             .map {Triple(it.key.trim(), it.key.trim().lowercase(), it.value.trim())}
             .filter { (_, loweredKey, _) -> loweredKey !in listOfExcludedHeaders }
             .forEach { (key, _, value) ->
@@ -198,6 +198,28 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
                 }
             }
         })
+    }
+
+    private fun withoutDuplicateHostHeader(headers: Map<String, String>, url: URL?): Map<String, String> {
+        if(url == null)
+            return headers
+
+        if(isNotIPAddress(url.host))
+            return headers - "Host"
+
+        return headers
+    }
+
+    private fun isNotIPAddress(host: String): Boolean {
+        return ! isIPAddress(host) && host != "localhost"
+    }
+
+    private fun isIPAddress(host: String): Boolean {
+        return try {
+            host.split(".").map { it.toInt() }.isNotEmpty()
+        } catch(e: Throwable) {
+            false
+        }
     }
 
     fun loadFileContentIntoParts(): HttpRequest {

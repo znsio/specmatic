@@ -18,7 +18,6 @@ import `in`.specmatic.optionalPattern
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.mockk.every
-import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import java.util.stream.Stream
@@ -185,7 +184,7 @@ internal class HttpRequestTest {
             this.url.host = "test.com"
             this.url.port = 80
         }
-        HttpRequest("GET", "/").buildRequest(builderWithPort80)
+        HttpRequest("GET", "/").buildRequest(builderWithPort80, null)
         assertThat(builderWithPort80.headers.get("Host")).isEqualTo("test.com")
 
         val httpRequestBuilderWithHTTPS = HttpRequestBuilder().apply {
@@ -193,7 +192,7 @@ internal class HttpRequestTest {
             this.url.host = "test.com"
             this.url.port = 443
         }
-        HttpRequest("GET", "/").buildRequest(httpRequestBuilderWithHTTPS)
+        HttpRequest("GET", "/").buildRequest(httpRequestBuilderWithHTTPS, null)
         assertThat(httpRequestBuilderWithHTTPS.headers.get("Host")).isEqualTo("test.com")
     }
 
@@ -203,7 +202,7 @@ internal class HttpRequestTest {
             this.url.host = "test.com"
             this.url.port = 8080
         }
-        HttpRequest("GET", "/").buildRequest(httpRequestBuilder2)
+        HttpRequest("GET", "/").buildRequest(httpRequestBuilder2, null)
         assertThat(httpRequestBuilder2.headers.get("Host")).isNull()
     }
 

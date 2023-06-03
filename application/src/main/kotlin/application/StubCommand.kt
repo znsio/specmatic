@@ -12,6 +12,7 @@ import org.springframework.context.ApplicationContext
 import picocli.CommandLine.*
 import java.util.concurrent.Callable
 
+
 @Command(name = "stub",
         mixinStandardHelpOptions = true,
         description = ["Start a stub server with contract"])
@@ -173,10 +174,18 @@ class StubCommand : Callable<Unit> {
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
+        port = when (isDefaultPort(port)) {
+            true -> if (portIsInUse(host, port)) findRandomFreePort() else port
+            false -> port
+        }
         httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, httpClientFactory, workingDirectory)
         kafkaStub = kafkaStubEngine.runKafkaStub(stubData, kafkaHost, kafkaPort.toInt(), startKafka)
 
         LogTail.storeSnapshot()
+    }
+
+    private fun isDefaultPort(port:Int): Boolean {
+        return DEFAULT_HTTP_STUB_PORT == port.toString()
     }
 
     private fun restartServer() {

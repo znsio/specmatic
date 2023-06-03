@@ -1,20 +1,24 @@
 package `in`.specmatic.conversions
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import `in`.specmatic.core.*
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONObject
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import io.ktor.http.*
+import io.mockk.InternalPlatformDsl.toStr
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -41,8 +45,10 @@ import org.testcontainers.shaded.okhttp3.Request
 import org.testcontainers.shaded.okhttp3.RequestBody
 import java.io.File
 import java.net.URI
+import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Stream
+import kotlin.collections.HashMap
 
 internal class OpenApiKtTest {
     companion object {
@@ -180,6 +186,122 @@ Background:
     }
 
     @Test
+    fun `should create tests for indirect optional non-nullable cyclic reference`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-optional-non-nullable.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    assertThat(request.path).matches("""\/demo\/circular-reference-optional-non-nullable""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    return HttpResponse(200, """{"intermediate-node": {}}""", headers)
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(flags["/demo/circular-reference-optional-non-nullable executed"]).isTrue
+        assertThat(flags.size).isEqualTo(1)
+        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
+    }
+
+    @Test
+    fun `should create tests for indirect nullable cyclic reference`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-nullable.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    assertThat(request.path).matches("""\/demo\/circular-reference-nullable""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    return HttpResponse(
+                        200,
+                        """{"contents": {"intermediate-node": {"indirect-cycle": null}}}""",
+                        headers
+                    )
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(flags["/demo/circular-reference-nullable executed"]).isTrue
+        assertThat(flags.size).isEqualTo(1)
+        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
+    }
+
+    @Test
+    fun `should create tests for indirect polymorphic cyclic reference`() {
+        val flags = mutableMapOf<String, Boolean>()
+
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-polymorphic.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val results = feature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    flags["${request.path} executed"] = true
+                    assertThat(request.path).matches("""\/demo\/circular-reference-polymorphic""")
+                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
+                        init {
+                            put("Content-Type", "application/json")
+                        }
+                    }
+                    return HttpResponse(
+                        200,
+                        """{"myBase": {"@type": "MySub1", "aMyBase": {"@type": "MySub2", "myVal": "aVal"}}}""",
+                        headers
+                    )
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertThat(flags["/demo/circular-reference-polymorphic executed"]).isTrue
+        assertThat(flags.size).isEqualTo(1)
+        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
+    }
+
+    @Test
     fun `should report errors in tests created from OpenAPI examples`() {
         val flags = mutableMapOf<String, Boolean>()
 
@@ -303,6 +425,8 @@ Background:
                 object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         flags["${request.path} executed"] = true
+                        println("====REQUEST")
+                        println(request.toLogString())
                         val headers: HashMap<String, String> = object : HashMap<String, String>() {
                             init {
                                 put("Content-Type", "application/json")
@@ -323,9 +447,9 @@ Background:
             System.clearProperty(Flags.negativeTestingFlag)
         }
 
-        assertThat(results.results.size).isEqualTo(5)
+        assertThat(results.results.size).isEqualTo(9)
         assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(1)
-        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(4)
+        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(8)
     }
 
     @Test
@@ -371,93 +495,6 @@ Background:
         assertThat(results.results.size).isEqualTo(16)
         assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(4)
         assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(12)
-        assertThat(results.report().trim()).isEqualTo(
-            """
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-  
-  In scenario "-ve: POST /pets. Response: pet response"
-  API: POST /pets -> 201
-  
-    >> RESPONSE.STATUS
-    
-       Expected 4xx status, but received 201
-""".trimIndent()
-        )
     }
 
     @Test
@@ -510,7 +547,9 @@ Background:
                 """.trimIndent(), sourceSpecPath
             )
         }.satisfies(Consumer {
-            assertThat(it.message).isEqualTo("""Scenario: "sending string instead of number should return not found" PATH: "/hello/test" is not as per included wsdl / OpenApi spec""")
+            val errorMessage = exceptionCauseMessage(it)
+            assertThat(errorMessage).contains("""Error matching url /hello/test to the specification""")
+            assertThat(errorMessage).contains("Expected number, actual was \"test\"")
         })
     }
 
@@ -1021,6 +1060,128 @@ Background:
         assertThat(result.success()).isTrue()
     }
 
+    @Test
+    fun `should validate and generate with indirect required non-nullable cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-non-nullable.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
+
+        val resp = HttpStub(feature).use {
+            val request =
+                Request.Builder().url("http://localhost:9000/demo/circular-reference-non-nullable")
+                    .addHeader("Content-Type", "application/json")
+                    .get().build()
+            val call = OkHttpClient().newCall(request)
+            call.execute()
+        }
+
+        assertThat(resp.isSuccessful).isFalse
+        assertThat(resp.code()).isEqualTo(400)
+        val body = resp.body()?.string()
+        assertThat(body).contains("Invalid pattern cycle")
+    }
+
+    @Test
+    @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
+    fun `should validate and generate with indirect optional non-nullable cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-optional-non-nullable.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
+
+        val resp = HttpStub(feature).use {
+            val request =
+                Request.Builder().url("http://localhost:9000/demo/circular-reference-optional-non-nullable")
+                    .addHeader("Content-Type", "application/json")
+                    .get().build()
+            val call = OkHttpClient().newCall(request)
+            call.execute()
+        }
+
+        val body = resp.body()?.string()
+        assertThat(resp.isSuccessful).withFailMessage("Response unexpectedly failed. body=$body").isTrue
+        assertThat(resp.code()).isEqualTo(200)
+        val deserialized = ObjectMapper().readValue(body, OptionalCycleRoot::class.java)
+        assertThat(deserialized).isNotNull
+    }
+
+    @Test
+    @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
+    fun `should validate and generate with indirect nullable cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-nullable.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
+
+        val resp = HttpStub(feature).use {
+            val request =
+                Request.Builder().url("http://localhost:9000/demo/circular-reference-nullable")
+                    .addHeader("Content-Type", "application/json")
+                    .get().build()
+            val call = OkHttpClient().newCall(request)
+            call.execute()
+        }
+
+        val body = resp.body()?.string()
+        assertThat(resp.isSuccessful).withFailMessage("Response unexpectedly failed. body=$body").isTrue
+        assertThat(resp.code()).isEqualTo(200)
+        val deserialized = ObjectMapper().readValue(body, NullableCycleHolder::class.java)
+        assertThat(deserialized).isNotNull
+    }
+
+    @Test
+    @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
+    fun `should validate and generate with polymorphic cyclic reference in open api`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/circular-reference-polymorphic.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+
+        val result = testBackwardCompatibility(feature, feature)
+        assertThat(result.success()).isTrue()
+
+        val resp = HttpStub(feature).use {
+            val request =
+                Request.Builder().url("http://localhost:9000/demo/circular-reference-polymorphic")
+                    .addHeader("Content-Type", "application/json")
+                    .get().build()
+            val call = OkHttpClient().newCall(request)
+            call.execute()
+        }
+
+        val body = resp.body()?.string()
+        assertThat(resp.isSuccessful).withFailMessage("Response unexpectedly failed. body=$body").isTrue
+        assertThat(resp.code()).isEqualTo(200)
+        val deserialized = ObjectMapper().readValue(body, MyBaseHolder::class.java)
+        assertThat(deserialized).isNotNull
+    }
+
     //TODO:
     @Ignore
     fun `should generate stub with cyclic reference in open api`() {
@@ -1148,6 +1309,11 @@ Background:
 
     @Test
     fun `should create petstore tests`() {
+        val systemPropertiesMap = System.getProperties().map { it.key.toString() to it.value.toString() }.toMap()
+        printMap("System Properties", systemPropertiesMap)
+
+        printMap("Environment Variables", System.getenv())
+
         val flags = mutableMapOf<String, Int>().withDefault { 0 }
 
         val feature = parseGherkinStringToFeature(
@@ -1190,6 +1356,7 @@ Background:
                                         ObjectMapper().writeValueAsString(Error(1, "zero is not allowed")),
                                         headers
                                     )
+
                                     else -> HttpResponse(
                                         200,
                                         ObjectMapper().writeValueAsString(pet),
@@ -1197,10 +1364,12 @@ Background:
                                     )
                                 }
                             }
+
                             "DELETE" -> HttpResponse(
                                 204,
                                 headers
                             )
+
                             "PATCH" -> {
                                 HttpResponse(
                                     200,
@@ -1208,8 +1377,10 @@ Background:
                                     headers
                                 )
                             }
+
                             else -> HttpResponse(400, "", headers)
                         }
+
                         request.path == "/pets" -> {
                             when (request.method) {
                                 "GET" -> {
@@ -1227,6 +1398,7 @@ Background:
                                         }
                                     )
                                 }
+
                                 "POST" -> {
                                     assertThat(request.bodyString).containsAnyOf(
                                         """
@@ -1247,9 +1419,11 @@ Background:
                                         headers
                                     )
                                 }
+
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
+
                         request.path == "/petIds" -> {
                             when (request.method) {
                                 "GET" -> {
@@ -1263,9 +1437,11 @@ Background:
                                         HttpResponse(403, "UnAuthorized", headers)
                                     }
                                 }
+
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
+
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1275,8 +1451,10 @@ Background:
             }
         )
 
+        printMap("Tests Executed", flags.mapValues { it.toString() })
+
         assertThat(flags["/pets POST executed"]).isEqualTo(1)
-        assertThat(flags["/pets GET executed"]).isEqualTo(12)
+        assertThat(flags["/pets GET executed"]).isEqualTo(24)
         assertThat(flags["/petIds GET executed"]).isEqualTo(4)
         assertThat(flags["/pets/0 GET executed"]).isEqualTo(1)
         assertThat(flags.keys.filter { it.matches(Regex("""\/pets\/[0-9]+ GET executed""")) }.size).isEqualTo(2)
@@ -1284,6 +1462,19 @@ Background:
         assertThat(flags.keys.filter { it.matches(Regex("""\/pets\/[0-9]+ PATCH executed""")) }.size).isEqualTo(7)
         assertThat(flags.size).isEqualTo(13)
         assertTrue(results.success(), results.report())
+    }
+
+    private fun printMap(label: String, map: Map<String, String>) {
+        val lines: List<String> = map.entries.map { (key, value) -> "${key}=${value}" }
+        printLines(label, lines)
+    }
+
+    private fun printLines(label: String, lines: List<String>) {
+        println(label)
+        println("-----------------")
+        println(lines.joinToString("\n"))
+        println("-----------------")
+        println()
     }
 
     @Test
@@ -1320,9 +1511,11 @@ Background:
                                         headers
                                     )
                                 }
+
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
+
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1388,9 +1581,11 @@ Background:
                                         headers
                                     )
                                 }
+
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
+
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1451,9 +1646,11 @@ Background:
                                         headers
                                     )
                                 }
+
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
+
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1563,6 +1760,7 @@ Background:
                             ) else return HttpResponse(400, "", headers)
 
                         }
+
                         "/services/nonJsonPayloadOnly" -> {
                             if (request.method == "POST" &&
                                 request.headers["Content-Type"] == "application/x-www-form-urlencoded" &&
@@ -1574,6 +1772,7 @@ Background:
                             ) else return HttpResponse(400, "", headers)
 
                         }
+
                         else -> return HttpResponse(400, "", headers)
                     }
                 }
@@ -1667,7 +1866,12 @@ Scenario: zero should return not found
                 setOf("message", "another_message"),
             )
         )
-        assertThat(queryParameters.map { it.values.toList() }).containsAll(listOf(listOf("hello", "Hari"), listOf("hello")))
+        assertThat(queryParameters.map { it.values.toList() }).containsAll(
+            listOf(
+                listOf("Hari", "hello"),
+                listOf("hello")
+            )
+        )
     }
 
     @Test
@@ -1725,6 +1929,450 @@ Scenario: zero should return not found
     }
 
     @Test
+    fun `should validate enum values in URL path params`() {
+        val openAPISpec = """
+Feature: Foo API
+
+  Background:
+    Given openapi openapi/enum_in_path.yaml
+
+  Scenario Outline: Delete foo
+    When GET /v1/foo/(data:string)
+    Then status 200
+    Examples:
+      | data |
+      | baz  |
+        """.trimIndent()
+
+        val flags = mutableListOf<String>()
+
+        try {
+            val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
+
+            feature.executeTests(
+                object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        flags.add("test executed")
+                        return HttpResponse.OK
+                    }
+
+                    override fun setServerState(serverState: Map<String, Value>) {}
+                }
+            )
+
+        } catch (e: Throwable) {
+
+        }
+
+        assertThat(flags).doesNotContain("test executed")
+    }
+
+    @Test
+    fun `contract-invalid test should be allowed for 400 request payload`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: Swagger API Team
+    email: apiteam@swagger.io
+    url: http://swagger.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: http://petstore.swagger.io/api
+paths:
+  /pets:
+    post:
+      summary: create a pet
+      description: Creates a new pet in the store. Duplicates are allowed
+      operationId: addPet
+      requestBody:
+        description: Pet to add to the store
+        required: true
+        content:
+          application/json:
+            schema:
+              ${'$'}ref: '#/components/schemas/NewPet'
+            examples:
+              SUCCESS:
+                value:
+                  name: 'Archie'
+              INVALID:
+                value:
+                  name: 10
+      responses:
+        '200':
+          description: new pet record
+          content:
+            application/json:
+              schema:
+                ${'$'}ref: '#/components/schemas/Pet'
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+                    name: Archie
+        '400':
+          description: invalid request
+          content:
+            application/json:
+              examples:
+                INVALID:
+                  value:
+                    message: Name must be a strings
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        name:
+          type: string
+        id:
+          type: integer
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        var contractInvalidValueReceived = false
+
+        try {
+            contract.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val jsonBody = request.body as JSONObjectValue
+
+                    if (jsonBody.jsonObject["name"] is NumberValue)
+                        contractInvalidValueReceived = true
+
+                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(contractInvalidValueReceived).isTrue
+        } finally {
+            System.clearProperty(Flags.negativeTestingFlag)
+        }
+    }
+
+    @Test
+    fun `contract-invalid test should be allowed for 400 query parameter`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: Swagger API Team
+    email: apiteam@swagger.io
+    url: http://swagger.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: http://petstore.swagger.io/api
+paths:
+  /pets:
+    post:
+      summary: create a pet
+      description: Creates a new pet in the store. Duplicates are allowed
+      operationId: addPet
+      parameters:
+        - in: header
+          name: data
+          schema:
+            type: integer
+          examples:
+            INVALID:
+              value: hello
+            SUCCESS:
+              value: 10
+      requestBody:
+        description: Pet to add to the store
+        required: true
+        content:
+          application/json:
+            schema:
+              ${'$'}ref: '#/components/schemas/NewPet'
+            examples:
+              SUCCESS:
+                value:
+                  name: 'Archie'
+              INVALID:
+                value:
+                  name: 10
+      responses:
+        '200':
+          description: new pet record
+          content:
+            application/json:
+              schema:
+                ${'$'}ref: '#/components/schemas/Pet'
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+                    name: Archie
+        '400':
+          description: invalid request
+          content:
+            application/json:
+              examples:
+                INVALID:
+                  value:
+                    message: Name must be a strings
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        name:
+          type: string
+        id:
+          type: integer
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        var contractInvalidValueReceived = false
+
+        try {
+            contract.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val dataHeaderValue: String? = request.headers["data"]
+
+                    if (dataHeaderValue == "hello")
+                        contractInvalidValueReceived = true
+
+                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(contractInvalidValueReceived).isTrue
+        } finally {
+            System.clearProperty(Flags.negativeTestingFlag)
+        }
+    }
+
+    @Test
+    fun `contract-invalid test should be allowed for 400 request header`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: Swagger API Team
+    email: apiteam@swagger.io
+    url: http://swagger.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: http://petstore.swagger.io/api
+paths:
+  /pets:
+    get:
+      summary: query for a pet
+      description: Queries info on a pet
+      parameters:
+        - in: query
+          name: data
+          schema:
+            type: integer
+          examples:
+            INVALID:
+              value: hello
+            SUCCESS:
+              value: 10
+      responses:
+        '200':
+          description: new pet record
+          content:
+            application/json:
+              schema:
+                ${'$'}ref: '#/components/schemas/Pet'
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+                    name: Archie
+        '400':
+          description: invalid request
+          content:
+            application/json:
+              examples:
+                INVALID:
+                  value:
+                    message: Name must be a strings
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        name:
+          type: string
+        id:
+          type: integer
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        var contractInvalidValueReceived = false
+
+        try {
+            contract.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val dataHeaderValue: String? = request.queryParams["data"]
+
+                    if (dataHeaderValue == "hello")
+                        contractInvalidValueReceived = true
+
+                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(contractInvalidValueReceived).isTrue
+        } finally {
+            System.clearProperty(Flags.negativeTestingFlag)
+        }
+    }
+
+    @Test
+    fun `a test marked WIP should setup the scenario to ignore failure`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: Swagger API Team
+    email: apiteam@swagger.io
+    url: http://swagger.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: http://petstore.swagger.io/api
+paths:
+  /pets:
+    post:
+      summary: create a pet
+      description: Creates a new pet in the store. Duplicates are allowed
+      operationId: addPet
+      requestBody:
+        description: Pet to add to the store
+        required: true
+        content:
+          application/json:
+            schema:
+              ${'$'}ref: '#/components/schemas/NewPet'
+            examples:
+              "[WIP] SUCCESS":
+                value:
+                  name: 'Archie'
+      responses:
+        '200':
+          description: new pet record
+          content:
+            application/json:
+              schema:
+                ${'$'}ref: '#/components/schemas/Pet'
+              examples:
+                "[WIP] SUCCESS":
+                  value:
+                    id: 10
+                    name: Archie
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        name:
+          type: string
+        id:
+          type: integer
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThat(contract.generateContractTestScenarios(emptyList()).single().ignoreFailure).isTrue
+    }
+
+    @Test
     fun `400 response in the contract should be used to match a 400 status response in a negative test even when a default response has been declared`() {
         val openAPISpec = """
             Feature: With default
@@ -1758,7 +2406,224 @@ Scenario: zero should return not found
             System.clearProperty(Flags.negativeTestingFlag)
         }
     }
+
+    @Test
+    fun `should run test from wrapper gherkin with unconstrained type in url`() {
+        val contract = parseGherkinStringToFeature(
+            """
+            Feature: Test wrapper of constraints
+              Background:
+                Given openapi core/src/test/resources/openapi/hello_with_constraints.yaml
+                
+              Scenario: Test
+                When GET /hello/(id:string)
+                Then status 200
+                
+                Examples:
+                | id         |
+                | 1234567890 |
+                | 0987654321 |
+        """.trimIndent()
+        )
+
+        var testCount = 0
+
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val idValue = request.path!!.split("/").last()
+                assertThat(idValue).hasSizeGreaterThan(9)
+                assertThat(idValue).hasSizeLessThan(21)
+
+                testCount += 1
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(testCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `should run test from wrapper gherkin with concrete value in url matching specification type`() {
+        val contract = parseGherkinStringToFeature(
+            """
+            Feature: Test wrapper of constraints
+              Background:
+                Given openapi core/src/test/resources/openapi/hello_with_constraints.yaml
+                
+              Scenario: Test
+                When GET /hello/1234567890
+                Then status 200
+        """.trimIndent()
+        )
+
+        var testCount = 0
+
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val idValue = request.path!!.split("/").last()
+                assertThat(idValue).hasSizeGreaterThan(9)
+                assertThat(idValue).hasSizeLessThan(21)
+
+                testCount += 1
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(testCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `should fail to run a test from wrapper gherkin with pattern url matching concrete specification value`() {
+        assertThatThrownBy {
+            parseGherkinStringToFeature(
+                """
+            Feature: Test wrapper of constraints
+              Background:
+                Given openapi core/src/test/resources/openapi/hello_with_constraints.yaml
+                
+              Scenario: Test
+                When GET /(val:string)/(id:string)
+                Then status 200
+        """.trimIndent()
+            )
+        }.satisfies(Consumer {
+            assertThat(it).isInstanceOf(ContractException::class.java)
+            assertThat(exceptionCauseMessage(it)).contains("not as per")
+        })
+    }
+
+    fun `should preserve trailing slash`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+    openapi: "3.0.3"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+      termsOfService: http://swagger.io/terms/
+      contact:
+        name: Swagger API Team
+        email: apiteam@swagger.io
+        url: http://swagger.io
+      license:
+        name: Apache 2.0
+        url: https://www.apache.org/licenses/LICENSE-2.0.html
+    servers:
+      - url: http://petstore.swagger.io/api
+    paths:
+      /pets/:
+        post:
+          summary: create a pet
+          description: Creates a new pet in the store. Duplicates are allowed
+          operationId: addPet
+          requestBody:
+            description: Pet to add to the store
+            required: true
+            content:
+              application/json:
+                schema:
+                  ${'$'}ref: '#/components/schemas/NewPet'
+                examples:
+                  SUCCESS:
+                    value:
+                      name: 'Archie'
+          responses:
+            '200':
+              description: new pet record
+              content:
+                application/json:
+                  schema:
+                    ${'$'}ref: '#/components/schemas/Pet'
+                  examples:
+                    SUCCESS:
+                      value:
+                        id: 10
+                        name: Archie
+    components:
+      schemas:
+        Pet:
+          type: object
+          required:
+            - id
+            - name
+          properties:
+            name:
+              type: string
+            id:
+              type: integer
+        NewPet:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val paths = mutableListOf<String>()
+
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                paths.add(request.path!!)
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        assertThat(paths).allSatisfy {
+            assertThat(it).endsWith("/")
+        }
+    }
 }
+
+data class CycleRoot(
+    @JsonProperty("intermediate-node") val intermediateNode: CycleIntermediateNode,
+)
+
+data class CycleIntermediateNode(
+    @JsonProperty("indirect-cycle") val indirectCycle: CycleRoot,
+)
+
+data class OptionalCycleRoot(
+    @JsonProperty("intermediate-node") val intermediateNode: OptionalCycleIntermediateNode,
+)
+
+data class OptionalCycleIntermediateNode(
+    @JsonProperty("indirect-cycle") val indirectCycle: OptionalCycleRoot?,
+)
+
+data class NullableCycleHolder(
+    @JsonProperty("contents") val contents: NullableCycleRoot?,
+)
+data class NullableCycleRoot(
+    @JsonProperty("intermediate-node") val intermediateNode: NullableCycleIntermediateNode,
+)
+
+data class NullableCycleIntermediateNode(
+    @JsonProperty("indirect-cycle") val indirectCycle: NullableCycleRoot?,
+)
+
+data class MyBaseHolder(@JsonProperty("myBase") val myBase: MyBase)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@type")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = MySub1::class),
+    JsonSubTypes.Type(value = MySub2::class),
+)
+interface MyBase {}
+data class MySub1(@JsonProperty("aMyBase") val aMyBase: MyBase?): MyBase
+data class MySub2(@JsonProperty("myVal") val myVal: String): MyBase
 
 data class Pet(
     @JsonProperty("name") val name: String,

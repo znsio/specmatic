@@ -25,7 +25,10 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
-      run: ./gradlew build
+      run: |
+        ./gradlew clean
+        git clean -fd
+        ./gradlew build
     - name: Publish to local maven
       run: ./gradlew publishToMavenLocal
     - name: Run maven project to check for Spring 2.3 conflicts

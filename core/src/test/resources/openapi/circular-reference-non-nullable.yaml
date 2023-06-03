@@ -1,0 +1,35 @@
+openapi: 3.0.1
+info:
+  title: Tests circular references
+  version: "1.0"
+paths:
+  /demo/circular-reference-non-nullable:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleRoot'
+
+components:
+  schemas:
+
+    CycleRoot:
+      type: object
+      properties:
+        # indirect cycle via an intermediate node
+        intermediate-node:
+          $ref: '#/components/schemas/CycleIntermediateNode'
+      required:
+        - intermediate-node
+
+    CycleIntermediateNode:
+      type: object
+      properties:
+        # Completes an indirect cycle back to the root
+        indirect-cycle:
+          $ref: '#/components/schemas/CycleRoot'
+      required:
+        - indirect-cycle

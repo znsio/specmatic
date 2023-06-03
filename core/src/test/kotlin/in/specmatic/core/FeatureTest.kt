@@ -13,10 +13,232 @@ import org.junit.jupiter.params.provider.MethodSource
 import `in`.specmatic.core.pattern.EmptyStringPattern
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.value.*
+import org.junit.jupiter.api.Nested
 import java.util.*
+import java.util.function.Consumer
 import java.util.stream.Stream
 
 class FeatureTest {
+    @Test
+    fun `test descriptions with no tags should contain no tag separators`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    post:
+      summary: Add Product
+      description: Add Product
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - sku
+              properties:
+                name:
+                  type: string
+                sku:
+                  type: string
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+""".trimIndent(), "").toFeature()
+
+        val scenarios: List<Scenario> = contract.generateContractTestScenarios(emptyList())
+
+        assertThat(scenarios.map { it.testDescription() }).allSatisfy {
+            assertThat(it).doesNotContain("|")
+        }
+    }
+
+    @Test
+    fun `test descriptions with generative tests on should contain the type`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    post:
+      summary: Add Product
+      description: Add Product
+      requestBody:
+        content:
+          application/json:
+            examples:
+              SUCCESS:
+                value:
+                  name: abc
+                  sku: "123"
+            schema:
+              type: object
+              required:
+                - name
+                - sku
+              properties:
+                name:
+                  type: string
+                sku:
+                  type: string
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+""".trimIndent(), "").toFeature()
+
+        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+
+        assertThat(scenarios.map { it.testDescription() }).allSatisfy {
+            assertThat(it).containsAnyOf("+ve", "-ve")
+        }
+    }
+
+    @Test
+    fun `test output should contain example name`() {
+val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    post:
+      summary: Add Product
+      description: Add Product
+      requestBody:
+        content:
+          application/json:
+            examples:
+              SUCCESS:
+                value:
+                  name: abc
+                  sku: "123"
+            schema:
+              type: object
+              required:
+                - name
+                - sku
+              properties:
+                name:
+                  type: string
+                sku:
+                  type: string
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+""".trimIndent(), "").toFeature()
+
+        val scenario: Scenario = contract.generateContractTestScenarios(emptyList()).first()
+        assertThat(scenario.testDescription()).contains("SUCCESS")
+    }
+
+    @Test
+    fun `test output should contain example name and preserve WIP tag`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    post:
+      summary: Add Product
+      description: Add Product
+      requestBody:
+        content:
+          application/json:
+            examples:
+              "[WIP] SUCCESS":
+                value:
+                  name: abc
+                  sku: "123"
+            schema:
+              type: object
+              required:
+                - name
+                - sku
+              properties:
+                name:
+                  type: string
+                sku:
+                  type: string
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              examples:
+                "[WIP] SUCCESS":
+                  value:
+                    id: 10
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+""".trimIndent(), "").toFeature()
+
+        val scenario: Scenario = contract.generateContractTestScenarios(emptyList()).first()
+        assertThat(scenario.testDescription()).contains("[WIP] SUCCESS")
+    }
     @DisplayName("Single Feature Contract")
     @ParameterizedTest
     @MethodSource("singleFeatureContractSource")

@@ -1,0 +1,28 @@
+openapi: 3.0.3
+info:
+  version: '1.0'
+  title: Foo API Definition
+  description: Example API to reproduce Specmatic 0.60.0 issue.
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+paths:
+  /v1/foo/{data}:
+    get:
+      summary: Get 'foo' data
+      description: Gets data on foo
+      parameters:
+        - in: path
+          name: data
+          schema:
+            type: string
+            enum: [bar,none]
+          required: true
+          description: type of 'foo' data required
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            text/plain:
+              schema:
+                type: string

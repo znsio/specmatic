@@ -20,6 +20,7 @@ data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
     override fun exactMatchElseType(): Pattern {
         return when {
             isPatternToken() -> DeferredPattern(string)
+            string.trim().startsWith("{") || string.trim().startsWith("<")-> parsedPattern(string)
             else -> ExactValuePattern(this)
         }
     }

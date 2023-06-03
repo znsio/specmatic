@@ -91,8 +91,10 @@ internal class URLMatcherTest {
     fun `should generate path when url has only path parameters`() {
         val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets/(petid:number)/owner/(owner:string)"))
         val resolver = mockk<Resolver>().also {
-            every { it.generate("petid", DeferredPattern("(number)", "petid")) } returns NumberValue(123)
-            every { it.generate("owner", DeferredPattern("(string)", "owner")) } returns StringValue("hari")
+            every { it.withCyclePrevention<StringValue>(ExactValuePattern(StringValue("pets")), any())} returns StringValue("pets")
+            every { it.withCyclePrevention<NumberValue>(DeferredPattern("(number)", "petid"), any())} returns NumberValue(123)
+            every { it.withCyclePrevention<StringValue>(ExactValuePattern(StringValue("owner")), any())} returns StringValue("owner")
+            every { it.withCyclePrevention<StringValue>(DeferredPattern("(string)", "owner"), any())} returns StringValue("hari")
         }
         urlPattern.generatePath(resolver).let{
             assertThat(it).isEqualTo("/pets/123/owner/hari")
@@ -103,8 +105,9 @@ internal class URLMatcherTest {
     fun `should generate query`() {
         val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets?petid=(number)&owner=(string)"))
         val resolver = mockk<Resolver>().also {
-            every { it.generate("petid", DeferredPattern("(number)", "petid")) } returns NumberValue(123)
-            every { it.generate("owner", DeferredPattern("(string)", "owner")) } returns StringValue("hari")
+            every { it.withCyclePrevention<StringValue>(ExactValuePattern(StringValue("pets")), any())} returns StringValue("pets")
+            every { it.withCyclePrevention<NumberValue>(DeferredPattern("(number)", "petid"), any())} returns NumberValue(123)
+            every { it.withCyclePrevention<StringValue>(DeferredPattern("(string)", "owner"), any())} returns StringValue("hari")
         }
         urlPattern.generateQuery(resolver).let {
             assertThat(it).isEqualTo(hashMapOf("petid" to "123", "owner" to "hari"))
@@ -236,5 +239,11 @@ internal class URLMatcherTest {
 
         val result = matcher.matches(URI("/"), mapOf("name" to "Archie"), Resolver())
         assertThat(result.isSuccess()).isFalse()
+    }
+
+    @Test
+    fun `should stringify date time query param to date time pattern`() {
+        val urlMatcher = URLMatcher(mapOf("before" to DateTimePattern), pathToPattern("/pets"), "/pets")
+        assertThat(urlMatcher.toString()).isEqualTo("/pets?before=(datetime)")
     }
 }

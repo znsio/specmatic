@@ -112,9 +112,9 @@ data class Feature(
         }
     }
 
-    fun backwardCompatibleLookup(httpRequest: HttpRequest): List<Pair<Scenario, Result>> {
+    fun compatibilityLookup(httpRequest: HttpRequest, mismatchMessages: MismatchMessages = NewAndOldContractRequestMismatches): List<Pair<Scenario, Result>> {
         try {
-            val resultList = lookupAllScenarios(httpRequest, scenarios, NewAndOldContractRequestMismatches, IgnoreUnexpectedKeys)
+            val resultList = lookupAllScenarios(httpRequest, scenarios, mismatchMessages, IgnoreUnexpectedKeys)
 
             val successes = lookupAllSuccessfulScenarios(resultList)
             if (successes.isNotEmpty())
@@ -124,7 +124,7 @@ data class Feature(
 
             return when {
                 deepMatchingErrors.isNotEmpty() -> deepMatchingErrors
-                scenarios.isEmpty() -> throw ContractException("The contract is empty.")
+                scenarios.isEmpty() -> throw EmptyContract()
                 else -> emptyList()
             }
         } finally {
@@ -216,35 +216,7 @@ data class Feature(
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
         try {
-            val results = scenarios.map { scenario ->
-                try {
-                    when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
-                        is Result.Success -> Pair(
-                            scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
-                                val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
-                                val requestTypeWithAncestors =
-                                    newRequestType.copy(
-                                        headersPattern = newRequestType.headersPattern.copy(
-                                            ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
-                                        )
-                                    )
-                                HttpStubData(
-                                    response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
-                                    resolver = resolver,
-                                    requestType = requestTypeWithAncestors,
-                                    responsePattern = scenario.httpResponsePattern,
-                                    contractPath = this.path
-                                )
-                            }, Result.Success()
-                        )
-                        is Result.Failure -> {
-                            Pair(null, matchResult.updateScenario(scenario).updatePath(path))
-                        }
-                    }
-                } catch (contractException: ContractException) {
-                    Pair(null, contractException.failure().updatePath(path))
-                }
-            }
+            val results = stubMatchResult(request, response, mismatchMessages)
 
             return results.find {
                 it.first != null
@@ -259,12 +231,50 @@ data class Feature(
         }
     }
 
+    fun stubMatchResult(
+        request: HttpRequest,
+        response: HttpResponse,
+        mismatchMessages: MismatchMessages
+    ): List<Pair<HttpStubData?, Result>> {
+        val results = scenarios.map { scenario ->
+            try {
+                when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
+                    is Result.Success -> Pair(
+                        scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
+                            val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
+                            val requestTypeWithAncestors =
+                                newRequestType.copy(
+                                    headersPattern = newRequestType.headersPattern.copy(
+                                        ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
+                                    )
+                                )
+                            HttpStubData(
+                                response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
+                                resolver = resolver,
+                                requestType = requestTypeWithAncestors,
+                                responsePattern = scenario.httpResponsePattern,
+                                contractPath = this.path
+                            )
+                        }, Result.Success()
+                    )
+
+                    is Result.Failure -> {
+                        Pair(null, matchResult.updateScenario(scenario).updatePath(path))
+                    }
+                }
+            } catch (contractException: ContractException) {
+                Pair(null, contractException.failure().updatePath(path))
+            }
+        }
+        return results
+    }
+
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
         generateContractTestScenarios(suggestions).map {
-            ScenarioTest(it, Flags.generativeTestingEnabled())
+            ScenarioTest(it, generativeTestingEnabled)
         }
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
@@ -303,7 +313,7 @@ data class Feature(
             it.isA2xxScenario()
         }.map { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
-            val negativeTestScenarios = negativeScenario.generateTestScenarios(testVariables, testBaseURLs)
+            val negativeTestScenarios = negativeScenario.generateTestScenarios(testVariables, testBaseURLs, true)
 
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
@@ -340,7 +350,7 @@ data class Feature(
             scenarioStub.request,
             scenarioStub.response,
             mismatchMessages
-        ).copy(delayInSeconds = scenarioStub.delayInSeconds)
+        ).copy(delayInSeconds = scenarioStub.delayInSeconds, requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) })
 
     fun clearServerState() {
         serverState = emptyMap()
@@ -561,12 +571,14 @@ data class Feature(
 
     fun toOpenAPIURLPrefixMap(urls: List<String>, mappedURLType: MappedURLType): Map<String, String> {
         val normalisedURL = urls.map { url ->
-            url.removeSuffix("/").removePrefix("http://").removePrefix("https://").split("/").joinToString("/") {
-                if(it.toIntOrNull() != null)
-                    "1"
-                else
-                    it
-            }.let { if(it.startsWith("/")) it else "/$it"}
+            val path =
+                url.removeSuffix("/").removePrefix("http://").removePrefix("https://").split("/").joinToString("/") {
+                    if (it.toIntOrNull() != null)
+                        "1"
+                    else
+                        it
+                }
+            path.let { if(it.startsWith("/")) it else "/$it"}
         }.distinct()
 
         val minLength = normalisedURL.map {
@@ -1240,6 +1252,10 @@ data class Feature(
     }
 }
 
+class EmptyContract : Throwable() {
+
+}
+
 private fun toFixtureInfo(rest: String): Pair<String, Value> {
     val fixtureTokens = breakIntoPartsMaxLength(rest.trim(), 2)
 
@@ -1567,7 +1583,8 @@ fun toFormDataPart(step: StepInfo, contractFilePath: String): MultiPartFormDataP
             MultiPartContentPattern(name, parsedPattern(content))
         }
         else -> {
-            MultiPartContentPattern(name, ExactValuePattern(parsedValue(content)))
+            MultiPartContentPattern(name, parsedPattern(content.trim()))
+//            MultiPartContentPattern(name, ExactValuePattern(parsedValue(content)))
         }
     }
 }

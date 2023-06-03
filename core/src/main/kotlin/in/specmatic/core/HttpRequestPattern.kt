@@ -6,10 +6,13 @@ import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
+import io.ktor.util.*
 
 private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
 private const val FORM_FIELDS_BREADCRUMB = "FORM-FIELDS"
 const val CONTENT_TYPE = "Content-Type"
+
+private val invalidRequestStatuses = listOf(400, 422)
 
 data class HeaderMatchParams(val request: HttpRequest, val headersResolver: Resolver?, val defaultResolver: Resolver, val failures: List<Failure>)
 
@@ -22,7 +25,7 @@ data class HttpRequestPattern(
     val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList(),
     val securitySchemes: List<OpenAPISecurityScheme> = emptyList()
 ) {
-    fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null): Result {
+    fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null, requestBodyReqex: Regex? = null): Result {
         val result = incomingHttpRequest to resolver to
                 ::matchPath then
                 ::matchMethod then
@@ -34,6 +37,13 @@ data class HttpRequestPattern(
                 ::matchFormFields then
                 ::matchMultiPartFormData then
                 ::matchBody then
+                {
+                    (request, resolver, failures) ->
+                    if (requestBodyReqex?.matches(request.bodyString) == false)
+                        MatchSuccess(Triple(request, resolver, failures.plus(Result.Failure("Request did not match regex ${requestBodyReqex.toString()}"))))
+                    else
+                        MatchSuccess(Triple(request, resolver, failures))
+                } then
                 ::summarize otherwise
                 ::handleError toResult
                 ::returnResult
@@ -171,7 +181,7 @@ data class HttpRequestPattern(
         val (httpRequest, resolver) = parameters
         method.let {
             return if (it != httpRequest.method)
-                MatchFailure(mismatchResult(method ?: "", httpRequest.method ?: "").breadCrumb("METHOD"))
+                MatchFailure(mismatchResult(method ?: "", httpRequest.method ?: "").copy(failureReason = FailureReason.MethodMismatch).breadCrumb("METHOD"))
             else
                 MatchSuccess(Triple(httpRequest, resolver, emptyList()))
         }
@@ -228,8 +238,8 @@ data class HttpRequestPattern(
                 requestType.copy(
                     headersPattern = HttpHeadersPattern(
                         toTypeMap(
-                            request.headers,
-                            headersPattern.pattern,
+                            toLowerCaseKeys(request.headers) as Map<String, String>,
+                            toLowerCaseKeys(headersPattern.pattern) as Map<String, Pattern>,
                             resolver
                         )
                     )
@@ -264,6 +274,9 @@ data class HttpRequestPattern(
             }
         }
     }
+
+    private fun toLowerCaseKeys(map: Map<String, Any?>) =
+        map.map { (key, value) -> key.toLowerCasePreservingASCIIRules() to value }.toMap()
 
     private fun toTypeMap(
         values: Map<String, String>,
@@ -315,9 +328,11 @@ data class HttpRequestPattern(
 
             val body = body
             attempt(breadCrumb = "BODY") {
-                body.generate(resolver).let { value ->
-                    newRequest = newRequest.updateBody(value)
-                    newRequest = newRequest.updateHeader(CONTENT_TYPE, value.httpContentType)
+                resolver.withCyclePrevention(body) {cyclePreventedResolver ->
+                    body.generate(cyclePreventedResolver).let { value ->
+                        newRequest = newRequest.updateBody(value)
+                        newRequest = newRequest.updateHeader(CONTENT_TYPE, value.httpContentType)
+                    }
                 }
             }
 
@@ -326,10 +341,9 @@ data class HttpRequestPattern(
             val formFieldsValue = attempt(breadCrumb = "FORM FIELDS") {
                 formFieldsPattern.mapValues { (key, pattern) ->
                     attempt(breadCrumb = key) {
-                        resolver.generate(
-                            key,
-                            pattern
-                        ).toString()
+                        resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                            cyclePreventedResolver.generate(key, pattern)
+                        }.toString()
                     }
                 }
             }
@@ -360,7 +374,12 @@ data class HttpRequestPattern(
         }
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
+    fun newBasedOn(row: Row, initialResolver: Resolver, status: Int = 0): List<HttpRequestPattern> {
+        val resolver = if(status in invalidRequestStatuses)
+            initialResolver.invalidRequestResolver()
+        else
+            initialResolver
+
         return attempt(breadCrumb = "REQUEST") {
             val newURLMatchers = urlMatcher?.newBasedOn(row, resolver) ?: listOf<URLMatcher?>(null)
                 val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
@@ -380,25 +399,39 @@ data class HttpRequestPattern(
                     } else if(row.containsField("(REQUEST-BODY)")) {
                         val example = row.getField("(REQUEST-BODY)")
                         val value = it.parse(example, resolver)
-                        val result = body.matches(value, resolver)
-                        if(result is Failure)
-                            throw ContractException(result.toFailureReport())
 
-                        if(Flags.generativeTestingEnabled()) {
-                            val rowWithRequestBodyAsIs = listOf(ExactValuePattern(value))
+                        if(! isInvalidRequestResponse(status)) {
+                            val result = body.matches(value, resolver)
+                            if (result is Failure)
+                                throw ContractException(result.toFailureReport())
+                        }
+
+                        if(resolver.generativeTestingEnabled) {
+                            val requestBodyAsIs = ExactValuePattern(value)
+                            val rowWithRequestBodyAsIs = listOf(requestBodyAsIs)
 
                             val requestsFromFlattenedRow: List<Pattern> =
-                                body.newBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+                                resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                                    body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
+                                }
 
-                            requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
+                            if(requestsFromFlattenedRow.none { it.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Result.Success}) {
+                                requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
+                            } else {
+                                requestsFromFlattenedRow
+                            }
                         } else {
                             listOf(ExactValuePattern(value))
                         }
                     } else {
 
-                        if(Flags.generativeTestingEnabled()) {
-                            val vanilla = body.newBasedOn(Row(), resolver)
-                            val fromExamples = body.newBasedOn(row, resolver)
+                        if(resolver.generativeTestingEnabled) {
+                            val vanilla = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                                body.newBasedOn(Row(), cyclePreventedResolver)
+                            }
+                            val fromExamples = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                                body.newBasedOn(row, cyclePreventedResolver)
+                            }
                             val remainingVanilla = vanilla.filterNot { vanillaType ->
                                 fromExamples.any { typeFromExamples ->
                                     vanillaType.encompasses(
@@ -411,7 +444,9 @@ data class HttpRequestPattern(
 
                             fromExamples.plus(remainingVanilla)
                         } else {
-                            body.newBasedOn(row, resolver)
+                            resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                                body.newBasedOn(row, cyclePreventedResolver)
+                            }
                         }
                     }
                 }
@@ -456,10 +491,18 @@ data class HttpRequestPattern(
         }
     }
 
+    private fun isInvalidRequestResponse(status: Int): Boolean {
+        return status in invalidRequestStatuses
+    }
+
     fun newBasedOn(resolver: Resolver): List<HttpRequestPattern> {
         return attempt(breadCrumb = "REQUEST") {
             val newURLMatchers = urlMatcher?.newBasedOn(resolver) ?: listOf<URLMatcher?>(null)
-            val newBodies = attempt(breadCrumb = "BODY") { body.newBasedOn(resolver) }
+            val newBodies = attempt(breadCrumb = "BODY") {
+                resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                    body.newBasedOn(cyclePreventedResolver)
+                }
+            }
             val newHeadersPattern = headersPattern.newBasedOn(resolver)
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, resolver)
             //TODO: Backward Compatibility
@@ -525,14 +568,17 @@ data class HttpRequestPattern(
                             val jsonValues = jsonObjectToValues(value)
                             val jsonValeuRow = Row(
                                 columnNames = jsonValues.map { it.first }.toList(),
-                                values = jsonValues.map { it.second }.toList())
+                                values = jsonValues.map { it.second }.toList(),
+                                name = row.name)
 
                             body.negativeBasedOn(jsonValeuRow, resolver)
                         } else {
                             listOf(ExactValuePattern(value))
                         }
 
-                        val flattenedRequests: List<Pattern> = body.newBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+                        val flattenedRequests: List<Pattern> = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                            body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
+                        }
 
                         flattenedRequests.plus(originalRequest)
 

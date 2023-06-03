@@ -113,6 +113,28 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
+    fun `Should avoid combinatorial explosion when many request properties with many possible values`() {
+        val resolver = Resolver(
+            newPatterns = (1..6).map { paramIndex ->
+                "(enum${paramIndex})" to AnyPattern((0..9).map { possibleValueIndex ->
+                    ExactValuePattern(StringValue("${paramIndex}${possibleValueIndex}"))
+                }.toList())
+            }.toMap()
+        )
+
+        val objPattern = parsedPattern("""{"p1": "(enum1)", "p2": "(enum2)", "p3": "(enum3)", "p4": "(enum4)", "p5": "(enum5)", "p6": "(enum6)"}""")
+
+
+        System.setProperty("MAX_TEST_REQUEST_COMBINATIONS", "64")
+        val newPatterns = try {
+            objPattern.newBasedOn(Row(), resolver)
+        } finally {
+            System.clearProperty("MAX_TEST_REQUEST_COMBINATIONS")
+        }
+        assertThat(newPatterns).hasSize(64)
+    }
+
+    @Test
     fun `When generating a new pattern based on a row, a concrete pattern value in the object should not become a concrete value`() {
         val resolver = Resolver()
 
@@ -176,6 +198,16 @@ internal class JSONObjectPatternTest {
     fun `it should encompass itself with a nullable value`() {
         val type = parsedPattern("""{"number": "(number?)"}""")
         assertThat(type.encompasses(type, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `having a non-null value it should NOT encompass another with a nullable value of the same type`() {
+        val bigger = parsedPattern("""{"number": "(number?)"}""")
+        val smallerWithNumber = parsedPattern("""{"number": "(number)"}""")
+        val smallerWithNull = parsedPattern("""{"number": "(null)"}""")
+
+        assertThat(smallerWithNumber.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(smallerWithNull.encompasses(bigger, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test

@@ -27,6 +27,21 @@ paths:
             404_NOT_FOUND:
               value: 0
               summary: value that returns 404
+            400_BAD_REQUEST:
+              value: 1
+        - in: header
+          name: traceId
+          schema:
+            type: string
+          required: false
+          description: trace id
+          examples:
+            200_OKAY:
+              value: "test-trace-id"
+            404_NOT_FOUND:
+              value: "test-trace-id"
+            400_BAD_REQUEST:
+              value: "(OMIT)"
       responses:
         '200':
           description: Says hello
@@ -54,3 +69,7 @@ paths:
             application/json:
               schema:
                 type: string
+              examples:
+                400_BAD_REQUEST:
+                  value: trace id missing
+                  summary: response that matches 400_BAD_REQUEST

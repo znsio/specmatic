@@ -203,9 +203,9 @@ internal class AnyPatternTest {
     fun `we should get deep errors errors with breadcrumbs for each possible type in a oneOf list`() {
         val customerType = JSONObjectPattern(mapOf("name" to StringPattern()), typeAlias = "(Customer)")
         val employeeType = JSONObjectPattern(mapOf("name" to StringPattern(), "manager" to StringPattern()), typeAlias = "(Employee)")
-        val eitherCustomerOrEmployeeType = AnyPattern(listOf(customerType, employeeType))
+        val oneOfCustomerOrEmployeeType = AnyPattern(listOf(customerType, employeeType))
 
-        val personType = JSONObjectPattern(mapOf("personInfo" to eitherCustomerOrEmployeeType))
+        val personType = JSONObjectPattern(mapOf("personInfo" to oneOfCustomerOrEmployeeType))
 
         val personData = parsedJSONObject("""{ "personInfo": { "name": "Sherlock Holmes", "salutation": "Mr" } }""")
 

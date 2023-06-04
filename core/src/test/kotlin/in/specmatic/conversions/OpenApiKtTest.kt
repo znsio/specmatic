@@ -18,7 +18,6 @@ import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import io.ktor.http.*
-import io.mockk.InternalPlatformDsl.toStr
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -145,7 +144,7 @@ Scenario: zero should return not found
 
     @Test
     fun `should create tests from OpenAPI examples`() {
-        val flags = mutableMapOf<String, Boolean>()
+        val contractTestsExecuted = mutableListOf<String>()
 
         val feature = parseGherkinStringToFeature(
             """
@@ -173,7 +172,8 @@ Background:
                             else -> 200
                         }
                     }
-                    flags["${request.path} executed and returned $status"] = true
+
+                    contractTestsExecuted.add("${request.path} executed and returned $status")
                     return HttpResponse(status, "hello world", headers)
                 }
 
@@ -182,11 +182,15 @@ Background:
             }
         )
 
-        assertThat(flags["/hello/0 executed and returned 404"]).isTrue
-        assertThat(flags["/hello/15 executed and returned 200"]).isTrue
-        assertThat(flags["/hello/1 executed and returned 400"]).isTrue
-        assertThat(flags.size).isEqualTo(3)
-        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
+        assertThat(contractTestsExecuted.sorted()).isEqualTo(
+            listOf(
+                "/hello/0 executed and returned 404",
+                "/hello/15 executed and returned 200",
+                "/hello/1 executed and returned 400"
+            ).sorted()
+        )
+
+        assertThat(results.success()).isTrue
     }
 
     @Test
@@ -307,7 +311,7 @@ Background:
 
     @Test
     fun `should report errors in tests created from OpenAPI examples`() {
-        val flags = mutableMapOf<String, Boolean>()
+        val contractTestsExecuted = mutableListOf<String>()
 
         val feature = parseGherkinStringToFeature(
             """
@@ -321,7 +325,6 @@ Background:
         val results = feature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    flags["${request.path} executed"] = true
                     assertThat(request.path).matches("""\/hello\/[0-9]+""")
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
@@ -333,6 +336,7 @@ Background:
                         0 -> 403
                         else -> 202
                     }
+                    contractTestsExecuted.add("${request.path} executed and returned $status")
                     return HttpResponse(status, "hello world", headers)
                 }
 
@@ -341,11 +345,15 @@ Background:
             }
         )
 
-        assertThat(flags["/hello/0 executed"]).isTrue
-        assertThat(flags["/hello/1 executed"]).isTrue
-        assertThat(flags["/hello/15 executed"]).isTrue
-        assertThat(flags.size).isEqualTo(3)
-        assertThat(results.report()).isEqualTo("""Match not found""".trimIndent())
+        assertThat(contractTestsExecuted.sorted()).isEqualTo(
+            listOf(
+                "/hello/15 executed and returned 202",
+                "/hello/0 executed and returned 403",
+                "/hello/1 executed and returned 202"
+            ).sorted()
+        )
+
+        assertThat(results.failureCount).isEqualTo(3)
     }
 
     @Disabled

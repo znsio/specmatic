@@ -589,7 +589,7 @@ data class HttpRequestPattern(
                 }
             }
 
-            val newHeadersPattern = headersPattern.newBasedOn(row, resolver)
+            val newHeadersPattern = headersPattern.negativeBasedOn(row, resolver)
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 

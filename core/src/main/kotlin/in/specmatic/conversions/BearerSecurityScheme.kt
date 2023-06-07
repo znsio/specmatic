@@ -3,7 +3,8 @@ package `in`.specmatic.conversions
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpRequestPattern
 import `in`.specmatic.core.Resolver
-import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.pattern.Row
+import `in`.specmatic.core.pattern.StringPattern
 import org.apache.http.HttpHeaders.AUTHORIZATION
 
 class BearerSecurityScheme : OpenAPISecurityScheme {
@@ -16,7 +17,11 @@ class BearerSecurityScheme : OpenAPISecurityScheme {
     }
 
     override fun addTo(httpRequest: HttpRequest): HttpRequest {
-        return httpRequest.copy(headers = httpRequest.headers.plus(AUTHORIZATION to StringPattern().generate(Resolver()).toStringLiteral()))
+        return httpRequest.copy(
+            headers = httpRequest.headers.plus(
+                AUTHORIZATION to "Bearer " + StringPattern().generate(Resolver()).toStringLiteral(),
+            ),
+        )
     }
 
     override fun addTo(requestPattern: HttpRequestPattern, row: Row): HttpRequestPattern {

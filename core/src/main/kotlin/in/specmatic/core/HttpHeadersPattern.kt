@@ -107,10 +107,6 @@ data class HttpHeadersPattern(
         return headers.filterKeys { key ->
             val headerWithoutOptionality = withoutOptionality(key).lowercase()
             ancestorHeadersLowerCase.containsKey(headerWithoutOptionality) || ancestorHeadersLowerCase.containsKey("$headerWithoutOptionality?")
-        }.filterNot { entry ->
-            val headerWithoutOptionality = withoutOptionality(entry.key).lowercase()
-
-            isStandardHeader(headerWithoutOptionality) && "${headerWithoutOptionality}?" in ancestorHeadersLowerCase
         }
     }
 

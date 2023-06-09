@@ -1,6 +1,10 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.core.pattern.EmptyStringPattern
+import `in`.specmatic.core.pattern.JSONObjectPattern
+import `in`.specmatic.core.pattern.NumberPattern
+import `in`.specmatic.core.value.*
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
@@ -10,12 +14,7 @@ import org.junit.jupiter.api.fail
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import `in`.specmatic.core.pattern.EmptyStringPattern
-import `in`.specmatic.core.pattern.NumberPattern
-import `in`.specmatic.core.value.*
-import org.junit.jupiter.api.Nested
 import java.util.*
-import java.util.function.Consumer
 import java.util.stream.Stream
 
 class FeatureTest {
@@ -1148,6 +1147,79 @@ Then status 200
 
         val testScenarios: List<Scenario> = contract.generateContractTestScenarios(emptyList())
         assertThat(testScenarios).hasSize(1)
+    }
+
+    @Test
+    fun `test ideal number of negative tests are created`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    post:
+      summary: Add Product
+      description: Add Product
+      parameters:
+        - in: header
+          name: X-Request-ID
+          schema:
+            type: string
+          required: true
+          examples:
+            SUCCESS:
+              value: 'request_id'
+              
+      requestBody:
+        content:
+          application/json:
+            examples:
+              SUCCESS:
+                value:
+                  name: abc
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+""".trimIndent(), "").toFeature()
+
+        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        println("Scenario count:" + scenarios.count())
+        scenarios.forEachIndexed { index, scenario ->
+            println("Scenario {$index}:")
+            println(scenario.testDescription())
+            scenario.httpRequestPattern.headersPattern.pattern.entries.forEach { (key, value) -> println("$key = $value") }
+            (scenario.httpRequestPattern.body as JSONObjectPattern).pattern.entries.forEach { (key, value) -> println("$key = $value") }
+            println()
+        }
+        assertThat(scenarios.count()).isEqualTo(10)
     }
 
     companion object {

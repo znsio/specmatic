@@ -2034,7 +2034,7 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            val result = this.scenarios.first().matchesMock(
+            val result: Result = this.scenarios.first().matchesMock(
                 HttpRequest(
                     "POST",
                     "/person",
@@ -2042,17 +2042,7 @@ Scenario: Get product by id
                 ), HttpResponse.OK("success")
             )
 
-            println(result.reportString())
-
-            assertThat(
-                this.matches(
-                    HttpRequest(
-                        "POST",
-                        "/person",
-                        body = parsedJSON("""{"address": [null, "Baker Street"]}""")
-                    ), HttpResponse.OK("success")
-                )
-            ).isTrue
+            assertThat(result).isInstanceOf(Result.Success::class.java)
         }
 
         val openAPIYaml = openAPIToString(openAPI)

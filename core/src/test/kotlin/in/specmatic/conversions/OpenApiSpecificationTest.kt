@@ -11,6 +11,8 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.NoMatchingScenario
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
@@ -6242,6 +6244,83 @@ paths:
         assertThat(NullPattern).isIn(addressType.pattern)
         assertThat(StringPattern()).isIn(addressType.pattern)
     }
+
+    @Test
+    fun `should be possible to have two stubs of authorization header with different values`() {
+        val specification = """
+            openapi: 3.0.1
+            info:
+              title: New Feature
+              version: "1"
+            paths:
+              /test:
+                post:
+                  summary: auth
+                  parameters:
+                    - in: header
+                      name: Authorization
+                      schema:
+                        type: string
+                      required: true
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Request'
+                  responses:
+                    "200":
+                      description: New scenario
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    "400":
+                      description: New scenario
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+            components:
+              schemas:
+                Request:
+                  type: object
+                  required:
+                    - item
+                  properties:
+                    item:
+                      type: string
+
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(specification, "/file.yaml").toFeature()
+
+        val validAuthStub: ScenarioStub = ScenarioStub(
+            HttpRequest("POST", "/test", mapOf("Authorization" to "valid"), body = parsedJSONObject("""{"item": "data"}""")),
+            HttpResponse.OK("success"))
+
+        val invalidAuthStub: ScenarioStub = ScenarioStub(
+            HttpRequest("POST", "/test", mapOf("Authorization" to "invalid"), body = parsedJSONObject("""{"item": "data"}""")),
+            HttpResponse(400, "failed"))
+
+        HttpStub(feature, listOf(invalidAuthStub, validAuthStub)).use { stub ->
+            val request = HttpRequest(
+                "POST",
+                "/test",
+                body = parsedJSONObject("""{"item": "data"}""")
+            )
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "valid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success")
+                assertThat(this.status).isEqualTo(200)
+            }
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "invalid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("failed")
+                assertThat(this.status).isEqualTo(400)
+            }
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

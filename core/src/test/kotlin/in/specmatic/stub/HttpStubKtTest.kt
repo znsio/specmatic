@@ -905,7 +905,59 @@ paths:
                 assertThat(this.body.toStringLiteral()).isNotEqualTo("success")
             }
         }
-
-
     }
+
+    @Test
+    fun `multiple stubs for a non 200 with a value specified for a header will load and match incoming requests correctly`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/multiple400StubsWithHeader.yaml")).use { stub ->
+            val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "valid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success")
+            }
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "invalid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("failed")
+            }
+        }
+    }
+
+    @Test
+    fun `stubs are loaded in order sorted by filename`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/contractWithOrderedStubs.yaml")).use { stub ->
+            val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
+
+            with(stub.client.execute(request)) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success 1")
+            }
+
+            with(stub.client.execute(request)) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success 2")
+            }
+        }
+    }
+
+    @Test
+    fun `stubs are loaded in order sorted by filename across nested dirs`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/contractWithOrderedStubsInNestedDirs.yaml")).use { stub ->
+            val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
+
+            with(stub.client.execute(request)) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success 1")
+            }
+
+            with(stub.client.execute(request)) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success 2")
+            }
+
+            with(stub.client.execute(request)) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success 3")
+            }
+
+            with(stub.client.execute(request)) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success 4")
+            }
+        }
+    }
+
 }

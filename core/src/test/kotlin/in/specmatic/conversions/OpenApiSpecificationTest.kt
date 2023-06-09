@@ -6311,6 +6311,118 @@ paths:
         }
     }
 
+    @Test
+    fun `validate the second element in a list`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: "Get person by id"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                  responses:
+                    200:
+                      description: "Get person by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas: {}
+        """.trimIndent(), "").toFeature()
+
+        with(feature) {
+            val result =
+                this.scenarios.first().matchesMock(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""[{"id": "123", "name": "Jack Sprat"}, {"id": "456"}]""")
+                    ), HttpResponse.OK("success"))
+
+            assertThat(result.reportString()).isEqualTo("""
+                >> REQUEST.BODY[1].name
+
+                   Expected key named "name" was missing
+            """.trimIndent())
+        }
+    }
+
+    @Test
+    fun `validate a nullable array`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: "Get person by id"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                              - names
+                            properties:
+                              id:
+                                type: string
+                              names:
+                                type: array
+                                nullable: true
+                                items:
+                                  type: string
+                  responses:
+                    200:
+                      description: "Get person by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas: {}
+        """.trimIndent(), "").toFeature()
+
+        with(feature) {
+            val result =
+                this.scenarios.first().matchesMock(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""[{"id": "123", "names": ["Jack", "Sprat"]}, {"id": "456", "names": null}]""")
+                    ), HttpResponse.OK("success"))
+
+            println(result.reportString())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

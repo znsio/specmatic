@@ -1119,9 +1119,7 @@ data class Feature(
             pattern is ListPattern -> {
                 if (pattern.pattern is DeferredPattern) {
                     ArraySchema().apply {
-                        this.items = Schema<Any>().apply {
-                            setSchemaType(pattern.pattern.typeAlias!!, this)
-                        }
+                        this.items = getSchemaType(pattern.pattern.typeAlias!!)
                     }
                 } else if (isArrayOfNullables(pattern)) {
                     ArraySchema().apply {
@@ -1216,14 +1214,6 @@ data class Feature(
 
             Schema<Any>().also { it.`$ref` = cleanedUpType }
         }
-    }
-
-    private fun setSchemaType(type: String, schema: Schema<Any>) {
-        val cleanedUpType = withoutPatternDelimiters(type)
-        if (builtInPatterns.contains(type))
-            schema.type = cleanedUpType
-        else
-            schema.`$ref` = cleanedUpType
     }
 
     private fun isArrayOrNull(pattern: Pattern): Boolean =

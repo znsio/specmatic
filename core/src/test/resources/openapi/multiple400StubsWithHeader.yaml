@@ -6,6 +6,12 @@ paths:
   /test:
     post:
       summary: Data
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
       requestBody:
         content:
           application/json:
@@ -13,6 +19,12 @@ paths:
               $ref: '#/components/schemas/Request'
       responses:
         "200":
+          description: Data
+          content:
+            text/plain:
+              schema:
+                type: string
+        "401":
           description: Data
           content:
             text/plain:

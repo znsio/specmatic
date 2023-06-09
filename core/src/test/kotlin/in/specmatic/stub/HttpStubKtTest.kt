@@ -5,6 +5,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
@@ -891,5 +892,20 @@ paths:
             assertThat(responseString).contains("request contained")
             assertThat(responseString).contains("json array")
         }
+    }
+
+    @Test
+    fun `transient stubs can be loaded from the file system`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/contractWithTransientMock.yaml")).use { stub ->
+            with(stub.client.execute(HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}""")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success")
+            }
+
+            with(stub.client.execute(HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}""")))) {
+                assertThat(this.body.toStringLiteral()).isNotEqualTo("success")
+            }
+        }
+
+
     }
 }

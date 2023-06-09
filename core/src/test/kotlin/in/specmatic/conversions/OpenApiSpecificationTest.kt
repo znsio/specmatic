@@ -842,15 +842,26 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(
-                this.matches(
+            with(this.scenarios.first().matchesMock(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}]}""")
+                ), HttpResponse.OK("success")
+            )) {
+                assertThat(this).isInstanceOf(Result.Success::class.java)
+            }
+
+            with(this.scenarios.first().matchesMock(
                     HttpRequest(
                         "POST",
                         "/person",
-                        body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
+                        body = parsedJSON("""{"id": "123", "address": null}""")
                     ), HttpResponse.OK("success")
-                )
-            ).isTrue
+                )) {
+
+                assertThat(this).isInstanceOf(Result.Success::class.java)
+            }
         }
 
         val openAPIYaml = openAPIToString(openAPI)
@@ -2021,6 +2032,16 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            val result = this.scenarios.first().matchesMock(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedJSON("""{"address": [null, "Baker Street"]}""")
+                ), HttpResponse.OK("success")
+            )
+
+            println(result.reportString())
+
             assertThat(
                 this.matches(
                     HttpRequest(

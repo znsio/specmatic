@@ -1060,22 +1060,20 @@ data class Feature(
             pattern is JSONObjectPattern -> jsonObjectToSchema(pattern)
             isArrayOfNullables(pattern) -> {
                 ArraySchema().apply {
-                    val arrayItemSchema = Schema<Any>().apply {
-                        val typeAlias =
-                            ((pattern as ListPattern).pattern as AnyPattern).pattern.first { !isEmptyOrNull(it) }.let {
-                                if (it.pattern is String && builtInPatterns.contains(it.pattern.toString()))
-                                    it.pattern as String
-                                else
-                                    it.typeAlias?.let { typeAlias ->
-                                        if (!typeAlias.startsWith("("))
-                                            "($typeAlias)"
-                                        else
-                                            typeAlias
-                                    } ?: throw ContractException("Unknown type: $it")
-                            }
+                    val typeAlias =
+                        ((pattern as ListPattern).pattern as AnyPattern).pattern.first { !isEmptyOrNull(it) }.let {
+                            if (it.pattern is String && builtInPatterns.contains(it.pattern.toString()))
+                                it.pattern as String
+                            else
+                                it.typeAlias?.let { typeAlias ->
+                                    if (!typeAlias.startsWith("("))
+                                        "($typeAlias)"
+                                    else
+                                        typeAlias
+                                } ?: throw ContractException("Unknown type: $it")
+                        }
 
-                        setSchemaType(typeAlias, this)
-                    }
+                    val arrayItemSchema = getSchemaType(typeAlias)
 
                     this.items = nullableSchemaAsOneOf(arrayItemSchema)
                 }
@@ -1084,11 +1082,11 @@ data class Feature(
                 ArraySchema().apply {
                     pattern as AnyPattern
 
-                    this.items = Schema<Any>().apply {
-                        setSchemaType(pattern.pattern.first { !isEmptyOrNull(it) }.let {
+                    this.items =
+                        getSchemaType(pattern.pattern.first { !isEmptyOrNull(it) }.let {
                             listInnerTypeDescriptor(it as ListPattern)
-                        }, this)
-                    }
+                        })
+
                     this.nullable = true
                 }
             }
@@ -1207,6 +1205,17 @@ data class Feature(
                     withoutPatternDelimiters(it.pattern).removeSuffix("*").removeSuffix("?").removeSuffix("*")
                 ) !in builtInPatterns
             }
+    }
+
+    private fun getSchemaType(type: String): Schema<Any> {
+        return if (builtInPatterns.contains(type)) {
+            toOpenApiSchema(builtInPatterns.getValue(type))
+        }
+        else {
+            val cleanedUpType = withoutPatternDelimiters(type)
+
+            Schema<Any>().also { it.`$ref` = cleanedUpType }
+        }
     }
 
     private fun setSchemaType(type: String, schema: Schema<Any>) {

@@ -854,6 +854,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     ) = schema.properties.orEmpty().map { (propertyName, propertyType) ->
         if (discriminatorPropertyName == propertyName)
             propertyName to ExactValuePattern(StringValue(patternName))
+        else if(schema.discriminator?.propertyName == propertyName)
+            propertyName to ExactValuePattern(StringValue(patternName))
         else {
             val optional = !requiredFields.contains(propertyName)
             toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(propertyType, typeStack)

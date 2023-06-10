@@ -66,7 +66,7 @@ class HttpStub(
     ) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken == null }.toMutableList())
-    private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.toMutableList())
+    private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
 
     val stubCount: Int
         get() {

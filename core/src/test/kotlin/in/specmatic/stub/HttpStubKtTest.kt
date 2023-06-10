@@ -938,24 +938,14 @@ paths:
     }
 
     @Test
-    fun `stubs are loaded in order sorted by filename across nested dirs`() {
+    fun `transient stubs are loaded in order sorted by filename across nested dirs where the first item in sorted order is the first item in the queue`() {
         createStubFromContracts(listOf("src/test/resources/openapi/contractWithOrderedStubsInNestedDirs.yaml")).use { stub ->
             val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
 
-            with(stub.client.execute(request)) {
-                assertThat(this.body.toStringLiteral()).isEqualTo("success 1")
-            }
-
-            with(stub.client.execute(request)) {
-                assertThat(this.body.toStringLiteral()).isEqualTo("success 2")
-            }
-
-            with(stub.client.execute(request)) {
-                assertThat(this.body.toStringLiteral()).isEqualTo("success 3")
-            }
-
-            with(stub.client.execute(request)) {
-                assertThat(this.body.toStringLiteral()).isEqualTo("success 4")
+            (0..4).map { ctr ->
+                with(stub.client.execute(request)) {
+                    assertThat(this.body.toStringLiteral()).isEqualTo("success $ctr")
+                }
             }
         }
     }

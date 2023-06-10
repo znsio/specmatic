@@ -557,7 +557,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         toSpecmaticPattern(mediaType.schema, emptyList(), jsonInFormData = jsonInFormData)
 
     fun toSpecmaticPattern(
-        schema: Schema<*>, typeStack: List<String>, patternName: String = "", jsonInFormData: Boolean = false
+        schema: Schema<*>, typeStack: List<String>, patternName: String = "", jsonInFormData: Boolean = false, discriminatorPropertyName: String? = null
     ): Pattern {
         val preExistingResult = patterns.get("($patternName)")
         val pattern = if (preExistingResult != null && !patternName.isNullOrBlank())
@@ -586,7 +586,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 } else if (schema.xml?.name != null) {
                     toXMLPattern(schema, typeStack = typeStack)
                 } else {
-                    toJsonObjectPattern(schema, patternName, typeStack)
+                    toJsonObjectPattern(schema, patternName, typeStack, discriminatorPropertyName)
                 }
             }
             is ArraySchema -> {
@@ -606,7 +606,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         } else constituentSchema
 
                         val requiredFields = schemaToProcess.required.orEmpty()
-                        toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
+                        toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack, discriminatorPropertyName = discriminatorPropertyName)
                     }.fold(emptyMap<String, Pattern>()) { acc, entry -> acc.plus(entry) }
                     val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
                     jsonObjectPattern
@@ -615,7 +615,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         val (componentName, schemaToProcess) =
                             if (componentSchema.`$ref` != null) resolveReferenceToSchema(componentSchema.`$ref`)
                             else patternName to componentSchema
-                        toSpecmaticPattern(schemaToProcess, typeStack.plus(componentName), componentName)
+
+                        val discriminatorPropertyName: String? = schema.discriminator?.propertyName
+
+                        toSpecmaticPattern(schemaToProcess, typeStack.plus(componentName), componentName, discriminatorPropertyName = discriminatorPropertyName)
                     }
 
                     val nullable = if(schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
@@ -838,18 +841,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun toJsonObjectPattern(
-        schema: Schema<*>, patternName: String, typeStack: List<String>
+        schema: Schema<*>, patternName: String, typeStack: List<String>, discriminatorPropertyName: String? = null
     ): JSONObjectPattern {
         val requiredFields = schema.required.orEmpty()
-        val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack)
+        val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack, discriminatorPropertyName)
         val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
         return cacheComponentPattern(patternName, jsonObjectPattern)
     }
 
     private fun toSchemaProperties(
-        schema: Schema<*>, requiredFields: List<String>, patternName: String, typeStack: List<String>
+        schema: Schema<*>, requiredFields: List<String>, patternName: String, typeStack: List<String>, discriminatorPropertyName: String? = null
     ) = schema.properties.orEmpty().map { (propertyName, propertyType) ->
-        if (schema.discriminator?.propertyName == propertyName)
+        if (discriminatorPropertyName == propertyName)
             propertyName to ExactValuePattern(StringValue(patternName))
         else {
             val optional = !requiredFields.contains(propertyName)

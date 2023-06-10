@@ -5663,12 +5663,12 @@ paths:
                   properties:
                     pet_type:
                       type: string
-                  discriminator:
-                    propertyName: pet_type
                 Pet_Polymorphic:
                   oneOf:
                     - ${'$'}ref: '#/components/schemas/Cat'
                     - ${'$'}ref: '#/components/schemas/Dog'
+                  discriminator:
+                    propertyName: pet_type
                 Dog:
                   allOf:
                   - ${'$'}ref: '#/components/schemas/Pet'

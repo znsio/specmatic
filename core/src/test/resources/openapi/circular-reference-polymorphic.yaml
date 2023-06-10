@@ -26,8 +26,6 @@ components:
 
     MyBase:
       type: object
-      discriminator:
-        propertyName: '@type'
       properties:
         '@type':
           type: string
@@ -36,6 +34,8 @@ components:
       oneOf:
         - $ref: '#/components/schemas/MySub1'
         - $ref: '#/components/schemas/MySub2'
+      discriminator:
+        propertyName: '@type'
 
     MySub1:
       allOf:

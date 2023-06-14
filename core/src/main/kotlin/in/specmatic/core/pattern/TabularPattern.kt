@@ -139,9 +139,17 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
     return patternList(patternCollection)
 }
 
-fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
+fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver, stringlyCheck: Boolean=false): List<Map<String, Pattern>> {
     val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
-    val negativePatternsMap = patternMap.mapValues { (_, pattern) -> pattern.negativeBasedOn(row, resolver) }
+    val negativePatternsMap = patternMap.mapValues { (_, pattern) ->
+        if (stringlyCheck && pattern is StringPattern) {
+            emptyList()
+        } else if (stringlyCheck && pattern is ScalarType) {
+            pattern.negativeBasedOn(row, resolver).filterNot { it is NullPattern }
+        } else {
+            pattern.negativeBasedOn(row, resolver)
+        }
+    }
     val modifiedPatternMap: Map<String, List<Map<String, List<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
         val negativePatterns = negativePatternsMap[keyToNegate]
         negativePatterns!!.map { negativePattern ->
@@ -175,10 +183,18 @@ fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<S
     return patternValues(patternCollection)
 }
 
-fun negativeBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<String, Pattern>> {
+fun negativeBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver, stringlyCheck:Boolean=false): List<Map<String, Pattern>> {
     val patternCollection = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) {
-            negativeBasedOn(key, pattern, resolver)
+            if(stringlyCheck && pattern is StringPattern) {
+                emptyList()
+            }
+            else if (stringlyCheck && pattern is ScalarType) {
+                negativeBasedOn(key, pattern, resolver).filterNot { it is NullPattern  }
+            }
+            else {
+                negativeBasedOn(key, pattern, resolver)
+            }
         }
     }
 

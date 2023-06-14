@@ -593,29 +593,41 @@ data class HttpRequestPattern(
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 
-            newURLMatchers.flatMap { newURLMatcher ->
-                newBodies.flatMap { newBody ->
-                    newHeadersPattern.flatMap { newHeadersPattern ->
-                        newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
-                            newFormDataPartLists.flatMap { newFormDataPartList ->
-                                val newRequestPattern = HttpRequestPattern(
-                                    headersPattern = newHeadersPattern,
-                                    urlMatcher = newURLMatcher,
-                                    method = method,
-                                    body = newBody,
-                                    formFieldsPattern = newFormFieldsPattern,
-                                    multiPartFormDataPattern = newFormDataPartList
-                                )
 
-                                when(securitySchemes) {
-                                    emptyList<OpenAPISecurityScheme>() -> listOf(newRequestPattern)
-                                    else -> securitySchemes.map {
-                                        newRequestPattern.copy(securitySchemes = listOf(it))
-                                    }
-                                }
-                            }
-                        }
-                    }
+            val positivePattern:HttpRequestPattern = newBasedOn(row, resolver).first()
+
+            val negativeRequestPatterns = mutableListOf<HttpRequestPattern>()
+            newURLMatchers.forEach { newUrlMatcher ->
+                negativeRequestPatterns.add(
+                    positivePattern.copy(urlMatcher = newUrlMatcher)
+                )
+            }
+            newBodies.forEach { newbodyPattern ->
+                negativeRequestPatterns.add(
+                    positivePattern.copy(body = newbodyPattern)
+                )
+            }
+            newHeadersPattern.forEach { newHeaderPattern ->
+                negativeRequestPatterns.add(
+                    positivePattern.copy(headersPattern = newHeaderPattern)
+                )
+            }
+            newFormFieldsPatterns.forEach { newFormFieldPattern ->
+                negativeRequestPatterns.add(
+                    positivePattern.copy(formFieldsPattern = newFormFieldPattern)
+                )
+            }
+            newFormDataPartLists.forEach { newFormDataPartListPattern ->
+                negativeRequestPatterns.add(
+                    positivePattern.copy(multiPartFormDataPattern = newFormDataPartListPattern)
+                )
+            }
+            // If security schemes are present, for now we'll just take the first scheme and assign it to each negative request pattern.
+            // Ideally we should generate negative patterns from the security schemes and use them.
+            when (securitySchemes.isEmpty()) {
+                true -> negativeRequestPatterns
+                false -> negativeRequestPatterns.map {
+                    it.copy(securitySchemes = listOf(securitySchemes.first()))
                 }
             }
         }

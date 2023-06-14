@@ -2,8 +2,8 @@ package `in`.specmatic.core
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.pattern.EmptyStringPattern
-import `in`.specmatic.core.pattern.JSONObjectPattern
 import `in`.specmatic.core.pattern.NumberPattern
+import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.value.*
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
@@ -1150,7 +1150,164 @@ Then status 200
     }
 
     @Test
-    fun `test ideal number of negative tests are created`() {
+    fun `test generates no negative tests for a string header parameter`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    get:
+      summary: Get Product
+      description: Get Product
+      parameters:
+        - in: header
+          name: X-Request-ID
+          schema:
+            type: string
+          examples:
+            SUCCESS:
+              value: 'abc'
+              
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+                    name: 'Product10'
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+""".trimIndent(), "").toFeature()
+
+        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        assertThat(scenarios.filter { it.testDescription().contains("-ve")}.count()).isEqualTo(0)
+    }
+
+    @Test
+    fun `test generates 1 negative test with string pattern for an integer header parameter`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    get:
+      summary: Get Product
+      description: Get Product
+      parameters:
+        - in: header
+          name: X-Request-ID
+          schema:
+            type: integer
+          examples:
+            SUCCESS:
+              value: 123
+              
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+                    name: 'Product10'
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+""".trimIndent(), "").toFeature()
+
+        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
+        assertThat(negativeTestScenarios.count()).isEqualTo(1)
+        val headerPattern = negativeTestScenarios.first().httpRequestPattern.headersPattern.pattern
+        assertThat(headerPattern.values.first() is StringPattern)
+    }
+
+    @Test
+    fun `test generates no negative tests for a boolean header parameter`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    get:
+      summary: Get Product
+      description: Get Product
+      parameters:
+        - in: header
+          name: X-Request-ID
+          schema:
+            type: boolean
+          examples:
+            SUCCESS:
+              value: true
+              
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+                    name: 'Product10'
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+""".trimIndent(), "").toFeature()
+
+        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
+        assertThat(negativeTestScenarios.count()).isEqualTo(0)
+    }
+
+    @Test
+    fun `test generates 8 negative tests for 2 integer header parameters and 2 body parameters`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
@@ -1169,11 +1326,20 @@ paths:
         - in: header
           name: X-Request-ID
           schema:
-            type: string
+            type: integer
           required: true
           examples:
             SUCCESS:
-              value: 'request_id'
+              value: 123
+              
+        - in: header
+          name: X-Request-Code
+          schema:
+            type: integer
+          required: true
+          examples:
+            SUCCESS:
+              value: 456
               
       requestBody:
         content:
@@ -1181,13 +1347,17 @@ paths:
             examples:
               SUCCESS:
                 value:
-                  name: abc
+                  name: 'abc'
+                  sku: 'sku'
             schema:
               type: object
               required:
                 - name
+                - sku
               properties:
                 name:
+                  type: string
+                sku:
                   type: string
       responses:
         '200':
@@ -1198,6 +1368,7 @@ paths:
                 SUCCESS:
                   value:
                     id: 10
+                    name : 'Product10'
               schema:
                 type: object
                 required:
@@ -1211,16 +1382,10 @@ paths:
 """.trimIndent(), "").toFeature()
 
         val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
-        println("Scenario count:" + scenarios.count())
-        scenarios.forEachIndexed { index, scenario ->
-            println("Scenario {$index}:")
-            println(scenario.testDescription())
-            scenario.httpRequestPattern.headersPattern.pattern.entries.forEach { (key, value) -> println("$key = $value") }
-            (scenario.httpRequestPattern.body as JSONObjectPattern).pattern.entries.forEach { (key, value) -> println("$key = $value") }
-            println()
-        }
-        assertThat(scenarios.count()).isEqualTo(10)
+        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
+        assertThat(negativeTestScenarios.count()).isEqualTo(8)
     }
+
 
     companion object {
         @JvmStatic

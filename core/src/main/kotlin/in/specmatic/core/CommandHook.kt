@@ -5,7 +5,8 @@ import `in`.specmatic.core.utilities.ExternalCommand
 import java.io.File
 
 enum class HookName {
-    stub_load_contract
+    stub_load_contract,
+    test_load_contract
 }
 
 class CommandHook(private val name: HookName): Hook {

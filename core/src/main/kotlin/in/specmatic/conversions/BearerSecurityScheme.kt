@@ -9,7 +9,9 @@ import org.apache.http.HttpHeaders.AUTHORIZATION
 
 class BearerSecurityScheme : OpenAPISecurityScheme {
     override fun matches(httpRequest: HttpRequest): Boolean {
-        return httpRequest.headers.containsKey(AUTHORIZATION)
+        return httpRequest.headers.let {
+            it.containsKey(AUTHORIZATION) && it[AUTHORIZATION]!!.lowercase().startsWith("bearer")
+        }
     }
 
     override fun removeParam(httpRequest: HttpRequest): HttpRequest {

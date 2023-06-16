@@ -10,11 +10,18 @@ import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
+import io.ktor.client.*
 import io.ktor.http.*
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
+import org.apache.hc.client5.http.impl.classic.HttpClients
+import org.apache.hc.core5.http.ClassicHttpRequest
+import org.apache.hc.core5.http.ContentType
+import org.apache.hc.core5.http.io.entity.EntityUtils
+import org.apache.hc.core5.http.io.entity.StringEntity
+import org.apache.hc.core5.http.io.support.ClassicRequestBuilder
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -35,14 +42,13 @@ import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
-import org.testcontainers.shaded.okhttp3.MediaType.*
-import org.testcontainers.shaded.okhttp3.OkHttpClient
-import org.testcontainers.shaded.okhttp3.Request
-import org.testcontainers.shaded.okhttp3.RequestBody
+import java.io.BufferedReader
 import java.io.File
+import java.io.InputStreamReader
 import java.net.URI
 import java.util.function.Consumer
 import java.util.stream.Stream
+
 
 internal class OpenApiKtTest {
     companion object {
@@ -991,19 +997,15 @@ Background:
         )
 
         val petResponse = HttpStub(feature).use {
-            val requestBody = RequestBody.create(
-                parse("application/json"), ObjectMapper().writeValueAsString(Pet("scooby", "golden", 1, "retriever", 1))
-            )
-            val request =
-                Request.Builder().url("http://localhost:9000/pets/1").addHeader("Content-Type", "application/json")
-                    .patch(requestBody).build()
-            val call = OkHttpClient().newCall(request)
-            call.execute()
+            val httpClient: CloseableHttpClient = HttpClients.createDefault()
+            val jsonPayload = ObjectMapper().writeValueAsString(Pet("scooby", "golden", 1, "retriever", 1))
+            val httpPatch: ClassicHttpRequest = ClassicRequestBuilder.patch("http://localhost:9000/pets/1")
+                .setEntity(StringEntity(jsonPayload, ContentType.APPLICATION_JSON))
+                .build()
+            httpClient.execute(httpPatch)
         }
-
-        assertThat(petResponse.isSuccessful).isTrue
-        assertThat(petResponse.code()).isEqualTo(200)
-        assertThat(ObjectMapper().readValue(petResponse.body()?.string(), Pet::class.java)).isNotNull
+        assertThat(petResponse.code).isEqualTo(200)
+        assertThat(ObjectMapper().readValue(EntityUtils.toString(petResponse.entity), Pet::class.java)).isNotNull
     }
 
     @Test

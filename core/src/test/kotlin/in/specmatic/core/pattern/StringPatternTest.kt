@@ -10,7 +10,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.testcontainers.shaded.org.apache.commons.lang.RandomStringUtils
+import org.testcontainers.shaded.org.apache.commons.lang3.RandomStringUtils
 import java.util.stream.Stream
 import `in`.specmatic.core.Result as Result
 

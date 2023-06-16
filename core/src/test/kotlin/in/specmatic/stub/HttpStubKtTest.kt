@@ -11,15 +11,17 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
-import io.mockk.InternalPlatformDsl.toStr
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
+import org.apache.hc.client5.http.impl.classic.HttpClients
+import org.apache.hc.core5.http.ClassicHttpRequest
+import org.apache.hc.core5.http.ContentType
+import org.apache.hc.core5.http.io.entity.EntityUtils
+import org.apache.hc.core5.http.io.entity.StringEntity
+import org.apache.hc.core5.http.io.support.ClassicRequestBuilder
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
-import org.testcontainers.shaded.okhttp3.MediaType
-import org.testcontainers.shaded.okhttp3.OkHttpClient
-import org.testcontainers.shaded.okhttp3.Request
-import org.testcontainers.shaded.okhttp3.RequestBody
 import java.security.KeyStore
 import java.util.*
 import java.util.function.Consumer
@@ -38,18 +40,19 @@ Feature: Test
         val feature = parseGherkinStringToFeature(gherkin)
 
         HttpStub(feature).use {
-            val body = RequestBody.create(MediaType.parse("application/json"), """{
+            val body =  """{
 "event": "features",
 "id": "332f8278",
 "data": "[{\"id\":\"b5bf7f9e-9391-40a4-8808-61ad73f800e9\",\"key\":\"FT01\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":true},{\"id\":\"8b6002e8-e97a-4ebe-8cae-ac68fb99fc33\",\"key\":\"FT02\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":false}]"
-}""")
-            val request = Request.Builder().url(it.endPoint + "/_specmatic/sse-expectations").addHeader("Content-Type", "application/json").post(body).build()
-            val call = OkHttpClient().newCall(request)
-            val response = call.execute()
+}"""
+            val httpClient: CloseableHttpClient = HttpClients.createDefault()
+            val httpPatch: ClassicHttpRequest = ClassicRequestBuilder.post(it.endPoint + "/_specmatic/sse-expectations")
+                .setEntity(StringEntity(body, ContentType.APPLICATION_JSON))
+                .build()
+            val response = httpClient.execute(httpPatch)
 
-            println(response.toStr())
-            println(response.body()?.string())
-            assertThat(response.code()).isEqualTo(200)
+            assertThat(response.code).isEqualTo(200)
+            println(EntityUtils.toString(response.entity))
         }
     }
 

@@ -71,7 +71,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
                 try {
                     val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract))
 
-                    val implicitDataDirs = listOf(implicitContractDataDir(contractPath.path)).plus(if(customImplicitStubBase() != null) listOf(implicitContractDataDir(contractPath.path, customImplicitStubBase())) else emptyList())
+                    val implicitDataDirs = listOf(implicitContractDataDir(contractPath.path)).plus(if(customImplicitStubBase() != null) listOf(implicitContractDataDir(contractPath.path, customImplicitStubBase())) else emptyList()).sorted()
 
                     val stubData = when {
                         implicitDataDirs.any { it.isDirectory } -> {
@@ -79,7 +79,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
                                 consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
                                 logIgnoredFiles(implicitDataDir)
 
-                                val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty()
+                                val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty().sorted()
                                 printDataFiles(stubDataFiles)
 
                                 stubDataFiles.map {
@@ -124,7 +124,7 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
     consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
 
-    val dataDirFileList = allDirsInTree(dataDirPaths)
+    val dataDirFileList = allDirsInTree(dataDirPaths).sorted()
 
     val features = contractPaths.map { path ->
         Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
@@ -134,7 +134,7 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
         consoleLog(StringLog("Loading stub expectations from ${it.path}".prependIndent("  ")))
         logIgnoredFiles(it)
         it.listFiles()?.toList() ?: emptyList<File>()
-    }.filter { it.extension == "json" }
+    }.filter { it.extension == "json" }.sorted()
     printDataFiles(dataFiles)
 
     val mockData = dataFiles.mapNotNull {
@@ -243,7 +243,7 @@ fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
     val stubbedFeatures = contractInfoFromStubs.map { it.first }
     val missingFeatures = features.map { it.second }.filter { it !in stubbedFeatures }
 
-    return contractInfoFromStubs.plus(missingFeatures.map { Pair(it, emptyList<ScenarioStub>()) })
+    return contractInfoFromStubs.plus(missingFeatures.map { Pair(it, emptyList()) })
 }
 
 fun allDirsInTree(dataDirPath: String): List<File> = allDirsInTree(listOf(dataDirPath))

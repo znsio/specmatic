@@ -11,6 +11,8 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.NoMatchingScenario
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
@@ -842,15 +844,26 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(
-                this.matches(
+            with(this.scenarios.first().matchesMock(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}]}""")
+                ), HttpResponse.OK("success")
+            )) {
+                assertThat(this).isInstanceOf(Result.Success::class.java)
+            }
+
+            with(this.scenarios.first().matchesMock(
                     HttpRequest(
                         "POST",
                         "/person",
-                        body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
+                        body = parsedJSON("""{"id": "123", "address": null}""")
                     ), HttpResponse.OK("success")
-                )
-            ).isTrue
+                )) {
+
+                assertThat(this).isInstanceOf(Result.Success::class.java)
+            }
         }
 
         val openAPIYaml = openAPIToString(openAPI)
@@ -2021,15 +2034,15 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(
-                this.matches(
-                    HttpRequest(
-                        "POST",
-                        "/person",
-                        body = parsedJSON("""{"address": [null, "Baker Street"]}""")
-                    ), HttpResponse.OK("success")
-                )
-            ).isTrue
+            val result: Result = this.scenarios.first().matchesMock(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedJSON("""{"address": [null, "Baker Street"]}""")
+                ), HttpResponse.OK("success")
+            )
+
+            assertThat(result).isInstanceOf(Result.Success::class.java)
         }
 
         val openAPIYaml = openAPIToString(openAPI)
@@ -6221,6 +6234,195 @@ paths:
         assertThat(NullPattern).isIn(addressType.pattern)
         assertThat(StringPattern()).isIn(addressType.pattern)
     }
+
+    @Test
+    fun `should be possible to have two stubs of authorization header with different values`() {
+        val specification = """
+            openapi: 3.0.1
+            info:
+              title: New Feature
+              version: "1"
+            paths:
+              /test:
+                post:
+                  summary: auth
+                  parameters:
+                    - in: header
+                      name: Authorization
+                      schema:
+                        type: string
+                      required: true
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Request'
+                  responses:
+                    "200":
+                      description: New scenario
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    "400":
+                      description: New scenario
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+            components:
+              schemas:
+                Request:
+                  type: object
+                  required:
+                    - item
+                  properties:
+                    item:
+                      type: string
+
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(specification, "/file.yaml").toFeature()
+
+        val validAuthStub: ScenarioStub = ScenarioStub(
+            HttpRequest("POST", "/test", mapOf("Authorization" to "valid"), body = parsedJSONObject("""{"item": "data"}""")),
+            HttpResponse.OK("success"))
+
+        val invalidAuthStub: ScenarioStub = ScenarioStub(
+            HttpRequest("POST", "/test", mapOf("Authorization" to "invalid"), body = parsedJSONObject("""{"item": "data"}""")),
+            HttpResponse(400, "failed"))
+
+        HttpStub(feature, listOf(invalidAuthStub, validAuthStub)).use { stub ->
+            val request = HttpRequest(
+                "POST",
+                "/test",
+                body = parsedJSONObject("""{"item": "data"}""")
+            )
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "valid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success")
+                assertThat(this.status).isEqualTo(200)
+            }
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "invalid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("failed")
+                assertThat(this.status).isEqualTo(400)
+            }
+        }
+    }
+
+    @Test
+    fun `validate the second element in a list`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: "Get person by id"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                  responses:
+                    200:
+                      description: "Get person by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas: {}
+        """.trimIndent(), "").toFeature()
+
+        with(feature) {
+            val result =
+                this.scenarios.first().matchesMock(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""[{"id": "123", "name": "Jack Sprat"}, {"id": "456"}]""")
+                    ), HttpResponse.OK("success"))
+
+            assertThat(result.reportString()).isEqualTo("""
+                >> REQUEST.BODY[1].name
+
+                   Expected key named "name" was missing
+            """.trimIndent())
+        }
+    }
+
+    @Test
+    fun `validate a nullable array`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: "Get person by id"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                              - names
+                            properties:
+                              id:
+                                type: string
+                              names:
+                                type: array
+                                nullable: true
+                                items:
+                                  type: string
+                  responses:
+                    200:
+                      description: "Get person by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas: {}
+        """.trimIndent(), "").toFeature()
+
+        with(feature) {
+            val result =
+                this.scenarios.first().matchesMock(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""[{"id": "123", "names": ["Jack", "Sprat"]}, {"id": "456", "names": null}]""")
+                    ), HttpResponse.OK("success"))
+
+            println(result.reportString())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

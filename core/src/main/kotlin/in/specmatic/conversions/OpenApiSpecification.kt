@@ -594,7 +594,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     toXMLPattern(schema, typeStack = typeStack)
                 } else {
 
-                    JSONArrayPattern(listOf(toSpecmaticPattern(schema.items, typeStack)))
+                    ListPattern(toSpecmaticPattern(schema.items, typeStack))
                 }
             }
             is ComposedSchema -> {

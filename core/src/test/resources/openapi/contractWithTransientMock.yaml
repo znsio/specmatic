@@ -1,0 +1,29 @@
+openapi: 3.0.1
+info:
+  title: Data
+  version: "1"
+paths:
+  /test:
+    post:
+      summary: Data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+      responses:
+        "200":
+          description: Data
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Request:
+      type: object
+      required:
+        - item
+      properties:
+        item:
+          type: string

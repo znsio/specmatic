@@ -1,0 +1,16 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/test",
+    "headers": {
+      "Authorization": "valid"
+    },
+    "body": {
+      "item": "data"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": "success"
+  }
+}

@@ -5,6 +5,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
@@ -892,4 +893,61 @@ paths:
             assertThat(responseString).contains("json array")
         }
     }
+
+    @Test
+    fun `transient stubs can be loaded from the file system`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/contractWithTransientMock.yaml")).use { stub ->
+            with(stub.client.execute(HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}""")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success")
+            }
+
+            with(stub.client.execute(HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}""")))) {
+                assertThat(this.body.toStringLiteral()).isNotEqualTo("success")
+            }
+        }
+    }
+
+    @Test
+    fun `multiple stubs for a non 200 with a value specified for a header will load and match incoming requests correctly`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/multiple400StubsWithHeader.yaml")).use { stub ->
+            val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "valid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success")
+            }
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "invalid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("failed")
+            }
+        }
+    }
+
+    @Test
+    fun `stubs are loaded in order sorted by filename`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/contractWithOrderedStubs.yaml")).use { stub ->
+            val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
+
+            with(stub.client.execute(request)) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success 1")
+            }
+
+            with(stub.client.execute(request)) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success 2")
+            }
+        }
+    }
+
+    @Test
+    fun `transient stubs are loaded in order sorted by filename across nested dirs where the first item in sorted order is the first item in the queue`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/contractWithOrderedStubsInNestedDirs.yaml")).use { stub ->
+            val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
+
+            (0..4).map { ctr ->
+                with(stub.client.execute(request)) {
+                    assertThat(this.body.toStringLiteral()).isEqualTo("success $ctr")
+                }
+            }
+        }
+    }
+
 }

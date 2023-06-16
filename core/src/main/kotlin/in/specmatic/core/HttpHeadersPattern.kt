@@ -53,9 +53,11 @@ data class HttpHeadersPattern(
             it.missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(it.name)
         }
 
+        val lowercasedHeadersWithRelevantKeys = headersWithRelevantKeys.mapKeys { it.key.lowercase() }
+
         val results: List<Result?> = this.pattern.mapKeys { it.key }.map { (key, pattern) ->
             val keyWithoutOptionality = withoutOptionality(key)
-            val sampleValue = headersWithRelevantKeys[keyWithoutOptionality]
+            val sampleValue = lowercasedHeadersWithRelevantKeys[keyWithoutOptionality.lowercase()]
 
             when {
                 sampleValue != null -> {
@@ -107,10 +109,6 @@ data class HttpHeadersPattern(
         return headers.filterKeys { key ->
             val headerWithoutOptionality = withoutOptionality(key).lowercase()
             ancestorHeadersLowerCase.containsKey(headerWithoutOptionality) || ancestorHeadersLowerCase.containsKey("$headerWithoutOptionality?")
-        }.filterNot { entry ->
-            val headerWithoutOptionality = withoutOptionality(entry.key).lowercase()
-
-            isStandardHeader(headerWithoutOptionality) && "${headerWithoutOptionality}?" in ancestorHeadersLowerCase
         }
     }
 
@@ -157,9 +155,19 @@ data class HttpHeadersPattern(
             newBasedOn(pattern, row, resolver)
         }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
 
+    fun negativeBasedOn(row: Row, resolver: Resolver) =
+        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row) { pattern ->
+            negativeBasedOn(pattern, row, resolver, true)
+        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+
     fun newBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
         allOrNothingCombinationIn(pattern) { pattern ->
             newBasedOn(pattern, resolver)
+        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+
+    fun negativeBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
+        allOrNothingCombinationIn(pattern) { pattern ->
+            negativeBasedOn(pattern, resolver, true)
         }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
 
     fun encompasses(other: HttpHeadersPattern, thisResolver: Resolver, otherResolver: Resolver): Result {

@@ -342,7 +342,7 @@ open class SpecmaticJUnitSupport {
         config: TestConfig
     ): List<ContractTest> {
         val contractFile = File(path)
-        val feature = parseContractFileToFeature(contractFile.path).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
+        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract)).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)

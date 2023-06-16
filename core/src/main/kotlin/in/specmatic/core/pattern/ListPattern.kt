@@ -16,7 +16,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         if(sampleData !is ListValue)
             return when {
                 resolvedHop(pattern, resolver) is XMLPattern -> mismatchResult("xml nodes", sampleData, resolver.mismatchMessages)
-                else -> mismatchResult("JSON array", sampleData, resolver.mismatchMessages)
+                else -> mismatchResult(this, sampleData, resolver.mismatchMessages)
             }
 
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
@@ -65,7 +65,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)
 
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value, resolver.mismatchMessages)
 
     override fun patternSet(resolver: Resolver): List<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)

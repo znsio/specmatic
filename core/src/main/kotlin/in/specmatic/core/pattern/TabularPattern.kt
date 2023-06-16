@@ -130,7 +130,7 @@ data class TabularPattern(
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
-    val patternCollection = patternMap.mapValues { (key, pattern) ->
+    val patternCollection: Map<String, List<Pattern>> = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) {
             newBasedOn(row, key, pattern, resolver)
         }
@@ -139,9 +139,17 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
     return patternList(patternCollection)
 }
 
-fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
+fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver, stringlyCheck: Boolean=false): List<Map<String, Pattern>> {
     val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
-    val negativePatternsMap = patternMap.mapValues { (_, pattern) -> pattern.negativeBasedOn(row, resolver) }
+    val negativePatternsMap = patternMap.mapValues { (_, pattern) ->
+        if (stringlyCheck && pattern is StringPattern) {
+            emptyList()
+        } else if (stringlyCheck && pattern is ScalarType) {
+            pattern.negativeBasedOn(row, resolver).filterNot { it is NullPattern }
+        } else {
+            pattern.negativeBasedOn(row, resolver)
+        }
+    }
     val modifiedPatternMap: Map<String, List<Map<String, List<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
         val negativePatterns = negativePatternsMap[keyToNegate]
         negativePatterns!!.map { negativePattern ->
@@ -158,6 +166,8 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
             }
         }
     }
+    if (modifiedPatternMap.values.isEmpty())
+      return listOf(emptyMap())
     return modifiedPatternMap.values.map { list: List<Map<String, List<Pattern>>> ->
         list.toList().map { patternList(it) }.flatten()
     }.flatten()
@@ -167,6 +177,24 @@ fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<S
     val patternCollection = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) {
             newBasedOn(key, pattern, resolver)
+        }
+    }
+
+    return patternValues(patternCollection)
+}
+
+fun negativeBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver, stringlyCheck:Boolean=false): List<Map<String, Pattern>> {
+    val patternCollection = patternMap.mapValues { (key, pattern) ->
+        attempt(breadCrumb = key) {
+            if(stringlyCheck && pattern is StringPattern) {
+                emptyList()
+            }
+            else if (stringlyCheck && pattern is ScalarType) {
+                negativeBasedOn(key, pattern, resolver).filterNot { it is NullPattern  }
+            }
+            else {
+                negativeBasedOn(key, pattern, resolver)
+            }
         }
     }
 
@@ -215,6 +243,14 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
 }
 
 fun newBasedOn(key: String, pattern: Pattern, resolver: Resolver): List<Pattern> {
+    return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
+        pattern.newBasedOn(cyclePreventedResolver)
+    }?:
+    // Handle cycle (represented by null value) by using empty list for optional properties
+    listOf()
+}
+
+fun negativeBasedOn(key: String, pattern: Pattern, resolver: Resolver): List<Pattern> {
     return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
         pattern.newBasedOn(cyclePreventedResolver)
     }?:

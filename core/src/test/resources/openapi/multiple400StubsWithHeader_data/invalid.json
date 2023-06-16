@@ -1,0 +1,16 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/test",
+    "headers": {
+      "Authorization": "invalid"
+    },
+    "body": {
+      "item": "data"
+    }
+  },
+  "http-response": {
+    "status": 401,
+    "body": "failed"
+  }
+}

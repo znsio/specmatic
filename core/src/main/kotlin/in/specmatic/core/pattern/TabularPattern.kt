@@ -272,7 +272,7 @@ fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): Li
         return listOf(emptyMap())
 
     val spec = CombinationSpec(patternCollection, Flags.maxTestRequestCombinations())
-    return spec.selectedCombinations;
+    return spec.selectedCombinations
 }
 
 fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): List<Map<String, ValueType>> {

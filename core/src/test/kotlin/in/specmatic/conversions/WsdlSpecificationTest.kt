@@ -1,6 +1,5 @@
 package `in`.specmatic.conversions
 
-import `in`.specmatic.Utils
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue

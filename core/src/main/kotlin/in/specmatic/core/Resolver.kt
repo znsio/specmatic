@@ -107,7 +107,7 @@ data class Resolver(
         try {
             if (count > 1)
                 // Terminate what would otherwise be an infinite cycle.
-                throw ContractException("Invalid pattern cycle: ${newCyclePreventionStack}", isCycle = true)
+                throw ContractException("Invalid pattern cycle: $newCyclePreventionStack", isCycle = true)
 
             return toResult(copy(cyclePreventionStack = newCyclePreventionStack))
         } catch (e: ContractException) {

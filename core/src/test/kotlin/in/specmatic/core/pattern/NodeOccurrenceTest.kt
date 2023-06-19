@@ -16,7 +16,7 @@ enum class ResultType {
 internal class NodeOccurrenceTest {
     companion object {
         @JvmStatic
-        fun params() = Stream.of(
+        fun params(): Stream<Arguments> = Stream.of(
             Arguments.of(NodeOccurrence.Multiple, NodeOccurrence.Optional, SuccessResult),
             Arguments.of(NodeOccurrence.Multiple, NodeOccurrence.Multiple, SuccessResult),
             Arguments.of(NodeOccurrence.Multiple, NodeOccurrence.Once, FailureResult),

@@ -40,7 +40,7 @@ data class HttpRequestPattern(
                 {
                     (request, resolver, failures) ->
                     if (requestBodyReqex?.matches(request.bodyString) == false)
-                        MatchSuccess(Triple(request, resolver, failures.plus(Result.Failure("Request did not match regex ${requestBodyReqex.toString()}"))))
+                        MatchSuccess(Triple(request, resolver, failures.plus(Failure("Request did not match regex $requestBodyReqex"))))
                     else
                         MatchSuccess(Triple(request, resolver, failures))
                 } then
@@ -388,7 +388,7 @@ data class HttpRequestPattern(
                         val example = row.getField(it.pattern)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
                     }
-                    else if(it.typeAlias?.let { isPatternToken(it) } == true && row.containsField(it.typeAlias!!)) {
+                    else if(it.typeAlias?.let { p -> isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
                         val example = row.getField(it.typeAlias!!)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
                     }
@@ -415,7 +415,7 @@ data class HttpRequestPattern(
                                     body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
                                 }
 
-                            if(requestsFromFlattenedRow.none { it.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Result.Success}) {
+                            if(requestsFromFlattenedRow.none { p -> p.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Success}) {
                                 requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
                             } else {
                                 requestsFromFlattenedRow
@@ -549,7 +549,7 @@ data class HttpRequestPattern(
                         val example = row.getField(it.pattern)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
                     }
-                    else if(it.typeAlias?.let { isPatternToken(it) } == true && row.containsField(it.typeAlias!!)) {
+                    else if(it.typeAlias?.let { p->isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
                         val example = row.getField(it.typeAlias!!)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
                     }
@@ -566,12 +566,12 @@ data class HttpRequestPattern(
 
                         val originalRequest = if(value is JSONObjectValue) {
                             val jsonValues = jsonObjectToValues(value)
-                            val jsonValeuRow = Row(
-                                columnNames = jsonValues.map { it.first }.toList(),
-                                values = jsonValues.map { it.second }.toList(),
+                            val jsonValueRow = Row(
+                                columnNames = jsonValues.map { entry -> entry.first }.toList(),
+                                values = jsonValues.map { entry -> entry.second }.toList(),
                                 name = row.name)
 
-                            body.negativeBasedOn(jsonValeuRow, resolver)
+                            body.negativeBasedOn(jsonValueRow, resolver)
                         } else {
                             listOf(ExactValuePattern(value))
                         }

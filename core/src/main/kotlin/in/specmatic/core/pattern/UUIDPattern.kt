@@ -5,8 +5,7 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import java.time.format.DateTimeFormatter
-import java.util.UUID
+import java.util.*
 
 object UUIDPattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result = when (sampleData) {

@@ -1,12 +1,11 @@
 package `in`.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
-import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 
 internal class JSONArrayPatternKtTest {
     @Test

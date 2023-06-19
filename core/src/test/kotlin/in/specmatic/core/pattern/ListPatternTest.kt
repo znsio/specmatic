@@ -10,7 +10,6 @@ import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Nested
-import org.junit.runner.notification.Failure
 
 internal class ListPatternTest {
     @Test
@@ -44,9 +43,9 @@ internal class ListPatternTest {
 
     @Test
     fun `should not encompass another list with different type`() {
-        val NumberPattern = ListPattern(parsedPattern("""(number?)"""))
+        val numberPattern = ListPattern(parsedPattern("""(number?)"""))
         val stringPattern = ListPattern(parsedPattern("""(string)"""))
-        assertThat(NumberPattern.encompasses(stringPattern, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
+        assertThat(numberPattern.encompasses(stringPattern, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test

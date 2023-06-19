@@ -1,9 +1,5 @@
 package `in`.specmatic.core
 
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.GherkinSection.Then
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
@@ -12,22 +8,24 @@ import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
-import java.util.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 internal class HttpResponseTest {
     @Test
     fun createANewResponseObjectWithInitialValues() {
         val response = HttpResponse(500, "ERROR", HashMap())
-        Assertions.assertEquals(500, response.status)
-        Assertions.assertEquals(StringValue("ERROR"), response.body)
+        assertEquals(500, response.status)
+        assertEquals(StringValue("ERROR"), response.body)
     }
 
     @Test
     fun createANewResponseObjectWithoutInitialValues() {
         val response = HttpResponse.EMPTY
-        Assertions.assertEquals(0, response.status)
-        Assertions.assertEquals(EmptyString, response.body)
+        assertEquals(0, response.status)
+        assertEquals(EmptyString, response.body)
     }
 
     @Test

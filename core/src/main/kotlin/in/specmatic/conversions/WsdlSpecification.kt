@@ -42,7 +42,7 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
         specmaticScenarioInfo: ScenarioInfo,
         steps: List<Step>
     ): List<ScenarioInfo> {
-        if (openApiScenarioInfos.isNullOrEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)
+        if (openApiScenarioInfos.isEmpty() || steps.isEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to
                     ::matchesRequest then
@@ -54,7 +54,7 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
         }
     }
 
-    fun matchesRequest(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
+    private fun matchesRequest(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
         val (specmaticScenarioInfo, wsdlScenarioInfos) = parameters
 
         val matchingScenarioInfos = wsdlScenarioInfos.filter {

@@ -107,14 +107,14 @@ fun WSDL(rootDefinition: XMLNode, wsdlPath: String): WSDL {
 fun schemaPrefixesFrom(schemas: Map<String, XMLNode>): Map<String, String> {
     val namespaces = schemas.keys.toSet().toList()
 
-    val namespacePrefixMap = toURLPrefixMap(namespaces, MappedURLType.includesDomain)
+    val namespacePrefixMap = toURLPrefixMap(namespaces, MappedURLType.INCLUDES_DOMAIN)
 
     return namespacePrefixMap
 }
 
 enum class MappedURLType(val index: Int) {
-    includesDomain(1),
-    pathOnly(0)
+    INCLUDES_DOMAIN(1),
+    PATH_ONLY(0)
 
 }
 
@@ -123,9 +123,9 @@ fun toURLPrefixMap(urls: List<String>, mappedURLType: MappedURLType): Map<String
         url.removeSuffix("/").removePrefix("http://").removePrefix("https://")
     }
 
-    val minLength = normalisedURL.map {
+    val minLength = normalisedURL.minOfOrNull {
         it.split("/").size
-    }.minOrNull() ?: throw ContractException("No schema namespaces found")
+    } ?: throw ContractException("No schema namespaces found")
 
     val segmentCount = 1.until(minLength + 1).first { length ->
         val segments = normalisedURL.map { url ->
@@ -183,16 +183,10 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         return definition.findByNodeNameAndAttribute(tagName, "name", localName)
     }
 
-    fun getServicePort() = rootDefinition.getXMLNodeByPath("service.port")
+    private fun getServicePort() = rootDefinition.getXMLNodeByPath("service.port")
 
     fun getNamespaces(typeInfo: WSDLTypeInfo): Map<String, String> {
         return typeInfo.getNamespaces(prefixToNamespace)
-    }
-
-    fun getNamespaces(): Map<String, String> {
-        return namespaceToPrefix.entries.associate {
-            it.value to it.key
-        }
     }
 
     fun mapNamespaceToPrefix(targetNamespace: String): String {
@@ -271,14 +265,6 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         } else {
             ReferredType(fullyQualifiedName.qname, node, this)
         }
-    }
-
-    fun findSchema(namespace: String): XMLNode {
-        if(namespace.isBlank())
-            throw ContractException("Cannot look for an empty schema namespace. Please report this to the Specmatic Builders at $SPECMATIC_GITHUB_ISSUES")
-
-        return schemas[namespace]
-            ?: throw ContractException("Couldn't find schema with targetNamespace $namespace")
     }
 
     fun findSchema(namespace: String, schema: XMLNode?): XMLNode {

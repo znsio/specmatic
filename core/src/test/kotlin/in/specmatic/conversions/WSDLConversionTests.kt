@@ -3,7 +3,6 @@ package `in`.specmatic.conversions
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.core.wsdl.parser.WSDL
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -483,7 +482,7 @@ class WSDLConversionTests {
                         <xsd:complexType name="PersonType">
                             <xsd:sequence>
                                 <xsd:element name="Id" type="xsd:integer" />
-                                <xsd:element name="Name" ${occurrence} type="xsd:string" />
+                                <xsd:element name="Name" $occurrence type="xsd:string" />
                             </xsd:sequence>
                         </xsd:complexType>
                     </xsd:schema>

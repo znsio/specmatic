@@ -381,7 +381,7 @@ internal class JSONObjectPatternTest {
 
         @Test
         fun `return as many errors as the number of key errors`() {
-            error as Result.Failure
+            error
 
             assertThat(error.toMatchFailureDetailList()).hasSize(3)
         }

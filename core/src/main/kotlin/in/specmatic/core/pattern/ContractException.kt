@@ -2,7 +2,6 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.FailureReport
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.Scenario
 import `in`.specmatic.core.ScenarioDetailsForResult
 
 fun isCycle(throwable: Throwable?): Boolean = when(throwable) {

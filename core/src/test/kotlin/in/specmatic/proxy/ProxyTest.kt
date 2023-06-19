@@ -1,14 +1,13 @@
 package `in`.specmatic.proxy
 
 import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.stub.HttpStub
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestTemplate
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.pattern.parsedJSON
-import `in`.specmatic.stub.HttpStub
 import java.io.File
 import java.net.InetSocketAddress
 
@@ -52,9 +51,6 @@ internal class ProxyTest {
                 return this
             }
 
-            override fun fileName(path: String): String {
-                return super.fileName(path)
-            }
         }
 
         HttpStub(simpleFeature).use {

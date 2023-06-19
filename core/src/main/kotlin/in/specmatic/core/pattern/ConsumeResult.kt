@@ -1,7 +1,6 @@
 package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.breadCrumb
 
 data class ProvisionalError<MatchedType>(val result: Result.Failure, val type: Pattern, val value: MatchedType)
 

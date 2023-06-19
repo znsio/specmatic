@@ -3,14 +3,11 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
-import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
-
-private const val INFINITY = 999999999
 
 data class StringPattern(
     override val typeAlias: String? = null,

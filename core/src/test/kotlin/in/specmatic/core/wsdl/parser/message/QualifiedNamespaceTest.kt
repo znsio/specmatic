@@ -1,12 +1,11 @@
 package `in`.specmatic.core.wsdl.parser.message
 
+import `in`.specmatic.core.value.toXMLNode
+import `in`.specmatic.core.wsdl.parser.WSDL
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.value.toXMLNode
-import `in`.specmatic.core.wsdl.parser.WSDL
 
 internal class QualifiedNamespaceTest {
     val dummyNode = toXMLNode("<dummy/>")

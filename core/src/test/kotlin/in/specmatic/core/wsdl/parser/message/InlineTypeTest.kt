@@ -1,12 +1,11 @@
 package `in`.specmatic.core.wsdl.parser.message
 
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.value.toXMLNode
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.value.toXMLNode
 
 internal class InlineTypeTest {
     @Test

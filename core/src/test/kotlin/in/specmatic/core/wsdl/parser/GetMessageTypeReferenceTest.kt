@@ -1,18 +1,17 @@
 package `in`.specmatic.core.wsdl.parser
 
 import `in`.specmatic.core.value.FullyQualifiedName
+import `in`.specmatic.core.value.XMLNode
+import `in`.specmatic.core.value.toXMLNode
+import `in`.specmatic.core.wsdl.parser.message.GetMessageTypeReference
+import `in`.specmatic.core.wsdl.parser.message.MessageTypeProcessingComplete
+import `in`.specmatic.core.wsdl.parser.message.ParseMessageWithElementRef
+import `in`.specmatic.core.wsdl.payload.EmptySOAPPayload
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.value.XMLNode
-import `in`.specmatic.core.value.toXMLNode
-import `in`.specmatic.core.value.localName
-import `in`.specmatic.core.wsdl.parser.message.GetMessageTypeReference
-import `in`.specmatic.core.wsdl.parser.message.MessageTypeProcessingComplete
-import `in`.specmatic.core.wsdl.parser.message.ParseMessageWithElementRef
-import `in`.specmatic.core.wsdl.payload.EmptySOAPPayload
 
 internal class GetMessageTypeReferenceTest{
     @Test

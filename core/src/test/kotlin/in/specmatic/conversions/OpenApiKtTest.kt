@@ -17,7 +17,6 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
-import io.ktor.http.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -29,25 +28,50 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.*
-import org.springframework.http.ContentDisposition
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
-import org.testcontainers.shaded.okhttp3.MediaType.*
+import org.testcontainers.shaded.okhttp3.MediaType.parse
 import org.testcontainers.shaded.okhttp3.OkHttpClient
 import org.testcontainers.shaded.okhttp3.Request
 import org.testcontainers.shaded.okhttp3.RequestBody
 import java.io.File
 import java.net.URI
-import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Stream
 import kotlin.collections.HashMap
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.MutableList
+import kotlin.collections.any
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.emptyList
+import kotlin.collections.filter
+import kotlin.collections.filterIsInstance
+import kotlin.collections.first
+import kotlin.collections.forEach
+import kotlin.collections.get
+import kotlin.collections.getValue
+import kotlin.collections.joinToString
+import kotlin.collections.last
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapOf
+import kotlin.collections.mapValues
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableMapOf
+import kotlin.collections.set
+import kotlin.collections.setOf
+import kotlin.collections.single
+import kotlin.collections.sorted
+import kotlin.collections.sum
+import kotlin.collections.toList
+import kotlin.collections.toMap
+import kotlin.collections.withDefault
 
 internal class OpenApiKtTest {
     companion object {
@@ -103,7 +127,7 @@ Scenario: zero should return not found
                     String::class.java
                 )
             } catch (e: HttpClientErrorException) {
-                assertThat(e.statusCode).isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND)
+                assertThat(e.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
             }
         }
     }
@@ -118,7 +142,7 @@ Scenario: zero should return not found
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["${request.path} executed"] = true
-                    assertThat(request.path).matches("""\/hello\/[0-9]+""")
+                    assertThat(request.path).matches("""/hello/\d+""")
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
                             put("Content-Type", "application/json")
@@ -158,7 +182,7 @@ Background:
         val results = feature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.path).matches("""\/hello\/[0-9]+""")
+                    assertThat(request.path).matches("""/hello/\d+""")
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
                             put("Content-Type", "application/json")
@@ -210,7 +234,7 @@ Background:
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["${request.path} executed"] = true
-                    assertThat(request.path).matches("""\/demo\/circular-reference-optional-non-nullable""")
+                    assertThat(request.path).matches("""/demo/circular-reference-optional-non-nullable""")
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
                             put("Content-Type", "application/json")
@@ -246,7 +270,7 @@ Background:
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["${request.path} executed"] = true
-                    assertThat(request.path).matches("""\/demo\/circular-reference-nullable""")
+                    assertThat(request.path).matches("""/demo/circular-reference-nullable""")
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
                             put("Content-Type", "application/json")
@@ -286,7 +310,7 @@ Background:
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["${request.path} executed"] = true
-                    assertThat(request.path).matches("""\/demo\/circular-reference-polymorphic""")
+                    assertThat(request.path).matches("""/demo/circular-reference-polymorphic""")
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
                             put("Content-Type", "application/json")
@@ -325,7 +349,7 @@ Background:
         val results = feature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.path).matches("""\/hello\/[0-9]+""")
+                    assertThat(request.path).matches("""/hello/\d+""")
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
                             put("Content-Type", "application/json")
@@ -506,8 +530,8 @@ Background:
         )
 
         assertThat(results.results.size).isEqualTo(16)
-        assertThat(results.results.filter { it is Result.Success }.size).isEqualTo(4)
-        assertThat(results.results.filter { it is Result.Failure }.size).isEqualTo(12)
+        assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(4)
+        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(12)
     }
 
     @Test
@@ -520,7 +544,7 @@ Background:
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["executed"] = true
-                    assertThat(request.path).matches("""\/hello\/[0-9]+""")
+                    assertThat(request.path).matches("""/hello/\d+""")
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
                             put("Content-Type", "application/json")
@@ -632,7 +656,7 @@ Background:
 
             assertThat(response.statusCodeValue).isEqualTo(200)
             assertThat(response.body).isInstanceOf(List::class.java)
-            assertThat(response.body[0]).isInstanceOf(Pet::class.java)
+            assertThat(response.body?.get(0)).isInstanceOf(Pet::class.java)
             assertThat(response.headers.keys).containsAll(
                 listOf(
                     "Content-Type",
@@ -693,13 +717,13 @@ Background:
                 URI.create("http://localhost:9000/petIds"),
                 HttpMethod.GET,
                 httpEntityWithBearerAuthHeader(),
-                object : ParameterizedTypeReference<List<Integer>>() {}
+                object : ParameterizedTypeReference<List<Int>>() {}
             )
         }
 
         assertThat(response.statusCodeValue).isEqualTo(200)
         assertThat(response.body).isInstanceOf(List::class.java)
-        assertThat(response.body[0]).isInstanceOf(Integer::class.java)
+        assertThat(response.body?.get(0)).isInstanceOf(Integer::class.java)
     }
 
     private fun httpEntityWithBearerAuthHeader() = HttpEntity(null, HttpHeaders().also { it.setBearerAuth("test") })
@@ -722,7 +746,7 @@ Background:
                     URI.create("http://localhost:9000/petIds"),
                     HttpMethod.GET,
                     null,
-                    object : ParameterizedTypeReference<List<Integer>>() {}
+                    object : ParameterizedTypeReference<List<Int>>() {}
                 )
             }
             assertThat(httpClientErrorException.statusCode).isEqualTo(BAD_REQUEST)
@@ -747,7 +771,7 @@ Background:
                     URI.create("http://localhost:9000/hello/0"),
                     HttpMethod.GET,
                     null,
-                    object : ParameterizedTypeReference<List<Integer>>() {}
+                    object : ParameterizedTypeReference<List<Int>>() {}
                 )
             }
             assertThat(httpClientErrorException.statusCode).isEqualTo(BAD_REQUEST)
@@ -1260,7 +1284,7 @@ Background:
             try {
                 restTemplate.postForObject(
                     URI.create("http://localhost:9000/pets"),
-                    NewPetWithUnexpectedFields("scooby", "golden", Integer(4)),
+                    NewPetWithUnexpectedFields("scooby", "golden", 4),
                     Pet::class.java
                 )
                 throw AssertionError("Should not allow unexpected fields")
@@ -1361,7 +1385,7 @@ Background:
                     }
                     val pet = Pet("scooby", "golden", 1, "retriever", 2)
                     return when {
-                        request.path!!.matches(Regex("""\/pets\/[0-9]+""")) -> when (request.method) {
+                        request.path!!.matches(Regex("""/pets/\d+""")) -> when (request.method) {
                             "GET" -> {
                                 when (request.path) {
                                     "/pets/0" -> HttpResponse(
@@ -1470,9 +1494,9 @@ Background:
         assertThat(flags["/pets GET executed"]).isEqualTo(24)
         assertThat(flags["/petIds GET executed"]).isEqualTo(4)
         assertThat(flags["/pets/0 GET executed"]).isEqualTo(1)
-        assertThat(flags.keys.filter { it.matches(Regex("""\/pets\/[0-9]+ GET executed""")) }.size).isEqualTo(2)
-        assertThat(flags.keys.any { it.matches(Regex("""\/pets\/[0-9]+ DELETE executed""")) }).isNotNull
-        assertThat(flags.filter {(path, _) -> path.matches(Regex("""\/pets\/[0-9]+ PATCH executed""")) }.values.sum()).isEqualTo(7)
+        assertThat(flags.keys.filter { it.matches(Regex("""/pets/\d+ GET executed""")) }.size).isEqualTo(2)
+        assertThat(flags.keys.any { it.matches(Regex("""/pets/\d+ DELETE executed""")) }).isNotNull
+        assertThat(flags.filter {(path, _) -> path.matches(Regex("""/pets/\d+ PATCH executed""")) }.values.sum()).isEqualTo(7)
         assertThat(flags.size).isEqualTo(13)
         assertTrue(results.success(), results.report())
     }
@@ -1514,8 +1538,8 @@ Background:
                         }
                     }
                     val pet = Pet("scooby", "golden", 1, "malinois", 2)
-                    return when {
-                        request.path == "/pets" -> {
+                    return when (request.path) {
+                        "/pets" -> {
                             when (request.method) {
                                 "POST" -> {
                                     HttpResponse(
@@ -1528,7 +1552,6 @@ Background:
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
-
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1584,8 +1607,8 @@ Background:
                         }
                     }
                     val pet = Pet("scooby", "golden", 1, "retriever", 3)
-                    return when {
-                        request.path == "/pets" -> {
+                    return when (request.path) {
+                        "/pets" -> {
                             when (request.method) {
                                 "POST" -> {
                                     HttpResponse(
@@ -1598,7 +1621,6 @@ Background:
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
-
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1649,8 +1671,8 @@ Background:
                         }
                     }
                     val pet = Pet("small", "golden", 1, "retriever", 2)
-                    return when {
-                        request.path == "/pets" -> {
+                    return when (request.path) {
+                        "/pets" -> {
                             when (request.method) {
                                 "POST" -> {
                                     HttpResponse(
@@ -1663,7 +1685,6 @@ Background:
                                 else -> HttpResponse(400, "", headers)
                             }
                         }
-
                         else -> HttpResponse(400, "", headers)
                     }
                 }
@@ -1690,7 +1711,7 @@ Background:
         assertThat(countMatches(results.report(), expectedReport)).isEqualTo(3)
     }
 
-    fun countMatches(string: String, pattern: String): Int {
+    private fun countMatches(string: String, pattern: String): Int {
         var index = 0
         var count = 0
 
@@ -1923,7 +1944,7 @@ Scenario: zero should return not found
             val results: Results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
-                    if (jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
+                    if (jsonBody.jsonObject["id"]?.toStringLiteral()?.toIntOrNull() != null)
                         return HttpResponse(200, body = StringValue("it worked"))
 
                     return HttpResponse(400, body = parsedJSONObject("""{"data": "information"}"""))
@@ -1973,7 +1994,7 @@ Feature: Foo API
                 }
             )
 
-        } catch (e: Throwable) {
+        } catch (_: Throwable) {
 
         }
 
@@ -2402,7 +2423,7 @@ components:
             val results: Results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
-                    if (jsonBody.jsonObject.get("id")?.toStringLiteral()?.toIntOrNull() != null)
+                    if (jsonBody.jsonObject["id"]?.toStringLiteral()?.toIntOrNull() != null)
                         return HttpResponse(200, body = StringValue("it worked"))
 
                     return HttpResponse(400, body = parsedJSONObject("""{"error_in_400": "message"}"""))
@@ -2636,7 +2657,7 @@ data class MyBaseHolder(@JsonProperty("myBase") val myBase: MyBase)
     JsonSubTypes.Type(value = MySub1::class),
     JsonSubTypes.Type(value = MySub2::class),
 )
-interface MyBase {}
+interface MyBase
 data class MySub1(@JsonProperty("aMyBase") val aMyBase: MyBase?) : MyBase
 data class MySub2(@JsonProperty("myVal") val myVal: String) : MyBase
 
@@ -2663,7 +2684,7 @@ data class NewPet(
 data class NewPetWithUnexpectedFields(
     @JsonProperty("name") val name: String,
     @JsonProperty("tag") val tag: String,
-    @JsonProperty("age") val age: Integer,
+    @JsonProperty("age") val age: Int,
 )
 
 data class NewPetWithMissingTag(

@@ -1,5 +1,3 @@
 package `in`.specmatic.test
 
-class ExitException : Throwable() {
-
-}
+class ExitException : Throwable()

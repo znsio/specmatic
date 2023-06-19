@@ -1,4 +1,3 @@
 package `in`.specmatic.core
 
-class NegativeScenario {
-}
+class NegativeScenario

@@ -109,7 +109,7 @@ paths:
         val request = HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3"))
         val stub = contract.matchingStub(request, HttpResponse.OK)
 
-        assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Success::class.java)
 
         HttpStub(listOf(contract), listOf(stub)).use {
             assertDoesNotThrow {

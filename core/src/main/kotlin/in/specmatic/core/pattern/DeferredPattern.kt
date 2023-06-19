@@ -51,7 +51,7 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
         return resolver.getPattern(pattern).listOf(valueList, resolver)
     }
 
-    override val typeAlias: String? = pattern
+    override val typeAlias: String = pattern
 
     override fun parse(value: String, resolver: Resolver): Value =
         resolver.getPattern(pattern).parse(value, resolver)

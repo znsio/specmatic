@@ -108,7 +108,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         specmaticScenarioInfo: ScenarioInfo, steps: List<Step>
     ): List<ScenarioInfo> {
         val openApiScenarioInfos = openApitoScenarioInfos()
-        if (openApiScenarioInfos.isNullOrEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)
+        if (openApiScenarioInfos.isEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to ::matchesPath then ::matchesMethod then ::matchesStatus then ::updateUrlMatcher otherwise ::handleError
         when (result) {
@@ -252,7 +252,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         } ?: "${httpRequestPattern.testDescription()}. Response: ${response.description}"
 
         return specmaticExampleRow?.let {
-            "${name} Examples: ${specmaticExampleRow.stringForOpenAPIError()}"
+            "$name Examples: ${specmaticExampleRow.stringForOpenAPIError()}"
         } ?: name
     }
 
@@ -269,7 +269,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         val requestBodyExample: Map<String, Any> = requestBodyExample(operation, exampleName)
 
                         val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
-                            if (value?.toString().orEmpty().contains("externalValue")) "${key}_filename" to value
+                            if (value.toString().contains("externalValue")) "${key}_filename" to value
                             else key to value
                         }.toMap()
 
@@ -560,7 +560,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         schema: Schema<*>, typeStack: List<String>, patternName: String = "", jsonInFormData: Boolean = false
     ): Pattern {
         val preExistingResult = patterns.get("($patternName)")
-        val pattern = if (preExistingResult != null && !patternName.isNullOrBlank())
+        val pattern = if (preExistingResult != null && patternName.isNotBlank())
             preExistingResult
         else if (typeStack.filter { it == patternName }.size > 1) {
             DeferredPattern("($patternName)")
@@ -671,7 +671,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun <T : Pattern> cacheComponentPattern(componentName: String, pattern: T): T {
-        if (!componentName.isNullOrBlank() && pattern !is DeferredPattern) {
+        if (componentName.isNotBlank() && pattern !is DeferredPattern) {
             val typeName = "(${componentName})"
             val prev = patterns.get(typeName)
             if (pattern != prev) {
@@ -831,7 +831,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         schema: Schema<*>, typeStack: List<String>, patternName: String
     ): DictionaryPattern {
         val valueSchema = schema.additionalProperties as Schema<Any>
-        val valueSchemaTypeName = valueSchema.`$ref` ?: valueSchema.types?.first() ?: "";
+        val valueSchemaTypeName = valueSchema.`$ref` ?: valueSchema.types?.first() ?: ""
         return DictionaryPattern(
             StringPattern(), toSpecmaticPattern(valueSchema, typeStack, valueSchemaTypeName, false)
         )

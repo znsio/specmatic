@@ -626,7 +626,7 @@ data class Feature(
             it.httpRequestPattern.urlMatcher?.path
         }.map {
             normalize(it)
-        }.toSet().toList(), MappedURLType.pathOnly)
+        }.toSet().toList(), MappedURLType.PATH_ONLY)
 
         val payloadAdjustedScenarios: List<Scenario> = scenarios.map { rawScenario ->
             val prefix = urlPrefixMap.getValue(normalize(rawScenario.httpRequestPattern.urlMatcher?.path!!))
@@ -769,7 +769,7 @@ data class Feature(
                 apiResponse.content = Content().apply {
                     val responseBodyType = scenario.httpResponsePattern.body
 
-                    val responseBodySchema: Pair<String, MediaType>? = when {
+                    val responseBodySchema: Pair<String, MediaType> = when {
                         isJSONPayload(responseBodyType) || responseBodyType is DeferredPattern && isJSONPayload(
                             responseBodyType.resolvePattern(scenario.resolver)
                         ) -> {
@@ -787,8 +787,7 @@ data class Feature(
                         }
                     }
 
-                    if (responseBodySchema != null)
-                        this.addMediaType(responseBodySchema.first, responseBodySchema.second)
+                    this.addMediaType(responseBodySchema.first, responseBodySchema.second)
                 }
             }
 
@@ -839,7 +838,7 @@ data class Feature(
         return openAPI
     }
 
-    private fun numberTemplatized(urlMatcher: URLMatcher?): URLMatcher? {
+    private fun numberTemplatized(urlMatcher: URLMatcher?): URLMatcher {
         if(urlMatcher!!.pathPattern.any { it.pattern !is ExactValuePattern })
             return urlMatcher
 
@@ -1119,7 +1118,7 @@ data class Feature(
             pattern is ListPattern -> {
                 if (pattern.pattern is DeferredPattern) {
                     ArraySchema().apply {
-                        this.items = getSchemaType(pattern.pattern.typeAlias!!)
+                        this.items = getSchemaType(pattern.pattern.typeAlias)
                     }
                 } else if (isArrayOfNullables(pattern)) {
                     ArraySchema().apply {
@@ -1174,7 +1173,7 @@ data class Feature(
                 TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}, ${pattern.javaClass.name}")
         }
 
-        return schema as Schema<Any>;
+        return schema as Schema<Any>
     }
 
     private fun nullableSchemaAsOneOf(typeSchema: Schema<Any>): ComposedSchema {
@@ -1251,9 +1250,7 @@ data class Feature(
     }
 }
 
-class EmptyContract : Throwable() {
-
-}
+class EmptyContract : Throwable()
 
 private fun toFixtureInfo(rest: String): Pair<String, Value> {
     val fixtureTokens = breakIntoPartsMaxLength(rest.trim(), 2)
@@ -1465,7 +1462,7 @@ fun parseEnum(step: StepInfo): Pair<String, Pattern> {
         val enumPattern = parsedPattern(enumType).run {
             when (this) {
                 is DeferredPattern -> this.resolvePattern(Resolver())
-                is AnyPattern -> throw ContractException("Enums ${enumName} type $enumType cannot be nullable. To mark the enum nullable please use it with nullable syntax. Suggested Usage: (${enumName}?)")
+                is AnyPattern -> throw ContractException("Enums $enumName type $enumType cannot be nullable. To mark the enum nullable please use it with nullable syntax. Suggested Usage: (${enumName}?)")
                 else -> this
             }
         }
@@ -1682,7 +1679,7 @@ fun scenarioInfos(
     val includedSpecifications = listOfNotNull(openApiSpecification, wsdlSpecification)
 
     val scenarioInfosBelongingToIncludedSpecifications =
-        includedSpecifications.mapNotNull { it.toScenarioInfos() }.flatten()
+        includedSpecifications.map { it.toScenarioInfos() }.flatten()
 
     val backgroundInfo = backgroundScenario(featureChildren)?.let { feature ->
         lexScenario(

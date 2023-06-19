@@ -5,10 +5,6 @@ import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.StringValue
 import java.io.File
-import java.util.*
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.Path
-import kotlin.io.path.name
 
 sealed class MultiPartFormDataPattern(open val name: String, open val contentType: String?) {
     abstract fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?>
@@ -137,9 +133,6 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
                 !filename.matches(StringValue(value.filename), resolver).isSuccess()
         }
     }
-
-    @OptIn(ExperimentalPathApi::class)
-    private fun fileNameFromPath(patternFilePath: String) = Path(patternFilePath).name
 
     override fun nonOptional(): MultiPartFormDataPattern {
         return copy(name = withoutOptionality(name))

@@ -4,13 +4,11 @@ import `in`.specmatic.Utils.readTextResource
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXML
 import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
@@ -173,6 +171,7 @@ Scenario: test request returns test response
         assertTrue(results.success(), results.report())
     }
 
+    @Ignore
     fun `should report error in test with both OpenAPI and Gherkin scenario names`() {
         val wsdlSpec = """
 Feature: Hello world

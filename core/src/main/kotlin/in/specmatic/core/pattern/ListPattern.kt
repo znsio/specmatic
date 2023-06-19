@@ -2,7 +2,6 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.breadCrumb
 import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.ListValue
 import `in`.specmatic.core.value.Value

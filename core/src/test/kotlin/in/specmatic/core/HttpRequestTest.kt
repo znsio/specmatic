@@ -163,6 +163,7 @@ internal class HttpRequestTest {
                 Arguments.of("http://localhost/", "test"),
                 Arguments.of("http://localhost", "/test"),
                 Arguments.of("", "http://localhost/test"),
+                Arguments.of("http://localhost/test", ""),
                 Arguments.of(null, "http://localhost/test"),
             ).stream()
     }
@@ -176,6 +177,23 @@ internal class HttpRequestTest {
         val url = HttpRequest("GET", path).getURL(baseUrl)
 
         assertThat(url).isEqualTo("http://localhost/test")
+    }
+
+    @Test
+    fun `it should handle single query param`() {
+        val url = HttpRequest("GET", "/", queryParams = mapOf("A" to "B")).getURL("http://localhost/test")
+        assertThat(url).isEqualTo("http://localhost/test?A=B")
+    }
+    @Test
+    fun `it should handle multiple query params`() {
+        val url = HttpRequest("GET", "/", queryParams = mapOf("A" to "B", "C" to "D")).getURL("http://localhost/test")
+        assertThat(url).isEqualTo("http://localhost/test?A=B&C=D")
+    }
+
+    @Test
+    fun `it should handle URL encoding for query params`() {
+        val url = HttpRequest("GET", "/", queryParams = mapOf("A" to "B E", "©C" to "!D")).getURL("http://localhost/test")
+        assertThat(url).isEqualTo("http://localhost/test?A=B+E&%C2%A9C=%21D")
     }
 
     @Test

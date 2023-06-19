@@ -239,7 +239,7 @@ class ContractAsTest {
             override fun execute(request: HttpRequest): HttpResponse {
                 flags["executed"] = true
 
-                assertThat(request.getURL("")).isEqualTo("/balance/123123")
+                assertThat(request.path).isEqualTo("/balance/123123")
                 assertThat(request.headers.keys).contains("x-loginId")
                 assertThat(request.headers["x-loginId"]).isEqualTo("a@b.com")
                 val headers: HashMap<String, String> = HashMap()

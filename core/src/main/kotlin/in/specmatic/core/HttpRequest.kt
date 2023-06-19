@@ -9,15 +9,13 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.netty.buffer.ByteBuf
+import org.apache.http.client.utils.URLEncodedUtils
+import org.apache.http.message.BasicNameValuePair
 import java.io.File
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
 import java.net.URL
-import java.net.URLEncoder
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
 
 const val FORM_FIELDS_JSON_KEY = "form-fields"
 const val MULTIPART_FORMDATA_JSON_KEY = "multipart-formdata"
@@ -64,39 +62,21 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
 
     fun updateMethod(name: String): HttpRequest = copy(method = name.uppercase())
 
-    private fun updateBody(contentBuffer: ByteBuf) {
-        val bodyString = contentBuffer.toString(Charset.defaultCharset())
-        updateBody(bodyString)
-    }
-
     fun updateHeader(key: String, value: String): HttpRequest = copy(headers = headers.plus(key to value))
 
     val bodyString: String
         get() = body.toString()
 
     fun getURL(baseURL: String?): String {
-        val cleanBase = baseURL?.let {
-            if(it.isNotBlank() && !it.endsWith("/"))
-                "$it/"
-            else
-                it
-        } ?: ""
-        val cleanPath = path?.let {
-            if(it.isNotBlank() && it.startsWith("/") && cleanBase.isNotBlank())
-                it.removePrefix("/")
-            else
-                it
-        } ?: ""
-
-        return "$cleanBase$cleanPath" + if (queryParams.isNotEmpty()) {
-            val joinedQueryParams =
-                queryParams.toList()
-                    .joinToString("&") {
-                        "${it.first}=${URLEncoder.encode(it.second, StandardCharsets.UTF_8.toString())}"
-                    }
-            "?$joinedQueryParams"
-        } else ""
+        val cleanBase = baseURL?.removeSuffix("/")
+        val cleanPath = path?.removePrefix("/")
+        val fullUrl = contact(cleanBase, cleanPath, "/")
+        val queryPart = URLEncodedUtils.format(queryParams.map { BasicNameValuePair(it.key, it.value) }, Charsets.UTF_8)
+        return contact(fullUrl, queryPart, "?")
     }
+
+    private fun contact(first: String?, second: String?, separator: String) =
+        listOf(first, second).filterNot { it.isNullOrBlank() }.joinToString(separator)
 
     fun toJSON(): JSONObjectValue {
         val requestMap = mutableMapOf<String, Value>()
@@ -174,9 +154,9 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
                 httpRequestBuilder.header(key, value)
             }
 
-        httpRequestBuilder.url.let { url ->
-            if(url.port == DEFAULT_PORT || url.port == url.protocol.defaultPort)
-                httpRequestBuilder.header("Host", url.authority)
+        httpRequestBuilder.url.let {
+            if(it.port == DEFAULT_PORT || it.port == it.protocol.defaultPort)
+                httpRequestBuilder.header("Host", it.authority)
         }
 
         httpRequestBuilder.setBody(when {

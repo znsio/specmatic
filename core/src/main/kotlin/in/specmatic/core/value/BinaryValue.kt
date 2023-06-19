@@ -17,11 +17,11 @@ data class BinaryValue(val byteArray: ByteArray = ByteArray(0)) : Value, ScalarV
 
     @OptIn(InternalAPI::class)
     override fun displayableValue(): String = toStringLiteral().quote()
-    override fun toStringLiteral() = byteArray.toString()
+    override fun toStringLiteral() = byteArray.contentToString()
     override fun displayableType(): String = "binary"
     override fun exactMatchElseType(): Pattern = ExactValuePattern(this)
 
-    override fun build(document: Document): Node = document.createTextNode(byteArray.toString())
+    override fun build(document: Document): Node = document.createTextNode(byteArray.contentToString())
 
     override fun matchFailure(): Result.Failure =
         Result.Failure("Unexpected child value found: $byteArray")
@@ -39,7 +39,7 @@ data class BinaryValue(val byteArray: ByteArray = ByteArray(0)) : Value, ScalarV
         types: Map<String, Pattern>,
         exampleDeclarations: ExampleDeclarations
     ): Pair<TypeDeclaration, ExampleDeclarations> =
-        primitiveTypeDeclarationWithKey(key, types, exampleDeclarations, displayableType(), byteArray.toString())
+        primitiveTypeDeclarationWithKey(key, types, exampleDeclarations, displayableType(), byteArray.contentToString())
 
     override fun typeDeclarationWithoutKey(
         exampleKey: String,
@@ -51,11 +51,11 @@ data class BinaryValue(val byteArray: ByteArray = ByteArray(0)) : Value, ScalarV
             types,
             exampleDeclarations,
             displayableType(),
-            byteArray.toString()
+            byteArray.contentToString()
         )
 
     override val nativeValue: ByteArray
         get() = byteArray
 
-    override fun toString() = byteArray.toString()
+    override fun toString() = byteArray.contentToString()
 }

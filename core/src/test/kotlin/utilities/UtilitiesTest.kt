@@ -59,6 +59,8 @@ internal class UtilitiesTest {
 
 
         val mockGitCommand = mockk<GitCommand>()
+        every { mockGitCommand.fetch() }.returns("")
+        every { mockGitCommand.revisionsBehindCount() }.returns(0)
         every { mockGitCommand.statusPorcelain() }.returns("")
         mockkStatic("in.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
@@ -80,7 +82,35 @@ internal class UtilitiesTest {
         File(".spec/repos/repo1").mkdirs()
 
         val mockGitCommand = mockk<GitCommand>()
+        every { mockGitCommand.fetch() }.returns("")
+        every { mockGitCommand.revisionsBehindCount() }.returns(0)
         every { mockGitCommand.statusPorcelain() }.returns("someDir/someFile")
+        mockkStatic("in.specmatic.core.utilities.Utilities")
+        every { loadSources("/configFilePath") }.returns(sources)
+        every { getSystemGit(any()) }.returns(mockGitCommand)
+
+        mockkStatic("in.specmatic.core.git.GitOperations")
+        every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
+
+
+        val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+        val expectedContractPaths = listOf(
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
+        )
+        assertThat(contractPaths == expectedContractPaths).isTrue
+    }
+
+    @Test
+    fun `contractFilePathsFrom sources when contracts repo dir exists and is behind remote`() {
+        val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        File(".spec").deleteRecursively()
+        File(".spec/repos/repo1").mkdirs()
+
+        val mockGitCommand = mockk<GitCommand>()
+        every { mockGitCommand.fetch() }.returns("changes")
+        every { mockGitCommand.revisionsBehindCount() }.returns(1)
         mockkStatic("in.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
         every { getSystemGit(any()) }.returns(mockGitCommand)

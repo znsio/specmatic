@@ -65,6 +65,14 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return execute(Configuration.gitCommand, "status", "--porcelain")
     }
 
+    override fun fetch(): String {
+        return execute(Configuration.gitCommand, "fetch")
+    }
+
+    override fun revisionsBehindCount(): Int {
+        return execute(Configuration.gitCommand, "rev-list", "--count", "HEAD..@{u}").trim().toInt()
+    }
+
 
     override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
         this.also {

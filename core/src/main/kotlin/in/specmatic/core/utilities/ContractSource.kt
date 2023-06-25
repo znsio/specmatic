@@ -69,6 +69,7 @@ data class GitRepo(
                 val contractsRepoDir =  this.directoryRelativeTo(reposBaseDir)
                 when {
                     !contractsRepoDir.exists() -> cloneRepo(reposBaseDir, this)
+                    contractsRepoDir.exists() && isBehind(contractsRepoDir) -> cloneRepo(reposBaseDir, this)
                     contractsRepoDir.exists() && isClean(contractsRepoDir) -> {
                         logger.log("Couldn't find local contracts but ${contractsRepoDir.path} already exists and is clean and has contracts")
                         contractsRepoDir
@@ -89,6 +90,12 @@ data class GitRepo(
     private fun isClean(contractsRepoDir: File): Boolean {
         val sourceGit = getSystemGit(contractsRepoDir.path)
         return sourceGit.statusPorcelain().isEmpty()
+    }
+
+    private fun isBehind(contractsRepoDir: File): Boolean {
+        val sourceGit = getSystemGit(contractsRepoDir.path)
+        sourceGit.fetch()
+        return sourceGit.revisionsBehindCount() > 0
     }
     private fun cloneRepo(reposBaseDir:File, gitRepo: GitRepo) : File {
         logger.log("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")

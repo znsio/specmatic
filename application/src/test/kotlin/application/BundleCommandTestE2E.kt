@@ -8,11 +8,7 @@ import io.ktor.utils.io.streams.*
 import io.mockk.clearAllMocks
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.jgit.api.Git
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -97,7 +93,6 @@ internal class BundleCommandTestE2E {
         @JvmStatic
         fun tearDown() {
             Configuration.globalConfigFileName = configFilename
-            cleanupSpecmaticDirectories(File("."))
         }
 
         fun cleanupSpecmaticDirectories(dir: File) {
@@ -124,6 +119,11 @@ internal class BundleCommandTestE2E {
     @BeforeEach
     fun setupEachTest() {
         clearAllMocks()
+    }
+
+    @AfterEach
+    fun teardownEachTest() {
+        cleanupSpecmaticDirectories(File("."))
     }
 
     @Test

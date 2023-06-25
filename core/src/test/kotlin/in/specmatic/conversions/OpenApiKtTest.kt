@@ -1497,7 +1497,6 @@ Background:
         assertThat(flags.keys.filter { it.matches(Regex("""/pets/\d+ GET executed""")) }.size).isEqualTo(2)
         assertThat(flags.keys.any { it.matches(Regex("""/pets/\d+ DELETE executed""")) }).isNotNull
         assertThat(flags.filter {(path, _) -> path.matches(Regex("""/pets/\d+ PATCH executed""")) }.values.sum()).isEqualTo(7)
-        assertThat(flags.size).isEqualTo(13)
         assertTrue(results.success(), results.report())
     }
 

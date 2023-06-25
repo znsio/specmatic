@@ -26,4 +26,6 @@ interface GitCommand {
     fun exists(treeish: String, relativePath: String): Boolean
     fun getCurrentBranch(): String
     fun statusPorcelain(): String
+    fun fetch(): String
+    fun revisionsBehindCount(): Int
 }

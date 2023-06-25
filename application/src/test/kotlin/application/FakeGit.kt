@@ -91,4 +91,12 @@ abstract class FakeGit: GitCommand {
     override fun statusPorcelain(): String {
         TODO("Not yet implemented")
     }
+
+    override fun fetch(): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun revisionsBehindCount(): Int {
+        TODO("Not yet implemented")
+    }
 }

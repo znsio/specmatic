@@ -73,6 +73,7 @@ enum class SourceProvider { git }
 data class Source(
     val provider: SourceProvider,
     val repository: String? = null,
+    val branch: String? = null,
     val test: List<String>? = null,
     val stub: List<String>? = null
 )

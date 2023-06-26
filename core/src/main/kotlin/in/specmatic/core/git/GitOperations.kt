@@ -34,9 +34,20 @@ fun clone(workingDirectory: File, gitRepo: GitRepo): File {
     return cloneDirectory
 }
 
+fun checkout(workingDirectory: File, branchName: String) {
+    logger.log("Checking out branch: ${branchName}")
+    try {
+        SystemGit(workingDirectory.path).checkout(branchName);
+    } catch(exception: Exception) {
+        logger.debug("Could not checkout branch ${branchName}")
+        logger.debug(exception.localizedMessage ?: exception.message ?: "")
+        logger.debug(exception.stackTraceToString())
+    }
+}
+
 private fun clone(gitRepositoryURI: String, cloneDirectory: File) {
     try {
-        SystemGit(cloneDirectory.parent, "-", AzureAuthCredentials).shallowClone(gitRepositoryURI, cloneDirectory)
+        SystemGit(cloneDirectory.parent, "-", AzureAuthCredentials).clone(gitRepositoryURI, cloneDirectory)
     } catch(exception: Exception) {
         logger.debug("Falling back to jgit after trying shallow clone")
         logger.debug(exception.localizedMessage ?: exception.message ?: "")

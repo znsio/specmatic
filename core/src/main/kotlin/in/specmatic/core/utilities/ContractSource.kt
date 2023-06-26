@@ -2,10 +2,7 @@ package `in`.specmatic.core.utilities
 
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.Configuration
-import `in`.specmatic.core.git.NonZeroExitError
-import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.git.clone
-import `in`.specmatic.core.git.exitErrorMessageContains
+import `in`.specmatic.core.git.*
 import `in`.specmatic.core.log.logger
 import java.io.File
 
@@ -22,11 +19,12 @@ sealed class ContractSource {
 
 data class GitRepo(
     val gitRepositoryURL: String,
+    val gitBranch: String?,
     override val testContracts: List<String>,
     override val stubContracts: List<String>
 ) : ContractSource() {
     val repoName = gitRepositoryURL.split("/").last().removeSuffix(".git")
-
+    val branchName = gitBranch
     override fun pathDescriptor(path: String): String {
         return "${repoName}:${path}"
     }
@@ -100,7 +98,13 @@ data class GitRepo(
     private fun cloneRepo(reposBaseDir:File, gitRepo: GitRepo) : File {
         logger.log("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
         reposBaseDir.mkdirs()
-        return clone(reposBaseDir, gitRepo)
+        val out = clone(reposBaseDir, gitRepo)
+
+        when(branchName) {
+            null -> logger.log("No branch specified, using default branch")
+            else -> checkout(out, branchName)
+        }
+        return out
     }
 
     private fun localRepoDir(workingDirectory: String): File = File(workingDirectory).resolve("repos")

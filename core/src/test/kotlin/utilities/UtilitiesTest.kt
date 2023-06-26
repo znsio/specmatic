@@ -32,7 +32,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir does not exist`() {
-        val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
         File(".spec").deleteRecursively()
 
         mockkStatic("in.specmatic.core.utilities.Utilities")
@@ -53,7 +53,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is clean`() {
-        val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
         File(".spec").deleteRecursively()
         File(".spec/repos/repo1").mkdirs()
 
@@ -77,7 +77,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is not clean`() {
-        val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
         File(".spec").deleteRecursively()
         File(".spec/repos/repo1").mkdirs()
 
@@ -104,7 +104,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is behind remote`() {
-        val sources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
         File(".spec").deleteRecursively()
         File(".spec/repos/repo1").mkdirs()
 
@@ -165,7 +165,7 @@ internal class UtilitiesTest {
         val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
-        val expectedSources = listOf(GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val expectedSources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
         assertThat(sources == expectedSources).isTrue
     }
 
@@ -176,8 +176,8 @@ internal class UtilitiesTest {
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
-                GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
-                GitRepo("https://repo2", listOf(), listOf("c/1.$CONTRACT_EXTENSION"))
+                GitRepo("https://repo1",null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
+                GitRepo("https://repo2",null, listOf(), listOf("c/1.$CONTRACT_EXTENSION"))
         )
         assertThat(sources == expectedSources).isTrue
     }
@@ -229,7 +229,7 @@ internal class UtilitiesTest {
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
-                GitRepo("https://repo1", listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
+                GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
                 GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"))
         )
         assertThat(sources == expectedSources).isTrue

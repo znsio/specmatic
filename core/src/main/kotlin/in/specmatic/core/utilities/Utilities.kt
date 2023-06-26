@@ -174,7 +174,7 @@ fun loadSources(specmaticConfigJson: SpecmaticConfigJson): List<ContractSource> 
 
                 when (source.repository) {
                     null -> GitMonoRepo(testPaths, stubPaths)
-                    else -> GitRepo(source.repository, testPaths, stubPaths)
+                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths)
                 }
             }
         }
@@ -194,13 +194,14 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
         when(nativeString(source.jsonObject, "provider")) {
             "git" -> {
                 val repositoryURL = nativeString(source.jsonObject, "repository")
+                val branch = nativeString(source.jsonObject, "branch")
 
                 val stubPaths = jsonArray(source, "stub")
                 val testPaths = jsonArray(source, "test")
 
                 when (repositoryURL) {
                     null -> GitMonoRepo(testPaths, stubPaths)
-                    else -> GitRepo(repositoryURL, testPaths, stubPaths)
+                    else -> GitRepo(repositoryURL, branch, testPaths, stubPaths)
                 }
             }
             else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $globalConfigFileName")

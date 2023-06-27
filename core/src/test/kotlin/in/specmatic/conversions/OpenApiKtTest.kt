@@ -3,6 +3,7 @@ package `in`.specmatic.conversions
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.databind.ObjectMapper
 import `in`.specmatic.core.*
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.log.Verbose
@@ -17,9 +18,12 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -33,11 +37,6 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
-import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper
-import org.testcontainers.shaded.okhttp3.MediaType.parse
-import org.testcontainers.shaded.okhttp3.OkHttpClient
-import org.testcontainers.shaded.okhttp3.Request
-import org.testcontainers.shaded.okhttp3.RequestBody
 import java.io.File
 import java.net.URI
 import java.util.function.Consumer
@@ -1068,7 +1067,7 @@ Background:
 
         val petResponse = HttpStub(feature).use {
             val requestBody = RequestBody.create(
-                parse("application/json"), ObjectMapper().writeValueAsString(Pet("scooby", "golden", 1, "retriever", 1))
+                "application/json".toMediaTypeOrNull(), ObjectMapper().writeValueAsString(Pet("scooby", "golden", 1, "retriever", 1))
             )
             val request =
                 Request.Builder().url("http://localhost:9000/pets/1").addHeader("Content-Type", "application/json")
@@ -1078,8 +1077,8 @@ Background:
         }
 
         assertThat(petResponse.isSuccessful).isTrue
-        assertThat(petResponse.code()).isEqualTo(200)
-        assertThat(ObjectMapper().readValue(petResponse.body()?.string(), Pet::class.java)).isNotNull
+        assertThat(petResponse.code).isEqualTo(200)
+        assertThat(ObjectMapper().readValue(petResponse.body?.string(), Pet::class.java)).isNotNull
     }
 
     @Test
@@ -1121,8 +1120,8 @@ Background:
         }
 
         assertThat(resp.isSuccessful).isFalse
-        assertThat(resp.code()).isEqualTo(400)
-        val body = resp.body()?.string()
+        assertThat(resp.code).isEqualTo(400)
+        val body = resp.body?.string()
         assertThat(body).contains("Invalid pattern cycle")
     }
 
@@ -1150,9 +1149,9 @@ Background:
             call.execute()
         }
 
-        val body = resp.body()?.string()
+        val body = resp.body?.string()
         assertThat(resp.isSuccessful).withFailMessage("Response unexpectedly failed. body=$body").isTrue
-        assertThat(resp.code()).isEqualTo(200)
+        assertThat(resp.code).isEqualTo(200)
         val deserialized = ObjectMapper().readValue(body, OptionalCycleRoot::class.java)
         assertThat(deserialized).isNotNull
     }
@@ -1181,9 +1180,9 @@ Background:
             call.execute()
         }
 
-        val body = resp.body()?.string()
+        val body = resp.body?.string()
         assertThat(resp.isSuccessful).withFailMessage("Response unexpectedly failed. body=$body").isTrue
-        assertThat(resp.code()).isEqualTo(200)
+        assertThat(resp.code).isEqualTo(200)
         val deserialized = ObjectMapper().readValue(body, NullableCycleHolder::class.java)
         assertThat(deserialized).isNotNull
     }
@@ -1212,15 +1211,15 @@ Background:
             call.execute()
         }
 
-        val body = resp.body()?.string()
+        val body = resp.body?.string()
         assertThat(resp.isSuccessful).withFailMessage("Response unexpectedly failed. body=$body").isTrue
-        assertThat(resp.code()).isEqualTo(200)
+        assertThat(resp.code).isEqualTo(200)
         val deserialized = ObjectMapper().readValue(body, MyBaseHolder::class.java)
         assertThat(deserialized).isNotNull
     }
 
     //TODO:
-    @Ignore
+    @Disabled
     fun `should generate stub with cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
             """

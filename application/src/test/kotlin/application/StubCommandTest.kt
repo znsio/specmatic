@@ -45,9 +45,6 @@ internal class StubCommandTest {
     lateinit var httpStubEngine: HTTPStubEngine
 
     @MockkBean
-    lateinit var kafkaStubEngine: KafkaStubEngine
-
-    @MockkBean
     lateinit var stubLoaderEngine: StubLoaderEngine
 
     @Autowired
@@ -77,7 +74,7 @@ internal class StubCommandTest {
     }
 
     @Test
-    fun `should attempt to start HTTP and Kafka stubs`() {
+    fun `should attempt to start a HTTP stub`() {
         val contractPath = "/path/to/contract.$CONTRACT_EXTENSION"
         val contract = """
             Feature: Math API
@@ -97,11 +94,8 @@ internal class StubCommandTest {
         val port = 9000
         val certInfo = CertInfo()
         val strictMode = false
-        val kafkaHost = "localhost"
-        val kafkaPort = 9093
 
         every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any(), any()) }.returns(null)
-        every { kafkaStubEngine.runKafkaStub(stubInfo, kafkaHost, kafkaPort, false) }.returns(null)
 
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
         every { fileOperations.isFile(contractPath) }.returns(true)
@@ -111,7 +105,6 @@ internal class StubCommandTest {
         assertThat(exitStatus).isZero()
 
         verify(exactly = 1) { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any(), any()) }
-        verify(exactly = 1) { kafkaStubEngine.runKafkaStub(stubInfo, kafkaHost, kafkaPort, false) }
     }
 
     @ParameterizedTest

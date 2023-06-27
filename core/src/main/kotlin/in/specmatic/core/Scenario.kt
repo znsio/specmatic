@@ -43,7 +43,6 @@ data class Scenario(
     val examples: List<Examples>,
     val patterns: Map<String, Pattern>,
     val fixtures: Map<String, Value>,
-    val kafkaMessagePattern: KafkaMessagePattern? = null,
     override val ignoreFailure: Boolean = false,
     val references: Map<String, References> = emptyMap(),
     val bindings: Map<String, String> = emptyMap(),
@@ -61,7 +60,6 @@ data class Scenario(
         scenarioInfo.examples,
         scenarioInfo.patterns,
         scenarioInfo.fixtures,
-        scenarioInfo.kafkaMessage,
         scenarioInfo.ignoreFailure,
         scenarioInfo.references,
         scenarioInfo.bindings
@@ -259,50 +257,28 @@ data class Scenario(
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
-        return when (kafkaMessagePattern) {
-            null -> scenarioBreadCrumb(this) {
-                attempt {
-                    when (isNegative) {
-                        false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
-                        else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
-                    }.map { newHttpRequestPattern ->
-                        Scenario(
-                            name,
-                            newHttpRequestPattern,
-                            httpResponsePattern,
-                            newExpectedServerState,
-                            examples,
-                            patterns,
-                            fixtures,
-                            kafkaMessagePattern,
-                            ignoreFailure,
-                            references,
-                            bindings,
-                            isGherkinScenario,
-                            isNegative,
-                            badRequestOrDefault,
-                            row.name,
-                            generativeTestingEnabled
-                        )
-                    }
-                }
-            }
-            else -> {
-                kafkaMessagePattern.newBasedOn(row, resolver).map { newKafkaMessagePattern ->
+        return scenarioBreadCrumb(this) {
+            attempt {
+                when (isNegative) {
+                    false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
+                    else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
+                }.map { newHttpRequestPattern ->
                     Scenario(
                         name,
-                        httpRequestPattern,
+                        newHttpRequestPattern,
                         httpResponsePattern,
                         newExpectedServerState,
                         examples,
                         patterns,
                         fixtures,
-                        newKafkaMessagePattern,
                         ignoreFailure,
                         references,
                         bindings,
                         isGherkinScenario,
-                        isNegative
+                        isNegative,
+                        badRequestOrDefault,
+                        row.name,
+                        generativeTestingEnabled
                     )
                 }
             }
@@ -314,39 +290,19 @@ data class Scenario(
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
-        return when (kafkaMessagePattern) {
-            null -> httpRequestPattern.newBasedOn(resolver).map { newHttpRequestPattern ->
-                Scenario(
-                    name,
-                    newHttpRequestPattern,
-                    httpResponsePattern,
-                    newExpectedServerState,
-                    examples,
-                    patterns,
-                    fixtures,
-                    kafkaMessagePattern,
-                    ignoreFailure,
-                    references,
-                    bindings
-                )
-            }
-            else -> {
-                kafkaMessagePattern.newBasedOn(row, resolver).map { newKafkaMessagePattern ->
-                    Scenario(
-                        name,
-                        httpRequestPattern,
-                        httpResponsePattern,
-                        newExpectedServerState,
-                        examples,
-                        patterns,
-                        fixtures,
-                        newKafkaMessagePattern,
-                        ignoreFailure,
-                        references,
-                        bindings
-                    )
-                }
-            }
+        return httpRequestPattern.newBasedOn(resolver).map { newHttpRequestPattern ->
+            Scenario(
+                name,
+                newHttpRequestPattern,
+                httpResponsePattern,
+                newExpectedServerState,
+                examples,
+                patterns,
+                fixtures,
+                ignoreFailure,
+                references,
+                bindings
+            )
         }
     }
 
@@ -467,11 +423,6 @@ data class Scenario(
         }
     }
 
-    fun matchesMock(kafkaMessage: KafkaMessage): Result {
-        return kafkaMessagePattern?.matches(kafkaMessage, resolver)
-            ?: Result.Failure("This scenario does not have a Kafka mock")
-    }
-
     fun resolverAndResponseFrom(response: HttpResponse): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
@@ -503,7 +454,6 @@ data class Scenario(
             scenario.examples,
             this.patterns,
             this.fixtures,
-            this.kafkaMessagePattern,
             this.ignoreFailure,
             scenario.references,
             bindings,
@@ -523,7 +473,6 @@ data class Scenario(
         this.examples,
         this.patterns,
         this.fixtures,
-        this.kafkaMessagePattern,
         this.ignoreFailure,
         this.references,
         bindings,

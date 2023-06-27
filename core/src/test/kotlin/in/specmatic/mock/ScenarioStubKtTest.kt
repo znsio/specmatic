@@ -161,25 +161,6 @@ internal class ScenarioStubKtTest {
     }
 
     @Test
-    fun `should load a kafka message from stub info`() {
-        val mockText = """
-{
-  "kafka-message": {
-    "topic": "the weather",
-    "key": "status",
-    "value": "cloudy"
-  }
-}
-        """.trim()
-
-        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        assertThat(mock.kafkaMessage).isNotNull
-        assertThat(mock.kafkaMessage?.topic).isEqualTo("the weather")
-        assertThat(mock.kafkaMessage?.key).isEqualTo(StringValue("status"))
-        assertThat(mock.kafkaMessage?.value).isEqualTo(StringValue("cloudy"))
-    }
-
-    @Test
     fun `should generate request pattern containing multipart file from mock data`() {
         val mockText = """
 {

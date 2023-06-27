@@ -26,7 +26,6 @@ internal class ScenarioTest {
             LinkedList(),
             HashMap(),
             HashMap(),
-            KafkaMessagePattern(),
         )
         scenario.generateTestScenarios().let {
             assertThat(it.size).isEqualTo(1)
@@ -44,7 +43,6 @@ internal class ScenarioTest {
             listOf(patterns),
             HashMap(),
             HashMap(),
-            KafkaMessagePattern(),
         )
         scenario.generateTestScenarios().let {
             assertThat(it.size).isEqualTo(2)
@@ -63,7 +61,6 @@ internal class ScenarioTest {
             LinkedList(),
             HashMap(),
             HashMap(),
-            KafkaMessagePattern(),
         )
         scenario.matches(HttpResponse.EMPTY).let {
             assertThat(it is Result.Failure).isTrue()
@@ -95,7 +92,6 @@ internal class ScenarioTest {
             listOf(example),
             HashMap(),
             HashMap(),
-            KafkaMessagePattern(),
         )
 
         val testScenarios = scenario.generateTestScenarios()
@@ -103,24 +99,6 @@ internal class ScenarioTest {
 
         assertThat(newState.getValue("id").toStringLiteral()).isNotEqualTo("(string)")
         assertThat(newState.getValue("id").toStringLiteral().trim().length).isGreaterThan(0)
-    }
-
-    @Test
-    fun `scenario will match a kafka mock message`() {
-        val kafkaMessagePattern = KafkaMessagePattern("customers", StringPattern(), StringPattern())
-        val scenario = Scenario(
-            "Test",
-            HttpRequestPattern(),
-            HttpResponsePattern(),
-            emptyMap(),
-            emptyList(),
-            emptyMap(),
-            emptyMap(),
-            kafkaMessagePattern,
-        )
-
-        val kafkaMessage = KafkaMessage("customers", StringValue("name"), StringValue("John Doe"))
-        assertThat(scenario.matchesMock(kafkaMessage)).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -133,7 +111,6 @@ internal class ScenarioTest {
             emptyList(),
             emptyMap(),
             emptyMap(),
-            null,
         )
         val mockRequest = HttpRequest(method = "GET", path = "/", headers = mapOf("X-Expected" to "value", "X-Unexpected" to "value"))
         val mockResponse = HttpResponse.OK
@@ -151,7 +128,6 @@ internal class ScenarioTest {
             emptyList(),
             emptyMap(),
             emptyMap(),
-            null,
         )
         val mockRequest = HttpRequest(method = "GET", path = "/")
         val mockResponse = HttpResponse.OK.copy(headers = mapOf("X-Expected" to "value", "X-Unexpected" to "value"))
@@ -169,7 +145,6 @@ internal class ScenarioTest {
             emptyList(),
             emptyMap(),
             emptyMap(),
-            null,
         )
         val mockRequest = HttpRequest(method = "GET", path = "/", queryParams = mapOf("expected" to "value", "unexpected" to "value"))
         val mockResponse = HttpResponse.OK
@@ -187,7 +162,6 @@ internal class ScenarioTest {
             emptyList(),
             emptyMap(),
             emptyMap(),
-            null,
         )
         val mockRequest = HttpRequest(method = "POST", path = "/", body = parsedValue("""{"unexpected": "value"}"""))
         val mockResponse = HttpResponse.OK

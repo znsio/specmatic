@@ -356,8 +356,6 @@ class HttpStub(
     }
 
     fun setExpectation(stub: ScenarioStub): HttpStubData {
-        if (stub.kafkaMessage != null) throw ContractException("Mocking Kafka messages over HTTP is not supported right now")
-
         val results = features.asSequence().map { feature ->
             try {
                 val stubData: HttpStubData = softCastResponseToXML(
@@ -744,7 +742,7 @@ fun stubResponse(
 
 fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<HttpStubData> {
     return contractInfo.flatMap { (feature, mocks) ->
-        mocks.filter { it.kafkaMessage == null }.map { mock ->
+        mocks.map { mock ->
             feature.matchingStub(mock, ContractAndStubMismatchMessages)
         }
     }

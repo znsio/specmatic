@@ -18,13 +18,9 @@ import java.util.concurrent.Callable
         description = ["Start a stub server with contract"])
 class StubCommand : Callable<Unit> {
     var httpStub: ContractStub? = null
-    var kafkaStub: QontractKafka? = null
 
     @Autowired
     private var httpStubEngine: HTTPStubEngine = HTTPStubEngine()
-
-    @Autowired
-    private var kafkaStubEngine: KafkaStubEngine = KafkaStubEngine()
 
     @Autowired
     private var stubLoaderEngine: StubLoaderEngine = StubLoaderEngine()
@@ -46,15 +42,6 @@ class StubCommand : Callable<Unit> {
 
     @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = DEFAULT_HTTP_STUB_PORT)
     var port: Int = 0
-
-    @Option(names = ["--startKafka"], description = ["Host on which to dump the stubbed kafka message"], defaultValue = "false")
-    var startKafka: Boolean = false
-
-    @Option(names = ["--kafkaHost"], description = ["Host on which to dump the stubbed kafka message"], defaultValue = "localhost", required = false)
-    lateinit var kafkaHost: String
-
-    @Option(names = ["--kafkaPort"], description = ["Port for the Kafka stub"], defaultValue = "9093", required = false)
-    lateinit var kafkaPort: String
 
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
@@ -124,7 +111,7 @@ class StubCommand : Callable<Unit> {
             validateContractFileExtensions(contractPaths, fileOperations)
             startServer()
 
-            if(httpStub != null || kafkaStub != null) {
+            if(httpStub != null) {
                 addShutdownHook()
 
                 val watcher = watchMaker.make(contractPaths.plus(dataDirs))
@@ -179,7 +166,6 @@ class StubCommand : Callable<Unit> {
             false -> port
         }
         httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, httpClientFactory, workingDirectory)
-        kafkaStub = kafkaStubEngine.runKafkaStub(stubData, kafkaHost, kafkaPort.toInt(), startKafka)
 
         LogTail.storeSnapshot()
     }
@@ -205,9 +191,6 @@ class StubCommand : Callable<Unit> {
     private fun stopServer() {
         httpStub?.close()
         httpStub = null
-
-        kafkaStub?.close()
-        kafkaStub = null
     }
 
     private fun addShutdownHook() {
@@ -216,7 +199,6 @@ class StubCommand : Callable<Unit> {
                 try {
                     consoleLog(StringLog("Shutting down stub servers"))
                     httpStub?.close()
-                    kafkaStub?.close()
                 } catch (e: InterruptedException) {
                     currentThread().interrupt()
                 }

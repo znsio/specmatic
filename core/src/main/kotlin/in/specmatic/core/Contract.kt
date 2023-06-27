@@ -25,15 +25,7 @@ data class Contract(val contract: Feature) {
         val httpClient = HttpClient(endPoint)
 
         contractBehaviour.generateContractTestScenarios(emptyList()).fold(Results()) { results, scenario ->
-            when(val kafkaMessagePattern = scenario.kafkaMessagePattern) {
-                null -> Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
-                else -> {
-                    val message = """KAFKA MESSAGE
-${kafkaMessagePattern.generate(scenario.resolver).toDisplayableString()}""".trimMargin().prependIndent("| ")
-                    println(message)
-                    Results(results = results.results.plus(Result.Success()).toMutableList())
-                }
-            }
+            Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
         }
     }
 }

@@ -327,21 +327,6 @@ data class Feature(
             scenario.copy(examples = emptyList()).generateBackwardCompatibilityScenarios()
         }
 
-    fun assertMatchesMockKafkaMessage(kafkaMessage: KafkaMessage) {
-        val result = matchesMockKafkaMessage(kafkaMessage)
-        if (result is Result.Failure)
-            throw NoMatchingScenario(Results(), cachedMessage = result.toFailureReport().toText())
-    }
-
-    fun matchesMockKafkaMessage(kafkaMessage: KafkaMessage): Result {
-        val results = scenarios.asSequence().map {
-            it.matchesMock(kafkaMessage)
-        }
-
-        return results.find { it is Result.Success } ?: results.firstOrNull()
-        ?: Result.Failure("No match found, couldn't check the message")
-    }
-
     fun matchingStub(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
@@ -354,28 +339,6 @@ data class Feature(
 
     fun clearServerState() {
         serverState = emptyMap()
-    }
-
-    fun lookupKafkaScenario(
-        olderKafkaMessagePattern: KafkaMessagePattern,
-        olderResolver: Resolver
-    ): Sequence<Pair<Scenario, Result>> {
-        try {
-            return scenarios.asSequence()
-                .filter { it.kafkaMessagePattern != null }
-                .map { newerScenario ->
-                    Pair(
-                        newerScenario,
-                        olderKafkaMessagePattern.encompasses(
-                            newerScenario.kafkaMessagePattern as KafkaMessagePattern,
-                            newerScenario.resolver,
-                            olderResolver
-                        )
-                    )
-                }
-        } finally {
-            serverState = emptyMap()
-        }
     }
 
     fun combine(baseScenario: Scenario, newScenario: Scenario): Scenario {
@@ -1390,8 +1353,6 @@ private fun lexScenario(
                         )
                     )
                 )
-            "KAFKA-MESSAGE" ->
-                scenarioInfo.copy(kafkaMessage = toAsyncMessage(step))
             "VALUE" ->
                 scenarioInfo.copy(
                     references = values(
@@ -1532,22 +1493,6 @@ fun values(
 
 private val contractCache = ContractCache()
 
-fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
-    val parts = breakIntoPartsMaxLength(step.rest, 3)
-
-    return when (parts.size) {
-        2 -> {
-            val (name, type) = parts
-            KafkaMessagePattern(name, value = parsedPattern(type))
-        }
-        3 -> {
-            val (name, key, contentType) = parts
-            KafkaMessagePattern(name, parsedPattern(key), parsedPattern(contentType))
-        }
-        else -> throw ContractException("The message keyword must have either 2 params (topic, value) or 3 (topic, key, value)")
-    }
-}
-
 fun toFormDataPart(step: StepInfo, contractFilePath: String): MultiPartFormDataPattern {
     val parts = breakIntoPartsMaxLength(step.rest, 4)
 
@@ -1652,7 +1597,6 @@ internal fun lex(featureChildren: List<FeatureChild>, filePath: String): List<Sc
                 scenarioInfo.examples,
                 scenarioInfo.patterns,
                 scenarioInfo.fixtures,
-                scenarioInfo.kafkaMessage,
                 scenarioInfo.ignoreFailure,
                 scenarioInfo.references,
                 scenarioInfo.bindings,
@@ -1751,20 +1695,15 @@ private fun scenarios(featureChildren: List<FeatureChild>) =
 fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature("New Feature", listOf(stub))
 
 private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, ExampleDeclarations> {
-    return when (namedStub.stub.kafkaMessage) {
-        null -> {
-            val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
+        val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
 
-            for (message in examples.messages) {
-                logger.log(message)
-            }
-
-            val (responseClauses, allTypes, _) = toGherkinClauses(namedStub.stub.response, typesFromRequest)
-            val typeClauses = toGherkinClauses(allTypes)
-            Pair(typeClauses.plus(requestClauses).plus(responseClauses), examples)
+        for (message in examples.messages) {
+            logger.log(message)
         }
-        else -> Pair(toGherkinClauses(namedStub.stub.kafkaMessage), UseExampleDeclarations())
-    }
+
+        val (responseClauses, allTypes, _) = toGherkinClauses(namedStub.stub.response, typesFromRequest)
+        val typeClauses = toGherkinClauses(allTypes)
+        return Pair(typeClauses.plus(requestClauses).plus(responseClauses), examples)
 }
 
 data class GherkinScenario(val scenarioName: String, val clauses: List<GherkinClause>)

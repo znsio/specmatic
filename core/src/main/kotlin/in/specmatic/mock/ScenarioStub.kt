@@ -4,21 +4,17 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.*
 
-data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val kafkaMessage: KafkaMessage? = null, val delayInSeconds: Int? = null, val stubToken: String? = null, val requestBodyRegex: String? = null) {
+data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInSeconds: Int? = null, val stubToken: String? = null, val requestBodyRegex: String? = null) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
-        if(kafkaMessage != null) {
-            TODO("Implement serialisation")
-        } else {
-            mockInteraction[MOCK_HTTP_REQUEST] = request.toJSON()
-            mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()
-        }
+
+        mockInteraction[MOCK_HTTP_REQUEST] = request.toJSON()
+        mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()
 
         return JSONObjectValue(mockInteraction)
     }
 }
 
-const val MOCK_KAFKA_MESSAGE = "kafka-message"
 const val MOCK_HTTP_REQUEST = "http-request"
 const val MOCK_HTTP_RESPONSE = "http-response"
 const val DELAY_IN_SECONDS = "delay-in-seconds"
@@ -30,51 +26,26 @@ val MOCK_HTTP_REQUEST_ALL_KEYS = listOf("mock-http-request", MOCK_HTTP_REQUEST)
 val MOCK_HTTP_RESPONSE_ALL_KEYS = listOf("mock-http-response", MOCK_HTTP_RESPONSE)
 
 fun validateMock(mockSpec: Map<String, Any?>) {
-    if (!mockSpec.containsKey(MOCK_KAFKA_MESSAGE)) {
-        if (MOCK_HTTP_REQUEST_ALL_KEYS.none { mockSpec.containsKey(it) })
-            throw ContractException(errorMessage = "Stub does not contain http-request/mock-http-request as a top level key.")
-        if (MOCK_HTTP_RESPONSE_ALL_KEYS.none { mockSpec.containsKey(it) })
-            throw ContractException(errorMessage = "Stub does not contain http-request/mock-http-request as a top level key.")
-    }
+    if (MOCK_HTTP_REQUEST_ALL_KEYS.none { mockSpec.containsKey(it) })
+        throw ContractException(errorMessage = "Stub does not contain http-request/mock-http-request as a top level key.")
+    if (MOCK_HTTP_RESPONSE_ALL_KEYS.none { mockSpec.containsKey(it) })
+        throw ContractException(errorMessage = "Stub does not contain http-request/mock-http-request as a top level key.")
 }
 
 fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
-    return when {
-        mockSpec.contains(MOCK_KAFKA_MESSAGE) -> ScenarioStub(kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, mockSpec)))
-        else -> {
-            val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
-            val mockResponse: HttpResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
+    val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
+    val mockResponse: HttpResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
 
-            val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
-            val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
-            val requestBodyRegex: String? = getRequestBodyRegexOrNull(mockSpec)
+    val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
+    val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
+    val requestBodyRegex: String? = getRequestBodyRegexOrNull(mockSpec)
 
-            ScenarioStub(request = mockRequest, response = mockResponse, delayInSeconds = delayInSeconds, stubToken = stubToken, requestBodyRegex = requestBodyRegex)
-        }
-    }
+    return ScenarioStub(request = mockRequest, response = mockResponse, delayInSeconds = delayInSeconds, stubToken = stubToken, requestBodyRegex = requestBodyRegex)
 }
 
 fun getRequestBodyRegexOrNull(mockSpec: Map<String, Value>): String? {
     val requestSpec: Map<String, Value> = getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec)
     return requestSpec[REQUEST_BODY_REGEX]?.toStringLiteral()
-}
-
-private const val KAFKA_TOPIC_KEY = "topic"
-private const val KAFKA_VALUE_KEY = "value"
-private const val KAFKA_KEY_KEY = "key"
-
-fun kafkaMessageFromJSON(json: Map<String, Value>): KafkaMessage {
-    if(KAFKA_TOPIC_KEY !in json)
-        throw ContractException("Kafka message stub info must contain a topic name")
-
-    if(KAFKA_VALUE_KEY !in json)
-        throw ContractException("Kafka message stub info must contain a payload")
-
-    val target = json.getValue(KAFKA_TOPIC_KEY)
-    val key = json[KAFKA_KEY_KEY]
-    val value = json.getValue(KAFKA_VALUE_KEY)
-
-    return KafkaMessage(target.toStringLiteral(), key?.let { StringValue(it.toStringLiteral()) }, value)
 }
 
 fun getJSONObjectValue(keys: List<String>, mapData: Map<String, Value>): Map<String, Value> {

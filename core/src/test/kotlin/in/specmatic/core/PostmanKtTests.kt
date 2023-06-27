@@ -249,7 +249,6 @@ class PostmanKtTests {
         assertThat(stub.second.name).isEqualTo("Original name")
 
         val request = stub.second.stub
-        assertThat(request.kafkaMessage).isNull()
         assertThat(request.request.method).isEqualTo("POST")
         assertThat(request.request.headers).isEqualTo(mapOf("X-Header" to "10"))
         assertThat(request.request.path).isEqualTo("")

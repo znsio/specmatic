@@ -86,18 +86,6 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--timeout"], description = ["Specify a timeout for the test requests"], required = false, defaultValue = "60")
     var timeout: Int = 60
 
-    @Option(names = ["--kafkaBootstrapServers"], description = ["Kafka's Bootstrap servers"], required=false)
-    var kafkaBootstrapServers: String = ""
-
-    @Option(names = ["--kafkaHost"], description = ["The host on which to connect to Kafka"], required=false)
-    var kafkaHost: String = "localhost"
-
-    @Option(names = ["--kafkaPort"], description = ["The port on which to connect to Kafka"], required=false)
-    var kafkaPort: Int = 9093
-
-    @Option(names = ["--commit"], description = ["Commit kafka messages that have been read"], required=false)
-    var commit: Boolean = false
-
     @Option(names = ["--junitReportDir"], description = ["Create junit xml reports in this directory"])
     var junitReportDirName: String? = null
 
@@ -151,20 +139,12 @@ class TestCommand : Callable<Unit> {
             System.setProperty(FILTER_NOT_NAME, filterName)
         }
 
-        System.setProperty("kafkaBootstrapServers", kafkaBootstrapServers)
-        System.setProperty("kafkaHost", kafkaHost)
-        System.setProperty("kafkaPort", kafkaPort.toString())
-        System.setProperty("commit", commit.toString())
-
-        if(variablesFileName != null)
-            System.setProperty(VARIABLES_FILE_NAME, variablesFileName)
+        variablesFileName?.let {
+            System.setProperty(VARIABLES_FILE_NAME, it)
+        }
 
         if(testBaseURL.isNotEmpty())
             System.setProperty(TEST_BASE_URL, testBaseURL)
-
-        if(kafkaPort != 0)
-            System.setProperty("kafkaPort", kafkaPort.toString())
-
 
         System.setProperty(CONTRACT_PATHS, contractPaths.joinToString(","))
 

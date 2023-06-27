@@ -9,7 +9,6 @@ import `in`.specmatic.core.log.StringLog
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.contractStubPaths
 import `in`.specmatic.core.utilities.jsonStringToValueMap
-import `in`.specmatic.core.value.KafkaMessage
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.*
 import java.io.File
@@ -216,12 +215,7 @@ fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
     val contractInfoFromStubs: List<Pair<Feature, List<ScenarioStub>>> = stubData.mapNotNull { (stubFile, stub) ->
         val matchResults = features.map { (qontractFile, feature) ->
             try {
-                val kafkaMessage = stub.kafkaMessage
-                if (kafkaMessage != null) {
-                    feature.assertMatchesMockKafkaMessage(kafkaMessage)
-                } else {
-                    feature.matchingStub(stub.request, stub.response, ContractAndStubMismatchMessages)
-                }
+                feature.matchingStub(stub.request, stub.response, ContractAndStubMismatchMessages)
                 StubMatchResults(feature, null)
             } catch (e: NoMatchingScenario) {
                 StubMatchResults(null, StubMatchErrorReport(StubMatchExceptionReport(stub.request, e), qontractFile))
@@ -315,43 +309,3 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
     }
 }
 
-// Used by stub client code
-fun stubKafkaMessage(contractPath: String, message: String, bootstrapServers: String) {
-    val kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, jsonStringToValueMap(message)))
-    parseGherkinStringToFeature(File(contractPath).readText()).assertMatchesMockKafkaMessage(kafkaMessage)
-    createProducer(bootstrapServers).use {
-        it.send(producerRecord(kafkaMessage))
-    }
-}
-
-// Used by stub client code
-fun testKafkaMessage(contractPath: String, bootstrapServers: String, commit: Boolean) {
-    val feature = parseGherkinStringToFeature(File(contractPath).readText())
-
-    val results = feature.scenarios.map {
-        testKafkaMessages(it, bootstrapServers, commit)
-    }
-
-    if(results.any { it is Result.Failure }) {
-        throw ContractException(Results(results.toMutableList()).report(PATH_NOT_RECOGNIZED_ERROR))
-    }
-}
-
-fun testKafkaMessages(scenario: Scenario, bootstrapServers: String, commit: Boolean): Result {
-    return createConsumer(bootstrapServers, commit).use { consumer ->
-        if(scenario.kafkaMessagePattern == null) throw ContractException("No kafka message found to test with")
-
-        val topic = scenario.kafkaMessagePattern.topic
-        consumer.subscribe(listOf(topic))
-
-        val messages = consumer.poll(Duration.ofSeconds(1)).map {
-            KafkaMessage(topic, it.key()?.let { key -> StringValue(key) }, StringValue(it.value()))
-        }
-
-        val results = messages.map {
-            scenario.kafkaMessagePattern.matches(it, scenario.resolver)
-        }
-
-        Results(results.toMutableList()).toResultIfAny()
-    }
-}

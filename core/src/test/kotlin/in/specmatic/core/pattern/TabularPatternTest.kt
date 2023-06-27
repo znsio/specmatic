@@ -11,9 +11,9 @@ import `in`.specmatic.stub.HttpStub
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -349,7 +349,7 @@ Feature: Recursive test
     }
 
     //TODO:
-    @Ignore
+    @Disabled
     fun `tabular type with recursive type definition should generate response with infinite loop`() {
         val gherkin = """
 Feature: Recursive test

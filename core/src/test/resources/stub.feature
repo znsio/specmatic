@@ -11,7 +11,3 @@ Feature: Test invocation of Qontract from within Karate
     * status 200
     * print response
     * httpStub.close()
-
-#  Scenario: Kafka test
-#    * API.stubKafkaMessage("/Users/joel/Source/files/examples/kafka/test.qontract", '{"kafka-message": {"topic": "customer", "key": "name", "value": "test data"}}', "PLAINTEXT://localhost:9093")
-#    * API.testKafkaMessage("/Users/joel/Source/files/examples/kafka/test.qontract", "PLAINTEXT://localhost:9093", false)

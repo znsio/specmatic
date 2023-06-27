@@ -5,7 +5,6 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.jsonStringToValueMap
-import `in`.specmatic.core.value.KafkaMessage
 
 interface StubData
 
@@ -51,6 +50,4 @@ fun executeExternalCommand(command: String, envParam: String): String {
     return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf(envParam)).executeAsSeparateProcess()
 }
 
-data class KafkaStubData(val kafkaMessage: KafkaMessage) : StubData
-
-data class StubDataItems(val http: List<HttpStubData> = emptyList(), val kafka: List<KafkaStubData> = emptyList())
+data class StubDataItems(val http: List<HttpStubData> = emptyList())

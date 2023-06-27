@@ -16,47 +16,24 @@ class HTTPStubEngine {
     fun runHTTPStub(stubs: List<Pair<Feature, List<ScenarioStub>>>, host: String, port: Int, certInfo: CertInfo, strictMode: Boolean, passThroughTargetBase: String = "", httpClientFactory: HttpClientFactory, workingDirectory: WorkingDirectory): HttpStub? {
         val features = stubs.map { it.first }
 
-        return when {
-            hasHttpScenarios(features) -> {
-                val httpExpectations = contractInfoToHttpExpectations(stubs)
+        val httpExpectations = contractInfoToHttpExpectations(stubs)
 
-                val httpFeatures = features.map {
-                    val httpScenarios = it.scenarios.filter { scenario ->
-                        scenario.kafkaMessagePattern == null
-                    }
+        val keyStoreData = certInfo.getHttpsCert()
 
-                    it.copy(scenarios = httpScenarios)
-                }
-
-                val keyStoreData = certInfo.getHttpsCert()
-                HttpStub(
-                    httpFeatures,
-                    httpExpectations,
-                    host,
-                    port,
-                    ::consoleLog,
-                    strictMode,
-                    keyStoreData,
-                    passThroughTargetBase = passThroughTargetBase,
-                    httpClientFactory = httpClientFactory,
-                    workingDirectory = workingDirectory
-                ).also {
-                    val protocol = if (keyStoreData != null) "https" else "http"
-                    consoleLog(StringLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop."))
-                }
-            }
-            else -> {
-                logger.log("Could not find any HTTP contracts, so stub server not started.")
-                null
-            }
-        }
-    }
-}
-
-internal fun hasHttpScenarios(behaviours: List<Feature>): Boolean {
-    return behaviours.any {
-        it.scenarios.any { scenario ->
-            scenario.kafkaMessagePattern == null
+        return HttpStub(
+            features,
+            httpExpectations,
+            host,
+            port,
+            ::consoleLog,
+            strictMode,
+            keyStoreData,
+            passThroughTargetBase = passThroughTargetBase,
+            httpClientFactory = httpClientFactory,
+            workingDirectory = workingDirectory
+        ).also {
+            val protocol = if (keyStoreData != null) "https" else "http"
+            consoleLog(StringLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop."))
         }
     }
 }

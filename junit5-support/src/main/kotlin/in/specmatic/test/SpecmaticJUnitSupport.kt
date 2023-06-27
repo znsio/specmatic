@@ -387,7 +387,6 @@ open class SpecmaticJUnitSupport {
                 listOf(examples),
                 emptyMap(),
                 emptyMap(),
-                null,
             )
         }
     }

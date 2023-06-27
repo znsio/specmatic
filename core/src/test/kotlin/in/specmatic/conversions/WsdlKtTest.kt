@@ -11,11 +11,11 @@ import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -88,7 +88,7 @@ class WsdlKtTest {
         wsdlFile.writeText(wsdlContent)
     }
 
-    @Ignore
+    @Disabled
     fun `should create stub from gherkin that includes wsdl`() {
         val wsdlSpec = """
 Feature: Hello world
@@ -171,7 +171,7 @@ Scenario: test request returns test response
         assertTrue(results.success(), results.report())
     }
 
-    @Ignore
+    @Disabled
     fun `should report error in test with both OpenAPI and Gherkin scenario names`() {
         val wsdlSpec = """
 Feature: Hello world

@@ -12,7 +12,7 @@ import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.HttpStubResponse
 import `in`.specmatic.stub.ThreadSafeListOfStubs
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Assert.assertFalse
+import org.junit.jupiter.api.Assertions.assertFalse
 import java.io.File
 
 fun toReport(result: Result, scenarioMessage: String? = null): String {

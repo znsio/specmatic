@@ -13,14 +13,15 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
 import io.mockk.InternalPlatformDsl.toStr
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
-import org.testcontainers.shaded.okhttp3.MediaType
-import org.testcontainers.shaded.okhttp3.OkHttpClient
-import org.testcontainers.shaded.okhttp3.Request
-import org.testcontainers.shaded.okhttp3.RequestBody
 import java.security.KeyStore
 import java.util.*
 import java.util.function.Consumer
@@ -278,7 +279,8 @@ Feature: Test
         val feature = parseGherkinStringToFeature(gherkin)
 
         HttpStub(feature).use {
-            val body = RequestBody.create(MediaType.parse("application/json"), """{
+            val body = RequestBody.create(
+                "application/json".toMediaTypeOrNull(), """{
 "event": "features",
 "id": "332f8278",
 "data": "[{\"id\":\"b5bf7f9e-9391-40a4-8808-61ad73f800e9\",\"key\":\"FT01\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":true},{\"id\":\"8b6002e8-e97a-4ebe-8cae-ac68fb99fc33\",\"key\":\"FT02\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":false}]"
@@ -288,8 +290,8 @@ Feature: Test
             val response = call.execute()
 
             println(response.toStr())
-            println(response.body()?.string())
-            assertThat(response.code()).isEqualTo(200)
+            println(response.body?.string())
+            assertThat(response.code).isEqualTo(200)
         }
     }
 
@@ -606,17 +608,6 @@ Feature: POST API
         val value = softCastValueToXML(StringValue("not xml"))
         assertThat(value).isInstanceOf(StringValue::class.java)
         assertThat(value.toStringLiteral()).isEqualTo("not xml")
-    }
-
-    @Test
-    fun `kafka stubs should not be picked up when creating http expectations`() {
-        val feature = parseGherkinStringToFeature("""
-            Feature: Kafka
-              Scenario: Kafka 
-                * kafka-message customer data
-        """.trimIndent())
-        val kafkaStubs = contractInfoToHttpExpectations(listOf(feature to emptyList()))
-        assertThat(kafkaStubs.isEmpty())
     }
 
     @Test

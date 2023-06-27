@@ -20,7 +20,6 @@ import io.ktor.util.reflect.*
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.*
-import org.junit.Ignore
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -210,7 +209,8 @@ Pet:
         File(SCHEMAS_DIRECTORY).deleteRecursively()
     }
 
-    @Ignore
+    @Disabled
+    @Test
     fun `should generate 200 OK scenarioInfos from openAPI`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
         val scenarioInfos = openApiSpecification.toScenarioInfos()

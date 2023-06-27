@@ -470,23 +470,6 @@ sample.json didn't match math.$CONTRACT_EXTENSION
   """.trimIndent())
     }
 
-    @Test
-    fun `should get a stub out of a qontract and a matching kafka stub file`() {
-        val feature = parseGherkinStringToFeature("""
-Feature: Customer Data
-    Scenario: Send customer info
-        * kafka-message customers (string)
-""".trim())
-
-        val stubInfo = loadContractStubs(listOf(Pair("customers.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(kafkaMessage = KafkaMessage("customers", value = StringValue("some data"))))))
-        assertThat(stubInfo.single().first).isEqualTo(feature)
-
-        val stub = stubInfo.single().second.single()
-        val expectedMessage = KafkaMessage("customers", value = StringValue("some data"))
-
-        assertThat(stub.kafkaMessage).isEqualTo(expectedMessage)
-    }
-
     private fun fakeResponse(request: HttpRequest, behaviour: Feature): HttpResponse {
         return stubResponse(request, listOf(Pair(behaviour, emptyList())))
     }
@@ -574,15 +557,10 @@ fun <ReturnType> captureStandardOutput(fn: () -> ReturnType): Pair<String, Retur
 fun contractInfoToExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): StubDataItems {
     return contractInfo.fold(StubDataItems()) { stubsAcc, (feature, mocks) ->
         val newStubs = mocks.fold(StubDataItems()) { stubs, mock ->
-            val kafkaMessage = mock.kafkaMessage
-            if(kafkaMessage != null) {
-                StubDataItems(stubs.http, stubs.kafka.plus(KafkaStubData(kafkaMessage)))
-            } else {
-                val stubData = feature.matchingStub(mock)
-                StubDataItems(stubs.http.plus(stubData), stubs.kafka)
-            }
+            val stubData = feature.matchingStub(mock)
+            StubDataItems(stubs.http.plus(stubData))
         }
 
-        StubDataItems(stubsAcc.http.plus(newStubs.http), stubsAcc.kafka.plus(newStubs.kafka))
+        StubDataItems(stubsAcc.http.plus(newStubs.http))
     }
 }

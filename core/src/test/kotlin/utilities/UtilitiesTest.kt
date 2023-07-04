@@ -3,15 +3,13 @@ package utilities
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
+import `in`.specmatic.core.git.checkout
 import `in`.specmatic.core.git.clone
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkConstructor
-import io.mockk.mockkStatic
+import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -48,6 +46,32 @@ internal class UtilitiesTest {
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
         )
+        verify(exactly = 0) { checkout(any(), any()) }
+        assertThat(contractPaths == expectedContractPaths).isTrue
+    }
+
+    @Test
+    fun `contractFilePathsFrom sources with branch when contracts repo dir does not exist`() {
+        val branchName = "featureBranch"
+        val sources = listOf(GitRepo("https://repo1",
+            branchName, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        File(".spec").deleteRecursively()
+
+        mockkStatic("in.specmatic.core.utilities.Utilities")
+        every { loadSources("/configFilePath") }.returns(sources)
+
+        mockkStatic("in.specmatic.core.git.GitOperations")
+        val repositoryDirectory = File(".spec/repos/repo1")
+        every { clone(File(".spec/repos"), any()) }.returns(repositoryDirectory)
+        every { checkout(repositoryDirectory, branchName) }.returns(Unit)
+
+        val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+        val expectedContractPaths = listOf(
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
+        )
+        verify(exactly = 1) { checkout(repositoryDirectory, branchName) }
         assertThat(contractPaths == expectedContractPaths).isTrue
     }
 

@@ -19,12 +19,11 @@ sealed class ContractSource {
 
 data class GitRepo(
     val gitRepositoryURL: String,
-    val gitBranch: String?,
+    val branchName: String?,
     override val testContracts: List<String>,
     override val stubContracts: List<String>
 ) : ContractSource() {
     val repoName = gitRepositoryURL.split("/").last().removeSuffix(".git")
-    val branchName = gitBranch
     override fun pathDescriptor(path: String): String {
         return "${repoName}:${path}"
     }
@@ -95,16 +94,16 @@ data class GitRepo(
         sourceGit.fetch()
         return sourceGit.revisionsBehindCount() > 0
     }
-    private fun cloneRepo(reposBaseDir:File, gitRepo: GitRepo) : File {
+    private fun cloneRepo(reposBaseDir: File, gitRepo: GitRepo): File {
         logger.log("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
         reposBaseDir.mkdirs()
-        val out = clone(reposBaseDir, gitRepo)
+        val repositoryDirectory = clone(reposBaseDir, gitRepo)
 
-        when(branchName) {
+        when (branchName) {
             null -> logger.log("No branch specified, using default branch")
-            else -> checkout(out, branchName)
+            else -> checkout(repositoryDirectory, branchName)
         }
-        return out
+        return repositoryDirectory
     }
 
     private fun localRepoDir(workingDirectory: String): File = File(workingDirectory).resolve("repos")

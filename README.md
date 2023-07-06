@@ -36,7 +36,7 @@ Systems interact with each other through several means. Specmatic hopes to addre
 * **Service Virtualisation** - Run your contract in stub mode and isolate yourself from downstream dependencies (also be sure that your stubs are 100% compatible with the actual provider)
 * **Contract as Test** - Test drive your services (APIs) using a contract
 * **Programmatic** (Kotlin, Java and JVM languages) **and Command line support**
-* **Tight integration with CI** - Triger Provider and Consumer CI builds when any of the contracts change.
+* **Tight integration with CI** - Trigger Provider and Consumer CI builds when any of the contracts change.
 * Versioning
 * Support for **SOAP/XML**, **Kafka**, **callbacks** and more
 * Already have a lot of APIs? Don't worry, we can take your **Postman Collection** and easily generate contracts from it

@@ -6,13 +6,12 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.log.StringLog
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.contractStubPaths
-import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.*
+import io.ktor.util.reflect.*
+import org.yaml.snakeyaml.Yaml
 import java.io.File
-import java.time.Duration
 
 // Used by stub client code
 fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): ContractStub {
@@ -67,7 +66,12 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
         when {
             contractPath.isFile && contractPath.extension in CONTRACT_EXTENSIONS -> {
                 consoleLog(StringLog("Loading $contractPath"))
-                try {
+
+                if(isYAML(contractPath.path) && !isOpenAPI(contractPath.path.trim())) {
+                    logger.log("Ignoring ${contractPath.path} as it is not an OpenAPI specification")
+                    emptyList()
+                }
+                else try {
                     val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract))
 
                     val implicitDataDirs = listOf(implicitContractDataDir(contractPath.path)).plus(if(customImplicitStubBase() != null) listOf(implicitContractDataDir(contractPath.path, customImplicitStubBase())) else emptyList()).sorted()
@@ -108,6 +112,8 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
     }
 }
 
+private fun isYAML(contractPath: String) = contractPath.trim().endsWith(".yaml")
+
 private fun logIgnoredFiles(implicitDataDir: File) {
     val ignoredFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension != "json" }?.filter { it.isFile } ?: emptyList()
     if (ignoredFiles.isNotEmpty()) {
@@ -125,8 +131,8 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
 
     val dataDirFileList = allDirsInTree(dataDirPaths).sorted()
 
-    val features = contractPaths.map { path ->
-        Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
+    val features = contractPaths.mapNotNull { path ->
+        loadIfOpenAPISpecification(path)
     }
 
     val dataFiles = dataDirFileList.flatMap {
@@ -147,6 +153,22 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
 
     return loadContractStubs(features, mockData)
 }
+
+fun loadIfOpenAPISpecification(path: String): Pair<String, Feature>? {
+    return if(isYAML(path)) {
+        if (isOpenAPI(path))
+            Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
+        else {
+            logger.log("Ignoring $path as it is not an OpenAPI specification")
+            null
+        }
+    } else {
+        Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
+    }
+}
+
+private fun isOpenAPI(path: String): Boolean =
+    Yaml().load<MutableMap<String, Any?>>(File(path).reader()).contains("openapi")
 
 private fun printDataFiles(dataFiles: List<File>) {
     if (dataFiles.isNotEmpty()) {

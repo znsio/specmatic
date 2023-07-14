@@ -12,6 +12,8 @@ import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.stub.isOpenAPI
+import `in`.specmatic.stub.isYAML
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -341,6 +343,9 @@ open class SpecmaticJUnitSupport {
         suggestionsData: String,
         config: TestConfig
     ): List<ContractTest> {
+        if(isYAML(path) && !isOpenAPI(path))
+            return emptyList()
+
         val contractFile = File(path)
         val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract)).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
 

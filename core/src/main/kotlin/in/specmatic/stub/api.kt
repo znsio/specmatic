@@ -112,7 +112,7 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
     }
 }
 
-private fun isYAML(contractPath: String) = contractPath.trim().endsWith(".yaml")
+fun isYAML(contractPath: String): Boolean = contractPath.trim().endsWith(".yaml")
 
 private fun logIgnoredFiles(implicitDataDir: File) {
     val ignoredFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension != "json" }?.filter { it.isFile } ?: emptyList()
@@ -153,22 +153,6 @@ fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<S
 
     return loadContractStubs(features, mockData)
 }
-
-fun loadIfOpenAPISpecification(path: String): Pair<String, Feature>? {
-    return if(isYAML(path)) {
-        if (isOpenAPI(path))
-            Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
-        else {
-            logger.log("Ignoring $path as it is not an OpenAPI specification")
-            null
-        }
-    } else {
-        Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
-    }
-}
-
-private fun isOpenAPI(path: String): Boolean =
-    Yaml().load<MutableMap<String, Any?>>(File(path).reader()).contains("openapi")
 
 private fun printDataFiles(dataFiles: List<File>) {
     if (dataFiles.isNotEmpty()) {
@@ -330,4 +314,20 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
         }
     }
 }
+
+fun loadIfOpenAPISpecification(path: String): Pair<String, Feature>? {
+    return if(isYAML(path)) {
+        if (isOpenAPI(path))
+            Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
+        else {
+            logger.log("Ignoring $path as it is not an OpenAPI specification")
+            null
+        }
+    } else {
+        Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
+    }
+}
+
+fun isOpenAPI(path: String): Boolean =
+    Yaml().load<MutableMap<String, Any?>>(File(path).reader()).contains("openapi")
 

@@ -5,7 +5,7 @@ import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.Pattern
 
 object NullValue : Value, ScalarValue {
-    override val httpContentType: String = "text/pain"
+    override val httpContentType: String = "text/plain"
 
     override fun valueErrorSnippet(): String = this.displayableType()
 

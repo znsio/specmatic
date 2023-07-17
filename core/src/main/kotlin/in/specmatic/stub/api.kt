@@ -316,16 +316,14 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
 }
 
 fun loadIfOpenAPISpecification(path: String): Pair<String, Feature>? {
-    return if(isYAML(path)) {
-        if (isOpenAPI(path))
-            Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
-        else {
-            logger.log("Ignoring $path as it is not an OpenAPI specification")
-            null
-        }
-    } else {
-        Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
-    }
+    if (!isYAML(path))
+        return Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
+
+    if (isOpenAPI(path))
+        return Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
+
+    logger.log("Ignoring $path as it is not an OpenAPI specification")
+    return null
 }
 
 fun isOpenAPI(path: String): Boolean =

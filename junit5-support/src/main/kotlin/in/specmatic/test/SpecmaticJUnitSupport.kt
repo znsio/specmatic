@@ -110,7 +110,7 @@ class TestReport(private val testReportRecords: MutableList<TestResultRecord> = 
         logger.newLine()
 
         val recordsWithFixedURLs = testReportRecords.map {
-            it.copy(path = it.path.replace(Regex("""\((.*):.*\)"""), "{$1}"))
+            it.copy(path = it.path.replace(Regex("""\((.*?):.*?\)"""), "{$1}"))
         }
 
         val coveredAPIRows = recordsWithFixedURLs.groupBy {

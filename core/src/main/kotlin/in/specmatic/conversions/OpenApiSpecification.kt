@@ -581,7 +581,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             is DateSchema -> DatePattern
             is BooleanSchema -> BooleanPattern
             is ObjectSchema -> {
-                if (schema.additionalProperties != null) {
+                if (schema.additionalProperties is Schema<*>) {
                     toDictionaryPattern(schema, typeStack, patternName)
                 } else if (schema.xml?.name != null) {
                     toXMLPattern(schema, typeStack = typeStack)
@@ -630,7 +630,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             else -> {
                 if (schema.nullable == true && schema.additionalProperties == null && schema.`$ref` == null) {
                     NullPattern
-                } else if (schema.additionalProperties != null) {
+                } else if (schema.additionalProperties is Schema<*>) {
                     toDictionaryPattern(schema, typeStack, patternName)
                 } else {
                     when (schema.`$ref`) {

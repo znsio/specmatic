@@ -3265,8 +3265,7 @@ components:
                 type: integer
 """.trimIndent()
 
-        println(openAPI)
-        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+                val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request = HttpRequest("POST", "/data", body = parsedValue("""{"data": [{"id": 10}]}"""))
         val response = HttpResponse.OK
@@ -3304,8 +3303,7 @@ paths:
           description: API
 """.trimIndent()
 
-        println(openAPI)
-        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+                val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request = HttpRequest("GET", "/permissions/state/ALLOW")
         val response = HttpResponse.OK
@@ -3347,8 +3345,7 @@ components:
         - DENY
 """.trimIndent()
 
-        println(openAPI)
-        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+                val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request = HttpRequest("GET", "/permissions/state/ALLOW")
         val response = HttpResponse.OK
@@ -3394,8 +3391,7 @@ components:
           type: string
 """.trimIndent()
 
-        println(openAPI)
-        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+                val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request =
             HttpRequest("POST", "/data", body = parsedValue("""{"10": {"name": "Jill"}, "20": {"name": "Jack"}}"""))
@@ -3438,8 +3434,7 @@ paths:
           description: API
 """.trimIndent()
 
-        println(openAPI)
-        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+                val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request =
             HttpRequest("POST", "/data", body = parsedValue("""{"10": {"name": "Jill"}, "20": {"name": "Jack"}}"""))
@@ -3489,8 +3484,7 @@ components:
           type: string
 """.trimIndent()
 
-        println(openAPI)
-        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+                val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request = HttpRequest(
             "POST",
@@ -3552,8 +3546,7 @@ components:
           type: string
 """.trimIndent()
 
-    println(openAPI)
-    val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
     val request = HttpRequest(
       "POST",
@@ -3597,8 +3590,7 @@ paths:
           description: API
 """.trimIndent()
 
-        println(openAPI)
-        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+                val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request =
             HttpRequest("POST", "/data", body = parsedValue("""{"10": "Jill", "20": "Jack"}"""))
@@ -3610,6 +3602,58 @@ paths:
 
         assertThat(stub.requestType.method).isEqualTo("POST")
         assertThat(stub.response.status).isEqualTo(200)
+    }
+
+    @Nested
+    inner class WhenAdditionalPropertiesIsFalse {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+              additionalProperties: false
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        @Test
+        fun `an object with no additional properties should match the specification`() {
+            val request =
+                HttpRequest("POST", "/data", body = parsedValue("""{"id": 10}"""))
+            val response = HttpResponse.OK
+
+            val stub: HttpStubData = feature.matchingStub(request, response)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `an object with additional properties should not match the specification`() {
+            val invalidRequest =
+                HttpRequest("POST", "/data", body = parsedValue("""{"id": 10, "name": "Jill"}"""))
+            val response = HttpResponse.OK
+
+            assertThatThrownBy { feature.matchingStub(invalidRequest, response) }
+                .isInstanceOf(NoMatchingScenario::class.java)
+                .hasMessageContaining("REQUEST.BODY.name")
+        }
     }
 
     @Test

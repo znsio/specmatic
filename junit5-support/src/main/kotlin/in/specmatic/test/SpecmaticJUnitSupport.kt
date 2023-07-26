@@ -1,5 +1,6 @@
 package `in`.specmatic.test
 
+import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
@@ -110,7 +111,7 @@ class TestReport(private val testReportRecords: MutableList<TestResultRecord> = 
         logger.newLine()
 
         val recordsWithFixedURLs = testReportRecords.map {
-            it.copy(path = it.path.replace(Regex("""\((.*?):.*?\)"""), "{$1}"))
+            it.copy(path = convertPathParameterStyle(it.path))
         }
 
         val coveredAPIRows = recordsWithFixedURLs.groupBy {
@@ -147,7 +148,6 @@ class TestReport(private val testReportRecords: MutableList<TestResultRecord> = 
 
         logger.log(APICoverageReport(coveredAPIRows, missedAPIRows).toLogString())
     }
-
 }
 
 open class SpecmaticJUnitSupport {

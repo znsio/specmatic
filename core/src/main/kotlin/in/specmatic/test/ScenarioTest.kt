@@ -1,12 +1,13 @@
 package `in`.specmatic.test
 
+import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.Scenario
 import `in`.specmatic.core.executeTest
 
 class ScenarioTest(val scenario: Scenario, private val generativeTestingEnabled: Boolean = false) : ContractTest {
     override fun testResultRecord(result: Result): TestResultRecord {
-        return TestResultRecord(scenario.path.replace(Regex("""\((.*):.*\)"""), "{$1}"), scenario.method, scenario.status, result.testResult())
+        return TestResultRecord(convertPathParameterStyle(scenario.path), scenario.method, scenario.status, result.testResult())
     }
 
     override fun generateTestScenarios(

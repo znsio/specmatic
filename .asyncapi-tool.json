@@ -1,0 +1,15 @@
+{
+  "title": "Specmatic",
+  "description": "An API contract testing tool that helps ensure the correctness APIs by automatically generating test cases and verifying them against the API spec. It simplifies the process of testing APIs and reduces the likelihood of bugs and compatibility issues.",
+  "links": {
+    "websiteUrl": "https://specmatic.in",
+    "docsUrl": "https://specmatic.in/documentation/",
+    "repoUrl": "https://github.com/znsio/specmatic"
+  },
+  "filters": {
+    "language": "kotlin",
+    "technology": ["maven"],
+    "categories": ["mocking-and-testing"],
+    "hasCommercial": false
+  }
+}

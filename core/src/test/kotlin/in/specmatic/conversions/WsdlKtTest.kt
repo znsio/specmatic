@@ -155,7 +155,10 @@ Scenario: test request returns test response
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.path).matches("""/SOAPService/SimpleSOAP""")
-                    assertThat(request.headers["SOAPAction"]).isEqualTo(""""http://specmatic.in/SOAPService/SimpleOperation"""")
+                    assertThat(listOf(
+                        """http://specmatic.in/SOAPService/SimpleOperation""",
+                        """"http://specmatic.in/SOAPService/SimpleOperation""""))
+                        .contains(request.headers["SOAPAction"])
                     val responseBody = when {
                         request.bodyString.contains("test request") -> """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                         else -> """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""

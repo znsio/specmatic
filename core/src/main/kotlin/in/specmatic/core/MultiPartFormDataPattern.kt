@@ -138,3 +138,53 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
         return copy(name = withoutOptionality(name))
     }
 }
+
+data class MultipartArrayPattern(override val name: String, val content: Pattern) : MultiPartFormDataPattern(name, "array") {
+
+    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?> {
+        if (content.pattern !is Pattern){
+            throw Exception("The multipart array item type wasn't parsed correctly, content.pattern was of type: ${content?.pattern?.javaClass?.canonicalName} instead of Pattern")
+        }
+        val itemPattern = content.pattern as Pattern
+
+        val multipartPattern = getArrayContentMultipartPattern(name, itemPattern)
+        return multipartPattern.newBasedOn(row, resolver)
+    }
+
+    override fun generate(resolver: Resolver): MultiPartFormDataValue {
+        if (content.pattern !is Pattern){
+            throw Exception("The multipart array item type wasn't parsed correctly, content.pattern was of type: ${content?.pattern?.javaClass?.canonicalName} instead of Pattern")
+        }
+        val itemPattern = content.pattern as Pattern
+        val multipartPattern = getArrayContentMultipartPattern(name, itemPattern)
+
+        return multipartPattern.generate(resolver)
+    }
+
+    override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
+        if(withoutOptionality(name) != value.name)
+            return Failure("The contract expected a part name to be $name, but got ${value.name}", failureReason = FailureReason.PartNameMisMatch)
+
+        if (content.pattern !is Pattern){
+            throw Exception("The multipart array item type wasn't parsed correctly, content.pattern was of type: ${content?.pattern?.javaClass?.canonicalName} instead of Pattern")
+        }
+        val itemPattern = content.pattern as Pattern
+
+        val multipartPattern = getArrayContentMultipartPattern(name, itemPattern)
+        return multipartPattern.matches(value, resolver)
+    }
+
+    private fun getArrayContentMultipartPattern(name: String, pattern: Pattern) : MultiPartFormDataPattern {
+        return if (pattern is BinaryPattern) {
+            MultiPartFilePattern(name, pattern)
+        } else {
+            MultiPartContentPattern(name, pattern)
+        }
+    }
+
+    override fun nonOptional(): MultiPartFormDataPattern {
+        return copy(name = withoutOptionality(name))
+    }
+
+}
+

@@ -479,18 +479,27 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                     else
                                         "$partName?"
 
-                                    if (partSchema is BinarySchema) {
-                                        MultiPartFilePattern(
-                                            partNameWithPresence,
-                                            toSpecmaticPattern(partSchema, emptyList()),
-                                            partContentType
-                                        )
-                                    } else {
-                                        MultiPartContentPattern(
-                                            partNameWithPresence,
-                                            toSpecmaticPattern(partSchema, emptyList()),
-                                            partContentType
-                                        )
+                                    when(partSchema){
+                                        is ArraySchema -> {
+                                            MultipartArrayPattern(
+                                                    partNameWithPresence,
+                                                    toSpecmaticPattern(partSchema, emptyList()),
+                                            )
+                                        }
+                                        is BinarySchema -> {
+                                            MultiPartFilePattern(
+                                                partNameWithPresence,
+                                                toSpecmaticPattern(partSchema, emptyList()),
+                                                partContentType
+                                            )
+                                        }
+                                        else -> {
+                                            MultiPartContentPattern(
+                                                    partNameWithPresence,
+                                                    toSpecmaticPattern(partSchema, emptyList()),
+                                                    partContentType
+                                            )
+                                        }
                                     }
                                 }
 
@@ -593,7 +602,6 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 if (schema.xml?.name != null) {
                     toXMLPattern(schema, typeStack = typeStack)
                 } else {
-
                     ListPattern(toSpecmaticPattern(schema.items, typeStack))
                 }
             }

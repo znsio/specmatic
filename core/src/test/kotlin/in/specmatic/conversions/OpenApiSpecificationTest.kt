@@ -21,6 +21,7 @@ import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.function.Consumer
@@ -556,7 +557,7 @@ Scenario: Get product by id
 
     @Test
     fun `OpenAPI contract where the request body refers to externalised type`() {
-        val openAPIYaml = """
+        val openAPIYaml = """       
             ---
             openapi: "3.0.1"
             info:
@@ -5008,6 +5009,72 @@ paths:
             OpenApiSpecification.fromYAML(openAPIOptional, "").toFeature().let {
                 assertThat(it.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single().name).endsWith("?")
             }
+        }
+
+
+        @Test
+        fun `support for multipart form data part array`() {
+            val openAPI = """
+                openapi: 3.0.3
+                info:
+                  title: Multipart With Array Example
+                  description: Service to add a test case to a Specmatic feature
+                  version: 1.0.0
+                tags:
+                  - name: UploadFile
+                paths:
+                  "/file":
+                    post:
+                      tags:
+                        - UploadFile
+                      operationId: sendMessage
+                      requestBody:
+                        content:
+                          multipart/form-data:
+                            schema:
+                              type: object
+                              properties:
+                                jsonPart:
+                                  type: object
+                                  title: Jason
+                                  properties:
+                                    foobar:
+                                      type: string
+                                      maxLength: 255
+                                      minLength: 1
+                                  required:
+                                    - foobar
+                                filesPart:
+                                  type: array
+                                  items:
+                                    type: string
+                                    format: binary
+                                  maxItems: 6
+                              required:
+                                - jsonPart
+                                - filesPart
+                      responses:
+                        "200":
+                          description: "Send Message Response"
+                          content:
+                            multipart/form-data:
+                              schema:
+                                type: object
+                                properties:
+                                  filename:
+                                    type: string
+                                    description: filename for associated file content
+            """.trimIndent()
+
+            val specifications = OpenApiSpecification.fromYAML(openAPI, "").toScenarioInfos()
+            assertTrue(specifications.isNotEmpty())
+
+            val firstSpec = specifications[0]
+            val multiPartPatterns = firstSpec.httpRequestPattern.multiPartFormDataPattern
+            assertTrue(multiPartPatterns.size == 2)
+
+            assertTrue(multiPartPatterns[0] is MultiPartContentPattern)
+            assertTrue(multiPartPatterns[1] is MultipartArrayPattern)
         }
 
         @Test

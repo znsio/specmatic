@@ -11,6 +11,8 @@ import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 
 const val SPECMATIC_XML_ATTRIBUTE_PREFIX = "${APPLICATION_NAME_LOWER_CASE}_"
 const val TYPE_ATTRIBUTE_NAME = "specmatic_type"
+const val SOAP_BODY = "body"
+const val SOAP_FAULT = "fault"
 
 fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, node.realName, attributeTypeMap(node), nodeTypes(node))
 
@@ -128,7 +130,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             sampleData: XMLNode,
             resolver: Resolver
     ): Result {
-        if(sampleData.name.lowercase() == "body" && sampleData.firstNode() is XMLNode && sampleData.firstNode()?.name?.lowercase() == "fault")
+        if(sampleData.name.lowercase() == SOAP_BODY && sampleData.firstNode() is XMLNode && sampleData.firstNode()?.name?.lowercase() == SOAP_FAULT)
             return Success()
 
         val results = pattern.nodes.scanIndexed(

@@ -74,7 +74,8 @@ class WSDLConversionTests {
 
             Scenario: SimpleOperation
                 When POST /SOAPService/SimpleSOAP
-                And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                And request-header SOAPAction (SoapAction)
                 And request-body
                 ""${'"'}
                 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><SimpleRequest>(string)</SimpleRequest></soapenv:Body></soapenv:Envelope>
@@ -157,7 +158,8 @@ class WSDLConversionTests {
 
             Scenario: SimpleOperation
                 When POST /SOAPService/SimpleSOAP
-                And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                And request-header SOAPAction (SoapAction)
                 And request-body
                 ""${'"'}
                 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><SimpleRequest>(string)</SimpleRequest></soapenv:Body></soapenv:Envelope>
@@ -249,7 +251,8 @@ class WSDLConversionTests {
                     </SPECMATIC_TYPE>
                     ""${'"'}
                     When POST /SOAPService/SimpleSOAP
-                    And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                    And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                    And request-header SOAPAction (SoapAction)
                     And request-body
                     ""${'"'}
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -345,7 +348,8 @@ class WSDLConversionTests {
                     </SPECMATIC_TYPE>
                     ""${'"'}
                     When POST /SOAPService/SimpleSOAP
-                    And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                    And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                    And request-header SOAPAction (SoapAction)
                     And request-body
                     ""${'"'}
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -446,7 +450,8 @@ class WSDLConversionTests {
                     </SPECMATIC_TYPE>
                     ""${'"'}
                     When POST /SOAPService/SimpleSOAP
-                    And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                    And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                    And request-header SOAPAction (SoapAction)
                     And request-body
                     ""${'"'}
                     <soapenv:Envelope xmlns:SOAPService="http://specmatic.in/SOAPService/" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -542,7 +547,8 @@ class WSDLConversionTests {
                     </SPECMATIC_TYPE>
                     ""${'"'}
                     When POST /SOAPService/SimpleSOAP
-                    And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                    And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                    And request-header SOAPAction (SoapAction)
                     And request-body
                     ""${'"'}
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -584,7 +590,8 @@ class WSDLConversionTests {
                         </SPECMATIC_TYPE>
                         ""${'"'}
                         When POST /SOAPService/SimpleSOAP
-                        And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                        And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                        And request-header SOAPAction (SoapAction)
                         And request-body
                         ""${'"'}
                         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -698,7 +705,8 @@ class WSDLConversionTests {
                         </SPECMATIC_TYPE>
                         ""${'"'}
                         When POST /SOAPService/SimpleSOAP
-                        And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                        And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                        And request-header SOAPAction (SoapAction)
                         And request-body
                         ""${'"'}
                         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -746,7 +754,8 @@ class WSDLConversionTests {
                         </SPECMATIC_TYPE>
                         ""${'"'}
                         When POST /SOAPService/SimpleSOAP
-                        And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                        And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                        And request-header SOAPAction (SoapAction)
                         And request-body
                         ""${'"'}
                         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -833,7 +842,8 @@ class WSDLConversionTests {
             
                 Scenario: SimpleOperation
                     When POST /SOAPService/SimpleSOAP
-                    And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                    And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                    And request-header SOAPAction (SoapAction)
                     Then status 200
                     And response-body
                     ""${'"'}
@@ -904,7 +914,8 @@ class WSDLConversionTests {
             
                 Scenario: SimpleOperation
                     When POST /SOAPService/SimpleSOAP
-                    And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                    And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                    And request-header SOAPAction (SoapAction)
                     And request-body
                     ""${'"'}
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body/></soapenv:Envelope>
@@ -996,7 +1007,8 @@ class WSDLConversionTests {
                     </SPECMATIC_TYPE>
                     ""${'"'}
                     When POST /SOAPService/SimpleSOAP
-                    And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                    And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                    And request-header SOAPAction (SoapAction)
                     And request-body
                     ""${'"'}
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -1108,7 +1120,8 @@ class WSDLConversionTests {
                     </SPECMATIC_TYPE>
                     ""${'"'}
                     When POST /SOAPService/SimpleSOAP
-                    And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                    And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                    And request-header SOAPAction (SoapAction)
                     And request-body
                     ""${'"'}
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -1214,7 +1227,8 @@ class WSDLConversionTests {
             
                 Scenario: SimpleOperation
                     When POST /SOAPService/SimpleSOAP
-                    And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                    And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                    And request-header SOAPAction (SoapAction)
                     And request-body
                     ""${'"'}
                     <soapenv:Envelope xmlns:SOAPService="http://specmatic.in/SOAPService/" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><SOAPService:SimpleRequest>(string)</SOAPService:SimpleRequest></soapenv:Body></soapenv:Envelope>
@@ -1292,7 +1306,8 @@ class WSDLConversionTests {
             
                 Scenario: SimpleOperation
                     When POST /SOAPService/SimpleSOAP
-                    And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+                    And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+                    And request-header SOAPAction (SoapAction)
                     And request-body
                     ""${'"'}
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><SimpleRequest>(string)</SimpleRequest></soapenv:Body></soapenv:Envelope>

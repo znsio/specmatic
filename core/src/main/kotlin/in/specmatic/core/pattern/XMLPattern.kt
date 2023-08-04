@@ -128,6 +128,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             sampleData: XMLNode,
             resolver: Resolver
     ): Result {
+        if(sampleData.name.lowercase() == "body" && sampleData.firstNode() is XMLNode && sampleData.firstNode()?.name?.lowercase() == "fault")
+            return Success()
+
         val results = pattern.nodes.scanIndexed(
                 ConsumeResult<XMLValue, Value>(
                         Success(),
@@ -136,13 +139,13 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         ) { index, consumeResult, type ->
             when (val resolvedType = resolvedHop(type, resolver)) {
                 is ListPattern -> ConsumeResult(
-                        resolvedType.matches(
-                                this.listOf(
-                                        consumeResult.remainder.subList(index, pattern.nodes.indices.last),
-                                        resolver
-                                ), resolver
-                        ),
-                        emptyList()
+                    resolvedType.matches(
+                        this.listOf(
+                            consumeResult.remainder.subList(index, pattern.nodes.indices.last),
+                            resolver
+                        ), resolver
+                    ),
+                    emptyList()
                 )
                 else -> {
                     try {

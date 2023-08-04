@@ -6,7 +6,10 @@ data class SOAPRequest(val path: String, val operationName: String, val soapActi
     fun statements(): List<String> {
         val pathStatement = listOf("When POST $path")
         val soapActionHeaderStatement = when {
-            soapAction.isNotBlank() -> listOf("""And request-header SOAPAction "$soapAction"""")
+            soapAction.isNotBlank() -> listOf(
+                """And enum SoapAction (string) values "$soapAction",$soapAction""",
+                """And request-header SOAPAction (SoapAction)"""
+            )
             else -> emptyList()
         }
 

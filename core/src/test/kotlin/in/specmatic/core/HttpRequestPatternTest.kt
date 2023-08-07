@@ -194,6 +194,22 @@ internal class HttpRequestPatternTest {
     }
 
     @Test
+    fun `request with a multipart array should result in a request with multiple files from the row`() {
+        val part = MultipartArrayPattern("file", ListPattern(BinaryPattern()))
+        val example = Row(columnNames = listOf("file_filename"),values = listOf("['test1.txt', 'test2.txt']"))
+
+        val requestPattern = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
+        val patterns = requestPattern.newBasedOn(example, Resolver())
+        assertThat(patterns).hasSize(1)
+
+        val expectedPattern = HttpRequestPattern(method= "POST", urlMatcher =toURLMatcherWithOptionalQueryParams("/"),
+            multiPartFormDataPattern = listOf(MultipartArrayPattern("file", ListPattern(BinaryPattern())))
+        )
+
+        assertThat(patterns.single()).isEqualTo(expectedPattern)
+    }
+
+    @Test
     fun `request having a part name the same as a key in a row should result in a request with a part having the specified value`() {
         val part = MultiPartContentPattern("name", StringPattern())
         val example = Row(listOf("name"), listOf("John Doe"))

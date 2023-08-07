@@ -3,8 +3,8 @@ package `in`.specmatic.core
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.utilities.lenientJson
 import `in`.specmatic.core.value.StringValue
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
@@ -156,7 +156,7 @@ data class MultipartArrayPattern(override val name: String, val content: Pattern
     override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?> {
         val multipartPattern = getArrayContentMultipartPattern()
         val rowKey = getRowKey()
-        val rows = try { when(val jsonElem = lenientJson.parseToJsonElement(row.getField(rowKey))) {
+        val rows = try { when(val jsonElem = Json.parseToJsonElement(row.getField(rowKey))) {
                     is JsonArray -> {
                         jsonElem.map { value ->
                             val values = row.values.toMutableList()

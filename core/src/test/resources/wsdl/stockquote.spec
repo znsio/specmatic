@@ -14,7 +14,8 @@ Feature: StockQuoteService
         </SPECMATIC_TYPE>
         """
         When POST /stockquote
-        And request-header SOAPAction "http://example.com/GetLastTradePrice"
+        And enum SoapAction (string) values "http://example.com/GetLastTradePrice",http://example.com/GetLastTradePrice
+        And request-header SOAPAction (SoapAction)
         And request-body
         """
         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header specmatic_occurs="optional"/><soapenv:Body><TradePriceRequest specmatic_type="GetLastTradePrice_SOAPPayload_Input"/></soapenv:Body></soapenv:Envelope>

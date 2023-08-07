@@ -57,11 +57,11 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
     private fun matchesRequest(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
         val (specmaticScenarioInfo, wsdlScenarioInfos) = parameters
 
-        val matchingScenarioInfos = wsdlScenarioInfos.filter {
-            it.httpRequestPattern.matches(
+        val matchingScenarioInfos = wsdlScenarioInfos.filter { scenarioInfo ->
+            scenarioInfo.httpRequestPattern.matches(
                 specmaticScenarioInfo.httpRequestPattern.generate(
-                    Resolver()
-                ), Resolver()
+                    Resolver(newPatterns = scenarioInfo.patterns)
+                ), Resolver(newPatterns = scenarioInfo.patterns)
             ).isSuccess()
         }
 

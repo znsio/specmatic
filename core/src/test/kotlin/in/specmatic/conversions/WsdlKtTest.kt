@@ -4,9 +4,11 @@ import `in`.specmatic.Utils.readTextResource
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXML
 import `in`.specmatic.core.wsdl.parser.WSDL
+import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.util.ClassUtils
 import org.springframework.web.client.RestTemplate
 import java.io.File
 import java.net.URI
@@ -135,6 +138,39 @@ Scenario: test request returns test response
     }
 
     @Test
+    fun `should be able to stub a fault`() {
+        val wsdlSpec = """
+Feature: Hello world
+
+Background:
+  Given wsdl test.wsdl           
+  
+        """.trimIndent()
+
+        val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
+
+        HttpStub(wsdlFeature).use { stub ->
+            val request = HttpRequest(
+                "POST",
+                "/SOAPService/SimpleSOAP",
+                headers = mapOf(
+                    "Content-Type" to "text/xml",
+                    "SOAPAction" to """http://specmatic.in/SOAPService/SimpleOperation"""
+                ),
+                body = StringValue("<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soapenv:Header/><soapenv:Body><SimpleRequest>test request</SimpleRequest></soapenv:Body></soapenv:Envelope>")
+            )
+
+            val response = HttpResponse(
+                status = 200,
+                body = "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soapenv:Header/><soapenv:Body><soapenv:Fault></soapenv:Fault></soapenv:Body></soapenv:Envelope>"
+            )
+
+            stub.setExpectation(ScenarioStub(request, response))
+        }
+
+    }
+
+    @Test
     fun `should create test from gherkin that includes wsdl`() {
         val wsdlSpec = """
 Feature: Hello world
@@ -155,7 +191,10 @@ Scenario: test request returns test response
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.path).matches("""/SOAPService/SimpleSOAP""")
-                    assertThat(request.headers["SOAPAction"]).isEqualTo(""""http://specmatic.in/SOAPService/SimpleOperation"""")
+                    assertThat(listOf(
+                        """http://specmatic.in/SOAPService/SimpleOperation""",
+                        """"http://specmatic.in/SOAPService/SimpleOperation""""))
+                        .contains(request.headers["SOAPAction"])
                     val responseBody = when {
                         request.bodyString.contains("test request") -> """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                         else -> """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""

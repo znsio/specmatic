@@ -362,7 +362,7 @@ data class HttpRequestPattern(
             val multipartData = attempt(breadCrumb = "MULTIPART DATA") {
                 multiPartFormDataPattern.mapIndexed { index, multiPartFormDataPattern ->
                     attempt(breadCrumb = "[$index]") { multiPartFormDataPattern.generate(resolver) }
-                }
+                }.flatten()
             }
             when (multipartData.size) {
                 0 -> newRequest

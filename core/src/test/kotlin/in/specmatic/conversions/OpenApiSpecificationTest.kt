@@ -4897,9 +4897,9 @@ paths:
         assertThat(requestPattern.multiPartFormDataPattern.single().name).isEqualTo("csv")
         assertThat(requestPattern.multiPartFormDataPattern.single().contentType).isEqualTo("text/csv")
 
-        val generatedValue: MultiPartContentValue =
-            requestPattern.multiPartFormDataPattern.single().generate(Resolver()) as MultiPartContentValue
-        assertThat(generatedValue.content.toStringLiteral()).isEqualTo(csvFileContent)
+        val generatedValue: List<MultiPartContentValue> =
+            requestPattern.multiPartFormDataPattern.single().generate(Resolver()) as List<MultiPartContentValue>
+        assertThat(generatedValue.get(0).content.toStringLiteral()).isEqualTo(csvFileContent)
     }
 
     @Nested

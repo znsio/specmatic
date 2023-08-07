@@ -25,7 +25,7 @@ internal class MultiPartContentPatternTest {
     @Test
     fun `it should generate a new pattern`() {
         val pattern = MultiPartContentPattern("employeeid", StringPattern())
-        val value: MultiPartContentValue = pattern.generate(Resolver()) as MultiPartContentValue
+        val value: MultiPartContentValue = pattern.generate(Resolver())[0] as MultiPartContentValue
 
         assertThat(value.name).isEqualTo("employeeid")
         assertThat(value.content).isInstanceOf(StringValue::class.java)
@@ -34,7 +34,7 @@ internal class MultiPartContentPatternTest {
     @Test
     fun `it should generate a new pattern with contentType`() {
         val pattern = MultiPartContentPattern("employeeid", StringPattern(), "text/plain")
-        val value = pattern.generate(Resolver()) as MultiPartContentValue
+        val value = pattern.generate(Resolver())[0] as MultiPartContentValue
 
         assertThat(value.name).isEqualTo("employeeid")
         assertThat(value.content).isInstanceOf(StringValue::class.java)

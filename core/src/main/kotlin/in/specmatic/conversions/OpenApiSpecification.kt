@@ -280,7 +280,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                     .map { valueString: String ->
                                         if (valueString.contains("externalValue")) {
                                             val first = ObjectMapper().readValue(valueString, Map::class.java).values.first()
-                                            if(first is ArrayList<*>) {
+                                            if(first is List<*>) {
                                                 when(first.size){
                                                     in 2..Int.MAX_VALUE-> ObjectMapper().writeValueAsString(first)
                                                     else -> first.toString()

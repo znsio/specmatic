@@ -99,4 +99,7 @@ abstract class FakeGit: GitCommand {
     override fun revisionsBehindCount(): Int {
         TODO("Not yet implemented")
     }
+    override fun getRemoteUrl(name: String): String {
+        TODO("Not yet implemented")
+    }
 }

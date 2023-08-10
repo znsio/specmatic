@@ -122,6 +122,8 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     fun getChangesFromMainBranch(mainBranch: String): List<String> {
         return execute(Configuration.gitCommand, "diff", "--name-only", mainBranch).split(System.lineSeparator())
     }
+
+    override fun getRemoteUrl(name: String): String = execute(Configuration.gitCommand, "remote", "get-url", name)
 }
 
 fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>): Boolean {

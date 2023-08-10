@@ -117,12 +117,12 @@ data class GitRepo(
             if (!sourceDir.exists())
                 sourceDir.mkdirs()
 
-            if (!sourceGit.workingDirectoryIsGitRepo()) {
+            if (!sourceGit.workingDirectoryIsGitRepo() || (sourceGit.workingDirectoryIsGitRepo() && sourceGit.getRemoteUrl() != this.gitRepositoryURL && sourceDir.listFiles()?.isEmpty()!!)) {
                 println("Found it, not a git dir, recreating...")
                 sourceDir.deleteRecursively()
                 sourceDir.mkdirs()
-                println("Cloning ${this.gitRepositoryURL} into ${sourceDir.absolutePath}")
-                sourceGit.clone(this.gitRepositoryURL, sourceDir.absoluteFile)
+                println("Cloning ${this.gitRepositoryURL} into ${sourceDir.canonicalPath}")
+                this.cloneRepo(sourceDir.canonicalFile.parentFile, this)
             } else {
                 println("Git repo already exists at ${sourceDir.path}, so ignoring it and moving on")
             }

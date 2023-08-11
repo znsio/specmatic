@@ -2,6 +2,7 @@ package `in`.specmatic.core.wsdl.parser
 
 import `in`.specmatic.core.SPECMATIC_GITHUB_ISSUES
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.TYPE_ATTRIBUTE_NAME
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.*
@@ -347,4 +348,17 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
 
 fun namespaceOrSchemaNamespace(namespace: String, schema: XMLNode?) =
     namespace.ifBlank { schema?.attributes?.get("xmlns")?.toStringLiteral() }
+
+fun buildXmlDataForComplexElement(
+    nodeName: String,
+    qontractTypeName: String,
+    attributes: List<AttributeElement>
+): String {
+    var xml = "<${nodeName} $TYPE_ATTRIBUTE_NAME=\"$qontractTypeName\""
+    attributes.forEach {
+        xml += " ${it.name}=\"${it.type}\""
+    }
+    xml += "/>"
+    return xml
+}
 

@@ -112,7 +112,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         val matchingType = if (this.pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)) {
             val typeName = this.pattern.getAttributeValue(TYPE_ATTRIBUTE_NAME)
             val xmlType = (resolver.getPattern("($typeName)") as XMLPattern)
-            xmlType.copy(pattern = xmlType.pattern.copy(name = this.pattern.name, realName = this.pattern.realName))
+            xmlType.copy(pattern = xmlType.pattern.copy(name = this.pattern.name, realName = this.pattern.realName, attributes = this.pattern.attributes.filterKeys { it != TYPE_ATTRIBUTE_NAME }))
         } else {
             this
         }

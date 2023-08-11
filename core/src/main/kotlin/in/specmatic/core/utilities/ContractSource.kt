@@ -117,7 +117,7 @@ data class GitRepo(
             if (!sourceDir.exists())
                 sourceDir.mkdirs()
 
-            if (!sourceGit.workingDirectoryIsGitRepo() || (sourceGit.workingDirectoryIsGitRepo() && sourceGit.getRemoteUrl() != this.gitRepositoryURL && sourceDir.listFiles()?.isEmpty()!!)) {
+            if (!sourceGit.workingDirectoryIsGitRepo() || isEmptyNestedGitDirectory(sourceGit, sourceDir)) {
                 println("Found it, not a git dir, recreating...")
                 sourceDir.deleteRecursively()
                 sourceDir.mkdirs()
@@ -130,6 +130,9 @@ data class GitRepo(
             println("Could not clone ${this.gitRepositoryURL}\n${e.javaClass.name}: ${exceptionCauseMessage(e)}")
         }
     }
+
+    private fun isEmptyNestedGitDirectory(sourceGit: SystemGit, sourceDir: File) =
+        (sourceGit.workingDirectoryIsGitRepo() && sourceGit.getRemoteUrl() != this.gitRepositoryURL && sourceDir.listFiles()?.isEmpty()!!)
 }
 
 data class GitMonoRepo(override val testContracts: List<String>, override val stubContracts: List<String>) : ContractSource() {

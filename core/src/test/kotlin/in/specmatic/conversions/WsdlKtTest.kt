@@ -4,6 +4,7 @@ import `in`.specmatic.Utils.readTextResource
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXML
@@ -13,12 +14,9 @@ import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -89,7 +87,7 @@ class WsdlKtTest {
         wsdlFile.createNewFile()
         wsdlFile.writeText(wsdlContent)
 
-        val wsdlContentWithAttributes = """
+        val wsdlContentWithOptionalAttributes = """
             <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
                               xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
                               xmlns:qr="http://specmatic.in/SOAPService/"
@@ -148,9 +146,72 @@ class WsdlKtTest {
 
             </wsdl:definitions>
         """.trimIndent()
-        val wsdlWithAttributesFile = File("test_with_attributes.wsdl")
-        wsdlWithAttributesFile.createNewFile()
-        wsdlWithAttributesFile.writeText(wsdlContentWithAttributes)
+        val wsdlWithOptionalAttributesFile = File("test_with_optional_attributes.wsdl")
+        wsdlWithOptionalAttributesFile.createNewFile()
+        wsdlWithOptionalAttributesFile.writeText(wsdlContentWithOptionalAttributes)
+
+        val wsdlContentWithMandatoryAttributes = """
+            <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                              xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                              xmlns:qr="http://specmatic.in/SOAPService/"
+                              targetNamespace="http://specmatic.in/SOAPService/">
+                <wsdl:types>
+                    <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="http://specmatic.in/SOAPService/">
+                        <xsd:element name="SimpleResponse" type="xsd:string"/>
+                        <xsd:element name="Person">
+                            <xsd:complexType>
+                                <xsd:sequence>
+                                    <xsd:element name="Id" type="xsd:integer" />
+                                    <xsd:element name="Name" type="xsd:string" />
+                                </xsd:sequence>
+                                <xs:attribute name="age" type="xs:integer" use="required"></xs:attribute>
+                            </xsd:complexType>
+                        </xsd:element>
+                    </xsd:schema>
+                </wsdl:types>
+
+                <wsdl:message name="simpleInputMessage">
+                    <wsdl:part name="simpleInputPart" element="qr:Person"/>
+                </wsdl:message>
+                <wsdl:message name="simpleOutputMessage">
+                    <wsdl:part name="simpleOutputPart" element="qr:SimpleResponse"/>
+                </wsdl:message>
+
+                <wsdl:portType name="simplePortType">
+                    <wsdl:operation name="SimpleOperation">
+                        <wsdl:input name="simpleInput"
+                                    message="qr:simpleInputMessage"/>
+                        <wsdl:output name="simpleOutput"
+                                     message="qr:simpleOutputMessage"/>
+                    </wsdl:operation>
+                </wsdl:portType>
+
+                <wsdl:binding name="simpleBinding" type="qr:simplePortType">
+                    <soap:binding transport="http://schemas.xmlsoap.org/soap/http"/>
+                    <wsdl:operation name="SimpleOperation">
+                        <soap:operation
+                                soapAction="http://specmatic.in/SOAPService/SimpleOperation"/>
+                        <wsdl:input name="simpleInput">
+                            <soap:body use="literal"/>
+                        </wsdl:input>
+                        <wsdl:output name="simpleOutput">
+                            <soap:body use="literal"/>
+                        </wsdl:output>
+                    </wsdl:operation>
+                </wsdl:binding>
+
+                <wsdl:service name="simpleService">
+                    <wsdl:port name="simplePort" binding="qr:simpleBinding">
+                        <soap:address
+                                location="http://specmatic.in/SOAPService/SimpleSOAP"/>
+                    </wsdl:port>
+                </wsdl:service>
+
+            </wsdl:definitions>
+        """.trimIndent()
+        val wsdlWithMandatoryAttributesFile = File("test_with_mandatory_attributes.wsdl")
+        wsdlWithMandatoryAttributesFile.createNewFile()
+        wsdlWithMandatoryAttributesFile.writeText(wsdlContentWithMandatoryAttributes)
     }
 
     @Disabled
@@ -273,12 +334,113 @@ Scenario: test request returns test response
     }
 
     @Test
-    fun `should create test for wsdl which has attributes in complex elements`() {
+    fun `should create test with optional attribute in complex elements when optional attribute is not set`() {
         val wsdlSpec = """
 Feature: Hello world
 
 Background:
-  Given wsdl test_with_attributes.wsdl           
+  Given wsdl test_with_optional_attributes.wsdl           
+  
+Scenario: test request returns test response
+  When POST /SOAPService/SimpleSOAP
+  And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+  And request-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>1</qr:Id><qr:Name>John Doe</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>
+  Then status 200
+  And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
+        """.trimIndent()
+
+        val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
+        val results = wsdlFeature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.path).matches("""/SOAPService/SimpleSOAP""")
+                    assertThat(listOf(
+                        """http://specmatic.in/SOAPService/SimpleOperation""",
+                        """"http://specmatic.in/SOAPService/SimpleOperation""""))
+                        .contains(request.headers["SOAPAction"])
+                    val responseBody = when {
+                        request.bodyString.contains("John Doe") -> """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
+                        else -> """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
+                    }
+                    return HttpResponse(200, responseBody, mapOf())
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertTrue(results.success(), results.report())
+    }
+
+    @Test
+    fun `should create test with mandatory attribute in complex elements when mandatory attribute is set`() {
+        val wsdlSpec = """
+Feature: Hello world
+
+Background:
+  Given wsdl test_with_mandatory_attributes.wsdl           
+  
+Scenario: test request returns test response
+  When POST /SOAPService/SimpleSOAP
+  And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+  And request-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="22"><qr:Id>1</qr:Id><qr:Name>John Doe</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>
+  Then status 200
+  And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
+        """.trimIndent()
+
+        val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
+        val results = wsdlFeature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.path).matches("""/SOAPService/SimpleSOAP""")
+                    assertThat(listOf(
+                        """http://specmatic.in/SOAPService/SimpleOperation""",
+                        """"http://specmatic.in/SOAPService/SimpleOperation""""))
+                        .contains(request.headers["SOAPAction"])
+                    val responseBody = when {
+                        request.bodyString.contains("John Doe") -> """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
+                        else -> """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
+                    }
+                    return HttpResponse(200, responseBody, mapOf())
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+
+        assertTrue(results.success(), results.report())
+    }
+
+    @Test
+    fun `should throws exception when mandatory attribute is not set`() {
+        val wsdlSpec = """
+Feature: Hello world
+
+Background:
+  Given wsdl test_with_mandatory_attributes.wsdl           
+  
+Scenario: test request returns test response
+  When POST /SOAPService/SimpleSOAP
+  And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+  And request-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>1</qr:Id><qr:Name>John Doe</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>
+  Then status 200
+  And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
+        """.trimIndent()
+        val exception = assertThrows<ContractException> {
+            val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
+        }
+        assertThat(exception.message == "test request returns test response\" request is not as per included wsdl / OpenApi spec")
+    }
+
+    @Test
+    fun `should create test with mandatory attribute in complex elements when the attribute is set`() {
+        val wsdlSpec = """
+Feature: Hello world
+
+Background:
+  Given wsdl test_with_optional_attributes.wsdl           
   
 Scenario: test request returns test response
   When POST /SOAPService/SimpleSOAP
@@ -394,6 +556,7 @@ Scenario: request not matching wsdl
     @AfterEach
     fun teardown() {
         File("test.wsdl").delete()
-        File("test_with_attributes.wsdl").delete()
+        File("test_with_optional_attributes.wsdl").delete()
+        File("test_with_mandatory_attributes.wsdl").delete()
     }
 }

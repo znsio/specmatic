@@ -356,7 +356,7 @@ fun buildXmlDataForComplexElement(
 ): String {
     var xml = "<${nodeName} $TYPE_ATTRIBUTE_NAME=\"$qontractTypeName\""
     attributes.forEach {
-        xml += " ${it.name}=\"${it.type}\""
+        xml += " ${it.nameWithOptionality}=\"${it.type}\""
     }
     xml += "/>"
     return xml

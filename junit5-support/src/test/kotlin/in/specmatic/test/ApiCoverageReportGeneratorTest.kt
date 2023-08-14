@@ -16,7 +16,7 @@ class ApiCoverageReportGeneratorTest {
         val applicationAPIs = mutableListOf(
             API("GET", "/route1"),
             API("POST", "/route1"),
-            API("GET", "/route2"),
+            API("GET", "/route2")
         )
 
         val apiCoverageReport = ApiCoverageReportGenerator(testReportRecords, applicationAPIs).generate()
@@ -33,7 +33,7 @@ class ApiCoverageReportGeneratorTest {
     }
 
     @Test
-    fun `test coverage report when all some routes are missed`(){
+    fun `test coverage report when all some routes are partially covered`(){
         val testReportRecords = mutableListOf(
             TestResultRecord("/route1", "GET", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 200,  TestResult.Success),
@@ -44,7 +44,7 @@ class ApiCoverageReportGeneratorTest {
             API("GET", "/route1"),
             API("POST", "/route1"),
             API("GET", "/route2"),
-            API("GET", "/route3"),
+            API("POST", "/route2")
         )
 
         val apiCoverageReport = ApiCoverageReportGenerator(testReportRecords, applicationAPIs).generate()
@@ -57,7 +57,7 @@ class ApiCoverageReportGeneratorTest {
                 APICoverageRow("GET", "/route2", 200, 1, CoverageStatus.Covered)
             ),
             listOf(
-                APICoverageRow("GET", "/route3", "", "", CoverageStatus.Missed)
+                APICoverageRow("POST", "/route2", "", "", CoverageStatus.Missed)
             )
         ))
     }

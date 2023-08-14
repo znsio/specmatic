@@ -1,6 +1,5 @@
 package `in`.specmatic.test
 
-import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
@@ -35,119 +34,6 @@ data class API(val method: String, val path: String)
 enum class CoverageStatus {
     Covered,
     Missed
-}
-
-data class APICoverageRow(val method: String, val path: String, val responseStatus: String, val count: String, val coverageStatus: CoverageStatus) {
-    constructor(method: String, path: String, responseStatus: Int, count: Int, coverageStatus: CoverageStatus): this(method, path, responseStatus.toString(), count.toString(), coverageStatus)
-
-    fun toRowString(maxPathSize: Int): String {
-        val longestStatus = longestStatus()
-        val statusFormat = "%${longestStatus.length}s"
-
-        val pathFormat = "%${maxPathSize}s"
-        val methodFormat = "%${"method".length}s"
-        val responseFormat = "%${"response".length}s"
-        val countFormat = "%${"count".length}s"
-
-        val status = if(path.isNotEmpty()) coverageStatus.toString().lowercase() else ""
-
-        return "| ${statusFormat.format(status)} | ${pathFormat.format(path)} | ${methodFormat.format(method)} | ${responseFormat.format(responseStatus)} | ${countFormat.format(count)} |"
-    }
-}
-
-class APICoverageReport(private val coveredAPIRows: List<APICoverageRow>, private val missedAPIRows: List<APICoverageRow>) {
-    fun toLogString(): String {
-        val maxPathSize: Int = coveredAPIRows.map { it.path.length }.plus(missedAPIRows.map { it.path.length }).max()
-
-        val longestStatus = longestStatus()
-        val statusFormat = "%${longestStatus.length}s"
-        val pathFormat = "%${maxPathSize}s"
-        val methodFormat = "%${"method".length}s"
-        val responseStatus = "%${"response".length}s"
-        val countFormat = "%${"count".length}s"
-
-        val tableHeader =
-            "| ${statusFormat.format("status")} | ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${responseStatus.format("response")} | ${
-                countFormat.format("count")
-            } |"
-        val headerSeparator =
-            "|-${"-".repeat(longestStatus.length)}-|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|-${responseStatus.format("--------")}-|-${
-                countFormat.format("-----")
-            }-|"
-
-        val headerTitleSize = tableHeader.length - 4
-        val tableTitle = "| ${"%-${headerTitleSize}s".format("API COVERAGE SUMMARY")} |"
-        val titleSeparator = "|-${"-".repeat(headerTitleSize)}-|"
-
-        val coveredCount = coveredAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
-        val uncoveredCount = missedAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
-        val total = coveredCount + uncoveredCount
-
-        val summary = "$coveredCount / $total APIs covered"
-        val summaryRowFormatter = "%-${headerTitleSize}s"
-        val summaryRow = "| ${summaryRowFormatter.format(summary)} |"
-
-        val header: List<String> = listOf(titleSeparator, tableTitle, titleSeparator, tableHeader, headerSeparator)
-        val body: List<String> = (coveredAPIRows + missedAPIRows).map { it.toRowString(maxPathSize) }
-        val footer: List<String> = listOf(titleSeparator, summaryRow, titleSeparator)
-
-        return (header + body + footer).joinToString(System.lineSeparator())
-    }
-}
-
-class TestReport(private val testReportRecords: MutableList<TestResultRecord> = mutableListOf(), private val applicationAPIs: MutableList<API> = mutableListOf()) {
-    fun addTestReportRecords(testResultRecord: TestResultRecord) {
-        testReportRecords.add(testResultRecord)
-    }
-
-    fun addAPIs(apis: List<API>) {
-        applicationAPIs.addAll(apis)
-    }
-
-    fun printReport() {
-        if(testReportRecords.isEmpty())
-            return
-
-        logger.newLine()
-
-        val recordsWithFixedURLs = testReportRecords.map {
-            it.copy(path = convertPathParameterStyle(it.path))
-        }
-
-        val coveredAPIRows = recordsWithFixedURLs.groupBy {
-            "${it.path}-${it.method}-${it.responseStatus}"
-        }.let { sortedRecords: Map<String, List<TestResultRecord>> ->
-            sortedRecords.keys.sorted().map { key ->
-                sortedRecords.getValue(key)
-            }
-        }.let { groupedRecords: List<List<TestResultRecord>> ->
-            groupedRecords.fold(emptyList()) { acc: List<APICoverageRow>, record: List<TestResultRecord> ->
-                val stat = record.first().let { APICoverageRow(it.method, it.path, it.responseStatus, record.size, CoverageStatus.Covered) }
-
-                when(acc) {
-                    emptyList<APICoverageRow>() -> listOf(stat)
-                    else -> {
-                        val checkedPath = if(stat.path == acc.lastOrNull { it.path.isNotEmpty() }?.path) stat.copy(path = "") else stat
-                        val checkedMethod = if(checkedPath.method == acc.lastOrNull { it.method.isNotEmpty() }?.method) checkedPath.copy(method = "") else checkedPath
-
-                        acc.plus(checkedMethod)
-                    }
-                }
-            }
-        }
-
-        val testedAPIs = testReportRecords.map { "${it.method}-${it.path}" }
-
-        val missedAPIs = applicationAPIs.filter {
-            "${it.method}-${it.path}" !in testedAPIs
-        }
-
-        val missedAPIRows = missedAPIs.map { missedAPI: API ->
-            APICoverageRow(missedAPI.method, missedAPI.path, "", "", CoverageStatus.Missed)
-        }
-
-        logger.log(APICoverageReport(coveredAPIRows, missedAPIRows).toLogString())
-    }
 }
 
 open class SpecmaticJUnitSupport {

@@ -61,4 +61,36 @@ class ApiCoverageReportGeneratorTest {
             )
         ))
     }
+
+    @Test
+    fun `test coverage report when some routes are marked as excluded`(){
+        val testReportRecords = mutableListOf(
+            TestResultRecord("/route1", "GET", 200, TestResult.Success),
+            TestResultRecord("/route1", "POST", 200,  TestResult.Success),
+            TestResultRecord("/route1", "POST", 401,  TestResult.Success),
+            TestResultRecord("/route2", "GET", 200,  TestResult.Success),
+        )
+        val applicationAPIs = mutableListOf(
+            API("GET", "/route1"),
+            API("POST", "/route1"),
+            API("GET", "/route2"),
+            API("POST", "/route2")
+        )
+
+        val excludedAPIs = mutableListOf(
+            API("GET", "/route2"),
+            API("POST", "/route2")
+        )
+
+        val apiCoverageReport = ApiCoverageReportGenerator(testReportRecords, applicationAPIs, excludedAPIs).generate()
+        println(apiCoverageReport.toLogString())
+        assertThat(apiCoverageReport).isEqualTo(APICoverageReport(
+            listOf(
+                APICoverageRow("GET", "/route1", 200, 1, CoverageStatus.Covered),
+                APICoverageRow("POST", "", 200, 1, CoverageStatus.Covered),
+                APICoverageRow("", "", 401, 1, CoverageStatus.Covered),
+            ),
+            listOf()
+        ))
+    }
 }

@@ -14,6 +14,9 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.stub.isYAML
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -29,6 +32,7 @@ fun longestStatus(): String {
     return longestStatus
 }
 
+@Serializable
 data class API(val method: String, val path: String)
 
 enum class CoverageStatus {
@@ -53,14 +57,25 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NAME = "filterName"
         const val FILTER_NOT_NAME = "filterNotName"
         const val ENDPOINTS_API = "endpointsAPI"
+        const val COVERAGE_CONFIGURATION = "excludedAPIs"
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         val testReport: TestReport = TestReport()
+        private val coverageConfiguration = System.getProperty(COVERAGE_CONFIGURATION)?.let {
+            Json.decodeFromString<CoverageConfiguration>(it)
+        }
 
         @AfterAll
         @JvmStatic
         fun report() {
+            println("Excluded APIs specified:")
+            coverageConfiguration?.excludedAPIs?.forEach { println("Path: ${it.path}, method: ${it.method}") }
+            coverageConfiguration?.excludedAPIs.let { excludedApis ->
+                if (excludedApis != null) {
+                    testReport.addExcludedAPIs(excludedApis.map { API(it.method, it.path) })
+                }
+            }
             testReport.printReport()
         }
 
@@ -100,6 +115,7 @@ open class SpecmaticJUnitSupport {
                 }
 
                 testReport.addAPIs(apis)
+
             } else {
                 logger.log("Endpoints API not found, cannot calculate actual coverage")
             }

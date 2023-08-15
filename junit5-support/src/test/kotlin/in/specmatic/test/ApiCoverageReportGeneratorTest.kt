@@ -78,7 +78,6 @@ class ApiCoverageReportGeneratorTest {
         )
 
         val excludedAPIs = mutableListOf(
-            API("GET", "/route2"),
             API("POST", "/route2")
         )
 
@@ -89,6 +88,7 @@ class ApiCoverageReportGeneratorTest {
                 APICoverageRow("GET", "/route1", 200, 1, CoverageStatus.Covered),
                 APICoverageRow("POST", "", 200, 1, CoverageStatus.Covered),
                 APICoverageRow("", "", 401, 1, CoverageStatus.Covered),
+                APICoverageRow("GET", "/route2", 200, 1, CoverageStatus.Covered),
             ),
             listOf()
         ))

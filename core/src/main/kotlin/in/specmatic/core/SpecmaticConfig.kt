@@ -85,7 +85,8 @@ data class SpecmaticConfigJson(
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
-    val repository: RespositoryInfo? = null
+    val repository: RespositoryInfo? = null,
+    val coverage:CoverageConfiguration? = null
 ) {
     companion object {
         fun load(configFileName: String? = null): SpecmaticConfigJson {
@@ -98,6 +99,20 @@ data class SpecmaticConfigJson(
 data class RespositoryInfo(
     val provider: String,
     val collectionName: String
+)
+
+@Serializable
+data class CoverageConfiguration(
+    val threshold: Int = 0,
+    val failBuildIfThresholdNotMet: Boolean = false,
+    val failBuildIfSpecHasMissedAPIs: Boolean = false,
+    val excludedAPIs: List<ExcludedApi> = emptyList()
+)
+
+@Serializable
+data class ExcludedApi(
+    val path: String,
+    val method: String
 )
 
 val SpecmaticJsonFormat = Json {

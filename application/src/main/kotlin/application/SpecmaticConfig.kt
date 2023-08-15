@@ -1,9 +1,11 @@
 package application
 
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.CoverageConfiguration
 import `in`.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.contractFilePathsFrom
+import `in`.specmatic.core.utilities.coverageConfigurationFrom
 import org.springframework.stereotype.Component
 
 @Component
@@ -27,5 +29,9 @@ class SpecmaticConfig {
 
     fun contractTestPathData(): List<ContractPathData> {
         return contractFilePathsFrom(globalConfigFileName, DEFAULT_WORKING_DIRECTORY) { source -> source.testContracts }
+    }
+
+    fun coverageConfiguration(): CoverageConfiguration? {
+        return coverageConfigurationFrom(globalConfigFileName)
     }
 }

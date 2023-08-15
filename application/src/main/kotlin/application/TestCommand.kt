@@ -25,12 +25,15 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.COVERAGE_CONFIGURATION
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.WORKING_DIRECTORY
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.w3c.dom.Document
 import org.xml.sax.InputSource
 import java.io.ByteArrayOutputStream
@@ -107,6 +110,9 @@ class TestCommand : Callable<Unit> {
             Configuration.globalConfigFileName = it
             System.setProperty(CONFIG_FILE_NAME, it)
         }
+
+        val coverageConfiguration = specmaticConfig.coverageConfiguration()
+        System.setProperty(COVERAGE_CONFIGURATION, Json.encodeToString(coverageConfiguration))
 
         contractPaths = loadContractPaths()
 

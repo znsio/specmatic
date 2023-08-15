@@ -3,17 +3,12 @@ package `in`.specmatic.test
 import `in`.specmatic.conversions.convertPathParameterStyle
 
 class ApiCoverageReportGenerator(
-    private var testReportRecords: List<TestResultRecord>,
-    private var applicationAPIs: List<API>,
+    private val testReportRecords: List<TestResultRecord>,
+    private val applicationAPIs: List<API>,
     private val excludedAPIs: List<API> = emptyList()
 ) {
 
     fun generate(): APICoverageReport {
-
-        testReportRecords = testReportRecords.filter { testReportRecord ->
-            excludedAPIs.none { it.path == testReportRecord.path } }
-
-        applicationAPIs = applicationAPIs.minus(excludedAPIs.toSet())
 
         val recordsWithFixedURLs = testReportRecords.map {
             it.copy(path = convertPathParameterStyle(it.path))
@@ -55,7 +50,7 @@ class ApiCoverageReportGenerator(
 
         val testedAPIs = testReportRecords.map { "${it.method}-${it.path}" }
 
-        val missedAPIs = applicationAPIs.filter {
+        val missedAPIs = applicationAPIs.minus(excludedAPIs.toSet()).filter {
             "${it.method}-${it.path}" !in testedAPIs
         }
 

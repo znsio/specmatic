@@ -26,9 +26,9 @@ class APICoverageReport(private val coveredAPIRows: List<APICoverageRow>, privat
         val tableTitle = "| ${"%-${headerTitleSize}s".format("API COVERAGE SUMMARY")} |"
         val titleSeparator = "|-${"-".repeat(headerTitleSize)}-|"
 
-        val nonZeroCoveragePercentageCounts = coveredAPIRows.count { it.coveragePercentage > 0 }
+        val totalAPICount  = coveredAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
         val coveragePercentageSum = coveredAPIRows.sumOf { it.coveragePercentage }
-        val totalCoveragePercentage = (coveragePercentageSum/nonZeroCoveragePercentageCounts).toDouble().roundToInt()
+        val totalCoveragePercentage = (coveragePercentageSum/totalAPICount).toDouble().roundToInt()
 
         val summary = "$totalCoveragePercentage% Coverage"
         val summaryRowFormatter = "%-${headerTitleSize}s"
@@ -43,7 +43,6 @@ class APICoverageReport(private val coveredAPIRows: List<APICoverageRow>, privat
         // Missing APIs message
 
         val uncoveredCount = missedAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
-        val totalAPICount  = coveredAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
 
         val missingAPIsMessageRows:MutableList<String> = mutableListOf()
         if(uncoveredCount > 0) {

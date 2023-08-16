@@ -1,22 +1,24 @@
 package `in`.specmatic.test
 
+import kotlin.math.roundToInt
+
 class APICoverageReport(private val coveredAPIRows: List<APICoverageRow>, private val missedAPIRows: List<APICoverageRow>) {
     fun toLogString(): String {
-        val maxPathSize: Int = coveredAPIRows.map { it.path.length }.plus(missedAPIRows.map { it.path.length }).max()
+        val maxPathSize: Int = coveredAPIRows.map { it.path.length }.max()
 
-        val longestStatus = longestStatus()
-        val statusFormat = "%${longestStatus.length}s"
+        val longestCoveragePercentageValue = "coverage"
+        val statusFormat = "%${longestCoveragePercentageValue.length}s"
         val pathFormat = "%${maxPathSize}s"
         val methodFormat = "%${"method".length}s"
         val responseStatus = "%${"response".length}s"
         val countFormat = "%${"count".length}s"
 
         val tableHeader =
-            "| ${statusFormat.format("status")} | ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${responseStatus.format("response")} | ${
+            "| ${statusFormat.format("coverage")} | ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${responseStatus.format("response")} | ${
                 countFormat.format("count")
             } |"
         val headerSeparator =
-            "|-${"-".repeat(longestStatus.length)}-|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|-${responseStatus.format("--------")}-|-${
+            "|-${"-".repeat(longestCoveragePercentageValue.length)}-|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|-${responseStatus.format("--------")}-|-${
                 countFormat.format("-----")
             }-|"
 
@@ -24,19 +26,31 @@ class APICoverageReport(private val coveredAPIRows: List<APICoverageRow>, privat
         val tableTitle = "| ${"%-${headerTitleSize}s".format("API COVERAGE SUMMARY")} |"
         val titleSeparator = "|-${"-".repeat(headerTitleSize)}-|"
 
-        val coveredCount = coveredAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
-        val uncoveredCount = missedAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
-        val total = coveredCount + uncoveredCount
+        val nonZeroCoveragePercentageCounts = coveredAPIRows.count { it.coveragePercentage > 0 }
+        val coveragePercentageSum = coveredAPIRows.sumOf { it.coveragePercentage }
+        val totalCoveragePercentage = (coveragePercentageSum/nonZeroCoveragePercentageCounts).toDouble().roundToInt()
 
-        val summary = "$coveredCount / $total APIs covered"
+        val summary = "$totalCoveragePercentage% Coverage"
         val summaryRowFormatter = "%-${headerTitleSize}s"
         val summaryRow = "| ${summaryRowFormatter.format(summary)} |"
 
         val header: List<String> = listOf(titleSeparator, tableTitle, titleSeparator, tableHeader, headerSeparator)
-        val body: List<String> = (coveredAPIRows + missedAPIRows).map { it.toRowString(maxPathSize) }
+        val body: List<String> = coveredAPIRows.map { it.toRowString(maxPathSize) }
         val footer: List<String> = listOf(titleSeparator, summaryRow, titleSeparator)
 
-        return (header + body + footer).joinToString(System.lineSeparator())
+        val coveredAPIsTable =  (header + body + footer).joinToString(System.lineSeparator())
+
+        // Missing APIs message
+
+        val uncoveredCount = missedAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
+        val totalAPICount  = coveredAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
+
+        val missingAPIsMessageRows:MutableList<String> = mutableListOf()
+        if(uncoveredCount > 0) {
+            missingAPIsMessageRows.add("$uncoveredCount out of $totalAPICount APIs found missing in the specification")
+        }
+
+        return coveredAPIsTable + System.lineSeparator()  + missingAPIsMessageRows.joinToString(System.lineSeparator())
     }
 
     override fun equals(other: Any?): Boolean {

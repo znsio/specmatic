@@ -27,7 +27,7 @@ fun longestStatus(): String {
     val longestStatus = listOf(
         CoverageStatus.Covered.toString().lowercase(),
         CoverageStatus.Missed.toString().lowercase(),
-        "status"
+        "coverage"
     ).sortedByDescending { it.length }.first()
     return longestStatus
 }

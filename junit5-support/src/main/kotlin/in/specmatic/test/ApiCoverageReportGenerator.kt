@@ -1,6 +1,9 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.conversions.convertPathParameterStyle
+import `in`.specmatic.core.TestResult
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 class ApiCoverageReportGenerator(
     private val testReportRecords: List<TestResultRecord>,
@@ -10,7 +13,14 @@ class ApiCoverageReportGenerator(
 
     fun generate(): APICoverageReport {
 
-        val recordsWithFixedURLs = testReportRecords.map {
+        val testReportRecordsIncludingMissingAPIs = testReportRecords.toMutableList()
+        applicationAPIs.forEach { api ->
+            if (testReportRecords.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it.path ==api.path }) {
+                testReportRecordsIncludingMissingAPIs.add(TestResultRecord(api.path, api.method, 0, TestResult.Skipped))
+            }
+        }
+
+        val recordsWithFixedURLs = testReportRecordsIncludingMissingAPIs.map {
             it.copy(path = convertPathParameterStyle(it.path))
         }
 
@@ -22,14 +32,21 @@ class ApiCoverageReportGenerator(
             }
         }.flatten()
 
-        val groupedAPIs = mutableMapOf<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>>()
-        for (result in coveredAPIs) {
-            groupedAPIs.getOrPut(result.path) { mutableMapOf() }
-                .getOrPut(result.method) { mutableMapOf() }
-                .getOrPut(result.responseStatus) { mutableListOf() }
-                .add(result)
-        }
-        val coveredAPIRows:MutableList<APICoverageRow> = mutableListOf()
+        // Creates a structure which looks like this:
+        // mutableMapOf<Path, MutableMap<Method, MutableMap<ResponseStatus, MutableList<TestResultRecord>>>>
+        val groupedAPIs = coveredAPIs.groupBy { it.path }
+            .mapValues { (_, pathResults) ->
+                pathResults.groupBy { it.method }
+                    .mapValues { (_, methodResults) ->
+                        methodResults.groupBy { it.responseStatus }
+                            .mapValues { (_, responseResults) ->
+                                responseResults.toMutableList()
+                            }.toMutableMap()
+                    }.toMutableMap()
+            }.toMutableMap()
+
+
+        val coveredAPIRows: MutableList<APICoverageRow> = mutableListOf()
 
         groupedAPIs.forEach { (route, methodMap) ->
             val routeAPIRows: MutableList<APICoverageRow> = mutableListOf()
@@ -46,7 +63,8 @@ class ApiCoverageReportGenerator(
                                 method = rowMethod,
                                 path ="",
                                 responseStatus = responseStatus.toString(),
-                                count = testResults.count().toString(),
+                                count = testResults.count{it.result != TestResult.Skipped}.toString(),
+                                coveragePercentage = 0
                             )
                         )
                     }
@@ -62,7 +80,7 @@ class ApiCoverageReportGenerator(
         }
 
         val missedAPIRows = missedAPIs.map { missedAPI: API ->
-            APICoverageRow(missedAPI.method, missedAPI.path, "", "", CoverageStatus.Missed)
+            APICoverageRow(missedAPI.method, missedAPI.path, "", "")
         }
 
         return APICoverageReport(coveredAPIRows, missedAPIRows)
@@ -73,14 +91,27 @@ class ApiCoverageReportGenerator(
         methodMap: MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>,
     ): APICoverageRow {
         val method = methodMap.keys.first()
-        val responseCode = methodMap[method]?.keys?.first()
-        val count =  methodMap[method]?.get(responseCode)?.size
+        val responseStatus = methodMap[method]?.keys?.first()
+        val count = methodMap[method]?.get(responseStatus)?.count { it.result != TestResult.Skipped }
+
+        val totalMethodResponseCodeCount = methodMap.values.sumOf { it.keys.size }
+        var totalMethodResponseCodeExecutedWithExamples = 0
+        methodMap.forEach { (_, responses) ->
+            responses.forEach { (_, testResults) ->
+                val nonSkippedTestsCount = min(testResults.count { it.result != TestResult.Skipped }, 1)
+                totalMethodResponseCodeExecutedWithExamples += nonSkippedTestsCount
+            }
+        }
+
+        val coveragePercentage =
+            ((totalMethodResponseCodeExecutedWithExamples.toFloat() / totalMethodResponseCodeCount.toFloat()) * 100).roundToInt()
         return APICoverageRow(
             method,
             route,
-            responseCode!!,
+            responseStatus!!,
             count!!,
-            CoverageStatus.Covered
+            coveragePercentage
         )
     }
 }
+

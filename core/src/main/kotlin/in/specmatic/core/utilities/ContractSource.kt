@@ -90,7 +90,7 @@ data class GitRepo(
     }
 
     private fun isBehind(contractsRepoDir: File): Boolean {
-        val sourceGit = getSystemGit(contractsRepoDir.path)
+        val sourceGit = getSystemGitWithAuth(contractsRepoDir.path)
         sourceGit.fetch()
         return sourceGit.revisionsBehindCount() > 0
     }

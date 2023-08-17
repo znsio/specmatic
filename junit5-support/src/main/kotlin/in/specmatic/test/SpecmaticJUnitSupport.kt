@@ -63,17 +63,17 @@ open class SpecmaticJUnitSupport {
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         val testReport: TestReport = TestReport()
         private val coverageConfiguration = System.getProperty(COVERAGE_CONFIGURATION)?.let {
-            Json.decodeFromString<CoverageConfiguration>(it)
+            Json.decodeFromString<APICoverageConfiguration>(it)
         }
 
         @AfterAll
         @JvmStatic
         fun report() {
             println("Excluded APIs specified:")
-            coverageConfiguration?.excludedAPIs?.forEach { println("Path: ${it.path}, method: ${it.method}") }
-            coverageConfiguration?.excludedAPIs.let { excludedApis ->
+            coverageConfiguration?.excludedEndpoints?.forEach { println("Path: $it") }
+            coverageConfiguration?.excludedEndpoints.let { excludedApis ->
                 if (excludedApis != null) {
-                    testReport.addExcludedAPIs(excludedApis.map { API(it.method, it.path) })
+                    testReport.addExcludedAPIs(excludedApis.map { API("", it) })
                 }
             }
             testReport.printReport()

@@ -277,9 +277,9 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
     return contractPathData
 }
 
-fun coverageConfigurationFrom(configFilePath: String) : CoverageConfiguration? {
+fun coverageConfigurationFrom(configFilePath: String) : APICoverageConfiguration? {
     val specmaticConfigJson = loadSpecmaticJsonConfig(configFilePath)
-    return specmaticConfigJson.coverage
+    return specmaticConfigJson?.report?.types?.APICoverage?.OpenAPI
 }
 
 fun getSystemGit(path: String) : GitCommand {

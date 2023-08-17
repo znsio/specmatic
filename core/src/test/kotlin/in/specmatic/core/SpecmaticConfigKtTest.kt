@@ -28,6 +28,14 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.environments?.get("staging")?.baseurls?.get("auth.spec")).isEqualTo("http://localhost:8080")
         assertThat(config.environments?.get("staging")?.variables?.get("username")).isEqualTo("jackie")
         assertThat(config.environments?.get("staging")?.variables?.get("password")).isEqualTo("PaSsWoRd")
+
+        assertThat(config.report?.formatters?.get(0)?.type).isEqualTo("text")
+        assertThat(config.report?.formatters?.get(0)?.layout).isEqualTo("table")
+        assertThat(config.report?.types?.APICoverage?.OpenAPI?.failureCriteria?.minThresholdPercentage).isEqualTo(70.0)
+        assertThat(config.report?.types?.APICoverage?.OpenAPI?.failureCriteria?.maxMissedEndpointsInSpec).isEqualTo(3.0)
+        assertThat(config.report?.types?.APICoverage?.OpenAPI?.failureCriteria?.enforce).isTrue()
+        assertThat(config.report?.types?.APICoverage?.OpenAPI?.excludedEndpoints?.get(0)).isEqualTo("/heartbeat")
+        assertThat(config.report?.types?.APICoverage?.OpenAPI?.excludedEndpoints?.get(1)).isEqualTo("/health")
     }
 
     @Test

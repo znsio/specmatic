@@ -1,7 +1,7 @@
 package application
 
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
-import `in`.specmatic.core.CoverageConfiguration
+import `in`.specmatic.core.APICoverageConfiguration
 import `in`.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.contractFilePathsFrom
@@ -31,7 +31,7 @@ class SpecmaticConfig {
         return contractFilePathsFrom(globalConfigFileName, DEFAULT_WORKING_DIRECTORY) { source -> source.testContracts }
     }
 
-    fun coverageConfiguration(): CoverageConfiguration? {
+    fun coverageConfiguration(): APICoverageConfiguration? {
         return coverageConfigurationFrom(globalConfigFileName)
     }
 }

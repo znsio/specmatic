@@ -15,7 +15,7 @@ class ApiCoverageReportGenerator(
 
         val testReportRecordsIncludingMissingAPIs = testReportRecords.toMutableList()
         applicationAPIs.forEach { api ->
-            if (testReportRecords.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it.path ==api.path }) {
+            if (testReportRecords.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it.path == api.path }) {
                 testReportRecordsIncludingMissingAPIs.add(TestResultRecord(api.path, api.method, 0, TestResult.Skipped))
             }
         }

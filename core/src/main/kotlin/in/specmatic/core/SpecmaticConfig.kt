@@ -85,8 +85,8 @@ data class SpecmaticConfigJson(
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
-    val repository: RespositoryInfo? = null,
-    val coverage:CoverageConfiguration? = null
+    val repository: RepositoryInfo? = null,
+    val report: ReportConfiguration? = null
 ) {
     companion object {
         fun load(configFileName: String? = null): SpecmaticConfigJson {
@@ -96,23 +96,44 @@ data class SpecmaticConfigJson(
 }
 
 @Serializable
-data class RespositoryInfo(
+data class RepositoryInfo(
     val provider: String,
     val collectionName: String
 )
 
 @Serializable
-data class CoverageConfiguration(
-    val threshold: Int = 0,
-    val failBuildIfThresholdNotMet: Boolean = false,
-    val failBuildIfSpecHasMissedAPIs: Boolean = false,
-    val excludedAPIs: List<ExcludedApi> = emptyList()
+data class ReportConfiguration(
+    val formatters: List<ReportFormatter>? = null,
+    val types: ReportTypes
 )
 
 @Serializable
-data class ExcludedApi(
-    val path: String,
-    val method: String
+data class ReportFormatter(
+    val type: String, //Can be enum
+    val layout: String //Can be enum
+)
+
+@Serializable
+data class ReportTypes (
+    val APICoverage: APICoverage
+)
+
+@Serializable
+data class APICoverage (
+    val OpenAPI: APICoverageConfiguration
+)
+
+@Serializable
+data class APICoverageConfiguration(
+    val failureCriteria: FailureCriteria,
+    val excludedEndpoints: List<String> = emptyList()
+)
+
+@Serializable
+data class FailureCriteria (
+    val minThresholdPercentage: Double,
+    val maxMissedEndpointsInSpec: Double,
+    val enforce: Boolean = false
 )
 
 val SpecmaticJsonFormat = Json {

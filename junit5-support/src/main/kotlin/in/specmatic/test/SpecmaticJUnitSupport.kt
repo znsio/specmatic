@@ -57,25 +57,24 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NAME = "filterName"
         const val FILTER_NOT_NAME = "filterNotName"
         const val ENDPOINTS_API = "endpointsAPI"
-        const val COVERAGE_CONFIGURATION = "excludedAPIs"
+        const val REPORT_CONFIGURATION = "excludedAPIs"
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         val testReport: TestReport = TestReport()
-        private val coverageConfiguration = System.getProperty(COVERAGE_CONFIGURATION)?.let {
-            Json.decodeFromString<APICoverageConfiguration>(it)
-        }
 
         @AfterAll
         @JvmStatic
         fun report() {
-            println("Excluded APIs specified:")
-            coverageConfiguration?.excludedEndpoints?.forEach { println("Path: $it") }
-            coverageConfiguration?.excludedEndpoints.let { excludedApis ->
-                if (excludedApis != null) {
-                    testReport.addExcludedAPIs(excludedApis)
-                }
+            val coverageConfiguration = System.getProperty(REPORT_CONFIGURATION)?.let {
+                val config = Json.decodeFromString<ReportConfiguration>(it)
+                config.formatters ?: listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
+                config
             }
+            println("Excluded APIs specified:")
+            val excludedEndpoints = coverageConfiguration?.types?.apiCoverage?.openAPI?.excludedEndpoints
+            excludedEndpoints?.forEach { println("Path: $it") }
+            excludedEndpoints?.let { testReport.addExcludedAPIs(it) }
             testReport.printReport()
         }
 

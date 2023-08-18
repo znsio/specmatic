@@ -25,7 +25,7 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.COVERAGE_CONFIGURATION
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.REPORT_CONFIGURATION
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
@@ -112,7 +112,7 @@ class TestCommand : Callable<Unit> {
         }
 
         val coverageConfiguration = specmaticConfig.coverageConfiguration()
-        System.setProperty(COVERAGE_CONFIGURATION, Json.encodeToString(coverageConfiguration))
+        System.setProperty(REPORT_CONFIGURATION, Json.encodeToString(coverageConfiguration))
 
         contractPaths = loadContractPaths()
 

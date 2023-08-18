@@ -111,8 +111,8 @@ class TestCommand : Callable<Unit> {
             System.setProperty(CONFIG_FILE_NAME, it)
         }
 
-        val coverageConfiguration = specmaticConfig.coverageConfiguration()
-        System.setProperty(REPORT_CONFIGURATION, Json.encodeToString(coverageConfiguration))
+        val reportConfiguration = specmaticConfig.reportConfiguration()
+        System.setProperty(REPORT_CONFIGURATION, Json.encodeToString(reportConfiguration))
 
         contractPaths = loadContractPaths()
 

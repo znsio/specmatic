@@ -20,6 +20,7 @@ import `in`.specmatic.test.reports.coverage.ApiCoverageReportGenerator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -71,8 +72,13 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
-            val apiCoverageReportGenerator = ApiCoverageReportGenerator(apiCoverageInput)
-            reportPrinter.printAPICoverageReport(apiCoverageReportGenerator.generate())
+            val apiCoverageReport = ApiCoverageReportGenerator(apiCoverageInput).generate()
+            reportPrinter.printAPICoverageReport(apiCoverageReport)
+            val failureCriteria = reportConfiguration.types.apiCoverage.openAPI.failureCriteria
+            if(failureCriteria.enforce){
+                assertThat(apiCoverageReport.totalCoveragePercentage).withFailMessage("Total coverage: ${apiCoverageReport.totalCoveragePercentage}% is less than the specified minimum threshold of ${failureCriteria.minThresholdPercentage}%").isGreaterThanOrEqualTo(failureCriteria.minThresholdPercentage)
+                assertThat(apiCoverageReport.missedEndpointsCount).withFailMessage("Total missed endpoints count: ${apiCoverageReport.missedEndpointsCount}% is greater than the maximum threshold of ${failureCriteria.maxMissedEndpointsInSpec}").isLessThanOrEqualTo(failureCriteria.maxMissedEndpointsInSpec)
+            }
         }
 
         private fun getReportConfiguration(): ReportConfiguration {

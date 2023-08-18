@@ -8,14 +8,14 @@ import kotlin.math.roundToInt
 class ApiCoverageReportGenerator(
     private val testReportRecords: List<TestResultRecord>,
     private val applicationAPIs: List<API>,
-    private val excludedAPIs: List<API> = emptyList()
+    private val excludedAPIs: List<String> = emptyList()
 ) {
 
     fun generate(): APICoverageReport {
 
         val testReportRecordsIncludingMissingAPIs = testReportRecords.toMutableList()
         applicationAPIs.forEach { api ->
-            if (testReportRecords.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it.path == api.path }) {
+            if (testReportRecords.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
                 testReportRecordsIncludingMissingAPIs.add(TestResultRecord(api.path, api.method, 0, TestResult.Skipped))
             }
         }
@@ -75,9 +75,10 @@ class ApiCoverageReportGenerator(
 
         val testedAPIs = testReportRecords.map { "${it.method}-${it.path}" }
 
-        val missedAPIs = applicationAPIs.minus(excludedAPIs.toSet()).filter {
-            "${it.method}-${it.path}" !in testedAPIs
-        }
+        val missedAPIs = applicationAPIs.filter { api -> excludedAPIs.none { it == api.path } }
+            .filter {
+                "${it.method}-${it.path}" !in testedAPIs
+            }
 
         val missedAPIRows = missedAPIs.map { missedAPI: API ->
             APICoverageRow(missedAPI.method, missedAPI.path, "", "")

@@ -2,7 +2,7 @@ package `in`.specmatic.test
 
 import `in`.specmatic.core.log.logger
 
-class TestReport(private val testReportRecords: MutableList<TestResultRecord> = mutableListOf(), private val applicationAPIs: MutableList<API> = mutableListOf(), private val excludedAPIs: MutableList<API> = mutableListOf()) {
+class TestReport(private val testReportRecords: MutableList<TestResultRecord> = mutableListOf(), private val applicationAPIs: MutableList<API> = mutableListOf(), private val excludedAPIs: MutableList<String> = mutableListOf()) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testReportRecords.add(testResultRecord)
     }
@@ -11,7 +11,7 @@ class TestReport(private val testReportRecords: MutableList<TestResultRecord> = 
         applicationAPIs.addAll(apis)
     }
 
-    fun addExcludedAPIs(apis: List<API>) {
+    fun addExcludedAPIs(apis: List<String>) {
         excludedAPIs.addAll(apis)
     }
 

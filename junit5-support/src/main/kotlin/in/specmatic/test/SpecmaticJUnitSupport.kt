@@ -73,7 +73,7 @@ open class SpecmaticJUnitSupport {
             coverageConfiguration?.excludedEndpoints?.forEach { println("Path: $it") }
             coverageConfiguration?.excludedEndpoints.let { excludedApis ->
                 if (excludedApis != null) {
-                    testReport.addExcludedAPIs(excludedApis.map { API("", it) })
+                    testReport.addExcludedAPIs(excludedApis)
                 }
             }
             testReport.printReport()

@@ -81,17 +81,22 @@ class ApiCoverageReportGeneratorTest {
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 401, TestResult.Success),
             TestResultRecord("/route2", "GET", 200, TestResult.Success),
+            TestResultRecord("/route2", "POST", 200, TestResult.Success)
         )
         val applicationAPIs = mutableListOf(
             API("GET", "/route1"),
             API("POST", "/route1"),
             API("GET", "/route2"),
-            API("POST", "/route2")
+            API("POST", "/route2"),
+            API("GET", "/healthCheck"),
+            API("GET", "/heartbeat")
         )
 
         val excludedAPIs = mutableListOf(
-            API("POST", "/route2")
+            "/healthCheck",
+            "/heartbeat"
         )
+
 
         val apiCoverageReport = ApiCoverageReportGenerator(testReportRecords, applicationAPIs, excludedAPIs).generate()
         println(apiCoverageReport.toLogString())
@@ -101,7 +106,8 @@ class ApiCoverageReportGeneratorTest {
                     APICoverageRow("GET", "/route1", 200, 1, 100),
                     APICoverageRow("POST", "", 200, 1, 0),
                     APICoverageRow("", "", 401, 1, 0),
-                    APICoverageRow("GET", "/route2", 200, 1, 100)
+                    APICoverageRow("GET", "/route2", 200, 1, 100),
+                    APICoverageRow("POST", "", 200, 1, 0)
                 ),
                 listOf()
             )

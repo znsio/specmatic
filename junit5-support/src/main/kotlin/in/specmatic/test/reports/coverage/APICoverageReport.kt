@@ -1,4 +1,4 @@
-package `in`.specmatic.test
+package `in`.specmatic.test.reports.coverage
 
 import kotlin.math.roundToInt
 

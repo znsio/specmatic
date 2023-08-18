@@ -1,9 +1,9 @@
-package `in`.specmatic.test.formatters
+package `in`.specmatic.test.reports.formatters
 
-import `in`.specmatic.test.APICoverageReport
+import `in`.specmatic.test.reports.coverage.APICoverageReport
 
-class CoverageReportTextFormatter: ReportFormatter<APICoverageReport> {
-    override fun format(report: APICoverageReport): String {
+class CoverageReportTextRenderer: ReportRenderer<APICoverageReport> {
+    override fun render(report: APICoverageReport): String {
         val maxPathSize: Int = report.rows.map { it.path.length }.max()
 
         val longestCoveragePercentageValue = "coverage"

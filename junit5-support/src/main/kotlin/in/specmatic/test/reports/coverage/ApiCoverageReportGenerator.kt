@@ -1,14 +1,13 @@
-package `in`.specmatic.test
+package `in`.specmatic.test.reports.coverage
 
 import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.TestResult
+import `in`.specmatic.test.TestResultRecord
 import kotlin.math.min
 import kotlin.math.roundToInt
 
 class ApiCoverageReportGenerator(
-    private val testResultRecords: List<TestResultRecord>,
-    private val applicationAPIs: List<API>,
-    private val excludedAPIs: List<String> = emptyList()
+    private val input: ApiCoverageInput
 ) {
     fun generate(): APICoverageReport {
 
@@ -76,9 +75,9 @@ class ApiCoverageReportGenerator(
     }
 
     private fun createConsolidatedListOfTestResultsForAllAPIs(): List<TestResultRecord> {
-        val testReportRecordsIncludingMissingAPIs = testResultRecords.toMutableList()
-        applicationAPIs.forEach { api ->
-            if (testResultRecords.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
+        val testReportRecordsIncludingMissingAPIs = input.testResultRecords.toMutableList()
+        input.applicationAPIs.forEach { api ->
+            if (input.testResultRecords.none { it.path == api.path && it.method == api.method } && input.excludedAPIs.none { it == api.path }) {
                 testReportRecordsIncludingMissingAPIs.add(TestResultRecord(api.path, api.method, 0, TestResult.Skipped))
             }
         }

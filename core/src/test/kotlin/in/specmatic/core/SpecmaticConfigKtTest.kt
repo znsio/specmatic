@@ -31,8 +31,8 @@ internal class SpecmaticConfigKtTest {
 
         assertThat(config.report?.formatters?.get(0)?.type).isEqualTo(ReportFormatterType.TEXT)
         assertThat(config.report?.formatters?.get(0)?.layout).isEqualTo(ReportFormatterLayout.TABLE)
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.failureCriteria?.minThresholdPercentage).isEqualTo(70.0)
-        assertThat(config.report?.types?.apiCoverage?.openAPI?.failureCriteria?.maxMissedEndpointsInSpec).isEqualTo(3.0)
+        assertThat(config.report?.types?.apiCoverage?.openAPI?.failureCriteria?.minThresholdPercentage).isEqualTo(70)
+        assertThat(config.report?.types?.apiCoverage?.openAPI?.failureCriteria?.maxMissedEndpointsInSpec).isEqualTo(3)
         assertThat(config.report?.types?.apiCoverage?.openAPI?.failureCriteria?.enforce).isTrue()
         assertThat(config.report?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(0)).isEqualTo("/heartbeat")
         assertThat(config.report?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(1)).isEqualTo("/health")

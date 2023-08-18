@@ -144,9 +144,9 @@ data class APICoverageConfiguration(
 )
 
 @Serializable
-data class FailureCriteria (
-    val minThresholdPercentage: Double,
-    val maxMissedEndpointsInSpec: Double,
+data class FailureCriteria(
+    val minThresholdPercentage: Int = 0,
+    val maxMissedEndpointsInSpec: Int = 0,
     val enforce: Boolean = false
 )
 

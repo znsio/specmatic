@@ -14,6 +14,9 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.stub.isYAML
+import `in`.specmatic.test.reports.ReportPrinter
+import `in`.specmatic.test.reports.coverage.ApiCoverageInput
+import `in`.specmatic.test.reports.coverage.ApiCoverageReportGenerator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -61,21 +64,30 @@ open class SpecmaticJUnitSupport {
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
-        val testReport: TestReport = TestReport()
+        private val reportConfiguration = getReportConfiguration()
+        private val reportPrinter: ReportPrinter = ReportPrinter(reportConfiguration.formatters!!)
+        val apiCoverageInput: ApiCoverageInput = ApiCoverageInput(excludedAPIs = reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints)
 
         @AfterAll
         @JvmStatic
         fun report() {
-            val coverageConfiguration = System.getProperty(REPORT_CONFIGURATION)?.let {
-                val config = Json.decodeFromString<ReportConfiguration>(it)
-                config.formatters ?: listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
-                config
+            val apiCoverageReportGenerator = ApiCoverageReportGenerator(apiCoverageInput)
+            reportPrinter.printAPICoverageReport(apiCoverageReportGenerator.generate())
+        }
+
+        private fun getReportConfiguration(): ReportConfiguration {
+            val reportConfiguration = System.getProperty(REPORT_CONFIGURATION)
+            val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
+            val defaultReportTypes =
+                ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(failureCriteria = FailureCriteria())))
+            return when (reportConfiguration) {
+                null -> ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
+                else -> {
+                    val config = Json.decodeFromString<ReportConfiguration>(reportConfiguration)
+                    val formatters = config.formatters ?: defaultFormatters
+                    config.copy(formatters = formatters)
+                }
             }
-            println("Excluded APIs specified:")
-            val excludedEndpoints = coverageConfiguration?.types?.apiCoverage?.openAPI?.excludedEndpoints
-            excludedEndpoints?.forEach { println("Path: $it") }
-            excludedEndpoints?.let { testReport.addExcludedAPIs(it) }
-            testReport.printReport()
         }
 
         fun queryActuator() {
@@ -113,7 +125,7 @@ open class SpecmaticJUnitSupport {
                     }
                 }
 
-                testReport.addAPIs(apis)
+                apiCoverageInput.addAPIs(apis)
 
             } else {
                 logger.log("Endpoints API not found, cannot calculate actual coverage")
@@ -217,7 +229,7 @@ open class SpecmaticJUnitSupport {
 
                 try {
                     val result: Result = invoker.execute(testScenario, timeout)
-                    testReport.addTestReportRecords(testScenario.testResultRecord(result))
+                    apiCoverageInput.addTestReportRecords(testScenario.testResultRecord(result))
 
                     if(result is Result.Success && result.isPartialSuccess()) {
                         partialSuccesses.add(result)
@@ -231,7 +243,7 @@ open class SpecmaticJUnitSupport {
                         else -> ResultAssert.assertThat(result).isSuccess()
                     }
                 } catch(e: Throwable) {
-                    testReport.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
+                    apiCoverageInput.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
                     throw e
                 }
             }

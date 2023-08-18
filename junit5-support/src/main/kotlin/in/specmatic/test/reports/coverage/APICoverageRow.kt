@@ -1,4 +1,4 @@
-package `in`.specmatic.test
+package `in`.specmatic.test.reports.coverage
 
 data class APICoverageRow(
     val method: String,

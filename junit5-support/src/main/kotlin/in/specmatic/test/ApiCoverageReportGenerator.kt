@@ -6,35 +6,18 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 class ApiCoverageReportGenerator(
-    private val testReportRecords: List<TestResultRecord>,
+    private val testResultRecords: List<TestResultRecord>,
     private val applicationAPIs: List<API>,
     private val excludedAPIs: List<String> = emptyList()
 ) {
-
     fun generate(): APICoverageReport {
 
-        val testReportRecordsIncludingMissingAPIs = testReportRecords.toMutableList()
-        applicationAPIs.forEach { api ->
-            if (testReportRecords.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
-                testReportRecordsIncludingMissingAPIs.add(TestResultRecord(api.path, api.method, 0, TestResult.Skipped))
-            }
-        }
-
-        val recordsWithFixedURLs = testReportRecordsIncludingMissingAPIs.map {
-            it.copy(path = convertPathParameterStyle(it.path))
-        }
-
-        val coveredAPIs = recordsWithFixedURLs.groupBy {
-            "${it.path}-${it.method}-${it.responseStatus}"
-        }.let { sortedRecords: Map<String, List<TestResultRecord>> ->
-            sortedRecords.keys.sorted().map { key ->
-                sortedRecords.getValue(key)
-            }
-        }.flatten()
+        var allAPITests = createConsolidatedListOfTestResultsForAllAPIs()
+        allAPITests = sortByPathMethodResponseStatus(allAPITests)
 
         // Creates a structure which looks like this:
         // mutableMapOf<Path, MutableMap<Method, MutableMap<ResponseStatus, MutableList<TestResultRecord>>>>
-        val groupedAPIs = coveredAPIs.groupBy { it.path }
+        val apiTestsGrouped = allAPITests.groupBy { it.path }
             .mapValues { (_, pathResults) ->
                 pathResults.groupBy { it.method }
                     .mapValues { (_, methodResults) ->
@@ -46,9 +29,9 @@ class ApiCoverageReportGenerator(
             }.toMutableMap()
 
 
-        val coveredAPIRows: MutableList<APICoverageRow> = mutableListOf()
+        val apiCoverageRows: MutableList<APICoverageRow> = mutableListOf()
 
-        groupedAPIs.forEach { (route, methodMap) ->
+        apiTestsGrouped.forEach { (route, methodMap) ->
             val routeAPIRows: MutableList<APICoverageRow> = mutableListOf()
             val topLevelCoverageRow = createTopLevelApiCoverageRow(route, methodMap)
             methodMap.forEach { (method, responseCodeMap) ->
@@ -70,20 +53,36 @@ class ApiCoverageReportGenerator(
                     }
                 }
             }
-            coveredAPIRows.addAll(routeAPIRows)
+            apiCoverageRows.addAll(routeAPIRows)
         }
 
-        val testedAPIs = testReportRecords.map { "${it.method}-${it.path}" }
+        val totalAPICount = apiTestsGrouped.keys.size
+        val missedAPICount = allAPITests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.Skipped } }.size
 
-        val missedAPIs = applicationAPIs.filter { api -> excludedAPIs.none { it == api.path } }
-            .filter {
-                "${it.method}-${it.path}" !in testedAPIs
+        return APICoverageReport(apiCoverageRows, totalAPICount, missedAPICount)
+    }
+
+    private fun sortByPathMethodResponseStatus(testResultRecordList: List<TestResultRecord>): List<TestResultRecord> {
+        val recordsWithFixedURLs = testResultRecordList.map {
+            it.copy(path = convertPathParameterStyle(it.path))
+        }
+        return recordsWithFixedURLs.groupBy {
+            "${it.path}-${it.method}-${it.responseStatus}"
+        }.let { sortedRecords: Map<String, List<TestResultRecord>> ->
+            sortedRecords.keys.sorted().map { key ->
+                sortedRecords.getValue(key)
             }
+        }.flatten()
+    }
 
-        val totalAPICount = coveredAPIs.map { it.path }.distinct().filter { it.isNotEmpty() }.size
-        val missedAPICount = missedAPIs.map { it.path }.distinct().filter { it.isNotEmpty() }.size
-
-        return APICoverageReport(coveredAPIRows, totalAPICount, missedAPICount)
+    private fun createConsolidatedListOfTestResultsForAllAPIs(): List<TestResultRecord> {
+        val testReportRecordsIncludingMissingAPIs = testResultRecords.toMutableList()
+        applicationAPIs.forEach { api ->
+            if (testResultRecords.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
+                testReportRecordsIncludingMissingAPIs.add(TestResultRecord(api.path, api.method, 0, TestResult.Skipped))
+            }
+        }
+        return testReportRecordsIncludingMissingAPIs
     }
 
     private fun createTopLevelApiCoverageRow(

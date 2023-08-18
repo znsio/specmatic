@@ -3,11 +3,13 @@ package `in`.specmatic.test
 import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.Scenario
+import `in`.specmatic.core.TestResult
 import `in`.specmatic.core.executeTest
 
 class ScenarioTest(val scenario: Scenario, private val generativeTestingEnabled: Boolean = false) : ContractTest {
     override fun testResultRecord(result: Result): TestResultRecord {
-        return TestResultRecord(convertPathParameterStyle(scenario.path), scenario.method, scenario.status, result.testResult())
+        val resultStatus = if (isBasedOnExample()) result.testResult() else TestResult.Skipped
+        return TestResultRecord(convertPathParameterStyle(scenario.path), scenario.method, scenario.status, resultStatus)
     }
 
     override fun generateTestScenarios(
@@ -19,6 +21,10 @@ class ScenarioTest(val scenario: Scenario, private val generativeTestingEnabled:
 
     override fun testDescription(): String {
         return scenario.testDescription()
+    }
+
+    override fun isBasedOnExample(): Boolean {
+        return scenario.examples.isNotEmpty()
     }
 
     override fun runTest(host: String?, port: String?, timeout: Int): Result {

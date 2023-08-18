@@ -40,7 +40,7 @@ class CoverageReportTextFormatter: ReportFormatter<APICoverageReport> {
 
         val missingAPIsMessageRows:MutableList<String> = mutableListOf()
         if(report.missedAPICount > 0) {
-            missingAPIsMessageRows.add("${report.missedAPICount} out of ${report.totalAPICount} APIs found missing in the specification")
+            missingAPIsMessageRows.add("${report.missedAPICount} out of ${report.totalAPICount} Endpoints are not completely covered in the specification.")
         }
         return coveredAPIsTable + System.lineSeparator()  + missingAPIsMessageRows.joinToString(System.lineSeparator())
     }

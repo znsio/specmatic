@@ -109,18 +109,32 @@ data class ReportConfiguration(
 
 @Serializable
 data class ReportFormatter(
-    val type: String, //Can be enum
-    val layout: String //Can be enum
+    val type: ReportFormatterType,
+    val layout: ReportFormatterLayout
 )
 
 @Serializable
+enum class ReportFormatterType {
+    @SerialName("text")
+    TEXT
+}
+
+@Serializable
+enum class ReportFormatterLayout {
+    @SerialName("table")
+    TABLE
+}
+
+@Serializable
 data class ReportTypes (
-    val APICoverage: APICoverage
+    @SerialName("APICoverage")
+    val apiCoverage: APICoverage
 )
 
 @Serializable
 data class APICoverage (
-    val OpenAPI: APICoverageConfiguration
+    @SerialName("OpenAPI")
+    val openAPI: APICoverageConfiguration
 )
 
 @Serializable

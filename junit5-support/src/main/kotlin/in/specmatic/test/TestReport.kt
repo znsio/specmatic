@@ -1,6 +1,7 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.test.formatters.CoverageReportTextFormatter
 
 class TestReport(private val testReportRecords: MutableList<TestResultRecord> = mutableListOf(), private val applicationAPIs: MutableList<API> = mutableListOf(), private val excludedAPIs: MutableList<String> = mutableListOf()) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
@@ -21,6 +22,7 @@ class TestReport(private val testReportRecords: MutableList<TestResultRecord> = 
 
         logger.newLine()
         val apiCoverageReport = ApiCoverageReportGenerator(testReportRecords, applicationAPIs, excludedAPIs).generate()
-        logger.log(apiCoverageReport.toLogString())
+        val textFormatter = CoverageReportTextFormatter()
+        logger.log(textFormatter.format(apiCoverageReport))
     }
 }

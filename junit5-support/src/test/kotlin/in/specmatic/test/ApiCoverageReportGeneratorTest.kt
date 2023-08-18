@@ -1,6 +1,7 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.core.TestResult
+import `in`.specmatic.test.formatters.CoverageReportTextFormatter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -20,7 +21,7 @@ class ApiCoverageReportGeneratorTest {
         )
 
         val apiCoverageReport = ApiCoverageReportGenerator(testReportRecords, applicationAPIs).generate()
-        println(apiCoverageReport.toLogString())
+        println(CoverageReportTextFormatter().format(apiCoverageReport))
         assertThat(apiCoverageReport).isEqualTo(
             APICoverageReport(
                 listOf(
@@ -29,7 +30,7 @@ class ApiCoverageReportGeneratorTest {
                     APICoverageRow("", "", "401", "1"),
                     APICoverageRow("GET", "/route2", 200, 1, 100)
                 ),
-                listOf()
+                2, 0
             )
         )
     }
@@ -53,7 +54,7 @@ class ApiCoverageReportGeneratorTest {
         )
 
         val apiCoverageReport = ApiCoverageReportGenerator(testReportRecords, applicationAPIs).generate()
-        println(apiCoverageReport.toLogString())
+        println(CoverageReportTextFormatter().format(apiCoverageReport))
         assertThat(apiCoverageReport).isEqualTo(
             APICoverageReport(
                 listOf(
@@ -65,11 +66,7 @@ class ApiCoverageReportGeneratorTest {
                     APICoverageRow("GET", "/route3", 0, 0, 0),
                     APICoverageRow("POST", "", 0, 0, 0)
                 ),
-                listOf(
-                    APICoverageRow("POST", "/route2", "", "", 0),
-                    APICoverageRow("GET", "/route3", "", "", 0),
-                    APICoverageRow("POST", "/route3", "", "", 0)
-                )
+                3, 2
             )
         )
     }
@@ -99,7 +96,7 @@ class ApiCoverageReportGeneratorTest {
 
 
         val apiCoverageReport = ApiCoverageReportGenerator(testReportRecords, applicationAPIs, excludedAPIs).generate()
-        println(apiCoverageReport.toLogString())
+        println(CoverageReportTextFormatter().format(apiCoverageReport))
         assertThat(apiCoverageReport).isEqualTo(
             APICoverageReport(
                 listOf(
@@ -109,7 +106,7 @@ class ApiCoverageReportGeneratorTest {
                     APICoverageRow("GET", "/route2", 200, 1, 100),
                     APICoverageRow("POST", "", 200, 1, 0)
                 ),
-                listOf()
+                2, 0
             )
         )
     }

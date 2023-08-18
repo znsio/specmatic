@@ -80,11 +80,10 @@ class ApiCoverageReportGenerator(
                 "${it.method}-${it.path}" !in testedAPIs
             }
 
-        val missedAPIRows = missedAPIs.map { missedAPI: API ->
-            APICoverageRow(missedAPI.method, missedAPI.path, "", "")
-        }
+        val totalAPICount = coveredAPIs.map { it.path }.distinct().filter { it.isNotEmpty() }.size
+        val missedAPICount = missedAPIs.map { it.path }.distinct().filter { it.isNotEmpty() }.size
 
-        return APICoverageReport(coveredAPIRows, missedAPIRows)
+        return APICoverageReport(coveredAPIRows, totalAPICount, missedAPICount)
     }
 
     private fun createTopLevelApiCoverageRow(

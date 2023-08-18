@@ -112,7 +112,7 @@ class TestCommand : Callable<Unit> {
         }
 
         val reportConfiguration = specmaticConfig.reportConfiguration()
-        System.setProperty(REPORT_CONFIGURATION, Json.encodeToString(reportConfiguration))
+        System.setProperty(REPORT_CONFIGURATION, reportConfiguration?.let { Json.encodeToString(it) } ?: "")
 
         contractPaths = loadContractPaths()
 

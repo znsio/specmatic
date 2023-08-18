@@ -61,7 +61,7 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NAME = "filterName"
         const val FILTER_NOT_NAME = "filterNotName"
         const val ENDPOINTS_API = "endpointsAPI"
-        const val REPORT_CONFIGURATION = "excludedAPIs"
+        const val REPORT_CONFIGURATION = "reportConfiguration"
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
@@ -86,8 +86,8 @@ open class SpecmaticJUnitSupport {
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
             val defaultReportTypes =
                 ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(failureCriteria = FailureCriteria())))
-            return when (reportConfiguration) {
-                null -> ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
+            return when (reportConfiguration.isEmpty()) {
+                true -> ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
                 else -> {
                     val config = Json.decodeFromString<ReportConfiguration>(reportConfiguration)
                     val formatters = config.formatters ?: defaultFormatters

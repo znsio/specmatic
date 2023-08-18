@@ -3,7 +3,7 @@ package `in`.specmatic.test.reports.coverage
 import `in`.specmatic.test.API
 import `in`.specmatic.test.TestResultRecord
 
-class ApiCoverageInput(
+class OpenApiCoverageReportInput(
     val testResultRecords: MutableList<TestResultRecord> = mutableListOf(),
     val applicationAPIs: MutableList<API> = mutableListOf(),
     val excludedAPIs: List<String> = mutableListOf()

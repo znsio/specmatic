@@ -15,8 +15,8 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.stub.isYAML
 import `in`.specmatic.test.reports.ReportPrinter
-import `in`.specmatic.test.reports.coverage.ApiCoverageInput
-import `in`.specmatic.test.reports.coverage.ApiCoverageReportGenerator
+import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
+import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportGenerator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -66,13 +66,13 @@ open class SpecmaticJUnitSupport {
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private val reportConfiguration = getReportConfiguration()
-        private val reportPrinter: ReportPrinter = ReportPrinter(reportConfiguration.formatters!!)
-        val apiCoverageInput: ApiCoverageInput = ApiCoverageInput(excludedAPIs = reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints)
+        private val reportPrinter: ReportPrinter = ReportPrinter(reportConfiguration)
+        val apiCoverageInput: OpenApiCoverageReportInput = OpenApiCoverageReportInput(excludedAPIs = reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints)
 
         @AfterAll
         @JvmStatic
         fun report() {
-            val apiCoverageReport = ApiCoverageReportGenerator(apiCoverageInput).generate()
+            val apiCoverageReport = OpenApiCoverageReportGenerator(apiCoverageInput).generate()
             reportPrinter.printAPICoverageReport(apiCoverageReport)
             val failureCriteria = reportConfiguration.types.apiCoverage.openAPI.failureCriteria
             if(failureCriteria.enforce){

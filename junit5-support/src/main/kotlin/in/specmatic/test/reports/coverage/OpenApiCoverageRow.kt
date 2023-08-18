@@ -1,6 +1,6 @@
 package `in`.specmatic.test.reports.coverage
 
-data class APICoverageRow(
+data class OpenApiCoverageRow(
     val method: String,
     val path: String,
     val responseStatus: String,
@@ -25,7 +25,7 @@ data class APICoverageRow(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is APICoverageRow) return false
+        if (other !is OpenApiCoverageRow) return false
         return method == other.method && path == other.path && responseStatus == other.responseStatus && count == other.count && coveragePercentage == other.coveragePercentage
     }
 

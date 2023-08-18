@@ -1,16 +1,16 @@
 package `in`.specmatic.test.reports
 
-import `in`.specmatic.core.ReportFormatter
+import `in`.specmatic.core.ReportConfiguration
 import `in`.specmatic.core.ReportFormatterType
 import `in`.specmatic.core.log.logger
-import `in`.specmatic.test.reports.coverage.APICoverageReport
-import `in`.specmatic.test.reports.formatters.CoverageReportTextRenderer
-import `in`.specmatic.test.reports.formatters.ReportRenderer
+import `in`.specmatic.test.reports.coverage.OpenAPICoverageReport
+import `in`.specmatic.test.reports.renderers.CoverageReportTextRenderer
+import `in`.specmatic.test.reports.renderers.ReportRenderer
 
-class ReportPrinter(formatters: List<ReportFormatter>) {
-    private var coverageReportRenderers:MutableList<ReportRenderer<APICoverageReport>> = mutableListOf()
+class ReportPrinter(reportConfiguration: ReportConfiguration) {
+    private var coverageReportRenderers:MutableList<ReportRenderer<OpenAPICoverageReport>> = mutableListOf()
     init {
-        formatters.map {
+        reportConfiguration.formatters!!.map {
             when (it.type) {
                 ReportFormatterType.TEXT -> CoverageReportTextRenderer()
                 else -> throw Exception("Report formatter type: ${it.type} is not supported")
@@ -18,7 +18,7 @@ class ReportPrinter(formatters: List<ReportFormatter>) {
         }.let { coverageReportRenderers.addAll(it) }
     }
 
-    fun printAPICoverageReport(apiCoverageReport: APICoverageReport) {
+    fun printAPICoverageReport(apiCoverageReport: OpenAPICoverageReport) {
         if(apiCoverageReport.rows.isEmpty()){
             return
         }

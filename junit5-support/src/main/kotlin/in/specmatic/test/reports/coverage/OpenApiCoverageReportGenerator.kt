@@ -6,10 +6,10 @@ import `in`.specmatic.test.TestResultRecord
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-class ApiCoverageReportGenerator(
-    private val input: ApiCoverageInput
+class OpenApiCoverageReportGenerator(
+    private val input: OpenApiCoverageReportInput
 ) {
-    fun generate(): APICoverageReport {
+    fun generate(): OpenAPICoverageReport {
 
         var allAPITests = createConsolidatedListOfTestResultsForAllAPIs()
         allAPITests = sortByPathMethodResponseStatus(allAPITests)
@@ -28,10 +28,10 @@ class ApiCoverageReportGenerator(
             }.toMutableMap()
 
 
-        val apiCoverageRows: MutableList<APICoverageRow> = mutableListOf()
+        val apiCoverageRows: MutableList<OpenApiCoverageRow> = mutableListOf()
 
         apiTestsGrouped.forEach { (route, methodMap) ->
-            val routeAPIRows: MutableList<APICoverageRow> = mutableListOf()
+            val routeAPIRows: MutableList<OpenApiCoverageRow> = mutableListOf()
             val topLevelCoverageRow = createTopLevelApiCoverageRow(route, methodMap)
             methodMap.forEach { (method, responseCodeMap) ->
                 responseCodeMap.forEach { (responseStatus, testResults) ->
@@ -58,7 +58,7 @@ class ApiCoverageReportGenerator(
         val totalAPICount = apiTestsGrouped.keys.size
         val missedAPICount = allAPITests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.Skipped } }.size
 
-        return APICoverageReport(apiCoverageRows, totalAPICount, missedAPICount)
+        return OpenAPICoverageReport(apiCoverageRows, totalAPICount, missedAPICount)
     }
 
     private fun sortByPathMethodResponseStatus(testResultRecordList: List<TestResultRecord>): List<TestResultRecord> {
@@ -87,7 +87,7 @@ class ApiCoverageReportGenerator(
     private fun createTopLevelApiCoverageRow(
         route: String,
         methodMap: MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>,
-    ): APICoverageRow {
+    ): OpenApiCoverageRow {
         val method = methodMap.keys.first()
         val responseStatus = methodMap[method]?.keys?.first()
         val count = methodMap[method]?.get(responseStatus)?.count { it.result != TestResult.Skipped }
@@ -103,7 +103,7 @@ class ApiCoverageReportGenerator(
 
         val coveragePercentage =
             ((totalMethodResponseCodeExecutedWithExamples.toFloat() / totalMethodResponseCodeCount.toFloat()) * 100).roundToInt()
-        return APICoverageRow(
+        return OpenApiCoverageRow(
             method,
             route,
             responseStatus!!,

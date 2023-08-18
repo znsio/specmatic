@@ -1,11 +1,11 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.core.TestResult
-import `in`.specmatic.test.reports.coverage.APICoverageReport
-import `in`.specmatic.test.reports.coverage.APICoverageRow
-import `in`.specmatic.test.reports.coverage.ApiCoverageInput
-import `in`.specmatic.test.reports.coverage.ApiCoverageReportGenerator
-import `in`.specmatic.test.reports.formatters.CoverageReportTextRenderer
+import `in`.specmatic.test.reports.coverage.OpenAPICoverageReport
+import `in`.specmatic.test.reports.coverage.OpenApiCoverageRow
+import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
+import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportGenerator
+import `in`.specmatic.test.reports.renderers.CoverageReportTextRenderer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -24,15 +24,15 @@ class ApiCoverageReportGeneratorTest {
             API("GET", "/route2")
         )
 
-        val apiCoverageReport = ApiCoverageReportGenerator(ApiCoverageInput(testReportRecords, applicationAPIs)).generate()
+        val apiCoverageReport = OpenApiCoverageReportGenerator(OpenApiCoverageReportInput(testReportRecords, applicationAPIs)).generate()
         println(CoverageReportTextRenderer().render(apiCoverageReport))
         assertThat(apiCoverageReport).isEqualTo(
-            APICoverageReport(
+            OpenAPICoverageReport(
                 listOf(
-                    APICoverageRow("GET", "/route1", 200, 1, 100),
-                    APICoverageRow("POST", "", "200", "1"),
-                    APICoverageRow("", "", "401", "1"),
-                    APICoverageRow("GET", "/route2", 200, 1, 100)
+                    OpenApiCoverageRow("GET", "/route1", 200, 1, 100),
+                    OpenApiCoverageRow("POST", "", "200", "1"),
+                    OpenApiCoverageRow("", "", "401", "1"),
+                    OpenApiCoverageRow("GET", "/route2", 200, 1, 100)
                 ),
                 2, 0
             )
@@ -57,18 +57,18 @@ class ApiCoverageReportGeneratorTest {
             TestResultRecord("/route2", "GET", 200, TestResult.Success),
         )
 
-        val apiCoverageReport = ApiCoverageReportGenerator(ApiCoverageInput(testReportRecords, applicationAPIs)).generate()
+        val apiCoverageReport = OpenApiCoverageReportGenerator(OpenApiCoverageReportInput(testReportRecords, applicationAPIs)).generate()
         println(CoverageReportTextRenderer().render(apiCoverageReport))
         assertThat(apiCoverageReport).isEqualTo(
-            APICoverageReport(
+            OpenAPICoverageReport(
                 listOf(
-                    APICoverageRow("GET", "/route1", 200, 1, 100),
-                    APICoverageRow("POST", "", 200, 1, 0),
-                    APICoverageRow("", "", 401, 1, 0),
-                    APICoverageRow("GET", "/route2", 200, 1, 50),
-                    APICoverageRow("POST", "", 0, 0, 0),
-                    APICoverageRow("GET", "/route3", 0, 0, 0),
-                    APICoverageRow("POST", "", 0, 0, 0)
+                    OpenApiCoverageRow("GET", "/route1", 200, 1, 100),
+                    OpenApiCoverageRow("POST", "", 200, 1, 0),
+                    OpenApiCoverageRow("", "", 401, 1, 0),
+                    OpenApiCoverageRow("GET", "/route2", 200, 1, 50),
+                    OpenApiCoverageRow("POST", "", 0, 0, 0),
+                    OpenApiCoverageRow("GET", "/route3", 0, 0, 0),
+                    OpenApiCoverageRow("POST", "", 0, 0, 0)
                 ),
                 3, 2
             )
@@ -99,16 +99,16 @@ class ApiCoverageReportGeneratorTest {
         )
 
 
-        val apiCoverageReport = ApiCoverageReportGenerator(ApiCoverageInput(testReportRecords, applicationAPIs, excludedAPIs)).generate()
+        val apiCoverageReport = OpenApiCoverageReportGenerator(OpenApiCoverageReportInput(testReportRecords, applicationAPIs, excludedAPIs)).generate()
         println(CoverageReportTextRenderer().render(apiCoverageReport))
         assertThat(apiCoverageReport).isEqualTo(
-            APICoverageReport(
+            OpenAPICoverageReport(
                 listOf(
-                    APICoverageRow("GET", "/route1", 200, 1, 100),
-                    APICoverageRow("POST", "", 200, 1, 0),
-                    APICoverageRow("", "", 401, 1, 0),
-                    APICoverageRow("GET", "/route2", 200, 1, 100),
-                    APICoverageRow("POST", "", 200, 1, 0)
+                    OpenApiCoverageRow("GET", "/route1", 200, 1, 100),
+                    OpenApiCoverageRow("POST", "", 200, 1, 0),
+                    OpenApiCoverageRow("", "", 401, 1, 0),
+                    OpenApiCoverageRow("GET", "/route2", 200, 1, 100),
+                    OpenApiCoverageRow("POST", "", 200, 1, 0)
                 ),
                 2, 0
             )

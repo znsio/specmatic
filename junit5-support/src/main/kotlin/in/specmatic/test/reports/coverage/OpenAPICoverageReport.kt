@@ -2,7 +2,7 @@ package `in`.specmatic.test.reports.coverage
 
 import kotlin.math.roundToInt
 
-class APICoverageReport(val rows: List<APICoverageRow>, val totalEndpointsCount:Int, val missedEndpointsCount: Int) {
+class OpenAPICoverageReport(val rows: List<OpenApiCoverageRow>, val totalEndpointsCount:Int, val missedEndpointsCount: Int) {
     var totalCoveragePercentage = 0
 
     init {
@@ -12,7 +12,7 @@ class APICoverageReport(val rows: List<APICoverageRow>, val totalEndpointsCount:
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is APICoverageReport) return false
+        if (other !is OpenAPICoverageReport) return false
         return rows == other.rows && missedEndpointsCount == other.missedEndpointsCount
     }
 

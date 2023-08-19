@@ -22,19 +22,4 @@ data class OpenApiCoverageRow(
 
         return "| ${statusFormat.format(coveragePercentage)} | ${pathFormat.format(path)} | ${methodFormat.format(method)} | ${responseFormat.format(responseStatus)} | ${countFormat.format(count)} |"
     }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is OpenApiCoverageRow) return false
-        return method == other.method && path == other.path && responseStatus == other.responseStatus && count == other.count && coveragePercentage == other.coveragePercentage
-    }
-
-    override fun hashCode(): Int {
-        var result = method.hashCode()
-        result = 31 * result + path.hashCode()
-        result = 31 * result + responseStatus.hashCode()
-        result = 31 * result + count.hashCode()
-        result = 31 * result + coveragePercentage.hashCode()
-        return result
-    }
 }

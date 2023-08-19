@@ -104,7 +104,7 @@ data class RepositoryInfo(
 @Serializable
 data class ReportConfiguration(
     val formatters: List<ReportFormatter>? = null,
-    val types: ReportTypes
+    val types: ReportTypes?
 )
 
 @Serializable
@@ -128,13 +128,13 @@ enum class ReportFormatterLayout {
 @Serializable
 data class ReportTypes (
     @SerialName("APICoverage")
-    val apiCoverage: APICoverage
+    val apiCoverage: APICoverage?
 )
 
 @Serializable
 data class APICoverage (
     @SerialName("OpenAPI")
-    val openAPI: APICoverageConfiguration
+    val openAPI: APICoverageConfiguration?
 )
 
 @Serializable

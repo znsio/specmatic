@@ -132,7 +132,7 @@ data class GitRepo(
     }
 
     private fun isEmptyNestedGitDirectory(sourceGit: SystemGit, sourceDir: File) =
-        (sourceGit.workingDirectoryIsGitRepo() && sourceGit.getRemoteUrl() != this.gitRepositoryURL && sourceDir.listFiles()?.isEmpty()!!)
+        (sourceGit.workingDirectoryIsGitRepo() && sourceGit.getRemoteUrl() != this.gitRepositoryURL && sourceDir.listFiles()?.isEmpty() == true)
 }
 
 data class GitMonoRepo(override val testContracts: List<String>, override val stubContracts: List<String>) : ContractSource() {

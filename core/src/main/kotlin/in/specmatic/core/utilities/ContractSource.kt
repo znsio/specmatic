@@ -122,7 +122,7 @@ data class GitRepo(
                 sourceDir.deleteRecursively()
                 sourceDir.mkdirs()
                 println("Cloning ${this.gitRepositoryURL} into ${sourceDir.canonicalPath}")
-                this.cloneRepo(sourceDir.canonicalFile.parentFile, this)
+                this.cloneRepoAndCheckoutBranch(sourceDir.canonicalFile.parentFile, this)
             } else {
                 println("Git repo already exists at ${sourceDir.path}, so ignoring it and moving on")
             }

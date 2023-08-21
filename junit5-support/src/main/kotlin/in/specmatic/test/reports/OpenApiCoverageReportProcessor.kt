@@ -9,23 +9,23 @@ import `in`.specmatic.test.reports.renderers.CoverageReportTextRenderer
 import `in`.specmatic.test.reports.renderers.ReportRenderer
 import org.assertj.core.api.Assertions.assertThat
 
-class OpenApiCoverageReportProcessor(private val reportConfiguration: ReportConfiguration) {
+class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: OpenApiCoverageReportInput ): ReportProcessor {
 
-    fun process(openApiCoverageReportInput: OpenApiCoverageReportInput) {
+    override fun process(reportConfiguration: ReportConfiguration) {
         openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints)
         val openAPICoverageReport = openApiCoverageReportInput.generate()
         if (openAPICoverageReport.rows.isEmpty()) {
             logger.log("The Open API coverage report generated is blank")
         } else {
-            val renderers = configureOpenApiCoverageReportRenderers()
+            val renderers = configureOpenApiCoverageReportRenderers(reportConfiguration)
             renderers.forEach { renderer ->
                 logger.log(renderer.render(openAPICoverageReport))
             }
         }
-        assertFailureCriteria(openAPICoverageReport)
+        assertFailureCriteria(reportConfiguration,openAPICoverageReport)
     }
 
-    private fun configureOpenApiCoverageReportRenderers(): List<ReportRenderer<OpenAPICoverageReport>> {
+    private fun configureOpenApiCoverageReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenAPICoverageReport>> {
         return reportConfiguration.formatters!!.map {
             when (it.type) {
                 ReportFormatterType.TEXT -> CoverageReportTextRenderer()
@@ -34,7 +34,10 @@ class OpenApiCoverageReportProcessor(private val reportConfiguration: ReportConf
         }
     }
 
-    private fun assertFailureCriteria(openAPICoverageReport: OpenAPICoverageReport) {
+    private fun assertFailureCriteria(
+        reportConfiguration: ReportConfiguration,
+        openAPICoverageReport: OpenAPICoverageReport
+    ) {
         val failureCriteria = reportConfiguration.types.apiCoverage.openAPI.failureCriteria
         if (failureCriteria.enforce) {
             val coverageThresholdNotMetMessage =

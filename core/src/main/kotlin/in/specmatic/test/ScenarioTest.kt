@@ -8,7 +8,7 @@ import `in`.specmatic.core.executeTest
 
 class ScenarioTest(val scenario: Scenario, private val generativeTestingEnabled: Boolean = false) : ContractTest {
     override fun testResultRecord(result: Result): TestResultRecord {
-        val resultStatus = if (isBasedOnExample()) result.testResult() else TestResult.Skipped
+        val resultStatus = if (scenario.generatedFromExamples) result.testResult() else TestResult.Skipped
         return TestResultRecord(convertPathParameterStyle(scenario.path), scenario.method, scenario.status, resultStatus)
     }
 
@@ -21,10 +21,6 @@ class ScenarioTest(val scenario: Scenario, private val generativeTestingEnabled:
 
     override fun testDescription(): String {
         return scenario.testDescription()
-    }
-
-    override fun isBasedOnExample(): Boolean {
-        return scenario.examples.isNotEmpty()
     }
 
     override fun runTest(host: String?, port: String?, timeout: Int): Result {

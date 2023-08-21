@@ -88,11 +88,6 @@ data class SpecmaticConfigJson(
     val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null
 ) {
-    companion object {
-        fun load(configFileName: String? = null): SpecmaticConfigJson {
-            return SpecmaticJsonFormat.decodeFromString(File(configFileName ?: globalConfigFileName).readText())
-        }
-    }
 }
 
 @Serializable

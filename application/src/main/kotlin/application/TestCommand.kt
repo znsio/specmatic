@@ -111,6 +111,7 @@ class TestCommand : Callable<Unit> {
             System.setProperty(CONFIG_FILE_NAME, it)
         }
 
+        //TODO (review) No need to pass the config from here, read it directly from JUnit5 support
         val reportConfiguration = specmaticConfig.reportConfiguration()
         System.setProperty(REPORT_CONFIGURATION, reportConfiguration?.let { Json.encodeToString(it) } ?: "")
 

@@ -82,8 +82,7 @@ open class SpecmaticJUnitSupport {
                 true -> ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
                 else -> {
                     val config = Json.decodeFromString<ReportConfiguration>(reportConfiguration)
-                    val formatters = config.formatters ?: defaultFormatters
-                    config.copy(formatters = formatters)
+                    config.copy(formatters = config.formatters ?: defaultFormatters)
                 }
             }
         }

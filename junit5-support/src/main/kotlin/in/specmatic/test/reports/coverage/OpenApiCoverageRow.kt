@@ -15,6 +15,7 @@ data class OpenApiCoverageRow(
 
         val pathFormat = "%${maxPathSize}s"
         val methodFormat = "%${"method".length}s"
+        //TODO (review) the count of spaces in the string with spaces should be derived from response length
         val responseFormat = if (responseStatus != "0") "%${"response".length}s" else "        "
         val countFormat = "%${"count".length}s"
 

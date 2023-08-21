@@ -18,10 +18,6 @@ class ScenarioTestGenerationFailure(val scenario: Scenario, val e: Throwable) : 
         return scenario.testDescription()
     }
 
-    override fun isBasedOnExample(): Boolean {
-        return scenario.examples.isNotEmpty()
-    }
-
     override fun runTest(host: String?, port: String?, timeout: Int): Result {
         return Result.Failure(exceptionCauseMessage(e)).updateScenario(scenario)
     }

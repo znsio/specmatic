@@ -1,9 +1,9 @@
 package application
 
-import `in`.specmatic.core.SpecmaticConfigJson
 import `in`.specmatic.core.azure.AzureAPI
 import `in`.specmatic.core.azure.PersonalAccessToken
 import `in`.specmatic.core.git.getPersonalAccessToken
+import `in`.specmatic.core.loadSpecmaticJsonConfig
 import `in`.specmatic.core.log.CompositePrinter
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
@@ -11,31 +11,50 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exitWithMessage
 import picocli.CommandLine
 import picocli.CommandLine.Option
-import picocli.CommandLine.Parameters
 import java.util.concurrent.Callable
 
 @CommandLine.Command(name = "graph",
     mixinStandardHelpOptions = true,
     description = ["Dependency graph"])
 class GraphCommand: Callable<Unit> {
-    @CommandLine.Command(name = "consumers", description = ["Display a list of services depending on contracts in this repo"])
-    fun consumers(@Option(names = ["--verbose"], description = ["Print verbose logs"]) verbose: Boolean = false, @Option(names = ["--azureBaseURL"], description = ["Azure base URL"], required = true) azureBaseURL: String) {
-        if(verbose)
+    @CommandLine.Command(
+        name = "consumers",
+        description = ["Display a list of services depending on contracts in this repo"]
+    )
+    fun consumers(
+        @Option(names = ["--verbose"], description = ["Print verbose logs"]) verbose: Boolean = false,
+        @Option(
+            names = ["--azureBaseURL"],
+            description = ["Azure base URL"],
+            required = true
+        ) azureBaseURL: String
+    ) {
+        if (verbose)
             logger = Verbose(CompositePrinter())
 
-        val configJson = SpecmaticConfigJson.load()
+        val configJson = loadSpecmaticJsonConfig(null)
 
-        val azureAuthToken = PersonalAccessToken(getPersonalAccessToken() ?: throw ContractException("Access token not found, put it in ${System.getProperty("user.home")}/specmatic.json"))
+        val azureAuthToken = PersonalAccessToken(
+            getPersonalAccessToken() ?: throw ContractException(
+                "Access token not found, put it in ${
+                    System.getProperty(
+                        "user.home"
+                    )
+                }/specmatic.json"
+            )
+        )
 
         val repository = configJson.repository
-            ?: exitWithMessage("""specmatic.json needs to contain a the repository information, as below:
+            ?: exitWithMessage(
+                """specmatic.json needs to contain a the repository information, as below:
                     |{
                     |  "repository": {
                     |    "provider": "azure"
                     |    "collectionName": "NameOfTheCollectionContainingThisProject"
                     |  }
                     |}
-                """.trimMargin())
+                """.trimMargin()
+            )
 
         val collection = repository.collectionName
         val azure = AzureAPI(azureAuthToken, azureBaseURL, collection)
@@ -50,7 +69,7 @@ class GraphCommand: Callable<Unit> {
                 logger.log("  Consumers of $relativeContractPath")
                 val consumers = azure.referencesToContract(relativeContractPath)
 
-                if(consumers.isEmpty()) {
+                if (consumers.isEmpty()) {
                     logger.log("    ** no consumers found **")
                 } else {
                     consumers.forEach {

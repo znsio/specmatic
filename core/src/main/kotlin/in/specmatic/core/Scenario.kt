@@ -50,7 +50,8 @@ data class Scenario(
     val isNegative: Boolean = false,
     val badRequestOrDefault: BadRequestOrDefault? = null,
     val exampleName: String? = null,
-    val generativeTestingEnabled: Boolean = false
+    val generativeTestingEnabled: Boolean = false,
+    val generatedFromExamples: Boolean = examples.isNotEmpty()
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,

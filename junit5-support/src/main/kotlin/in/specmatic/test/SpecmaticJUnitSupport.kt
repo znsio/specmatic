@@ -17,8 +17,6 @@ import `in`.specmatic.stub.isYAML
 import `in`.specmatic.test.reports.ReportProcessor
 import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -59,7 +57,6 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NAME = "filterName"
         const val FILTER_NOT_NAME = "filterNotName"
         const val ENDPOINTS_API = "endpointsAPI"
-        const val REPORT_CONFIGURATION = "reportConfiguration"
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
@@ -74,15 +71,21 @@ open class SpecmaticJUnitSupport {
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            val reportConfiguration = System.getProperty(REPORT_CONFIGURATION)
+            val reportConfiguration = reportConfigurationFromConfig()
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
+            val defaultFailureCriteria = FailureCriteria(70, 0, true)
             val defaultReportTypes =
-                ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(failureCriteria = FailureCriteria())))
-            return when (reportConfiguration.isEmpty()) {
-                true -> ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
+                ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(failureCriteria = defaultFailureCriteria)))
+            return when (reportConfiguration) {
+                null -> {
+                    logger.log("Report configuration found empty")
+                    logger.log("Configuring OpenAPI coverage report with the following default failure criteria:")
+                    logger.log("minThresholdPercentage: ${defaultFailureCriteria.minThresholdPercentage}%")
+                    logger.log("maxMissedEndpointsInSpec: ${defaultFailureCriteria.maxMissedEndpointsInSpec}%")
+                    ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
+                }
                 else -> {
-                    val config = Json.decodeFromString<ReportConfiguration>(reportConfiguration)
-                    config.copy(formatters = config.formatters ?: defaultFormatters)
+                    reportConfiguration.copy(formatters = reportConfiguration.formatters ?: defaultFormatters)
                 }
             }
         }
@@ -127,6 +130,10 @@ open class SpecmaticJUnitSupport {
             } else {
                 logger.log("Endpoints API not found, cannot calculate actual coverage")
             }
+        }
+
+        fun reportConfigurationFromConfig(): ReportConfiguration? {
+            return reportConfigurationFrom(globalConfigFileName)
         }
     }
 

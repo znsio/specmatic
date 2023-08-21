@@ -25,7 +25,6 @@ class OpenApiCoverageReportInput(
     }
 
     fun generate(): OpenAPICoverageReport {
-        // TODO (review) Move to the OpenApiCoverageReportInput class
         var allAPITests = createConsolidatedListOfTestResultsForAllAPIs()
         allAPITests = sortByPathMethodResponseStatus(allAPITests)
 

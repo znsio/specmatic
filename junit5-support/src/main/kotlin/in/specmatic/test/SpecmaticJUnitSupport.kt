@@ -73,15 +73,11 @@ open class SpecmaticJUnitSupport {
         private fun getReportConfiguration(): ReportConfiguration {
             val reportConfiguration = reportConfigurationFromConfig()
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
-            val defaultFailureCriteria = FailureCriteria(70, 0, true)
             val defaultReportTypes =
-                ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(failureCriteria = defaultFailureCriteria)))
+                ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(failureCriteria = FailureCriteria(0, 0, false))))
             return when (reportConfiguration) {
                 null -> {
-                    logger.log("Report configuration found empty")
-                    logger.log("Configuring OpenAPI coverage report with the following default failure criteria:")
-                    logger.log("minThresholdPercentage: ${defaultFailureCriteria.minThresholdPercentage}%")
-                    logger.log("maxMissedEndpointsInSpec: ${defaultFailureCriteria.maxMissedEndpointsInSpec}%")
+                    logger.log("Report configuration found empty, hence configuring OpenAPI coverage report without any failure criteria ")
                     ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
                 }
                 else -> {

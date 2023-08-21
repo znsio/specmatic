@@ -150,5 +150,13 @@ val SpecmaticJsonFormat = Json {
 }
 
 fun loadSpecmaticJsonConfig(configFileName: String?): SpecmaticConfigJson {
-    return SpecmaticJsonFormat.decodeFromString(File(configFileName ?: globalConfigFileName).readText())
+    val configFile = File(configFileName ?: globalConfigFileName)
+    if (!configFile.exists()) {
+        throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_FILE_NAME} at path ${configFile.absolutePath}")
+    }
+    try {
+        return SpecmaticJsonFormat.decodeFromString(configFile.readText())
+    } catch (e: Throwable) {
+        throw ContractException("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json fie adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
+    }
 }

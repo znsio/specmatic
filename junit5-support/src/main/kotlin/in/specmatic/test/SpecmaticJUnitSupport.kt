@@ -14,7 +14,7 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.stub.isYAML
-import `in`.specmatic.test.reports.ReportProcessor
+import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
 import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterAll
@@ -66,7 +66,7 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
-            val reportProcessor = ReportProcessor(reportConfiguration)
+            val reportProcessor = OpenApiCoverageReportProcessor(reportConfiguration)
             reportProcessor.process(openApiCoverageReportInput)
         }
 

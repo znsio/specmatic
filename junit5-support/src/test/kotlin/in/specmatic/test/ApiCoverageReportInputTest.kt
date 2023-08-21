@@ -2,14 +2,13 @@ package `in`.specmatic.test
 
 import `in`.specmatic.core.TestResult
 import `in`.specmatic.test.reports.coverage.OpenAPICoverageReport
-import `in`.specmatic.test.reports.coverage.OpenApiCoverageRow
 import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
-import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportGenerator
+import `in`.specmatic.test.reports.coverage.OpenApiCoverageRow
 import `in`.specmatic.test.reports.renderers.CoverageReportTextRenderer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class ApiCoverageReportGeneratorTest {
+class ApiCoverageReportInputTest {
     @Test
     fun `test coverage report when all routes are covered`() {
         val testReportRecords = mutableListOf(
@@ -24,7 +23,7 @@ class ApiCoverageReportGeneratorTest {
             API("GET", "/route2")
         )
 
-        val apiCoverageReport = OpenApiCoverageReportGenerator(OpenApiCoverageReportInput(testReportRecords, applicationAPIs)).generate()
+        val apiCoverageReport = OpenApiCoverageReportInput(testReportRecords, applicationAPIs).generate()
         println(CoverageReportTextRenderer().render(apiCoverageReport))
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageReport(
@@ -57,7 +56,7 @@ class ApiCoverageReportGeneratorTest {
             TestResultRecord("/route2", "GET", 200, TestResult.Success),
         )
 
-        val apiCoverageReport = OpenApiCoverageReportGenerator(OpenApiCoverageReportInput(testReportRecords, applicationAPIs)).generate()
+        val apiCoverageReport = OpenApiCoverageReportInput(testReportRecords, applicationAPIs).generate()
         println(CoverageReportTextRenderer().render(apiCoverageReport))
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageReport(
@@ -99,7 +98,7 @@ class ApiCoverageReportGeneratorTest {
         )
 
 
-        val apiCoverageReport = OpenApiCoverageReportGenerator(OpenApiCoverageReportInput(testReportRecords, applicationAPIs, excludedAPIs)).generate()
+        val apiCoverageReport = OpenApiCoverageReportInput(testReportRecords, applicationAPIs, excludedAPIs).generate()
         println(CoverageReportTextRenderer().render(apiCoverageReport))
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageReport(

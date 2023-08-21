@@ -66,7 +66,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     }
 
     override fun fetch(): String {
-        return execute(Configuration.gitCommand, "fetch")
+        return executeWithAuth("fetch")
     }
 
     override fun revisionsBehindCount(): Int {

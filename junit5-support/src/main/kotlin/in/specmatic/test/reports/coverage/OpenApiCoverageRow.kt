@@ -17,7 +17,7 @@ data class OpenApiCoverageRow(
         val pathFormat = "%${maxPathSize}s"
         val methodFormat = "%${"method".length}s"
         val responseFormat = if (responseStatus != "0") "%${responseCellWidthMarkerString.length}s" else " ".repeat(responseCellWidthMarkerString.length)
-        val countFormat = "%${"count".length}s"
+        val countFormat = "%${"#excercised".length}s"
 
         val coveragePercentage = if(path.isNotEmpty()) "$coveragePercentage%" else ""
 

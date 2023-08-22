@@ -11,15 +11,15 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
         val pathFormat = "%${maxPathSize}s"
         val methodFormat = "%${"method".length}s"
         val responseStatus = "%${"response".length}s"
-        val countFormat = "%${"count".length}s"
+        val countFormat = "%${"#excercised".length}s"
 
         val tableHeader =
             "| ${statusFormat.format("coverage")} | ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${responseStatus.format("response")} | ${
-                countFormat.format("count")
+                countFormat.format("#excercised")
             } |"
         val headerSeparator =
             "|-${"-".repeat(longestCoveragePercentageValue.length)}-|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|-${responseStatus.format("--------")}-|-${
-                countFormat.format("-----")
+                countFormat.format("-----------")
             }-|"
 
         val headerTitleSize = tableHeader.length - 4

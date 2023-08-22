@@ -11,7 +11,7 @@ class OpenApiCoverageRowTest {
         val path  = "/route1"
         val coverageRowString = OpenApiCoverageRow("GET", path, 200, 1, 100).toRowString(path.length)
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("|     100% | /route1 |    GET |      200 |     1 |")
+        assertThat(coverageRowString).isEqualTo("|     100% | /route1 |    GET |      200 |           1 |")
     }
 
     @Test
@@ -19,7 +19,7 @@ class OpenApiCoverageRowTest {
         val path  = "/route1"
         val coverageRowString = OpenApiCoverageRow("POST", "", 200, 1, 0).toRowString(path.length)
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("|          |         |   POST |      200 |     1 |")
+        assertThat(coverageRowString).isEqualTo("|          |         |   POST |      200 |           1 |")
     }
 
     @Test
@@ -27,7 +27,7 @@ class OpenApiCoverageRowTest {
         val path  = "/route1"
         val coverageRowString = OpenApiCoverageRow("GET", path, 0, 0, 0).toRowString(path.length)
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("|       0% | /route1 |    GET |          |     0 |")
+        assertThat(coverageRowString).isEqualTo("|       0% | /route1 |    GET |          |           0 |")
     }
 
 
@@ -36,6 +36,6 @@ class OpenApiCoverageRowTest {
         val path  = "/route1"
         val coverageRowString = OpenApiCoverageRow("POST", "", 0, 1, 0).toRowString(path.length)
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("|          |         |   POST |          |     1 |")
+        assertThat(coverageRowString).isEqualTo("|          |         |   POST |          |           1 |")
     }
 }

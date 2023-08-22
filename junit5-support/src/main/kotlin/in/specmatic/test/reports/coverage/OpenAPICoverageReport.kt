@@ -5,7 +5,8 @@ import kotlin.math.roundToInt
 data class OpenAPICoverageReport(
     val rows: List<OpenApiCoverageRow>,
     val totalEndpointsCount: Int,
-    val missedEndpointsCount: Int
+    val missedEndpointsCount: Int,
+    val notImplementedAPICount: Int
 ) {
     val totalCoveragePercentage: Int = (coveragePercentageSum(rows) / totalEndpointsCount).toDouble().roundToInt()
 

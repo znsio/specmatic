@@ -40,7 +40,10 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
 
         val missingAPIsMessageRows:MutableList<String> = mutableListOf()
         if(report.missedEndpointsCount > 0) {
-            missingAPIsMessageRows.add("${report.missedEndpointsCount} out of ${report.totalEndpointsCount} Endpoints are not completely covered in the specification.")
+            missingAPIsMessageRows.add("${report.missedEndpointsCount} out of ${report.totalEndpointsCount} endpoints are not completely covered in the specification.")
+        }
+        if(report.notImplementedAPICount > 0) {
+            missingAPIsMessageRows.add("${report.notImplementedAPICount} out of ${report.totalEndpointsCount} endpoints have not been completely implemented.")
         }
         return coveredAPIsTable + System.lineSeparator()  + missingAPIsMessageRows.joinToString(System.lineSeparator())
     }

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 
 class ApiCoverageReportInputTest {
     @Test
-    fun `test coverage report when all routes are covered`() {
+    fun `test coverage report when all endpoints are covered`() {
         val testReportRecords = mutableListOf(
             TestResultRecord("/route1", "GET", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
@@ -33,13 +33,13 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageRow("", "", "401", "1"),
                     OpenApiCoverageRow("GET", "/route2", 200, 1, 100)
                 ),
-                2, 0
+                2, 0,  0
             )
         )
     }
 
     @Test
-    fun `test coverage report when some routes are partially covered`() {
+    fun `test coverage report when some endpoints are partially covered`() {
         val applicationAPIs = mutableListOf(
             API("GET", "/route1"),
             API("POST", "/route1"),
@@ -69,13 +69,13 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageRow("GET", "/route3", 0, 0, 0),
                     OpenApiCoverageRow("POST", "", 0, 0, 0)
                 ),
-                3, 2
+                3, 2, 0
             )
         )
     }
 
     @Test
-    fun `test coverage report when some routes are marked as excluded`() {
+    fun `test coverage report when some endpoints are marked as excluded`() {
         val testReportRecords = mutableListOf(
             TestResultRecord("/route1", "GET", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
@@ -109,13 +109,13 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageRow("GET", "/route2", 200, 1, 100),
                     OpenApiCoverageRow("POST", "", 200, 1, 0)
                 ),
-                2, 0
+                2, 0, 0
             )
         )
     }
 
     @Test
-    fun `test coverage report when some routes or operations are present in spec, but not implemented`() {
+    fun `test coverage report when some endpoints or operations are present in spec, but not implemented`() {
         val applicationAPIs = mutableListOf(
             API("GET", "/route1"),
             API("POST", "/route1"),
@@ -126,7 +126,7 @@ class ApiCoverageReportInputTest {
             TestResultRecord("/route1", "GET", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
             TestResultRecord("/route2", "GET", 200, TestResult.Success),
-            TestResultRecord("/route2", "POST", 404, TestResult.Failed)
+            TestResultRecord("/route2", "POST", 200, TestResult.Failed)
         )
 
         val apiCoverageReport = OpenApiCoverageReportInput(testReportRecords, applicationAPIs).generate()
@@ -137,9 +137,43 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageRow("GET", "/route1", 200, 1, 100),
                     OpenApiCoverageRow("POST", "", 200, 1, 0),
                     OpenApiCoverageRow("GET", "/route2", 200, 1, 50),
-                    OpenApiCoverageRow("POST", "", 404, 0, 0)
+                    OpenApiCoverageRow("POST", "", 200, 0, 0)
                 ),
-                2, 0
+                2, 0, 1
+            )
+        )
+    }
+
+    @Test
+    fun `test coverage report when partially covered and partially implemented endpoints`() {
+        val applicationAPIs = mutableListOf(
+            API("GET", "/route1"),
+            API("POST", "/route1"),
+            API("GET", "/route2"),
+            API("GET", "/route3"),
+            API("POST", "/route3")
+        )
+
+        val testReportRecords = mutableListOf(
+            TestResultRecord("/route1", "GET", 200, TestResult.Success),
+            TestResultRecord("/route1", "POST", 200, TestResult.Success),
+            TestResultRecord("/route2", "GET", 200, TestResult.Success),
+            TestResultRecord("/route2", "POST", 200, TestResult.Failed)
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(testReportRecords, applicationAPIs).generate()
+        println(CoverageReportTextRenderer().render(apiCoverageReport))
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageReport(
+                listOf(
+                    OpenApiCoverageRow("GET", "/route1", 200, 1, 100),
+                    OpenApiCoverageRow("POST", "", 200, 1, 0),
+                    OpenApiCoverageRow("GET", "/route2", 200, 1, 50),
+                    OpenApiCoverageRow("POST", "", 200, 0, 0),
+                    OpenApiCoverageRow("GET", "/route3", 0, 0, 0),
+                    OpenApiCoverageRow("POST", "", 0, 0, 0)
+                ),
+                3, 1, 1
             )
         )
     }

@@ -25,9 +25,9 @@ class OpenApiCoverageReportInput(
     }
 
     fun generate(): OpenAPICoverageReport {
-        // If we get a failed test with response code 404, then it means that the particular endpoint operation exists in the spec, but has not been implemented.
+        // If we get a failed test whose path and method are not found in the actuator, it means that the particular operation exists in the spec, but has not been implemented.
         testResultRecords.forEach{
-            if(it.responseStatus == 404 && it.result == TestResult.Failed){
+            if(it.result == TestResult.Failed && applicationAPIs.none{api -> api.path == it.path && api.method == it.method}){
                 testResultRecords[testResultRecords.indexOf(it)] = it.copy(result = TestResult.NotImplemented)
             }
         }
@@ -77,8 +77,9 @@ class OpenApiCoverageReportInput(
 
         val totalAPICount = apiTestsGrouped.keys.size
         val missedAPICount = allAPITests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.Skipped } }.size
+        val notImplementedAPICount = allAPITests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.NotImplemented } }.size
 
-        return OpenAPICoverageReport(apiCoverageRows, totalAPICount, missedAPICount)
+        return OpenAPICoverageReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount)
     }
 
     private fun sortByPathMethodResponseStatus(testResultRecordList: List<TestResultRecord>): List<TestResultRecord> {

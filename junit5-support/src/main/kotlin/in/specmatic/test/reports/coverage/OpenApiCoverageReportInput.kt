@@ -25,7 +25,7 @@ class OpenApiCoverageReportInput(
     }
 
     fun generate(): OpenAPICoverageReport {
-        var allAPITests = createConsolidatedListOfTestResultsForAllAPIs()
+        var allAPITests = addTestResultsForMissingEndpoints()
         allAPITests = sortByPathMethodResponseStatus(allAPITests)
 
         // Creates a structure which looks like this:
@@ -88,7 +88,7 @@ class OpenApiCoverageReportInput(
         }.flatten()
     }
 
-    private fun createConsolidatedListOfTestResultsForAllAPIs(): List<TestResultRecord> {
+    private fun addTestResultsForMissingEndpoints(): List<TestResultRecord> {
         val testReportRecordsIncludingMissingAPIs = testResultRecords.toMutableList()
         applicationAPIs.forEach { api ->
             if (testResultRecords.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {

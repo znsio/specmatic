@@ -43,12 +43,19 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
             val coverageThresholdNotMetMessage =
                 "Total coverage: ${openAPICoverageReport.totalCoveragePercentage}% is less than the specified minimum threshold of ${failureCriteria.minThresholdPercentage}%"
             val missedEndpointsCountExceededMessage =
-                "Total missed endpoints count: ${openAPICoverageReport.missedEndpointsCount}% is greater than the maximum threshold of ${failureCriteria.maxMissedEndpointsInSpec}"
-            if(openAPICoverageReport.totalCoveragePercentage < failureCriteria.minThresholdPercentage) {
-                logger.log(coverageThresholdNotMetMessage)
-            }
-            if(openAPICoverageReport.missedEndpointsCount > failureCriteria.maxMissedEndpointsInSpec) {
-                logger.log(missedEndpointsCountExceededMessage)
+                "Total missed endpoints count: ${openAPICoverageReport.missedEndpointsCount} is greater than the maximum threshold of ${failureCriteria.maxMissedEndpointsInSpec}"
+            val minCoverageThresholdNotMet = openAPICoverageReport.totalCoveragePercentage < failureCriteria.minThresholdPercentage
+            val maxMissingEndpointsExceeded = openAPICoverageReport.missedEndpointsCount > failureCriteria.maxMissedEndpointsInSpec
+            if(minCoverageThresholdNotMet || maxMissingEndpointsExceeded){
+                logger.newLine()
+                logger.log("The following failure criteria specified for the OpenAPI Coverage Report was not met:")
+                if(minCoverageThresholdNotMet) {
+                    logger.log(coverageThresholdNotMetMessage)
+                }
+                if(maxMissingEndpointsExceeded) {
+                    logger.log(missedEndpointsCountExceededMessage)
+                }
+                logger.newLine()
             }
             assertThat(openAPICoverageReport.totalCoveragePercentage).withFailMessage(coverageThresholdNotMetMessage)
                 .isGreaterThanOrEqualTo(failureCriteria.minThresholdPercentage)

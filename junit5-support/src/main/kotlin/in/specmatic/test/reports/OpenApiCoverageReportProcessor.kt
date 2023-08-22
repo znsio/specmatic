@@ -22,7 +22,7 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
                 logger.log(renderer.render(openAPICoverageReport))
             }
         }
-        assertFailureCriteria(reportConfiguration,openAPICoverageReport)
+        assertSuccessCriteria(reportConfiguration,openAPICoverageReport)
     }
 
     private fun configureOpenApiCoverageReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenAPICoverageReport>> {
@@ -34,33 +34,31 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
         }
     }
 
-    private fun assertFailureCriteria(
+    private fun assertSuccessCriteria(
         reportConfiguration: ReportConfiguration,
         openAPICoverageReport: OpenAPICoverageReport
     ) {
-        val failureCriteria = reportConfiguration.types.apiCoverage.openAPI.failureCriteria
-        if (failureCriteria.enforce) {
+        val successCriteria = reportConfiguration.types.apiCoverage.openAPI.successCriteria
+        if (successCriteria.enforce) {
             val coverageThresholdNotMetMessage =
-                "Total coverage: ${openAPICoverageReport.totalCoveragePercentage}% is less than the specified minimum threshold of ${failureCriteria.minThresholdPercentage}%"
+                "Total API coverage: ${openAPICoverageReport.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.minThresholdPercentage}%."
             val missedEndpointsCountExceededMessage =
-                "Total missed endpoints count: ${openAPICoverageReport.missedEndpointsCount} is greater than the maximum threshold of ${failureCriteria.maxMissedEndpointsInSpec}"
-            val minCoverageThresholdNotMet = openAPICoverageReport.totalCoveragePercentage < failureCriteria.minThresholdPercentage
-            val maxMissingEndpointsExceeded = openAPICoverageReport.missedEndpointsCount > failureCriteria.maxMissedEndpointsInSpec
-            if(minCoverageThresholdNotMet || maxMissingEndpointsExceeded){
+                "Total missed endpoints count: ${openAPICoverageReport.missedEndpointsCount} is greater than the maximum threshold of ${successCriteria.maxMissedEndpointsInSpec}."
+            val minCoverageThresholdCriteriaMet = openAPICoverageReport.totalCoveragePercentage >= successCriteria.minThresholdPercentage
+            val maxMissingEndpointsExceededCriteriaMet = openAPICoverageReport.missedEndpointsCount <= successCriteria.maxMissedEndpointsInSpec
+            val coverageReportSuccessCriteriaMet = minCoverageThresholdCriteriaMet && maxMissingEndpointsExceededCriteriaMet
+            if(!coverageReportSuccessCriteriaMet){
                 logger.newLine()
-                logger.log("The following failure criteria specified for the OpenAPI Coverage Report was not met:")
-                if(minCoverageThresholdNotMet) {
+                logger.log("Build failed due to:")
+                if(!minCoverageThresholdCriteriaMet) {
                     logger.log(coverageThresholdNotMetMessage)
                 }
-                if(maxMissingEndpointsExceeded) {
+                if(!maxMissingEndpointsExceededCriteriaMet) {
                     logger.log(missedEndpointsCountExceededMessage)
                 }
                 logger.newLine()
             }
-            assertThat(openAPICoverageReport.totalCoveragePercentage).withFailMessage(coverageThresholdNotMetMessage)
-                .isGreaterThanOrEqualTo(failureCriteria.minThresholdPercentage)
-            assertThat(openAPICoverageReport.missedEndpointsCount).withFailMessage(missedEndpointsCountExceededMessage)
-                .isLessThanOrEqualTo(failureCriteria.maxMissedEndpointsInSpec)
+            assertThat(coverageReportSuccessCriteriaMet).withFailMessage("One or more success criteria specified for the API Coverage report were not met.").isTrue
         }
     }
 }

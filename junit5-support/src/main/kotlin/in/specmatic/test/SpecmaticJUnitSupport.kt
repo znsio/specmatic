@@ -23,22 +23,8 @@ import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import java.io.File
 
-fun longestStatus(): String {
-    val longestStatus = listOf(
-        CoverageStatus.Covered.toString().lowercase(),
-        CoverageStatus.Missed.toString().lowercase(),
-        "coverage"
-    ).sortedByDescending { it.length }.first()
-    return longestStatus
-}
-
 @Serializable
 data class API(val method: String, val path: String)
-
-enum class CoverageStatus {
-    Covered,
-    Missed
-}
 
 open class SpecmaticJUnitSupport {
     companion object {
@@ -74,7 +60,7 @@ open class SpecmaticJUnitSupport {
             val reportConfiguration = reportConfigurationFromConfig()
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
             val defaultReportTypes =
-                ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(failureCriteria = FailureCriteria(0, 0, false))))
+                ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
             return when (reportConfiguration) {
                 null -> {
                     logger.log("Report configuration found empty, hence configuring OpenAPI coverage report without any failure criteria ")

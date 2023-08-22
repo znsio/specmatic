@@ -45,7 +45,7 @@
     "types": {
       "APICoverage": {
         "OpenAPI": {
-          "failureCriteria": {
+          "successCriteria": {
             "minThresholdPercentage": 70,
             "maxMissedEndpointsInSpec": 3,
             "enforce": true

@@ -134,12 +134,12 @@ data class APICoverage (
 
 @Serializable
 data class APICoverageConfiguration(
-    val failureCriteria: FailureCriteria,
+    val successCriteria: SuccessCriteria,
     val excludedEndpoints: List<String> = emptyList()
 )
 
 @Serializable
-data class FailureCriteria(
+data class SuccessCriteria(
     val minThresholdPercentage: Int,
     val maxMissedEndpointsInSpec: Int,
     val enforce: Boolean = false

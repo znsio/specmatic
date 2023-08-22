@@ -113,4 +113,34 @@ class ApiCoverageReportInputTest {
             )
         )
     }
+
+    @Test
+    fun `test coverage report when some routes or operations are present in spec, but not implemented`() {
+        val applicationAPIs = mutableListOf(
+            API("GET", "/route1"),
+            API("POST", "/route1"),
+            API("GET", "/route2")
+        )
+
+        val testReportRecords = mutableListOf(
+            TestResultRecord("/route1", "GET", 200, TestResult.Success),
+            TestResultRecord("/route1", "POST", 200, TestResult.Success),
+            TestResultRecord("/route2", "GET", 200, TestResult.Success),
+            TestResultRecord("/route2", "POST", 404, TestResult.Failed)
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(testReportRecords, applicationAPIs).generate()
+        println(CoverageReportTextRenderer().render(apiCoverageReport))
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageReport(
+                listOf(
+                    OpenApiCoverageRow("GET", "/route1", 200, 1, 100),
+                    OpenApiCoverageRow("POST", "", 200, 1, 0),
+                    OpenApiCoverageRow("GET", "/route2", 200, 1, 50),
+                    OpenApiCoverageRow("POST", "", 404, 0, 0)
+                ),
+                2, 0
+            )
+        )
+    }
 }

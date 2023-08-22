@@ -58,7 +58,7 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
                 }
                 logger.newLine()
             }
-            assertThat(coverageReportSuccessCriteriaMet).withFailMessage("One or more success criteria specified for the API Coverage report were not met.").isTrue
+            assertThat(coverageReportSuccessCriteriaMet).withFailMessage("One or more API Coverage report's success criteria were not met.").isTrue
         }
     }
 }

@@ -185,7 +185,8 @@ enum class TestResult {
     Success,
     Error,
     Failed,
-    Skipped
+    Skipped,
+    NotImplemented
 }
 
 enum class FailureReason(val fluffLevel: Int) {

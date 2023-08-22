@@ -25,6 +25,12 @@ class OpenApiCoverageReportInput(
     }
 
     fun generate(): OpenAPICoverageReport {
+        // If we get a failed test with response code 404, then it means that the particular endpoint operation exists in the spec, but has not been implemented.
+        testResultRecords.forEach{
+            if(it.responseStatus == 404 && it.result == TestResult.Failed){
+                testResultRecords[testResultRecords.indexOf(it)] = it.copy(result = TestResult.NotImplemented)
+            }
+        }
         var allAPITests = addTestResultsForMissingEndpoints()
         allAPITests = sortByPathMethodResponseStatus(allAPITests)
 
@@ -59,7 +65,7 @@ class OpenApiCoverageReportInput(
                                 method = rowMethod,
                                 path ="",
                                 responseStatus = responseStatus.toString(),
-                                count = testResults.count{it.result != TestResult.Skipped}.toString(),
+                                count = testResults.count{it.includeForCoverage}.toString(),
                                 coveragePercentage = 0
                             )
                         )
@@ -104,19 +110,19 @@ class OpenApiCoverageReportInput(
     ): OpenApiCoverageRow {
         val method = methodMap.keys.first()
         val responseStatus = methodMap[method]?.keys?.first()
-        val count = methodMap[method]?.get(responseStatus)?.count { it.result != TestResult.Skipped }
+        val count = methodMap[method]?.get(responseStatus)?.count { it.includeForCoverage }
 
         val totalMethodResponseCodeCount = methodMap.values.sumOf { it.keys.size }
-        var totalMethodResponseCodeExecutedWithExamples = 0
+        var totalMethodResponseCodeCoveredCount = 0
         methodMap.forEach { (_, responses) ->
             responses.forEach { (_, testResults) ->
-                val nonSkippedTestsCount = min(testResults.count { it.result != TestResult.Skipped }, 1)
-                totalMethodResponseCodeExecutedWithExamples += nonSkippedTestsCount
+                val increment = min(testResults.count { it.includeForCoverage }, 1)
+                totalMethodResponseCodeCoveredCount += increment
             }
         }
 
         val coveragePercentage =
-            ((totalMethodResponseCodeExecutedWithExamples.toFloat() / totalMethodResponseCodeCount.toFloat()) * 100).roundToInt()
+            ((totalMethodResponseCodeCoveredCount.toFloat() / totalMethodResponseCodeCount.toFloat()) * 100).roundToInt()
         return OpenApiCoverageRow(
             method,
             route,
@@ -125,4 +131,5 @@ class OpenApiCoverageReportInput(
             coveragePercentage
         )
     }
+
 }

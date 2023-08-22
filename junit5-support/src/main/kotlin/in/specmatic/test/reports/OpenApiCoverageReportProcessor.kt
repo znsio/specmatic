@@ -49,7 +49,7 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
             val coverageReportSuccessCriteriaMet = minCoverageThresholdCriteriaMet && maxMissingEndpointsExceededCriteriaMet
             if(!coverageReportSuccessCriteriaMet){
                 logger.newLine()
-                logger.log("Build failed due to:")
+                logger.log("API Coverage Report success criteria failures:")
                 if(!minCoverageThresholdCriteriaMet) {
                     logger.log(coverageThresholdNotMetMessage)
                 }

@@ -8,9 +8,9 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 class OpenApiCoverageReportInput(
-    val testResultRecords: MutableList<TestResultRecord> = mutableListOf(),
-    val applicationAPIs: MutableList<API> = mutableListOf(),
-    val excludedAPIs: MutableList<String> = mutableListOf()
+    private val testResultRecords: MutableList<TestResultRecord> = mutableListOf(),
+    private val applicationAPIs: MutableList<API> = mutableListOf(),
+    private val excludedAPIs: MutableList<String> = mutableListOf()
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testResultRecords.add(testResultRecord)
@@ -25,13 +25,13 @@ class OpenApiCoverageReportInput(
     }
 
     fun generate(): OpenAPICoverageReport {
-        // If we get a failed test whose path and method are not found in the actuator, it means that the particular operation exists in the spec, but has not been implemented.
-        testResultRecords.forEach{
-            if(it.result == TestResult.Failed && applicationAPIs.none{api -> api.path == it.path && api.method == it.method}){
-                testResultRecords[testResultRecords.indexOf(it)] = it.copy(result = TestResult.NotImplemented)
-            }
-        }
-        var allAPITests = addTestResultsForMissingEndpoints()
+        // If we get a failed test whose path and method are not found in the actuator, it means that the operation exists in the spec, but has not been implemented.
+        val notImplementedTests =
+            testResultRecords.filter { it.result == TestResult.Failed && applicationAPIs.none { api -> api.path == it.path && api.method == it.method } }
+        val testResults = testResultRecords.minus(notImplementedTests.toSet())
+            .plus(notImplementedTests.map { it.copy(result = TestResult.NotImplemented) })
+
+        var allAPITests = addTestResultsForMissingEndpoints(testResults)
         allAPITests = sortByPathMethodResponseStatus(allAPITests)
 
         // Creates a structure which looks like this:
@@ -95,10 +95,10 @@ class OpenApiCoverageReportInput(
         }.flatten()
     }
 
-    private fun addTestResultsForMissingEndpoints(): List<TestResultRecord> {
-        val testReportRecordsIncludingMissingAPIs = testResultRecords.toMutableList()
+    private fun addTestResultsForMissingEndpoints(testResults: List<TestResultRecord>): List<TestResultRecord> {
+        val testReportRecordsIncludingMissingAPIs = testResults.toMutableList()
         applicationAPIs.forEach { api ->
-            if (testResultRecords.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
+            if (testResults.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
                 testReportRecordsIncludingMissingAPIs.add(TestResultRecord(api.path, api.method, 0, TestResult.Skipped))
             }
         }

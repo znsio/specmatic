@@ -1,6 +1,7 @@
 package `in`.specmatic.test.reports.renderers
 
 import `in`.specmatic.test.reports.coverage.OpenAPICoverageReport
+import `in`.specmatic.test.reports.coverage.Remarks
 
 class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
     override fun render(report: OpenAPICoverageReport): String {
@@ -11,16 +12,17 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
         val pathFormat = "%${maxPathSize}s"
         val methodFormat = "%${"method".length}s"
         val responseStatus = "%${"response".length}s"
-        val countFormat = "%${"#excercised".length}s"
+        val countFormat = "%${"# exercised".length}s"
+        val remarksFormat = "%${Remarks.NotImplemented.toString().length}s"
 
         val tableHeader =
             "| ${statusFormat.format("coverage")} | ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${responseStatus.format("response")} | ${
-                countFormat.format("#excercised")
-            } |"
+                countFormat.format("# exercised")
+            } | ${remarksFormat.format("remarks")} |"
         val headerSeparator =
             "|-${"-".repeat(longestCoveragePercentageValue.length)}-|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|-${responseStatus.format("--------")}-|-${
                 countFormat.format("-----------")
-            }-|"
+            }-|-${remarksFormat.format("---------------")}-|"
 
         val headerTitleSize = tableHeader.length - 4
         val tableTitle = "| ${"%-${headerTitleSize}s".format("API COVERAGE SUMMARY")} |"
@@ -28,7 +30,7 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
 
         val totalCoveragePercentage = report.totalCoveragePercentage
 
-        val summary = "$totalCoveragePercentage% Coverage"
+        val summary = "$totalCoveragePercentage% API Coverage"
         val summaryRowFormatter = "%-${headerTitleSize}s"
         val summaryRow = "| ${summaryRowFormatter.format(summary)} |"
 

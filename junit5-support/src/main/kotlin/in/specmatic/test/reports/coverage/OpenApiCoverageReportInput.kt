@@ -2,6 +2,7 @@ package `in`.specmatic.test.reports.coverage
 
 import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.TestResult
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.test.API
 import `in`.specmatic.test.TestResultRecord
 import kotlin.math.min
@@ -66,7 +67,8 @@ class OpenApiCoverageReportInput(
                                 path ="",
                                 responseStatus = responseStatus.toString(),
                                 count = testResults.count{it.includeForCoverage}.toString(),
-                                coveragePercentage = 0
+                                coveragePercentage = 0,
+                                remarks = getRemarks(testResults)
                             )
                         )
                     }
@@ -111,6 +113,7 @@ class OpenApiCoverageReportInput(
     ): OpenApiCoverageRow {
         val method = methodMap.keys.first()
         val responseStatus = methodMap[method]?.keys?.first()
+        val remarks = getRemarks(methodMap[method]?.get(responseStatus)!!)
         val count = methodMap[method]?.get(responseStatus)?.count { it.includeForCoverage }
 
         val totalMethodResponseCodeCount = methodMap.values.sumOf { it.keys.size }
@@ -129,8 +132,21 @@ class OpenApiCoverageReportInput(
             route,
             responseStatus!!,
             count!!,
-            coveragePercentage
+            coveragePercentage,
+            remarks
         )
     }
 
+    private fun getRemarks(testResultRecords: List<TestResultRecord>): Remarks {
+        val coveredCount = testResultRecords.count { it.includeForCoverage }
+        return when (coveredCount == 0) {
+            true -> when (testResultRecords.first().result) {
+                TestResult.Skipped -> Remarks.Missed
+                TestResult.NotImplemented -> Remarks.NotImplemented
+                else -> throw ContractException("Cannot determine remarks for unknown test result: ${testResultRecords.first().result}")
+            }
+
+            else -> Remarks.Covered
+        }
+    }
 }

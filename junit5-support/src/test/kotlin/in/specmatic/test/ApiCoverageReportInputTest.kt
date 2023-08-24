@@ -151,8 +151,8 @@ class ApiCoverageReportInputTest {
             API("GET", "/route1"),
             API("POST", "/route1"),
             API("GET", "/route2"),
-            API("GET", "/route3"),
-            API("POST", "/route3")
+            API("GET", "/route3/{route_id}"),
+            API("POST", "/route3/{route_id}")
         )
 
         val testReportRecords = mutableListOf(
@@ -171,7 +171,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageRow("POST", "", 200, 1, 0,  Remarks.Covered),
                     OpenApiCoverageRow("GET", "/route2", 200, 1, 50,  Remarks.Covered),
                     OpenApiCoverageRow("POST", "", 200, 0, 0,  Remarks.NotImplemented),
-                    OpenApiCoverageRow("GET", "/route3", 0, 0, 0,  Remarks.Missed),
+                    OpenApiCoverageRow("GET", "/route3/{route_id}", 0, 0, 0,  Remarks.Missed),
                     OpenApiCoverageRow("POST", "", 0, 0, 0,  Remarks.Missed)
                 ),
                 3, 1, 1

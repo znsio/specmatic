@@ -22,13 +22,13 @@ data class OpenApiCoverageRow(
         val responseCellWidthMarkerString = "response"
         val statusFormat = "%${longestStatus.length}s"
 
-        val pathFormat = "%${maxPathSize}s"
-        val methodFormat = "%${"method".length}s"
+        val pathFormat = "%-${maxPathSize}s"
+        val methodFormat = "%-${"method".length}s"
         val responseFormat = if (responseStatus != "0") "%${responseCellWidthMarkerString.length}s" else " ".repeat(
             responseCellWidthMarkerString.length
         )
         val countFormat = "%${"# exercised".length}s"
-        val remarksFormat = "%${Remarks.NotImplemented.toString().length}s"
+        val remarksFormat = "%-${Remarks.NotImplemented.toString().length}s"
 
         val coveragePercentage = if (path.isNotEmpty()) "$coveragePercentage%" else ""
 

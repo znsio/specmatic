@@ -9,11 +9,11 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
 
         val longestCoveragePercentageValue = "coverage"
         val statusFormat = "%${longestCoveragePercentageValue.length}s"
-        val pathFormat = "%${maxPathSize}s"
-        val methodFormat = "%${"method".length}s"
+        val pathFormat = "%-${maxPathSize}s"
+        val methodFormat = "%-${"method".length}s"
         val responseStatus = "%${"response".length}s"
         val countFormat = "%${"# exercised".length}s"
-        val remarksFormat = "%${Remarks.NotImplemented.toString().length}s"
+        val remarksFormat = "%-${Remarks.NotImplemented.toString().length}s"
 
         val tableHeader =
             "| ${statusFormat.format("coverage")} | ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${responseStatus.format("response")} | ${

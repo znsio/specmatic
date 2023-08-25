@@ -17,7 +17,7 @@ data class OpenApiCoverageRow(
         remarks: Remarks
     ) : this(method, path, responseStatus.toString(), count.toString(), coveragePercentage, remarks)
 
-    fun toRowString(maxPathSize: Int): String {
+    fun toRowString(maxPathSize: Int, maxRemarksSize: Int): String {
         val longestStatus = "coverage"
         val responseCellWidthMarkerString = "response"
         val statusFormat = "%${longestStatus.length}s"
@@ -28,7 +28,7 @@ data class OpenApiCoverageRow(
             responseCellWidthMarkerString.length
         )
         val countFormat = "%${"# exercised".length}s"
-        val remarksFormat = "%-${Remarks.NotImplemented.toString().length}s"
+        val remarksFormat = "%-${maxRemarksSize}s"
 
         val coveragePercentage = if (path.isNotEmpty()) "$coveragePercentage%" else ""
 

@@ -1,11 +1,11 @@
 package `in`.specmatic.test.reports.renderers
 
 import `in`.specmatic.test.reports.coverage.OpenAPICoverageReport
-import `in`.specmatic.test.reports.coverage.Remarks
 
 class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
     override fun render(report: OpenAPICoverageReport): String {
         val maxPathSize: Int = report.rows.map { it.path.length }.max()
+        val maxRemarksSize = report.rows.map{it.remarks.toString().length}.max()
 
         val longestCoveragePercentageValue = "coverage"
         val statusFormat = "%${longestCoveragePercentageValue.length}s"
@@ -13,7 +13,7 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
         val methodFormat = "%-${"method".length}s"
         val responseStatus = "%${"response".length}s"
         val countFormat = "%${"# exercised".length}s"
-        val remarksFormat = "%-${Remarks.NotImplemented.toString().length}s"
+        val remarksFormat = "%-${maxRemarksSize}s"
 
         val tableHeader =
             "| ${statusFormat.format("coverage")} | ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${responseStatus.format("response")} | ${
@@ -22,7 +22,7 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
         val headerSeparator =
             "|-${"-".repeat(longestCoveragePercentageValue.length)}-|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|-${responseStatus.format("--------")}-|-${
                 countFormat.format("-----------")
-            }-|-${remarksFormat.format("---------------")}-|"
+            }-|-${"-".repeat(maxRemarksSize)}-|"
 
         val headerTitleSize = tableHeader.length - 4
         val tableTitle = "| ${"%-${headerTitleSize}s".format("API COVERAGE SUMMARY")} |"
@@ -35,7 +35,7 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
         val summaryRow = "| ${summaryRowFormatter.format(summary)} |"
 
         val header: List<String> = listOf(titleSeparator, tableTitle, titleSeparator, tableHeader, headerSeparator)
-        val body: List<String> = report.rows.map { it.toRowString(maxPathSize) }
+        val body: List<String> = report.rows.map { it.toRowString(maxPathSize, maxRemarksSize) }
         val footer: List<String> = listOf(titleSeparator, summaryRow, titleSeparator)
 
         val coveredAPIsTable =  (header + body + footer).joinToString(System.lineSeparator())

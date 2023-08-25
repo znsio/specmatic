@@ -44,7 +44,6 @@ internal class TestCommandTest {
     fun `clean up test command`() {
         testCommand.contractPaths = arrayListOf()
         testCommand.junitReportDirName = null
-        every { specmaticConfig.reportConfiguration() }.returns(null)
     }
 
     @Test

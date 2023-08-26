@@ -66,7 +66,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     }
 
     override fun fetch(): String {
-        return execute(Configuration.gitCommand, "fetch")
+        return executeWithAuth("fetch")
     }
 
     override fun revisionsBehindCount(): Int {
@@ -122,6 +122,8 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     fun getChangesFromMainBranch(mainBranch: String): List<String> {
         return execute(Configuration.gitCommand, "diff", "--name-only", mainBranch).split(System.lineSeparator())
     }
+
+    override fun getRemoteUrl(name: String): String = execute(Configuration.gitCommand, "remote", "get-url", name)
 }
 
 fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>): Boolean {

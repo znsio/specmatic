@@ -12,6 +12,7 @@ import org.xml.sax.InputSource
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.azure.AzureAuthCredentials
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.log.logger
@@ -284,6 +285,10 @@ fun reportConfigurationFrom(configFilePath: String) : ReportConfiguration? {
 
 fun getSystemGit(path: String) : GitCommand {
     return SystemGit(path)
+}
+
+fun getSystemGitWithAuth(path: String) : GitCommand {
+    return SystemGit(path, authCredentials = AzureAuthCredentials)
 }
 
 class UncaughtExceptionHandler: Thread.UncaughtExceptionHandler {

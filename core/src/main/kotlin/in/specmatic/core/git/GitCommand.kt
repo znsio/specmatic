@@ -28,4 +28,5 @@ interface GitCommand {
     fun statusPorcelain(): String
     fun fetch(): String
     fun revisionsBehindCount(): Int
+    fun getRemoteUrl(name: String = "origin"): String
 }

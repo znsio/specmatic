@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test
 
 class ApiCoverageReportInputTest {
     @Test
-    fun `test coverage report when all endpoints are covered`() {
+    fun `test generates api coverage report when all endpoints are covered`() {
         val testReportRecords = mutableListOf(
             TestResultRecord("/route1", "GET", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
@@ -40,7 +40,7 @@ class ApiCoverageReportInputTest {
     }
 
     @Test
-    fun `test coverage report when some endpoints are partially covered`() {
+    fun `test generates api coverage report when some endpoints are partially covered`() {
         val applicationAPIs = mutableListOf(
             API("GET", "/route1"),
             API("POST", "/route1"),
@@ -76,7 +76,7 @@ class ApiCoverageReportInputTest {
     }
 
     @Test
-    fun `test coverage report when some endpoints are marked as excluded`() {
+    fun `test generates api coverage report when some endpoints are marked as excluded`() {
         val testReportRecords = mutableListOf(
             TestResultRecord("/route1", "GET", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
@@ -116,7 +116,47 @@ class ApiCoverageReportInputTest {
     }
 
     @Test
-    fun `test coverage report when some endpoints or operations are present in spec, but not implemented`() {
+    fun `test generates empty api coverage report with all endpoints marked as excluded`() {
+        val testReportRecords = mutableListOf(
+            TestResultRecord("/route1", "GET", 200, TestResult.Success),
+            TestResultRecord("/route1", "POST", 200, TestResult.Success),
+            TestResultRecord("/route1", "POST", 401, TestResult.Success),
+            TestResultRecord("/route2", "GET", 200, TestResult.Success),
+            TestResultRecord("/route2", "POST", 200, TestResult.Success)
+        )
+        val applicationAPIs = mutableListOf(
+            API("GET", "/route1"),
+            API("POST", "/route1"),
+            API("GET", "/route2"),
+            API("POST", "/route2"),
+            API("GET", "/healthCheck"),
+            API("GET", "/heartbeat")
+        )
+
+        val excludedAPIs = mutableListOf(
+            "/route1",
+            "/route2",
+            "/healthCheck",
+            "/heartbeat"
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(testReportRecords, applicationAPIs, excludedAPIs).generate()
+        assertThat(apiCoverageReport.rows).isEmpty()
+        assertThat(apiCoverageReport.totalCoveragePercentage).isEqualTo(0)
+    }
+
+    @Test
+    fun `test generates empty api coverage report with all no paths are documented in the open api spec and endpoints api is not defined`() {
+        val testReportRecords = mutableListOf<TestResultRecord>()
+        val applicationAPIs = mutableListOf<API>()
+        val excludedAPIs = mutableListOf<String>()
+
+        val apiCoverageReport = OpenApiCoverageReportInput(testReportRecords, applicationAPIs, excludedAPIs).generate()
+        assertThat(apiCoverageReport.rows).isEmpty()
+    }
+
+    @Test
+    fun `test generates coverage report when some endpoints or operations are present in spec, but not implemented`() {
         val applicationAPIs = mutableListOf(
             API("GET", "/route1"),
             API("POST", "/route1"),
@@ -146,7 +186,7 @@ class ApiCoverageReportInputTest {
     }
 
     @Test
-    fun `test coverage report when partially covered and partially implemented endpoints`() {
+    fun `test generates api coverage report when partially covered and partially implemented endpoints`() {
         val applicationAPIs = mutableListOf(
             API("GET", "/route1"),
             API("POST", "/route1"),

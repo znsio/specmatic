@@ -149,7 +149,7 @@ val SpecmaticJsonFormat = Json {
     prettyPrint = true
 }
 
-fun loadSpecmaticJsonConfig(configFileName: String?): SpecmaticConfigJson {
+fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson {
     val configFile = File(configFileName ?: globalConfigFileName)
     if (!configFile.exists()) {
         throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_FILE_NAME} at path ${configFile.absolutePath}")

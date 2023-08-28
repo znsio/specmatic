@@ -63,7 +63,7 @@ open class SpecmaticJUnitSupport {
                 ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
             return when (reportConfiguration) {
                 null -> {
-                    logger.log("Report configuration found empty, hence configuring OpenAPI coverage report without any failure criteria ")
+                    logger.log("API coverage report configuration not found in specmatic.json, proceeding with API coverage report without success criteria")
                     ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
                 }
                 else -> {

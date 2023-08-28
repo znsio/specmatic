@@ -26,31 +26,13 @@ class OpenApiCoverageReportInput(
     }
 
     fun generate(): OpenAPICoverageReport {
-        // If we get a failed test whose path and method are not found in the actuator, it means that the operation exists in the spec, but has not been implemented.
-        val notImplementedTests =
-            testResultRecords.filter { it.result == TestResult.Failed && applicationAPIs.none { api -> api.path == it.path && api.method == it.method } }
-        val testResults = testResultRecords.minus(notImplementedTests.toSet())
-            .plus(notImplementedTests.map { it.copy(result = TestResult.NotImplemented) })
+        val testResults = testResultRecords.filter { testResult -> excludedAPIs.none { it == testResult.path } }
+        val testResultsWithNotImplementedEndpoints = identifyTestsThatFailedBecauseOfEndpointsThatWereNotImplemented(testResults)
+        var allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
+        allTests = sortByPathMethodResponseStatus(allTests)
 
-        var allAPITests = addTestResultsForMissingEndpoints(testResults)
-        allAPITests = sortByPathMethodResponseStatus(allAPITests)
-
-        // Creates a structure which looks like this:
-        // mutableMapOf<Path, MutableMap<Method, MutableMap<ResponseStatus, MutableList<TestResultRecord>>>>
-        val apiTestsGrouped = allAPITests.groupBy { it.path }
-            .mapValues { (_, pathResults) ->
-                pathResults.groupBy { it.method }
-                    .mapValues { (_, methodResults) ->
-                        methodResults.groupBy { it.responseStatus }
-                            .mapValues { (_, responseResults) ->
-                                responseResults.toMutableList()
-                            }.toMutableMap()
-                    }.toMutableMap()
-            }.toMutableMap()
-
-
+        val apiTestsGrouped = groupTestsByPathMethodAndResponseStatus(allTests)
         val apiCoverageRows: MutableList<OpenApiCoverageRow> = mutableListOf()
-
         apiTestsGrouped.forEach { (route, methodMap) ->
             val routeAPIRows: MutableList<OpenApiCoverageRow> = mutableListOf()
             val topLevelCoverageRow = createTopLevelApiCoverageRow(route, methodMap)
@@ -78,10 +60,22 @@ class OpenApiCoverageReportInput(
         }
 
         val totalAPICount = apiTestsGrouped.keys.size
-        val missedAPICount = allAPITests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.Skipped } }.size
-        val notImplementedAPICount = allAPITests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.NotImplemented } }.size
-
+        val missedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.Skipped } }.size
+        val notImplementedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.NotImplemented } }.size
         return OpenAPICoverageReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount)
+    }
+
+    private fun groupTestsByPathMethodAndResponseStatus(allAPITests: List<TestResultRecord>): MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> {
+        return allAPITests.groupBy { it.path }
+            .mapValues { (_, pathResults) ->
+                pathResults.groupBy { it.method }
+                    .mapValues { (_, methodResults) ->
+                        methodResults.groupBy { it.responseStatus }
+                            .mapValues { (_, responseResults) ->
+                                responseResults.toMutableList()
+                            }.toMutableMap()
+                    }.toMutableMap()
+            }.toMutableMap()
     }
 
     private fun sortByPathMethodResponseStatus(testResultRecordList: List<TestResultRecord>): List<TestResultRecord> {
@@ -148,5 +142,12 @@ class OpenApiCoverageReportInput(
 
             else -> Remarks.Covered
         }
+    }
+
+    private fun identifyTestsThatFailedBecauseOfEndpointsThatWereNotImplemented(testResults: List<TestResultRecord>): List<TestResultRecord> {
+        val notImplementedTests =
+            testResults.filter { it.result == TestResult.Failed && applicationAPIs.none { api -> api.path == it.path && api.method == it.method } }
+        return testResults.minus(notImplementedTests.toSet())
+            .plus(notImplementedTests.map { it.copy(result = TestResult.NotImplemented) })
     }
 }

@@ -8,7 +8,7 @@ data class OpenAPICoverageReport(
     val missedEndpointsCount: Int,
     val notImplementedAPICount: Int
 ) {
-    val totalCoveragePercentage: Int = (coveragePercentageSum(rows) / totalEndpointsCount).toDouble().roundToInt()
+    val totalCoveragePercentage: Int = if (totalEndpointsCount > 0) (coveragePercentageSum(rows) / totalEndpointsCount).toDouble().roundToInt() else 0
 
     private fun coveragePercentageSum(rows: List<OpenApiCoverageRow>) = rows.sumOf { it.coveragePercentage }
 }

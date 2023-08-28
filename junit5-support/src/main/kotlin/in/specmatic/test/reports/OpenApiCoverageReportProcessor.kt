@@ -15,7 +15,7 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
         openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints)
         val openAPICoverageReport = openApiCoverageReportInput.generate()
         if (openAPICoverageReport.rows.isEmpty()) {
-            logger.log("The Open API coverage report generated is blank")
+            logger.log("The Open API coverage report generated is blank.\nThis can happen if you have included all the endpoints in the 'excludedEndpoints' array in the report section in specmatic.json, or if your open api specification does not have any paths documented.")
         } else {
             val renderers = configureOpenApiCoverageReportRenderers(reportConfiguration)
             renderers.forEach { renderer ->

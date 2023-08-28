@@ -32,7 +32,7 @@ class GraphCommand: Callable<Unit> {
         if (verbose)
             logger = Verbose(CompositePrinter())
 
-        val configJson = loadSpecmaticJsonConfig(null)
+        val configJson = loadSpecmaticJsonConfig()
 
         val azureAuthToken = PersonalAccessToken(
             getPersonalAccessToken() ?: throw ContractException(

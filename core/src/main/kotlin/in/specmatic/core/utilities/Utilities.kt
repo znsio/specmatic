@@ -278,6 +278,11 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
     return contractPathData
 }
 
+fun reportConfigurationFrom(configFilePath: String) : ReportConfiguration? {
+    val specmaticConfigJson = loadSpecmaticJsonConfig(configFilePath)
+    return specmaticConfigJson.report
+}
+
 fun getSystemGit(path: String) : GitCommand {
     return SystemGit(path)
 }

@@ -1344,6 +1344,27 @@ Background:
     }
 
     @Test
+    fun `should filter out schema scenarios already defined in spec`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Hello world
+            
+            Background:
+              Given openapi openapi/petstore-expanded.yaml
+              
+              Scenario Outline: get by tag
+                When GET /pets
+                Then status 200
+                Examples:
+                  | tag     |
+                  | testing |
+        """.trimIndent(), sourceSpecPath
+        )
+        val openapiSpec = OpenApiSpecification.fromFile("openapi/petstore-expanded.yaml")
+
+        assertThat(feature.scenarios).hasSameSizeAs(openapiSpec.toScenarioInfos())
+    }
+    @Test
     fun `should create petstore tests`() {
         val systemPropertiesMap = System.getProperties().map { it.key.toString() to it.value.toString() }.toMap()
         printMap("System Properties", systemPropertiesMap)

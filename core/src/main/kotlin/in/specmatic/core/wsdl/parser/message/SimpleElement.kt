@@ -73,9 +73,3 @@ fun fromTypeAttribute(element: XMLNode): String? {
         it.toStringLiteral().localName()
     }
 }
-
-fun fromNameAttribute(element: XMLNode): String? {
-    return element.attributes["name"]?.let {
-        it.toStringLiteral().localName()
-    }
-}

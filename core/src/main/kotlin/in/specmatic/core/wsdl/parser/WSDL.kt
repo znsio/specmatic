@@ -348,17 +348,3 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
 
 fun namespaceOrSchemaNamespace(namespace: String, schema: XMLNode?) =
     namespace.ifBlank { schema?.attributes?.get("xmlns")?.toStringLiteral() }
-
-fun buildXmlDataForComplexElement(
-    nodeName: String,
-    qontractTypeName: String,
-    attributes: List<AttributeElement>
-): String {
-    var xml = "<${nodeName} $TYPE_ATTRIBUTE_NAME=\"$qontractTypeName\""
-    attributes.forEach {
-        xml += " ${it.nameWithOptionality}=\"${it.type}\""
-    }
-    xml += "/>"
-    return xml
-}
-

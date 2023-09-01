@@ -73,6 +73,7 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
         typeInfo: WSDLTypeInfo
     ): SOAPPayload {
         val complexType = wsdl.getComplexTypeNode(element)
+
         return ComplexTypedSOAPPayload(soapMessageType, nodeNameForSOAPBody, qontractTypeName, namespaces, complexType.getAttributes())
     }
 }

@@ -414,7 +414,7 @@ Scenario: test request returns test response
     }
 
     @Test
-    fun `should throws exception when mandatory attribute is not set`() {
+    fun `should throw exception when mandatory attribute is not set`() {
         val wsdlSpec = """
 Feature: Hello world
 
@@ -429,7 +429,7 @@ Scenario: test request returns test response
   And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
         """.trimIndent()
         val exception = assertThrows<ContractException> {
-            val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
+            parseGherkinStringToFeature(wsdlSpec)
         }
         assertThat(exception.message == "test request returns test response\" request is not as per included wsdl / OpenApi spec")
     }

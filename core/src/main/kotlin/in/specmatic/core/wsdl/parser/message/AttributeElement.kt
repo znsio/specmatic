@@ -22,10 +22,14 @@ class AttributeElement(xmlNode: XMLNode) {
             else -> "${name}${XML_ATTR_OPTIONAL_SUFFIX}"
         }
     }
+}
 
-    fun isMandatory(element: XMLNode): Boolean? {
-        return element.attributes["use"]?.let {
-            it.toStringLiteral().localName() == "required"
-        }
+fun isMandatory(element: XMLNode): Boolean? {
+    return element.attributes["use"]?.let {
+        it.toStringLiteral().localName() == "required"
     }
+}
+
+fun fromNameAttribute(element: XMLNode): String? {
+    return element.attributes["name"]?.toStringLiteral()?.localName()
 }

@@ -3,15 +3,12 @@ package `in`.specmatic.conversions
 import `in`.specmatic.Utils.readTextResource
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
+import `in`.specmatic.core.Result
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.value.*
-import `in`.specmatic.core.wsdl.parser.SOAPMessageType
 import `in`.specmatic.core.wsdl.parser.WSDL
-import `in`.specmatic.core.wsdl.parser.operation.SOAPRequest
-import `in`.specmatic.core.wsdl.payload.SOAPPayload
-import `in`.specmatic.core.wsdl.payload.SimpleTypedSOAPPayload
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
@@ -363,11 +360,6 @@ Scenario: test spec with mandatory attributes with examples
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.path).matches("""/SOAPService/SimpleSOAP""")
-                    assertThat(listOf(
-                        """http://specmatic.in/SOAPService/SimpleOperation""",
-                        """"http://specmatic.in/SOAPService/SimpleOperation""""))
-                        .contains(request.headers["SOAPAction"])
                     if (requestContainsPersonNodeWithAge(request, age)) countOfTestsWithAgeAttributeSetFromExamples++
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     return HttpResponse(200, responseBody, mapOf())
@@ -378,7 +370,7 @@ Scenario: test spec with mandatory attributes with examples
             }
         )
         assertTrue(results.success(), results.report())
-        assertThat(countOfTestsWithAgeAttributeSetFromExamples).isGreaterThanOrEqualTo(1)
+        assertThat(countOfTestsWithAgeAttributeSetFromExamples).isEqualTo(2)
     }
 
     @Test
@@ -402,11 +394,6 @@ Scenario: test spec with mandatory attributes without examples
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.path).matches("""/SOAPService/SimpleSOAP""")
-                    assertThat(listOf(
-                        """http://specmatic.in/SOAPService/SimpleOperation""",
-                        """"http://specmatic.in/SOAPService/SimpleOperation""""))
-                        .contains(request.headers["SOAPAction"])
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithRandomAge(request)) countOfTestsWithAgeAttributeSetToRandomValue++
                     return HttpResponse(200, responseBody, mapOf())
@@ -417,11 +404,11 @@ Scenario: test spec with mandatory attributes without examples
             }
         )
         assertTrue(results.success(), results.report())
-        assertThat(countOfTestsWithAgeAttributeSetToRandomValue).isGreaterThanOrEqualTo(1)
+        assertThat(countOfTestsWithAgeAttributeSetToRandomValue).isEqualTo(4)
     }
 
     @Test
-    fun `should create atleast one test with example value for wsdl with optional attribute in complex elements with examples`() {
+    fun `should create atleast one test with example value for wsdl with optional attribute in complex elements having an example which has the attribute`() {
         val age = 44
         val wsdlSpec = """
 Feature: WSDL Attribute Test
@@ -438,7 +425,6 @@ Scenario: test spec with optional attributes without examples
   Examples:
       | (REQUEST-BODY) |
       | <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="$age"><qr:Id>4</qr:Id><qr:Name>John Doe</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope> |
-      | <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>5</qr:Id><qr:Name>Jane Doe</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope> |
         """.trimIndent()
 
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
@@ -446,11 +432,6 @@ Scenario: test spec with optional attributes without examples
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.path).matches("""/SOAPService/SimpleSOAP""")
-                    assertThat(listOf(
-                        """http://specmatic.in/SOAPService/SimpleOperation""",
-                        """"http://specmatic.in/SOAPService/SimpleOperation""""))
-                        .contains(request.headers["SOAPAction"])
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithAge(request, age)) countOfTestsWithAgeAttributeSetFromExamples++
                     return HttpResponse(200, responseBody, mapOf())
@@ -461,7 +442,44 @@ Scenario: test spec with optional attributes without examples
             }
         )
         assertTrue(results.success(), results.report())
-        assertThat(countOfTestsWithAgeAttributeSetFromExamples).isGreaterThanOrEqualTo(1)
+        assertThat(countOfTestsWithAgeAttributeSetFromExamples).isEqualTo(2)
+    }
+
+    @Test
+    fun `should create atleast one test without attribute for wsdl with optional attribute in complex elements having an example which does not have the attribute`() {
+        val wsdlSpec = """
+Feature: WSDL Attribute Test
+
+Background:
+  Given wsdl test_with_optional_attributes.wsdl           
+  
+Scenario: test spec with optional attributes without examples
+  When POST /SOAPService/SimpleSOAP
+  And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
+  And request-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="11"><qr:Id>1</qr:Id><qr:Name>James Smith</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>
+  Then status 200
+  And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
+  Examples:
+      | (REQUEST-BODY) |
+      | <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>5</qr:Id><qr:Name>Jane Doe</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope> |
+        """.trimIndent()
+
+        val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
+        var countOfTestsWithoutTheAgeAttribute = 0
+        val results = wsdlFeature.executeTests(
+            object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
+                    if (requestContainsPersonNodeWithoutAgeAttribute(request)) countOfTestsWithoutTheAgeAttribute++
+                    return HttpResponse(200, responseBody, mapOf())
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }
+        )
+        assertTrue(results.success(), results.report())
+        assertThat(countOfTestsWithoutTheAgeAttribute).isEqualTo(2)
     }
 
     @Test
@@ -485,11 +503,6 @@ Scenario: test request returns test response
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.path).matches("""/SOAPService/SimpleSOAP""")
-                    assertThat(listOf(
-                        """http://specmatic.in/SOAPService/SimpleOperation""",
-                        """"http://specmatic.in/SOAPService/SimpleOperation""""))
-                        .contains(request.headers["SOAPAction"])
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithRandomAge(request)) countOfTestsWithAgeAttributeSetToRandomValue++
                     return HttpResponse(200, responseBody, mapOf())
@@ -500,12 +513,12 @@ Scenario: test request returns test response
             }
         )
         assertTrue(results.success(), results.report())
-        assertThat(countOfTestsWithAgeAttributeSetToRandomValue).isGreaterThanOrEqualTo(1)
+        assertThat(countOfTestsWithAgeAttributeSetToRandomValue).isGreaterThanOrEqualTo(4)
     }
 
 
     @Test
-    fun `should stub request successfully when wsdl has a mandatory attribute and the request also includes it`() {
+    fun `should match soap request with attribute which is mandatory in the wsdl`() {
         val wsdlSpec = """
 Feature: WSDL Attribute Test
 
@@ -520,38 +533,22 @@ Scenario: test spec with mandatory attributes without examples
   And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
         """.trimIndent()
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
-//        val payload = SimpleTypedSOAPPayload(SOAPMessageType.Input, toXMLNode("<qr:Person age=\"33\"><qr:Id>\"3\"</qr:Id><qr:Name>\"John Doe\"</qr:Name></qr:Person>"), emptyMap())
-//        assertThat(
-//            wsdlFeature.matchingStub(
-//                SOAPRequest(
-//                    "/SOAPService/SimpleSOAP",
-//                    "POST",
-//                    "",
-//                    body = payload
-//                ), HttpResponse.OK("success")
-//            ).response.headers["X-Specmatic-Result"]
-//        ).isEqualTo("success")
-
-        HttpStub(wsdlFeature).use {
-            val soapRequest =
-                """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="22"><qr:Id>2</qr:Id><qr:Name>James Taylor</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>"""
-
-            val headers = HttpHeaders()
-            headers.add("SOAPAction", """"http://specmatic.in/SOAPService/SimpleOperation"""")
-            val response = RestTemplate().exchange(
-                URI.create("http://localhost:9000/SOAPService/SimpleSOAP"),
-                HttpMethod.POST,
-                HttpEntity(soapRequest, headers),
-                String::class.java
-            )
-            assertThat(response.statusCodeValue).isEqualTo(200)
-            assertThat(response.body)
-                .matches("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>[A-Z]*</SimpleResponse></soapenv:Body></soapenv:Envelope>""")
-        }
+        val soapRequest = HttpRequest(
+            "POST",
+            "/SOAPService/SimpleSOAP",
+            mapOf(
+                "SOAPAction" to "http://specmatic.in/SOAPService/SimpleOperation",
+                "Content-Type" to "application/xml"
+            ),
+            body = parsedValue("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="22"><qr:Id>2</qr:Id><qr:Name>James Taylor</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>""")
+        )
+        val wsdlScenario = wsdlFeature.scenarios.single()
+        val result = wsdlScenario.httpRequestPattern.matches(soapRequest, wsdlScenario.resolver)
+        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
-    fun `should throw an error when stub is running a wsdl with a mandatory attribute and the request does not include it`() {
+    fun `should not match soap request which does not have an attribute which is mandatory in the wsdl`() {
         val wsdlSpec = """
 Feature: WSDL Attribute Test
 
@@ -566,26 +563,23 @@ Scenario: test spec with mandatory attributes without examples
   And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
         """.trimIndent()
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
-        val exception = assertThrows<HttpClientErrorException> {
-            HttpStub(wsdlFeature).use {
-                val soapRequest =
-                    """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>2</qr:Id><qr:Name>James Taylor</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>"""
-
-                val headers = HttpHeaders()
-                headers.add("SOAPAction", """"http://specmatic.in/SOAPService/SimpleOperation"""")
-                val response = RestTemplate().exchange(
-                    URI.create("http://localhost:9000/SOAPService/SimpleSOAP"),
-                    HttpMethod.POST,
-                    HttpEntity(soapRequest, headers),
-                    String::class.java
-                )
-            }
-        }
-        assertThat(exception.message).contains("Attribute named age in the contract was not found in the request")
+        val soapRequest = HttpRequest(
+            "POST",
+            "/SOAPService/SimpleSOAP",
+            mapOf(
+                "SOAPAction" to "http://specmatic.in/SOAPService/SimpleOperation",
+                "Content-Type" to "application/xml"
+            ),
+            body = parsedValue("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>2</qr:Id><qr:Name>James Taylor</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>""")
+        )
+        val wsdlScenario = wsdlFeature.scenarios.single()
+        val result = wsdlScenario.httpRequestPattern.matches(soapRequest, wsdlScenario.resolver)
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).contains("Expected attribute named \"age\" was missing")
     }
 
     @Test
-    fun `should stub request successfully when wsdl has an optional attribute and the request also includes it`() {
+    fun `should match soap request with attribute which is optional in the wsdl`() {
         val wsdlSpec = """
 Feature: WSDL Attribute Test
 
@@ -600,26 +594,22 @@ Scenario: test spec with mandatory attributes without examples
   And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
         """.trimIndent()
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
-        HttpStub(wsdlFeature).use {
-            val soapRequest =
-                """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="22"><qr:Id>2</qr:Id><qr:Name>James Taylor</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>"""
-
-            val headers = HttpHeaders()
-            headers.add("SOAPAction", """"http://specmatic.in/SOAPService/SimpleOperation"""")
-            val response = RestTemplate().exchange(
-                URI.create("http://localhost:9000/SOAPService/SimpleSOAP"),
-                HttpMethod.POST,
-                HttpEntity(soapRequest, headers),
-                String::class.java
-            )
-            assertThat(response.statusCodeValue).isEqualTo(200)
-            assertThat(response.body)
-                .matches("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>[A-Z]*</SimpleResponse></soapenv:Body></soapenv:Envelope>""")
-        }
+        val soapRequest = HttpRequest(
+            "POST",
+            "/SOAPService/SimpleSOAP",
+            mapOf(
+                "SOAPAction" to "http://specmatic.in/SOAPService/SimpleOperation",
+                "Content-Type" to "application/xml"
+            ),
+            body = parsedValue("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="22"><qr:Id>2</qr:Id><qr:Name>James Taylor</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>""")
+        )
+        val wsdlScenario = wsdlFeature.scenarios.single()
+        val result = wsdlScenario.httpRequestPattern.matches(soapRequest, wsdlScenario.resolver)
+        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
-    fun `should stub request successfully when wsdl has an optional attribute and the request does not include it`() {
+    fun `should match soap request which does not have an attribute which is optional in the wsdl`() {
         val wsdlSpec = """
 Feature: WSDL Attribute Test
 
@@ -634,22 +624,18 @@ Scenario: test spec with mandatory attributes without examples
   And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
         """.trimIndent()
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
-        HttpStub(wsdlFeature).use {
-            val soapRequest =
-                """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>2</qr:Id><qr:Name>James Taylor</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>"""
-
-            val headers = HttpHeaders()
-            headers.add("SOAPAction", """"http://specmatic.in/SOAPService/SimpleOperation"""")
-            val response = RestTemplate().exchange(
-                URI.create("http://localhost:9000/SOAPService/SimpleSOAP"),
-                HttpMethod.POST,
-                HttpEntity(soapRequest, headers),
-                String::class.java
-            )
-            assertThat(response.statusCodeValue).isEqualTo(200)
-            assertThat(response.body)
-                .matches("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>[A-Z]*</SimpleResponse></soapenv:Body></soapenv:Envelope>""")
-        }
+        val soapRequest = HttpRequest(
+            "POST",
+            "/SOAPService/SimpleSOAP",
+            mapOf(
+                "SOAPAction" to "http://specmatic.in/SOAPService/SimpleOperation",
+                "Content-Type" to "application/xml"
+            ),
+            body = parsedValue("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>2</qr:Id><qr:Name>James Taylor</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>""")
+        )
+        val wsdlScenario = wsdlFeature.scenarios.single()
+        val result = wsdlScenario.httpRequestPattern.matches(soapRequest, wsdlScenario.resolver)
+        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -768,9 +754,18 @@ Scenario: request not matching wsdl
         return personAge > 0
     }
 
+    fun requestContainsPersonNodeWithoutAgeAttribute(request:HttpRequest): Boolean {
+        val personNode = getPersonNode(request)
+        return personNode?.attributes?.get("age") == null
+    }
+
     private fun getPersonAge(request: HttpRequest): Int? {
-        val personNode = (((request.body as XMLNode).childNodes.filterIsInstance<XMLNode>()
-            .first { it.name == "Body"}).childNodes.filterIsInstance<XMLNode>().first())
-        return personNode.attributes["age"]?.toStringLiteral()?.toInt()
+        val personNode = getPersonNode(request)
+        return personNode?.attributes?.get("age")?.toStringLiteral()?.toInt()
+    }
+
+    private fun getPersonNode(request: HttpRequest): XMLNode? {
+        val personNode = (request.body as XMLNode).findFirstChildByPath("Body.Person")
+        return personNode
     }
 }

@@ -340,9 +340,7 @@ Scenario: test request returns test response
     }
 
     @Test
-    fun `should create test for mandatory attribute in complex elements with examples`() {
-        val id = 3
-        val name = "John Doe"
+    fun `should create atleast one test with example value for wsdl with mandatory attribute in complex elements with examples`() {
         val age = 33
         val wsdlSpec = """
 Feature: WSDL Attribute Test
@@ -358,7 +356,7 @@ Scenario: test spec with mandatory attributes with examples
   And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
   Examples:
       | (REQUEST-BODY) |
-      | <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="$age"><qr:Id>$id</qr:Id><qr:Name>$name</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope> |
+      | <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="$age"><qr:Id>3</qr:Id><qr:Name>John Doe</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope> |
         """.trimIndent()
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
         var countOfTestsWithAgeAttributeSetFromExamples = 0
@@ -384,7 +382,7 @@ Scenario: test spec with mandatory attributes with examples
     }
 
     @Test
-    fun `should create test for mandatory attribute in complex elements without examples`() {
+    fun `should create atleast one test with random value for wsdl with mandatory attribute in complex elements without examples`() {
         val wsdlSpec = """
 Feature: WSDL Attribute Test
 
@@ -423,9 +421,7 @@ Scenario: test spec with mandatory attributes without examples
     }
 
     @Test
-    fun `should create test for optional attribute in complex elements with examples`() {
-        val id = 4
-        val name = "Jane Doe"
+    fun `should create atleast one test with example value for wsdl with optional attribute in complex elements with examples`() {
         val age = 44
         val wsdlSpec = """
 Feature: WSDL Attribute Test
@@ -441,8 +437,8 @@ Scenario: test spec with optional attributes without examples
   And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
   Examples:
       | (REQUEST-BODY) |
-      | <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="$age"><qr:Id>$id</qr:Id><qr:Name>$name</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope> |
-      | <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>$id</qr:Id><qr:Name>$name</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope> |
+      | <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="$age"><qr:Id>4</qr:Id><qr:Name>John Doe</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope> |
+      | <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>5</qr:Id><qr:Name>Jane Doe</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope> |
         """.trimIndent()
 
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
@@ -469,7 +465,7 @@ Scenario: test spec with optional attributes without examples
     }
 
     @Test
-    fun `should create test for optional attribute in complex elements without examples`() {
+    fun `should create atleast one test with random value for wsdl with optional attribute in complex elements without examples`() {
         val wsdlSpec = """
 Feature: Hello world
 
@@ -555,7 +551,7 @@ Scenario: test spec with mandatory attributes without examples
     }
 
     @Test
-    fun `should throws an error when stub is running a wsdl with a mandatory attribute and the request does not include it`() {
+    fun `should throw an error when stub is running a wsdl with a mandatory attribute and the request does not include it`() {
         val wsdlSpec = """
 Feature: WSDL Attribute Test
 

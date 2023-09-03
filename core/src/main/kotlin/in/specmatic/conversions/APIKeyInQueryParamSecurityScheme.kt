@@ -3,12 +3,13 @@ package `in`.specmatic.conversions
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpRequestPattern
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.Result
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.StringValue
 
 class APIKeyInQueryParamSecurityScheme(val name: String) : OpenAPISecurityScheme {
-    override fun matches(httpRequest: HttpRequest): Boolean {
-        return httpRequest.queryParams.containsKey(name)
+    override fun matches(httpRequest: HttpRequest): Result {
+        return if (httpRequest.queryParams.containsKey(name)) Result.Success() else Result.Failure("API-key named $name was not present in query string")
     }
 
     override fun removeParam(httpRequest: HttpRequest): HttpRequest {

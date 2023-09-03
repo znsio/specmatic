@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
-import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import java.io.File
 import java.net.URI
@@ -357,9 +356,11 @@ Scenario: test spec with mandatory attributes with examples
         """.trimIndent()
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
         var countOfTestsWithAgeAttributeSetFromExamples = 0
+        var requestCount = 0
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
+                    logRequestFacts(request, ++requestCount)
                     if (requestContainsPersonNodeWithAge(request, age)) countOfTestsWithAgeAttributeSetFromExamples++
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     return HttpResponse(200, responseBody, mapOf())
@@ -391,9 +392,11 @@ Scenario: test spec with mandatory attributes without examples
 
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
         var countOfTestsWithAgeAttributeSetToRandomValue = 0
+        var requestCount = 0
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
+                    logRequestFacts(request, ++requestCount)
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithRandomAge(request)) countOfTestsWithAgeAttributeSetToRandomValue++
                     return HttpResponse(200, responseBody, mapOf())
@@ -429,9 +432,11 @@ Scenario: test spec with optional attributes without examples
 
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
         var countOfTestsWithAgeAttributeSetFromExamples = 0
+        var requestCount = 0
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
+                    logRequestFacts(request, ++requestCount)
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithAge(request, age)) countOfTestsWithAgeAttributeSetFromExamples++
                     return HttpResponse(200, responseBody, mapOf())
@@ -466,9 +471,11 @@ Scenario: test spec with optional attributes without examples
 
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
         var countOfTestsWithoutTheAgeAttribute = 0
+        var requestCount = 0
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
+                    logRequestFacts(request, ++requestCount)
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithoutAgeAttribute(request)) countOfTestsWithoutTheAgeAttribute++
                     return HttpResponse(200, responseBody, mapOf())
@@ -500,9 +507,11 @@ Scenario: test request returns test response
 
         val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
         var countOfTestsWithAgeAttributeSetToRandomValue = 0
+        var requestCount = 0
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
+                    logRequestFacts(request, ++requestCount)
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithRandomAge(request)) countOfTestsWithAgeAttributeSetToRandomValue++
                     return HttpResponse(200, responseBody, mapOf())
@@ -756,7 +765,7 @@ Scenario: request not matching wsdl
 
     fun requestContainsPersonNodeWithoutAgeAttribute(request:HttpRequest): Boolean {
         val personNode = getPersonNode(request)
-        return personNode?.attributes?.get("age") == null
+        return personNode?.attributes?.keys?.none { it == "age" } ?: true
     }
 
     private fun getPersonAge(request: HttpRequest): Int? {
@@ -765,7 +774,29 @@ Scenario: request not matching wsdl
     }
 
     private fun getPersonNode(request: HttpRequest): XMLNode? {
-        val personNode = (request.body as XMLNode).findFirstChildByPath("Body.Person")
-        return personNode
+        return (request.body as XMLNode).findFirstChildByPath("Body.Person")
+    }
+
+    private fun logRequestFacts(request: HttpRequest, count:Int) {
+        println("Soap Request {$count}:")
+        println("Headers:")
+        val soapActionHeader = request.headers["SOAPAction"]
+        soapActionHeader?.let {
+            when (soapActionHeader.startsWith("\"") && soapActionHeader.endsWith("\"")) {
+                true -> println("Contains SOAPAction header with double quotes")
+                else -> println("Contains SOAPAction header without double quotes")
+            }
+        } ?: println("SOAPAction header is null")
+        println("Body:")
+        when((request.body as XMLNode).findFirstChildByPath("Header")) {
+            null -> println("SOAP Env Header is missing in body")
+            else -> println("SOAP Env Header is present in body")
+        }
+        when(requestContainsPersonNodeWithoutAgeAttribute(request)) {
+            true -> println("Age attribute is not present in Person node")
+            else -> println("Age attribute is present in Person node")
+        }
+
+        println()
     }
 }

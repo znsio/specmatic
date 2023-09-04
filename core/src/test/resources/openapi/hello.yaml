@@ -11,6 +11,7 @@ servers:
 paths:
   /hello/{id}:
     get:
+      tag: "WIP"
       summary: hello world
       description: Optional extended description in CommonMark or HTML.
       parameters:

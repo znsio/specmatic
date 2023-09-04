@@ -1,15 +1,27 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'info.solidsoft.gradle.pitest:gradle-pitest-plugin:1.9.11'
+    }
+}
+
 plugins {
     id 'java-library'
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'signing'
+    id 'info.solidsoft.pitest' version '1.9.11'
 }
 
 apply plugin: "jacoco"
 jacoco {
     toolVersion = "0.8.7"
 }
+
+apply plugin: 'info.solidsoft.pitest'
 
 repositories {
     mavenLocal()
@@ -142,6 +154,7 @@ compileKotlin {
 
 test {
     finalizedBy jacocoTestReport
+    systemProperty 'spring.test.constructor.autowire.mode', 'all'
 }
 
 jacocoTestReport {
@@ -152,4 +165,18 @@ jacocoTestReport {
         csv.required = false
     }
 }
+
+pitest {
+    jvmArgs = ['-Dspring.test.constructor.autowire.mode=all']
+    junit5PluginVersion = '1.0.0'
+    avoidCallsTo = ['kotlin.jvm.internal']
+    mutators = ['STRONGER']
+    targetClasses = ['in.specmatic.*']
+    targetTests = ['in.specmatic.test.*']
+    pitestVersion = '1.9.11'
+    threads = 4
+    outputFormats = ['XML', 'HTML']
+    timestampedReports = false
+}
+
 

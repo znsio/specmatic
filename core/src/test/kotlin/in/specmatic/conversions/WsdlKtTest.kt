@@ -1,10 +1,7 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.Utils.readTextResource
-import `in`.specmatic.core.HttpRequest
-import `in`.specmatic.core.HttpResponse
-import `in`.specmatic.core.Result
-import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.value.*
@@ -336,7 +333,7 @@ Scenario: test request returns test response
     }
 
     @Test
-    fun `should create atleast one test with example value for wsdl with mandatory attribute in complex elements with examples`() {
+    fun `should create tests with the example value provided in examples for the an attribute in a complex element that is mandatory in the wsdl`() {
         val age = 33
         val wsdlSpec = """
 Feature: WSDL Attribute Test
@@ -360,7 +357,7 @@ Scenario: test spec with mandatory attributes with examples
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    logRequestFacts(request, ++requestCount)
+                    logRequestCharacteristics(request, ++requestCount)
                     if (requestContainsPersonNodeWithAge(request, age)) countOfTestsWithAgeAttributeSetFromExamples++
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     return HttpResponse(200, responseBody, mapOf())
@@ -375,7 +372,7 @@ Scenario: test spec with mandatory attributes with examples
     }
 
     @Test
-    fun `should create atleast one test with random value for wsdl with mandatory attribute in complex elements without examples`() {
+    fun `should create tests with random values for an attribute in a complex element that is mandatory in the wsdl given no examples`() {
         val wsdlSpec = """
 Feature: WSDL Attribute Test
 
@@ -396,7 +393,7 @@ Scenario: test spec with mandatory attributes without examples
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    logRequestFacts(request, ++requestCount)
+                    logRequestCharacteristics(request, ++requestCount)
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithRandomAge(request)) countOfTestsWithAgeAttributeSetToRandomValue++
                     return HttpResponse(200, responseBody, mapOf())
@@ -411,7 +408,7 @@ Scenario: test spec with mandatory attributes without examples
     }
 
     @Test
-    fun `should create atleast one test with example value for wsdl with optional attribute in complex elements having an example which has the attribute`() {
+    fun `should create tests with the example value an attribute in a complex element that is mandatory in the wsdl given an RESPONSE-BODY example that has the attribute`() {
         val age = 44
         val wsdlSpec = """
 Feature: WSDL Attribute Test
@@ -436,7 +433,7 @@ Scenario: test spec with optional attributes without examples
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    logRequestFacts(request, ++requestCount)
+                    logRequestCharacteristics(request, ++requestCount)
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithAge(request, age)) countOfTestsWithAgeAttributeSetFromExamples++
                     return HttpResponse(200, responseBody, mapOf())
@@ -451,7 +448,7 @@ Scenario: test spec with optional attributes without examples
     }
 
     @Test
-    fun `should create atleast one test without attribute for wsdl with optional attribute in complex elements having an example which does not have the attribute`() {
+    fun `should create tests with the example value an attribute in a complex element that is mandatory in the wsdl given an RESPONSE-BODY example that does not have the attribute`() {
         val wsdlSpec = """
 Feature: WSDL Attribute Test
 
@@ -475,7 +472,7 @@ Scenario: test spec with optional attributes without examples
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    logRequestFacts(request, ++requestCount)
+                    logRequestCharacteristics(request, ++requestCount)
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithoutAgeAttribute(request)) countOfTestsWithoutTheAgeAttribute++
                     return HttpResponse(200, responseBody, mapOf())
@@ -490,7 +487,7 @@ Scenario: test spec with optional attributes without examples
     }
 
     @Test
-    fun `should create atleast one test with random value for wsdl with optional attribute in complex elements without examples`() {
+    fun `should create tests with random values for an attribute in a complex element that is optional in the wsdl given no examples`() {
         val wsdlSpec = """
 Feature: Hello world
 
@@ -511,7 +508,7 @@ Scenario: test request returns test response
         val results = wsdlFeature.executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    logRequestFacts(request, ++requestCount)
+                    logRequestCharacteristics(request, ++requestCount)
                     val responseBody = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>WSDL</SimpleResponse></soapenv:Body></soapenv:Envelope>"""
                     if (requestContainsPersonNodeWithRandomAge(request)) countOfTestsWithAgeAttributeSetToRandomValue++
                     return HttpResponse(200, responseBody, mapOf())
@@ -589,20 +586,7 @@ Scenario: test spec with mandatory attributes without examples
 
     @Test
     fun `should match soap request with attribute which is optional in the wsdl`() {
-        val wsdlSpec = """
-Feature: WSDL Attribute Test
-
-Background:
-  Given wsdl test_with_optional_attributes.wsdl           
-  
-Scenario: test spec with mandatory attributes without examples
-  When POST /SOAPService/SimpleSOAP
-  And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
-  And request-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>1</qr:Id><qr:Name>James Smith</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>
-  Then status 200
-  And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
-        """.trimIndent()
-        val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
+        val wsdlFeature = parseContractFileToFeature(File("test_with_optional_attributes.wsdl"))
         val soapRequest = HttpRequest(
             "POST",
             "/SOAPService/SimpleSOAP",
@@ -777,7 +761,7 @@ Scenario: request not matching wsdl
         return (request.body as XMLNode).findFirstChildByPath("Body.Person")
     }
 
-    private fun logRequestFacts(request: HttpRequest, count:Int) {
+    private fun logRequestCharacteristics(request: HttpRequest, count:Int) {
         println("Soap Request {$count}:")
         println("Headers:")
         val soapActionHeader = request.headers["SOAPAction"]

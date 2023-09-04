@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.common.net.HttpHeaders.AUTHORIZATION
 import `in`.specmatic.core.*
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.log.Verbose
@@ -993,6 +994,68 @@ Feature: Authenticated
         })
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should match http request with authorization header for spec with bearer security scheme`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/hello.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+        val httpRequest = HttpRequest(
+            "GET",
+            "/hello/1",
+            mapOf(
+                AUTHORIZATION to "Bearer foo"
+            )
+        )
+        val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should not match http request without authorization header for spec with bearer security scheme`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/hello.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+        val httpRequest = HttpRequest(
+            "GET",
+            "/hello/1"
+        )
+        val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).contains("Authorization header is missing in request")
+    }
+
+    @Test
+    fun `should not match http request with authorization header but without the bearer prefix for spec with bearer security scheme`() {
+        val feature = parseGherkinStringToFeature(
+            """
+Feature: Hello world
+
+Background:
+  Given openapi openapi/hello.yaml
+        """.trimIndent(), sourceSpecPath
+        )
+        val httpRequest = HttpRequest(
+            "GET",
+            "/hello/1",
+            mapOf(
+                AUTHORIZATION to "foo"
+            )
+        )
+        val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).contains("Authorization header must be prefixed with \"Bearer\"")
     }
 
     @Test

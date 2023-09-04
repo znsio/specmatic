@@ -57,7 +57,12 @@ open class SpecmaticJUnitSupport {
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            val reportConfiguration = reportConfigurationFromConfig()
+            val reportConfiguration: ReportConfiguration? = try {
+                reportConfigurationFromConfig()
+            } catch(e: Exception) {
+                logger.log("Could not load report configuration: " + exceptionCauseMessage(e))
+                null
+            }
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
             val defaultReportTypes =
                 ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))

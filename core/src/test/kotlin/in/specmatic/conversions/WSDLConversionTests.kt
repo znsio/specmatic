@@ -474,7 +474,9 @@ class WSDLConversionTests {
     }
 
     @Test
-    fun `optional attribute in complex type`() {
+    fun `parse WSDL with optional attribute in complex type`() {
+        val optionalAttribute = "age"
+
         val wsdlContent = """
             <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
                               xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
@@ -489,7 +491,7 @@ class WSDLConversionTests {
                                     <xsd:element name="Id" type="xsd:integer" />
                                     <xsd:element name="Name" type="xsd:string" />
                                 </xsd:sequence>
-                                <xs:attribute name="age" type="xs:integer"></xs:attribute>
+                                <xs:attribute name="$optionalAttribute" type="xs:integer"></xs:attribute>
                             </xsd:complexType>
                         </xsd:element>
                     </xsd:schema>
@@ -556,7 +558,7 @@ class WSDLConversionTests {
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
                       <soapenv:Header specmatic_occurs="optional"/>
                       <soapenv:Body>
-                        <Person age.opt="(number)" specmatic_type="SimpleOperation_SOAPPayload_Input"/>
+                        <Person $optionalAttribute.opt="(number)" specmatic_type="SimpleOperation_SOAPPayload_Input"/>
                       </soapenv:Body>
                     </soapenv:Envelope>
                     ""${'"'}
@@ -573,7 +575,9 @@ class WSDLConversionTests {
     }
 
     @Test
-    fun `mandatory attribute in complex type`() {
+    fun `parse WSDL with mandatory attribute in complex type`() {
+        val mandatoryAttribute = "age"
+
         val wsdlContent = """
             <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
                               xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
@@ -588,7 +592,7 @@ class WSDLConversionTests {
                                     <xsd:element name="Id" type="xsd:integer" />
                                     <xsd:element name="Name" type="xsd:string" />
                                 </xsd:sequence>
-                                <xs:attribute name="age" type="xs:integer" use="required"></xs:attribute>
+                                <xs:attribute name="$mandatoryAttribute" type="xs:integer" use="required"></xs:attribute>
                             </xsd:complexType>
                         </xsd:element>
                     </xsd:schema>
@@ -655,7 +659,7 @@ class WSDLConversionTests {
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
                       <soapenv:Header specmatic_occurs="optional"/>
                       <soapenv:Body>
-                        <Person age="(number)" specmatic_type="SimpleOperation_SOAPPayload_Input"/>
+                        <Person $mandatoryAttribute="(number)" specmatic_type="SimpleOperation_SOAPPayload_Input"/>
                       </soapenv:Body>
                     </soapenv:Envelope>
                     ""${'"'}

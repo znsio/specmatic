@@ -6519,8 +6519,6 @@ paths:
                                     multiPartFormData = listOf(MultiPartFileValue("filesPart", "test.pdf", "application/pdf", "UTF-8"))
                             ), HttpResponse.OK("{\"filename\": \"ThIsi5ByT3sD4tA\"}")
                     )
-
-            println(result.reportString())
             assertThat(result).isInstanceOf(Result.Success::class.java)
         }
     }

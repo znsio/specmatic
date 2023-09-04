@@ -36,15 +36,7 @@ data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, va
 }
 
 fun createSimpleType(element: XMLNode, wsdl: WSDL, actualElement: XMLNode? = null): Pair<List<XMLValue>, String?> {
-    val value = when (val typeName = simpleTypeName(element)) {
-        in primitiveStringTypes -> StringValue("(string)")
-        in primitiveNumberTypes -> StringValue("(number)")
-        in primitiveDateTypes -> StringValue("(datetime)")
-        in primitiveBooleanType -> StringValue("(boolean)")
-        "anyType" -> StringValue("(anything)")
-
-        else -> throw ContractException("""Primitive type "$typeName" not recognized""")
-    }
+    val value = elementTypeValue(element)
 
     val resolvedElement = actualElement ?: element
 
@@ -53,6 +45,16 @@ fun createSimpleType(element: XMLNode, wsdl: WSDL, actualElement: XMLNode? = nul
     val prefix = fqname.prefix.ifBlank { null }
 
     return Pair(listOf(XMLNode(fqname.qname, qontractAttributes, listOf(value))), prefix)
+}
+
+fun elementTypeValue(element: XMLNode): StringValue = when (val typeName = simpleTypeName(element)) {
+    in primitiveStringTypes -> StringValue("(string)")
+    in primitiveNumberTypes -> StringValue("(number)")
+    in primitiveDateTypes -> StringValue("(datetime)")
+    in primitiveBooleanType -> StringValue("(boolean)")
+    "anyType" -> StringValue("(anything)")
+
+    else -> throw ContractException("""Primitive type "$typeName" not recognized""")
 }
 
 fun simpleTypeName(element: XMLNode): String {

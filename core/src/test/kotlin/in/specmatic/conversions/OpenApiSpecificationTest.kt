@@ -21,6 +21,7 @@ import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.function.Consumer
@@ -6461,6 +6462,63 @@ paths:
                         "/person",
                         body = parsedJSON("""[{"id": "123", "names": ["Jack", "Sprat"]}, {"id": "456", "names": null}]""")
                     ), HttpResponse.OK("success"))
+
+            println(result.reportString())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Test
+    fun `support for multipart form data part array with a return type byte array string`() {
+        val openAPI = """
+                openapi: 3.0.3
+                info:
+                  title: Return type of multipart-form-data with string format byte
+                  description: Service to add a test case to a Specmatic feature
+                  version: 1.0.0
+                tags:
+                  - name: UploadFile
+                paths:
+                  "/file":
+                    post:
+                      tags:
+                        - UploadFile
+                      operationId: sendMessage
+                      requestBody:
+                        content:
+                          multipart/form-data:
+                            schema:
+                              type: object
+                              properties:
+                                filesPart:
+                                  type: string
+                                  format: binary
+                              required:
+                                - filesPart
+                      responses:
+                        "200":
+                          description: "Send Message Response"
+                          content:
+                            multipart/form-data:
+                              schema:
+                                type: object
+                                properties:
+                                  filename:
+                                    type: string
+                                    format: byte
+            """.trimIndent()
+
+        val specifications = OpenApiSpecification.fromYAML(openAPI, "").toScenarioInfos()
+        assertTrue(specifications.isNotEmpty())
+        with(OpenApiSpecification.fromYAML(openAPI, "",).toFeature()) {
+            val result =
+                    this.scenarios.first().matchesMock(
+                            HttpRequest(
+                                    "POST",
+                                    "/file",
+                                    multiPartFormData = listOf(MultiPartFileValue("filesPart", "test.pdf", "application/pdf", "UTF-8"))
+                            ), HttpResponse.OK("{\"filename\": \"ThIsi5ByT3sD4tA\"}")
+                    )
 
             println(result.reportString())
             assertThat(result).isInstanceOf(Result.Success::class.java)

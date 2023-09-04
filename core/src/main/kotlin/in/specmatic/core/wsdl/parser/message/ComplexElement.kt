@@ -49,16 +49,21 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
         )
     }
 
-    internal fun generateChildren(parentTypeName: String, complexType: XMLNode, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
-        return eliminateAnnotations(complexType.childNodes.filterIsInstance<XMLNode>()).map {
+    internal fun generateChildren(
+        parentTypeName: String,
+        complexType: XMLNode,
+        existingTypes: Map<String, XMLPattern>,
+        typeStack: Set<String>
+    ): WSDLTypeInfo {
+        return eliminateAnnotationsAndAttributes(complexType.childNodes.filterIsInstance<XMLNode>()).map {
             complexTypeChildNode(it, wsdl, parentTypeName)
         }.fold(WSDLTypeInfo()) { wsdlTypeInfo, child ->
             child.process(wsdlTypeInfo, existingTypes, typeStack)
         }
     }
 
-    private fun eliminateAnnotations(childNodes: List<XMLNode>) =
-        childNodes.filterNot { it.name == "annotation" }
+    private fun eliminateAnnotationsAndAttributes(childNodes: List<XMLNode>) =
+        childNodes.filterNot { it.name == "annotation" || it.name == "attribute" }
 
     override fun getSOAPPayload(
         soapMessageType: SOAPMessageType,
@@ -66,29 +71,48 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
         qontractTypeName: String,
         namespaces: Map<String, String>,
         typeInfo: WSDLTypeInfo
-    ): SOAPPayload =
-        ComplexTypedSOAPPayload(soapMessageType, nodeNameForSOAPBody, qontractTypeName, namespaces)
-}
+    ): SOAPPayload {
+        val complexType = wsdl.getComplexTypeNode(element)
 
-data class ComplexType(val complexType: XMLNode, val wsdl: WSDL) {
-    fun generateChildren(parentTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
-        return generateChildren(parentTypeName, complexType, existingTypes, typeStack, wsdl)
+        return ComplexTypedSOAPPayload(soapMessageType, nodeNameForSOAPBody, qontractTypeName, namespaces, complexType.getAttributes())
     }
 }
 
-internal fun generateChildren(parentTypeName: String, complexType: XMLNode, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>, wsdl: WSDL): WSDLTypeInfo {
-    return eliminateAnnotations(complexType.childNodes.filterIsInstance<XMLNode>()).map {
+data class ComplexType(val complexType: XMLNode, val wsdl: WSDL) {
+    fun generateChildren(
+        parentTypeName: String,
+        existingTypes: Map<String, XMLPattern>,
+        typeStack: Set<String>
+    ): WSDLTypeInfo {
+        return generateChildren(parentTypeName, complexType, existingTypes, typeStack, wsdl)
+    }
+
+    fun getAttributes(): List<AttributeElement> {
+        return complexType.childNodes.filterIsInstance<XMLNode>().filter {
+            it.name == "attribute"
+        }.map { AttributeElement(it) }
+    }
+}
+
+internal fun generateChildren(
+    parentTypeName: String,
+    complexType: XMLNode,
+    existingTypes: Map<String, XMLPattern>,
+    typeStack: Set<String>,
+    wsdl: WSDL
+): WSDLTypeInfo {
+    return eliminateAnnotationsAndAttributes(complexType.childNodes.filterIsInstance<XMLNode>()).map {
         complexTypeChildNode(it, wsdl, parentTypeName)
     }.fold(WSDLTypeInfo()) { wsdlTypeInfo, child ->
         child.process(wsdlTypeInfo, existingTypes, typeStack)
     }
 }
 
-private fun eliminateAnnotations(childNodes: List<XMLNode>) =
-    childNodes.filterNot { it.name == "annotation" }
+private fun eliminateAnnotationsAndAttributes(childNodes: List<XMLNode>) =
+    childNodes.filterNot { it.name == "annotation" || it.name == "attribute" }
 
 fun complexTypeChildNode(child: XMLNode, wsdl: WSDL, parentTypeName: String): ComplexTypeChild {
-    return when(child.name) {
+    return when (child.name) {
         "element" -> ElementInComplexType(child, wsdl, parentTypeName)
         "sequence", "all" -> CollectionOfChildrenInComplexType(child, wsdl, parentTypeName)
         "complexContent" -> ComplexTypeExtension(child, wsdl, parentTypeName)

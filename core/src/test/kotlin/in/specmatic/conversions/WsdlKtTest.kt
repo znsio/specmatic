@@ -525,20 +525,7 @@ Scenario: test request returns test response
 
     @Test
     fun `should match soap request with attribute which is mandatory in the wsdl`() {
-        val wsdlSpec = """
-Feature: WSDL Attribute Test
-
-Background:
-  Given wsdl test_with_mandatory_attributes.wsdl           
-  
-Scenario: test spec with mandatory attributes without examples
-  When POST /SOAPService/SimpleSOAP
-  And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
-  And request-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="11"><qr:Id>1</qr:Id><qr:Name>James Smith</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>
-  Then status 200
-  And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
-        """.trimIndent()
-        val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
+        val wsdlFeature = parseContractFileToFeature(File("test_with_mandatory_attributes.wsdl"))
         val soapRequest = HttpRequest(
             "POST",
             "/SOAPService/SimpleSOAP",
@@ -555,20 +542,7 @@ Scenario: test spec with mandatory attributes without examples
 
     @Test
     fun `should not match soap request which does not have an attribute which is mandatory in the wsdl`() {
-        val wsdlSpec = """
-Feature: WSDL Attribute Test
-
-Background:
-  Given wsdl test_with_mandatory_attributes.wsdl           
-  
-Scenario: test spec with mandatory attributes without examples
-  When POST /SOAPService/SimpleSOAP
-  And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
-  And request-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person age="11"><qr:Id>1</qr:Id><qr:Name>James Smith</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>
-  Then status 200
-  And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
-        """.trimIndent()
-        val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
+        val wsdlFeature = parseContractFileToFeature(File("test_with_mandatory_attributes.wsdl"))
         val soapRequest = HttpRequest(
             "POST",
             "/SOAPService/SimpleSOAP",
@@ -603,20 +577,7 @@ Scenario: test spec with mandatory attributes without examples
 
     @Test
     fun `should match soap request which does not have an attribute which is optional in the wsdl`() {
-        val wsdlSpec = """
-Feature: WSDL Attribute Test
-
-Background:
-  Given wsdl test_with_optional_attributes.wsdl           
-  
-Scenario: test spec with mandatory attributes without examples
-  When POST /SOAPService/SimpleSOAP
-  And request-header SOAPAction "http://specmatic.in/SOAPService/SimpleOperation"
-  And request-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><qr:Person><qr:Id>1</qr:Id><qr:Name>James Smith</qr:Name></qr:Person></soapenv:Body></soapenv:Envelope>
-  Then status 200
-  And response-body <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soapenv:Header/><soapenv:Body><SimpleResponse>test response</SimpleResponse></soapenv:Body></soapenv:Envelope>
-        """.trimIndent()
-        val wsdlFeature = parseGherkinStringToFeature(wsdlSpec)
+        val wsdlFeature = parseContractFileToFeature(File("test_with_optional_attributes.wsdl"))
         val soapRequest = HttpRequest(
             "POST",
             "/SOAPService/SimpleSOAP",

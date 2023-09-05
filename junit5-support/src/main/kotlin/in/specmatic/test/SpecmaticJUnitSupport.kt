@@ -46,26 +46,27 @@ open class SpecmaticJUnitSupport {
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
-        private val reportConfiguration = getReportConfiguration()
         private val openApiCoverageReportInput = OpenApiCoverageReportInput()
 
         @AfterAll
         @JvmStatic
         fun report() {
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
-            reportProcessors.forEach { it.process(reportConfiguration) }
+            reportProcessors.forEach { it.process(getReportConfiguration()) }
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
             val reportConfiguration: ReportConfiguration? = try {
                 reportConfigurationFromConfig()
             } catch(e: Exception) {
-                logger.log("Could not load report configuration: " + exceptionCauseMessage(e))
+                logger.log("Could not load report configuration (got error \"" + exceptionCauseMessage(e) + "\"), running test with default report configuration")
                 null
             }
+
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
             val defaultReportTypes =
                 ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
+
             return when (reportConfiguration) {
                 null -> {
                     logger.log("API coverage report configuration not found in specmatic.json, proceeding with API coverage report without success criteria")

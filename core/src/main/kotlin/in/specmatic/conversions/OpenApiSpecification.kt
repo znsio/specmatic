@@ -530,6 +530,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         if (securityScheme.scheme == BEARER_SECURITY_SCHEME)
             return BearerSecurityScheme()
 
+        if (securityScheme.type == SecurityScheme.Type.OAUTH2) {
+            return BearerSecurityScheme()
+        }
+
         if (securityScheme.type == SecurityScheme.Type.APIKEY) {
             if (securityScheme.`in` == SecurityScheme.In.HEADER)
                 return APIKeyInHeaderSecurityScheme(securityScheme.name)
@@ -538,7 +542,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 return APIKeyInQueryParamSecurityScheme(securityScheme.name)
         }
 
-        throw ContractException("Specmatic only supports bearer and api key authentication (header, query) security schemes at the moment")
+        throw ContractException("Specmatic only supports oauth2, bearer, and api key authentication (header, query) security schemes at the moment")
     }
 
     private fun toFormFields(mediaType: MediaType) =

@@ -13,7 +13,10 @@ class QontractApplicationRunner(specmaticCommand: SpecmaticCommand, factory: Com
 
     @Throws(Exception::class)
     override fun run(vararg args: String) {
-        exitCode = CommandLine(myCommand, factory).execute(*args)
+        val cmd = CommandLine(myCommand, factory)
+        cmd.subcommands.getValue("generate-completion").commandSpec.usageMessage().hidden(true)
+
+        exitCode = cmd.execute(*args)
     }
 
     override fun getExitCode() = exitCode

@@ -283,6 +283,11 @@ fun reportConfigurationFrom(configFilePath: String) : ReportConfiguration? {
     return specmaticConfigJson.report
 }
 
+fun securityConfigurationFrom(configFilePath: String): SecurityConfiguration? {
+    val specmaticConfigJson = loadSpecmaticJsonConfig(configFilePath)
+    return specmaticConfigJson.security
+}
+
 fun getSystemGit(path: String) : GitCommand {
     return SystemGit(path)
 }

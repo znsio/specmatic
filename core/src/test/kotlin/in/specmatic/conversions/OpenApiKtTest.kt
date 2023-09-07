@@ -830,7 +830,7 @@ Background:
   Given openapi openapi/apiKeyAuthCookie.yaml
         """.trimIndent(), sourceSpecPath
             )
-        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer and api key authentication (header, query) security schemes at the moment") }
+        }.also { assertThat(it.message).isEqualTo("Specmatic only supports oauth2, bearer, and api key authentication (header, query) security schemes at the moment") }
     }
 
     @Test
@@ -1044,131 +1044,6 @@ Feature: Hello world
 
 Background:
   Given openapi openapi/hello.yaml
-        """.trimIndent(), sourceSpecPath
-        )
-        val httpRequest = HttpRequest(
-            "GET",
-            "/hello/1",
-            mapOf(
-                AUTHORIZATION to "foo"
-            )
-        )
-        val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())
-        assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).contains("Authorization header must be prefixed with \"Bearer\"")
-    }
-
-    @Test
-    fun `should generate test with oauth2 security scheme with authorization header value from example`() {
-        val contract: Feature = parseGherkinStringToFeature(
-            """
-Feature: Authenticated
-
-  Background:
-    Given openapi openapi/hello_with_oauth2.yaml
-  
-  Scenario: Query param auth test
-    When GET /hello/(id:number)
-    Then status 200
-    
-    Examples:
-    | Authorization | id |
-    | Bearer abc123 | 10 |
-        """.trimIndent(), sourceSpecPath
-        )
-
-        val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.headers).containsEntry(AUTHORIZATION, "Bearer abc123")
-                return HttpResponse.OK("success")
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-
-            }
-
-        })
-
-        assertThat(result).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `should generate test with oauth2 security scheme with random token in authorization header when no example exists`() {
-        val contract: Feature = parseGherkinStringToFeature(
-            """
-Feature: Authenticated
-
-  Background:
-    Given openapi openapi/hello_with_oauth2.yaml
-        """.trimIndent(), sourceSpecPath
-        )
-
-        val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.headers).containsKey(AUTHORIZATION)
-                assertThat(request.headers[AUTHORIZATION]).matches("Bearer (\\S+)")
-                return HttpResponse.OK("success")
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-
-            }
-
-        })
-
-        assertThat(result).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `should match http request with authorization header for spec with oauth2 security scheme`() {
-        val feature = parseGherkinStringToFeature(
-            """
-Feature: Hello world
-
-Background:
-  Given openapi openapi/hello_with_oauth2.yaml
-        """.trimIndent(), sourceSpecPath
-        )
-        val httpRequest = HttpRequest(
-            "GET",
-            "/hello/1",
-            mapOf(
-                AUTHORIZATION to "Bearer foo"
-            )
-        )
-        val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())
-        assertThat(result).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `should not match http request with authorization header missing for spec with oauth2 security scheme`() {
-        val feature = parseGherkinStringToFeature(
-            """
-Feature: Hello world
-
-Background:
-  Given openapi openapi/hello_with_oauth2.yaml
-        """.trimIndent(), sourceSpecPath
-        )
-        val httpRequest = HttpRequest(
-            "GET",
-            "/hello/1"
-        )
-        val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())
-        assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).contains("Authorization header is missing in request")
-    }
-
-    @Test
-    fun `should not match http request with authorization header without bearer prefix for spec with oauth2 security scheme`() {
-        val feature = parseGherkinStringToFeature(
-            """
-Feature: Hello world
-
-Background:
-  Given openapi openapi/hello_with_oauth2.yaml
         """.trimIndent(), sourceSpecPath
         )
         val httpRequest = HttpRequest(

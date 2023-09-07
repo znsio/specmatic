@@ -1,0 +1,95 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /hello-with-oauth2:
+    get:
+      summary: hello world
+      description: Route with OAuth2 security scheme
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+        - oAuth2AuthCode: [ ]
+
+  /hello-with-bearer:
+    get:
+      summary: hello world
+      description: Route with Bearer security scheme.
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+        - BearerAuth: [ ]
+
+  /hello-with-apikey-header:
+    get:
+      summary: hello world
+      description: Route with API Key security scheme.
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+        - ApiKeyAuthHeader: [ ]
+
+  /hello-with-apikey-query-param:
+    get:
+      summary: hello world
+      description: Route with API Key security scheme.
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+        - ApiKeyAuthQuery: [ ]
+
+components:
+  securitySchemes:
+    oAuth2AuthCode:
+      type: oauth2
+      description: For more information, see https://example.com/docs/oauth
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.example.com/oauth/authorize
+          tokenUrl: https://api.example.com/api/oauth.access
+          scopes:
+            users:read: Read user information
+            users:write: Modify user information
+            im:read: Read messages
+            im:write: Write messages
+            im:history: Access the message archive
+            search:read: Search messages, files, and so on
+    BearerAuth:
+      type: http
+      scheme: bearer
+    ApiKeyAuthHeader:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+    ApiKeyAuthQuery:
+      type: apiKey
+      in: query
+      name: apiKey
+

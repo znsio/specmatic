@@ -30,20 +30,16 @@ paths:
 
 components:
   securitySchemes:
-    oAuth2AuthCode:
+    oAuth2Implicit:
       type: oauth2
       description: For more information, see https://example.com/docs/oauth
       flows:
-        authorizationCode:
-          authorizationUrl: https://api.example.com/oauth/authorize
-          tokenUrl: https://api.example.com/api/oauth.access
+        implicit:
+          authorizationUrl: https://api.examlple.com/oauth2/authorize
           scopes:
-            users:read: Read user information
-            users:write: Modify user information
-            im:read: Read messages
-            im:write: Write messages
-            im:history: Access the message archive
-            search:read: Search messages, files, and so on
+            read: Grant read-only access to all your data except for the account and user info
+            write: Grant write-only access to all your data except for the account and user info
+            profile: Grant read-only access to the account and user info only
 
 security:
-  - oAuth2AuthCode: []
+  - oAuth2Implicit: []

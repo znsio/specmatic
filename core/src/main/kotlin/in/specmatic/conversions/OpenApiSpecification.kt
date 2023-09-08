@@ -529,17 +529,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun toSecurityScheme(schemeName: String, securityScheme: SecurityScheme): OpenAPISecurityScheme {
         val securitySchemeConfiguration = securityConfiguration?.OpenAPI?.securitySchemes?.get(schemeName)
         if (securityScheme.scheme == BEARER_SECURITY_SCHEME) {
-            val token = securitySchemeConfiguration?.let{
-                (it as BearerSecuritySchemeConfiguration).token
-            }
-            return BearerSecurityScheme(token)
+            return toBearerSecurityScheme(securityScheme.scheme, securitySchemeConfiguration)
         }
 
         if (securityScheme.type == SecurityScheme.Type.OAUTH2) {
-            val token = securitySchemeConfiguration?.let{
-                (it as OAuth2SecuritySchemeConfiguration).token
-            }
-            return BearerSecurityScheme(token)
+            return toBearerSecurityScheme(securityScheme.type.toString(), securitySchemeConfiguration)
         }
 
         if (securityScheme.type == SecurityScheme.Type.APIKEY) {
@@ -554,6 +548,26 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         throw ContractException("Specmatic only supports oauth2, bearer, and api key authentication (header, query) security schemes at the moment")
+    }
+
+    private fun toBearerSecurityScheme(
+        type: String,
+        securitySchemeConfiguration: SecuritySchemeConfiguration?
+    ): BearerSecurityScheme {
+        val token = when (type) {
+            BEARER_SECURITY_SCHEME ->
+                securitySchemeConfiguration?.let {
+                    (it as BearerSecuritySchemeConfiguration).token
+                }
+
+            SecurityScheme.Type.OAUTH2.toString() ->
+                securitySchemeConfiguration?.let {
+                    (it as OAuth2SecuritySchemeConfiguration).token
+                }
+
+            else -> throw ContractException("Cannot use the Bearer Security Scheme implementation for scheme type: $type")
+        }
+        return BearerSecurityScheme(token)
     }
 
     private fun toFormFields(mediaType: MediaType) =

@@ -41,8 +41,8 @@ class BadRequestOrDefault(private val badRequestResponses: Map<Int, HttpResponse
         httpResponse.status in badRequestResponses || defaultResponse != null
 }
 
-fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook()): Feature {
-    return parseContractFileToFeature(File(contractPath), hook)
+fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String = "", sourceRepository:String = "",  sourceRepositoryBranch:String = "", specificationPath:String = "" ): Feature {
+    return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath)
 }
 
 fun checkExists(file: File) = file.also {
@@ -50,11 +50,11 @@ fun checkExists(file: File) = file.also {
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
 }
 
-fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook()): Feature {
+fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourceProvider:String = "", sourceRepository:String = "",  sourceRepositoryBranch:String = "", specificationPath:String = "" ): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
-        "yaml" -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path).toFeature()
+        "yaml" -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath).toFeature()
         "wsdl" -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw ContractException("File extension of ${file.path} not recognized")
@@ -274,7 +274,7 @@ data class Feature(
 
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
         generateContractTestScenarios(suggestions).map {
-            ScenarioTest(it, generativeTestingEnabled)
+            ScenarioTest(it, generativeTestingEnabled, it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
         }
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {

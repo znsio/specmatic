@@ -252,7 +252,14 @@ fun gitRootDir(): String {
     return gitRoot.substring(gitRoot.lastIndexOf('/') + 1)
 }
 
-data class ContractPathData(val baseDir: String, val path: String) {
+data class ContractPathData(
+    val baseDir: String,
+    val path: String,
+    val provider: String = "",
+    val repository: String = "",
+    val branch: String = "",
+    val specificationPath: String = ""
+) {
     val relativePath: String
       get() {
           return File(this.path).relativeTo(File(this.baseDir)).path.let {

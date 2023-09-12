@@ -60,8 +60,13 @@ data class HttpRequestPattern(
         if(securitySchemes.isEmpty())
             return MatchSuccess(Triple(httpRequest, resolver, failures))
 
-        val matchingSecurityScheme = securitySchemes.find { it.matches(httpRequest) }
-            ?: return MatchSuccess(Triple(httpRequest, resolver, failures.plus(Failure("No auth params were found in the request"))))
+        val matchFailures = mutableListOf<Failure>()
+        val matchingSecurityScheme: OpenAPISecurityScheme = securitySchemes.firstOrNull {
+            when (val result = it.matches(httpRequest)) {
+                is Failure -> false.also { matchFailures.add(result) }
+                is Success -> true
+            }
+        } ?: return MatchSuccess(Triple(httpRequest, resolver, failures.plus(matchFailures)))
 
         return MatchSuccess(Triple(matchingSecurityScheme.removeParam(httpRequest), resolver, failures))
     }

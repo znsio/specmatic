@@ -3,12 +3,13 @@ package `in`.specmatic.conversions
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpRequestPattern
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.Result
 import `in`.specmatic.core.pattern.Row
 import `in`.specmatic.core.pattern.StringPattern
 
 class APIKeyInHeaderSecurityScheme(val name: String) : OpenAPISecurityScheme {
-    override fun matches(httpRequest: HttpRequest): Boolean {
-        return httpRequest.headers.containsKey(name)
+    override fun matches(httpRequest: HttpRequest): Result {
+        return if (httpRequest.headers.containsKey(name)) Result.Success() else Result.Failure("API-key named $name was not present as a header")
     }
 
     override fun removeParam(httpRequest: HttpRequest): HttpRequest {

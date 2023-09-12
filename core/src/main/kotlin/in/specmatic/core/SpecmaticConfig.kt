@@ -85,25 +85,78 @@ data class SpecmaticConfigJson(
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
-    val repository: RespositoryInfo? = null
+    val repository: RepositoryInfo? = null,
+    val report: ReportConfiguration? = null
 ) {
-    companion object {
-        fun load(configFileName: String? = null): SpecmaticConfigJson {
-            return SpecmaticJsonFormat.decodeFromString(File(configFileName ?: globalConfigFileName).readText())
-        }
-    }
 }
 
 @Serializable
-data class RespositoryInfo(
+data class RepositoryInfo(
     val provider: String,
     val collectionName: String
+)
+
+@Serializable
+data class ReportConfiguration(
+    val formatters: List<ReportFormatter>? = null,
+    val types: ReportTypes
+)
+
+@Serializable
+data class ReportFormatter(
+    val type: ReportFormatterType,
+    val layout: ReportFormatterLayout
+)
+
+@Serializable
+enum class ReportFormatterType {
+    @SerialName("text")
+    TEXT
+}
+
+@Serializable
+enum class ReportFormatterLayout {
+    @SerialName("table")
+    TABLE
+}
+
+@Serializable
+data class ReportTypes (
+    @SerialName("APICoverage")
+    val apiCoverage: APICoverage
+)
+
+@Serializable
+data class APICoverage (
+    @SerialName("OpenAPI")
+    val openAPI: APICoverageConfiguration
+)
+
+@Serializable
+data class APICoverageConfiguration(
+    val successCriteria: SuccessCriteria,
+    val excludedEndpoints: List<String> = emptyList()
+)
+
+@Serializable
+data class SuccessCriteria(
+    val minThresholdPercentage: Int,
+    val maxMissedEndpointsInSpec: Int,
+    val enforce: Boolean = false
 )
 
 val SpecmaticJsonFormat = Json {
     prettyPrint = true
 }
 
-fun loadSpecmaticJsonConfig(configFileName: String?): SpecmaticConfigJson {
-    return SpecmaticJsonFormat.decodeFromString(File(configFileName ?: globalConfigFileName).readText())
+fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson {
+    val configFile = File(configFileName ?: globalConfigFileName)
+    if (!configFile.exists()) {
+        throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_FILE_NAME} at path ${configFile.canonicalPath}")
+    }
+    try {
+        return SpecmaticJsonFormat.decodeFromString(configFile.readText())
+    } catch (e: Throwable) {
+        throw ContractException("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json fie adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
+    }
 }

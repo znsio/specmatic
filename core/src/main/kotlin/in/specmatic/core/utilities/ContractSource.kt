@@ -80,7 +80,7 @@ data class GitRepo(
         }
 
         return selector.select(this).map {
-            ContractPathData(repoDir.path, repoDir.resolve(it).path)
+            ContractPathData(repoDir.path, repoDir.resolve(it).path, "git", gitRepositoryURL,branchName ?: "", it)
         }
     }
 
@@ -167,7 +167,7 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
         val configFileLocation = File(configFilePath).absoluteFile.parentFile
 
         return selector.select(this).map {
-            ContractPathData(monoRepoBaseDir.canonicalPath, configFileLocation.resolve(it).canonicalPath)
+            ContractPathData(monoRepoBaseDir.canonicalPath, configFileLocation.resolve(it).canonicalPath, specificationPath = it)
         }
     }
 }

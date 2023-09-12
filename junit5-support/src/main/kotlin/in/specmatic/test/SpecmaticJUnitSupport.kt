@@ -184,8 +184,8 @@ open class SpecmaticJUnitSupport {
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path).map { it.path }
-                    contractFilePaths.flatMap { loadTestScenarios(it, "", "", testConfig) }
+                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
+                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath) }
                 }
             }
 
@@ -246,14 +246,17 @@ open class SpecmaticJUnitSupport {
         path: String,
         suggestionsPath: String,
         suggestionsData: String,
-        config: TestConfig
+        config: TestConfig,
+        sourceProvider:String = "",
+        sourceRepository:String = "",
+        sourceRepositoryBranch:String = "",
+        specificationPath:String = ""
     ): List<ContractTest> {
         if(isYAML(path) && !isOpenAPI(path))
             return emptyList()
 
         val contractFile = File(path)
-        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract)).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
-
+        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
             suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)

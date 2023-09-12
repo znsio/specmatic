@@ -58,16 +58,8 @@ Examples:
 
             @Test
             fun `should generate test with oauth2 authorization code security scheme with random token in authorization header when no example exists`() {
-                val contract: Feature = parseGherkinStringToFeature(
-                    """
-Feature: OAuth2
-
-Background:
-Given openapi openapi/hello_with_oauth2_authorization_code_flow.yaml
-    """.trimIndent(), sourceSpecPath
-                )
-
-                val contractTests = contract.generateContractTestScenarios(emptyList())
+                val feature = parseContractFileToFeature("./src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml")
+                val contractTests = feature.generateContractTestScenarios(emptyList())
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsKey(HttpHeaders.AUTHORIZATION)
@@ -80,7 +72,6 @@ Given openapi openapi/hello_with_oauth2_authorization_code_flow.yaml
                     }
 
                 })
-
                 assertThat(result).isInstanceOf(Result.Success::class.java)
             }
 

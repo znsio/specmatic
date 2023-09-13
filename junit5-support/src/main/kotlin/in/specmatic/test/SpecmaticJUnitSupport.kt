@@ -43,8 +43,8 @@ open class SpecmaticJUnitSupport {
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
-        private val openApiCoverageReportInput = OpenApiCoverageReportInput()
-        private var specmaticConfig: SpecmaticConfigJson? = null
+        private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
+        private var specmaticConfig: SpecmaticConfigJson?
 
         @AfterAll
         @JvmStatic
@@ -115,8 +115,12 @@ open class SpecmaticJUnitSupport {
         }
 
         fun reportConfigurationFromConfig(): ReportConfiguration? {
-            return reportConfigurationFrom(globalConfigFileName)
+            return reportConfigurationFrom(getConfigFile())
         }
+
+        fun getConfigFile() = System.getProperty(CONFIG_FILE_NAME) ?: globalConfigFileName
+
+        fun getConfigFileWithAbsolutePath() = File(getConfigFile()).canonicalPath
 
         fun securityConfigurationFromConfig(): SecurityConfiguration? {
             return securityConfigurationFrom(globalConfigFileName)
@@ -152,7 +156,6 @@ open class SpecmaticJUnitSupport {
     fun contractTest(): Collection<DynamicTest> {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
-        val givenConfigFile = System.getProperty(CONFIG_FILE_NAME)
         val filterName: String? = System.getProperty(FILTER_NAME)
         val filterNotName: String? = System.getProperty(FILTER_NOT_NAME)
 
@@ -176,14 +179,14 @@ open class SpecmaticJUnitSupport {
                     contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig, specmaticConfig?.security) }
                 }
                 else -> {
-                    val configFile = givenConfigFile ?: globalConfigFileName
+                    val configFile = getConfigFile()
 
                     exitIfDoesNotExist("config file", configFile)
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path).map { it.path }
-                    contractFilePaths.flatMap { loadTestScenarios(it, "", "", testConfig, specmaticConfig?.security) }
+                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
+                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfig?.security) }
                 }
             }
 
@@ -255,14 +258,17 @@ open class SpecmaticJUnitSupport {
         suggestionsPath: String,
         suggestionsData: String,
         config: TestConfig,
+        sourceProvider:String? = null,
+        sourceRepository:String? = null,
+        sourceRepositoryBranch:String? = null,
+        specificationPath:String? = null,
         securityConfiguration: SecurityConfiguration?
     ): List<ContractTest> {
         if(isYAML(path) && !isOpenAPI(path))
             return emptyList()
 
         val contractFile = File(path)
-        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), securityConfiguration).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
-
+        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
             suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)

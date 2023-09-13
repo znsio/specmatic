@@ -31,7 +31,7 @@ import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
 
-class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
+class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
     ApiSpecification {
     companion object {
         fun fromFile(openApiFilePath: String, relativeTo: String = ""): OpenApiSpecification {
@@ -51,7 +51,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             return OpenApiSpecification(openApiFile, openApi)
         }
 
-        fun fromYAML(yamlContent: String, filePath: String, loggerForErrors: LogStrategy = logger, securityConfiguration: SecurityConfiguration? = null): OpenApiSpecification {
+        fun fromYAML(yamlContent: String, filePath: String,  loggerForErrors: LogStrategy = logger, sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), filePath)
             val openApi: OpenAPI? = parseResult.openAPI
@@ -68,7 +68,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 printMessages(parseResult, filePath, loggerForErrors)
             }
 
-            return OpenApiSpecification(filePath, openApi, securityConfiguration)
+            return OpenApiSpecification(filePath, openApi, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration)
         }
 
         private fun printMessages(parseResult: SwaggerParseResult, filePath: String, loggerForErrors: LogStrategy) {
@@ -237,6 +237,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             httpRequestPattern = httpRequestPattern,
                             httpResponsePattern = httpResponsePattern,
                             ignoreFailure = ignoreFailure,
+                            sourceProvider = sourceProvider,
+                            sourceRepository = sourceRepository,
+                            sourceRepositoryBranch = sourceRepositoryBranch,
+                            specification = specificationPath,
+                            serviceType = "HTTP"
                         )
                     }
                 }.flatten()
@@ -334,7 +339,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                     specmaticExampleRows.first().columnNames,
                                     specmaticExampleRows
                                 )
-                            ) else emptyList()
+                            ) else emptyList(),
+                            sourceProvider = sourceProvider,
+                            sourceRepository = sourceRepository,
+                            sourceRepositoryBranch = sourceRepositoryBranch,
+                            specification = specificationPath,
+                            serviceType = "HTTP"
                         )
                     }
                 }.flatten()

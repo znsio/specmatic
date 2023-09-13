@@ -44,7 +44,7 @@ open class SpecmaticJUnitSupport {
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
-        private var specmaticConfig: SpecmaticConfigJson?
+        private var specmaticConfig: SpecmaticConfigJson? = null
 
         @AfterAll
         @JvmStatic
@@ -114,17 +114,9 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        fun reportConfigurationFromConfig(): ReportConfiguration? {
-            return reportConfigurationFrom(getConfigFile())
-        }
-
         fun getConfigFile() = System.getProperty(CONFIG_FILE_NAME) ?: globalConfigFileName
 
         fun getConfigFileWithAbsolutePath() = File(getConfigFile()).canonicalPath
-
-        fun securityConfigurationFromConfig(): SecurityConfiguration? {
-            return securityConfigurationFrom(globalConfigFileName)
-        }
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -176,7 +168,7 @@ open class SpecmaticJUnitSupport {
         val testScenarios = try {
             val testScenarios = when {
                 contractPaths != null -> {
-                    contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig, specmaticConfig?.security) }
+                    contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig, securityConfiguration = specmaticConfig?.security) }
                 }
                 else -> {
                     val configFile = getConfigFile()
@@ -245,7 +237,7 @@ open class SpecmaticJUnitSupport {
 
     private fun getSpecmaticJsonConfig(): SpecmaticConfigJson? {
         return try {
-            loadSpecmaticJsonConfig()
+            loadSpecmaticJsonConfig(getConfigFile())
         }
         catch (e: Throwable) {
             logger.log(exceptionCauseMessage(e))
@@ -262,7 +254,7 @@ open class SpecmaticJUnitSupport {
         sourceRepository:String? = null,
         sourceRepositoryBranch:String? = null,
         specificationPath:String? = null,
-        securityConfiguration: SecurityConfiguration?
+        securityConfiguration: SecurityConfiguration? = null
     ): List<ContractTest> {
         if(isYAML(path) && !isOpenAPI(path))
             return emptyList()

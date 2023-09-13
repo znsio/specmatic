@@ -1,6 +1,6 @@
-package `in`.specmatic.test.reports.coverage
+package `in`.specmatic.test.reports.coverage.console
 
-data class OpenApiCoverageRow(
+data class OpenApiCoverageConsoleRow(
     val method: String,
     val path: String,
     val responseStatus: String,

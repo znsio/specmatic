@@ -8,11 +8,11 @@ data class TestResultRecord(
     val method: String,
     val responseStatus: Int,
     val result: TestResult,
-    val sourceProvider: String = "",
-    val sourceRepository: String = "",
-    val sourceRepositoryBranch: String = "",
-    val specification: String = "",
-    val serviceType: String = ""
+    val sourceProvider: String? = null,
+    val sourceRepository: String? = null,
+    val sourceRepositoryBranch: String? = null,
+    val specification: String? = null,
+    val serviceType: String? = null
 ) {
     val includeForCoverage = result !in listOf(TestResult.Skipped, TestResult.NotImplemented)
 }

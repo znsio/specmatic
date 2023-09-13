@@ -126,7 +126,7 @@ open class SpecmaticJUnitSupport {
 
         fun getConfigFile() = System.getProperty(CONFIG_FILE_NAME) ?: globalConfigFileName
 
-        fun getConfigFileWithAbsolutePath() = File(getConfigFile()).absolutePath
+        fun getConfigFileWithAbsolutePath() = File(getConfigFile()).canonicalPath
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -250,10 +250,10 @@ open class SpecmaticJUnitSupport {
         suggestionsPath: String,
         suggestionsData: String,
         config: TestConfig,
-        sourceProvider:String = "",
-        sourceRepository:String = "",
-        sourceRepositoryBranch:String = "",
-        specificationPath:String = ""
+        sourceProvider:String? = null,
+        sourceRepository:String? = null,
+        sourceRepositoryBranch:String? = null,
+        specificationPath:String? = null
     ): List<ContractTest> {
         if(isYAML(path) && !isOpenAPI(path))
             return emptyList()

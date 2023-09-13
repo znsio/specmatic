@@ -255,10 +255,10 @@ fun gitRootDir(): String {
 data class ContractPathData(
     val baseDir: String,
     val path: String,
-    val provider: String = "",
-    val repository: String = "",
-    val branch: String = "",
-    val specificationPath: String = ""
+    val provider: String? = null,
+    val repository: String? = null,
+    val branch: String? = null,
+    val specificationPath: String? = null
 ) {
     val relativePath: String
       get() {

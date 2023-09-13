@@ -94,7 +94,7 @@ class OpenApiCoverageReportInput(
                         method = operationGroup.second,
                         responseCode = operationGroup.third,
                         count = operationRows.count{it.includeForCoverage},
-                        coverageStatus = getRemarks(operationRows)
+                        coverageStatus = getRemarks(operationRows).toString()
                     )
                 }
             )

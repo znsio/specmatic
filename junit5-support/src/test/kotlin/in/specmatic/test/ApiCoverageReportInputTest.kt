@@ -253,8 +253,8 @@ class ApiCoverageReportInputTest {
                         "in/specmatic/examples/store/route1.yaml",
                         "HTTP",
                         listOf(
-                            OpenApiCoverageOperation("/route1", "GET",200, 1, Remarks.Covered),
-                            OpenApiCoverageOperation( "/route1", "POST",200, 1, Remarks.Covered)
+                            OpenApiCoverageOperation("/route1", "GET",200, 1, Remarks.Covered.toString()),
+                            OpenApiCoverageOperation( "/route1", "POST",200, 1, Remarks.Covered.toString())
                         )
                     ),
                     OpenApiCoverageJsonRow(
@@ -264,15 +264,15 @@ class ApiCoverageReportInputTest {
                         "in/specmatic/examples/store/route2.yaml",
                         "HTTP",
                         listOf(
-                            OpenApiCoverageOperation( "/route2", "GET",200, 1, Remarks.Covered),
-                            OpenApiCoverageOperation( "/route2", "POST",200, 0, Remarks.NotImplemented)
+                            OpenApiCoverageOperation( "/route2", "GET",200, 1, Remarks.Covered.toString()),
+                            OpenApiCoverageOperation( "/route2", "POST",200, 0, Remarks.NotImplemented.toString())
                         )
                     ),
                     OpenApiCoverageJsonRow(
                         serviceType = "HTTP",
                         operations = listOf(
-                            OpenApiCoverageOperation( "/route3/{route_id}", "GET",0, 0, Remarks.Missed),
-                            OpenApiCoverageOperation( "/route3/{route_id}", "POST",0, 0, Remarks.Missed)
+                            OpenApiCoverageOperation( "/route3/{route_id}", "GET",0, 0, Remarks.Missed.toString()),
+                            OpenApiCoverageOperation( "/route3/{route_id}", "POST",0, 0, Remarks.Missed.toString()      )
                         )
                     )
                 )

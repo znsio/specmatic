@@ -46,7 +46,7 @@ open class SpecmaticJUnitSupport {
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
-        private val openApiCoverageReportInput = OpenApiCoverageReportInput()
+        private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
         @AfterAll
         @JvmStatic
@@ -121,8 +121,12 @@ open class SpecmaticJUnitSupport {
         }
 
         fun reportConfigurationFromConfig(): ReportConfiguration? {
-            return reportConfigurationFrom(globalConfigFileName)
+            return reportConfigurationFrom(getConfigFile())
         }
+
+        fun getConfigFile() = System.getProperty(CONFIG_FILE_NAME) ?: globalConfigFileName
+
+        fun getConfigFileWithAbsolutePath() = File(getConfigFile()).absolutePath
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -154,7 +158,6 @@ open class SpecmaticJUnitSupport {
     fun contractTest(): Collection<DynamicTest> {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
-        val givenConfigFile = System.getProperty(CONFIG_FILE_NAME)
         val filterName: String? = System.getProperty(FILTER_NAME)
         val filterNotName: String? = System.getProperty(FILTER_NOT_NAME)
 
@@ -178,7 +181,7 @@ open class SpecmaticJUnitSupport {
                     contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig) }
                 }
                 else -> {
-                    val configFile = givenConfigFile ?: globalConfigFileName
+                    val configFile = getConfigFile()
 
                     exitIfDoesNotExist("config file", configFile)
 

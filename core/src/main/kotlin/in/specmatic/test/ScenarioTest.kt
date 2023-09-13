@@ -7,11 +7,13 @@ import `in`.specmatic.core.TestResult
 import `in`.specmatic.core.executeTest
 
 class ScenarioTest(
-    val scenario: Scenario, private val generativeTestingEnabled: Boolean = false, val sourceProvider: String = "",
-    val sourceRepository: String = "",
-    val sourceRepositoryBranch: String = "",
-    val specification: String = "",
-    val serviceType: String = ""
+    val scenario: Scenario,
+    private val generativeTestingEnabled: Boolean = false,
+    private val sourceProvider: String? = null,
+    private val sourceRepository: String? = null,
+    private val sourceRepositoryBranch: String? = null,
+    private val specification: String? = null,
+    private val serviceType: String? = null
 ) : ContractTest {
     override fun testResultRecord(result: Result): TestResultRecord {
         val resultStatus = if (scenario.generatedFromExamples) result.testResult() else TestResult.Skipped

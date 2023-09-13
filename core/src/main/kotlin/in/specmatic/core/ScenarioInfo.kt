@@ -16,11 +16,11 @@ data class ScenarioInfo(
     val references: Map<String, References> = emptyMap(),
     val bindings: Map<String, String> = emptyMap(),
     val isGherkinScenario: Boolean = false,
-    val sourceProvider:String = "",
-    val sourceRepository:String = "",
-    val sourceRepositoryBranch:String = "",
-    val specification:String = "",
-    val serviceType:String = ""
+    val sourceProvider:String? = null,
+    val sourceRepository:String? = null,
+    val sourceRepositoryBranch:String? = null,
+    val specification:String? = null,
+    val serviceType:String? = null
 ) {
     fun matchesSignature(other: ScenarioInfo) = httpRequestPattern.matchesSignature(other.httpRequestPattern) &&
             httpResponsePattern.status == other.httpResponsePattern.status

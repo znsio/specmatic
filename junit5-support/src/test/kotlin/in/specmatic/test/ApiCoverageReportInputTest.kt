@@ -269,12 +269,8 @@ class ApiCoverageReportInputTest {
                         )
                     ),
                     OpenApiCoverageJsonRow(
-                        "",
-                        "",
-                        "",
-                        "",
-                        "HTTP",
-                        listOf(
+                        serviceType = "HTTP",
+                        operations = listOf(
                             OpenApiCoverageOperation( "/route3/{route_id}", "GET",0, 0, Remarks.Missed),
                             OpenApiCoverageOperation( "/route3/{route_id}", "POST",0, 0, Remarks.Missed)
                         )

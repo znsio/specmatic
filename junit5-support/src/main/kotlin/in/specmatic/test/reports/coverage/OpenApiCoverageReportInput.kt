@@ -191,9 +191,9 @@ class OpenApiCoverageReportInput(
 }
 
 data class CoverageGroupKey(
-    val sourceProvider: String,
-    val sourceRepository: String,
-    val sourceRepositoryBranch: String,
-    val specification: String,
-    val serviceType: String
+    val sourceProvider: String?,
+    val sourceRepository: String?,
+    val sourceRepositoryBranch: String?,
+    val specification: String?,
+    val serviceType: String?
 )

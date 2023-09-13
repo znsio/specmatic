@@ -34,7 +34,7 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
     }
 
     private fun saveAsJson(openApiCoverageJsonReport: OpenApiCoverageJsonReport) {
-        println("Saving Open API Coverage Report json to $JSON_REPORT_PATH...")
+        println("Saving Open API Coverage Report json to $JSON_REPORT_PATH ...")
         val json = Json {
             encodeDefaults = false
         }

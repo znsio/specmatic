@@ -52,11 +52,11 @@ data class Scenario(
     val exampleName: String? = null,
     val generativeTestingEnabled: Boolean = false,
     val generatedFromExamples: Boolean = examples.isNotEmpty(),
-    val sourceProvider:String = "",
-    val sourceRepository:String = "",
-    val sourceRepositoryBranch:String = "",
-    val specification:String = "",
-    val serviceType:String = ""
+    val sourceProvider:String? = null,
+    val sourceRepository:String? = null,
+    val sourceRepositoryBranch:String? = null,
+    val specification:String? = null,
+    val serviceType:String? = null
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,

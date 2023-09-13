@@ -31,7 +31,7 @@ import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
 
-class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, val sourceProvider:String = "", val sourceRepository:String = "",  val sourceRepositoryBranch:String = "", val specificationPath:String = "") : IncludedSpecification,
+class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null) : IncludedSpecification,
     ApiSpecification {
     companion object {
         fun fromFile(openApiFilePath: String, relativeTo: String = ""): OpenApiSpecification {
@@ -51,7 +51,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             return OpenApiSpecification(openApiFile, openApi)
         }
 
-        fun fromYAML(yamlContent: String, filePath: String, sourceProvider:String = "", sourceRepository:String = "",  sourceRepositoryBranch:String = "", specificationPath:String = "", loggerForErrors: LogStrategy = logger): OpenApiSpecification {
+        fun fromYAML(yamlContent: String, filePath: String,  loggerForErrors: LogStrategy = logger, sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null,): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), filePath)
             val openApi: OpenAPI? = parseResult.openAPI

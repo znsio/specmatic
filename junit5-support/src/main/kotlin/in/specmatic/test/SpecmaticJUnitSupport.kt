@@ -115,7 +115,7 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: globalConfigFileName
+        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: "./${Configuration.DEFAULT_CONFIG_FILE_NAME}"
 
         private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }
@@ -250,9 +250,12 @@ open class SpecmaticJUnitSupport {
         return try {
             loadSpecmaticJsonConfig(configFile)
         }
-        catch (e: Throwable) {
+        catch (e: ContractException) {
             logger.log(exceptionCauseMessage(e))
             null
+        }
+        catch (e: Throwable) {
+            exitWithMessage(exceptionCauseMessage(e))
         }
     }
 

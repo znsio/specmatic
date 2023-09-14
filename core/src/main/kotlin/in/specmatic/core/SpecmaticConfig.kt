@@ -157,6 +157,6 @@ fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson
     try {
         return SpecmaticJsonFormat.decodeFromString(configFile.readText())
     } catch (e: Throwable) {
-        throw Exception("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json fie adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
+        throw Exception("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
     }
 }

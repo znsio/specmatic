@@ -63,8 +63,7 @@ open class SpecmaticJUnitSupport {
             val defaultReportTypes = ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
             return when (val reportConfiguration = specmaticConfigJson?.report) {
                 null -> {
-                    logger.log("Could not load report configuration, running test with default report configuration")
-                    logger.log("API coverage report configuration not found in specmatic.json, proceeding with API coverage report without success criteria")
+                    logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
                     ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
                 }
                 else -> {
@@ -115,7 +114,7 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: "./${Configuration.DEFAULT_CONFIG_FILE_NAME}"
+        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getGlobalConfigFileName()
 
         private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }

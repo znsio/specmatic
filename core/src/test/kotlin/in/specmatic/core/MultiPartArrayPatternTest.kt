@@ -38,7 +38,7 @@ internal class MultiPartArrayPatternTest {
     }
 
     @Test
-    fun `it should generate multiple patterns when a single example is set`() {
+    fun `it should only one pattern when a single example is set`() {
         val pattern = MultipartArrayPattern("files", ListPattern(BinaryPattern()))
         val example = Row(columnNames = listOf("files_filename"),values = listOf("test3.txt"))
 

@@ -46,29 +46,24 @@ open class SpecmaticJUnitSupport {
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
+        private var specmaticConfigJson: SpecmaticConfigJson? = null
         private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
         @AfterAll
         @JvmStatic
         fun report() {
-            val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
-            reportProcessors.forEach { it.process(getReportConfiguration()) }
+            specmaticConfigJson?.let {
+                val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
+                reportProcessors.forEach { it.process(getReportConfiguration()) }
+            }
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            val reportConfiguration: ReportConfiguration? = try {
-                reportConfigurationFromConfig()
-            } catch(e: Exception) {
-                logger.log("Could not load report configuration (got error \"" + exceptionCauseMessage(e) + "\"), running test with default report configuration")
-                null
-            }
-
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
-            val defaultReportTypes =
-                ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
-
-            return when (reportConfiguration) {
+            val defaultReportTypes = ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
+            return when (val reportConfiguration = specmaticConfigJson?.report) {
                 null -> {
+                    logger.log("Could not load report configuration, running test with default report configuration")
                     logger.log("API coverage report configuration not found in specmatic.json, proceeding with API coverage report without success criteria")
                     ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
                 }
@@ -120,13 +115,9 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        fun reportConfigurationFromConfig(): ReportConfiguration? {
-            return reportConfigurationFrom(configFile)
-        }
-
         val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: globalConfigFileName
 
-        private fun getConfigFileWithAbsolutePath() = File(configFile).takeIf { it.exists() }?.canonicalPath
+        private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -174,44 +165,16 @@ open class SpecmaticJUnitSupport {
         } catch (e: Throwable) {
             return loadExceptionAsTestError(e)
         }
-        val specmaticJson = getSpecmaticJson()
         val testScenarios = try {
             val testScenarios = when {
                 contractPaths != null -> {
-                    contractPaths.split(",").flatMap { specification ->
-                        val sources: List<ContractSource>? = specmaticJson?.let { loadSources(specmaticJson) }
-                        val sourceAndSpecification: Pair<ContractSource, String>? = sources?.flatMap { source ->
-                            source.testContracts.mapNotNull { testContract ->
-                                if (specification.endsWith(testContract)) Pair(source, testContract) else null
-                            }
-                        }?.firstOrNull()
-                        val specSource: SpecificationSource = sourceAndSpecification?.let {
-                            val source = sourceAndSpecification.first
-                            val specificationPath = sourceAndSpecification.second
-                            when (source) {
-                                is GitRepo -> SpecificationSource(
-                                    source.type,
-                                    specificationPath,
-                                    source.gitRepositoryURL,
-                                    source.branchName
-                                )
-
-                                else -> SpecificationSource(
-                                    provider = source.type,
-                                    specificationPath = specificationPath
-                                )
-                            }
-                        } ?: SpecificationSource(specificationPath = specification)
-
+                    contractPaths.split(",").flatMap {
                         loadTestScenarios(
-                            specification,
+                            it,
                             suggestionsPath,
                             suggestionsData,
                             testConfig,
-                            specSource.provider,
-                            specSource.repository,
-                            specSource.repositoryBranch,
-                            specSource.specificationPath
+                            specificationPath = it
                         )
                     }
                 }
@@ -222,7 +185,10 @@ open class SpecmaticJUnitSupport {
 
                     createIfDoesNotExist(workingDirectory.path)
 
+                    specmaticConfigJson = getSpecmaticJson()
+
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
+
                     contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath) }
                 }
             }
@@ -393,5 +359,3 @@ fun selectTestsToRun(
 
     return filteredByNotName
 }
-
-data class SpecificationSource(val provider:String? = null, val repository:String? = null, val repositoryBranch:String? = null, val specificationPath:String? = null )

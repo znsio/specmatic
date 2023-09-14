@@ -121,12 +121,12 @@ open class SpecmaticJUnitSupport {
         }
 
         fun reportConfigurationFromConfig(): ReportConfiguration? {
-            return reportConfigurationFrom(getConfigFile())
+            return reportConfigurationFrom(configFile)
         }
 
-        fun getConfigFile() = System.getProperty(CONFIG_FILE_NAME) ?: globalConfigFileName
+        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: globalConfigFileName
 
-        fun getConfigFileWithAbsolutePath() = File(getConfigFile()).canonicalPath
+        private fun getConfigFileWithAbsolutePath() = File(configFile).takeIf { it.exists() }?.canonicalPath
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -174,14 +174,49 @@ open class SpecmaticJUnitSupport {
         } catch (e: Throwable) {
             return loadExceptionAsTestError(e)
         }
-
+        val specmaticJson = getSpecmaticJson()
         val testScenarios = try {
             val testScenarios = when {
                 contractPaths != null -> {
-                    contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig) }
+                    contractPaths.split(",").flatMap { specification ->
+                        val sources = specmaticJson?.let { loadSources(specmaticJson) }
+                        val sourceAndSpecification = sources?.flatMap { source ->
+                            source.testContracts.mapNotNull { testContract ->
+                                if (specification.endsWith(testContract)) Pair(source, testContract) else null
+                            }
+                        }?.firstOrNull()
+                        val specSource = sourceAndSpecification?.let {
+                            val source = sourceAndSpecification.first
+                            val specificationPath = sourceAndSpecification.second
+                            when (source) {
+                                is GitRepo -> SpecificationSource(
+                                    source.type,
+                                    specificationPath,
+                                    source.gitRepositoryURL,
+                                    source.branchName
+                                )
+
+                                else -> SpecificationSource(
+                                    provider = source.type,
+                                    specificationPath = specificationPath
+                                )
+                            }
+                        } ?: SpecificationSource(specificationPath = specification)
+
+                        loadTestScenarios(
+                            specification,
+                            suggestionsPath,
+                            suggestionsData,
+                            testConfig,
+                            specSource.provider,
+                            specSource.repository,
+                            specSource.repositoryBranch,
+                            specSource.specificationPath
+                        )
+                    }
                 }
                 else -> {
-                    val configFile = getConfigFile()
+                    val configFile = configFile
 
                     exitIfDoesNotExist("config file", configFile)
 
@@ -243,6 +278,16 @@ open class SpecmaticJUnitSupport {
                 }
             }
         }.toList()
+    }
+
+    private fun getSpecmaticJson(): SpecmaticConfigJson? {
+        return try {
+            loadSpecmaticJsonConfig(configFile)
+        }
+        catch (e: Throwable) {
+            logger.log(exceptionCauseMessage(e))
+            null
+        }
     }
 
     private fun loadTestScenarios(
@@ -348,3 +393,5 @@ fun selectTestsToRun(
 
     return filteredByNotName
 }
+
+data class SpecificationSource(val provider:String? = null, val repository:String? = null, val repositoryBranch:String? = null, val specificationPath:String? = null )

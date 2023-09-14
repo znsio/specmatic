@@ -4,6 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class OpenApiCoverageJsonReport(
-    val specmaticConfigPath:String,
+    val specmaticConfigPath:String? = null,
     val apiCoverage:List<OpenApiCoverageJsonRow>
 )

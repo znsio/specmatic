@@ -179,13 +179,13 @@ open class SpecmaticJUnitSupport {
             val testScenarios = when {
                 contractPaths != null -> {
                     contractPaths.split(",").flatMap { specification ->
-                        val sources = specmaticJson?.let { loadSources(specmaticJson) }
-                        val sourceAndSpecification = sources?.flatMap { source ->
+                        val sources: List<ContractSource>? = specmaticJson?.let { loadSources(specmaticJson) }
+                        val sourceAndSpecification: Pair<ContractSource, String>? = sources?.flatMap { source ->
                             source.testContracts.mapNotNull { testContract ->
                                 if (specification.endsWith(testContract)) Pair(source, testContract) else null
                             }
                         }?.firstOrNull()
-                        val specSource = sourceAndSpecification?.let {
+                        val specSource: SpecificationSource = sourceAndSpecification?.let {
                             val source = sourceAndSpecification.first
                             val specificationPath = sourceAndSpecification.second
                             when (source) {

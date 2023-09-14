@@ -3,10 +3,10 @@ package `in`.specmatic.core
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.io.File
-import kotlinx.serialization.Serializable
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
@@ -157,6 +157,6 @@ fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson
     try {
         return SpecmaticJsonFormat.decodeFromString(configFile.readText())
     } catch (e: Throwable) {
-        throw ContractException("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json fie adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
+        throw Exception("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
     }
 }

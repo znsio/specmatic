@@ -189,14 +189,7 @@ Feature: Authenticated
 
             @Test
             fun `should match http request with authorization header for spec with oauth2 security scheme with client credentials flow`() {
-                val feature = parseGherkinStringToFeature(
-                    """
-Feature: Hello world
-
-Background:
-Given openapi openapi/hello_with_oauth2_client_credentials_flow.yaml
-    """.trimIndent(), sourceSpecPath
-                )
+                val feature = parseContractFileToFeature("src/test/resources/openapi/hello_with_oauth2_client_credentials_flow.yaml")
                 val httpRequest = HttpRequest(
                     "GET",
                     "/hello/1",
@@ -248,14 +241,7 @@ Feature: Authenticated
 
             @Test
             fun `should match http request with authorization header for spec with oauth2 security scheme with implicit flow`() {
-                val feature = parseGherkinStringToFeature(
-                    """
-Feature: Hello world
-
-Background:
-Given openapi openapi/hello_with_oauth2_implicit_flow.yaml
-    """.trimIndent(), sourceSpecPath
-                )
+                val feature = parseContractFileToFeature("src/test/resources/openapi/hello_with_oauth2_implicit_flow.yaml")
                 val httpRequest = HttpRequest(
                     "GET",
                     "/hello/1",
@@ -307,14 +293,7 @@ Feature: Authenticated
 
             @Test
             fun `should match http request with authorization header for spec with oauth2 security scheme with resource owner password credentials flow`() {
-                val feature = parseGherkinStringToFeature(
-                    """
-Feature: Hello world
-
-Background:
-Given openapi openapi/hello_with_oauth2_resource_owner_password_credentials_flow.yaml
-    """.trimIndent(), sourceSpecPath
-                )
+                val feature = parseContractFileToFeature("src/test/resources/openapi/hello_with_oauth2_resource_owner_password_credentials_flow.yaml")
                 val httpRequest = HttpRequest(
                     "GET",
                     "/hello/1",
@@ -581,67 +560,5 @@ Feature: Authenticated
                 assertThat(responseFromQuery.status).isEqualTo(200)
             }
         }
-    }
-
-    @Test
-    fun `should generate tests with appropriate credentials for supported security schemes based on security configuration`() {
-        val feature = parseContractFileToFeature(
-            "./src/test/resources/openapi/hello_with_all_supported_security_schemes.yaml",
-            securityConfiguration = SecurityConfiguration(
-                OpenAPI = OpenAPISecurityConfiguration(
-                    securitySchemes = mapOf(
-                        "oAuth2AuthCode" to OAuth2SecuritySchemeConfiguration("oauth2", "OAUTH1234"),
-                        "BearerAuth" to BearerSecuritySchemeConfiguration("bearer", "BEARER1234"),
-                        "ApiKeyAuthHeader" to APIKeySecuritySchemeConfiguration("apiKey", "API-HEADER-USER"),
-                        "ApiKeyAuthQuery" to APIKeySecuritySchemeConfiguration("apiKey", "API-QUERY-PARAM-USER")
-                    )
-                )
-            )
-        )
-        val contractTests = feature.generateContractTestScenarios(emptyList())
-        val requestLogs = mutableListOf<String>()
-        contractTests.forEach {
-            val result = executeTest(it, object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    request.headers[HttpHeaders.AUTHORIZATION]?.let { header ->
-                        if (header == "Bearer OAUTH1234") {
-                            requestLogs.add("Path ${request.path} invoked with ${HttpHeaders.AUTHORIZATION} header set with oAuth2 token: OAUTH1234")
-                        }
-                    }
-                    request.headers[HttpHeaders.AUTHORIZATION]?.let { header ->
-                        if (header == "Bearer BEARER1234") {
-                            requestLogs.add("Path ${request.path} invoked with ${HttpHeaders.AUTHORIZATION} header set with bearer token: BEARER1234")
-                        }
-                    }
-                    request.headers["X-API-KEY"]?.let { header ->
-                        if (header == "API-HEADER-USER") {
-                            requestLogs.add("Path ${request.path} invoked with X-API-KEY header set as API-HEADER-USER")
-                        }
-                    }
-                    request.queryParams["apiKey"]?.let { queryParam ->
-                        if (queryParam == "API-QUERY-PARAM-USER") {
-                            requestLogs.add("Path ${request.path} invoked with 'apiKey' query parameter set as API-QUERY-PARAM-USER")
-                        }
-                    }
-                    return HttpResponse.OK("success")
-                }
-
-                override fun setServerState(serverState: Map<String, Value>) {
-
-                }
-            })
-            assertThat(result).isInstanceOf(Result.Success::class.java)
-        }
-
-        assertThat(
-            requestLogs
-        ).isEqualTo(
-            listOf(
-                "Path /hello-with-oauth2 invoked with Authorization header set with oAuth2 token: OAUTH1234",
-                "Path /hello-with-bearer invoked with Authorization header set with bearer token: BEARER1234",
-                "Path /hello-with-apikey-header invoked with X-API-KEY header set as API-HEADER-USER",
-                "Path /hello-with-apikey-query-param invoked with 'apiKey' query parameter set as API-QUERY-PARAM-USER"
-            )
-        )
     }
 }

@@ -77,17 +77,10 @@ Examples:
 
             @Test
             fun `should generate test with oauth2 authorization code security scheme with token in authorization header from security configuration`() {
+                val token = "QWERTY1234"
                 val feature = parseContractFileToFeature(
                     "./src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml",
-                    securityConfiguration = SecurityConfiguration(
-                        OpenAPI = OpenAPISecurityConfiguration(
-                            securitySchemes = mapOf(
-                                "oAuth2AuthCode" to OAuth2SecuritySchemeConfiguration(
-                                    "oauth2", "QWERTY1234"
-                                )
-                            )
-                        )
-                    )
+                    securityConfiguration = newSecurityConfiguration(token)
                 )
                 val contractTests = feature.generateContractTestScenarios(emptyList())
                 val result = executeTest(contractTests.single(), object : TestExecutor {
@@ -105,16 +98,19 @@ Examples:
                 assertThat(result).isInstanceOf(Result.Success::class.java)
             }
 
+            private fun newSecurityConfiguration(token: String) = SecurityConfiguration(
+                OpenAPI = OpenAPISecurityConfiguration(
+                    securitySchemes = mapOf(
+                        "oAuth2AuthCode" to OAuth2SecuritySchemeConfiguration(
+                            "oauth2", token
+                        )
+                    )
+                )
+            )
+
             @Test
             fun `should match http request with authorization header for spec with oauth2 security scheme with authorization code`() {
-                val feature = parseGherkinStringToFeature(
-                    """
-Feature: Hello world
-
-Background:
-Given openapi openapi/hello_with_oauth2_authorization_code_flow.yaml
-    """.trimIndent(), sourceSpecPath
-                )
+                val feature = parseContractFileToFeature("src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml")
                 val httpRequest = HttpRequest(
                     "GET",
                     "/hello/1",
@@ -128,14 +124,7 @@ Given openapi openapi/hello_with_oauth2_authorization_code_flow.yaml
 
             @Test
             fun `should not match http request with authorization header missing for spec with oauth2 authorization code security scheme with authorization code`() {
-                val feature = parseGherkinStringToFeature(
-                    """
-Feature: Hello world
-
-Background:
-Given openapi openapi/hello_with_oauth2_authorization_code_flow.yaml
-    """.trimIndent(), sourceSpecPath
-                )
+                val feature = parseContractFileToFeature("src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml")
                 val httpRequest = HttpRequest(
                     "GET",
                     "/hello/1"
@@ -147,14 +136,7 @@ Given openapi openapi/hello_with_oauth2_authorization_code_flow.yaml
 
             @Test
             fun `should not match http request with authorization header without bearer prefix for spec with oauth2 authorization code security scheme with authorization code`() {
-                val feature = parseGherkinStringToFeature(
-                    """
-Feature: Hello world
-
-Background:
-Given openapi openapi/hello_with_oauth2_authorization_code_flow.yaml
-    """.trimIndent(), sourceSpecPath
-                )
+                val feature = parseContractFileToFeature("src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml")
                 val httpRequest = HttpRequest(
                     "GET",
                     "/hello/1",

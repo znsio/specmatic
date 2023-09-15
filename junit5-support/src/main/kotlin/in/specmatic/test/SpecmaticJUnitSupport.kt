@@ -161,7 +161,6 @@ open class SpecmaticJUnitSupport {
         } catch (e: Throwable) {
             return loadExceptionAsTestError(e)
         }
-        specmaticConfig = getSpecmaticJsonConfig()
         val testScenarios = try {
             val testScenarios = when {
                 contractPaths != null -> {
@@ -186,7 +185,7 @@ open class SpecmaticJUnitSupport {
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
-                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfig?.security) }
+                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security) }
                 }
             }
 

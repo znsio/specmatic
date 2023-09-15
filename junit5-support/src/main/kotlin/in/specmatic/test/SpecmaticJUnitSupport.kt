@@ -43,27 +43,24 @@ open class SpecmaticJUnitSupport {
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
+        private var specmaticConfigJson: SpecmaticConfigJson? = null
         private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
-        private var specmaticConfig: SpecmaticConfigJson? = null
 
         @AfterAll
         @JvmStatic
         fun report() {
-            val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
-            reportProcessors.forEach { it.process(getReportConfiguration()) }
+            specmaticConfigJson?.let {
+                val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
+                reportProcessors.forEach { it.process(getReportConfiguration()) }
+            }
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            val reportConfiguration = specmaticConfig?.report
-            if(reportConfiguration == null) {
-                logger.log("Could not load report configuration, running test with default report configuration")
-            }
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
-            val defaultReportTypes =
-                ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
-            return when (reportConfiguration) {
+            val defaultReportTypes = ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
+            return when (val reportConfiguration = specmaticConfigJson?.report) {
                 null -> {
-                    logger.log("API coverage report configuration not found in specmatic.json, proceeding with API coverage report without success criteria")
+                    logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
                     ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
                 }
                 else -> {
@@ -114,9 +111,9 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        fun getConfigFile() = System.getProperty(CONFIG_FILE_NAME) ?: globalConfigFileName
+        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getGlobalConfigFileName()
 
-        fun getConfigFileWithAbsolutePath() = File(getConfigFile()).canonicalPath
+        private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -168,16 +165,27 @@ open class SpecmaticJUnitSupport {
         val testScenarios = try {
             val testScenarios = when {
                 contractPaths != null -> {
-                    contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig, securityConfiguration = specmaticConfig?.security) }
+                    contractPaths.split(",").flatMap {
+                        loadTestScenarios(
+                            it,
+                            suggestionsPath,
+                            suggestionsData,
+                            testConfig,
+                            specificationPath = it
+                        )
+                    }
                 }
                 else -> {
-                    val configFile = getConfigFile()
+                    val configFile = configFile
 
                     exitIfDoesNotExist("config file", configFile)
 
                     createIfDoesNotExist(workingDirectory.path)
 
+                    specmaticConfigJson = getSpecmaticJson()
+
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
+
                     contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfig?.security) }
                 }
             }
@@ -235,13 +243,16 @@ open class SpecmaticJUnitSupport {
         }.toList()
     }
 
-    private fun getSpecmaticJsonConfig(): SpecmaticConfigJson? {
+    private fun getSpecmaticJson(): SpecmaticConfigJson? {
         return try {
-            loadSpecmaticJsonConfig(getConfigFile())
+            loadSpecmaticJsonConfig(configFile)
         }
-        catch (e: Throwable) {
+        catch (e: ContractException) {
             logger.log(exceptionCauseMessage(e))
             null
+        }
+        catch (e: Throwable) {
+            exitWithMessage(exceptionCauseMessage(e))
         }
     }
 

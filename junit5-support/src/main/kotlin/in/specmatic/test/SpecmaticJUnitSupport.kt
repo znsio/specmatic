@@ -4,10 +4,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
 import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.Examples
-import `in`.specmatic.core.pattern.Row
-import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
@@ -188,7 +185,7 @@ open class SpecmaticJUnitSupport {
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
-                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath) }
+                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security) }
                 }
             }
 
@@ -266,13 +263,14 @@ open class SpecmaticJUnitSupport {
         sourceProvider:String? = null,
         sourceRepository:String? = null,
         sourceRepositoryBranch:String? = null,
-        specificationPath:String? = null
+        specificationPath:String? = null,
+        securityConfiguration: SecurityConfiguration? = null
     ): List<ContractTest> {
         if(isYAML(path) && !isOpenAPI(path))
             return emptyList()
 
         val contractFile = File(path)
-        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
+        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
             suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)

@@ -31,7 +31,7 @@ import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
 
-class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null) : IncludedSpecification,
+class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
     ApiSpecification {
     companion object {
         fun fromFile(openApiFilePath: String, relativeTo: String = ""): OpenApiSpecification {
@@ -51,7 +51,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             return OpenApiSpecification(openApiFile, openApi)
         }
 
-        fun fromYAML(yamlContent: String, filePath: String,  loggerForErrors: LogStrategy = logger, sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null,): OpenApiSpecification {
+        fun fromYAML(yamlContent: String, filePath: String,  loggerForErrors: LogStrategy = logger, sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), filePath)
             val openApi: OpenAPI? = parseResult.openAPI
@@ -68,7 +68,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 printMessages(parseResult, filePath, loggerForErrors)
             }
 
-            return OpenApiSpecification(filePath, openApi, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath)
+            return OpenApiSpecification(filePath, openApi, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration)
         }
 
         private fun printMessages(parseResult: SwaggerParseResult, filePath: String, loggerForErrors: LogStrategy) {
@@ -437,8 +437,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     ): List<HttpRequestPattern> {
 
         val contractSecuritySchemes: Map<String, OpenAPISecurityScheme> =
-            openApi.components?.securitySchemes?.mapValues { (_, scheme) ->
-                toSecurityScheme(scheme)
+            openApi.components?.securitySchemes?.mapValues { (schemeName, scheme) ->
+                toSecurityScheme(schemeName, scheme)
             } ?: emptyMap()
 
         val parameters = operation.parameters
@@ -536,19 +536,43 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return operationSecuritySchemes
     }
 
-    private fun toSecurityScheme(securityScheme: SecurityScheme): OpenAPISecurityScheme {
-        if (securityScheme.scheme == BEARER_SECURITY_SCHEME)
-            return BearerSecurityScheme()
-
-        if (securityScheme.type == SecurityScheme.Type.APIKEY) {
-            if (securityScheme.`in` == SecurityScheme.In.HEADER)
-                return APIKeyInHeaderSecurityScheme(securityScheme.name)
-
-            if (securityScheme.`in` == SecurityScheme.In.QUERY)
-                return APIKeyInQueryParamSecurityScheme(securityScheme.name)
+    private fun toSecurityScheme(schemeName: String, securityScheme: SecurityScheme): OpenAPISecurityScheme {
+        val securitySchemeConfiguration = securityConfiguration?.OpenAPI?.securitySchemes?.get(schemeName)
+        if (securityScheme.scheme == BEARER_SECURITY_SCHEME) {
+            return toBearerSecurityScheme(securityScheme.scheme, securitySchemeConfiguration)
         }
 
-        throw ContractException("Specmatic only supports bearer and api key authentication (header, query) security schemes at the moment")
+        if (securityScheme.type == SecurityScheme.Type.OAUTH2) {
+            return toBearerSecurityScheme(securityScheme.type.toString(), securitySchemeConfiguration)
+        }
+
+        if (securityScheme.type == SecurityScheme.Type.APIKEY) {
+            val apiKey = securitySchemeConfiguration?.let{
+                (it as APIKeySecuritySchemeConfiguration).value
+            }
+            if (securityScheme.`in` == SecurityScheme.In.HEADER)
+                return APIKeyInHeaderSecurityScheme(securityScheme.name, apiKey)
+
+            if (securityScheme.`in` == SecurityScheme.In.QUERY)
+                return APIKeyInQueryParamSecurityScheme(securityScheme.name, apiKey)
+        }
+
+        throw ContractException("Specmatic only supports oauth2, bearer, and api key authentication (header, query) security schemes at the moment")
+    }
+
+    private fun toBearerSecurityScheme(
+        type: String,
+        securitySchemeConfiguration: SecuritySchemeConfiguration?
+    ): BearerSecurityScheme {
+        val token = when (type) {
+            BEARER_SECURITY_SCHEME, SecurityScheme.Type.OAUTH2.toString() ->
+                securitySchemeConfiguration?.let {
+                    (it as SecuritySchemeWithOAuthToken).token
+                }
+
+            else -> throw ContractException("Cannot use the Bearer Security Scheme implementation for scheme type: $type")
+        }
+        return BearerSecurityScheme(token)
     }
 
     private fun toFormFields(mediaType: MediaType) =

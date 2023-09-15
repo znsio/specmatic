@@ -41,8 +41,8 @@ class BadRequestOrDefault(private val badRequestResponses: Map<Int, HttpResponse
         httpResponse.status in badRequestResponses || defaultResponse != null
 }
 
-fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null): Feature {
-    return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath)
+fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null): Feature {
+    return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration)
 }
 
 fun checkExists(file: File) = file.also {
@@ -50,11 +50,11 @@ fun checkExists(file: File) = file.also {
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
 }
 
-fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null): Feature {
+fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
-        "yaml" -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath).toFeature()
+        "yaml" -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration).toFeature()
         "wsdl" -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw ContractException("File extension of ${file.path} not recognized")

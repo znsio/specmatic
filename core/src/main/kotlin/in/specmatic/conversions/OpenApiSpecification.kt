@@ -564,20 +564,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         type: String,
         securitySchemeConfiguration: SecuritySchemeConfiguration?
     ): BearerSecurityScheme {
-        val token = when (type) {
-            BEARER_SECURITY_SCHEME ->
-                securitySchemeConfiguration?.let {
-                    (it as BearerSecuritySchemeConfiguration).token
-                }
+        if(securitySchemeConfiguration is SecuritySchemeWithOAuthToken)
+            return BearerSecurityScheme(securitySchemeConfiguration.token)
 
-            SecurityScheme.Type.OAUTH2.toString() ->
-                securitySchemeConfiguration?.let {
-                    (it as OAuth2SecuritySchemeConfiguration).token
-                }
-
-            else -> throw ContractException("Cannot use the Bearer Security Scheme implementation for scheme type: $type")
-        }
-        return BearerSecurityScheme(token)
+        throw ContractException("Cannot use the Bearer Security Scheme implementation for scheme type: $type")
     }
 
     private fun toFormFields(mediaType: MediaType) =

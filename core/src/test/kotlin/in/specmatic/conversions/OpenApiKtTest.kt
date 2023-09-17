@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.net.HttpHeaders.AUTHORIZATION
 import `in`.specmatic.core.*
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.log.Verbose
@@ -17,7 +16,6 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
-import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
@@ -60,7 +58,6 @@ import kotlin.collections.joinToString
 import kotlin.collections.last
 import kotlin.collections.listOf
 import kotlin.collections.map
-import kotlin.collections.mapOf
 import kotlin.collections.mapValues
 import kotlin.collections.mutableListOf
 import kotlin.collections.mutableMapOf
@@ -1184,6 +1181,37 @@ Background:
         }
     }
 
+    @Test
+    fun `should filter out schema scenarios already defined in spec`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Hello world
+            
+            Background:
+              Given openapi openapi/petstore-expanded.yaml
+              
+              Scenario Outline: get by tag
+                When GET /pets
+                Then status 200
+                Examples:
+                  | tag     |
+                  | testing |
+        """.trimIndent(), sourceSpecPath
+        )
+        val openapiSpec = OpenApiSpecification.fromFile("openapi/petstore-expanded.yaml")
+
+        assertThat(feature.scenarios).hasSameSizeAs(openapiSpec.toScenarioInfos())
+
+        val apiIdentifiersFromGherkinSpec = feature.scenarios.map {
+            it.apiIdentifier
+        }.sorted().distinct()
+
+        val apiIdentifiersDirectlyFromSpecification = feature.scenarios.map {
+            it.apiIdentifier
+        }.sorted().distinct()
+
+        assertThat(apiIdentifiersFromGherkinSpec).isEqualTo(apiIdentifiersDirectlyFromSpecification)
+    }
     @Test
     fun `should create petstore tests`() {
         val systemPropertiesMap = System.getProperties().map { it.key.toString() to it.value.toString() }.toMap()

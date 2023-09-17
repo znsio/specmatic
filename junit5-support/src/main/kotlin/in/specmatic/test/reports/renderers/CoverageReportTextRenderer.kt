@@ -1,9 +1,9 @@
 package `in`.specmatic.test.reports.renderers
 
-import `in`.specmatic.test.reports.coverage.OpenAPICoverageReport
+import `in`.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 
-class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageReport> {
-    override fun render(report: OpenAPICoverageReport): String {
+class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
+    override fun render(report: OpenAPICoverageConsoleReport): String {
         val maxPathSize: Int = report.rows.map { it.path.length }.max()
         val maxRemarksSize = report.rows.map{it.remarks.toString().length}.max()
 

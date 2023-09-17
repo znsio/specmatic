@@ -3,10 +3,10 @@ package `in`.specmatic.core
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.io.File
-import kotlinx.serialization.Serializable
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
@@ -86,9 +86,9 @@ data class SpecmaticConfigJson(
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
-    val report: ReportConfiguration? = null
-) {
-}
+    val report: ReportConfiguration? = null,
+    val security: SecurityConfiguration? = null
+)
 
 @Serializable
 data class RepositoryInfo(
@@ -145,6 +145,37 @@ data class SuccessCriteria(
     val enforce: Boolean = false
 )
 
+@Serializable
+data class SecurityConfiguration(
+    val OpenAPI:OpenAPISecurityConfiguration?
+)
+
+@Serializable
+data class OpenAPISecurityConfiguration(
+    val securitySchemes: Map<String, SecuritySchemeConfiguration>
+)
+
+@Serializable
+sealed class SecuritySchemeConfiguration {
+    abstract val type: String
+}
+
+interface SecuritySchemeWithOAuthToken {
+    val token: String
+}
+
+@Serializable
+@SerialName("oauth2")
+data class OAuth2SecuritySchemeConfiguration(override val type:String, override val token: String,) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
+
+@Serializable
+@SerialName("bearer")
+data class BearerSecuritySchemeConfiguration(override val type:String, override val token: String,) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
+
+@Serializable
+@SerialName("apiKey")
+data class APIKeySecuritySchemeConfiguration(override val type:String, val value: String) : SecuritySchemeConfiguration()
+
 val SpecmaticJsonFormat = Json {
     prettyPrint = true
 }
@@ -152,11 +183,11 @@ val SpecmaticJsonFormat = Json {
 fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson {
     val configFile = File(configFileName ?: globalConfigFileName)
     if (!configFile.exists()) {
-        throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_FILE_NAME} at path ${configFile.absolutePath}")
+        throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_FILE_NAME} at path ${configFile.canonicalPath}")
     }
     try {
         return SpecmaticJsonFormat.decodeFromString(configFile.readText())
     } catch (e: Throwable) {
-        throw ContractException("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json fie adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
+        throw Exception("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
     }
 }

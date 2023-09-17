@@ -76,6 +76,9 @@ data class Scenario(
         serviceType = scenarioInfo.serviceType
     )
 
+    val apiIdentifier: String
+        get() = "$method $path $status"
+
     override val method: String
         get() {
             return httpRequestPattern.method ?: ""

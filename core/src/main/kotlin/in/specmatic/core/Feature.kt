@@ -1655,7 +1655,7 @@ fun scenarioInfos(
     }
 
     return specmaticScenarioInfos.plus(scenarioInfosBelongingToIncludedSpecifications.filter { scenarioInfo ->
-        !specmaticScenarioInfos.any {
+        specmaticScenarioInfos.none {
             it.httpResponsePattern.status == scenarioInfo.httpResponsePattern.status
                     && it.httpRequestPattern.matchesSignature(scenarioInfo.httpRequestPattern)
         }

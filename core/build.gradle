@@ -21,7 +21,7 @@ def jgit_version = "5.13.0.202109080827-r"
 def junit_version = "5.9.1"
 
 dependencies {
-    implementation 'io.cucumber:gherkin:22.0.0'
+    implementation 'io.cucumber:gherkin:27.0.0'
     implementation "io.ktor:ktor-server-netty:$ktor_version"
     implementation "io.ktor:ktor-server-core:$ktor_version"
     implementation "io.ktor:ktor-client-core-jvm:$ktor_version"

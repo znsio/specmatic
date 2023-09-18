@@ -67,6 +67,27 @@ class HttpStub(
         log: (event: LogMessage) -> Unit = dontPrintToConsole
     ) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
 
+    val stubUsageReport: StubUsageReport = StubUsageReport()
+
+    init {
+        features.forEach {
+            it.scenarios.forEach { scenario ->
+                stubUsageReport.addStubApi(
+                    StubApi(
+                        scenario.path,
+                        scenario.method,
+                        scenario.status,
+                        scenario.sourceProvider,
+                        scenario.sourceRepository,
+                        scenario.sourceRepositoryBranch,
+                        scenario.specification,
+                        scenario.serviceType
+                    )
+                )
+            }
+        }
+    }
+
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken == null }.toMutableList())
     private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
 
@@ -81,8 +102,6 @@ class HttpStub(
         }
 
     val endPoint = endPointFromHostAndPort(host, port, keyData)
-
-    val stubUsageReport: StubUsageReport = StubUsageReport()
 
     override val client = HttpClient(this.endPoint)
 

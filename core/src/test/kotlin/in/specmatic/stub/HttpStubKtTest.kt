@@ -992,6 +992,11 @@ paths:
             stub.client.execute(HttpRequest("GET", "/hello"))
             stub.client.execute(HttpRequest("GET", "/unknown"))
 
+            assertThat(stub.stubUsageReport.stubApis).isEqualTo(listOf(
+                StubApi("/data", "GET", 200, serviceType = "HTTP"),
+                StubApi("/hello", "GET", 200, serviceType = "HTTP")
+            ))
+
             assertThat(stub.stubUsageReport.logs).isEqualTo(listOf(
                 StubApi("/data", "GET", 200),
                 StubApi("/hello", "GET", 200)

@@ -2,7 +2,7 @@ package `in`.specmatic.stub.report
 
 class StubUsageReport(
     private var configFilePath: String = "",
-    private val stubApis:MutableList<StubApi> = mutableListOf(),
+    val stubApis:MutableList<StubApi> = mutableListOf(),
     val logs: MutableList<StubApi> = mutableListOf()
 ) {
     fun addStubRequestLog(log: StubApi) {

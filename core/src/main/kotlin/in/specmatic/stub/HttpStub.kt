@@ -14,6 +14,8 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.mock.*
+import `in`.specmatic.stub.report.StubApi
+import `in`.specmatic.stub.report.StubUsageReport
 import `in`.specmatic.test.HttpClient
 import io.ktor.http.*
 import io.ktor.http.content.*
@@ -80,7 +82,7 @@ class HttpStub(
 
     val endPoint = endPointFromHostAndPort(host, port, keyData)
 
-    val stubUsageReport:StubUsageReport = StubUsageReport()
+    val stubUsageReport: StubUsageReport = StubUsageReport()
 
     override val client = HttpClient(this.endPoint)
 
@@ -281,7 +283,7 @@ class HttpStub(
 
     private fun logRequestAndStubResponse(request: HttpRequest, response: HttpStubResponse) {
         stubUsageReport.addStubRequestLog(
-            StubRequestLog(
+            StubApi(
                 request.path,
                 request.method,
                 response.response.status

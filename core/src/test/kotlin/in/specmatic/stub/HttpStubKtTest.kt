@@ -10,6 +10,7 @@ import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.report.StubApi
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
 import io.mockk.InternalPlatformDsl.toStr
@@ -992,8 +993,8 @@ paths:
             stub.client.execute(HttpRequest("GET", "/unknown"))
 
             assertThat(stub.stubUsageReport.logs).isEqualTo(listOf(
-                StubRequestLog("/data", "GET", 200),
-                StubRequestLog("/hello", "GET", 200)
+                StubApi("/data", "GET", 200),
+                StubApi("/hello", "GET", 200)
             ))
         }
     }

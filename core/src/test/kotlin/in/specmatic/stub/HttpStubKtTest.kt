@@ -13,7 +13,6 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
 import io.mockk.InternalPlatformDsl.toStr
-import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -992,8 +991,10 @@ paths:
             stub.client.execute(HttpRequest("GET", "/hello"))
             stub.client.execute(HttpRequest("GET", "/unknown"))
 
-            assertThat(stub.requestLogs.count()).isEqualTo(2)
+            assertThat(stub.stubUsageReport.logs).isEqualTo(listOf(
+                StubRequestLog("/data", "GET", 200),
+                StubRequestLog("/hello", "GET", 200)
+            ))
         }
     }
-
 }

@@ -80,7 +80,7 @@ class HttpStub(
 
     val endPoint = endPointFromHostAndPort(host, port, keyData)
 
-    val requestLogs:MutableList<StubRequestLog> = mutableListOf()
+    val stubUsageReport:StubUsageReport = StubUsageReport()
 
     override val client = HttpClient(this.endPoint)
 
@@ -279,14 +279,14 @@ class HttpStub(
             if(it.response.specmaticResultHeaderValue() == "success") logRequestAndStubResponse(httpRequest, it)
         }
 
-    private fun logRequestAndStubResponse(request:HttpRequest, response:HttpStubResponse) {
-        requestLogs.add(
+    private fun logRequestAndStubResponse(request: HttpRequest, response: HttpStubResponse) {
+        stubUsageReport.addStubRequestLog(
             StubRequestLog(
-                response.contractPath,
-                request.path!!,
-                request.method!!,
-                response.response.status,
-                ))
+                request.path,
+                request.method,
+                response.response.status
+            )
+        )
     }
 
     private suspend fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {

@@ -80,6 +80,8 @@ class HttpStub(
 
     val endPoint = endPointFromHostAndPort(host, port, keyData)
 
+    val requestLogs:MutableList<StubRequestLog> = mutableListOf()
+
     override val client = HttpClient(this.endPoint)
 
     private val sseBuffer: SSEBuffer = SSEBuffer()
@@ -273,7 +275,19 @@ class HttpStub(
             strictMode,
             passThroughTargetBase,
             httpClientFactory
-        )
+        ).also {
+            if(it.response.specmaticResultHeaderValue() == "success") logRequestAndStubResponse(httpRequest, it)
+        }
+
+    private fun logRequestAndStubResponse(request:HttpRequest, response:HttpStubResponse) {
+        requestLogs.add(
+            StubRequestLog(
+                response.contractPath,
+                request.path!!,
+                request.method!!,
+                response.response.status,
+                ))
+    }
 
     private suspend fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {

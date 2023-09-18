@@ -941,4 +941,59 @@ paths:
         }
     }
 
+    @Test
+    fun `should log only successful request and responses`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    get:
+      summary: hello world
+      description: test
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+  /hello:
+    get:
+      summary: hello world
+      description: say hello
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+  
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(contract).use { stub ->
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/data"
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": 10
+                    }
+                }
+            """.trimIndent())
+
+            stub.client.execute(HttpRequest("GET", "/data"))
+            stub.client.execute(HttpRequest("GET", "/hello"))
+            stub.client.execute(HttpRequest("GET", "/unknown"))
+
+            assertThat(stub.requestLogs.count()).isEqualTo(2)
+        }
+    }
+
 }

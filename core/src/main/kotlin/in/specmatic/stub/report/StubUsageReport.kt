@@ -3,7 +3,7 @@ package `in`.specmatic.stub.report
 import `in`.specmatic.conversions.convertPathParameterStyle
 
 class StubUsageReport(
-    private var configFilePath: String,
+    private val configFilePath: String,
     private val allSpecApis: MutableList<StubApi> = mutableListOf(),
     private val stubLogs: MutableList<StubApi> = mutableListOf()
 ) {

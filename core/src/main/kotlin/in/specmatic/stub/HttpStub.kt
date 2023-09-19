@@ -672,11 +672,11 @@ private fun stubbedResponse(
 }
 
 private fun stubThatMatchesRequest(
-    threadSafeStubQueue: ThreadSafeListOfStubs,
-    threadSafeStubs: ThreadSafeListOfStubs,
+    transientStubs: ThreadSafeListOfStubs,
+    nonTransientStubs: ThreadSafeListOfStubs,
     httpRequest: HttpRequest
 ): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
-    val queueMatchResults: List<Pair<Result, HttpStubData>> = threadSafeStubQueue.matchResults { stubs ->
+    val queueMatchResults: List<Pair<Result, HttpStubData>> = transientStubs.matchResults { stubs ->
         stubs.map {
             val (requestPattern, _, resolver) = it
             Pair(
@@ -691,11 +691,11 @@ private fun stubThatMatchesRequest(
 
     val queueMock = queueMatchResults.findLast { (result, _) -> result is Result.Success }
     if(queueMock != null) {
-        threadSafeStubQueue.remove(queueMock.second)
+        transientStubs.remove(queueMock.second)
         return Pair(queueMock.second, queueMatchResults)
     }
 
-    val listMatchResults: List<Pair<Result, HttpStubData>> = threadSafeStubs.matchResults { stubs ->
+    val listMatchResults: List<Pair<Result, HttpStubData>> = nonTransientStubs.matchResults { stubs ->
         stubs.map {
             val (requestPattern, _, resolver) = it
             Pair(

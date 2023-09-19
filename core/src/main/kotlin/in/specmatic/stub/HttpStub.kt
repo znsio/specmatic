@@ -36,7 +36,7 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
 
-data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "", val scenario:Scenario? = null, val sourceProvider:String? = null, val sourceRepository:String? = null, val sourceRepositoryBranch:String? = null, val specification:String? = null, val serviceType:String? = null)
+data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "", val feature:Feature? = null, val scenario:Scenario? = null)
 
 class HttpStub(
     private val features: List<Feature>,
@@ -293,11 +293,11 @@ class HttpStub(
                 response.scenario?.path,
                 request.method,
                 response.response.status,
-                response.sourceProvider,
-                response.sourceRepository,
-                response.sourceRepositoryBranch,
-                response.specification,
-                response.serviceType,
+                response.feature?.sourceProvider,
+                response.feature?.sourceRepository,
+                response.feature?.sourceRepositoryBranch,
+                response.feature?.specification,
+                response.feature?.serviceType,
             )
         )
     }
@@ -751,11 +751,7 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
         else -> HttpStubResponse(
             fakeResponse.successResponse?.build()?.withRandomResultHeader()!!,
             contractPath = fakeResponse.feature.path,
-            sourceProvider = fakeResponse.feature.sourceProvider,
-            sourceRepository = fakeResponse.feature.sourceRepository,
-            sourceRepositoryBranch = fakeResponse.feature.sourceRepositoryBranch,
-            specification = fakeResponse.feature.specification,
-            serviceType = fakeResponse.feature.serviceType,
+            feature = fakeResponse.feature,
             scenario = fakeResponse.successResponse.scenario
         )
     }

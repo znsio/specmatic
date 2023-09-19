@@ -975,21 +975,24 @@ paths:
         """.trimIndent(), "").toFeature()
 
         HttpStub(contract).use { stub ->
-//            stub.setExpectation("""
-//                {
-//                    "http-request": {
-//                        "method": "GET",
-//                        "path": "/data"
-//                    },
-//                    "http-response": {
-//                        "status": 200,
-//                        "body": 10
-//                    }
-//                }
-//            """.trimIndent())
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/data"
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": 10
+                    }
+                }
+            """.trimIndent())
 
-            stub.client.execute(HttpRequest("GET", "/data"))
+            val response = stub.client.execute(HttpRequest("GET", "/data"))
+            assertThat(response.body.toStringLiteral()).isEqualTo("10")
+
             stub.client.execute(HttpRequest("GET", "/hello"))
+
             stub.client.execute(HttpRequest("GET", "/unknown"))
 
             assertThat(stub.allSpecApis).isEqualTo(listOf(

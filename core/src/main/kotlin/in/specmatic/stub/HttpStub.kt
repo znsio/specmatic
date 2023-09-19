@@ -665,7 +665,7 @@ private fun stubbedResponse(
 
     val stubResponse = mock?.let {
         val softCastResponse = it.softCastResponseToXML(httpRequest).response
-        HttpStubResponse(softCastResponse, it.delayInSeconds, it.contractPath)
+        HttpStubResponse(softCastResponse, it.delayInSeconds, it.contractPath, scenario = mock.scenario, feature = mock.feature)
     }
 
     return Pair(matchResults, stubResponse)

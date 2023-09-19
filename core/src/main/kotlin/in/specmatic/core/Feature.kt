@@ -258,7 +258,9 @@ data class Feature(
                                 resolver = resolver,
                                 requestType = requestTypeWithAncestors,
                                 responsePattern = scenario.httpResponsePattern,
-                                contractPath = this.path
+                                contractPath = this.path,
+                                feature = this,
+                                scenario = scenario
                             )
                         }, Result.Success()
                     )

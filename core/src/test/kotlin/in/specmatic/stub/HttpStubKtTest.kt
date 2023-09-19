@@ -975,31 +975,31 @@ paths:
         """.trimIndent(), "").toFeature()
 
         HttpStub(contract).use { stub ->
-            stub.setExpectation("""
-                {
-                    "http-request": {
-                        "method": "GET",
-                        "path": "/data"
-                    },
-                    "http-response": {
-                        "status": 200,
-                        "body": 10
-                    }
-                }
-            """.trimIndent())
+//            stub.setExpectation("""
+//                {
+//                    "http-request": {
+//                        "method": "GET",
+//                        "path": "/data"
+//                    },
+//                    "http-response": {
+//                        "status": 200,
+//                        "body": 10
+//                    }
+//                }
+//            """.trimIndent())
 
             stub.client.execute(HttpRequest("GET", "/data"))
             stub.client.execute(HttpRequest("GET", "/hello"))
             stub.client.execute(HttpRequest("GET", "/unknown"))
 
-            assertThat(stub.stubUsageReport.stubApis).isEqualTo(listOf(
+            assertThat(stub.allSpecApis).isEqualTo(listOf(
                 StubApi("/data", "GET", 200, serviceType = "HTTP"),
                 StubApi("/hello", "GET", 200, serviceType = "HTTP")
             ))
 
-            assertThat(stub.stubUsageReport.logs).isEqualTo(listOf(
-                StubApi("/data", "GET", 200),
-                StubApi("/hello", "GET", 200)
+            assertThat(stub.logs).isEqualTo(listOf(
+                StubApi("/data", "GET", 200, serviceType = "HTTP"),
+                StubApi("/hello", "GET", 200, serviceType = "HTTP")
             ))
         }
     }

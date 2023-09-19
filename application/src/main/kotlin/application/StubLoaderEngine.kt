@@ -2,6 +2,7 @@ package application
 
 import `in`.specmatic.core.Feature
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.loadContractStubsFromFiles
 import `in`.specmatic.stub.loadContractStubsFromImplicitPaths
@@ -10,15 +11,15 @@ import java.io.File
 
 @Component
 class StubLoaderEngine {
-    fun loadStubs(contractPaths: List<String>, dataDirs: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
-        contractPaths.forEach { contractPath ->
-            if(!File(contractPath).exists()) {
+    fun loadStubs(contractSources: List<ContractPathData>, dataDirs: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
+        contractSources.forEach { contractPath ->
+            if(!File(contractPath.path).exists()) {
                 logger.log("$contractPath does not exist.")
             }
         }
         return when {
-            dataDirs.isNotEmpty() -> loadContractStubsFromFiles(contractPaths, dataDirs)
-            else -> loadContractStubsFromImplicitPaths(contractPaths)
+            dataDirs.isNotEmpty() -> loadContractStubsFromFiles(contractSources.map { it.path }, dataDirs)
+            else -> loadContractStubsFromImplicitPaths(contractSources)
         }
     }
 }

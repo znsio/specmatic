@@ -80,7 +80,12 @@ data class Feature(
     val testVariables: Map<String, String> = emptyMap(),
     val testBaseURLs: Map<String, String> = emptyMap(),
     val path: String = "",
-    val generativeTestingEnabled: Boolean = Flags.generativeTestingEnabled()
+    val generativeTestingEnabled: Boolean = Flags.generativeTestingEnabled(),
+    val sourceProvider:String? = null,
+    val sourceRepository:String? = null,
+    val sourceRepositoryBranch:String? = null,
+    val specification:String? = null,
+    val serviceType:String? = null
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {

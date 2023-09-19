@@ -5,10 +5,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.log.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedValue
-import `in`.specmatic.core.utilities.capitalizeFirstChar
-import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.utilities.jsonStringToValueMap
-import `in`.specmatic.core.utilities.toMap
+import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
@@ -31,13 +28,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.Writer
 import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
 
-data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "")
+data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "", val scenario:Scenario? = null, val sourceProvider:String? = null, val sourceRepository:String? = null, val sourceRepositoryBranch:String? = null, val specification:String? = null, val serviceType:String? = null)
 
 class HttpStub(
     private val features: List<Feature>,
@@ -49,7 +48,8 @@ class HttpStub(
     keyData: KeyData? = null,
     val passThroughTargetBase: String = "",
     val httpClientFactory: HttpClientFactory = HttpClientFactory(),
-    val workingDirectory: WorkingDirectory? = null
+    val workingDirectory: WorkingDirectory? = null,
+    val specmaticConfigPath:String? = null
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -67,29 +67,16 @@ class HttpStub(
         log: (event: LogMessage) -> Unit = dontPrintToConsole
     ) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
 
-    val stubUsageReport: StubUsageReport = StubUsageReport()
-
-    init {
-        features.forEach {
-            it.scenarios.forEach { scenario ->
-                stubUsageReport.addStubApi(
-                    StubApi(
-                        scenario.path,
-                        scenario.method,
-                        scenario.status,
-                        scenario.sourceProvider,
-                        scenario.sourceRepository,
-                        scenario.sourceRepositoryBranch,
-                        scenario.specification,
-                        scenario.serviceType
-                    )
-                )
-            }
-        }
+    companion object {
+        const val JSON_REPORT_PATH = "./build/reports/specmatic"
+        const val JSON_REPORT_FILE_NAME = "stub_usage_report.json"
     }
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken == null }.toMutableList())
     private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
+
+    val logs:MutableList<StubApi> = mutableListOf()
+    val allSpecApis:MutableList<StubApi> = mutableListOf()
 
     val stubCount: Int
         get() {
@@ -301,11 +288,16 @@ class HttpStub(
         }
 
     private fun logRequestAndStubResponse(request: HttpRequest, response: HttpStubResponse) {
-        stubUsageReport.addStubRequestLog(
+        logs.add(
             StubApi(
-                request.path,
+                response.scenario?.path,
                 request.method,
-                response.response.status
+                response.response.status,
+                response.sourceProvider,
+                response.sourceRepository,
+                response.sourceRepositoryBranch,
+                response.specification,
+                response.serviceType,
             )
         )
     }
@@ -462,6 +454,37 @@ class HttpStub(
 
     init {
         server.start()
+
+        features.forEach {
+            it.scenarios.forEach { scenario ->
+                if (scenario.isA2xxScenario()) {
+                    allSpecApis.add(
+                        StubApi(
+                            scenario.path,
+                            scenario.method,
+                            scenario.status,
+                            scenario.sourceProvider,
+                            scenario.sourceRepository,
+                            scenario.sourceRepositoryBranch,
+                            scenario.specification,
+                            scenario.serviceType
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    override fun printUsageReport() {
+        specmaticConfigPath?.let {
+            val stubUsageReport = StubUsageReport(specmaticConfigPath, allSpecApis, logs )
+            println("Saving Stub Usage Report json to $JSON_REPORT_PATH ...")
+            val json = Json {
+                encodeDefaults = false
+            }
+            val reportJson = json.encodeToString(stubUsageReport.generate())
+            saveJsonFile(reportJson, JSON_REPORT_PATH, JSON_REPORT_FILE_NAME)
+        }
     }
 }
 
@@ -727,7 +750,13 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
         }
         else -> HttpStubResponse(
             fakeResponse.successResponse?.build()?.withRandomResultHeader()!!,
-            contractPath = fakeResponse.feature.path
+            contractPath = fakeResponse.feature.path,
+            sourceProvider = fakeResponse.feature.sourceProvider,
+            sourceRepository = fakeResponse.feature.sourceRepository,
+            sourceRepositoryBranch = fakeResponse.feature.sourceRepositoryBranch,
+            specification = fakeResponse.feature.specification,
+            serviceType = fakeResponse.feature.serviceType,
+            scenario = fakeResponse.successResponse.scenario
         )
     }
 }

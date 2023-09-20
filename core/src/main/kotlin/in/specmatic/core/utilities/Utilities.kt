@@ -263,17 +263,7 @@ data class ContractPathData(
     val repository: String? = null,
     val branch: String? = null,
     val specificationPath: String? = null
-) {
-    val relativePath: String
-      get() {
-          return File(this.path).relativeTo(File(this.baseDir)).path.let {
-              when(it[0]) {
-                  '/' -> it
-                  else -> "/$it"
-              }
-          }
-      }
-}
+)
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
     logger.log("Loading config file $configFilePath")

@@ -4,8 +4,8 @@ import `in`.specmatic.conversions.convertPathParameterStyle
 
 class StubUsageReport(
     private val configFilePath: String,
-    private val allEndpoints: MutableList<StubEndpoint> = mutableListOf(),
-    private val stubLogs: MutableList<StubEndpoint> = mutableListOf()
+    private val allEndpoints: List<StubEndpoint> = mutableListOf(),
+    private val stubLogs: List<StubEndpoint> = mutableListOf()
 ) {
     fun generate(): StubUsageReportJson {
         val stubUsageJsonRows = allEndpoints.groupBy {

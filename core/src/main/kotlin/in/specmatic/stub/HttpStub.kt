@@ -75,8 +75,8 @@ class HttpStub(
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken == null }.toMutableList())
     private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
 
-    private val _logs:MutableList<StubEndpoint> = mutableListOf()
-    private val _allEndpoints:MutableList<StubEndpoint> = mutableListOf()
+    private val _logs: MutableList<StubEndpoint> = mutableListOf()
+    private val _allEndpoints: List<StubEndpoint> = extractALlEndpoints()
 
     val logs: List<StubEndpoint> get() = _logs.toList()
     val allEndpoints: List<StubEndpoint> get() = _allEndpoints.toList()
@@ -459,28 +459,27 @@ class HttpStub(
 
     init {
         server.start()
-        extractALlEndpoints()
     }
 
-    private fun extractALlEndpoints() {
-        features.forEach {
-            it.scenarios.forEach { scenario ->
+    private fun extractALlEndpoints(): List<StubEndpoint> {
+        return features.map {
+            it.scenarios.map { scenario ->
                 if (scenario.isA2xxScenario()) {
-                    _allEndpoints.add(
-                        StubEndpoint(
-                            scenario.path,
-                            scenario.method,
-                            scenario.status,
-                            scenario.sourceProvider,
-                            scenario.sourceRepository,
-                            scenario.sourceRepositoryBranch,
-                            scenario.specification,
-                            scenario.serviceType
-                        )
+                    StubEndpoint(
+                        scenario.path,
+                        scenario.method,
+                        scenario.status,
+                        scenario.sourceProvider,
+                        scenario.sourceRepository,
+                        scenario.sourceRepositoryBranch,
+                        scenario.specification,
+                        scenario.serviceType
                     )
+                } else {
+                    null
                 }
             }
-        }
+        }.flatten().filterNotNull()
     }
 
     private fun printUsageReport() {

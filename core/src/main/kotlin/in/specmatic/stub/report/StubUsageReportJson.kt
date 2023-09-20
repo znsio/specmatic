@@ -3,7 +3,7 @@ package `in`.specmatic.stub.report
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class StubUsageJsonReport (
+data class StubUsageReportJson (
     val specmaticConfigPath:String,
-    val stubUsage:List<StubUsageJsonRow>
+    val stubUsage:List<StubUsageReportRow>
 )

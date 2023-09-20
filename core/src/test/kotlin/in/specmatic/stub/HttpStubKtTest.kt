@@ -10,7 +10,7 @@ import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.report.StubApi
+import `in`.specmatic.stub.report.StubEndpoint
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
 import io.mockk.InternalPlatformDsl.toStr
@@ -1010,11 +1010,11 @@ paths:
         val stubContract2 = OpenApiSpecification.fromYAML(hello2AndData2Spec, "").toFeature()
 
         HttpStub(listOf(stubContract1, stubContract2)).use { stub ->
-            assertThat(stub.allSpecApis).isEqualTo(listOf(
-                StubApi("/data", "GET", 200, serviceType = "HTTP"),
-                StubApi("/hello", "GET", 200, serviceType = "HTTP"),
-                StubApi("/data2", "GET", 200, serviceType = "HTTP"),
-                StubApi("/hello2", "GET", 200, serviceType = "HTTP")
+            assertThat(stub.allEndpoints).isEqualTo(listOf(
+                StubEndpoint("/data", "GET", 200, serviceType = "HTTP"),
+                StubEndpoint("/hello", "GET", 200, serviceType = "HTTP"),
+                StubEndpoint("/data2", "GET", 200, serviceType = "HTTP"),
+                StubEndpoint("/hello2", "GET", 200, serviceType = "HTTP")
             ))
         }
     }
@@ -1028,8 +1028,8 @@ paths:
             stub.client.execute(HttpRequest("GET", "/hello"))
 
             assertThat(stub.logs).isEqualTo(listOf(
-                StubApi("/data", "GET", 200, serviceType = "HTTP"),
-                StubApi("/hello", "GET", 200, serviceType = "HTTP")
+                StubEndpoint("/data", "GET", 200, serviceType = "HTTP"),
+                StubEndpoint("/hello", "GET", 200, serviceType = "HTTP")
             ))
         }
     }
@@ -1060,8 +1060,8 @@ paths:
             stub.client.execute(HttpRequest("GET", "/unknown"))
 
             assertThat(stub.logs).isEqualTo(listOf(
-                StubApi("/data", "GET", 200, serviceType = "HTTP"),
-                StubApi("/hello", "GET", 200, serviceType = "HTTP")
+                StubEndpoint("/data", "GET", 200, serviceType = "HTTP"),
+                StubEndpoint("/hello", "GET", 200, serviceType = "HTTP")
             ))
         }
     }
@@ -1076,7 +1076,7 @@ paths:
             stub.client.execute(HttpRequest("GET", "/unknown"))
 
             assertThat(stub.logs).isEqualTo(listOf(
-                StubApi("/data", "GET", 200, serviceType = "HTTP"),
+                StubEndpoint("/data", "GET", 200, serviceType = "HTTP"),
             ))
         }
     }

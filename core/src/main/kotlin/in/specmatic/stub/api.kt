@@ -61,8 +61,8 @@ fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<Stri
     return HttpStub(features, httpExpectations, host, port, ::consoleLog, specmaticConfigPath  = File(getGlobalConfigFileName()).canonicalPath)
 }
 
-fun loadContractStubsFromImplicitPaths(contractSources: List<ContractPathData>): List<Pair<Feature, List<ScenarioStub>>> {
-    return contractSources.map { Pair(File(it.path), it) }.flatMap { (contractPath, contractSource) ->
+fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathData>): List<Pair<Feature, List<ScenarioStub>>> {
+    return contractPathDataList.map { Pair(File(it.path), it) }.flatMap { (contractPath, contractSource) ->
         when {
             contractPath.isFile && contractPath.extension in CONTRACT_EXTENSIONS -> {
                 consoleLog(StringLog("Loading $contractPath"))

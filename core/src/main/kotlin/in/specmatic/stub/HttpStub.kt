@@ -11,7 +11,7 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.mock.*
-import `in`.specmatic.stub.report.StubApi
+import `in`.specmatic.stub.report.StubEndpoint
 import `in`.specmatic.stub.report.StubUsageReport
 import `in`.specmatic.test.HttpClient
 import io.ktor.http.*
@@ -75,11 +75,11 @@ class HttpStub(
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken == null }.toMutableList())
     private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
 
-    private val _logs:MutableList<StubApi> = mutableListOf()
-    private val _allSpecApis:MutableList<StubApi> = mutableListOf()
+    private val _logs:MutableList<StubEndpoint> = mutableListOf()
+    private val _allEndpoints:MutableList<StubEndpoint> = mutableListOf()
 
-    val logs: List<StubApi> get() = _logs.toList()
-    val allSpecApis: List<StubApi> get() = _allSpecApis.toList()
+    val logs: List<StubEndpoint> get() = _logs.toList()
+    val allEndpoints: List<StubEndpoint> get() = _allEndpoints.toList()
 
 
     val stubCount: Int
@@ -293,7 +293,7 @@ class HttpStub(
 
     private fun logRequestAndStubResponse(request: HttpRequest, response: HttpStubResponse) {
         _logs.add(
-            StubApi(
+            StubEndpoint(
                 response.scenario?.path,
                 request.method,
                 response.response.status,
@@ -463,8 +463,8 @@ class HttpStub(
         features.forEach {
             it.scenarios.forEach { scenario ->
                 if (scenario.isA2xxScenario()) {
-                    _allSpecApis.add(
-                        StubApi(
+                    _allEndpoints.add(
+                        StubEndpoint(
                             scenario.path,
                             scenario.method,
                             scenario.status,
@@ -482,7 +482,7 @@ class HttpStub(
 
     private fun printUsageReport() {
         specmaticConfigPath?.let {
-            val stubUsageReport = StubUsageReport(specmaticConfigPath, _allSpecApis, _logs )
+            val stubUsageReport = StubUsageReport(specmaticConfigPath, _allEndpoints, _logs )
             println("Saving Stub Usage Report json to $JSON_REPORT_PATH ...")
             val json = Json {
                 encodeDefaults = false

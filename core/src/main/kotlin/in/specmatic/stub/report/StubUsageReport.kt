@@ -4,11 +4,11 @@ import `in`.specmatic.conversions.convertPathParameterStyle
 
 class StubUsageReport(
     private val configFilePath: String,
-    private val allSpecApis: MutableList<StubApi> = mutableListOf(),
-    private val stubLogs: MutableList<StubApi> = mutableListOf()
+    private val allEndpoints: MutableList<StubEndpoint> = mutableListOf(),
+    private val stubLogs: MutableList<StubEndpoint> = mutableListOf()
 ) {
-    fun generate(): StubUsageJsonReport {
-        val stubUsageJsonRows = allSpecApis.groupBy {
+    fun generate(): StubUsageReportJson {
+        val stubUsageJsonRows = allEndpoints.groupBy {
             StubUsageReportGroupKey(
                 it.sourceProvider,
                 it.sourceRepository,
@@ -17,7 +17,7 @@ class StubUsageReport(
                 it.serviceType
             )
         }.map { (key, recordsOfGroup) ->
-            StubUsageJsonRow(
+            StubUsageReportRow(
                 type = key.sourceProvider,
                 repository = key.sourceRepository,
                 branch = key.sourceRepositoryBranch,
@@ -26,7 +26,7 @@ class StubUsageReport(
                 operations = recordsOfGroup.groupBy {
                     Triple(it.path, it.method, it.responseCode)
                 }.map { (operationGroup, _) ->
-                    StubUsageOperation(
+                    StubUsageReportOperation(
                         path = operationGroup.first?.let { convertPathParameterStyle(it) },
                         method = operationGroup.second,
                         responseCode = operationGroup.third,
@@ -44,7 +44,7 @@ class StubUsageReport(
                 }
             )
         }
-        return StubUsageJsonReport(configFilePath, stubUsageJsonRows)
+        return StubUsageReportJson(configFilePath, stubUsageJsonRows)
     }
 }
 

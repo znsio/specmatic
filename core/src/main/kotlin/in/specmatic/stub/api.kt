@@ -104,7 +104,6 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
                     emptyList()
                 }
             }
-            // TODO: Check why contractPath can be a directory
             contractPath.isDirectory -> {
                 loadContractStubsFromImplicitPaths(contractPath.listFiles()?.toList()?.map { ContractPathData("",  it.absolutePath) } ?: emptyList())
             }

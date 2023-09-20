@@ -288,7 +288,7 @@ class HttpStub(
             passThroughTargetBase,
             httpClientFactory
         ).also {
-            if(it.response.specmaticResultHeaderValue() == "success") logRequestAndStubResponse(httpRequest, it)
+            if(it.response.isSuccessful()) logRequestAndStubResponse(httpRequest, it)
         }
 
     private fun logRequestAndStubResponse(request: HttpRequest, response: HttpStubResponse) {
@@ -459,7 +459,10 @@ class HttpStub(
 
     init {
         server.start()
+        extractALlEndpoints()
+    }
 
+    private fun extractALlEndpoints() {
         features.forEach {
             it.scenarios.forEach { scenario ->
                 if (scenario.isA2xxScenario()) {

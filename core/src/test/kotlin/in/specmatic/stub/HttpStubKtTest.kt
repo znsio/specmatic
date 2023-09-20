@@ -11,17 +11,24 @@ import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.report.StubEndpoint
+import `in`.specmatic.stub.report.StubUsageReportJson
+import `in`.specmatic.stub.report.StubUsageReportOperation
+import `in`.specmatic.stub.report.StubUsageReportRow
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
 import io.mockk.InternalPlatformDsl.toStr
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
+import java.io.File
 import java.security.KeyStore
 import java.util.*
 import java.util.function.Consumer
@@ -89,6 +96,14 @@ paths:
                 type: string
   
         """.trimIndent()
+
+        private val stubUsageReportFile = File("./build/reports/specmatic/stub_usage_report.json")
+
+        @AfterAll
+        @JvmStatic
+        fun tearDownAll() {
+            stubUsageReportFile.delete()
+        }
     }
     @Test
     fun `flush transient stub`() {
@@ -1020,6 +1035,53 @@ paths:
     }
 
     @Test
+    fun `should generate stub usage report when stub is stopped`() {
+        val stubContract1 = OpenApiSpecification.fromYAML(helloAndDataSpec, "", sourceProvider = "git", sourceRepository = "https://github.com/znsio/specmatic-order-contracts.git", sourceRepositoryBranch = "main", specificationPath = "in/specmatic/examples/store/helloAndDataSpec.yaml").toFeature()
+        val stubContract2 = OpenApiSpecification.fromYAML(hello2AndData2Spec, "", sourceProvider = "git", sourceRepository = "https://github.com/znsio/specmatic-order-contracts.git", sourceRepositoryBranch = "main", specificationPath = "in/specmatic/examples/store/hello2AndData2Spec.yaml").toFeature()
+
+        HttpStub(listOf(stubContract1, stubContract2), specmaticConfigPath = "./specmatic.json").use { stub ->
+            stub.client.execute(HttpRequest("GET", "/data"))
+            stub.client.execute(HttpRequest("GET", "/unknown"))
+            stub.client.execute(HttpRequest("GET", "/hello"))
+            stub.client.execute(HttpRequest("GET", "/unknown"))
+            stub.client.execute(HttpRequest("GET", "/hello2"))
+            stub.client.execute(HttpRequest("GET", "/hello2"))
+            stub.client.execute(HttpRequest("GET", "/unknown"))
+            stub.client.execute(HttpRequest("GET", "/data2"))
+            stub.client.execute(HttpRequest("GET", "/data2"))
+        }
+
+        val stubUsageReport:StubUsageReportJson = Json.decodeFromString(stubUsageReportFile.readText())
+
+        assertThat(stubUsageReport).isEqualTo(StubUsageReportJson(
+            StubUsageReportTest.CONFIG_FILE_PATH, listOf(
+                StubUsageReportRow(
+                    "git",
+                    "https://github.com/znsio/specmatic-order-contracts.git",
+                    "main",
+                    "in/specmatic/examples/store/helloAndDataSpec.yaml",
+                    "HTTP",
+                    listOf(
+                        StubUsageReportOperation("/data", "GET",200, 1),
+                        StubUsageReportOperation( "/hello", "GET",200, 1)
+                    )
+                ),
+                StubUsageReportRow(
+                    "git",
+                    "https://github.com/znsio/specmatic-order-contracts.git",
+                    "main",
+                    "in/specmatic/examples/store/hello2AndData2Spec.yaml",
+                    "HTTP",
+                    listOf(
+                        StubUsageReportOperation( "/data2", "GET",200, 2),
+                        StubUsageReportOperation( "/hello2", "GET",200, 2)
+                    )
+                )
+            )
+        ))
+    }
+
+    @Test
     fun `should log all successful requests when response is faked or auto-generated`() {
         val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
 
@@ -1074,6 +1136,34 @@ paths:
 
             stub.client.execute(HttpRequest("GET", "/data"))
             stub.client.execute(HttpRequest("GET", "/unknown"))
+
+            assertThat(stub.logs).isEqualTo(listOf(
+                StubEndpoint("/data", "GET", 200, serviceType = "HTTP"),
+            ))
+        }
+    }
+
+    @Test
+    fun `should not log unsuccessful requests in strict mode`() {
+        val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
+
+        HttpStub(features = listOf(contract), strictMode = true).use { stub ->
+
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/data"
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": 10
+                    }
+                }
+            """.trimIndent())
+
+            stub.client.execute(HttpRequest("GET", "/data"))
+            stub.client.execute(HttpRequest("GET", "/hello"))
 
             assertThat(stub.logs).isEqualTo(listOf(
                 StubEndpoint("/data", "GET", 200, serviceType = "HTTP"),

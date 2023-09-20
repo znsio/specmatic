@@ -1082,7 +1082,7 @@ paths:
     }
 
     @Test
-    fun `should log all successful requests when response is faked or auto-generated`() {
+    fun `should log all successful requests when response is faked`() {
         val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
 
         HttpStub(contract).use { stub ->

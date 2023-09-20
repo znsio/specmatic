@@ -322,7 +322,7 @@ fun loadIfOpenAPISpecification(contractPathData: ContractPathData): Pair<String,
     if (isOpenAPI(contractPathData.path))
         return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath))
 
-    logger.log("Ignoring $contractPathData as it is not an OpenAPI specification")
+    logger.log("Ignoring ${contractPathData.path} as it is not an OpenAPI specification")
     return null
 }
 

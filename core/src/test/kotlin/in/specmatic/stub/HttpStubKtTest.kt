@@ -27,6 +27,69 @@ import java.util.*
 import java.util.function.Consumer
 
 internal class HttpStubKtTest {
+    companion object{
+        private val helloAndDataSpec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    get:
+      summary: hello world
+      description: test
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+  /hello:
+    get:
+      summary: hello world
+      description: say hello
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+  
+        """.trimIndent()
+
+        private val hello2AndData2Spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data2:
+    get:
+      summary: hello world
+      description: test
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+  /hello2:
+    get:
+      summary: hello world
+      description: say hello
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+  
+        """.trimIndent()
+    }
     @Test
     fun `flush transient stub`() {
         val contract = OpenApiSpecification.fromYAML("""
@@ -942,37 +1005,38 @@ paths:
     }
 
     @Test
-    fun `should log only successful request and responses`() {
-        val contract = OpenApiSpecification.fromYAML("""
-openapi: 3.0.0
-info:
-  title: Sample API
-  version: 0.1.9
-paths:
-  /data:
-    get:
-      summary: hello world
-      description: test
-      responses:
-        '200':
-          description: Says hello
-          content:
-            text/plain:
-              schema:
-                type: number
-  /hello:
-    get:
-      summary: hello world
-      description: say hello
-      responses:
-        '200':
-          description: Says hello
-          content:
-            text/plain:
-              schema:
-                type: string
-  
-        """.trimIndent(), "").toFeature()
+    fun `should determine all the api endpoints across all the specs`() {
+        val stubContract1 = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
+        val stubContract2 = OpenApiSpecification.fromYAML(hello2AndData2Spec, "").toFeature()
+
+        HttpStub(listOf(stubContract1, stubContract2)).use { stub ->
+            assertThat(stub.allSpecApis).isEqualTo(listOf(
+                StubApi("/data", "GET", 200, serviceType = "HTTP"),
+                StubApi("/hello", "GET", 200, serviceType = "HTTP"),
+                StubApi("/data2", "GET", 200, serviceType = "HTTP"),
+                StubApi("/hello2", "GET", 200, serviceType = "HTTP")
+            ))
+        }
+    }
+
+    @Test
+    fun `should log all successful requests when response is faked or auto-generated`() {
+        val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
+
+        HttpStub(contract).use { stub ->
+            stub.client.execute(HttpRequest("GET", "/data"))
+            stub.client.execute(HttpRequest("GET", "/hello"))
+
+            assertThat(stub.logs).isEqualTo(listOf(
+                StubApi("/data", "GET", 200, serviceType = "HTTP"),
+                StubApi("/hello", "GET", 200, serviceType = "HTTP")
+            ))
+        }
+    }
+
+    @Test
+    fun `should log all successful requests when response is stubbed`() {
+        val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
 
         HttpStub(contract).use { stub ->
             stub.setExpectation("""
@@ -995,14 +1059,24 @@ paths:
 
             stub.client.execute(HttpRequest("GET", "/unknown"))
 
-            assertThat(stub.allSpecApis).isEqualTo(listOf(
-                StubApi("/data", "GET", 200, serviceType = "HTTP"),
-                StubApi("/hello", "GET", 200, serviceType = "HTTP")
-            ))
-
             assertThat(stub.logs).isEqualTo(listOf(
                 StubApi("/data", "GET", 200, serviceType = "HTTP"),
                 StubApi("/hello", "GET", 200, serviceType = "HTTP")
+            ))
+        }
+    }
+
+    @Test
+    fun `should not log unsuccessful requests`() {
+        val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
+
+        HttpStub(contract).use { stub ->
+
+            stub.client.execute(HttpRequest("GET", "/data"))
+            stub.client.execute(HttpRequest("GET", "/unknown"))
+
+            assertThat(stub.logs).isEqualTo(listOf(
+                StubApi("/data", "GET", 200, serviceType = "HTTP"),
             ))
         }
     }

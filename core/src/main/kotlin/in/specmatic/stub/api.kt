@@ -40,25 +40,25 @@ fun createStub(host: String = "localhost", port: Int = 9000): ContractStub {
     val features = stubs.map { it.first }
     val expectations = contractInfoToHttpExpectations(stubs)
 
-    return HttpStub(features, expectations, host, port, log = ::consoleLog, workingDirectory = workingDirectory)
+    return HttpStub(features, expectations, host, port, log = ::consoleLog, workingDirectory = workingDirectory, specmaticConfigPath  = File(getGlobalConfigFileName()).canonicalPath)
 }
 
 // Used by stub client code
 fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
     val contractPaths = contractStubPaths().map { it.path }
-    val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
+    val contractInfo = loadContractStubsFromFiles(contractPaths.map { ContractPathData("", it) }, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
-    return HttpStub(features, httpExpectations, host, port, ::consoleLog)
+    return HttpStub(features, httpExpectations, host, port, ::consoleLog, specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath)
 }
 
 fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
-    val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
+    val contractInfo = loadContractStubsFromFiles(contractPaths.map { ContractPathData("", it) }, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
-    return HttpStub(features, httpExpectations, host, port, ::consoleLog)
+    return HttpStub(features, httpExpectations, host, port, ::consoleLog, specmaticConfigPath  = File(getGlobalConfigFileName()).canonicalPath)
 }
 
 fun loadContractStubsFromImplicitPaths(contractSources: List<ContractPathData>): List<Pair<Feature, List<ScenarioStub>>> {
@@ -125,15 +125,15 @@ private fun logIgnoredFiles(implicitDataDir: File) {
     }
 }
 
-fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
-    val contactPathsString = contractPaths.joinToString(System.lineSeparator())
+fun loadContractStubsFromFiles(contractPathDataList: List<ContractPathData>, dataDirPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
+    val contactPathsString = contractPathDataList.map { it.path }.joinToString(System.lineSeparator())
     consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
 
     val dataDirFileList = allDirsInTree(dataDirPaths).sorted()
 
-    val features = contractPaths.mapNotNull { path ->
-        loadIfOpenAPISpecification(path)
+    val features = contractPathDataList.mapNotNull { contractPathData ->
+        loadIfOpenAPISpecification(contractPathData)
     }
 
     val dataFiles = dataDirFileList.flatMap {
@@ -316,14 +316,14 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
     }
 }
 
-fun loadIfOpenAPISpecification(path: String): Pair<String, Feature>? {
-    if (!isYAML(path))
-        return Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
+fun loadIfOpenAPISpecification(contractPathData: ContractPathData): Pair<String, Feature>? {
+    if (!isYAML(contractPathData.path))
+        return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath))
 
-    if (isOpenAPI(path))
-        return Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
+    if (isOpenAPI(contractPathData.path))
+        return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath))
 
-    logger.log("Ignoring $path as it is not an OpenAPI specification")
+    logger.log("Ignoring $contractPathData as it is not an OpenAPI specification")
     return null
 }
 

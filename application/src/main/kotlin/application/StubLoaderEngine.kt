@@ -18,7 +18,7 @@ class StubLoaderEngine {
             }
         }
         return when {
-            dataDirs.isNotEmpty() -> loadContractStubsFromFiles(contractSources.map { it.path }, dataDirs)
+            dataDirs.isNotEmpty() -> loadContractStubsFromFiles(contractSources, dataDirs)
             else -> loadContractStubsFromImplicitPaths(contractSources)
         }
     }

@@ -75,8 +75,12 @@ class HttpStub(
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken == null }.toMutableList())
     private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
 
-    val logs:MutableList<StubApi> = mutableListOf()
-    val allSpecApis:MutableList<StubApi> = mutableListOf()
+    private val _logs:MutableList<StubApi> = mutableListOf()
+    private val _allSpecApis:MutableList<StubApi> = mutableListOf()
+
+    val logs: List<StubApi> get() = _logs.toList()
+    val allSpecApis: List<StubApi> get() = _allSpecApis.toList()
+
 
     val stubCount: Int
         get() {
@@ -288,7 +292,7 @@ class HttpStub(
         }
 
     private fun logRequestAndStubResponse(request: HttpRequest, response: HttpStubResponse) {
-        logs.add(
+        _logs.add(
             StubApi(
                 response.scenario?.path,
                 request.method,
@@ -458,7 +462,7 @@ class HttpStub(
         features.forEach {
             it.scenarios.forEach { scenario ->
                 if (scenario.isA2xxScenario()) {
-                    allSpecApis.add(
+                    _allSpecApis.add(
                         StubApi(
                             scenario.path,
                             scenario.method,
@@ -477,7 +481,7 @@ class HttpStub(
 
     override fun printUsageReport() {
         specmaticConfigPath?.let {
-            val stubUsageReport = StubUsageReport(specmaticConfigPath, allSpecApis, logs )
+            val stubUsageReport = StubUsageReport(specmaticConfigPath, _allSpecApis, _logs )
             println("Saving Stub Usage Report json to $JSON_REPORT_PATH ...")
             val json = Json {
                 encodeDefaults = false

@@ -8,6 +8,4 @@ interface ContractStub : Closeable {
 
     // Java helper
     fun setExpectation(json: String)
-
-    fun printUsageReport()
 }

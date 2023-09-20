@@ -209,7 +209,6 @@ class StubCommand : Callable<Unit> {
             override fun run() {
                 try {
                     consoleLog(StringLog("Shutting down stub servers"))
-                    httpStub?.printUsageReport()
                     httpStub?.close()
                 } catch (e: InterruptedException) {
                     currentThread().interrupt()

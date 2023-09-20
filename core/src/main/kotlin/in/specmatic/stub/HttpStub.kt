@@ -443,6 +443,7 @@ class HttpStub(
     override fun close() {
         server.stop(0, 5000)
         workingDirectory?.delete()
+        printUsageReport()
     }
 
     private fun handleStateSetupRequest(httpRequest: HttpRequest): HttpStubResponse {
@@ -479,7 +480,7 @@ class HttpStub(
         }
     }
 
-    override fun printUsageReport() {
+    private fun printUsageReport() {
         specmaticConfigPath?.let {
             val stubUsageReport = StubUsageReport(specmaticConfigPath, _allSpecApis, _logs )
             println("Saving Stub Usage Report json to $JSON_REPORT_PATH ...")

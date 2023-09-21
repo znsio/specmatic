@@ -75,7 +75,7 @@ class HttpStub(
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken == null }.toMutableList())
     private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
 
-    private val _logs: MutableList<StubEndpoint> = mutableListOf()
+    private val _logs: MutableList<StubEndpoint> = Collections.synchronizedList(ArrayList())
     private val _allEndpoints: List<StubEndpoint> = extractALlEndpoints()
 
     val logs: List<StubEndpoint> get() = _logs.toList()
@@ -292,24 +292,6 @@ class HttpStub(
         result.log(_logs, httpRequest)
 
         return result.response
-    }
-//            .also {
-//            if(it.response.isSuccessful()) logRequestAndStubResponse(httpRequest, it)
-//        }
-
-    private fun logRequestAndStubResponse(request: HttpRequest, response: HttpStubResponse) {
-        _logs.add(
-            StubEndpoint(
-                response.scenario?.path,
-                request.method,
-                response.response.status,
-                response.feature?.sourceProvider,
-                response.feature?.sourceRepository,
-                response.feature?.sourceRepositoryBranch,
-                response.feature?.specification,
-                response.feature?.serviceType,
-            )
-        )
     }
 
     private suspend fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {

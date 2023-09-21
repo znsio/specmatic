@@ -30,6 +30,7 @@ import io.swagger.v3.parser.core.models.SwaggerParseResult
 import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
+private const val SERVICE_TYPE_HTTP = "HTTP"
 
 class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
     ApiSpecification {
@@ -92,7 +93,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     fun toFeature(): Feature {
         val name = File(openApiFile).name
-        return Feature(toScenarioInfos().map { Scenario(it) }, name = name, path = openApiFile)
+        return Feature(
+            toScenarioInfos().map { Scenario(it) }, name = name, path = openApiFile, sourceProvider = sourceProvider,
+            sourceRepository = sourceRepository,
+            sourceRepositoryBranch = sourceRepositoryBranch,
+            specification = specificationPath,
+            serviceType = SERVICE_TYPE_HTTP
+        )
     }
 
     override fun toScenarioInfos(): List<ScenarioInfo> {
@@ -241,7 +248,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             sourceRepository = sourceRepository,
                             sourceRepositoryBranch = sourceRepositoryBranch,
                             specification = specificationPath,
-                            serviceType = "HTTP"
+                            serviceType = SERVICE_TYPE_HTTP
                         )
                     }
                 }.flatten()
@@ -344,7 +351,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             sourceRepository = sourceRepository,
                             sourceRepositoryBranch = sourceRepositoryBranch,
                             specification = specificationPath,
-                            serviceType = "HTTP"
+                            serviceType = SERVICE_TYPE_HTTP
                         )
                     }
                 }.flatten()

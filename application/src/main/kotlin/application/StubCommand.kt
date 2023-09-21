@@ -4,12 +4,14 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import `in`.specmatic.core.log.*
+import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.stub.ContractStub
 import `in`.specmatic.stub.HttpClientFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import picocli.CommandLine.*
+import java.io.File
 import java.util.concurrent.Callable
 
 
@@ -94,6 +96,10 @@ class StubCommand : Callable<Unit> {
     @Autowired
     val httpClientFactory = HttpClientFactory()
 
+    private var contractSources:List<ContractPathData> = emptyList()
+
+    var specmaticConfigPath: String? = null
+
     override fun call() {
         val logPrinters = configureLogPrinters()
 
@@ -107,13 +113,22 @@ class StubCommand : Callable<Unit> {
         }
 
         try {
-            contractPaths = loadConfig()
+            contractSources = when (contractPaths.isEmpty()) {
+                true -> {
+                    logger.debug("No contractPaths specified. Using configuration file named $configFileName")
+                    specmaticConfigPath = File(Configuration.globalConfigFileName).canonicalPath
+                    specmaticConfig.contractStubPathData()
+                }
+                else -> contractPaths.map {
+                    ContractPathData("", it)
+                }
+            }
+            contractPaths = contractSources.map { it.path }
             validateContractFileExtensions(contractPaths, fileOperations)
             startServer()
 
             if(httpStub != null) {
                 addShutdownHook()
-
                 val watcher = watchMaker.make(contractPaths.plus(dataDirs))
                 watcher.watchForChanges {
                     restartServer()
@@ -150,14 +165,10 @@ class StubCommand : Callable<Unit> {
         listOf(TextFilePrinter(LogDirectory(it, logPrefix, "", "log")))
     } ?: emptyList()
 
-    private fun loadConfig() = contractPaths.ifEmpty {
-        logger.debug("No contractPaths specified. Using configuration file named $configFileName")
-        specmaticConfig.contractStubPaths()
-    }
 
     private fun startServer() {
         val workingDirectory = WorkingDirectory()
-        val stubData = stubLoaderEngine.loadStubs(contractPaths, dataDirs)
+        val stubData = stubLoaderEngine.loadStubs(contractSources, dataDirs)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
@@ -165,7 +176,7 @@ class StubCommand : Callable<Unit> {
             true -> if (portIsInUse(host, port)) findRandomFreePort() else port
             false -> port
         }
-        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, httpClientFactory, workingDirectory)
+        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, specmaticConfigPath, httpClientFactory, workingDirectory)
 
         LogTail.storeSnapshot()
     }

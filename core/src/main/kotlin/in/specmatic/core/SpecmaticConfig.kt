@@ -18,19 +18,13 @@ const val DATA_DIR_SUFFIX = "_data"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
 const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
-class WorkingDirectory(private val filePath: File, private val existsBefore: Boolean) {
-    constructor(path: File): this(path, path.exists())
+class WorkingDirectory(private val filePath: File) {
     constructor(path: String = DEFAULT_WORKING_DIRECTORY): this(File(path))
 
     val path: String
         get() {
             return filePath.path
         }
-
-    fun delete() {
-        if(!existsBefore)
-            filePath.deleteRecursively()
-    }
 }
 
 fun invalidContractExtensionMessage(filename: String): String {

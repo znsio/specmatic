@@ -301,9 +301,9 @@ data class Feature(
             positiveTestScenarios(suggestions)
     }
 
-    fun positiveTestScenarios(suggestions: List<Scenario>) =
+    fun positiveTestScenarios(suggestions: List<Scenario>): List<Scenario> =
         scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
-            it.newBasedOn(suggestions)
+            it.withSuggestions(suggestions)
         }.flatMap {
             it.generateTestScenarios(testVariables, testBaseURLs, generativeTestingEnabled)
         }

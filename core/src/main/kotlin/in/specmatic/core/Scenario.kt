@@ -56,7 +56,8 @@ data class Scenario(
     val sourceRepository:String? = null,
     val sourceRepositoryBranch:String? = null,
     val specification:String? = null,
-    val serviceType:String? = null
+    val serviceType:String? = null,
+    val suiteName: String? = null
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -469,17 +470,17 @@ data class Scenario(
         return "$generativePrefix Scenario: $method $path -> $responseStatus$exampleIdentifier"
     }
 
-    fun newBasedOn(scenario: Scenario): Scenario =
+    fun withSuggestions(suggestions: Scenario): Scenario =
         Scenario(
             this.name,
             this.httpRequestPattern,
             this.httpResponsePattern,
             this.expectedFacts,
-            scenario.examples,
+            suggestions.examples,
             this.patterns,
             this.fixtures,
             this.ignoreFailure,
-            scenario.references,
+            suggestions.references,
             bindings,
             isGherkinScenario,
             isNegative,
@@ -490,8 +491,8 @@ data class Scenario(
             serviceType = serviceType
         )
 
-    fun newBasedOn(suggestions: List<Scenario>) =
-        this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
+    fun withSuggestions(suggestions: List<Scenario>) =
+        this.withSuggestions(suggestions.find { it.name == this.name } ?: this)
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?) = Scenario(

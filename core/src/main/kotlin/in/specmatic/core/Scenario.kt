@@ -349,7 +349,9 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOn(row, enableGenerativeTesting)
+                newBasedOn(row, enableGenerativeTesting).map {
+                    it.copy(suiteName = "Within-boundary tests using examples")
+                }
             }
         }
     }
@@ -515,7 +517,8 @@ data class Scenario(
         sourceRepository = sourceRepository,
         sourceRepositoryBranch = sourceRepositoryBranch,
         specification = specification,
-        serviceType = serviceType
+        serviceType = serviceType,
+        suiteName = "Beyond-boundary tests"
     )
 }
 

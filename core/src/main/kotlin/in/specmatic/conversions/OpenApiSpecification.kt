@@ -279,16 +279,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         }.toMap()
 
                         when {
-                            requestExamples.isNotEmpty() -> Row(
-                                requestExamples.keys.toList().map { keyName: String -> keyName },
-                                requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
-                                    .map { valueString: String ->
-                                        if (valueString.contains("externalValue")) {
-                                            ObjectMapper().readValue(valueString, Map::class.java).values.first()
-                                                .toString()
-                                        } else valueString
-                                    },
-                                name = exampleName)
+                            requestExamples.isNotEmpty() -> Row(requestExamples, exampleName)
                             else -> Row()
                         }
                     }

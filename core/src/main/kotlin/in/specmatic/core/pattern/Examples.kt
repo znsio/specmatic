@@ -12,7 +12,7 @@ data class Examples(val columnNames: List<String> = emptyList(), val rows: List<
         fun examplesFrom(examplesList: List<Examples>): List<`in`.specmatic.core.pattern.Examples> = examplesList.map { examplesFrom(it) }
 
         fun examplesFrom(examples: Examples): `in`.specmatic.core.pattern.Examples {
-            val columns = getColumnNames(examples)
+            val columns: List<String> = getColumnNames(examples)
             val rows = examples.tableBody.map { Row(columns, getValues(it)) }
 
             return Examples(columns, rows)
@@ -20,7 +20,7 @@ data class Examples(val columnNames: List<String> = emptyList(), val rows: List<
 
         private fun getColumnNames(examples: Examples) = getValues(examples.tableHeader)
 
-        private fun getValues(row: TableRow): ArrayList<String> = ArrayList(row.cells.map { it.value })
+        private fun getValues(row: TableRow): List<String> = row.cells.map { it.value }
 
     }
 

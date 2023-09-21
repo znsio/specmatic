@@ -3,18 +3,39 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.OMIT
 import `in`.specmatic.core.References
 import `in`.specmatic.core.jsonObjectToValues
+import `in`.specmatic.core.pattern.RowType.*
 import `in`.specmatic.core.value.JSONObjectValue
+import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
 
 const val DEREFERENCE_PREFIX = "$"
 const val FILENAME_PREFIX = "@"
+
+enum class RowType {
+    NoExamples, Example
+}
 
 data class Row(
     val columnNames: List<String> = emptyList(),
     val values: List<String> = emptyList(),
     val variables: Map<String, String> = emptyMap(),
     val references: Map<String, References> = emptyMap(),
-    val name: String = ""
+    val name: String = "",
+    val rowType: RowType = NoExamples
 ) {
+    constructor(columnNames: List<String>, values: List<String>) : this(columnNames, values, rowType = Example)
+    constructor(requestExamples: Map<String, Any>, exampleName: String) : this(
+        requestExamples.keys.toList().map { keyName: String -> keyName },
+        requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
+            .map { valueString: String ->
+                if (valueString.contains("externalValue")) {
+                    ObjectMapper().readValue(valueString, Map::class.java).values.first()
+                        .toString()
+                } else valueString
+            },
+        name = exampleName,
+        rowType = Example
+    )
+
     private val cells = columnNames.zip(values.map { it }).toMap().toMutableMap()
 
     fun flattenRequestBodyIntoRow(): Row {

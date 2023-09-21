@@ -35,8 +35,6 @@ data class HttpResponse(
     fun specmaticResultHeaderValue(): String =
         this.headers.getOrDefault(SPECMATIC_RESULT_HEADER, "success")
 
-    fun isSuccessful(): Boolean = specmaticResultHeaderValue() == "success"
-
     fun updateBodyWith(content: Value): HttpResponse {
         return copy(body = content, headers = headers.minus(CONTENT_TYPE).plus(CONTENT_TYPE to content.httpContentType))
     }

@@ -278,8 +278,8 @@ class HttpStub(
     private fun handleFetchLogRequest(): HttpStubResponse =
         HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getString())))
 
-    private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse =
-        getHttpResponse(
+    private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse {
+        val result: StubbedResponseResult = getHttpResponse(
             httpRequest,
             features,
             threadSafeHttpStubs,
@@ -287,9 +287,15 @@ class HttpStub(
             strictMode,
             passThroughTargetBase,
             httpClientFactory
-        ).also {
-            if(it.response.isSuccessful()) logRequestAndStubResponse(httpRequest, it)
-        }
+        )
+
+        result.log(_logs, httpRequest)
+
+        return result.response
+    }
+//            .also {
+//            if(it.response.isSuccessful()) logRequestAndStubResponse(httpRequest, it)
+//        }
 
     private fun logRequestAndStubResponse(request: HttpRequest, response: HttpStubResponse) {
         _logs.add(
@@ -609,6 +615,35 @@ internal suspend fun respondToKtorHttpResponse(call: ApplicationCall, httpRespon
     call.respond(textContent)
 }
 
+interface StubbedResponseResult {
+    fun log(logs: MutableList<StubEndpoint>, httpRequest: HttpRequest)
+
+    val response: HttpStubResponse
+}
+
+class FoundStubbedResponse(override val response: HttpStubResponse) : StubbedResponseResult {
+    override fun log(logs: MutableList<StubEndpoint>, httpRequest: HttpRequest) {
+        logs.add(
+            StubEndpoint(
+                response.scenario?.path,
+                httpRequest.method,
+                response.response.status,
+                response.feature?.sourceProvider,
+                response.feature?.sourceRepository,
+                response.feature?.sourceRepositoryBranch,
+                response.feature?.specification,
+                response.feature?.serviceType,
+            )
+        )
+    }
+}
+
+class NotStubbed(override val response: HttpStubResponse) : StubbedResponseResult {
+    override fun log(logs: MutableList<StubEndpoint>, httpRequest: HttpRequest) {
+
+    }
+}
+
 fun getHttpResponse(
     httpRequest: HttpRequest,
     features: List<Feature>,
@@ -617,16 +652,16 @@ fun getHttpResponse(
     strictMode: Boolean,
     passThroughTargetBase: String = "",
     httpClientFactory: HttpClientFactory? = null
-): HttpStubResponse {
+): StubbedResponseResult {
     return try {
         val (matchResults, stubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
-        stubResponse
+        stubResponse?.let { FoundStubbedResponse(stubResponse) }
             ?: if (httpClientFactory != null && passThroughTargetBase.isNotBlank()) {
-                passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory)
+                NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
             } else {
                 if (strictMode)
-                    HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults))
+                    NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
                 else
                     fakeHttpResponse(features, httpRequest)
             }
@@ -736,7 +771,7 @@ object ContractAndRequestsMismatch : MismatchMessages {
     }
 }
 
-private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): HttpStubResponse {
+private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): StubbedResponseResult {
     data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
 
     val responses: List<ResponseDetails> = features.asSequence().map { feature ->
@@ -753,14 +788,14 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
                 first.plus(second)
             }.withoutFluff().generateErrorHttpResponse(httpRequest)
 
-            HttpStubResponse(httpFailureResponse)
+            NotStubbed(HttpStubResponse(httpFailureResponse))
         }
-        else -> HttpStubResponse(
+        else -> FoundStubbedResponse(HttpStubResponse(
             fakeResponse.successResponse?.build()?.withRandomResultHeader()!!,
             contractPath = fakeResponse.feature.path,
             feature = fakeResponse.feature,
             scenario = fakeResponse.successResponse.scenario
-        )
+        ))
     }
 }
 

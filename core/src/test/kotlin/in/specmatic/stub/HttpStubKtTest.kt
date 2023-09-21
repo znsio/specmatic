@@ -774,7 +774,7 @@ paths:
               schema:
                 type: string
         """.trimIndent(), "").toFeature()
-        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf()), ThreadSafeListOfStubs(mutableListOf()), false)
+        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf()), ThreadSafeListOfStubs(mutableListOf()), false).response
 
         println(response.response.toLogString())
 
@@ -861,7 +861,7 @@ paths:
             responsePattern = contract.scenarios.single().httpResponsePattern
         )
 
-        val response = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), ThreadSafeListOfStubs(mutableListOf()),true)
+        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), ThreadSafeListOfStubs(mutableListOf()),true).response
         val requestString = response.response.toLogString()
 
         println(requestString)

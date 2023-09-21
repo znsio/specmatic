@@ -21,6 +21,7 @@ import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -5053,6 +5054,15 @@ paths:
                               required:
                                 - jsonPart
                                 - filesPart
+                            examples:
+                              200_OKAY:
+                                value:
+                                  jsonPart:
+                                    foobar: "foobar"
+                                  filesPart:
+                                    externalValue: 
+                                      - "input.txt"
+                                      - "input2.txt"
                       responses:
                         "200":
                           description: "Send Message Response"
@@ -5064,6 +5074,10 @@ paths:
                                   filename:
                                     type: string
                                     description: filename for associated file content
+                              examples:
+                                200_OKAY: 
+                                  value: 
+                                    filename: "mergedInput.txt"
             """.trimIndent()
 
             val specifications = OpenApiSpecification.fromYAML(openAPI, "").toScenarioInfos()
@@ -5072,9 +5086,14 @@ paths:
             val firstSpec = specifications[0]
             val multiPartPatterns = firstSpec.httpRequestPattern.multiPartFormDataPattern
             assertTrue(multiPartPatterns.size == 2)
-
             assertTrue(multiPartPatterns[0] is MultiPartContentPattern)
             assertTrue(multiPartPatterns[1] is MultipartArrayPattern)
+
+            assertEquals(1, firstSpec.examples.size)
+            assertEquals(1, firstSpec.examples.single().rows.size)
+            assertEquals(2, firstSpec.examples.single().rows.single().values.size)
+            assertTrue(firstSpec.examples.single().rows.single().values.get(0).contains("foobar"))
+            assertEquals("[\"input.txt\",\"input2.txt\"]", firstSpec.examples.single().rows.single().values.get(1))
         }
 
         @Test

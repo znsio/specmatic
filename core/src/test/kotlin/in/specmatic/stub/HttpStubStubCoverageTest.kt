@@ -11,7 +11,9 @@ import kotlinx.serialization.json.Json
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
+import org.springframework.web.client.RestTemplate
 import java.io.File
+import kotlin.concurrent.thread
 
 class HttpStubStubCoverageTest {
     companion object {
@@ -238,6 +240,25 @@ paths:
             assertThat(stub.logs).isEqualTo(listOf(
                 StubEndpoint("/data", "GET", 200, serviceType = "HTTP"),
             ))
+        }
+    }
+
+    @Test
+    fun `should log all requests successfully when multiple threads make requests concurrently`() {
+        val contract = OpenApiSpecification.fromYAML(helloAndDataSpec, "").toFeature()
+
+        HttpStub(contract).use { stub ->
+
+            val threads = List(10) {
+                thread {
+                    RestTemplate().getForEntity("http://localhost:9000/hello", String::class.java)
+                }
+            }
+
+            threads.forEach { it.join() }
+
+            assertThat(stub.logs.count()).isEqualTo(10)
+            assertThat(stub.logs.all { it == StubEndpoint("/hello", "GET", 200, serviceType = "HTTP") }).isTrue
         }
     }
 }

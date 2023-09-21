@@ -9,6 +9,7 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
+import io.ktor.http.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import java.net.URI
@@ -194,9 +195,9 @@ internal class HttpRequestPatternTest {
     }
 
     @Test
-    fun `request with a multipart array should result in a request with multiple files from the row`() {
+    fun `request with an array of filename in the row should result in a request with multiple files with the same part name`() {
         val part = MultipartArrayPattern("file", ListPattern(BinaryPattern()))
-        val example = Row(columnNames = listOf("file_filename"),values = listOf("['test1.txt', 'test2.txt']"))
+        val example = Row(columnNames = listOf("file_filename"),values = listOf("[\"test1.txt\", \"test2.txt\"]"))
 
         val requestPattern = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("/"), multiPartFormDataPattern = listOf(part))
         val patterns = requestPattern.newBasedOn(example, Resolver())
@@ -205,8 +206,15 @@ internal class HttpRequestPatternTest {
         val expectedPattern = HttpRequestPattern(method= "POST", urlMatcher =toURLMatcherWithOptionalQueryParams("/"),
             multiPartFormDataPattern = listOf(MultipartArrayPattern("file", ListPattern(BinaryPattern())))
         )
-
         assertThat(patterns.single()).isEqualTo(expectedPattern)
+
+        val generatedHttpRequest = patterns.single().generate(Resolver())
+        assertEquals(2, generatedHttpRequest.multiPartFormData.size)
+        assertEquals("file", (generatedHttpRequest.multiPartFormData.get(0) as MultiPartFileValue).name)
+        assertEquals("test1.txt", (generatedHttpRequest.multiPartFormData.get(0) as MultiPartFileValue).filename)
+        assertEquals("file", (generatedHttpRequest.multiPartFormData.get(1) as MultiPartFileValue).name)
+        assertEquals("test2.txt", (generatedHttpRequest.multiPartFormData.get(1) as MultiPartFileValue).filename)
+
     }
 
     @Test

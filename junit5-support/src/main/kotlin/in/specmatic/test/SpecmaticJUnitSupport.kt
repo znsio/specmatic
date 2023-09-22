@@ -14,9 +14,7 @@ import `in`.specmatic.stub.isYAML
 import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
 import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import kotlinx.serialization.Serializable
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.DynamicTest
-import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.*
 import org.opentest4j.TestAbortedException
 import java.io.File
 
@@ -133,16 +131,16 @@ open class SpecmaticJUnitSupport {
         return envConfig
     }
 
-    private fun loadExceptionAsTestError(e: Throwable): Collection<DynamicTest> {
+    private fun loadExceptionAsTestError(e: Throwable): Iterator<DynamicTest> {
         return listOf(DynamicTest.dynamicTest("Load Error") {
             testsNames.add("Load Error")
             logger.log(e)
             ResultAssert.assertThat(Result.Failure(exceptionCauseMessage(e))).isSuccess()
-        })
+        }).iterator()
     }
 
     @TestFactory
-    fun contractTest(): Collection<DynamicTest> {
+    fun contractTest(): Iterator<DynamicNode> {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
         val filterName: String? = System.getProperty(FILTER_NAME)
@@ -161,7 +159,7 @@ open class SpecmaticJUnitSupport {
         } catch (e: Throwable) {
             return loadExceptionAsTestError(e)
         }
-        val testScenarios = try {
+        val testScenarios: List<ContractTest> = try {
             val testScenarios = when {
                 contractPaths != null -> {
                     contractPaths.split(",").flatMap {
@@ -205,41 +203,51 @@ open class SpecmaticJUnitSupport {
 
         var checkedAPIs = false
 
-        return testScenarios.map { testScenario ->
-            DynamicTest.dynamicTest(testScenario.testDescription()) {
-                if(!checkedAPIs) {
-                    checkedAPIs = true
+        val testSuites: Map<String, List<ContractTest>> = testScenarios.groupBy {
+            it.suitName
+        }
+
+        val tests: List<DynamicContainer> = testSuites.entries.map { (suiteName, testScenarios) ->
+            val dynamicTests: List<DynamicTest> = testScenarios.map { testScenario ->
+                DynamicTest.dynamicTest(testScenario.testDescription()) {
+                    if(!checkedAPIs) {
+                        checkedAPIs = true
+
+                        try {
+                            queryActuator()
+                        } catch(exception: Throwable) {
+                            logger.log(exception, "Failed to query actuator with error")
+                        }
+                    }
+
+                    testsNames.add(testScenario.testDescription())
 
                     try {
-                        queryActuator()
-                    } catch(exception: Throwable) {
-                        logger.log(exception, "Failed to query actuator with error")
-                    }
-                }
+                        val result: Result = invoker.execute(testScenario, timeout)
+                        openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result))
 
-                testsNames.add(testScenario.testDescription())
-
-                try {
-                    val result: Result = invoker.execute(testScenario, timeout)
-                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result))
-
-                    if(result is Result.Success && result.isPartialSuccess()) {
-                        partialSuccesses.add(result)
-                    }
-
-                    when {
-                        result.shouldBeIgnored() -> {
-                            val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${result.toReport().toText().prependIndent("  ")}"
-                            throw TestAbortedException(message)
+                        if(result is Result.Success && result.isPartialSuccess()) {
+                            partialSuccesses.add(result)
                         }
-                        else -> ResultAssert.assertThat(result).isSuccess()
+
+                        when {
+                            result.shouldBeIgnored() -> {
+                                val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${result.toReport().toText().prependIndent("  ")}"
+                                throw TestAbortedException(message)
+                            }
+                            else -> ResultAssert.assertThat(result).isSuccess()
+                        }
+                    } catch(e: Throwable) {
+                        openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
+                        throw e
                     }
-                } catch(e: Throwable) {
-                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
-                    throw e
                 }
             }
-        }.toList()
+
+            DynamicContainer.dynamicContainer(suiteName + " ( ${dynamicTests.size} tests)", dynamicTests.toMutableList().stream())
+        }
+
+        return tests.iterator()
     }
 
     private fun getSpecmaticJson(): SpecmaticConfigJson? {

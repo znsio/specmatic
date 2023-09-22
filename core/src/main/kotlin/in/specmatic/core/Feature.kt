@@ -318,6 +318,8 @@ data class Feature(
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
                 scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
+            }.map {
+                it.copy(suiteName = "Mutation tests")
             }
 
         }.flatten()

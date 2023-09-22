@@ -342,15 +342,15 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             when (examples.size) {
-                0 -> listOf(Row())
+                0 -> listOf(RowWithTestDescription(Row(), "Generated without examples"))
                 else -> examples.flatMap {
                     it.rows.map { row ->
-                        row.copy(variables = variables, references = referencesWithBaseURLs)
+                        RowWithTestDescription(row.copy(variables = variables, references = referencesWithBaseURLs), "Using examples")
                     }
                 }
             }.flatMap { row ->
-                newBasedOn(row, enableGenerativeTesting).map {
-                    it.copy(suiteName = "Within-boundary tests using examples")
+                newBasedOn(row.row, enableGenerativeTesting).map {
+                    it.copy(suiteName = row.testDescription)
                 }
             }
         }
@@ -367,15 +367,17 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             when (examples.size) {
-                0 -> listOf(Row())
+                0 -> listOf(RowWithTestDescription(Row(), "Generated without examples"))
                 else -> examples.flatMap {
                     it.rows.map { row ->
-                        row.copy(variables = variables, references = referencesWithBaseURLs)
+                        RowWithTestDescription(row.copy(variables = variables, references = referencesWithBaseURLs), "Using examples")
                     }
                 }
             }.flatMap { row ->
                 try {
-                    newBasedOn(row, generativeTestingEnabled).map { ScenarioTest(it, generativeTestingEnabled) }
+                    newBasedOn(row.row, generativeTestingEnabled).map {
+                        it.copy(suiteName = row.testDescription)
+                    }.map { ScenarioTest(it, generativeTestingEnabled) }
                 } catch (e: Throwable) {
                     listOf(ScenarioTestGenerationFailure(this, e))
                 }
@@ -464,12 +466,7 @@ data class Scenario(
         val responseStatus = this.httpResponsePattern.status
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | ${exampleName.trim()}" }
 
-        val generativePrefix = if(this.generativeTestingEnabled)
-            if(this.isNegative) "-ve " else "+ve "
-        else
-            ""
-
-        return "$generativePrefix Scenario: $method $path -> $responseStatus$exampleIdentifier"
+        return "Scenario: $method $path -> $responseStatus$exampleIdentifier"
     }
 
     fun withSuggestions(suggestions: Scenario): Scenario =

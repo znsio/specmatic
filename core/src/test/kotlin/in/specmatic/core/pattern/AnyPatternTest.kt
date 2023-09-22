@@ -1,17 +1,16 @@
 package `in`.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.*
 import `in`.specmatic.emptyPattern
 import `in`.specmatic.shouldMatch
-import org.checkerframework.common.value.qual.StringVal
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 
 internal class AnyPatternTest {
     @Test

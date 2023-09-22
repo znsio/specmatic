@@ -77,7 +77,7 @@ data class AnyPattern(
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val isNullable = pattern.any {it is NullPattern}
-        return pattern.flatMap { innerPattern ->
+        return pattern.sortedBy{ it is NullPattern }.flatMap { innerPattern ->
             resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
                 innerPattern.newBasedOn(row, cyclePreventedResolver)
             }?: listOf()  // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
@@ -152,6 +152,10 @@ data class AnyPattern(
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         if (pattern.isEmpty())
             throw ContractException("AnyPattern doesn't have any types, so can't infer which type of list to wrap the given value in")
+
+        if (pattern.size >= 2) {
+            return pattern.single { it !is NullPattern }.listOf(valueList, resolver)
+        }
 
         return pattern.single().listOf(valueList, resolver)
     }

@@ -6,12 +6,10 @@ import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.withNullPattern
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.*
 import `in`.specmatic.emptyPattern
 import `in`.specmatic.shouldMatch
+import org.checkerframework.common.value.qual.StringVal
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 
@@ -224,5 +222,23 @@ internal class AnyPatternTest {
             
                Key named "salutation" was unexpected
        """.trimIndent())
+    }
+
+    @Test
+    fun `should generate a Nullable list swiftly`() {
+        val type = AnyPattern(listOf(NullPattern, StringPattern()))
+        val listOf = type.listOf(listOf(StringValue("It's me"), StringValue("Hi"), StringValue("I'm the problem it's me")), Resolver())
+        assertEquals(3, (listOf as JSONArrayValue).list.size)
+        assertEquals("It's me", (listOf as JSONArrayValue).list.get(0).toStringLiteral())
+        assertEquals("Hi", (listOf as JSONArrayValue).list.get(1).toStringLiteral())
+        assertEquals("I'm the problem it's me", (listOf as JSONArrayValue).list.get(2).toStringLiteral())
+    }
+
+    @Test
+    fun `should generate a Nullable from a row`() {
+        val type = AnyPattern(listOf(NullPattern, JSONObjectPattern(pattern = mapOf(Pair("foo", StringPattern())))))
+        val row = Row(columnNames = listOf("foo"), values=listOf("bar"))
+        val newBasedOnPattern = type.newBasedOn(row, Resolver())
+        assertEquals("bar", ((newBasedOnPattern.single(){it !is NullPattern} as JSONObjectPattern).pattern.get("foo") as ExactValuePattern).toString())
     }
 }

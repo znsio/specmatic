@@ -153,11 +153,7 @@ data class AnyPattern(
         if (pattern.isEmpty())
             throw ContractException("AnyPattern doesn't have any types, so can't infer which type of list to wrap the given value in")
 
-        if (pattern.size >= 2) {
-            return pattern.single { it !is NullPattern }.listOf(valueList, resolver)
-        }
-
-        return pattern.single().listOf(valueList, resolver)
+        return pattern.first().listOf(valueList, resolver)
     }
 
     override val typeName: String

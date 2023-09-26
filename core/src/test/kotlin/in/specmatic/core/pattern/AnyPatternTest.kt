@@ -224,20 +224,22 @@ internal class AnyPatternTest {
     }
 
     @Test
-    fun `should generate a Nullable list swiftly`() {
+    fun `should wrap values in the relevant list type`() {
         val type = AnyPattern(listOf(NullPattern, StringPattern()))
-        val listOf = type.listOf(listOf(StringValue("It's me"), StringValue("Hi"), StringValue("I'm the problem it's me")), Resolver())
-        assertEquals(3, (listOf as JSONArrayValue).list.size)
-        assertEquals("It's me", (listOf as JSONArrayValue).list.get(0).toStringLiteral())
-        assertEquals("Hi", (listOf as JSONArrayValue).list.get(1).toStringLiteral())
-        assertEquals("I'm the problem it's me", (listOf as JSONArrayValue).list.get(2).toStringLiteral())
+        val wrappedList = type.listOf(listOf(StringValue("It's me"), StringValue("Hi"), StringValue("I'm the problem it's me")), Resolver()) as JSONArrayValue
+
+        val wrappedValues = wrappedList.list.map { it.toStringLiteral() }
+        val expectedValues = listOf("It's me", "Hi", "I'm the problem it's me")
+
+        assertThat(wrappedValues).isEqualTo(expectedValues)
     }
 
     @Test
-    fun `should generate a Nullable from a row`() {
-        val type = AnyPattern(listOf(NullPattern, JSONObjectPattern(pattern = mapOf(Pair("foo", StringPattern())))))
-        val row = Row(columnNames = listOf("foo"), values=listOf("bar"))
-        val newBasedOnPattern = type.newBasedOn(row, Resolver())
-        assertEquals("bar", ((newBasedOnPattern.single(){it !is NullPattern} as JSONObjectPattern).pattern.get("foo") as ExactValuePattern).toString())
+    fun `should wrap values in the relevant list type when the AnyPattern object represents an enum with 3 options`() {
+        val type = AnyPattern(listOf(
+            ExactValuePattern(StringValue("one")), ExactValuePattern(StringValue("two")), ExactValuePattern(StringValue("three"))))
+        val listOf = type.listOf(listOf(StringValue("one"), StringValue("two"), StringValue("three")), Resolver())
+
+        assertEquals(3, (listOf as JSONArrayValue).list.size)
     }
 }

@@ -42,7 +42,7 @@ data class Base64StringPattern(override val typeAlias: String? = null) : Pattern
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern, NumberPattern(), BooleanPattern)
+        return listOf(NullPattern, NumberPattern(), BooleanPattern, StringPattern())
     }
 
     override fun parse(value: String, resolver: Resolver): Value = StringValue(Base64.encodeBase64String(value.encodeToByteArray()))

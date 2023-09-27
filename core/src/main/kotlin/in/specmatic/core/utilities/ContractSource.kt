@@ -7,6 +7,7 @@ import `in`.specmatic.core.log.logger
 import java.io.File
 
 sealed class ContractSource {
+    abstract val type:String?
     abstract val testContracts: List<String>
     abstract val stubContracts: List<String>
     abstract fun pathDescriptor(path: String): String
@@ -21,7 +22,8 @@ data class GitRepo(
     val gitRepositoryURL: String,
     val branchName: String?,
     override val testContracts: List<String>,
-    override val stubContracts: List<String>
+    override val stubContracts: List<String>,
+    override val type: String?
 ) : ContractSource() {
     val repoName = gitRepositoryURL.split("/").last().removeSuffix(".git")
     override fun pathDescriptor(path: String): String {
@@ -80,7 +82,7 @@ data class GitRepo(
         }
 
         return selector.select(this).map {
-            ContractPathData(repoDir.path, repoDir.resolve(it).path)
+            ContractPathData(repoDir.path, repoDir.resolve(it).path, type, gitRepositoryURL, branchName, it)
         }
     }
 
@@ -135,7 +137,8 @@ data class GitRepo(
         (sourceGit.workingDirectoryIsGitRepo() && sourceGit.getRemoteUrl() != this.gitRepositoryURL && sourceDir.listFiles()?.isEmpty() == true)
 }
 
-data class GitMonoRepo(override val testContracts: List<String>, override val stubContracts: List<String>) : ContractSource() {
+data class GitMonoRepo(override val testContracts: List<String>, override val stubContracts: List<String>,
+                       override val type: String?) : ContractSource() {
     override fun pathDescriptor(path: String): String = path
     override fun install(workingDirectory: File) {
         println("Checking list of mono repo paths...")
@@ -167,7 +170,7 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
         val configFileLocation = File(configFilePath).absoluteFile.parentFile
 
         return selector.select(this).map {
-            ContractPathData(monoRepoBaseDir.canonicalPath, configFileLocation.resolve(it).canonicalPath)
+            ContractPathData(monoRepoBaseDir.canonicalPath, configFileLocation.resolve(it).canonicalPath, provider = type, specificationPath = it)
         }
     }
 }

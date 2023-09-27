@@ -97,7 +97,7 @@ fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeSt
         ThreadSafeListOfStubs(threadSafeStubs.toMutableList()),
         ThreadSafeListOfStubs(mutableListOf()),
         strictMode
-    )
+    ).response
 }
 
 fun testStub(contractGherkin: String, stubRequest: HttpRequest, stubResponse: HttpResponse): HttpResponse {

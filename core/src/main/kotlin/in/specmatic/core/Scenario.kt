@@ -50,7 +50,13 @@ data class Scenario(
     val isNegative: Boolean = false,
     val badRequestOrDefault: BadRequestOrDefault? = null,
     val exampleName: String? = null,
-    val generativeTestingEnabled: Boolean = false
+    val generativeTestingEnabled: Boolean = false,
+    val generatedFromExamples: Boolean = examples.isNotEmpty(),
+    val sourceProvider:String? = null,
+    val sourceRepository:String? = null,
+    val sourceRepositoryBranch:String? = null,
+    val specification:String? = null,
+    val serviceType:String? = null
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -62,8 +68,16 @@ data class Scenario(
         scenarioInfo.fixtures,
         scenarioInfo.ignoreFailure,
         scenarioInfo.references,
-        scenarioInfo.bindings
+        scenarioInfo.bindings,
+        sourceProvider = scenarioInfo.sourceProvider,
+        sourceRepository = scenarioInfo.sourceRepository,
+        sourceRepositoryBranch = scenarioInfo.sourceRepositoryBranch,
+        specification = scenarioInfo.specification,
+        serviceType = scenarioInfo.serviceType
     )
+
+    val apiIdentifier: String
+        get() = "$method $path $status"
 
     override val method: String
         get() {
@@ -278,7 +292,12 @@ data class Scenario(
                         isNegative,
                         badRequestOrDefault,
                         row.name,
-                        generativeTestingEnabled
+                        generativeTestingEnabled,
+                        sourceProvider = sourceProvider,
+                        sourceRepository = sourceRepository,
+                        sourceRepositoryBranch = sourceRepositoryBranch,
+                        specification = specification,
+                        serviceType = serviceType
                     )
                 }
             }
@@ -301,7 +320,12 @@ data class Scenario(
                 fixtures,
                 ignoreFailure,
                 references,
-                bindings
+                bindings,
+                sourceProvider = sourceProvider,
+                sourceRepository = sourceRepository,
+                sourceRepositoryBranch = sourceRepositoryBranch,
+                specification = specification,
+                serviceType = serviceType
             )
         }
     }
@@ -458,7 +482,12 @@ data class Scenario(
             scenario.references,
             bindings,
             isGherkinScenario,
-            isNegative
+            isNegative,
+            sourceProvider = sourceProvider,
+            sourceRepository = sourceRepository,
+            sourceRepositoryBranch = sourceRepositoryBranch,
+            specification = specification,
+            serviceType = serviceType
         )
 
     fun newBasedOn(suggestions: List<Scenario>) =
@@ -480,7 +509,12 @@ data class Scenario(
         isNegative = true,
         badRequestOrDefault,
         exampleName,
-        generativeTestingEnabled
+        generativeTestingEnabled,
+        sourceProvider = sourceProvider,
+        sourceRepository = sourceRepository,
+        sourceRepositoryBranch = sourceRepositoryBranch,
+        specification = specification,
+        serviceType = serviceType
     )
 }
 

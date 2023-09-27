@@ -3,10 +3,10 @@ package `in`.specmatic.core
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.io.File
-import kotlinx.serialization.Serializable
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
@@ -85,25 +85,109 @@ data class SpecmaticConfigJson(
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
     val hooks: Map<String, String> = emptyMap(),
-    val repository: RespositoryInfo? = null
-) {
-    companion object {
-        fun load(configFileName: String? = null): SpecmaticConfigJson {
-            return SpecmaticJsonFormat.decodeFromString(File(configFileName ?: globalConfigFileName).readText())
-        }
-    }
-}
+    val repository: RepositoryInfo? = null,
+    val report: ReportConfiguration? = null,
+    val security: SecurityConfiguration? = null
+)
 
 @Serializable
-data class RespositoryInfo(
+data class RepositoryInfo(
     val provider: String,
     val collectionName: String
 )
+
+@Serializable
+data class ReportConfiguration(
+    val formatters: List<ReportFormatter>? = null,
+    val types: ReportTypes
+)
+
+@Serializable
+data class ReportFormatter(
+    val type: ReportFormatterType,
+    val layout: ReportFormatterLayout
+)
+
+@Serializable
+enum class ReportFormatterType {
+    @SerialName("text")
+    TEXT
+}
+
+@Serializable
+enum class ReportFormatterLayout {
+    @SerialName("table")
+    TABLE
+}
+
+@Serializable
+data class ReportTypes (
+    @SerialName("APICoverage")
+    val apiCoverage: APICoverage
+)
+
+@Serializable
+data class APICoverage (
+    @SerialName("OpenAPI")
+    val openAPI: APICoverageConfiguration
+)
+
+@Serializable
+data class APICoverageConfiguration(
+    val successCriteria: SuccessCriteria,
+    val excludedEndpoints: List<String> = emptyList()
+)
+
+@Serializable
+data class SuccessCriteria(
+    val minThresholdPercentage: Int,
+    val maxMissedEndpointsInSpec: Int,
+    val enforce: Boolean = false
+)
+
+@Serializable
+data class SecurityConfiguration(
+    val OpenAPI:OpenAPISecurityConfiguration?
+)
+
+@Serializable
+data class OpenAPISecurityConfiguration(
+    val securitySchemes: Map<String, SecuritySchemeConfiguration>
+)
+
+@Serializable
+sealed class SecuritySchemeConfiguration {
+    abstract val type: String
+}
+
+interface SecuritySchemeWithOAuthToken {
+    val token: String
+}
+
+@Serializable
+@SerialName("oauth2")
+data class OAuth2SecuritySchemeConfiguration(override val type:String, override val token: String,) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
+
+@Serializable
+@SerialName("bearer")
+data class BearerSecuritySchemeConfiguration(override val type:String, override val token: String,) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
+
+@Serializable
+@SerialName("apiKey")
+data class APIKeySecuritySchemeConfiguration(override val type:String, val value: String) : SecuritySchemeConfiguration()
 
 val SpecmaticJsonFormat = Json {
     prettyPrint = true
 }
 
-fun loadSpecmaticJsonConfig(configFileName: String?): SpecmaticConfigJson {
-    return SpecmaticJsonFormat.decodeFromString(File(configFileName ?: globalConfigFileName).readText())
+fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson {
+    val configFile = File(configFileName ?: globalConfigFileName)
+    if (!configFile.exists()) {
+        throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_FILE_NAME} at path ${configFile.canonicalPath}")
+    }
+    try {
+        return SpecmaticJsonFormat.decodeFromString(configFile.readText())
+    } catch (e: Throwable) {
+        throw Exception("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
+    }
 }

@@ -7,10 +7,10 @@ import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import org.apache.commons.codec.binary.Base64
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 internal class Base64StringPatternTest {
-
     @Test
     fun `should fail to match null values gracefully`() {
         NullValue shouldNotMatch Base64StringPattern()
@@ -36,6 +36,18 @@ internal class Base64StringPatternTest {
         assertThat(Base64StringPattern().matches(StringValue(""), Resolver()).isSuccess()).isTrue
     }
 
+    @Test
+    fun `the parsed StringValue should have the same string value as the original`() {
+        val original = "U3AzY200dDFrIFJ1bEV6"
+        val parsed = Base64StringPattern().parse(original, Resolver()).toStringLiteral()
+        assertThat(parsed).isEqualTo(original)
+    }
 
+    @Test
+    fun `it should not be possible for this type of Pattern to parse a non-base64 encoded string`() {
+        assertThatThrownBy {
+            Base64StringPattern().parse(".", Resolver()).toStringLiteral()
+        }.isInstanceOf(ContractException::class.java)
 
+    }
 }

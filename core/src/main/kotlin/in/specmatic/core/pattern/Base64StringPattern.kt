@@ -45,7 +45,12 @@ data class Base64StringPattern(override val typeAlias: String? = null) : Pattern
         return listOf(NullPattern, NumberPattern(), BooleanPattern, StringPattern())
     }
 
-    override fun parse(value: String, resolver: Resolver): Value = StringValue(Base64.encodeBase64String(value.encodeToByteArray()))
+    override fun parse(value: String, resolver: Resolver): Value {
+        if(! Base64.isBase64(value))
+            throw ContractException("Expected a base64 string but got \"$value\"")
+
+        return StringValue(value)
+    }
 
     override val typeName: String = "string"
     override val pattern: Any = "(string)"

@@ -52,6 +52,12 @@ dependencies {
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
 }
 
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
 test {
     useJUnitPlatform()
 }

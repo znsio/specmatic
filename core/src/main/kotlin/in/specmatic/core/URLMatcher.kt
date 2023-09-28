@@ -221,7 +221,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     fun toOpenApiPath(): String {
         val pathParamsWithPattern =
             this.path.split("/").filter { it.startsWith("(") }.map { it.replace("(", "").replace(")", "").split(":") }
-        return this.path.replace("(", "{").replace(""":[a-z,A-Z]*\)""".toRegex(), "}")
+        return this.path.replace("(", "{").replace(""":[a-z,A-Z]*?\)""".toRegex(), "}")
     }
 
     fun pathParameters(): List<URLPathPattern> {

@@ -1,6 +1,7 @@
 package utilities
 
 import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.SourceProvider
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.checkout
@@ -30,7 +31,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir does not exist`() {
-        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
 
         mockkStatic("in.specmatic.core.utilities.Utilities")
@@ -42,9 +43,9 @@ internal class UtilitiesTest {
 
         val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
         val expectedContractPaths = listOf(
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION"),
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "a/1.spec"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "b/1.spec"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",   specificationPath = "c/1.spec"),
         )
         verify(exactly = 0) { checkout(any(), any()) }
         assertThat(contractPaths == expectedContractPaths).isTrue
@@ -54,7 +55,7 @@ internal class UtilitiesTest {
     fun `contractFilePathsFrom sources with branch when contracts repo dir does not exist`() {
         val branchName = "featureBranch"
         val sources = listOf(GitRepo("https://repo1",
-            branchName, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+            branchName, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
 
         mockkStatic("in.specmatic.core.utilities.Utilities")
@@ -67,9 +68,9 @@ internal class UtilitiesTest {
 
         val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
         val expectedContractPaths = listOf(
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION"),
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION", "git", "https://repo1", "featureBranch", "a/1.spec"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1", "featureBranch", "b/1.spec"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1", "featureBranch", "c/1.spec"),
         )
         verify(exactly = 1) { checkout(repositoryDirectory, branchName) }
         assertThat(contractPaths == expectedContractPaths).isTrue
@@ -77,7 +78,7 @@ internal class UtilitiesTest {
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is clean`() {
-        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
         File(".spec/repos/repo1").mkdirs()
 
@@ -88,20 +89,20 @@ internal class UtilitiesTest {
         every { mockGitCommand.statusPorcelain() }.returns("")
         mockkStatic("in.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
-        every { getSystemGit(any()) }.returns(mockGitCommand)
+        every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
 
         val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
         val expectedContractPaths = listOf(
-                ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION"),
-                ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
-                ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
+                ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "a/1.spec"),
+                ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "b/1.spec"),
+                ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "c/1.spec"),
         )
         assertThat(contractPaths == expectedContractPaths).isTrue
     }
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is not clean`() {
-        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
         File(".spec/repos/repo1").mkdirs()
 
@@ -111,7 +112,7 @@ internal class UtilitiesTest {
         every { mockGitCommand.statusPorcelain() }.returns("someDir/someFile")
         mockkStatic("in.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
-        every { getSystemGit(any()) }.returns(mockGitCommand)
+        every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
 
         mockkStatic("in.specmatic.core.git.GitOperations")
         every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
@@ -119,16 +120,16 @@ internal class UtilitiesTest {
 
         val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
         val expectedContractPaths = listOf(
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION"),
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "a/1.spec"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "b/1.spec"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "c/1.spec"),
         )
         assertThat(contractPaths == expectedContractPaths).isTrue
     }
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is behind remote`() {
-        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
         File(".spec/repos/repo1").mkdirs()
 
@@ -137,7 +138,7 @@ internal class UtilitiesTest {
         every { mockGitCommand.revisionsBehindCount() }.returns(1)
         mockkStatic("in.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
-        every { getSystemGit(any()) }.returns(mockGitCommand)
+        every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
 
         mockkStatic("in.specmatic.core.git.GitOperations")
         every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
@@ -145,9 +146,9 @@ internal class UtilitiesTest {
 
         val contractPaths = contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
         val expectedContractPaths = listOf(
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION"),
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION"),
-            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/a/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "a/1.spec"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "b/1.spec"),
+            ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "c/1.spec"),
         )
         assertThat(contractPaths == expectedContractPaths).isTrue
     }
@@ -171,11 +172,11 @@ internal class UtilitiesTest {
         val testPaths = contractFilePathsFrom(configFilePath, ".$CONTRACT_EXTENSION") { source -> source.testContracts }
         val stubPaths = contractFilePathsFrom(configFilePath, ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
         val expectedStubPaths = listOf(
-            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/a/1.$CONTRACT_EXTENSION"),
-            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/b/1.$CONTRACT_EXTENSION")
+            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/a/1.$CONTRACT_EXTENSION", provider = SourceProvider.git.toString(), specificationPath = "../a/1.spec"),
+            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/b/1.$CONTRACT_EXTENSION", provider = SourceProvider.git.toString(), specificationPath = "../b/1.spec")
         )
         val expectedTestPaths = listOf(
-            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/c/1.$CONTRACT_EXTENSION"),
+            ContractPathData("/path/to/monorepo", "$currentPath/monorepo/c/1.$CONTRACT_EXTENSION", provider=SourceProvider.git.toString(), specificationPath = "../c/1.spec"),
         )
 
         assertThat(stubPaths == expectedStubPaths).isTrue
@@ -189,7 +190,7 @@ internal class UtilitiesTest {
         val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
-        val expectedSources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val expectedSources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
@@ -200,8 +201,8 @@ internal class UtilitiesTest {
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
-                GitRepo("https://repo1",null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
-                GitRepo("https://repo2",null, listOf(), listOf("c/1.$CONTRACT_EXTENSION"))
+                GitRepo("https://repo1",null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
+                GitRepo("https://repo2",null, listOf(), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString())
         )
         assertThat(sources == expectedSources).isTrue
     }
@@ -211,7 +212,7 @@ internal class UtilitiesTest {
         val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
-        val expectedSources = listOf(GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION")))
+        val expectedSources = listOf(GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
@@ -220,7 +221,7 @@ internal class UtilitiesTest {
         val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
-        val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), listOf()))
+        val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), listOf(), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
@@ -229,7 +230,7 @@ internal class UtilitiesTest {
         val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"],\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
-        val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), listOf("c/1.$CONTRACT_EXTENSION")))
+        val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
@@ -240,8 +241,8 @@ internal class UtilitiesTest {
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
-            GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
-                GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"))
+            GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
+                GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString())
         )
         assertThat(sources == expectedSources).isTrue
     }
@@ -253,8 +254,8 @@ internal class UtilitiesTest {
         val configJson = parsedJSON(qontractJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
-                GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION")),
-                GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"))
+                GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
+                GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString())
         )
         assertThat(sources == expectedSources).isTrue
     }

@@ -1,19 +1,16 @@
 package `in`.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.withNullPattern
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.*
 import `in`.specmatic.emptyPattern
 import `in`.specmatic.shouldMatch
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 
 internal class AnyPatternTest {
     @Test
@@ -224,5 +221,25 @@ internal class AnyPatternTest {
             
                Key named "salutation" was unexpected
        """.trimIndent())
+    }
+
+    @Test
+    fun `should wrap values in the relevant list type`() {
+        val type = AnyPattern(listOf(NullPattern, StringPattern()))
+        val wrappedList = type.listOf(listOf(StringValue("It's me"), StringValue("Hi"), StringValue("I'm the problem it's me")), Resolver()) as JSONArrayValue
+
+        val wrappedValues = wrappedList.list.map { it.toStringLiteral() }
+        val expectedValues = listOf("It's me", "Hi", "I'm the problem it's me")
+
+        assertThat(wrappedValues).isEqualTo(expectedValues)
+    }
+
+    @Test
+    fun `should wrap values in the relevant list type when the AnyPattern object represents an enum with 3 options`() {
+        val type = AnyPattern(listOf(
+            ExactValuePattern(StringValue("one")), ExactValuePattern(StringValue("two")), ExactValuePattern(StringValue("three"))))
+        val listOf = type.listOf(listOf(StringValue("one"), StringValue("two"), StringValue("three")), Resolver())
+
+        assertEquals(3, (listOf as JSONArrayValue).list.size)
     }
 }

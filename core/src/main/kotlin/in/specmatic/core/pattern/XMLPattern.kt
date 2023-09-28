@@ -11,6 +11,8 @@ import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 
 const val SPECMATIC_XML_ATTRIBUTE_PREFIX = "${APPLICATION_NAME_LOWER_CASE}_"
 const val TYPE_ATTRIBUTE_NAME = "specmatic_type"
+const val SOAP_BODY = "body"
+const val SOAP_FAULT = "fault"
 
 fun toTypeData(node: XMLNode): XMLTypeData = XMLTypeData(node.name, node.realName, attributeTypeMap(node), nodeTypes(node))
 
@@ -110,7 +112,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         val matchingType = if (this.pattern.attributes.containsKey(TYPE_ATTRIBUTE_NAME)) {
             val typeName = this.pattern.getAttributeValue(TYPE_ATTRIBUTE_NAME)
             val xmlType = (resolver.getPattern("($typeName)") as XMLPattern)
-            xmlType.copy(pattern = xmlType.pattern.copy(name = this.pattern.name, realName = this.pattern.realName))
+            xmlType.copy(pattern = xmlType.pattern.copy(name = this.pattern.name, realName = this.pattern.realName, attributes = this.pattern.attributes.filterKeys { it != TYPE_ATTRIBUTE_NAME }))
         } else {
             this
         }
@@ -128,6 +130,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             sampleData: XMLNode,
             resolver: Resolver
     ): Result {
+        if(sampleData.name.lowercase() == SOAP_BODY && sampleData.firstNode() is XMLNode && sampleData.firstNode()?.name?.lowercase() == SOAP_FAULT)
+            return Success()
+
         val results = pattern.nodes.scanIndexed(
                 ConsumeResult<XMLValue, Value>(
                         Success(),
@@ -136,13 +141,13 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         ) { index, consumeResult, type ->
             when (val resolvedType = resolvedHop(type, resolver)) {
                 is ListPattern -> ConsumeResult(
-                        resolvedType.matches(
-                                this.listOf(
-                                        consumeResult.remainder.subList(index, pattern.nodes.indices.last),
-                                        resolver
-                                ), resolver
-                        ),
-                        emptyList()
+                    resolvedType.matches(
+                        this.listOf(
+                            consumeResult.remainder.subList(index, pattern.nodes.indices.last),
+                            resolver
+                        ), resolver
+                    ),
+                    emptyList()
                 )
                 else -> {
                     try {
@@ -418,12 +423,11 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
         val qontractType = pattern.attributes[TYPE_ATTRIBUTE_NAME]
         val resolved = resolver.getPattern("($qontractType)") as XMLPattern
-        val qontractAttributes = this.pattern.attributes.filterKeys { it.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) }
         return resolved.copy(
                 pattern = resolved.pattern.copy(
                         name = this.pattern.name,
                         realName = this.pattern.realName,
-                        attributes = resolved.pattern.attributes.plus(qontractAttributes)
+                        attributes = resolved.pattern.attributes.plus(this.pattern.attributes)
                 )
         )
     }

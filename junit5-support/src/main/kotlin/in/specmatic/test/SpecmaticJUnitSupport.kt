@@ -4,149 +4,24 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
 import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.Examples
-import `in`.specmatic.core.pattern.Row
-import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.stub.isOpenAPI
+import `in`.specmatic.stub.isYAML
+import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
+import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
+import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.opentest4j.TestAbortedException
 import java.io.File
 
-fun longestStatus(): String {
-    val longestStatus = listOf(
-        CoverageStatus.Covered.toString().lowercase(),
-        CoverageStatus.Missed.toString().lowercase(),
-        "status"
-    ).sortedByDescending { it.length }.first()
-    return longestStatus
-}
-
+@Serializable
 data class API(val method: String, val path: String)
-
-enum class CoverageStatus {
-    Covered,
-    Missed
-}
-
-data class APICoverageRow(val method: String, val path: String, val responseStatus: String, val count: String, val coverageStatus: CoverageStatus) {
-    constructor(method: String, path: String, responseStatus: Int, count: Int, coverageStatus: CoverageStatus): this(method, path, responseStatus.toString(), count.toString(), coverageStatus)
-
-    fun toRowString(maxPathSize: Int): String {
-        val longestStatus = longestStatus()
-        val statusFormat = "%${longestStatus.length}s"
-
-        val pathFormat = "%${maxPathSize}s"
-        val methodFormat = "%${"method".length}s"
-        val responseFormat = "%${"response".length}s"
-        val countFormat = "%${"count".length}s"
-
-        val status = if(path.isNotEmpty()) coverageStatus.toString().lowercase() else ""
-
-        return "| ${statusFormat.format(status)} | ${pathFormat.format(path)} | ${methodFormat.format(method)} | ${responseFormat.format(responseStatus)} | ${countFormat.format(count)} |"
-    }
-}
-
-class APICoverageReport(private val coveredAPIRows: List<APICoverageRow>, private val missedAPIRows: List<APICoverageRow>) {
-    fun toLogString(): String {
-        val maxPathSize: Int = coveredAPIRows.map { it.path.length }.plus(missedAPIRows.map { it.path.length }).max()
-
-        val longestStatus = longestStatus()
-        val statusFormat = "%${longestStatus.length}s"
-        val pathFormat = "%${maxPathSize}s"
-        val methodFormat = "%${"method".length}s"
-        val responseStatus = "%${"response".length}s"
-        val countFormat = "%${"count".length}s"
-
-        val tableHeader =
-            "| ${statusFormat.format("status")} | ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${responseStatus.format("response")} | ${
-                countFormat.format("count")
-            } |"
-        val headerSeparator =
-            "|-${"-".repeat(longestStatus.length)}-|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|-${responseStatus.format("--------")}-|-${
-                countFormat.format("-----")
-            }-|"
-
-        val headerTitleSize = tableHeader.length - 4
-        val tableTitle = "| ${"%-${headerTitleSize}s".format("API COVERAGE SUMMARY")} |"
-        val titleSeparator = "|-${"-".repeat(headerTitleSize)}-|"
-
-        val coveredCount = coveredAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
-        val uncoveredCount = missedAPIRows.map { it.path }.distinct().filter { it.isNotEmpty() }.size
-        val total = coveredCount + uncoveredCount
-
-        val summary = "$coveredCount / $total APIs covered"
-        val summaryRowFormatter = "%-${headerTitleSize}s"
-        val summaryRow = "| ${summaryRowFormatter.format(summary)} |"
-
-        val header: List<String> = listOf(titleSeparator, tableTitle, titleSeparator, tableHeader, headerSeparator)
-        val body: List<String> = (coveredAPIRows + missedAPIRows).map { it.toRowString(maxPathSize) }
-        val footer: List<String> = listOf(titleSeparator, summaryRow, titleSeparator)
-
-        return (header + body + footer).joinToString(System.lineSeparator())
-    }
-}
-
-class TestReport(private val testReportRecords: MutableList<TestResultRecord> = mutableListOf(), private val applicationAPIs: MutableList<API> = mutableListOf()) {
-    fun addTestReportRecords(testResultRecord: TestResultRecord) {
-        testReportRecords.add(testResultRecord)
-    }
-
-    fun addAPIs(apis: List<API>) {
-        applicationAPIs.addAll(apis)
-    }
-
-    fun printReport() {
-        if(testReportRecords.isEmpty())
-            return
-
-        logger.newLine()
-
-        val recordsWithFixedURLs = testReportRecords.map {
-            it.copy(path = it.path.replace(Regex("""\((.*):.*\)"""), "{$1}"))
-        }
-
-        val coveredAPIRows = recordsWithFixedURLs.groupBy {
-            "${it.path}-${it.method}-${it.responseStatus}"
-        }.let { sortedRecords: Map<String, List<TestResultRecord>> ->
-            sortedRecords.keys.sorted().map { key ->
-                sortedRecords.getValue(key)
-            }
-        }.let { groupedRecords: List<List<TestResultRecord>> ->
-            groupedRecords.fold(emptyList()) { acc: List<APICoverageRow>, record: List<TestResultRecord> ->
-                val stat = record.first().let { APICoverageRow(it.method, it.path, it.responseStatus, record.size, CoverageStatus.Covered) }
-
-                when(acc) {
-                    emptyList<APICoverageRow>() -> listOf(stat)
-                    else -> {
-                        val checkedPath = if(stat.path == acc.lastOrNull { it.path.isNotEmpty() }?.path) stat.copy(path = "") else stat
-                        val checkedMethod = if(checkedPath.method == acc.lastOrNull { it.method.isNotEmpty() }?.method) checkedPath.copy(method = "") else checkedPath
-
-                        acc.plus(checkedMethod)
-                    }
-                }
-            }
-        }
-
-        val testedAPIs = testReportRecords.map { "${it.method}-${it.path}" }
-
-        val missedAPIs = applicationAPIs.filter {
-            "${it.method}-${it.path}" !in testedAPIs
-        }
-
-        val missedAPIRows = missedAPIs.map { missedAPI: API ->
-            APICoverageRow(missedAPI.method, missedAPI.path, "", "", CoverageStatus.Missed)
-        }
-
-        logger.log(APICoverageReport(coveredAPIRows, missedAPIRows).toLogString())
-    }
-
-}
 
 open class SpecmaticJUnitSupport {
     companion object {
@@ -168,12 +43,30 @@ open class SpecmaticJUnitSupport {
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
-        val testReport: TestReport = TestReport()
+        private var specmaticConfigJson: SpecmaticConfigJson? = null
+        private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
         @AfterAll
         @JvmStatic
         fun report() {
-            testReport.printReport()
+            specmaticConfigJson?.let {
+                val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
+                reportProcessors.forEach { it.process(getReportConfiguration()) }
+            }
+        }
+
+        private fun getReportConfiguration(): ReportConfiguration {
+            val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
+            val defaultReportTypes = ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
+            return when (val reportConfiguration = specmaticConfigJson?.report) {
+                null -> {
+                    logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
+                    ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
+                }
+                else -> {
+                    reportConfiguration.copy(formatters = reportConfiguration.formatters ?: defaultFormatters)
+                }
+            }
         }
 
         fun queryActuator() {
@@ -211,11 +104,16 @@ open class SpecmaticJUnitSupport {
                     }
                 }
 
-                testReport.addAPIs(apis)
+                openApiCoverageReportInput.addAPIs(apis)
+
             } else {
                 logger.log("Endpoints API not found, cannot calculate actual coverage")
             }
         }
+
+        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getGlobalConfigFileName()
+
+        private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -247,7 +145,6 @@ open class SpecmaticJUnitSupport {
     fun contractTest(): Collection<DynamicTest> {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
-        val givenConfigFile = System.getProperty(CONFIG_FILE_NAME)
         val filterName: String? = System.getProperty(FILTER_NAME)
         val filterNotName: String? = System.getProperty(FILTER_NOT_NAME)
 
@@ -264,21 +161,31 @@ open class SpecmaticJUnitSupport {
         } catch (e: Throwable) {
             return loadExceptionAsTestError(e)
         }
-
         val testScenarios = try {
             val testScenarios = when {
                 contractPaths != null -> {
-                    contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig) }
+                    contractPaths.split(",").flatMap {
+                        loadTestScenarios(
+                            it,
+                            suggestionsPath,
+                            suggestionsData,
+                            testConfig,
+                            specificationPath = it
+                        )
+                    }
                 }
                 else -> {
-                    val configFile = givenConfigFile ?: globalConfigFileName
+                    val configFile = configFile
 
                     exitIfDoesNotExist("config file", configFile)
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path).map { it.path }
-                    contractFilePaths.flatMap { loadTestScenarios(it, "", "", testConfig) }
+                    specmaticConfigJson = getSpecmaticJson()
+
+                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
+
+                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security) }
                 }
             }
 
@@ -314,7 +221,7 @@ open class SpecmaticJUnitSupport {
 
                 try {
                     val result: Result = invoker.execute(testScenario, timeout)
-                    testReport.addTestReportRecords(testScenario.testResultRecord(result))
+                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result))
 
                     if(result is Result.Success && result.isPartialSuccess()) {
                         partialSuccesses.add(result)
@@ -328,22 +235,42 @@ open class SpecmaticJUnitSupport {
                         else -> ResultAssert.assertThat(result).isSuccess()
                     }
                 } catch(e: Throwable) {
-                    testReport.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
+                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
                     throw e
                 }
             }
         }.toList()
     }
 
+    private fun getSpecmaticJson(): SpecmaticConfigJson? {
+        return try {
+            loadSpecmaticJsonConfig(configFile)
+        }
+        catch (e: ContractException) {
+            logger.log(exceptionCauseMessage(e))
+            null
+        }
+        catch (e: Throwable) {
+            exitWithMessage(exceptionCauseMessage(e))
+        }
+    }
+
     private fun loadTestScenarios(
         path: String,
         suggestionsPath: String,
         suggestionsData: String,
-        config: TestConfig
+        config: TestConfig,
+        sourceProvider:String? = null,
+        sourceRepository:String? = null,
+        sourceRepositoryBranch:String? = null,
+        specificationPath:String? = null,
+        securityConfiguration: SecurityConfiguration? = null
     ): List<ContractTest> {
-        val contractFile = File(path)
-        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract)).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
+        if(isYAML(path) && !isOpenAPI(path))
+            return emptyList()
 
+        val contractFile = File(path)
+        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
             suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)

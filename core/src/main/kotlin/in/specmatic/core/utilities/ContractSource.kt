@@ -7,6 +7,7 @@ import `in`.specmatic.core.log.logger
 import java.io.File
 
 sealed class ContractSource {
+    abstract val type:String?
     abstract val testContracts: List<String>
     abstract val stubContracts: List<String>
     abstract fun pathDescriptor(path: String): String
@@ -21,7 +22,8 @@ data class GitRepo(
     val gitRepositoryURL: String,
     val branchName: String?,
     override val testContracts: List<String>,
-    override val stubContracts: List<String>
+    override val stubContracts: List<String>,
+    override val type: String?
 ) : ContractSource() {
     val repoName = gitRepositoryURL.split("/").last().removeSuffix(".git")
     override fun pathDescriptor(path: String): String {
@@ -65,8 +67,8 @@ data class GitRepo(
                 val reposBaseDir = localRepoDir(workingDirectory)
                 val contractsRepoDir =  this.directoryRelativeTo(reposBaseDir)
                 when {
-                    !contractsRepoDir.exists() -> cloneRepo(reposBaseDir, this)
-                    contractsRepoDir.exists() && isBehind(contractsRepoDir) -> cloneRepo(reposBaseDir, this)
+                    !contractsRepoDir.exists() -> cloneRepoAndCheckoutBranch(reposBaseDir, this)
+                    contractsRepoDir.exists() && isBehind(contractsRepoDir) -> cloneRepoAndCheckoutBranch(reposBaseDir, this)
                     contractsRepoDir.exists() && isClean(contractsRepoDir) -> {
                         logger.log("Couldn't find local contracts but ${contractsRepoDir.path} already exists and is clean and has contracts")
                         contractsRepoDir
@@ -80,7 +82,7 @@ data class GitRepo(
         }
 
         return selector.select(this).map {
-            ContractPathData(repoDir.path, repoDir.resolve(it).path)
+            ContractPathData(repoDir.path, repoDir.resolve(it).path, type, gitRepositoryURL, branchName, it)
         }
     }
 
@@ -90,11 +92,11 @@ data class GitRepo(
     }
 
     private fun isBehind(contractsRepoDir: File): Boolean {
-        val sourceGit = getSystemGit(contractsRepoDir.path)
+        val sourceGit = getSystemGitWithAuth(contractsRepoDir.path)
         sourceGit.fetch()
         return sourceGit.revisionsBehindCount() > 0
     }
-    private fun cloneRepo(reposBaseDir: File, gitRepo: GitRepo): File {
+    private fun cloneRepoAndCheckoutBranch(reposBaseDir: File, gitRepo: GitRepo): File {
         logger.log("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
         reposBaseDir.mkdirs()
         val repositoryDirectory = clone(reposBaseDir, gitRepo)
@@ -117,12 +119,12 @@ data class GitRepo(
             if (!sourceDir.exists())
                 sourceDir.mkdirs()
 
-            if (!sourceGit.workingDirectoryIsGitRepo()) {
+            if (!sourceGit.workingDirectoryIsGitRepo() || isEmptyNestedGitDirectory(sourceGit, sourceDir)) {
                 println("Found it, not a git dir, recreating...")
                 sourceDir.deleteRecursively()
                 sourceDir.mkdirs()
-                println("Cloning ${this.gitRepositoryURL} into ${sourceDir.absolutePath}")
-                sourceGit.clone(this.gitRepositoryURL, sourceDir.absoluteFile)
+                println("Cloning ${this.gitRepositoryURL} into ${sourceDir.canonicalPath}")
+                this.cloneRepoAndCheckoutBranch(sourceDir.canonicalFile.parentFile, this)
             } else {
                 println("Git repo already exists at ${sourceDir.path}, so ignoring it and moving on")
             }
@@ -130,9 +132,13 @@ data class GitRepo(
             println("Could not clone ${this.gitRepositoryURL}\n${e.javaClass.name}: ${exceptionCauseMessage(e)}")
         }
     }
+
+    private fun isEmptyNestedGitDirectory(sourceGit: SystemGit, sourceDir: File) =
+        (sourceGit.workingDirectoryIsGitRepo() && sourceGit.getRemoteUrl() != this.gitRepositoryURL && sourceDir.listFiles()?.isEmpty() == true)
 }
 
-data class GitMonoRepo(override val testContracts: List<String>, override val stubContracts: List<String>) : ContractSource() {
+data class GitMonoRepo(override val testContracts: List<String>, override val stubContracts: List<String>,
+                       override val type: String?) : ContractSource() {
     override fun pathDescriptor(path: String): String = path
     override fun install(workingDirectory: File) {
         println("Checking list of mono repo paths...")
@@ -164,7 +170,7 @@ data class GitMonoRepo(override val testContracts: List<String>, override val st
         val configFileLocation = File(configFilePath).absoluteFile.parentFile
 
         return selector.select(this).map {
-            ContractPathData(monoRepoBaseDir.canonicalPath, configFileLocation.resolve(it).canonicalPath)
+            ContractPathData(monoRepoBaseDir.canonicalPath, configFileLocation.resolve(it).canonicalPath, provider = type, specificationPath = it)
         }
     }
 }

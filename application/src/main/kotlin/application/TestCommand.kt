@@ -1,17 +1,8 @@
 package application
 
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import application.test.ContractExecutionListener
-import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
-import org.junit.platform.launcher.Launcher
-import org.junit.platform.launcher.LauncherDiscoveryRequest
-import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
-import org.springframework.beans.factory.annotation.Autowired
-import picocli.CommandLine
-import picocli.CommandLine.Command
-import picocli.CommandLine.Option
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.Configuration
-import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
@@ -20,28 +11,32 @@ import `in`.specmatic.core.utilities.xmlToString
 import `in`.specmatic.test.SpecmaticJUnitSupport
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.WORKING_DIRECTORY
+import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
+import org.junit.platform.launcher.Launcher
+import org.junit.platform.launcher.LauncherDiscoveryListener
+import org.junit.platform.launcher.LauncherDiscoveryRequest
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
+import org.springframework.beans.factory.annotation.Autowired
 import org.w3c.dom.Document
 import org.xml.sax.InputSource
-import java.io.ByteArrayOutputStream
+import picocli.CommandLine
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringReader
 import java.nio.file.Paths
 import java.util.concurrent.Callable
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
-import kotlin.io.path.Path
 
 @Command(name = "test",
         mixinStandardHelpOptions = true,
@@ -108,8 +103,6 @@ class TestCommand : Callable<Unit> {
             System.setProperty(CONFIG_FILE_NAME, it)
         }
 
-        contractPaths = loadContractPaths()
-
         if(port == 0) {
             port = when {
                 useHttps -> 443
@@ -146,7 +139,7 @@ class TestCommand : Callable<Unit> {
         if(testBaseURL.isNotEmpty())
             System.setProperty(TEST_BASE_URL, testBaseURL)
 
-        System.setProperty(CONTRACT_PATHS, contractPaths.joinToString(","))
+        if(contractPaths.isNotEmpty()) System.setProperty(CONTRACT_PATHS, contractPaths.joinToString(","))
 
         val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
                 .selectors(selectClass(SpecmaticJUnitSupport::class.java))
@@ -160,44 +153,7 @@ class TestCommand : Callable<Unit> {
             junitLauncher.registerTestExecutionListeners(reportListener)
         }
 
-        val bundleDir: File? = if(contractPaths.size == 1 && contractPaths.first().lowercase().endsWith("zip")) {
-            val zipFilePath = contractPaths.first()
-            val path = Path(".${APPLICATION_NAME_LOWER_CASE}_test_bundle")
-
-            logger.debug("Unzipping bundle into ${path.toFile().canonicalPath}")
-
-            val bundleDir = path.toFile()
-            bundleDir.mkdirs()
-
-            zipFileEntries(zipFilePath) { name, content ->
-                bundleDir.resolve(name).apply {
-                    logger.debug("Creating file ${this.canonicalPath}")
-                    parentFile.mkdirs()
-                    createNewFile()
-                    writeText(content)
-                }
-            }
-
-            System.setProperty(WORKING_DIRECTORY, bundleDir.canonicalPath)
-            System.clearProperty(CONTRACT_PATHS)
-
-            val bundledConfigFile = bundleDir.resolve(DEFAULT_CONFIG_FILE_NAME)
-
-            logger.debug("Checking for the existence of bundled config file ${bundledConfigFile.canonicalPath}")
-            if(!bundledConfigFile.exists())
-                throw ContractException("$DEFAULT_CONFIG_FILE_NAME must be included in the test bundle.")
-            logger.debug("Found bundled config file")
-
-            System.setProperty(CONFIG_FILE_NAME, bundledConfigFile.canonicalPath)
-
-            bundleDir
-        } else {
-            null
-        }
-
         junitLauncher.execute(request)
-
-        bundleDir?.deleteRecursively()
 
         junitReportDirName?.let {
             val reportDirectory = File(it)
@@ -238,42 +194,5 @@ class TestCommand : Callable<Unit> {
     }
     catch (e: Throwable) {
         logger.log(e)
-    }
-
-    private fun loadContractPaths(): List<String> {
-        return when {
-            contractPaths.isEmpty() -> {
-                logger.debug("No contractPaths specified. Using configuration file named ${Configuration.globalConfigFileName}")
-                specmaticConfig.contractTestPaths()
-            }
-            else -> contractPaths
-        }
-    }
-}
-
-fun zipFileEntries(zipFilePath: String, fn: (String, String) -> Unit) {
-    File(zipFilePath).inputStream().use {
-        val zipFile = ZipInputStream(it)
-
-        var entry: ZipEntry? = zipFile.nextEntry
-
-        while(entry != null) {
-            val buffer = ByteArrayOutputStream()
-
-            while(zipFile.available() == 1) {
-                val bytes = ByteArray(1024)
-                val readCount = zipFile.read(bytes)
-                if(readCount > 0)
-                    buffer.write(bytes, 0, readCount)
-            }
-
-            val rawData = buffer.toByteArray()
-
-            val content = String(rawData)
-
-            fn(entry.name, content)
-
-            entry = zipFile.nextEntry
-        }
     }
 }

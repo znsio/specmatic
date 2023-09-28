@@ -12,6 +12,7 @@ import org.xml.sax.InputSource
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.azure.AzureAuthCredentials
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.log.logger
@@ -23,6 +24,9 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.stub.HttpStub
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
@@ -173,8 +177,8 @@ fun loadSources(specmaticConfigJson: SpecmaticConfigJson): List<ContractSource> 
                 val testPaths = source.test ?: emptyList()
 
                 when (source.repository) {
-                    null -> GitMonoRepo(testPaths, stubPaths)
-                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths)
+                    null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
+                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                 }
             }
         }
@@ -198,10 +202,11 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
 
                 val stubPaths = jsonArray(source, "stub")
                 val testPaths = jsonArray(source, "test")
+                val type = nativeString(source.jsonObject, "provider")
 
                 when (repositoryURL) {
-                    null -> GitMonoRepo(testPaths, stubPaths)
-                    else -> GitRepo(repositoryURL, branch, testPaths, stubPaths)
+                    null -> GitMonoRepo(testPaths, stubPaths, type)
+                    else -> GitRepo(repositoryURL, branch, testPaths, stubPaths, type)
                 }
             }
             else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $globalConfigFileName")
@@ -251,17 +256,14 @@ fun gitRootDir(): String {
     return gitRoot.substring(gitRoot.lastIndexOf('/') + 1)
 }
 
-data class ContractPathData(val baseDir: String, val path: String) {
-    val relativePath: String
-      get() {
-          return File(this.path).relativeTo(File(this.baseDir)).path.let {
-              when(it[0]) {
-                  '/' -> it
-                  else -> "/$it"
-              }
-          }
-      }
-}
+data class ContractPathData(
+    val baseDir: String,
+    val path: String,
+    val provider: String? = null,
+    val repository: String? = null,
+    val branch: String? = null,
+    val specificationPath: String? = null
+)
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
     logger.log("Loading config file $configFilePath")
@@ -281,6 +283,10 @@ fun getSystemGit(path: String) : GitCommand {
     return SystemGit(path)
 }
 
+fun getSystemGitWithAuth(path: String) : GitCommand {
+    return SystemGit(path, authCredentials = AzureAuthCredentials)
+}
+
 class UncaughtExceptionHandler: Thread.UncaughtExceptionHandler {
     override fun uncaughtException(t: Thread?, e: Throwable?) {
         if(e != null)
@@ -298,3 +304,9 @@ internal fun withNumberType(resolver: Resolver) =
         resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberPattern()))
 
 fun String.capitalizeFirstChar() = this.replaceFirstChar { it.uppercase() }
+
+fun saveJsonFile(jsonString: String, path: String, fileName: String) {
+    val directory = File(path)
+    directory.mkdirs()
+    File(directory, fileName).writeText(jsonString)
+}

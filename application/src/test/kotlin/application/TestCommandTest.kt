@@ -44,16 +44,17 @@ internal class TestCommandTest {
     fun `clean up test command`() {
         testCommand.contractPaths = arrayListOf()
         testCommand.junitReportDirName = null
+        System.clearProperty(CONTRACT_PATHS)
     }
 
     @Test
-    fun `when contract files are not given it should load from qontract config`() {
+    fun `when contract files are not given it should not load from specmatic config`() {
         every { specmaticConfig.contractTestPaths() }.returns(contractsToBeRunAsTests)
 
         CommandLine(testCommand, factory).execute()
 
-        verify(exactly = 1) { specmaticConfig.contractTestPaths() }
-        assertThat(System.getProperty(CONTRACT_PATHS)).isEqualTo(contractsToBeRunAsTests.joinToString(","))
+        verify(exactly = 0) { specmaticConfig.contractTestPaths() }
+        assertThat(System.getProperty(CONTRACT_PATHS)).isNull()
     }
 
     @Test

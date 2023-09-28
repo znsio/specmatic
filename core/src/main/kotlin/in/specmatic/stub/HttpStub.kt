@@ -5,15 +5,14 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.log.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedValue
-import `in`.specmatic.core.utilities.capitalizeFirstChar
-import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.utilities.jsonStringToValueMap
-import `in`.specmatic.core.utilities.toMap
+import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.mock.*
+import `in`.specmatic.stub.report.StubEndpoint
+import `in`.specmatic.stub.report.StubUsageReport
 import `in`.specmatic.test.HttpClient
 import io.ktor.http.*
 import io.ktor.http.content.*
@@ -29,13 +28,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.Writer
 import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
 
-data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "")
+data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "", val feature:Feature? = null, val scenario:Scenario? = null)
 
 class HttpStub(
     private val features: List<Feature>,
@@ -47,7 +48,8 @@ class HttpStub(
     keyData: KeyData? = null,
     val passThroughTargetBase: String = "",
     val httpClientFactory: HttpClientFactory = HttpClientFactory(),
-    val workingDirectory: WorkingDirectory? = null
+    val workingDirectory: WorkingDirectory? = null,
+    val specmaticConfigPath:String? = null
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -65,8 +67,20 @@ class HttpStub(
         log: (event: LogMessage) -> Unit = dontPrintToConsole
     ) : this(parseGherkinStringToFeature(gherkinData), scenarioStubs, host, port, log)
 
+    companion object {
+        const val JSON_REPORT_PATH = "./build/reports/specmatic"
+        const val JSON_REPORT_FILE_NAME = "stub_usage_report.json"
+    }
+
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken == null }.toMutableList())
     private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
+
+    private val _logs: MutableList<StubEndpoint> = Collections.synchronizedList(ArrayList())
+    private val _allEndpoints: List<StubEndpoint> = extractALlEndpoints()
+
+    val logs: List<StubEndpoint> get() = _logs.toList()
+    val allEndpoints: List<StubEndpoint> get() = _allEndpoints.toList()
+
 
     val stubCount: Int
         get() {
@@ -264,8 +278,8 @@ class HttpStub(
     private fun handleFetchLogRequest(): HttpStubResponse =
         HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getString())))
 
-    private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse =
-        getHttpResponse(
+    private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse {
+        val result: StubbedResponseResult = getHttpResponse(
             httpRequest,
             features,
             threadSafeHttpStubs,
@@ -274,6 +288,11 @@ class HttpStub(
             passThroughTargetBase,
             httpClientFactory
         )
+
+        result.log(_logs, httpRequest)
+
+        return result.response
+    }
 
     private suspend fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {
@@ -412,6 +431,7 @@ class HttpStub(
     override fun close() {
         server.stop(0, 5000)
         workingDirectory?.delete()
+        printUsageReport()
     }
 
     private fun handleStateSetupRequest(httpRequest: HttpRequest): HttpStubResponse {
@@ -427,6 +447,39 @@ class HttpStub(
 
     init {
         server.start()
+    }
+
+    private fun extractALlEndpoints(): List<StubEndpoint> {
+        return features.map {
+            it.scenarios.map { scenario ->
+                if (scenario.isA2xxScenario()) {
+                    StubEndpoint(
+                        scenario.path,
+                        scenario.method,
+                        scenario.status,
+                        scenario.sourceProvider,
+                        scenario.sourceRepository,
+                        scenario.sourceRepositoryBranch,
+                        scenario.specification,
+                        scenario.serviceType
+                    )
+                } else {
+                    null
+                }
+            }
+        }.flatten().filterNotNull()
+    }
+
+    private fun printUsageReport() {
+        specmaticConfigPath?.let {
+            val stubUsageReport = StubUsageReport(specmaticConfigPath, _allEndpoints, _logs )
+            println("Saving Stub Usage Report json to $JSON_REPORT_PATH ...")
+            val json = Json {
+                encodeDefaults = false
+            }
+            val reportJson = json.encodeToString(stubUsageReport.generate())
+            saveJsonFile(reportJson, JSON_REPORT_PATH, JSON_REPORT_FILE_NAME)
+        }
     }
 }
 
@@ -552,16 +605,16 @@ fun getHttpResponse(
     strictMode: Boolean,
     passThroughTargetBase: String = "",
     httpClientFactory: HttpClientFactory? = null
-): HttpStubResponse {
+): StubbedResponseResult {
     return try {
         val (matchResults, stubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
-        stubResponse
+        stubResponse?.let { FoundStubbedResponse(stubResponse) }
             ?: if (httpClientFactory != null && passThroughTargetBase.isNotBlank()) {
-                passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory)
+                NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
             } else {
                 if (strictMode)
-                    HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults))
+                    NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
                 else
                     fakeHttpResponse(features, httpRequest)
             }
@@ -607,18 +660,18 @@ private fun stubbedResponse(
 
     val stubResponse = mock?.let {
         val softCastResponse = it.softCastResponseToXML(httpRequest).response
-        HttpStubResponse(softCastResponse, it.delayInSeconds, it.contractPath)
+        HttpStubResponse(softCastResponse, it.delayInSeconds, it.contractPath, scenario = mock.scenario, feature = mock.feature)
     }
 
     return Pair(matchResults, stubResponse)
 }
 
 private fun stubThatMatchesRequest(
-    threadSafeStubQueue: ThreadSafeListOfStubs,
-    threadSafeStubs: ThreadSafeListOfStubs,
+    transientStubs: ThreadSafeListOfStubs,
+    nonTransientStubs: ThreadSafeListOfStubs,
     httpRequest: HttpRequest
 ): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
-    val queueMatchResults: List<Pair<Result, HttpStubData>> = threadSafeStubQueue.matchResults { stubs ->
+    val queueMatchResults: List<Pair<Result, HttpStubData>> = transientStubs.matchResults { stubs ->
         stubs.map {
             val (requestPattern, _, resolver) = it
             Pair(
@@ -633,11 +686,11 @@ private fun stubThatMatchesRequest(
 
     val queueMock = queueMatchResults.findLast { (result, _) -> result is Result.Success }
     if(queueMock != null) {
-        threadSafeStubQueue.remove(queueMock.second)
+        transientStubs.remove(queueMock.second)
         return Pair(queueMock.second, queueMatchResults)
     }
 
-    val listMatchResults: List<Pair<Result, HttpStubData>> = threadSafeStubs.matchResults { stubs ->
+    val listMatchResults: List<Pair<Result, HttpStubData>> = nonTransientStubs.matchResults { stubs ->
         stubs.map {
             val (requestPattern, _, resolver) = it
             Pair(
@@ -671,7 +724,7 @@ object ContractAndRequestsMismatch : MismatchMessages {
     }
 }
 
-private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): HttpStubResponse {
+private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): StubbedResponseResult {
     data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
 
     val responses: List<ResponseDetails> = features.asSequence().map { feature ->
@@ -688,12 +741,14 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
                 first.plus(second)
             }.withoutFluff().generateErrorHttpResponse(httpRequest)
 
-            HttpStubResponse(httpFailureResponse)
+            NotStubbed(HttpStubResponse(httpFailureResponse))
         }
-        else -> HttpStubResponse(
+        else -> FoundStubbedResponse(HttpStubResponse(
             fakeResponse.successResponse?.build()?.withRandomResultHeader()!!,
-            contractPath = fakeResponse.feature.path
-        )
+            contractPath = fakeResponse.feature.path,
+            feature = fakeResponse.feature,
+            scenario = fakeResponse.successResponse.scenario
+        ))
     }
 }
 

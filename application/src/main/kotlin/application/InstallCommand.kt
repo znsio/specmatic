@@ -11,8 +11,11 @@ import java.util.concurrent.Callable
 
 @CommandLine.Command(name = "install", description = ["Clone the git repositories declared in the manifest"], mixinStandardHelpOptions = true)
 class InstallCommand: Callable<Unit> {
+
+    @CommandLine.Option(names = ["--targetDirectory"], description = ["Directory in which the git repository will be cloned"])
+    var targetDirectory: String = System.getProperty("user.home")
     override fun call() {
-        val userHome = File(System.getProperty("user.home"))
+        val userHome = File(targetDirectory)
         val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
 
         val sources = try { loadSources(globalConfigFileName) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }

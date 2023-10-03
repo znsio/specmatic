@@ -390,10 +390,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     ) = operation.parameters.orEmpty()
         .filter { parameter ->
             parameter.examples.orEmpty().any { it.key == exampleName }
+        }.associate {
+            val exampleValue: Example = it.examples[exampleName]
+                ?: throw ContractException("The value of ${it.name} in example $exampleName was unexpectedly found to be null.")
+
+            it.name to exampleValue.value
         }
-        .map {
-            it.name to it.examples[exampleName]!!.value
-        }.toMap()
 
     private fun openApiPaths() = openApi.paths.orEmpty()
 

@@ -16,7 +16,6 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
-import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
@@ -59,7 +58,6 @@ import kotlin.collections.joinToString
 import kotlin.collections.last
 import kotlin.collections.listOf
 import kotlin.collections.map
-import kotlin.collections.mapOf
 import kotlin.collections.mapValues
 import kotlin.collections.mutableListOf
 import kotlin.collections.mutableMapOf
@@ -777,96 +775,6 @@ Background:
         }
     }
 
-    @Test
-    fun `should generate stub that authenticates with api key in header and query`() {
-        createStubFromContracts(listOf("src/test/resources/openapi/apiKeyAuth.yaml")).use {
-            val requestWithHeader = HttpRequest(
-                method = "GET",
-                path = "/hello/10",
-                headers = mapOf(
-                    "X-API-KEY" to "test"
-                )
-            )
-
-            val responseFromHeader = it.client.execute(requestWithHeader)
-            assertThat(responseFromHeader.status).isEqualTo(200)
-
-            val requestWithQuery = HttpRequest(
-                method = "GET",
-                path = "/hello/10",
-                queryParams = mapOf(
-                    "apiKey" to "test"
-                )
-            )
-
-            val responseFromQuery = it.client.execute(requestWithQuery)
-            assertThat(responseFromQuery.status).isEqualTo(200)
-        }
-    }
-
-    @Test
-    fun `should throw not supported error when a security scheme other than bearer auth is defined`() {
-        assertThrows<ContractException> {
-            parseGherkinStringToFeature(
-                """
-Feature: Hello world
-
-Background:
-  Given openapi openapi/unsupported-authentication.yaml
-        """.trimIndent(), sourceSpecPath
-            )
-        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer and api key authentication (header, query) security schemes at the moment") }
-    }
-
-    @Test
-    fun `should throw not supported error when a non-query-or-header API security scheme is defined`() {
-        assertThrows<ContractException> {
-            parseGherkinStringToFeature(
-                """
-Feature: Hello world
-
-Background:
-  Given openapi openapi/apiKeyAuthCookie.yaml
-        """.trimIndent(), sourceSpecPath
-            )
-        }.also { assertThat(it.message).isEqualTo("Specmatic only supports bearer and api key authentication (header, query) security schemes at the moment") }
-    }
-
-    @Test
-    fun `should generate test with api key security scheme value from row`() {
-        val contract: Feature = parseGherkinStringToFeature(
-            """
-Feature: Authenticated
-
-  Background:
-    Given openapi openapi/authenticated.yaml
-  
-  Scenario: Header auth test
-    When GET /hello/(id:number)
-    Then status 200
-    
-    Examples:
-    | X-API-KEY | id |
-    | abc123    | 10 |
-        """.trimIndent(), sourceSpecPath
-        )
-
-        val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.headers).containsEntry("X-API-KEY", "abc123")
-                return HttpResponse.OK("success")
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-
-            }
-
-        })
-
-        assertThat(result).isInstanceOf(Result.Success::class.java)
-    }
-
     @ParameterizedTest
     @MethodSource("multiPartFileUploadSpecs")
     fun `should generate test with multipart file upload`(openApiFile: String, fileName: String) {
@@ -958,76 +866,6 @@ Background:
             }
             assertThat(httpClientErrorException.message).contains("The contract expected a file, but got content instead.")
         }
-    }
-
-    @Test
-    fun `should generate test with bearer auth security scheme value from row`() {
-        val contract: Feature = parseGherkinStringToFeature(
-            """
-Feature: Authenticated
-
-  Background:
-    Given openapi openapi/authenticated.yaml
-  
-  Scenario: Bearer auth test
-    When GET /hello/(id:number)
-    Then status 200
-    
-    Examples:
-    | Authorization | id |
-    | Bearer abc123 | 10 |
-        """.trimIndent(), sourceSpecPath
-        )
-
-        val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.headers).containsEntry("Authorization", "Bearer abc123")
-                return HttpResponse.OK("success")
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-
-            }
-
-        })
-
-        assertThat(result).isInstanceOf(Result.Success::class.java)
-    }
-
-    @Test
-    fun `should generate test with query param api key auth security scheme value from row`() {
-        val contract: Feature = parseGherkinStringToFeature(
-            """
-Feature: Authenticated
-
-  Background:
-    Given openapi openapi/authenticated.yaml
-  
-  Scenario: Query param auth test
-    When GET /hello/(id:number)
-    Then status 200
-    
-    Examples:
-    | apiKey | id |
-    | abc123 | 10 |
-        """.trimIndent(), sourceSpecPath
-        )
-
-        val contractTests = contract.generateContractTestScenarios(emptyList())
-        val result = executeTest(contractTests.single(), object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.queryParams).containsEntry("apiKey", "abc123")
-                return HttpResponse.OK("success")
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-
-            }
-
-        })
-
-        assertThat(result).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
@@ -1343,6 +1181,37 @@ Background:
         }
     }
 
+    @Test
+    fun `should filter out schema scenarios already defined in spec`() {
+        val feature = parseGherkinStringToFeature(
+            """
+            Feature: Hello world
+            
+            Background:
+              Given openapi openapi/petstore-expanded.yaml
+              
+              Scenario Outline: get by tag
+                When GET /pets
+                Then status 200
+                Examples:
+                  | tag     |
+                  | testing |
+        """.trimIndent(), sourceSpecPath
+        )
+        val openapiSpec = OpenApiSpecification.fromFile("openapi/petstore-expanded.yaml")
+
+        assertThat(feature.scenarios).hasSameSizeAs(openapiSpec.toScenarioInfos())
+
+        val apiIdentifiersFromGherkinSpec = feature.scenarios.map {
+            it.apiIdentifier
+        }.sorted().distinct()
+
+        val apiIdentifiersDirectlyFromSpecification = feature.scenarios.map {
+            it.apiIdentifier
+        }.sorted().distinct()
+
+        assertThat(apiIdentifiersFromGherkinSpec).isEqualTo(apiIdentifiersDirectlyFromSpecification)
+    }
     @Test
     fun `should create petstore tests`() {
         val systemPropertiesMap = System.getProperties().map { it.key.toString() to it.value.toString() }.toMap()

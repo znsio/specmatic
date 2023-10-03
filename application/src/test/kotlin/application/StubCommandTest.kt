@@ -19,8 +19,11 @@ import `in`.specmatic.core.LEGACY_CONTRACT_EXTENSION
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.CONTRACT_EXTENSIONS
+import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpClientFactory
+import io.ktor.serialization.*
+import io.mockk.clearAllMocks
 import java.io.File
 import java.nio.file.Path
 
@@ -53,24 +56,25 @@ internal class StubCommandTest {
     @BeforeEach
     fun `clean up stub command`() {
         stubCommand.contractPaths = arrayListOf()
+        stubCommand.specmaticConfigPath = null
     }
 
     @Test
-    fun `when contract files are not given it should load from qontract config`() {
-        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
+    fun `when contract files are not given it should load from specmatic config`() {
+        every { specmaticConfig.contractStubPathData() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION").map { ContractPathData("", it) })
 
         CommandLine(stubCommand, factory).execute()
 
-        verify(exactly = 1) { specmaticConfig.contractStubPaths() }
+        verify(exactly = 1) { specmaticConfig.contractStubPathData() }
     }
 
     @Test
     fun `when contract files are given it should not load from qontract config`() {
-        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
+        every { specmaticConfig.contractStubPathData() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION").map { ContractPathData("", it) })
 
         CommandLine(stubCommand, factory).execute("/parameter/path/to/contract.$CONTRACT_EXTENSION")
 
-        verify(exactly = 0) { specmaticConfig.contractStubPaths() }
+        verify(exactly = 0) { specmaticConfig.contractStubPathData() }
     }
 
     @Test
@@ -88,14 +92,23 @@ internal class StubCommandTest {
         every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
 
         val stubInfo = listOf(Pair(feature, emptyList<ScenarioStub>()))
-        every { stubLoaderEngine.loadStubs(listOf(contractPath), emptyList()) }.returns(stubInfo)
+        every { stubLoaderEngine.loadStubs(listOf(contractPath).map { ContractPathData("", it) }, emptyList()) }.returns(stubInfo)
 
         val host = "0.0.0.0"
         val port = 9000
         val certInfo = CertInfo()
         val strictMode = false
 
-        every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any(), any()) }.returns(null)
+        every { httpStubEngine.runHTTPStub(
+            stubInfo,
+            host,
+            port,
+            certInfo,
+            strictMode,
+            any(),
+            httpClientFactory = any(),
+            workingDirectory = any()
+        ) }.returns(null)
 
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
         every { fileOperations.isFile(contractPath) }.returns(true)
@@ -104,7 +117,16 @@ internal class StubCommandTest {
         val exitStatus = CommandLine(stubCommand, factory).execute(contractPath)
         assertThat(exitStatus).isZero()
 
-        verify(exactly = 1) { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any(), any()) }
+        verify(exactly = 1) { httpStubEngine.runHTTPStub(
+            stubInfo,
+            host,
+            port,
+            certInfo,
+            strictMode,
+            any(),
+            httpClientFactory = any(),
+            workingDirectory = any(),
+        ) }
     }
 
     @ParameterizedTest
@@ -160,7 +182,7 @@ internal class StubCommandTest {
         every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
 
         val stubInfo = listOf(Pair(feature, emptyList<ScenarioStub>()))
-        every { stubLoaderEngine.loadStubs(listOf(contractPath), emptyList()) }.returns(stubInfo)
+        every { stubLoaderEngine.loadStubs(listOf(contractPath).map { ContractPathData("", it) }, emptyList()) }.returns(stubInfo)
 
         val host = "0.0.0.0"
         val port = 9000
@@ -168,7 +190,16 @@ internal class StubCommandTest {
         val strictMode = false
         val passThroughTargetBase = "http://passthroughTargetBase"
 
-        every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, passThroughTargetBase, any(), any()) }.returns(null)
+        every { httpStubEngine.runHTTPStub(
+            stubInfo,
+            host,
+            port,
+            certInfo,
+            strictMode,
+            passThroughTargetBase,
+            httpClientFactory = any(),
+            workingDirectory = any(),
+        ) }.returns(null)
 
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
         every { fileOperations.isFile(contractPath) }.returns(true)
@@ -177,6 +208,15 @@ internal class StubCommandTest {
         val exitStatus = CommandLine(stubCommand, factory).execute("--passThroughTargetBase=$passThroughTargetBase", contractPath)
         assertThat(exitStatus).isZero()
 
-        verify(exactly = 1) { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any(), any()) }
+        verify(exactly = 1) { httpStubEngine.runHTTPStub(
+            stubInfo,
+            host,
+            port,
+            certInfo,
+            strictMode,
+            any(),
+            httpClientFactory = any(),
+            workingDirectory = any(),
+        ) }
     }
 }

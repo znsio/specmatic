@@ -25,8 +25,12 @@ Systems interact with each other through several means. Specmatic hopes to addre
 * Libraries, SDK 
 * OS Level Pipes
 
+[Specmatic's Product Roadmap](https://specmatic.in/roadmap/)
+
 Learn more at [specmatic.in](https://specmatic.in/#features)
 
 [Get started now](https://specmatic.in/getting_started.html)
+
+[![Specmatic - Contract Driven Development - YouTube playlist](https://img.youtube.com/vi/3HPgpvd8MGg/0.jpg)](https://www.youtube.com/watch?v=3HPgpvd8MGg&list=PL9Z-JgiTsOYRERcsy9o3y6nsi5yK3IB_w)
 
 [Youtube playlist](https://www.youtube.com/watch?v=3HPgpvd8MGg&list=PL9Z-JgiTsOYRERcsy9o3y6nsi5yK3IB_w)

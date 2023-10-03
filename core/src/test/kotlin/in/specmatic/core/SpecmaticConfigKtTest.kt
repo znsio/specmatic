@@ -36,6 +36,11 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.report?.types?.apiCoverage?.openAPI?.successCriteria?.enforce).isTrue()
         assertThat(config.report?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(0)).isEqualTo("/heartbeat")
         assertThat(config.report?.types?.apiCoverage?.openAPI?.excludedEndpoints?.get(1)).isEqualTo("/health")
+
+        assertThat((config.security?.OpenAPI?.securitySchemes?.get("oAuth2AuthCode") as OAuth2SecuritySchemeConfiguration).token).isEqualTo("OAUTH1234")
+        assertThat((config.security?.OpenAPI?.securitySchemes?.get("BearerAuth") as BearerSecuritySchemeConfiguration).token).isEqualTo("BEARER1234")
+        assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthHeader") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-HEADER-USER")
+        assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthQuery") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-QUERY-PARAM-USER")
     }
 
     @Test

@@ -4,10 +4,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
 import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.Examples
-import `in`.specmatic.core.pattern.Row
-import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
@@ -46,30 +43,24 @@ open class SpecmaticJUnitSupport {
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
-        private val openApiCoverageReportInput = OpenApiCoverageReportInput()
+        private var specmaticConfigJson: SpecmaticConfigJson? = null
+        private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
         @AfterAll
         @JvmStatic
         fun report() {
-            val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
-            reportProcessors.forEach { it.process(getReportConfiguration()) }
+            specmaticConfigJson?.let {
+                val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
+                reportProcessors.forEach { it.process(getReportConfiguration()) }
+            }
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            val reportConfiguration: ReportConfiguration? = try {
-                reportConfigurationFromConfig()
-            } catch(e: Exception) {
-                logger.log("Could not load report configuration (got error \"" + exceptionCauseMessage(e) + "\"), running test with default report configuration")
-                null
-            }
-
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
-            val defaultReportTypes =
-                ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
-
-            return when (reportConfiguration) {
+            val defaultReportTypes = ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
+            return when (val reportConfiguration = specmaticConfigJson?.report) {
                 null -> {
-                    logger.log("API coverage report configuration not found in specmatic.json, proceeding with API coverage report without success criteria")
+                    logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
                     ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
                 }
                 else -> {
@@ -120,9 +111,9 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        fun reportConfigurationFromConfig(): ReportConfiguration? {
-            return reportConfigurationFrom(globalConfigFileName)
-        }
+        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getGlobalConfigFileName()
+
+        private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -154,7 +145,6 @@ open class SpecmaticJUnitSupport {
     fun contractTest(): Collection<DynamicTest> {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
-        val givenConfigFile = System.getProperty(CONFIG_FILE_NAME)
         val filterName: String? = System.getProperty(FILTER_NAME)
         val filterNotName: String? = System.getProperty(FILTER_NOT_NAME)
 
@@ -171,21 +161,31 @@ open class SpecmaticJUnitSupport {
         } catch (e: Throwable) {
             return loadExceptionAsTestError(e)
         }
-
         val testScenarios = try {
             val testScenarios = when {
                 contractPaths != null -> {
-                    contractPaths.split(",").flatMap { loadTestScenarios(it, suggestionsPath, suggestionsData, testConfig) }
+                    contractPaths.split(",").flatMap {
+                        loadTestScenarios(
+                            it,
+                            suggestionsPath,
+                            suggestionsData,
+                            testConfig,
+                            specificationPath = it
+                        )
+                    }
                 }
                 else -> {
-                    val configFile = givenConfigFile ?: globalConfigFileName
+                    val configFile = configFile
 
                     exitIfDoesNotExist("config file", configFile)
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path).map { it.path }
-                    contractFilePaths.flatMap { loadTestScenarios(it, "", "", testConfig) }
+                    specmaticConfigJson = getSpecmaticJson()
+
+                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
+
+                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security) }
                 }
             }
 
@@ -242,18 +242,35 @@ open class SpecmaticJUnitSupport {
         }.toList()
     }
 
+    private fun getSpecmaticJson(): SpecmaticConfigJson? {
+        return try {
+            loadSpecmaticJsonConfig(configFile)
+        }
+        catch (e: ContractException) {
+            logger.log(exceptionCauseMessage(e))
+            null
+        }
+        catch (e: Throwable) {
+            exitWithMessage(exceptionCauseMessage(e))
+        }
+    }
+
     private fun loadTestScenarios(
         path: String,
         suggestionsPath: String,
         suggestionsData: String,
-        config: TestConfig
+        config: TestConfig,
+        sourceProvider:String? = null,
+        sourceRepository:String? = null,
+        sourceRepositoryBranch:String? = null,
+        specificationPath:String? = null,
+        securityConfiguration: SecurityConfiguration? = null
     ): List<ContractTest> {
         if(isYAML(path) && !isOpenAPI(path))
             return emptyList()
 
         val contractFile = File(path)
-        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract)).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
-
+        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
             suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)

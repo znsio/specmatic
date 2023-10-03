@@ -229,7 +229,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun openApitoScenarioInfos(): List<ScenarioInfo> {
         return openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
-                val specmaticPath = toSpecmaticPath2(openApiPath, operation)
+                val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
                     toHttpRequestPatterns(
@@ -271,7 +271,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun toScenarioInfosWithExamples(): List<ScenarioInfo> {
         return openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
-                val specmaticPath = toSpecmaticPath2(openApiPath, operation)
+                val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
                     val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
@@ -937,7 +937,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     private fun componentNameFromReference(component: String) = component.substringAfterLast("/")
 
-    private fun toSpecmaticPath2(openApiPath: String, operation: Operation): URLMatcher {
+    private fun toSpecmaticPath(openApiPath: String, operation: Operation): URLMatcher {
         val parameters = operation.parameters ?: return toURLMatcherWithOptionalQueryParams(openApiPath)
 
         val pathStringParts: List<String> = openApiPath.removePrefix("/").removeSuffix("/").let {

@@ -41,10 +41,10 @@ dependencies {
     implementation 'org.assertj:assertj-core:3.24.2'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.9.1'
 
-    implementation('info.picocli:picocli-spring-boot-starter:4.7.0') {
+    implementation('info.picocli:picocli-spring-boot-starter:4.7.5') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
-    implementation 'info.picocli:picocli:4.7.0'
+    implementation 'info.picocli:picocli:4.7.5'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-network-tls:$ktor_version"
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"

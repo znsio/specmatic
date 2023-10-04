@@ -2,6 +2,7 @@ package `in`.specmatic.core.utilities
 
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.Configuration
+import `in`.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import `in`.specmatic.core.git.*
 import `in`.specmatic.core.log.logger
 import java.io.File
@@ -71,10 +72,12 @@ data class GitRepo(
                     contractsRepoDir.exists() && isBehind(contractsRepoDir) -> cloneRepoAndCheckoutBranch(reposBaseDir, this)
                     contractsRepoDir.exists() && isClean(contractsRepoDir) -> {
                         logger.log("Couldn't find local contracts but ${contractsRepoDir.path} already exists and is clean and has contracts")
+                        ensureThatSpecmaticFolderIsIgnored()
                         contractsRepoDir
                     }
                     else -> {
                         logger.log("Couldn't find local contracts. Although ${contractsRepoDir.path} exists, it is not clean.\nHence cloning $gitRepositoryURL into ${reposBaseDir.path}")
+                        ensureThatSpecmaticFolderIsIgnored()
                         clone(reposBaseDir, this)
                     }
                 }
@@ -96,16 +99,49 @@ data class GitRepo(
         sourceGit.fetch()
         return sourceGit.revisionsBehindCount() > 0
     }
+
+    private fun isSpecmaticFolderIgnored(): Boolean {
+        val currentWorkingDirectory = File(".").absolutePath
+        val sourceGit = getSystemGit(currentWorkingDirectory)
+        return sourceGit.checkIgnore(DEFAULT_WORKING_DIRECTORY).isNotEmpty()
+    }
+
     private fun cloneRepoAndCheckoutBranch(reposBaseDir: File, gitRepo: GitRepo): File {
         logger.log("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
         reposBaseDir.mkdirs()
         val repositoryDirectory = clone(reposBaseDir, gitRepo)
-
         when (branchName) {
             null -> logger.log("No branch specified, using default branch")
             else -> checkout(repositoryDirectory, branchName)
         }
+        ensureThatSpecmaticFolderIsIgnored()
         return repositoryDirectory
+    }
+
+    private fun ensureThatSpecmaticFolderIsIgnored() {
+        val gitIgnoreFile = File(".gitignore")
+        when (gitIgnoreFile.exists()) {
+            true -> {
+                if(!isSpecmaticFolderIgnored()){
+                    logger.log("A .gitignore file exists for this git repo, but it does not contain the $DEFAULT_WORKING_DIRECTORY folder.")
+                    addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile)
+                }
+            }
+            else -> {
+                createGitIgnoreFile(gitIgnoreFile)
+                addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile, false)
+            }
+        }
+    }
+
+    private fun addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile: File, onNewLine:Boolean = true){
+        logger.log("Adding $DEFAULT_WORKING_DIRECTORY folder to the existing .gitignore file.")
+        gitIgnoreFile.appendText("${if (onNewLine) "\n" else ""}.specmatic")
+    }
+
+    private fun createGitIgnoreFile(gitIgnoreFile: File) {
+        logger.log("Creating a gitignore file file as it is missing for the current project.")
+        gitIgnoreFile.createNewFile()
     }
 
     private fun localRepoDir(workingDirectory: String): File = File(workingDirectory).resolve("repos")

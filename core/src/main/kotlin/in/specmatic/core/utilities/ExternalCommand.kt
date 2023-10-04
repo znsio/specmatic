@@ -20,7 +20,7 @@ class ExternalCommand(
             val err = process.errorStream.bufferedReader().readText()
             process.waitFor()
 
-            if (process.exitValue() != 0) throw NonZeroExitError("""Error executing $commandWithParameters: ${err.ifEmpty { out }}""")
+            if (process.exitValue() != 0) throw NonZeroExitError("""Error executing $commandWithParameters: ${err.ifEmpty { out }}""", process.exitValue())
 
             out
         } catch (otherExceptions: Exception) {

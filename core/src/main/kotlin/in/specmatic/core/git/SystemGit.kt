@@ -73,6 +73,17 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return execute(Configuration.gitCommand, "rev-list", "--count", "HEAD..@{u}").trim().toInt()
     }
 
+    override fun checkIgnore(path: String): String {
+        try {
+            return execute(Configuration.gitCommand, "check-ignore", path)
+        }
+        catch (nonZeroExitError:NonZeroExitError) {
+            if(nonZeroExitError.exitCode == 1) {
+                return ""
+            }
+            throw nonZeroExitError
+        }
+    }
 
     override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
         this.also {
@@ -133,4 +144,4 @@ fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>
     }
 }
 
-class NonZeroExitError(error: String) : Throwable(error)
+class NonZeroExitError(error: String, val exitCode:Int) : Throwable(error)

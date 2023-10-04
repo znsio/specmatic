@@ -227,14 +227,6 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     fun pathParameters(): List<URLPathPattern> {
         return pathPattern.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }
-
-    fun withOptionalQueryParams(apiKeyQueryParams: Set<String> = emptySet()): URLMatcher {
-        val allQueryParams = apiKeyQueryParams.associate { apiKeyQueryParam ->
-            "${apiKeyQueryParam}?" to StringPattern()
-        }.plus(this.queryPattern)
-
-        return this.copy(queryPattern = allQueryParams)
-    }
 }
 
 internal fun toURLMatcherWithOptionalQueryParams(url: String, apiKeyQueryParams: Set<String> = emptySet()): URLMatcher =

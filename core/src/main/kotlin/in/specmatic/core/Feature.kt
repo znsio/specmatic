@@ -85,7 +85,8 @@ data class Feature(
     val sourceRepository:String? = null,
     val sourceRepositoryBranch:String? = null,
     val specification:String? = null,
-    val serviceType:String? = null
+    val serviceType:String? = null,
+    val stubsFromExamples: Map<String, Pair<HttpRequest, HttpResponse>> = emptyMap()
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
@@ -1630,7 +1631,7 @@ fun scenarioInfos(
     val includedSpecifications = listOfNotNull(openApiSpecification, wsdlSpecification)
 
     val scenarioInfosBelongingToIncludedSpecifications =
-        includedSpecifications.map { it.toScenarioInfos() }.flatten()
+        includedSpecifications.map { it.toScenarioInfos().first }.flatten()
 
     val backgroundInfo = backgroundScenario(featureChildren)?.let { feature ->
         lexScenario(

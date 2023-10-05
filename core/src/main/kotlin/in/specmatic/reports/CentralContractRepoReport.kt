@@ -8,7 +8,7 @@ import `in`.specmatic.stub.isYAML
 import java.io.File
 
 class CentralContractRepoReport {
-    fun generate(currentWorkingDir:String=""): CentralContractRepoReportJson {
+    fun generate(currentWorkingDir: String = ""): CentralContractRepoReportJson {
         val searchPath = currentWorkingDir.takeIf { it.isNotEmpty() } ?: File("").canonicalPath
         logger.log("Searching for specification files at: $searchPath")
         val specifications = findSpecifications(searchPath)
@@ -17,24 +17,25 @@ class CentralContractRepoReport {
 
     private fun getSpecificationRows(specifications: List<File>, currentWorkingDir: String): List<SpecificationRow> {
         val currentWorkingDirPath = File(currentWorkingDir).absoluteFile
-        return specifications.mapNotNull { spec ->
-            val feature = OpenApiSpecification.fromYAML(spec.readText(), spec.path).toFeature()
+        return specifications.associateWith {
+            OpenApiSpecification.fromYAML(it.readText(), it.path).toFeature()
+        }.filter { (spec, feature) ->
             if (feature.scenarios.isEmpty()) {
-                println("Excluding specification: ${spec.path} as it does not have any paths ")
-                null
-            } else {
-                SpecificationRow(
-                    spec.relativeTo(currentWorkingDirPath).path,
-                    feature.serviceType,
-                    feature.scenarios.map {
-                        SpecificationOperation(
-                            convertPathParameterStyle(it.path),
-                            it.method,
-                            it.httpResponsePattern.status
-                        )
-                    }
-                )
+                logger.log("Excluding specification: ${spec.path} as it does not have any paths ")
             }
+            feature.scenarios.isNotEmpty()
+        }.map { (spec, feature) ->
+            SpecificationRow(
+                spec.relativeTo(currentWorkingDirPath).path,
+                feature.serviceType,
+                feature.scenarios.map {
+                    SpecificationOperation(
+                        convertPathParameterStyle(it.path),
+                        it.method,
+                        it.httpResponsePattern.status
+                    )
+                }
+            )
         }
     }
 

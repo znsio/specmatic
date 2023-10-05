@@ -13,7 +13,7 @@ import java.io.File
 class CentralContractRepoReportTest {
 
     @Test
-    fun `test generates report based on all the open api specifications present in the current folder`() {
+    fun `test generates report based on all the open api specifications present in the specified dir`() {
         val report = CentralContractRepoReport().generate("./specifications")
         assertThat(report).isEqualTo(
             CentralContractRepoReportJson(

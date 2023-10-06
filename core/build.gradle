@@ -17,7 +17,7 @@ repositories {
 }
 
 def ktor_version = "2.3.4"
-def jgit_version = "5.13.0.202109080827-r"
+def jgit_version = "6.7.0.202309050840-r"
 def junit_version = "5.9.1"
 
 dependencies {

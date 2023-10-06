@@ -3,6 +3,7 @@ package `in`.specmatic.reports
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.stub.isYAML
 import java.io.File
@@ -17,9 +18,19 @@ class CentralContractRepoReport {
 
     private fun getSpecificationRows(specifications: List<File>, currentWorkingDir: String): List<SpecificationRow> {
         val currentWorkingDirPath = File(currentWorkingDir).absoluteFile
-        return specifications.associateWith {
-            OpenApiSpecification.fromYAML(it.readText(), it.path).toFeature()
-        }.filter { (spec, feature) ->
+
+        return specifications.mapNotNull {
+            try {
+                val feature = OpenApiSpecification.fromYAML(it.readText(), it.path).toFeature()
+                Pair(it, feature)
+            }
+            catch (e:Throwable){
+                logger.log("Could not parse ${it.path} due to the following error:")
+                logger.log(exceptionCauseMessage(e))
+                null
+            }
+        }
+       .filter { (spec, feature) ->
             if (feature.scenarios.isEmpty()) {
                 logger.log("Excluding specification: ${spec.path} as it does not have any paths ")
             }

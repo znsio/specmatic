@@ -273,12 +273,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             openApiOperations(pathItem).map { (httpMethod, operation) ->
                 val specmaticPath = toSpecmaticPath2(openApiPath, operation)
 
+                val requestBody: RequestBody? = resolveRequestBody(operation)
+
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
                     val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
                     val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, _) ->
                         val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
 
-                        val requestBodyExample: Map<String, Any> = requestBodyExample(operation, exampleName)
+                        val requestBodyExample: Map<String, Any> = requestBodyExample(requestBody, exampleName, operation?.summary)
 
                         val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
                             if (value.toString().contains("externalValue")) "${key}_filename" to value
@@ -360,16 +362,19 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun requestBodyExample(
-        operation: Operation,
-        exampleName: String
+        requestBody: RequestBody?,
+        exampleName: String,
+        operationSummary: String?
     ): Map<String, Any> {
+
         val requestExampleValue: Any? =
-            operation.requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName)?.value
+            requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName)?.value
 
         val requestBodyExample: Map<String, Any> = if (requestExampleValue != null) {
-            if (operation.requestBody?.content?.entries?.first()?.key == "application/x-www-form-urlencoded" || operation.requestBody?.content?.entries?.first()?.key == "multipart/form-data") {
+            if (requestBody.content?.entries?.first()?.key == "application/x-www-form-urlencoded" || requestBody?.content?.entries?.first()?.key == "multipart/form-data") {
+                val operationSummaryClause = operationSummary?.let { "for operation \"${operationSummary}\""} ?: ""
                 val jsonExample =
-                    attempt("Could not parse example $exampleName for operation \"${operation.summary}\"") {
+                    attempt("Could not parse example $exampleName$operationSummaryClause") {
                         parsedJSON(requestExampleValue.toString()) as JSONObjectValue
                     }
                 jsonExample.jsonObject.map { (key, value) ->
@@ -470,17 +475,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             securitySchemes = operationSecuritySchemes
         )
 
-        return when (operation.requestBody) {
+        return when (val requestBody = resolveRequestBody(operation)) {
             null -> listOf(
                 requestPattern
             )
             else -> {
-                val requestBody = if (operation.requestBody.`$ref` == null) {
-                    operation.requestBody
-                } else {
-                    resolveReferenceToRequestBody(operation.requestBody.`$ref`).second
-                }
-
                 requestBody.content.map { (contentType, mediaType) ->
                     when (contentType.lowercase()) {
                         "multipart/form-data" -> {
@@ -529,6 +528,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
         }
     }
+
+    private fun resolveRequestBody(operation: Operation): RequestBody? =
+        if (operation.requestBody.`$ref` == null) {
+            operation.requestBody
+        } else {
+            resolveReferenceToRequestBody(operation.requestBody.`$ref`).second
+        }
 
     private fun operationSecuritySchemes(
         operation: Operation,

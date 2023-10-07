@@ -19,6 +19,7 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.examples.Example
+import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.media.*
 import io.swagger.v3.oas.models.parameters.*
 import io.swagger.v3.oas.models.responses.ApiResponse
@@ -414,9 +415,26 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun openAPIHeadersToSpecmatic(response: ApiResponse) =
         response.headers.orEmpty().map { (headerName, header) ->
             toSpecmaticParamName(header.required != true, headerName) to toSpecmaticPattern(
-                header.schema, emptyList()
+                resolveResponseHeader(header)?.schema ?: throw ContractException(headerComponentMissingError(headerName, response)), emptyList()
             )
         }.toMap()
+
+    private fun headerComponentMissingError(headerName: String, response: ApiResponse): String {
+        if(response.description != null) {
+            return "Header component not found for header $headerName in response \"${response.description}\""
+        }
+
+        return "Header component not found for header $headerName"
+    }
+
+    private fun resolveResponseHeader(header: Header): Header? {
+        return if(header.`$ref` != null) {
+            val headerComponentName = header.`$ref`.substringAfterLast("/")
+            openApi.components?.headers?.get(headerComponentName)
+        } else {
+            header
+        }
+    }
 
     private fun openAPIResponseToSpecmatic(
         response: ApiResponse,
@@ -530,11 +548,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun resolveRequestBody(operation: Operation): RequestBody? =
-        if (operation.requestBody.`$ref` == null) {
-            operation.requestBody
-        } else {
-            resolveReferenceToRequestBody(operation.requestBody.`$ref`).second
-        }
+        operation.requestBody?.`$ref`?.let {
+            resolveReferenceToRequestBody(it).second
+        } ?: operation.requestBody
 
     private fun operationSecuritySchemes(
         operation: Operation,

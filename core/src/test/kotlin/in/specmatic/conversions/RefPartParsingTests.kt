@@ -2,10 +2,12 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class RefPartParsingTests {
@@ -70,7 +72,7 @@ components:
     }
 
     @Test
-    fun `header refs`() {
+    fun `request header refs`() {
         val specification = """
 openapi: 3.0.0
 info:
@@ -87,11 +89,12 @@ paths:
     get:
       summary: hello world
       description: Optional extended description in CommonMark or HTML.
-      parameters:
-        - ${"$"}ref: '#/components/parameters/Id'
       responses:
         '200':
           description: Says hello
+          headers:
+            X-HelloResponseHeader:
+              ${"$"}ref: '#/components/headers/HelloResponseHeader'
           content:
             application/json:
               schema:
@@ -100,17 +103,14 @@ paths:
                 200_OK:
                   value: success
 components:
-  parameters:
-    Id:
-      in: query
-      name: id
+  headers:
+    HelloResponseHeader:
       schema:
-        type: integer
+        type: string
       examples:
         200_OK:
-          value: 10
+          value: helloworld
       required: true
-      description: Numeric ID
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(specification, "").toFeature()
@@ -118,17 +118,58 @@ components:
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/hello")
-                assertThat(request.queryParams).containsKey("id")
 
-                return HttpResponse.OK("success")
+                return HttpResponse.OK("success").copy(headers = mapOf("X-HelloResponseHeader" to "world"))
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
+        println(results.report())
+
         assertThat(results.success()).isTrue()
         assertThat(results.successCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `request header refs where header component is missing`() {
+        val specification = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /hello:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      responses:
+        '200':
+          description: Says hello
+          headers:
+            X-HelloResponseHeader:
+              ${"$"}ref: '#/components/headers/HelloResponseHeader'
+          content:
+            application/json:
+              schema:
+                type: string
+              examples:
+                200_OK:
+                  value: success
+        """.trimIndent()
+
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(specification, "").toFeature()
+        }
+            .isInstanceOf(ContractException::class.java)
+            .hasMessageContaining("X-HelloResponseHeader")
     }
 
     @Test

@@ -297,6 +297,93 @@ components:
     }
 
     @Test
+    fun `request body with nested refs`() {
+        val specification = """
+---
+openapi: "3.0.1"
+info:
+  title: "Person API"
+  version: "1"
+paths:
+  /person:
+    post:
+      summary: "Get person by id"
+      parameters: []
+      requestBody:
+        ${"$"}ref: '#/components/requestBodies/PersonRequest'
+      responses:
+        200:
+          description: "Get person by id"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                200_OK:
+                  value: "success"
+components:
+  schemas:
+    Id:
+      type: object
+      properties:
+        id:
+          type: string
+      required:
+        - id
+    OtherData:
+      allOf:
+        - type: object
+          properties:
+            name:
+              type: string
+          required:
+            - name
+        - ${"$"}ref: '#/components/schemas/Description'
+    Description:
+      type: object
+      properties:
+        description:
+          type: string
+      required:
+          - description
+  requestBodies:
+    PersonRequest:
+      content:
+        application/json:
+          schema:
+            allOf:
+              - ${"$"}ref: '#/components/schemas/Id'
+              - ${"$"}ref: '#/components/schemas/OtherData'
+          examples:
+            200_OK:
+              value:
+                id: "abc123"
+                name: "Jane"
+                description: "A person"
+        """.trimIndent()
+
+        val apiSpecification = OpenApiSpecification.fromYAML(specification, "")
+        val feature = apiSpecification.toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val expectedRequest = parsedJSONObject("""{"id":"abc123", "name": "Jane", "description": "A person"}""")
+                assertThat(request.body).isEqualTo(expectedRequest)
+                return HttpResponse.OK("success")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        println(results.distinctReport())
+
+        assertThat(results.failureCount).isEqualTo(0)
+        assertThat(results.successCount).isEqualTo(1)
+        assertThat(results.success()).isTrue()
+    }
+
+    @Test
     fun `response body refs`() {
         val specification = """
 ---

@@ -621,6 +621,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     fun toSpecmaticPattern(mediaType: MediaType, jsonInFormData: Boolean = false): Pattern =
         toSpecmaticPattern(mediaType.schema, emptyList(), jsonInFormData = jsonInFormData)
 
+    private fun resolveDeepAllOfs(schema: Schema<Any>): List<Schema<Any>> {
+        if(schema.allOf == null)
+            return listOf(schema)
+
+        return schema.allOf.flatMap { constituentSchema ->
+            if (constituentSchema.`$ref` != null) {
+                val (_, referredSchema) = resolveReferenceToSchema(constituentSchema.`$ref`)
+                resolveDeepAllOfs(referredSchema)
+            } else listOf(constituentSchema)
+        }
+    }
+
     fun toSpecmaticPattern(
         schema: Schema<*>, typeStack: List<String>, patternName: String = "", jsonInFormData: Boolean = false
     ): Pattern {
@@ -664,15 +676,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
             is ComposedSchema -> {
                 if (schema.allOf != null) {
-                    val schemaProperties = schema.allOf.map { constituentSchema ->
-                        val schemaToProcess = if (constituentSchema.`$ref` != null) {
-                            val (_, referredSchema) = resolveReferenceToSchema(constituentSchema.`$ref`)
-                            referredSchema
-                        } else constituentSchema
-
+                    val deepListOfAllOfs = resolveDeepAllOfs(schema)
+                    val schemaProperties = deepListOfAllOfs.map { schemaToProcess ->
                         val requiredFields = schemaToProcess.required.orEmpty()
                         toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
                     }.fold(emptyMap<String, Pattern>()) { acc, entry -> acc.plus(entry) }
+
                     val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
                     jsonObjectPattern
                 } else if (schema.oneOf != null) {

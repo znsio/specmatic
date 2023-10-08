@@ -57,7 +57,7 @@ dependencies {
 
     implementation 'org.slf4j:slf4j-nop:2.0.9'
 
-    implementation 'org.apache.ant:ant-junit:1.10.12'
+    implementation 'org.apache.ant:ant-junit:1.10.14'
 
     implementation(project(':core'))
     implementation(project(':junit5-support'))

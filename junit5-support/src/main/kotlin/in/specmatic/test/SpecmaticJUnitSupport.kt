@@ -283,6 +283,14 @@ open class SpecmaticJUnitSupport {
 
         return feature
             .copy(scenarios = selectTestsToRun(feature.scenarios, filterName, filterNotName) { it.name })
+            .also {
+                if (it.scenarios.isEmpty())
+                    logger.log("All scenarios were filtered out.")
+                else if (it.scenarios.size < feature.scenarios.size) {
+                    logger.log("Selected scenarios:")
+                    it.scenarios.forEach { scenario -> logger.log(scenario.name.prependIndent("  ")) }
+                }
+            }
             .generateContractTests(suggestions)
     }
 
@@ -358,7 +366,7 @@ fun <T> selectTestsToRun(
     val filteredByNotName: List<T> = if(!filterNotName.isNullOrBlank()) {
         val filterNotNames = filterNotName.split(",").map { it.trim() }
 
-        testScenarios.filterNot { test ->
+        filteredByName.filterNot { test ->
             filterNotNames.any { getTestDescription(test).contains(it) }
         }
     } else

@@ -30,8 +30,8 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.4"
-def junit_version = "5.9.1"
+def ktor_version = "2.3.5"
+def junit_version = "5.10.0"
 def jgit_version = "5.13.0.202109080827-r"
 
 dependencies {
@@ -39,7 +39,7 @@ dependencies {
     testImplementation 'com.arakelian:java-jq:1.3.0'
 
     implementation 'org.assertj:assertj-core:3.24.2'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.9.1'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
 
     implementation('info.picocli:picocli-spring-boot-starter:4.7.5') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
@@ -57,7 +57,7 @@ dependencies {
 
     implementation 'org.slf4j:slf4j-nop:2.0.9'
 
-    implementation 'org.apache.ant:ant-junit:1.10.12'
+    implementation 'org.apache.ant:ant-junit:1.10.14'
 
     implementation(project(':core'))
     implementation(project(':junit5-support'))

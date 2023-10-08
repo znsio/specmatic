@@ -66,16 +66,23 @@ data class GitRepo(
             else -> {
                 val reposBaseDir = localRepoDir(workingDirectory)
                 val contractsRepoDir =  this.directoryRelativeTo(reposBaseDir)
+                logger.log("Looking for a contract repo checkout at: ${contractsRepoDir.canonicalPath}")
                 when {
-                    !contractsRepoDir.exists() -> cloneRepoAndCheckoutBranch(reposBaseDir, this)
-                    contractsRepoDir.exists() && isBehind(contractsRepoDir) -> cloneRepoAndCheckoutBranch(reposBaseDir, this)
+                    !contractsRepoDir.exists() -> {
+                        logger.log("Contract repo does not exist.")
+                        cloneRepoAndCheckoutBranch(reposBaseDir, this)
+                    }
+                    contractsRepoDir.exists() && isBehind(contractsRepoDir) -> {
+                        logger.log("Contract repo exists but is behind the remote.")
+                        cloneRepoAndCheckoutBranch(reposBaseDir, this)
+                    }
                     contractsRepoDir.exists() && isClean(contractsRepoDir) -> {
-                        logger.log("Couldn't find local contracts but ${contractsRepoDir.path} already exists and is clean and has contracts")
+                        logger.log("Contract repo exists, is clean, and is up to date with remote.")
                         contractsRepoDir
                     }
                     else -> {
-                        logger.log("Couldn't find local contracts. Although ${contractsRepoDir.path} exists, it is not clean.\nHence cloning $gitRepositoryURL into ${reposBaseDir.path}")
-                        clone(reposBaseDir, this)
+                        logger.log("Contract repo exists, but it is not clean.")
+                        cloneRepoAndCheckoutBranch(reposBaseDir, this)
                     }
                 }
             }
@@ -97,7 +104,7 @@ data class GitRepo(
         return sourceGit.revisionsBehindCount() > 0
     }
     private fun cloneRepoAndCheckoutBranch(reposBaseDir: File, gitRepo: GitRepo): File {
-        logger.log("Couldn't find local contracts, cloning $gitRepositoryURL into ${reposBaseDir.path}")
+        logger.log("Cloning $gitRepositoryURL into ${reposBaseDir.path}")
         reposBaseDir.mkdirs()
         val repositoryDirectory = clone(reposBaseDir, gitRepo)
 

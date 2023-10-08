@@ -16,9 +16,9 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.4"
+def ktor_version = "2.3.5"
 def jgit_version = "5.13.0.202109080827-r"
-def junit_version = "5.9.1"
+def junit_version = "5.10.0"
 
 dependencies {
     implementation 'io.cucumber:gherkin:22.0.0'

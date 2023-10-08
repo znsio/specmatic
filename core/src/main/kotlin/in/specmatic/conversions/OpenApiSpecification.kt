@@ -326,16 +326,6 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             }
                         }
 
-                        specmaticExampleRows.forEach { row ->
-                            scenarioBreadCrumb(scenarioDetails) {
-                                httpRequestPattern.newBasedOn(
-                                    row,
-                                    Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch),
-                                    httpResponsePattern.status
-                                )
-                            }
-                        }
-
                         val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
 
                         ScenarioInfo(

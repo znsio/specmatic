@@ -467,55 +467,6 @@ And response-body (number)
     }
 
     @Test
-    fun `test loading erroneous row value should return customized error`() {
-        assertThatThrownBy {
-            OpenApiSpecification.fromYAML(
-                """
-openapi: 3.0.0
-info:
-  title: Sample API
-  version: 0.1.9
-paths:
-  /data:
-    post:
-      summary: hello world
-      description: test
-      requestBody:
-        content:
-          application/json:
-            examples:
-              200_OK:
-                value:
-                  data: abc123
-            schema:
-              type: object
-              properties:
-                data:
-                  type: number
-              required:
-                - data
-      responses:
-        '200':
-          description: Says hello
-          content:
-            text/plain:
-              examples:
-                200_OK:
-                  value: 10
-              schema:
-                type: number
-        """.trimIndent(), ""
-            ).toFeature()
-        }.satisfies(Consumer {
-            val msg = exceptionCauseMessage(it)
-
-            println(msg)
-
-            assertThat(msg).contains("Contract expected")
-        })
-    }
-
-    @Test
     fun `test erroneous contract test response should return customized error`() {
         val contract = OpenApiSpecification.fromYAML(
             """

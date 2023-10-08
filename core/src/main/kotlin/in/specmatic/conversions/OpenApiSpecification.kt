@@ -359,10 +359,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     ): Map<String, Any> {
 
         val requestExampleValue: Any? =
-            requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName)?.value
+            resolveExample(requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName))?.value
 
         val requestBodyExample: Map<String, Any> = if (requestExampleValue != null) {
-            if (requestBody.content?.entries?.first()?.key == "application/x-www-form-urlencoded" || requestBody?.content?.entries?.first()?.key == "multipart/form-data") {
+            if (requestBody?.content?.entries?.first()?.key == "application/x-www-form-urlencoded" || requestBody?.content?.entries?.first()?.key == "multipart/form-data") {
                 val operationSummaryClause = operationSummary?.let { "for operation \"${operationSummary}\""} ?: ""
                 val jsonExample =
                     attempt("Could not parse example $exampleName$operationSummaryClause") {
@@ -380,17 +380,24 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return requestBodyExample
     }
 
+    private fun resolveExample(example: Example?): Example? {
+        return example?.`$ref`?.let {
+            val exampleName = it.substringAfterLast("/")
+            openApi.components?.examples?.get(exampleName)
+        } ?: example
+    }
+
     private fun parameterExamples(
         operation: Operation,
         exampleName: String
-    ) = operation.parameters.orEmpty()
+    ): Map<String, Any> = operation.parameters.orEmpty()
         .filter { parameter ->
             parameter.examples.orEmpty().any { it.key == exampleName }
         }.associate {
             val exampleValue: Example = it.examples[exampleName]
                 ?: throw ContractException("The value of ${it.name} in example $exampleName was unexpectedly found to be null.")
 
-            it.name to exampleValue.value
+            it.name to (resolveExample(exampleValue)?.value ?: "")
         }
 
     private fun openApiPaths() = openApi.paths.orEmpty()

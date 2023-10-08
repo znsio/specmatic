@@ -282,7 +282,7 @@ open class SpecmaticJUnitSupport {
         }
 
         return feature
-            .copy(scenarios = selectTestsToRun(feature.scenarios, filterName, filterNotName) { it.name })
+            .copy(scenarios = selectTestsToRun(feature.scenarios, filterName, filterNotName) { it.testDescription() })
             .also {
                 if (it.scenarios.isEmpty())
                     logger.log("All scenarios were filtered out.")

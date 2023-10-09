@@ -152,12 +152,11 @@ paths:
     get:
       summary: hello world
       description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - ${"$"}ref: '#/components/parameters/HelloRequestHeader'
       responses:
         '200':
           description: Says hello
-          headers:
-            X-HelloResponseHeader:
-              ${"$"}ref: '#/components/headers/HelloResponseHeader'
           content:
             application/json:
               schema:
@@ -166,8 +165,10 @@ paths:
                 200_OK:
                   value: success
 components:
-  headers:
-    HelloResponseHeader:
+  parameters:
+    HelloRequestHeader:
+      in: header
+      name: X-HelloResponseHeader
       schema:
         type: string
       examples:
@@ -181,6 +182,7 @@ components:
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/hello")
+                assertThat(request.headers["X-HelloResponseHeader"]).isEqualTo("helloworld")
 
                 return HttpResponse.OK("success").copy(headers = mapOf("X-HelloResponseHeader" to "world"))
             }
@@ -213,12 +215,11 @@ paths:
     get:
       summary: hello world
       description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - ${"$"}ref: '#/components/parameters/HelloRequestHeader'
       responses:
         '200':
           description: Says hello
-          headers:
-            X-HelloResponseHeader:
-              ${"$"}ref: '#/components/headers/HelloResponseHeader'
           content:
             application/json:
               schema:
@@ -227,8 +228,10 @@ paths:
                 200_OK:
                   value: success
 components:
-  headers:
-    HelloResponseHeader:
+  parameters:
+    HelloRequestHeader:
+      in: header
+      name: X-HelloResponseHeader
       schema:
         type: string
       examples:
@@ -245,6 +248,7 @@ components:
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/hello")
+                assertThat(request.headers["X-HelloResponseHeader"]).isEqualTo("helloworld")
 
                 return HttpResponse.OK("success").copy(headers = mapOf("X-HelloResponseHeader" to "world"))
             }

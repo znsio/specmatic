@@ -1200,7 +1200,8 @@ Background:
         )
         val openapiSpec = OpenApiSpecification.fromFile("openapi/petstore-expanded.yaml")
 
-        assertThat(feature.scenarios).hasSameSizeAs(openapiSpec.toScenarioInfos())
+        val (expectedScenarios, _) = openapiSpec.toScenarioInfos()
+        assertThat(feature.scenarios).hasSameSizeAs(expectedScenarios)
 
         val apiIdentifiersFromGherkinSpec = feature.scenarios.map {
             it.apiIdentifier

@@ -3,6 +3,7 @@ package `in`.specmatic.stub
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.XML_ATTR_OPTIONAL_SUFFIX
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -12,6 +13,7 @@ import `in`.specmatic.test.HttpClient
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
@@ -781,6 +783,103 @@ paths:
             )))).use { stub ->
             assertThat(stub.stubCount).isEqualTo(1)
             assertThat(stub.transientStubCount).isEqualTo(0)
+        }
+    }
+
+    @Nested
+    inner class ExpectationPriorities {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.1
+info:
+  title: Data API
+  version: "1"
+paths:
+  /:
+    post:
+      summary: Data
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+              required:
+                - id
+            examples:
+              200_OK:
+                value:
+                  id: 10
+      responses:
+        "200":
+          description: Data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+              examples:
+                200_OK:
+                  value:
+                    message: example_expectation
+""".trim(), "").toFeature()
+
+
+        @Test
+        fun `expectations from examples`() {
+            HttpStub(feature).use { stub ->
+                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}"""))).let { response ->
+                    assertThat(response.status).isEqualTo(200)
+                    assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"example_expectation"}"""))
+                }
+            }
+        }
+
+        @Test
+        fun `expectations from examples should have less priority than file expectations`() {
+            HttpStub(feature, listOf(ScenarioStub(
+                HttpRequest(
+                    method = "POST",
+                    path = "/",
+                    body = parsedJSONObject("""{"id": 10}""")
+                ),
+                HttpResponse(
+                    status = 200,
+                    body = parsedJSONObject("""{"message":"file_overrides_example_expectation"}""")
+                )))
+            ).use { stub ->
+                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}"""))).let { response ->
+                    assertThat(response.status).isEqualTo(200)
+                    assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"file_overrides_example_expectation"}"""))
+                }
+            }
+        }
+
+        @Test
+        fun `expectations from examples should have less priority than dynamic expectations`() {
+            HttpStub(feature).use { stub ->
+                stub.setExpectation(ScenarioStub(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/",
+                        body = parsedJSONObject("""{"id": 10}""")
+                    ),
+                    HttpResponse(
+                        status = 200,
+                        body = parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}""")
+                    )))
+                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}"""))).let { response ->
+                    assertThat(response.status).isEqualTo(200)
+                    assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}"""))
+                }
+            }
         }
     }
 }

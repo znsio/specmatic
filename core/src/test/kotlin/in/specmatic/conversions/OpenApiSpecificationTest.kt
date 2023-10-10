@@ -213,7 +213,7 @@ Pet:
     @Test
     fun `should generate 200 OK scenarioInfos from openAPI`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
         assertThat(scenarioInfos.size).isEqualTo(3)
     }
 
@@ -261,15 +261,15 @@ Pet:
     @Test
     fun `should not resolve non ref nested types to Deferred Pattern`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
-        val nestedTypeWithoutRef = scenarioInfos.first().patterns.getOrDefault("(NestedTypeWithoutRef)", NullPattern)
+        val (scenarioInfoData, _) = openApiSpecification.toScenarioInfos()
+        val nestedTypeWithoutRef = scenarioInfoData.first().patterns.getOrDefault("(NestedTypeWithoutRef)", NullPattern)
         assertThat(containsDeferredPattern(nestedTypeWithoutRef)).isFalse
     }
 
     @Test
     fun `should resolve ref nested types to Deferred Pattern`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
         val nestedTypeWithRef = scenarioInfos[4].patterns["(NestedTypeWithRef)"]
         assertThat(containsDeferredPattern(nestedTypeWithRef!!)).isTrue
     }
@@ -284,7 +284,7 @@ Pet:
     @Test
     fun `none of the scenarios should expect the Content-Type header`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         for (scenarioInfo in scenarioInfos) {
             assertNotFoundInHeaders("Content-Type", scenarioInfo.httpRequestPattern.headersPattern)
@@ -3699,7 +3699,8 @@ paths:
     @Test
     fun `should resolve ref to another file`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE_WITH_REFERENCE)
-        assertThat(openApiSpecification.toScenarioInfos().size).isEqualTo(1)
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
+        assertThat((scenarioInfos).size).isEqualTo(1)
         assertThat(openApiSpecification.patterns["(Pet)"]).isNotNull
     }
 

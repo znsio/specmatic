@@ -75,8 +75,8 @@ class HttpStub(
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(staticHttpStubData(_httpStubs))
 
     private fun staticHttpStubData(_httpStubs: List<HttpStubData>): MutableList<HttpStubData> {
-        val explicitStubs = _httpStubs.filter { it.stubToken == null }.toMutableList()
-        val stubsFromSpecification = features.map { feature ->
+        val staticStubs = _httpStubs.filter { it.stubToken == null }.toMutableList()
+        val stubsFromSpecificationExamples: List<HttpStubData> = features.map { feature ->
             feature.stubsFromExamples.entries.mapNotNull {
                 val (request, response) = it.value
                 try {
@@ -100,7 +100,7 @@ class HttpStub(
             }
         }.flatten()
 
-        return stubsFromSpecification.plus(explicitStubs).toMutableList()
+        return staticStubs.plus(stubsFromSpecificationExamples).toMutableList()
     }
 
     private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())

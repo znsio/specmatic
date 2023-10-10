@@ -19,6 +19,7 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.examples.Example
+import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.media.*
 import io.swagger.v3.oas.models.parameters.*
 import io.swagger.v3.oas.models.responses.ApiResponse
@@ -313,13 +314,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             openApiOperations(pathItem).map { (httpMethod, operation) ->
                 val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
+                val requestBody: RequestBody? = resolveRequestBody(operation)
+
                 toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
                     val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
                     val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, _) ->
                         val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
 
-                        val requestBodyExample: Map<String, Any> =
-                            requestBodyExample(operation, exampleName)
+                        val requestBodyExample: Map<String, Any> = requestBodyExample(requestBody, exampleName, operation?.summary)
 
                         val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
                             if (value.toString().contains("externalValue")) "${key}_filename" to value
@@ -364,16 +366,6 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             }
                         }
 
-                        specmaticExampleRows.forEach { row ->
-                            scenarioBreadCrumb(scenarioDetails) {
-                                httpRequestPattern.newBasedOn(
-                                    row,
-                                    Resolver(newPatterns = this.patterns).copy(mismatchMessages = Scenario.ContractAndRowValueMismatch),
-                                    httpResponsePattern.status
-                                )
-                            }
-                        }
-
                         val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
 
                         ScenarioInfo(
@@ -401,49 +393,50 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun requestBodyExample(
-        operation: Operation,
-        exampleName: String
+        requestBody: RequestBody?,
+        exampleName: String,
+        operationSummary: String?
     ): Map<String, Any> {
         val requestExampleValue: Any? =
-            examplesFromMediaType(operation.requestBody?.content?.values?.firstOrNull(), exampleName)
+            resolveExample(requestBody?.content?.values?.firstOrNull()?.examples?.get(exampleName))?.value
 
-        return requestBodyExample(requestExampleValue, operation, exampleName)
+        val requestBodyExample: Map<String, Any> = if (requestExampleValue != null) {
+            if (requestBody?.content?.entries?.first()?.key == "application/x-www-form-urlencoded" || requestBody?.content?.entries?.first()?.key == "multipart/form-data") {
+                val operationSummaryClause = operationSummary?.let { "for operation \"${operationSummary}\""} ?: ""
+                val jsonExample =
+                    attempt("Could not parse example $exampleName$operationSummaryClause") {
+                        parsedJSON(requestExampleValue.toString()) as JSONObjectValue
+                    }
+                jsonExample.jsonObject.map { (key, value) ->
+                    key to value.toString()
+                }.toMap()
+            } else {
+                mapOf("(REQUEST-BODY)" to requestExampleValue)
+            }
+        } else {
+            emptyMap()
+        }
+        return requestBodyExample
     }
 
-    private fun examplesFromMediaType(mediaType: MediaType?, exampleName: String) =
-        mediaType?.examples?.get(exampleName)?.value
-
-    private fun requestBodyExample(
-        requestExampleValue: Any?,
-        operation: Operation,
-        exampleName: String
-    ): Map<String, Any> = if (requestExampleValue != null) {
-        if (operation.requestBody?.content?.entries?.first()?.key == "application/x-www-form-urlencoded" || operation.requestBody?.content?.entries?.first()?.key == "multipart/form-data") {
-            val jsonExample =
-                attempt("Could not parse example $exampleName for operation \"${operation.summary}\"") {
-                    parsedJSON(requestExampleValue.toString()) as JSONObjectValue
-                }
-            jsonExample.jsonObject.map { (key, value) ->
-                key to value.toString()
-            }.toMap()
-        } else {
-            mapOf("(REQUEST-BODY)" to requestExampleValue)
-        }
-    } else {
-        emptyMap()
+    private fun resolveExample(example: Example?): Example? {
+        return example?.`$ref`?.let {
+            val exampleName = it.substringAfterLast("/")
+            openApi.components?.examples?.get(exampleName)
+        } ?: example
     }
 
     private fun parameterExamples(
         operation: Operation,
         exampleName: String
-    ) = operation.parameters.orEmpty()
+    ): Map<String, Any> = operation.parameters.orEmpty()
         .filter { parameter ->
             parameter.examples.orEmpty().any { it.key == exampleName }
         }.associate {
             val exampleValue: Example = it.examples[exampleName]
                 ?: throw ContractException("The value of ${it.name} in example $exampleName was unexpectedly found to be null.")
 
-            it.name to exampleValue.value
+            it.name to (resolveExample(exampleValue)?.value ?: "")
         }
 
     private fun openApiPaths() = openApi.paths.orEmpty()
@@ -458,11 +451,28 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun openAPIHeadersToSpecmatic(response: ApiResponse) =
         response.headers.orEmpty().map { (headerName, header) ->
             toSpecmaticParamName(header.required != true, headerName) to toSpecmaticPattern(
-                header.schema, emptyList()
+                resolveResponseHeader(header)?.schema ?: throw ContractException(headerComponentMissingError(headerName, response)), emptyList()
             )
         }.toMap()
 
     data class ResponseData(val first: ApiResponse, val second: MediaType, val third: HttpResponsePattern, val examples: Map<String, HttpResponse>)
+
+    private fun headerComponentMissingError(headerName: String, response: ApiResponse): String {
+        if(response.description != null) {
+            return "Header component not found for header $headerName in response \"${response.description}\""
+        }
+
+        return "Header component not found for header $headerName"
+    }
+
+    private fun resolveResponseHeader(header: Header): Header? {
+        return if(header.`$ref` != null) {
+            val headerComponentName = header.`$ref`.substringAfterLast("/")
+            openApi.components?.headers?.get(headerComponentName)
+        } else {
+            header
+        }
+    }
 
     private fun openAPIResponseToSpecmatic(
         response: ApiResponse,
@@ -531,17 +541,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             securitySchemes = operationSecuritySchemes(operation, contractSecuritySchemes)
         )
 
-        return when (operation.requestBody) {
+        return when (val requestBody = resolveRequestBody(operation)) {
             null -> listOf(
                 Pair(requestPattern, emptyMap())
             )
             else -> {
-                val requestBody = if (operation.requestBody.`$ref` == null) {
-                    operation.requestBody
-                } else {
-                    resolveReferenceToRequestBody(operation.requestBody.`$ref`).second
-                }
-
                 requestBody.content.map { (contentType, mediaType) ->
                     when (contentType.lowercase()) {
                         "multipart/form-data" -> {
@@ -602,6 +606,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
         }
     }
+
+    private fun resolveRequestBody(operation: Operation): RequestBody? =
+        operation.requestBody?.`$ref`?.let {
+            resolveReferenceToRequestBody(it).second
+        } ?: operation.requestBody
 
     private fun operationSecuritySchemes(
         operation: Operation,
@@ -672,6 +681,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     fun toSpecmaticPattern(mediaType: MediaType, jsonInFormData: Boolean = false): Pattern =
         toSpecmaticPattern(mediaType.schema, emptyList(), jsonInFormData = jsonInFormData)
 
+    private fun resolveDeepAllOfs(schema: Schema<Any>): List<Schema<Any>> {
+        if(schema.allOf == null)
+            return listOf(schema)
+
+        return schema.allOf.flatMap { constituentSchema ->
+            if (constituentSchema.`$ref` != null) {
+                val (_, referredSchema) = resolveReferenceToSchema(constituentSchema.`$ref`)
+                resolveDeepAllOfs(referredSchema)
+            } else listOf(constituentSchema)
+        }
+    }
+
     fun toSpecmaticPattern(
         schema: Schema<*>, typeStack: List<String>, patternName: String = "", jsonInFormData: Boolean = false
     ): Pattern {
@@ -715,15 +736,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
             is ComposedSchema -> {
                 if (schema.allOf != null) {
-                    val schemaProperties = schema.allOf.map { constituentSchema ->
-                        val schemaToProcess = if (constituentSchema.`$ref` != null) {
-                            val (_, referredSchema) = resolveReferenceToSchema(constituentSchema.`$ref`)
-                            referredSchema
-                        } else constituentSchema
-
+                    val deepListOfAllOfs = resolveDeepAllOfs(schema)
+                    val schemaProperties = deepListOfAllOfs.map { schemaToProcess ->
                         val requiredFields = schemaToProcess.required.orEmpty()
                         toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
                     }.fold(emptyMap<String, Pattern>()) { acc, entry -> acc.plus(entry) }
+
                     val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
                     jsonObjectPattern
                 } else if (schema.oneOf != null) {

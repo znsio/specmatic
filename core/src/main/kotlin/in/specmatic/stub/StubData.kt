@@ -16,7 +16,9 @@ data class HttpStubData(
     val responsePattern: HttpResponsePattern,
     val contractPath: String = "",
     val stubToken: String? = null,
-    val requestBodyRegex: Regex? = null
+    val requestBodyRegex: Regex? = null,
+    val feature:Feature? = null,
+    val scenario: Scenario? = null
 ) : StubData {
     fun softCastResponseToXML(httpRequest: HttpRequest): HttpStubData = when {
         response.externalisedResponseCommand.isNotEmpty() -> invokeExternalCommand(httpRequest).copy(contractPath = contractPath)

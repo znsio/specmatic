@@ -24,6 +24,9 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.stub.HttpStub
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
@@ -260,17 +263,7 @@ data class ContractPathData(
     val repository: String? = null,
     val branch: String? = null,
     val specificationPath: String? = null
-) {
-    val relativePath: String
-      get() {
-          return File(this.path).relativeTo(File(this.baseDir)).path.let {
-              when(it[0]) {
-                  '/' -> it
-                  else -> "/$it"
-              }
-          }
-      }
-}
+)
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
     logger.log("Loading config file $configFilePath")
@@ -311,3 +304,9 @@ internal fun withNumberType(resolver: Resolver) =
         resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberPattern()))
 
 fun String.capitalizeFirstChar() = this.replaceFirstChar { it.uppercase() }
+
+fun saveJsonFile(jsonString: String, path: String, fileName: String) {
+    val directory = File(path)
+    directory.mkdirs()
+    File(directory, fileName).writeText(jsonString)
+}

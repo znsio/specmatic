@@ -30,6 +30,7 @@ import io.swagger.v3.parser.core.models.SwaggerParseResult
 import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
+private const val SERVICE_TYPE_HTTP = "HTTP"
 
 class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
     ApiSpecification {
@@ -92,7 +93,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     fun toFeature(): Feature {
         val name = File(openApiFile).name
-        return Feature(toScenarioInfos().map { Scenario(it) }, name = name, path = openApiFile)
+        return Feature(
+            toScenarioInfos().map { Scenario(it) }, name = name, path = openApiFile, sourceProvider = sourceProvider,
+            sourceRepository = sourceRepository,
+            sourceRepositoryBranch = sourceRepositoryBranch,
+            specification = specificationPath,
+            serviceType = SERVICE_TYPE_HTTP
+        )
     }
 
     override fun toScenarioInfos(): List<ScenarioInfo> {
@@ -241,7 +248,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             sourceRepository = sourceRepository,
                             sourceRepositoryBranch = sourceRepositoryBranch,
                             specification = specificationPath,
-                            serviceType = "HTTP"
+                            serviceType = SERVICE_TYPE_HTTP
                         )
                     }
                 }.flatten()
@@ -344,7 +351,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             sourceRepository = sourceRepository,
                             sourceRepositoryBranch = sourceRepositoryBranch,
                             specification = specificationPath,
-                            serviceType = "HTTP"
+                            serviceType = SERVICE_TYPE_HTTP
                         )
                     }
                 }.flatten()
@@ -383,10 +390,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     ) = operation.parameters.orEmpty()
         .filter { parameter ->
             parameter.examples.orEmpty().any { it.key == exampleName }
+        }.associate {
+            val exampleValue: Example = it.examples[exampleName]
+                ?: throw ContractException("The value of ${it.name} in example $exampleName was unexpectedly found to be null.")
+
+            it.name to exampleValue.value
         }
-        .map {
-            it.name to it.examples[exampleName]!!.value
-        }.toMap()
 
     private fun openApiPaths() = openApi.paths.orEmpty()
 
@@ -980,12 +989,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
     }
 
-    private fun openApiOperations(pathItem: PathItem): Map<String, Operation> = mapOf<String, Operation?>(
-        "GET" to pathItem.get,
-        "POST" to pathItem.post,
-        "DELETE" to pathItem.delete,
-        "PUT" to pathItem.put,
-        "PATCH" to pathItem.patch
-    ).filter { (_, value) -> value != null }.map { (key, value) -> key to value!! }.toMap()
+    private fun openApiOperations(pathItem: PathItem): Map<String, Operation> {
+        return linkedMapOf<String, Operation?>(
+            "POST" to pathItem.post,
+            "GET" to pathItem.get,
+            "PATCH" to pathItem.patch,
+            "PUT" to pathItem.put,
+            "DELETE" to pathItem.delete
+        ).filter { (_, value) -> value != null }.map { (key, value) -> key to value!! }.toMap()
+    }
 }
-

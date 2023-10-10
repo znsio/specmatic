@@ -108,7 +108,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>> {
         val scenarioInfosWithExamples = toScenarioInfosWithExamples()
-        val (openApitoScenarioInfosFromSpecification, examplesAsStubs) = openApitoScenarioInfos()
+        val (
+            openApitoScenarioInfosFromSpecification: List<ScenarioInfo>,
+            examplesAsStubs: Map<String, Pair<HttpRequest, HttpResponse>>
+        ) = openApitoScenarioInfos()
 
         val combinedScenariosFromSpecificationAndWrapper = openApitoScenarioInfosFromSpecification.filter { scenarioInfo ->
             scenarioInfosWithExamples.none { scenarioInfoWithExample ->
@@ -122,7 +125,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo, steps: List<Step>
     ): List<ScenarioInfo> {
-        val (openApiScenarioInfos, stubs) = openApitoScenarioInfos()
+        val (openApiScenarioInfos, _) = openApitoScenarioInfos()
         if (openApiScenarioInfos.isEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to ::matchesPath then ::matchesMethod then ::matchesStatus then ::updateUrlMatcher otherwise ::handleError
@@ -235,7 +238,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun openApitoScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>> {
-        val data = openApiPaths().map { (openApiPath, pathItem) ->
+        val data: List<Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>>> = openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
                 val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
@@ -269,7 +272,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                 val requestExamples = httpRequestPatterns.map {
                     it.second
-                }.fold(emptyMap<String, HttpRequest>()) { acc, map ->
+                }.foldRight(emptyMap<String, HttpRequest>()) { acc, map ->
                     acc.plus(map)
                 }
 
@@ -286,7 +289,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }.flatten()
 
         val scenarioInfos = data.map { it.first }.flatten()
-        val examples = data.map { it.second }.reduce {
+        val examples: Map<String, Pair<HttpRequest, HttpResponse>> = data.map { it.second }.foldRight(emptyMap()) {
             acc, map -> acc.plus(map)
         }
 
@@ -489,18 +492,17 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 it.value?.value?.toString()
             } ?: emptyMap()
 
-            val examples: Map<String, HttpResponse> = if(status.toInt() != 0) {
-                exampleBodies.map {
-                    it.key to HttpResponse(
-                        status.toInt(),
-                        body = it.value ?: "",
-                        headers = emptyMap()
-                    )
-                }.toMap()
-            } else {
-                emptyMap()
-            }
-
+            val examples: Map<String, HttpResponse> =
+                when(status.toIntOrNull()) {
+                    0, null -> emptyMap()
+                    else -> exampleBodies.map {
+                        it.key to HttpResponse(
+                            status.toInt(),
+                            body = it.value ?: "",
+                            headers = emptyMap()
+                        )
+                    }.toMap()
+                }
 
             ResponseData(response, mediaType, responsePattern, examples)
         }

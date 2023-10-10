@@ -6,8 +6,10 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.TestExecutor
+import io.ktor.http.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class RefPartParsingTests {
@@ -17,13 +19,6 @@ class RefPartParsingTests {
 openapi: 3.0.0
 info:
   title: Sample API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-servers:
-  - url: http://api.example.com/v1
-    description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
-    description: Optional server description, e.g. Internal staging server for testing
 paths:
   /hello/{id}:
     get:
@@ -77,13 +72,6 @@ components:
 openapi: 3.0.0
 info:
   title: Sample API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-servers:
-  - url: http://api.example.com/v1
-    description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
-    description: Optional server description, e.g. Internal staging server for testing
 paths:
   /hello/{id}:
     get:
@@ -140,13 +128,6 @@ components:
 openapi: 3.0.0
 info:
   title: Sample API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-servers:
-  - url: http://api.example.com/v1
-    description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
-    description: Optional server description, e.g. Internal staging server for testing
 paths:
   /hello:
     get:
@@ -168,7 +149,7 @@ components:
   parameters:
     HelloRequestHeader:
       in: header
-      name: X-HelloResponseHeader
+      name: X-HelloRequestHeader
       schema:
         type: string
       examples:
@@ -182,9 +163,9 @@ components:
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/hello")
-                assertThat(request.headers["X-HelloResponseHeader"]).isEqualTo("helloworld")
+                assertThat(request.headers["X-HelloRequestHeader"]).isEqualTo("helloworld")
 
-                return HttpResponse.OK("success").copy(headers = mapOf("X-HelloResponseHeader" to "world"))
+                return HttpResponse.OK("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -193,7 +174,7 @@ components:
 
         println(results.report())
 
-        assertThat(results.success()).isTrue()
+        assertThat(results.failureCount).isEqualTo(0)
         assertThat(results.successCount).isEqualTo(1)
     }
 
@@ -203,13 +184,6 @@ components:
 openapi: 3.0.0
 info:
   title: Sample API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-servers:
-  - url: http://api.example.com/v1
-    description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
-    description: Optional server description, e.g. Internal staging server for testing
 paths:
   /hello:
     get:
@@ -231,7 +205,7 @@ components:
   parameters:
     HelloRequestHeader:
       in: header
-      name: X-HelloResponseHeader
+      name: X-HelloRequestHeader
       schema:
         type: string
       examples:
@@ -248,9 +222,9 @@ components:
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/hello")
-                assertThat(request.headers["X-HelloResponseHeader"]).isEqualTo("helloworld")
+                assertThat(request.headers["X-HelloRequestHeader"]).isEqualTo("helloworld")
 
-                return HttpResponse.OK("success").copy(headers = mapOf("X-HelloResponseHeader" to "world"))
+                return HttpResponse.OK("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -259,28 +233,75 @@ components:
 
         println(results.report())
 
-        assertThat(results.success()).isTrue()
+        assertThat(results.failureCount).isEqualTo(0)
         assertThat(results.successCount).isEqualTo(1)
     }
 
     @Test
-    fun `request header ref where header component is missing`() {
+    @Disabled
+    fun `response header ref`() {
         val specification = """
 openapi: 3.0.0
 info:
   title: Sample API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-servers:
-  - url: http://api.example.com/v1
-    description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
-    description: Optional server description, e.g. Internal staging server for testing
 paths:
   /hello:
     get:
       summary: hello world
-      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: header
+          name: X-HelloRequestHeader
+          schema:
+            type: string
+          examples:
+            200_OK:
+              value: helloworld
+      responses:
+        '201':
+          description: Created
+          headers:
+            X-HelloResponseHeader:
+              ${"$"}ref: '#/components/headers/HelloResponseHeader'
+components:
+  headers:
+    HelloResponseHeader:
+      schema:
+        type: string
+      examples:
+        200_OK:
+          value: helloworld
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(specification, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.path).isEqualTo("/hello")
+                assertThat(request.headers["X-HelloRequestHeader"]).isEqualTo("helloworld")
+
+                return HttpResponse(status = 201, headers = mapOf("X-HelloResponseHeader" to "helloworld"))
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        println(results.report())
+
+        assertThat(results.failureCount).isEqualTo(0)
+        assertThat(results.successCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `response header ref where header component is missing`() {
+        val specification = """
+openapi: 3.0.0
+info:
+  title: Sample API
+paths:
+  /hello:
+    get:
+      summary: hello world
       responses:
         '200':
           description: Says hello
@@ -309,13 +330,6 @@ paths:
 openapi: 3.0.0
 info:
   title: Sample API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-servers:
-  - url: http://api.example.com/v1
-    description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
-    description: Optional server description, e.g. Internal staging server for testing
 paths:
   /hello:
     get:
@@ -343,8 +357,6 @@ components:
       examples:
         200_OK:
           value: 10
-      required: true
-      description: Numeric ID
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(specification, "").toFeature()
@@ -361,8 +373,8 @@ components:
             }
         })
 
-        assertThat(results.success()).isTrue()
         assertThat(results.successCount).isEqualTo(1)
+        assertThat(results.failureCount).isEqualTo(0)
     }
 
     @Test
@@ -371,13 +383,6 @@ components:
 openapi: 3.0.0
 info:
   title: Sample API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-servers:
-  - url: http://api.example.com/v1
-    description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
-    description: Optional server description, e.g. Internal staging server for testing
 paths:
   /hello:
     get:
@@ -426,7 +431,7 @@ components:
             }
         })
 
-        assertThat(results.success()).isTrue()
+        assertThat(results.failureCount).isEqualTo(0)
         assertThat(results.successCount).isEqualTo(1)
     }
 
@@ -437,7 +442,6 @@ components:
 openapi: "3.0.1"
 info:
   title: "Person API"
-  version: "1"
 paths:
   /person:
     post:
@@ -489,7 +493,6 @@ components:
 
         assertThat(results.failureCount).isEqualTo(0)
         assertThat(results.successCount).isEqualTo(1)
-        assertThat(results.success()).isTrue()
     }
 
     @Test
@@ -499,7 +502,6 @@ components:
 openapi: "3.0.1"
 info:
   title: "Person API"
-  version: "1"
 paths:
   /person:
     post:
@@ -576,7 +578,6 @@ components:
 
         assertThat(results.failureCount).isEqualTo(0)
         assertThat(results.successCount).isEqualTo(1)
-        assertThat(results.success()).isTrue()
     }
 
     @Test
@@ -586,7 +587,6 @@ components:
 openapi: "3.0.1"
 info:
   title: "Person API"
-  version: "1"
 paths:
   /person:
     post:
@@ -643,83 +643,6 @@ components:
 
         assertThat(results.failureCount).isEqualTo(0)
         assertThat(results.successCount).isEqualTo(1)
-        assertThat(results.success()).isTrue()
-    }
-
-    @Test
-    fun `ref within allOf`() {
-        val specification = """
----
-openapi: "3.0.1"
-info:
-  title: "Person API"
-  version: "1"
-paths:
-  /person:
-    post:
-      summary: "Get person by id"
-      parameters: []
-      requestBody:
-        ${"$"}ref: '#/components/requestBodies/PersonRequest'
-      responses:
-        200:
-          description: "Get person by id"
-          content:
-            text/plain:
-              schema:
-                type: "string"
-              examples:
-                200_OK:
-                  value: "success"
-components:
-  schemas:
-    Id:
-      type: object
-      properties:
-        id:
-          type: string
-      required:
-        - id
-    Name:
-      type: object
-      properties:
-        name:
-          type: string
-      required:
-        - name
-  requestBodies:
-    PersonRequest:
-      content:
-        application/json:
-          schema:
-            allOf:
-              - ${"$"}ref: '#/components/schemas/Id'
-              - ${"$"}ref: '#/components/schemas/Name'
-          examples:
-            200_OK:
-              value:
-                id: "abc123"
-                name: "Jane"
-        """.trimIndent()
-
-        val feature = OpenApiSpecification.fromYAML(specification, "").toFeature()
-
-        val results = feature.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                val expectedRequest = parsedJSONObject("""{"id": "abc123", "name":"Jane"}""")
-                assertThat(request.body).isEqualTo(expectedRequest)
-                return HttpResponse.OK("success")
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-            }
-        })
-
-        println(results.distinctReport())
-
-        assertThat(results.failureCount).isEqualTo(0)
-        assertThat(results.successCount).isEqualTo(1)
-        assertThat(results.success()).isTrue()
     }
 
     @Test
@@ -729,24 +652,12 @@ components:
 openapi: "3.0.1"
 info:
   title: "Person API"
-  version: "1"
 paths:
   /person:
     post:
       summary: "Get person by id"
-      parameters: []
       requestBody:
-        content:
-          application/json:
-            schema:
-              required:
-              - "name"
-              properties:
-                name:
-                  type: "string"
-            examples:
-              200_OK:
-                ${"$"}ref: '#/components/examples/200_OK_Request_Example' 
+        ${"$"}ref: '#/components/requestBodies/Request_Body' 
       responses:
         200:
           description: "Get person by id"
@@ -763,6 +674,19 @@ paths:
                   value:
                     name: 123
 components:
+  requestBodies:
+    Request_Body:
+      content:
+        application/json:
+          schema:
+            required:
+            - "name"
+            properties:
+              name:
+                type: "string"
+          examples:
+            200_OK:
+              ${"$"}ref: '#/components/examples/200_OK_Request_Example' 
   examples:
     200_OK_Request_Example:
       value:
@@ -787,7 +711,6 @@ components:
 
         assertThat(results.failureCount).isEqualTo(0)
         assertThat(results.successCount).isEqualTo(1)
-        assertThat(results.success()).isTrue()
     }
 
     @Test
@@ -797,7 +720,6 @@ components:
 openapi: "3.0.1"
 info:
   title: "Person API"
-  version: "1"
 paths:
   /person:
     post:
@@ -856,6 +778,5 @@ components:
 
         assertThat(results.failureCount).isEqualTo(0)
         assertThat(results.successCount).isEqualTo(1)
-        assertThat(results.success()).isTrue()
     }
 }

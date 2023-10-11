@@ -315,7 +315,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     private fun toScenarioInfosWithExamples(): List<ScenarioInfo> {
         val testsDirectory: File? = getTestsDirectory()
-        val externalisedJSONExamples: Map<OperationIdentifier, List<Row>> = loadExternalisedJSONExamples(testsDirectory).also {
+        val externalizedJSONExamples: Map<OperationIdentifier, List<Row>> = loadExternalisedJSONExamples(testsDirectory).also {
             if(it.isNotEmpty()) {
                 logger.log("Loaded ${it.size} externalised test${if(it.size > 1) "s" else ""}")
                 it.keys.map {
@@ -324,7 +324,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
         }
 
-        return openApiPaths().map { (openApiPath, pathItem) ->
+        val scenarioInfos = openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
                 val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
@@ -347,7 +347,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             logger.log("Looking for tests for operation ${it.loggableString}")
                         }
 
-                        val rowsToBeUsed: List<Row> = externalisedJSONExamples[operationIdentifier] ?: specmaticExampleRows
+                        val relevantExternalizedJSONExamples = externalizedJSONExamples[operationIdentifier]
+                        val rowsToBeUsed: List<Row> = relevantExternalizedJSONExamples ?: specmaticExampleRows
 
                         ScenarioInfo(
                             scenarioName = scenarioName,
@@ -366,6 +367,20 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 }.flatten()
             }.flatten()
         }.flatten()
+
+        val externalizedExampleFilePaths = externalizedJSONExamples.entries.flatMap { it.value.map { it.fileSource } }.filterNotNull().sorted().toSet()
+        val utilizedFileSources = scenarioInfos.map { it.examples.map { it.rows.map { it.fileSource } } }.flatten().flatten().filterNotNull().sorted().toSet()
+
+        val unusedExternalizedExamples = (externalizedExampleFilePaths - utilizedFileSources)
+        if(unusedExternalizedExamples.isNotEmpty()) {
+            logger.log("The following externalized examples were not used:")
+
+            unusedExternalizedExamples.sorted().forEach {
+                logger.log("  $it")
+            }
+        }
+
+        return scenarioInfos
     }
 
     private fun rowsToExamples(specmaticExampleRows: List<Row>): List<Examples> =
@@ -447,7 +462,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     OperationIdentifier(requestMethod, requestPath, responseStatus) to Row(
                         columnNames,
                         values,
-                        name = testName
+                        name = testName,
+                        fileSource = exampleFromFile.file.canonicalPath
                     )
                 }
             } catch (e: Throwable) {

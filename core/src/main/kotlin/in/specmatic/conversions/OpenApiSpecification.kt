@@ -5,6 +5,7 @@ import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.utilities.readEnvVarOrProperty
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -34,6 +35,7 @@ private const val BEARER_SECURITY_SCHEME = "bearer"
 private const val SERVICE_TYPE_HTTP = "HTTP"
 
 private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
+private const val testDirectoryProperty = "specmaticTestsDirectory"
 
 class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
     ApiSpecification {
@@ -477,11 +479,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun testDirectoryFileFromEnvironmentVariable(): File? {
-        if(System.getenv().containsKey(testDirectoryEnvironmentVariable)) {
-            return File(System.getenv(testDirectoryEnvironmentVariable))
+        return readEnvVarOrProperty(testDirectoryEnvironmentVariable, testDirectoryProperty)?.let {
+            File(System.getenv(testDirectoryEnvironmentVariable))
         }
-
-        return null
     }
 
     private fun testDirectoryFileFromSpecificationPath(): File? {

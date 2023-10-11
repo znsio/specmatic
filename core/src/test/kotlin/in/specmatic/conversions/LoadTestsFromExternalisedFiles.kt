@@ -22,7 +22,7 @@ class LoadTestsFromExternalisedFiles {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/order_action_figure")
                 assertThat(request.method).isEqualTo("POST")
-                assertThat(request.headers).containsEntry("X-Request-ID", "1234")
+                assertThat(request.headers).containsEntry("X-Request-ID", "12345")
                 assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
 
                 return HttpResponse.OK(parsedJSONObject("""{"id": 1}"""))
@@ -32,6 +32,7 @@ class LoadTestsFromExternalisedFiles {
             }
         })
 
+        println(results.report())
         assertThat(results.successCount).isEqualTo(1)
         assertThat(results.failureCount).isEqualTo(0)
     }
@@ -129,7 +130,7 @@ class LoadTestsFromExternalisedFiles {
         try {
             logger = testLogger
 
-            val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalised_test_with_query_params.yaml").toFeature()
+            val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml").toFeature()
 
             feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {

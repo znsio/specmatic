@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/order_action_figure",
+    "query": {
+      "description": "Jedi"
+    }
+  },
+  "http-response": {
+    "status": 200
+  },
+  "name": "Get Order Details"
+}

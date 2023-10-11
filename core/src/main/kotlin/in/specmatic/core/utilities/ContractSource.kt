@@ -84,7 +84,6 @@ data class GitRepo(
                     }
                     else -> {
                         logger.log("Contract repo exists, but it is not clean.")
-                        ensureThatSpecmaticFolderIsIgnored()
                         cloneRepoAndCheckoutBranch(reposBaseDir, this)
                     }
                 }

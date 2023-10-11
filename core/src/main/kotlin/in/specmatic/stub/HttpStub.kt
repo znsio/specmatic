@@ -430,7 +430,6 @@ class HttpStub(
 
     override fun close() {
         server.stop(0, 5000)
-        workingDirectory?.delete()
         printUsageReport()
     }
 

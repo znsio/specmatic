@@ -137,6 +137,7 @@ internal class UtilitiesTest {
         File(".spec/repos/repo1").mkdirs()
 
         val mockGitCommand = mockk<GitCommand>()
+        every { mockGitCommand.statusPorcelain() }.returns("")
         every { mockGitCommand.fetch() }.returns("changes")
         every { mockGitCommand.revisionsBehindCount() }.returns(1)
         mockkStatic("in.specmatic.core.utilities.Utilities")

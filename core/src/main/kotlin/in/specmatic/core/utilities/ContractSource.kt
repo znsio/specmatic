@@ -96,7 +96,7 @@ data class GitRepo(
     }
 
     private fun isClean(contractsRepoDir: File): Boolean {
-        val sourceGit = getSystemGit(contractsRepoDir.path)
+        val sourceGit = getSystemGitWithAuth(contractsRepoDir.path)
         return sourceGit.statusPorcelain().isEmpty()
     }
 
@@ -108,7 +108,7 @@ data class GitRepo(
 
     private fun isSpecmaticFolderIgnored(): Boolean {
         val currentWorkingDirectory = File(".").absolutePath
-        val sourceGit = getSystemGit(currentWorkingDirectory)
+        val sourceGit = getSystemGitWithAuth(currentWorkingDirectory)
         return sourceGit.checkIgnore(DEFAULT_WORKING_DIRECTORY).isNotEmpty()
     }
 

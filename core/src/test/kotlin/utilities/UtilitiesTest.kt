@@ -142,7 +142,7 @@ internal class UtilitiesTest {
         every { mockGitCommand.revisionsBehindCount() }.returns(1)
         mockkStatic("in.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
-        every { getSystemGit(any()) }.returns(mockGitCommand)
+        every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
 
         mockkStatic("in.specmatic.core.git.GitOperations")
         every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
@@ -315,8 +315,7 @@ internal class UtilitiesTest {
                 every { mockGitCommand.statusPorcelain() }.returns("")
                 mockkStatic("in.specmatic.core.utilities.Utilities")
                 every { loadSources("/configFilePath") }.returns(sources)
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
-                every { getSystemGit(any()) }.returns(mockGitCommand)
+                every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
 
                 val contractPaths =
                     contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
@@ -345,9 +344,7 @@ internal class UtilitiesTest {
                 every { mockGitCommand.statusPorcelain() }.returns("someDir/someFile")
                 mockkStatic("in.specmatic.core.utilities.Utilities")
                 every { loadSources("/configFilePath") }.returns(sources)
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
                 every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-                every { getSystemGit(any()) }.returns(mockGitCommand)
 
                 mockkStatic("in.specmatic.core.git.GitOperations")
                 every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
@@ -379,9 +376,7 @@ internal class UtilitiesTest {
                 every { mockGitCommand.statusPorcelain() }.returns("")
                 mockkStatic("in.specmatic.core.utilities.Utilities")
                 every { loadSources("/configFilePath") }.returns(sources)
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
                 every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-                every { getSystemGit(any()) }.returns(mockGitCommand)
 
                 mockkStatic("in.specmatic.core.git.GitOperations")
                 every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
@@ -448,7 +443,7 @@ internal class UtilitiesTest {
                 mockkStatic("in.specmatic.core.utilities.Utilities")
                 every { loadSources("/configFilePath") }.returns(sources)
                 every { mockGitCommand.checkIgnore(any()) }.returns("")
-                every { getSystemGit(any()) }.returns(mockGitCommand)
+                every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
 
                 val contractPaths =
                     contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
@@ -479,7 +474,6 @@ internal class UtilitiesTest {
                 every { loadSources("/configFilePath") }.returns(sources)
                 every { mockGitCommand.checkIgnore(any()) }.returns("")
                 every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-                every { getSystemGit(any()) }.returns(mockGitCommand)
 
                 mockkStatic("in.specmatic.core.git.GitOperations")
                 every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
@@ -513,7 +507,6 @@ internal class UtilitiesTest {
                 every { loadSources("/configFilePath") }.returns(sources)
                 every { mockGitCommand.checkIgnore(any()) }.returns("")
                 every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-                every { getSystemGit(any()) }.returns(mockGitCommand)
 
                 mockkStatic("in.specmatic.core.git.GitOperations")
                 every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))

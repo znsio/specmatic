@@ -343,9 +343,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                         val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
 
-                        val operationIdentifier = OperationIdentifier(httpMethod, specmaticPath.path, httpResponsePattern.status).also {
-                            logger.log("Looking for tests for operation ${it.loggableString}")
-                        }
+                        val operationIdentifier = OperationIdentifier(httpMethod, specmaticPath.path, httpResponsePattern.status)
 
                         val relevantExternalizedJSONExamples = externalizedJSONExamples[operationIdentifier]
                         val rowsToBeUsed: List<Row> = relevantExternalizedJSONExamples ?: specmaticExampleRows

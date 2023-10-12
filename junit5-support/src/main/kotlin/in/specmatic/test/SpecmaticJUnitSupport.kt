@@ -288,7 +288,7 @@ open class SpecmaticJUnitSupport {
                     logger.log("All scenarios were filtered out.")
                 else if (it.scenarios.size < feature.scenarios.size) {
                     logger.log("Selected scenarios:")
-                    it.scenarios.forEach { scenario -> logger.log(scenario.name.prependIndent("  ")) }
+                    it.scenarios.forEach { scenario -> logger.log(scenario.testDescription().prependIndent("  ")) }
                 }
             }
             .generateContractTests(suggestions)

@@ -5,6 +5,7 @@ import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.utilities.readEnvVarOrProperty
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -32,6 +33,9 @@ import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
 private const val SERVICE_TYPE_HTTP = "HTTP"
+
+private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
+private const val testDirectoryProperty = "specmaticTestsDirectory"
 
 class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
     ApiSpecification {
@@ -310,63 +314,39 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun toScenarioInfosWithExamples(): List<ScenarioInfo> {
-        return openApiPaths().map { (openApiPath, pathItem) ->
+        val testsDirectory: File? = getTestsDirectory()
+        val externalizedJSONExamples: Map<OperationIdentifier, List<Row>> = loadExternalisedJSONExamples(testsDirectory).also {
+            if(it.isNotEmpty()) {
+                logger.log("Loaded ${it.size} externalised test${if(it.size > 1) "s" else ""}")
+                it.keys.map {
+                    logger.log("  ${it.loggableString}")
+                }
+            }
+        }
+
+        val scenarioInfos = openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
                 val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
                 val requestBody: RequestBody? = resolveRequestBody(operation)
 
-                toHttpResponsePatterns(operation.responses).map { (response, responseMediaType, httpResponsePattern) ->
+                val httpResponsePatterns = toHttpResponsePatterns(operation.responses)
+                val httpRequestPatterns = toHttpRequestPatterns(specmaticPath, httpMethod, operation)
+
+                httpResponsePatterns.map { (response, responseMediaType, httpResponsePattern) ->
                     val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
-                    val specmaticExampleRows: List<Row> = responseExamples.map { (exampleName, _) ->
-                        val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
+                    val specmaticExampleRows: List<Row> = testRowsFromExamples(responseExamples, operation, requestBody)
 
-                        val requestBodyExample: Map<String, Any> = requestBodyExample(requestBody, exampleName, operation?.summary)
-
-                        val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
-                            if (value.toString().contains("externalValue")) "${key}_filename" to value
-                            else key to value
-                        }.toMap()
-
-                        when {
-                            requestExamples.isNotEmpty() -> Row(
-                                requestExamples.keys.toList().map { keyName: String -> keyName },
-                                requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
-                                    .map { valueString: String ->
-                                        if (valueString.contains("externalValue")) {
-                                            ObjectMapper().readValue(valueString, Map::class.java).values.first()
-                                                .toString()
-                                        } else valueString
-                                    },
-                                name = exampleName)
-                            else -> Row()
-                        }
-                    }
-
-                    toHttpRequestPatterns(
-                        specmaticPath, httpMethod, operation
-                    ).map { it.first }.map { httpRequestPattern: HttpRequestPattern ->
+                    httpRequestPatterns.map { it.first }.map { httpRequestPattern: HttpRequestPattern ->
                         val scenarioName =
                             scenarioName(operation, response, httpRequestPattern, null)
 
-                        val scenarioDetails = object : ScenarioDetailsForResult {
-                            override val ignoreFailure: Boolean
-                                get() = false
-                            override val name: String
-                                get() = scenarioName
-                            override val method: String
-                                get() = httpRequestPattern.method ?: ""
-                            override val path: String
-                                get() = httpRequestPattern.urlMatcher?.path ?: ""
-                            override val status: Int
-                                get() = httpResponsePattern.status
-
-                            override fun testDescription(): String {
-                                TODO("Not yet implemented")
-                            }
-                        }
-
                         val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
+
+                        val operationIdentifier = OperationIdentifier(httpMethod, specmaticPath.path, httpResponsePattern.status)
+
+                        val relevantExternalizedJSONExamples = externalizedJSONExamples[operationIdentifier]
+                        val rowsToBeUsed: List<Row> = relevantExternalizedJSONExamples ?: specmaticExampleRows
 
                         ScenarioInfo(
                             scenarioName = scenarioName,
@@ -374,12 +354,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                             httpRequestPattern = httpRequestPattern,
                             httpResponsePattern = httpResponsePattern,
                             ignoreFailure = ignoreFailure,
-                            examples = if (specmaticExampleRows.isNotEmpty()) listOf(
-                                Examples(
-                                    specmaticExampleRows.first().columnNames,
-                                    specmaticExampleRows
-                                )
-                            ) else emptyList(),
+                            examples = rowsToExamples(rowsToBeUsed),
                             sourceProvider = sourceProvider,
                             sourceRepository = sourceRepository,
                             sourceRepositoryBranch = sourceRepositoryBranch,
@@ -390,6 +365,146 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 }.flatten()
             }.flatten()
         }.flatten()
+
+        val externalizedExampleFilePaths = externalizedJSONExamples.entries.flatMap { it.value.map { it.fileSource } }.filterNotNull().sorted().toSet()
+        val utilizedFileSources = scenarioInfos.map { it.examples.map { it.rows.map { it.fileSource } } }.flatten().flatten().filterNotNull().sorted().toSet()
+
+        val unusedExternalizedExamples = (externalizedExampleFilePaths - utilizedFileSources)
+        if(unusedExternalizedExamples.isNotEmpty()) {
+            logger.log("The following externalized examples were not used:")
+
+            unusedExternalizedExamples.sorted().forEach {
+                logger.log("  $it")
+            }
+        }
+
+        return scenarioInfos
+    }
+
+    private fun rowsToExamples(specmaticExampleRows: List<Row>): List<Examples> =
+        if(specmaticExampleRows.isNotEmpty()) listOf(
+            Examples(
+                specmaticExampleRows.first().columnNames,
+                specmaticExampleRows
+            )
+        )
+        else
+            emptyList()
+
+    private fun testRowsFromExamples(
+        responseExamples: Map<String, Example>,
+        operation: Operation,
+        requestBody: RequestBody?
+    ) = responseExamples.map { (exampleName, _) ->
+        val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
+
+        val requestBodyExample: Map<String, Any> =
+            requestBodyExample(requestBody, exampleName, operation?.summary)
+
+        val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
+            if (value.toString().contains("externalValue")) "${key}_filename" to value
+            else key to value
+        }.toMap()
+
+        when {
+            requestExamples.isNotEmpty() -> Row(
+                requestExamples.keys.toList().map { keyName: String -> keyName },
+                requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
+                    .map { valueString: String ->
+                        if (valueString.contains("externalValue")) {
+                            ObjectMapper().readValue(valueString, Map::class.java).values.first()
+                                .toString()
+                        } else valueString
+                    },
+                name = exampleName
+            )
+
+            else -> Row()
+        }
+    }
+
+    data class OperationIdentifier(val requestMethod: String, val requestPath: String, val responseStatus: Int) {
+        val loggableString: String = "$requestMethod $requestPath -> $responseStatus"
+    }
+
+    private fun loadExternalisedJSONExamples(testsDirectory: File?): Map<OperationIdentifier, List<Row>> {
+        if(testsDirectory == null)
+            return emptyMap()
+
+        if(! testsDirectory.exists())
+            return emptyMap()
+
+        val files = testsDirectory.listFiles()
+
+        if(files.isNullOrEmpty())
+            return emptyMap()
+
+        return files.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
+            try {
+                with(exampleFromFile) {
+                    logger.log("Loading test file ${exampleFromFile.expectationFilePath}")
+
+                    val examples: Map<String, String> =
+                        headers
+                            .plus(queryParams)
+                            .plus(pathParams)
+                            .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
+
+                    val (
+                        columnNames,
+                        values
+                    ) = examples.entries.let { entry ->
+                        entry.map { it.key } to entry.map { it.value }
+                    }
+
+                    OperationIdentifier(requestMethod, requestPath, responseStatus) to Row(
+                        columnNames,
+                        values,
+                        name = testName,
+                        fileSource = exampleFromFile.file.canonicalPath
+                    )
+                }
+            } catch (e: Throwable) {
+                logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")
+                null
+            }
+        }
+            .groupBy { (operationIdentifier, _) -> operationIdentifier }
+            .mapValues { it.value.map { it.second } }
+    }
+
+    private fun getTestsDirectory(): File? {
+        val testDirectory = testDirectoryFileFromSpecificationPath() ?: testDirectoryFileFromEnvironmentVariable()
+
+        return when {
+            testDirectory?.exists() == true -> {
+                logger.log("Test directory ${testDirectory.canonicalPath} found")
+                testDirectory
+            }
+            testDirectory != null -> {
+                logger.log("Test directory ${testDirectory.canonicalPath} not found")
+                null
+            }
+            else -> {
+                logger.log("Test directory for specification $specificationPath does not exist and is not specified")
+                null
+            }
+        }
+    }
+
+    private fun testDirectoryFileFromEnvironmentVariable(): File? {
+        return readEnvVarOrProperty(testDirectoryEnvironmentVariable, testDirectoryProperty)?.let {
+            File(System.getenv(testDirectoryEnvironmentVariable))
+        }
+    }
+
+    private fun testDirectoryFileFromSpecificationPath(): File? {
+        if(openApiFile.isBlank())
+            return null
+
+        return File(openApiFile).canonicalFile.let {
+            it.parentFile.resolve(it.nameWithoutExtension + "_tests")
+        }
     }
 
     private fun requestBodyExample(

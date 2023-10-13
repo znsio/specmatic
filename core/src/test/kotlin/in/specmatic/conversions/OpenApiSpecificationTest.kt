@@ -3656,6 +3656,55 @@ paths:
         }
     }
 
+
+    @Nested
+    inner class WhenAdditionalPropertiesIsTrue {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        @Test
+        fun `an object with string keys with values of any type should meet the specification`() {
+            val request =
+                HttpRequest("POST", "/data", body = parsedValue("""{"id": 10, "address": {"street": "Link Road", "city": "Mumbai", "country": "India"}}"""))
+            val response = HttpResponse.OK
+
+            val stub: HttpStubData = feature.matchingStub(request, response)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `an object with string keys with some values set as null should match the specification`() {
+            val request =
+                HttpRequest("POST", "/data", body = parsedValue("""{"id": 10, "address": null}"""))
+            val response = HttpResponse.OK
+
+            val stub: HttpStubData = feature.matchingStub(request, response)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
     @Test
     fun `conversion supports dictionary type`() {
         val gherkin = """

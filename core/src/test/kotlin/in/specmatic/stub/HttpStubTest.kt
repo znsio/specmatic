@@ -2,14 +2,15 @@ package `in`.specmatic.stub
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
-import `in`.specmatic.core.pattern.XML_ATTR_OPTIONAL_SUFFIX
-import `in`.specmatic.core.pattern.parsedJSONObject
-import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.HttpRequest
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.DELAY_IN_SECONDS
 import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.shouldMatch
 import `in`.specmatic.test.HttpClient
+import io.ktor.client.request.*
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
@@ -880,6 +881,89 @@ paths:
                     assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}"""))
                 }
             }
+        }
+
+        @Test
+        fun `should return fake response  when additional properties is set as true`(){
+            val openAPI =
+                """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    get:
+      summary: Retrieve data
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+""".trimIndent()
+            val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+            HttpStub(feature).use { stub ->
+                stub.client.execute(HttpRequest("GET", "/data")).let { response ->
+                    assertThat(response.status).isEqualTo(200)
+                    println(response.body.toStringLiteral())
+                    val responseValue = parsedJSON(response.body.toStringLiteral())
+                    responseValue shouldMatch DictionaryPattern(StringPattern(), AnythingPattern)
+                }
+            }
+
+        }
+
+        @Test
+        fun `should return stubbed response based on expectations set when additional properties is set as true`(){
+            val openAPI =
+                """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: string
+""".trimIndent()
+            val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+            HttpStub(feature).use { stub ->
+                stub.setExpectation(ScenarioStub(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/data",
+                        body = parsedJSONObject("""{"id": 10}""")
+                    ),
+                    HttpResponse(
+                        status = 200,
+                        body = StringValue("response data")
+                    )))
+                stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
+                    .let { response ->
+                        assertThat(response.status).isEqualTo(200)
+                        assertThat(response.body).isEqualTo( StringValue("response data"))
+                    }
+            }
+
         }
     }
 }

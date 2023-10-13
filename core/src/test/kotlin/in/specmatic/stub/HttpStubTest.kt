@@ -884,7 +884,7 @@ paths:
         }
 
         @Test
-        fun `should return fake response  when additional properties is set as true`(){
+        fun `should generate response as a json object with strings keys with values of any type when additional properties is set as true`(){
             val openAPI =
                 """
 ---
@@ -909,7 +909,6 @@ paths:
             HttpStub(feature).use { stub ->
                 stub.client.execute(HttpRequest("GET", "/data")).let { response ->
                     assertThat(response.status).isEqualTo(200)
-                    println(response.body.toStringLiteral())
                     val responseValue = parsedJSON(response.body.toStringLiteral())
                     responseValue shouldMatch DictionaryPattern(StringPattern(), AnythingPattern)
                 }

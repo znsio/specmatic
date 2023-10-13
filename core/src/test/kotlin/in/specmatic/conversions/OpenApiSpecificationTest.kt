@@ -3703,6 +3703,17 @@ paths:
             val stub: HttpStubData = feature.matchingStub(request, response)
             assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
         }
+
+        @Test
+        fun `a string values null should not match the specification`() {
+            val invalidRequest =
+                HttpRequest("POST", "/data", body = StringValue("some data"))
+            val response = HttpResponse.OK
+
+            assertThatThrownBy { feature.matchingStub(invalidRequest, response) }
+                .isInstanceOf(NoMatchingScenario::class.java)
+                .hasMessageContaining("Expected json object, actual was some data")
+        }
     }
 
     @Test

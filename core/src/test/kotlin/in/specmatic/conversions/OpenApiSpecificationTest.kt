@@ -3705,7 +3705,7 @@ paths:
         }
 
         @Test
-        fun `a string values null should not match the specification`() {
+        fun `a string value should not match the specification`() {
             val invalidRequest =
                 HttpRequest("POST", "/data", body = StringValue("some data"))
             val response = HttpResponse.OK

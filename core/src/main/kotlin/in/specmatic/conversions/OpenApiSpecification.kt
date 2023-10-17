@@ -855,7 +855,21 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     val schemaProperties = deepListOfAllOfs.map { schemaToProcess ->
                         val requiredFields = schemaToProcess.required.orEmpty()
                         toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
-                    }.fold(emptyMap<String, Pattern>()) { acc, entry -> acc.plus(entry) }
+                    }.fold(emptyMap<String, Pattern>()) { propertiesAcc, propertiesEntry ->
+                        val updatedPropertiesAcc: Map<String, Pattern> =
+                            propertiesEntry.entries.fold(propertiesAcc) { acc, propertyEntry ->
+                                when (val keyWithoutOptionality = withoutOptionality(propertyEntry.key)) {
+                                    in acc ->
+                                        acc
+                                    propertyEntry.key ->
+                                        acc.minus("$keyWithoutOptionality?").plus(propertyEntry.key to propertyEntry.value)
+                                    else ->
+                                        acc.plus(propertyEntry.key to propertyEntry.value)
+                                }
+                            }
+
+                        updatedPropertiesAcc
+                    }
 
                     val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
                     jsonObjectPattern

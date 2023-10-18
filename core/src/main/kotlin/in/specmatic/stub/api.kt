@@ -327,5 +327,10 @@ fun loadIfOpenAPISpecification(contractPathData: ContractPathData): Pair<String,
 }
 
 fun isOpenAPI(path: String): Boolean =
-    Yaml().load<MutableMap<String, Any?>>(File(path).reader()).contains("openapi")
+    try {
+        Yaml().load<MutableMap<String, Any?>>(File(path).reader()).contains("openapi")
+    } catch(e: Throwable) {
+        logger.log(e, "Could not parse $path")
+        false
+    }
 

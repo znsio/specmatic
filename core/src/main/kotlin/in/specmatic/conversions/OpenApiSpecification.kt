@@ -481,12 +481,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 logger.log("Test directory ${testDirectory.canonicalPath} found")
                 testDirectory
             }
-            testDirectory != null -> {
-                logger.log("Test directory ${testDirectory.canonicalPath} not found")
-                null
-            }
             else -> {
-                logger.log("Test directory for specification $specificationPath does not exist and is not specified")
                 null
             }
         }

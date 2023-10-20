@@ -17,6 +17,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
 
 private const val testSystemProperty = "THIS_PROPERTY_EXISTS"
@@ -290,265 +292,152 @@ internal class UtilitiesTest {
 
     @Nested
     inner class SpecmaticFolderIsIgnoredInGitRepoTest {
-        @Nested
-        inner class GitIgnoreFileDoesNotExistTest {
-            @Test
-            fun `should create gitignore file add specmatic folder to it when contracts repo dir does not exist `() {
-                val branchName = "featureBranch"
-                val sources = listOf(
-                    GitRepo(
-                        "https://repo1",
-                        branchName, listOf(), listOf("a/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()
-                    )
+
+        @ParameterizedTest
+        @ValueSource(booleans = [true, false])
+        fun `should create gitignore file add specmatic folder to it when contracts repo dir does not exist `(gitIgnoreFileExists:Boolean) {
+            val branchName = "featureBranch"
+            val sources = listOf(
+                GitRepo(
+                    "https://repo1",
+                    branchName, listOf(), listOf("a/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()
                 )
-                File(".spec").deleteRecursively()
-                deleteGitIgnoreFile()
+            )
+            File(".spec").deleteRecursively()
+            deleteGitIgnoreFile()
 
-                mockkStatic("in.specmatic.core.utilities.Utilities")
-                every { loadSources("/configFilePath") }.returns(sources)
-
-                mockkStatic("in.specmatic.core.git.GitOperations")
-                val repositoryDirectory = File(".spec/repos/repo1")
-                every { clone(File(".spec/repos"), any()) }.returns(repositoryDirectory)
-                every { checkout(repositoryDirectory, branchName) }.returns(Unit)
-                val mockGitCommand = mockk<GitCommand>()
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
-
-                val contractPaths =
-                    contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-                assertThat(contractPaths.size).isEqualTo(1)
-                assertSpecmaticFolderIsIgnored()
+            if(gitIgnoreFileExists) {
+                createEmptyGitIgnoreFile()
             }
 
-            @Test
-            fun `should create gitignore file add specmatic folder to it when contracts repo dir exists and is clean`() {
-                val sources = listOf(
-                    GitRepo(
-                        "https://repo1",
-                        null,
-                        listOf(),
-                        listOf("a/1.$CONTRACT_EXTENSION"),
-                        SourceProvider.git.toString()
-                    )
-                )
-                File(".spec").deleteRecursively()
-                File(".spec/repos/repo1").mkdirs()
-                deleteGitIgnoreFile()
+            mockkStatic("in.specmatic.core.utilities.Utilities")
+            every { loadSources("/configFilePath") }.returns(sources)
 
-                val mockGitCommand = mockk<GitCommand>()
-                every { mockGitCommand.fetch() }.returns("")
-                every { mockGitCommand.revisionsBehindCount() }.returns(0)
-                every { mockGitCommand.statusPorcelain() }.returns("")
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
-                mockkStatic("in.specmatic.core.utilities.Utilities")
-                every { loadSources("/configFilePath") }.returns(sources)
-                every { getSystemGit(any()) }.returns(mockGitCommand)
+            mockkStatic("in.specmatic.core.git.GitOperations")
+            val repositoryDirectory = File(".spec/repos/repo1")
+            every { clone(File(".spec/repos"), any()) }.returns(repositoryDirectory)
+            every { checkout(repositoryDirectory, branchName) }.returns(Unit)
+            val mockGitCommand = mockk<GitCommand>()
+            every { mockGitCommand.checkIgnore(any()) }.returns("")
 
-                val contractPaths =
-                    contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-                assertThat(contractPaths.size).isEqualTo(1)
-                assertSpecmaticFolderIsIgnored()
-            }
-
-            @Test
-            fun `should create gitignore file and add specmatic folder to it when contracts repo dir exists and is not clean`() {
-                val sources = listOf(
-                    GitRepo(
-                        "https://repo1",
-                        null,
-                        listOf(),
-                        listOf("a/1.$CONTRACT_EXTENSION"),
-                        SourceProvider.git.toString()
-                    )
-                )
-                File(".spec").deleteRecursively()
-                File(".spec/repos/repo1").mkdirs()
-                deleteGitIgnoreFile()
-
-                val mockGitCommand = mockk<GitCommand>()
-                every { mockGitCommand.fetch() }.returns("")
-                every { mockGitCommand.revisionsBehindCount() }.returns(0)
-                every { mockGitCommand.statusPorcelain() }.returns("someDir/someFile")
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
-                mockkStatic("in.specmatic.core.utilities.Utilities")
-                every { loadSources("/configFilePath") }.returns(sources)
-                every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-                every { getSystemGit(any()) }.returns(mockGitCommand)
-
-                mockkStatic("in.specmatic.core.git.GitOperations")
-                every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
-
-                val contractPaths =
-                    contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-                assertThat(contractPaths.size).isEqualTo(1)
-                assertSpecmaticFolderIsIgnored()
-            }
-
-            @Test
-            fun `should create gitignore file and add specmatic folder to it when contracts repo dir exists and is behind remote`() {
-                val sources = listOf(
-                    GitRepo(
-                        "https://repo1",
-                        null,
-                        listOf(),
-                        listOf("a/1.$CONTRACT_EXTENSION"),
-                        SourceProvider.git.toString()
-                    )
-                )
-                File(".spec").deleteRecursively()
-                File(".spec/repos/repo1").mkdirs()
-                deleteGitIgnoreFile()
-
-                val mockGitCommand = mockk<GitCommand>()
-                every { mockGitCommand.fetch() }.returns("")
-                every { mockGitCommand.revisionsBehindCount() }.returns(1)
-                every { mockGitCommand.statusPorcelain() }.returns("")
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
-                mockkStatic("in.specmatic.core.utilities.Utilities")
-                every { loadSources("/configFilePath") }.returns(sources)
-                every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-                every { getSystemGit(any()) }.returns(mockGitCommand)
-
-                mockkStatic("in.specmatic.core.git.GitOperations")
-                every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
-
-                val contractPaths =
-                    contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-                assertThat(contractPaths.size).isEqualTo(1)
-                assertSpecmaticFolderIsIgnored()
-            }
+            val contractPaths =
+                contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+            assertThat(contractPaths.size).isEqualTo(1)
+            assertSpecmaticFolderIsIgnored()
         }
 
-        @Nested
-        inner class GitIgnoreFileExistsTest {
-            @Test
-            fun `should add specmatic folder to gitignore file if it exists when contracts repo dir does not exist `() {
-                val branchName = "featureBranch"
-                val sources = listOf(
-                    GitRepo(
-                        "https://repo1",
-                        branchName, listOf(), listOf("a/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()
-                    )
+        @ParameterizedTest
+        @ValueSource(booleans = [true, false])
+        fun `should create gitignore file add specmatic folder to it when contracts repo dir exists and is clean`(gitIgnoreFileExists:Boolean) {
+            val sources = listOf(
+                GitRepo(
+                    "https://repo1",
+                    null,
+                    listOf(),
+                    listOf("a/1.$CONTRACT_EXTENSION"),
+                    SourceProvider.git.toString()
                 )
-                File(".spec").deleteRecursively()
-                deleteGitIgnoreFile()
+            )
+            File(".spec").deleteRecursively()
+            File(".spec/repos/repo1").mkdirs()
+            deleteGitIgnoreFile()
+
+            if(gitIgnoreFileExists) {
                 createEmptyGitIgnoreFile()
-
-                mockkStatic("in.specmatic.core.utilities.Utilities")
-                every { loadSources("/configFilePath") }.returns(sources)
-
-                mockkStatic("in.specmatic.core.git.GitOperations")
-                val repositoryDirectory = File(".spec/repos/repo1")
-                every { clone(File(".spec/repos"), any()) }.returns(repositoryDirectory)
-                every { checkout(repositoryDirectory, branchName) }.returns(Unit)
-
-                val mockGitCommand = mockk<GitCommand>()
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
-
-                val contractPaths =
-                    contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-                assertThat(contractPaths.size).isEqualTo(1)
-                assertSpecmaticFolderIsIgnored()
             }
 
-            @Test
-            fun `should add specmatic folder to gitignore file if it exists when contracts repo dir exists and is clean`() {
-                val sources = listOf(
-                    GitRepo(
-                        "https://repo1",
-                        null,
-                        listOf(),
-                        listOf("a/1.$CONTRACT_EXTENSION"),
-                        SourceProvider.git.toString()
-                    )
+            val mockGitCommand = mockk<GitCommand>()
+            every { mockGitCommand.fetch() }.returns("")
+            every { mockGitCommand.revisionsBehindCount() }.returns(0)
+            every { mockGitCommand.statusPorcelain() }.returns("")
+            every { mockGitCommand.checkIgnore(any()) }.returns("")
+            mockkStatic("in.specmatic.core.utilities.Utilities")
+            every { loadSources("/configFilePath") }.returns(sources)
+            every { getSystemGit(any()) }.returns(mockGitCommand)
+            every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
+
+            val contractPaths =
+                contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+            assertThat(contractPaths.size).isEqualTo(1)
+            assertSpecmaticFolderIsIgnored()
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = [true, false])
+        fun `should create gitignore file and add specmatic folder to it when contracts repo dir exists and is not clean`(gitIgnoreFileExists:Boolean) {
+            val sources = listOf(
+                GitRepo(
+                    "https://repo1",
+                    null,
+                    listOf(),
+                    listOf("a/1.$CONTRACT_EXTENSION"),
+                    SourceProvider.git.toString()
                 )
-                File(".spec").deleteRecursively()
-                File(".spec/repos/repo1").mkdirs()
+            )
+            File(".spec").deleteRecursively()
+            File(".spec/repos/repo1").mkdirs()
+            deleteGitIgnoreFile()
+
+            if(gitIgnoreFileExists) {
                 createEmptyGitIgnoreFile()
-
-
-                val mockGitCommand = mockk<GitCommand>()
-                every { mockGitCommand.fetch() }.returns("")
-                every { mockGitCommand.revisionsBehindCount() }.returns(0)
-                every { mockGitCommand.statusPorcelain() }.returns("")
-                mockkStatic("in.specmatic.core.utilities.Utilities")
-                every { loadSources("/configFilePath") }.returns(sources)
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
-                every { getSystemGit(any()) }.returns(mockGitCommand)
-
-                val contractPaths =
-                    contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-                assertThat(contractPaths.size).isEqualTo(1)
-                assertSpecmaticFolderIsIgnored()
             }
 
-            @Test
-            fun `should add specmatic folder to gitignore file if it exists when contracts repo dir exists and is not clean`() {
-                val sources = listOf(
-                    GitRepo(
-                        "https://repo1",
-                        null,
-                        listOf(),
-                        listOf("a/1.$CONTRACT_EXTENSION"),
-                        SourceProvider.git.toString()
-                    )
+            val mockGitCommand = mockk<GitCommand>()
+            every { mockGitCommand.fetch() }.returns("")
+            every { mockGitCommand.revisionsBehindCount() }.returns(0)
+            every { mockGitCommand.statusPorcelain() }.returns("someDir/someFile")
+            every { mockGitCommand.checkIgnore(any()) }.returns("")
+            mockkStatic("in.specmatic.core.utilities.Utilities")
+            every { loadSources("/configFilePath") }.returns(sources)
+            every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
+            every { getSystemGit(any()) }.returns(mockGitCommand)
+
+            mockkStatic("in.specmatic.core.git.GitOperations")
+            every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
+
+            val contractPaths =
+                contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+            assertThat(contractPaths.size).isEqualTo(1)
+            assertSpecmaticFolderIsIgnored()
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = [true, false])
+        fun `should create gitignore file and add specmatic folder to it when contracts repo dir exists and is behind remote`(gitIgnoreFileExists:Boolean) {
+            val sources = listOf(
+                GitRepo(
+                    "https://repo1",
+                    null,
+                    listOf(),
+                    listOf("a/1.$CONTRACT_EXTENSION"),
+                    SourceProvider.git.toString()
                 )
-                File(".spec").deleteRecursively()
-                File(".spec/repos/repo1").mkdirs()
+            )
+            File(".spec").deleteRecursively()
+            File(".spec/repos/repo1").mkdirs()
+            deleteGitIgnoreFile()
+
+            if(gitIgnoreFileExists) {
                 createEmptyGitIgnoreFile()
-
-                val mockGitCommand = mockk<GitCommand>()
-                every { mockGitCommand.fetch() }.returns("")
-                every { mockGitCommand.revisionsBehindCount() }.returns(0)
-                every { mockGitCommand.statusPorcelain() }.returns("someDir/someFile")
-                mockkStatic("in.specmatic.core.utilities.Utilities")
-                every { loadSources("/configFilePath") }.returns(sources)
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
-                every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-                every { getSystemGit(any()) }.returns(mockGitCommand)
-
-                mockkStatic("in.specmatic.core.git.GitOperations")
-                every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
-
-                val contractPaths =
-                    contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-                assertThat(contractPaths.size).isEqualTo(1)
-                assertSpecmaticFolderIsIgnored()
             }
 
-            @Test
-            fun `should add specmatic folder to gitignore file if it exists when contracts repo dir exists and is behind remote`() {
-                val sources = listOf(
-                    GitRepo(
-                        "https://repo1",
-                        null,
-                        listOf(),
-                        listOf("a/1.$CONTRACT_EXTENSION"),
-                        SourceProvider.git.toString()
-                    )
-                )
-                File(".spec").deleteRecursively()
-                File(".spec/repos/repo1").mkdirs()
-                createEmptyGitIgnoreFile()
+            val mockGitCommand = mockk<GitCommand>()
+            every { mockGitCommand.fetch() }.returns("")
+            every { mockGitCommand.revisionsBehindCount() }.returns(1)
+            every { mockGitCommand.statusPorcelain() }.returns("")
+            every { mockGitCommand.checkIgnore(any()) }.returns("")
+            mockkStatic("in.specmatic.core.utilities.Utilities")
+            every { loadSources("/configFilePath") }.returns(sources)
+            every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
+            every { getSystemGit(any()) }.returns(mockGitCommand)
 
-                val mockGitCommand = mockk<GitCommand>()
-                every { mockGitCommand.fetch() }.returns("")
-                every { mockGitCommand.revisionsBehindCount() }.returns(1)
-                every { mockGitCommand.statusPorcelain() }.returns("")
-                mockkStatic("in.specmatic.core.utilities.Utilities")
-                every { loadSources("/configFilePath") }.returns(sources)
-                every { mockGitCommand.checkIgnore(any()) }.returns("")
-                every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-                every { getSystemGit(any()) }.returns(mockGitCommand)
+            mockkStatic("in.specmatic.core.git.GitOperations")
+            every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
 
-                mockkStatic("in.specmatic.core.git.GitOperations")
-                every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
-
-                val contractPaths =
-                    contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-                assertThat(contractPaths.size).isEqualTo(1)
-                assertSpecmaticFolderIsIgnored()
-            }
+            val contractPaths =
+                contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
+            assertThat(contractPaths.size).isEqualTo(1)
+            assertSpecmaticFolderIsIgnored()
         }
     }
 

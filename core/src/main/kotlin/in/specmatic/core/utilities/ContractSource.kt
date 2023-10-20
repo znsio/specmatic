@@ -96,7 +96,7 @@ data class GitRepo(
     }
 
     private fun isClean(contractsRepoDir: File): Boolean {
-        val sourceGit = getSystemGitWithAuth(contractsRepoDir.path)
+        val sourceGit = getSystemGit(contractsRepoDir.path)
         return sourceGit.statusPorcelain().isEmpty()
     }
 
@@ -108,7 +108,7 @@ data class GitRepo(
 
     private fun isSpecmaticFolderIgnored(): Boolean {
         val currentWorkingDirectory = File(".").absolutePath
-        val sourceGit = getSystemGitWithAuth(currentWorkingDirectory)
+        val sourceGit = getSystemGit(currentWorkingDirectory)
         return sourceGit.checkIgnore(DEFAULT_WORKING_DIRECTORY).isNotEmpty()
     }
 
@@ -125,29 +125,22 @@ data class GitRepo(
     }
 
     private fun ensureThatSpecmaticFolderIsIgnored() {
-        val gitIgnoreFile = File(".gitignore")
-        when (gitIgnoreFile.exists()) {
-            true -> {
-                if(!isSpecmaticFolderIgnored()){
-                    logger.log("A .gitignore file exists for this git repo, but it does not contain the $DEFAULT_WORKING_DIRECTORY folder.")
-                    addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile)
-                }
+        if(!isSpecmaticFolderIgnored()){
+            val gitIgnoreFile = File(".gitignore")
+            if(gitIgnoreFile.exists()){
+                logger.log("A .gitignore file exists for this git repo, but it does not contain the $DEFAULT_WORKING_DIRECTORY folder.")
+                addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile)
             }
-            else -> {
-                createGitIgnoreFile(gitIgnoreFile)
+            else{
+                logger.log("Creating a gitignore file file as it is missing for the current project.")
                 addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile, false)
             }
         }
     }
 
     private fun addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile: File, onNewLine:Boolean = true){
-        logger.log("Adding $DEFAULT_WORKING_DIRECTORY folder to the existing .gitignore file.")
-        gitIgnoreFile.appendText("${if (onNewLine) "\n" else ""}.specmatic")
-    }
-
-    private fun createGitIgnoreFile(gitIgnoreFile: File) {
-        logger.log("Creating a gitignore file file as it is missing for the current project.")
-        gitIgnoreFile.createNewFile()
+        logger.log("Adding $DEFAULT_WORKING_DIRECTORY folder to .gitignore file.")
+        gitIgnoreFile.appendText("${if (onNewLine) "\n" else ""}$DEFAULT_WORKING_DIRECTORY")
     }
 
     private fun localRepoDir(workingDirectory: String): File = File(workingDirectory).resolve("repos")

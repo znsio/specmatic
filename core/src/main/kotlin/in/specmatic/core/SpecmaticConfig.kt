@@ -16,7 +16,7 @@ const val LEGACY_CONTRACT_EXTENSION = "qontract"
 val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, LEGACY_CONTRACT_EXTENSION, "yaml", "wsdl")
 const val DATA_DIR_SUFFIX = "_data"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
-const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
+const val   DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
 class WorkingDirectory(private val filePath: File) {
     constructor(path: String = DEFAULT_WORKING_DIRECTORY): this(File(path))

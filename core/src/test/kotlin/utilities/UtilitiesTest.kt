@@ -306,7 +306,7 @@ internal class UtilitiesTest {
             File(".spec").deleteRecursively()
             deleteGitIgnoreFile()
 
-            if(gitIgnoreFileExists) {
+            if(!gitIgnoreFileExists) {
                 createEmptyGitIgnoreFile()
             }
 
@@ -342,7 +342,7 @@ internal class UtilitiesTest {
             File(".spec/repos/repo1").mkdirs()
             deleteGitIgnoreFile()
 
-            if(gitIgnoreFileExists) {
+            if(!gitIgnoreFileExists) {
                 createEmptyGitIgnoreFile()
             }
 
@@ -378,7 +378,7 @@ internal class UtilitiesTest {
             File(".spec/repos/repo1").mkdirs()
             deleteGitIgnoreFile()
 
-            if(gitIgnoreFileExists) {
+            if(!gitIgnoreFileExists) {
                 createEmptyGitIgnoreFile()
             }
 
@@ -417,7 +417,7 @@ internal class UtilitiesTest {
             File(".spec/repos/repo1").mkdirs()
             deleteGitIgnoreFile()
 
-            if(gitIgnoreFileExists) {
+            if(!gitIgnoreFileExists) {
                 createEmptyGitIgnoreFile()
             }
 

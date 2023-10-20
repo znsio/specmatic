@@ -170,7 +170,9 @@ open class SpecmaticJUnitSupport {
                             suggestionsPath,
                             suggestionsData,
                             testConfig,
-                            specificationPath = it
+                            specificationPath = it,
+                            filterName = filterName,
+                            filterNotName = filterNotName
                         )
                     }
                 }
@@ -185,11 +187,11 @@ open class SpecmaticJUnitSupport {
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
-                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security) }
+                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
                 }
             }
 
-            selectTestsToRun(testScenarios, filterName, filterNotName)
+            selectTestsToRun(testScenarios, filterName, filterNotName) { it.testDescription() }
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
         } catch(e: Throwable) {
@@ -260,11 +262,13 @@ open class SpecmaticJUnitSupport {
         suggestionsPath: String,
         suggestionsData: String,
         config: TestConfig,
-        sourceProvider:String? = null,
-        sourceRepository:String? = null,
-        sourceRepositoryBranch:String? = null,
-        specificationPath:String? = null,
-        securityConfiguration: SecurityConfiguration? = null
+        sourceProvider: String? = null,
+        sourceRepository: String? = null,
+        sourceRepositoryBranch: String? = null,
+        specificationPath: String? = null,
+        securityConfiguration: SecurityConfiguration? = null,
+        filterName: String?,
+        filterNotName: String?
     ): List<ContractTest> {
         if(isYAML(path) && !isOpenAPI(path))
             return emptyList()
@@ -277,7 +281,17 @@ open class SpecmaticJUnitSupport {
             else -> emptyList()
         }
 
-        return feature.generateContractTests(suggestions)
+        return feature
+            .copy(scenarios = selectTestsToRun(feature.scenarios, filterName, filterNotName) { it.testDescription() })
+            .also {
+                if (it.scenarios.isEmpty())
+                    logger.log("All scenarios were filtered out.")
+                else if (it.scenarios.size < feature.scenarios.size) {
+                    logger.debug("Selected scenarios:")
+                    it.scenarios.forEach { scenario -> logger.debug(scenario.testDescription().prependIndent("  ")) }
+                }
+            }
+            .generateContractTests(suggestions)
     }
 
     private fun suggestionsFromFile(suggestionsPath: String): List<Scenario> {
@@ -334,25 +348,26 @@ private fun asJSONObjectValue(value: Value, errorMessage: String): Map<String, V
     return value.jsonObject
 }
 
-fun selectTestsToRun(
-    testScenarios: List<ContractTest>,
+fun <T> selectTestsToRun(
+    testScenarios: List<T>,
     filterName: String? = null,
-    filterNotName: String? = null
-): List<ContractTest> {
+    filterNotName: String? = null,
+    getTestDescription: (T) -> String
+): List<T> {
     val filteredByName = if (!filterName.isNullOrBlank()) {
         val filterNames = filterName.split(",").map { it.trim() }
 
         testScenarios.filter { test ->
-            filterNames.any { test.testDescription().contains(it) }
+            filterNames.any { getTestDescription(test).contains(it) }
         }
     } else
         testScenarios
 
-    val filteredByNotName: List<ContractTest> = if(!filterNotName.isNullOrBlank()) {
+    val filteredByNotName: List<T> = if(!filterNotName.isNullOrBlank()) {
         val filterNotNames = filterNotName.split(",").map { it.trim() }
 
-        testScenarios.filterNot { test ->
-            filterNotNames.any { test.testDescription().contains(it) }
+        filteredByName.filterNot { test ->
+            filterNotNames.any { getTestDescription(test).contains(it) }
         }
     } else
         filteredByName

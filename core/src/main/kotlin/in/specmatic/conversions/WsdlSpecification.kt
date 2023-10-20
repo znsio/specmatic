@@ -36,7 +36,7 @@ class WSDLFile(private val location: String) : WSDLContent {
 }
 
 class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecification {
-    private val openApiScenarioInfos = toScenarioInfos()
+    private val openApiScenarioInfos: List<ScenarioInfo> = toScenarioInfos().first
 
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo,
@@ -96,8 +96,8 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
         }
     }
 
-    override fun toScenarioInfos(): List<ScenarioInfo> {
-        return scenarioInfos(wsdlToFeatureChildren(wsdlFile), "")
+    override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>> {
+        return scenarioInfos(wsdlToFeatureChildren(wsdlFile), "") to emptyMap()
     }
 
     private fun wsdlToFeatureChildren(wsdlFile: WSDLContent): List<FeatureChild> {

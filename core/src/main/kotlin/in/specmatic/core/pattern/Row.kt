@@ -13,7 +13,8 @@ data class Row(
     val values: List<String> = emptyList(),
     val variables: Map<String, String> = emptyMap(),
     val references: Map<String, References> = emptyMap(),
-    val name: String = ""
+    val name: String = "",
+    val fileSource: String? = null
 ) {
     private val cells = columnNames.zip(values.map { it }).toMap().toMutableMap()
 

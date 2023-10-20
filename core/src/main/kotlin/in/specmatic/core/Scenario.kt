@@ -255,13 +255,13 @@ data class Scenario(
         override fun unexpectedKey(keyLabel: String, keyName: String): String {
             return "${
                 keyLabel.lowercase().capitalizeFirstChar()
-            } named $keyName in the row value was not in the contract"
+            } named $keyName in the example was not in the specification"
         }
 
         override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
             return "${
                 keyLabel.lowercase().capitalizeFirstChar()
-            } named $keyName in the contract was not found in the row value"
+            } named $keyName in the specification was not found in the example"
         }
     }
 
@@ -551,13 +551,13 @@ object ContractAndResponseMismatch : MismatchMessages {
     }
 
     override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the response was not in the contract"
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the response was not in the specification"
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
         return "${
             keyLabel.lowercase().capitalizeFirstChar()
-        } named $keyName in the contract was not found in the response"
+        } named $keyName in the specification was not found in the response"
     }
 }
 

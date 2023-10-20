@@ -34,18 +34,18 @@ dependencies {
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.3'
 
-    implementation 'io.swagger.parser.v3:swagger-parser:2.1.16'
+    implementation 'io.swagger.parser.v3:swagger-parser:2.1.18'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     testImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.0'
     testImplementation 'org.assertj:assertj-core:3.24.2'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
-    testImplementation 'org.json:json:20230618'
+    testImplementation 'org.json:json:20231013'
     testImplementation 'org.springframework:spring-web:5.3.30'
     testImplementation 'io.mockk:mockk:1.13.2'
     testImplementation 'org.assertj:assertj-core:3.24.2'

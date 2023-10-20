@@ -6,8 +6,6 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 
-interface StubData
-
 data class HttpStubData(
     val requestType: HttpRequestPattern,
     val response: HttpResponse,
@@ -19,7 +17,10 @@ data class HttpStubData(
     val requestBodyRegex: Regex? = null,
     val feature:Feature? = null,
     val scenario: Scenario? = null
-) : StubData {
+) {
+    val matchFailure: Boolean
+        get() = response.headers[SPECMATIC_RESULT_HEADER] == "failure"
+
     fun softCastResponseToXML(httpRequest: HttpRequest): HttpStubData = when {
         response.externalisedResponseCommand.isNotEmpty() -> invokeExternalCommand(httpRequest).copy(contractPath = contractPath)
         else -> this.copy(response = response.copy(body = softCastValueToXML(response.body)))

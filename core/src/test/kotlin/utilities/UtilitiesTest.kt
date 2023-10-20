@@ -14,9 +14,12 @@ import `in`.specmatic.core.value.toXMLNode
 import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.io.File
+
+private const val testSystemProperty = "THIS_PROPERTY_EXISTS"
 
 internal class UtilitiesTest {
     @Test
@@ -262,6 +265,27 @@ internal class UtilitiesTest {
                 GitMonoRepo(listOf(), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString())
         )
         assertThat(sources == expectedSources).isTrue
+    }
+
+    @Nested
+    inner class ReadingEnvironmentVariableOrProperty {
+        @Test
+        fun `read property when environment variable does not exist`() {
+            System.setProperty(testSystemProperty, "true")
+            assertThat(readEnvVarOrProperty("THIS_ENV_VAR_DOES_NOT_EXIST", testSystemProperty)).isEqualTo("true")
+        }
+
+
+        @Test
+        fun `read environment variable instead of property when the environment variable exists`() {
+            System.setProperty(testSystemProperty, "true")
+            val (
+                environmentVariableName,
+                environmentVariableValue
+            ) = System.getenv().entries.first { it.value != "true" }
+
+            assertThat(readEnvVarOrProperty(environmentVariableName, testSystemProperty)).isEqualTo(environmentVariableValue)
+        }
     }
 
     @Nested
@@ -538,5 +562,13 @@ internal class UtilitiesTest {
     @AfterEach
     fun tearDownAfterEach() {
         deleteGitIgnoreFile()
+    }
+
+    companion object {
+        @AfterAll
+        @JvmStatic
+        fun teardown() {
+            System.clearProperty(testSystemProperty)
+        }
     }
 }

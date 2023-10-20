@@ -66,10 +66,10 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--suggestions"], description = ["A json value with scenario name and multiple suggestions"], defaultValue = "")
     var suggestions: String = ""
 
-    @Option(names = ["--filter-name"], description = ["Run only tests with this value in their name"], defaultValue = "")
+    @Option(names = ["--filter-name"], description = ["Run only tests with this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
     var filterName: String = ""
 
-    @Option(names = ["--filter-not-name"], description = ["Run only tests which do not have this value in their name"], defaultValue = "")
+    @Option(names = ["--filter-not-name"], description = ["Run only tests which do not have this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
     var filterNotName: String = ""
 
     @Option(names = ["--env"], description = ["Environment name"])
@@ -129,7 +129,7 @@ class TestCommand : Callable<Unit> {
         }
 
         if(filterNotName.isNotBlank()) {
-            System.setProperty(FILTER_NOT_NAME, filterName)
+            System.setProperty(FILTER_NOT_NAME, filterNotName)
         }
 
         variablesFileName?.let {

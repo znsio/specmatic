@@ -196,8 +196,6 @@ open class SpecmaticJUnitSupport {
             return loadExceptionAsTestError(e)
         } catch(e: Throwable) {
             return loadExceptionAsTestError(e)
-        } finally {
-            workingDirectory.delete()
         }
 
         val invoker = when(val testBaseURL = System.getProperty(TEST_BASE_URL)) {

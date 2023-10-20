@@ -29,4 +29,5 @@ interface GitCommand {
     fun fetch(): String
     fun revisionsBehindCount(): Int
     fun getRemoteUrl(name: String = "origin"): String
+    fun checkIgnore(path: String): String
 }

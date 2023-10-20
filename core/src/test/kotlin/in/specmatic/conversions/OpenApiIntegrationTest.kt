@@ -371,6 +371,35 @@ Feature: Authenticated
         }
 
         @Test
+        fun `should generate test with bearer security scheme with token in authorization header from security configuration`() {
+            val token = "TOKEN1234"
+            val feature = parseContractFileToFeature(
+                "./src/test/resources/openapi/authenticated.yaml",
+                securityConfiguration = securityConfigurationForBearerScheme(token)
+            )
+            val contractTests = feature.generateContractTestScenarios(emptyList())
+            var requestMadeWithTokenFromSpecmaticJson = false
+            contractTests.forEach { scenario ->
+                val result = executeTest(scenario, object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        request.headers[HttpHeaders.AUTHORIZATION]?.takeIf {
+                            it == "Bearer TOKEN1234"
+                        }?.let {
+                            requestMadeWithTokenFromSpecmaticJson = true
+                        }
+                        return HttpResponse.OK("success")
+                    }
+
+                    override fun setServerState(serverState: Map<String, Value>) {
+
+                    }
+                })
+                assertThat(result).isInstanceOf(Result.Success::class.java)
+            }
+            assertThat(requestMadeWithTokenFromSpecmaticJson).isTrue
+        }
+
+        @Test
         fun `should match http request with authorization header for spec with bearer security scheme`() {
             val feature = parseGherkinStringToFeature(
                 """
@@ -431,6 +460,16 @@ Background:
             assertThat(result).isInstanceOf(Result.Failure::class.java)
             assertThat(result.reportString()).contains("Authorization header must be prefixed with \"Bearer\"")
         }
+
+        private fun securityConfigurationForBearerScheme(token: String) = SecurityConfiguration(
+            OpenAPI = OpenAPISecurityConfiguration(
+                securitySchemes = mapOf(
+                    "BearerAuth" to BearerSecuritySchemeConfiguration(
+                        "bearer", token
+                    )
+                )
+            )
+        )
 
     }
 
@@ -535,6 +574,64 @@ Feature: Authenticated
         }
 
         @Test
+        fun `should generate test with api key in header security scheme with token in header from security configuration`() {
+            val token = "APIHEADERKEY1234"
+            val feature = parseContractFileToFeature(
+                "./src/test/resources/openapi/authenticated.yaml",
+                securityConfiguration = securityConfigurationForApiKeyInHeaderScheme(token)
+            )
+            val contractTests = feature.generateContractTestScenarios(emptyList())
+            var requestMadeWithApiKeyInHeaderFromSpecmaticJson = false
+            contractTests.forEach { scenario ->
+                val result = executeTest(scenario, object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        request.headers["X-API-KEY"]?.takeIf {
+                            it == "APIHEADERKEY1234"
+                        }?.let {
+                            requestMadeWithApiKeyInHeaderFromSpecmaticJson = true
+                        }
+                        return HttpResponse.OK("success")
+                    }
+
+                    override fun setServerState(serverState: Map<String, Value>) {
+
+                    }
+                })
+                assertThat(result).isInstanceOf(Result.Success::class.java)
+            }
+            assertThat(requestMadeWithApiKeyInHeaderFromSpecmaticJson).isTrue
+        }
+
+        @Test
+        fun `should generate test with api key in query param security scheme with token in query param from security configuration`() {
+            val token = "APIQUERYKEY1234"
+            val feature = parseContractFileToFeature(
+                "./src/test/resources/openapi/authenticated.yaml",
+                securityConfiguration = securityConfigurationForApiKeyInQueryScheme(token)
+            )
+            val contractTests = feature.generateContractTestScenarios(emptyList())
+            var requestMadeWithApiKeyInQueryFromSpecmaticJson = false
+            contractTests.forEach { scenario ->
+                val result = executeTest(scenario, object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        request.queryParams["apiKey"]?.takeIf {
+                            it == "APIQUERYKEY1234"
+                        }?.let {
+                            requestMadeWithApiKeyInQueryFromSpecmaticJson = true
+                        }
+                        return HttpResponse.OK("success")
+                    }
+
+                    override fun setServerState(serverState: Map<String, Value>) {
+
+                    }
+                })
+                assertThat(result).isInstanceOf(Result.Success::class.java)
+            }
+            assertThat(requestMadeWithApiKeyInQueryFromSpecmaticJson).isTrue
+        }
+
+        @Test
         fun `should generate stub that authenticates with api key in header and query`() {
             createStubFromContracts(listOf("src/test/resources/openapi/apiKeyAuth.yaml")).use {
                 val requestWithHeader = HttpRequest(
@@ -560,5 +657,25 @@ Feature: Authenticated
                 assertThat(responseFromQuery.status).isEqualTo(200)
             }
         }
+
+        private fun securityConfigurationForApiKeyInHeaderScheme(token: String) = SecurityConfiguration(
+            OpenAPI = OpenAPISecurityConfiguration(
+                securitySchemes = mapOf(
+                    "ApiKeyAuthHeader" to APIKeySecuritySchemeConfiguration(
+                        "apiKey", token
+                    )
+                )
+            )
+        )
+
+        private fun securityConfigurationForApiKeyInQueryScheme(token: String) = SecurityConfiguration(
+            OpenAPI = OpenAPISecurityConfiguration(
+                securitySchemes = mapOf(
+                    "ApiKeyAuthQuery" to APIKeySecuritySchemeConfiguration(
+                        "apiKey", token
+                    )
+                )
+            )
+        )
     }
 }

@@ -6,7 +6,7 @@ data class Results(val results: List<Result> = emptyList()) {
     fun hasResults(): Boolean = results.isNotEmpty()
 
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
-    fun success(): Boolean = !hasFailures()
+    fun success(): Boolean = successCount > 0 && failureCount == 0
 
     fun withoutFluff(fluffLevel: Int): Results = copy(results = results.filterNot { it.isFluffy(fluffLevel) })
 

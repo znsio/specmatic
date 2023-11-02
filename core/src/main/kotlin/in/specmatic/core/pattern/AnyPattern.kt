@@ -1,9 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.core.MismatchMessages
-import `in`.specmatic.core.Resolver
-import `in`.specmatic.core.Result
-import `in`.specmatic.core.mismatchResult
+import `in`.specmatic.core.*
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.ScalarValue
@@ -76,12 +73,41 @@ data class AnyPattern(
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        val isNullable = pattern.any {it is NullPattern}
-        return pattern.flatMap { innerPattern ->
-            resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
-                innerPattern.newBasedOn(row, cyclePreventedResolver)
-            }?: listOf()  // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
+        val isNullable = pattern.any { it is NullPattern }
+        val patternResults: List<Pair<List<Pattern>?, Throwable?>> =
+            pattern.sortedBy { it is NullPattern }.map { innerPattern ->
+                try {
+                    val patterns =
+                        resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
+                            innerPattern.newBasedOn(row, cyclePreventedResolver)
+                        } ?: listOf()
+                    Pair(patterns, null)
+                } catch (e: Throwable) {
+                    Pair(null, e)
+                }
+            }
+
+        return newTypesOrExceptionIfNone(patternResults, "Could not generate new tests")
+    }
+
+    private fun newTypesOrExceptionIfNone(patternResults: List<Pair<List<Pattern>?, Throwable?>>, message: String): List<Pattern> {
+        val newPatterns: List<Pattern> = patternResults.mapNotNull { it.first }.flatten()
+
+        if (newPatterns.isEmpty() && pattern.isNotEmpty()) {
+            val exceptions = patternResults.mapNotNull { it.second }.map {
+                when (it) {
+                    is ContractException -> it
+                    else -> ContractException(exceptionCause = it)
+                }
+            }
+
+            val failures = exceptions.map { it.failure() }
+
+            val failure = Result.Failure.fromFailures(failures)
+
+            throw ContractException(failure.toFailureReport(message))
         }
+        return newPatterns
     }
 
     override fun newBasedOn(resolver: Resolver): List<Pattern> {
@@ -96,9 +122,20 @@ data class AnyPattern(
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val nullable = pattern.any { it is NullPattern }
 
-        val negativeTypes = pattern.flatMap {
-            it.negativeBasedOn(row, resolver)
-        }.let {
+        val negativeTypeResults = pattern.map {
+            try {
+                val patterns =
+                    it.negativeBasedOn(row, resolver)
+                Pair(patterns, null)
+            } catch(e: Throwable) {
+                Pair(null, e)
+            }
+        }
+
+        val negativeTypes = newTypesOrExceptionIfNone(
+            negativeTypeResults,
+            "Could not get negative tests"
+        ).let {
             if (nullable)
                 it.filterNot { it is NullPattern }
             else
@@ -153,7 +190,7 @@ data class AnyPattern(
         if (pattern.isEmpty())
             throw ContractException("AnyPattern doesn't have any types, so can't infer which type of list to wrap the given value in")
 
-        return pattern.single().listOf(valueList, resolver)
+        return pattern.first().listOf(valueList, resolver)
     }
 
     override val typeName: String

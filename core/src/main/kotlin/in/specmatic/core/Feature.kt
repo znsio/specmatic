@@ -80,7 +80,13 @@ data class Feature(
     val testVariables: Map<String, String> = emptyMap(),
     val testBaseURLs: Map<String, String> = emptyMap(),
     val path: String = "",
-    val generativeTestingEnabled: Boolean = Flags.generativeTestingEnabled()
+    val generativeTestingEnabled: Boolean = Flags.generativeTestingEnabled(),
+    val sourceProvider:String? = null,
+    val sourceRepository:String? = null,
+    val sourceRepositoryBranch:String? = null,
+    val specification:String? = null,
+    val serviceType:String? = null,
+    val stubsFromExamples: Map<String, Pair<HttpRequest, HttpResponse>> = emptyMap()
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
@@ -253,7 +259,9 @@ data class Feature(
                                 resolver = resolver,
                                 requestType = requestTypeWithAncestors,
                                 responsePattern = scenario.httpResponsePattern,
-                                contractPath = this.path
+                                contractPath = this.path,
+                                feature = this,
+                                scenario = scenario
                             )
                         }, Result.Success()
                     )
@@ -1625,7 +1633,7 @@ fun scenarioInfos(
     val includedSpecifications = listOfNotNull(openApiSpecification, wsdlSpecification)
 
     val scenarioInfosBelongingToIncludedSpecifications =
-        includedSpecifications.map { it.toScenarioInfos() }.flatten()
+        includedSpecifications.map { it.toScenarioInfos().first }.flatten()
 
     val backgroundInfo = backgroundScenario(featureChildren)?.let { feature ->
         lexScenario(

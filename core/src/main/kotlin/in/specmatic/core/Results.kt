@@ -59,7 +59,7 @@ data class Results(val results: List<Result> = emptyList()) {
 
         return when {
             filteredResults.isNotEmpty() -> listToDistinctReport(filteredResults)
-            else -> defaultMessage.trim()
+            else -> if(successCount > 0 && failureCount == 0) "" else defaultMessage.trim()
         }
     }
 

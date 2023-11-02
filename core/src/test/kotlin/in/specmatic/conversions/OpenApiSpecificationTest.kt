@@ -213,7 +213,7 @@ Pet:
     @Test
     fun `should generate 200 OK scenarioInfos from openAPI`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
         assertThat(scenarioInfos.size).isEqualTo(3)
     }
 
@@ -261,15 +261,15 @@ Pet:
     @Test
     fun `should not resolve non ref nested types to Deferred Pattern`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
-        val nestedTypeWithoutRef = scenarioInfos.first().patterns.getOrDefault("(NestedTypeWithoutRef)", NullPattern)
+        val (scenarioInfoData, _) = openApiSpecification.toScenarioInfos()
+        val nestedTypeWithoutRef = scenarioInfoData.first().patterns.getOrDefault("(NestedTypeWithoutRef)", NullPattern)
         assertThat(containsDeferredPattern(nestedTypeWithoutRef)).isFalse
     }
 
     @Test
     fun `should resolve ref nested types to Deferred Pattern`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
         val nestedTypeWithRef = scenarioInfos[4].patterns["(NestedTypeWithRef)"]
         assertThat(containsDeferredPattern(nestedTypeWithRef!!)).isTrue
     }
@@ -284,7 +284,7 @@ Pet:
     @Test
     fun `none of the scenarios should expect the Content-Type header`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         for (scenarioInfo in scenarioInfos) {
             assertNotFoundInHeaders("Content-Type", scenarioInfo.httpRequestPattern.headersPattern)
@@ -3656,6 +3656,66 @@ paths:
         }
     }
 
+
+    @Nested
+    inner class WhenAdditionalPropertiesIsTrue {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        @Test
+        fun `an object with string keys with values of any type should meet the specification`() {
+            val request =
+                HttpRequest("POST", "/data", body = parsedValue("""{"id": 10, "address": {"street": "Link Road", "city": "Mumbai", "country": "India"}}"""))
+            val response = HttpResponse.OK
+
+            val stub: HttpStubData = feature.matchingStub(request, response)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `an object with string keys with some values set as null should match the specification`() {
+            val request =
+                HttpRequest("POST", "/data", body = parsedValue("""{"id": 10, "address": null}"""))
+            val response = HttpResponse.OK
+
+            val stub: HttpStubData = feature.matchingStub(request, response)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `a string value should not match the specification`() {
+            val invalidRequest =
+                HttpRequest("POST", "/data", body = StringValue("some data"))
+            val response = HttpResponse.OK
+
+            assertThatThrownBy { feature.matchingStub(invalidRequest, response) }
+                .isInstanceOf(NoMatchingScenario::class.java)
+                .hasMessageContaining("Expected json object, actual was some data")
+        }
+    }
+
     @Test
     fun `conversion supports dictionary type`() {
         val gherkin = """
@@ -3699,7 +3759,8 @@ paths:
     @Test
     fun `should resolve ref to another file`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE_WITH_REFERENCE)
-        assertThat(openApiSpecification.toScenarioInfos().size).isEqualTo(1)
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
+        assertThat((scenarioInfos).size).isEqualTo(1)
         assertThat(openApiSpecification.patterns["(Pet)"]).isNotNull
     }
 

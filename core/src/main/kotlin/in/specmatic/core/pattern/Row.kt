@@ -20,7 +20,8 @@ data class Row(
     val variables: Map<String, String> = emptyMap(),
     val references: Map<String, References> = emptyMap(),
     val name: String = "",
-    val rowType: RowType = NoExamples
+    val rowType: RowType = NoExamples,
+    val fileSource: String? = null
 ) {
     constructor(columnNames: List<String>, values: List<String>) : this(columnNames, values, rowType = Example)
     constructor(requestExamples: Map<String, Any>, exampleName: String) : this(

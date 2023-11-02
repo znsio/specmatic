@@ -103,7 +103,7 @@ internal class CompatibleCommandTest {
         """.trimIndent()
 
         val contractGitCommand = mockk<GitCommand>()
-        every { contractGitCommand.show("HEAD", relativeContractPath) }.answers { throw NonZeroExitError("ERROR") }
+        every { contractGitCommand.show("HEAD", relativeContractPath) }.answers { throw NonZeroExitError("ERROR", 1) }
         every { gitCommand.fileIsInGitDir(contractPath) }.returns(true)
         every { gitCommand.relativeGitPath(contractPath) }.returns(Pair(contractGitCommand, relativeContractPath))
         every { fileOperations.isFile(any()) }.returns(true)
@@ -183,7 +183,7 @@ internal class CompatibleCommandTest {
         val gitRoot = mockk<GitCommand>()
 
         every { gitCommand.relativeGitPath(contractPath) }.returns(Pair(gitRoot, relativeContractPath))
-        every { gitRoot.show(oldCommitHash, relativeContractPath) }.answers { throw NonZeroExitError("Commit not found") }
+        every { gitRoot.show(oldCommitHash, relativeContractPath) }.answers { throw NonZeroExitError("Commit not found", 1) }
         every { gitRoot.show(newCommitHash, relativeContractPath) }.returns(contract)
 
         val exitCode = CommandLine(compatibleCommand, factory).execute("git", "commits", contractPath, newCommitHash, oldCommitHash)
@@ -209,7 +209,7 @@ internal class CompatibleCommandTest {
         val gitRoot = mockk<GitCommand>()
 
         every { gitCommand.relativeGitPath(contractPath) }.returns(Pair(gitRoot, relativeContractPath))
-        every { gitRoot.show(newCommitHash, relativeContractPath) }.answers { throw NonZeroExitError("Commit not found") }
+        every { gitRoot.show(newCommitHash, relativeContractPath) }.answers { throw NonZeroExitError("Commit not found", 1) }
         every { gitRoot.show(oldCommitHash, relativeContractPath) }.returns(contract)
 
         val exitCode = CommandLine(compatibleCommand, factory).execute("git", "commits", contractPath, newCommitHash, oldCommitHash)

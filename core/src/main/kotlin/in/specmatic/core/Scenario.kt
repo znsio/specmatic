@@ -469,8 +469,9 @@ data class Scenario(
         val path = this.httpRequestPattern.urlMatcher?.path ?: ""
         val responseStatus = this.httpResponsePattern.status
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | ${exampleName.trim()}" }
+        val testType = if(isNegative) "-ve " else if (generativeTestingEnabled) "+ve " else ""
 
-        return "Scenario: $method $path -> $responseStatus$exampleIdentifier"
+        return "${testType}Scenario: $method $path -> $responseStatus$exampleIdentifier"
     }
 
     fun withSuggestions(suggestions: Scenario): Scenario =

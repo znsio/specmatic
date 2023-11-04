@@ -20,10 +20,8 @@ data class Row(
     val variables: Map<String, String> = emptyMap(),
     val references: Map<String, References> = emptyMap(),
     val name: String = "",
-    val rowType: RowType = NoExamples,
     val fileSource: String? = null
 ) {
-    constructor(columnNames: List<String>, values: List<String>) : this(columnNames, values, rowType = Example)
     constructor(requestExamples: Map<String, Any>, exampleName: String) : this(
         requestExamples.keys.toList().map { keyName: String -> keyName },
         requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
@@ -33,8 +31,7 @@ data class Row(
                         .toString()
                 } else valueString
             },
-        name = exampleName,
-        rowType = Example
+        name = exampleName
     )
 
     private val cells = columnNames.zip(values.map { it }).toMap().toMutableMap()

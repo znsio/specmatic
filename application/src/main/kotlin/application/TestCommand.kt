@@ -18,12 +18,12 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUITE_LIST
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
-import org.junit.platform.launcher.LauncherDiscoveryListener
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.springframework.beans.factory.annotation.Autowired
@@ -90,6 +90,9 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--variables"], description = ["Variables file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
     var variablesFileName: String? = null
 
+    @Option(names = ["--suites"], description = ["Comma-separated list of suites to run (W = Within-bounds tests, O = Outside-bounds tests, WG = Within-bounds generated tests)"])
+    var suites: String = ""
+
     @Option(names = ["--debug"], description = ["Debug logs"])
     var verboseMode: Boolean = false
 
@@ -123,6 +126,7 @@ class TestCommand : Callable<Unit> {
         System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
+        System.setProperty(SUITE_LIST, suites)
 
         if(filterName.isNotBlank()) {
             System.setProperty(FILTER_NAME, filterName)

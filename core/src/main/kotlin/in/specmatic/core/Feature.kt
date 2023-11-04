@@ -327,7 +327,7 @@ data class Feature(
 
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
-                scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
+                scenario.httpRequestPattern.matches(sampleRequest, negativeTestScenario.resolver).isSuccess()
             }.map {
                 it.copy(suiteName = OUTSIDE_BOUNDS_TEST_SUITE)
             }

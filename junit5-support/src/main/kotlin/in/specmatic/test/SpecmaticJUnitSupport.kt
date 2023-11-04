@@ -38,6 +38,7 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NAME = "filterName"
         const val FILTER_NOT_NAME = "filterNotName"
         const val ENDPOINTS_API = "endpointsAPI"
+        const val SUITE_LIST = "suites"
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
@@ -203,11 +204,9 @@ open class SpecmaticJUnitSupport {
 
         var checkedAPIs = false
 
-        val testSuites: Map<String, List<ContractTest>> = testScenarios.groupBy {
-            it.suiteName
-        }
+        val testSuites: List<TestSuite> = groupScenariosBySuite(testScenarios)
 
-        val tests: List<DynamicContainer> = testSuites.entries.map { (suiteName, testScenarios) ->
+        val tests: List<DynamicContainer> = testSuites.map { (suiteName, testScenarios) ->
             val dynamicTests: List<DynamicTest> = testScenarios.map { testScenario ->
                 DynamicTest.dynamicTest(testScenario.testDescription()) {
                     if(!checkedAPIs) {
@@ -244,10 +243,38 @@ open class SpecmaticJUnitSupport {
                 }
             }
 
-            DynamicContainer.dynamicContainer(suiteName + " ( ${dynamicTests.size} tests)", dynamicTests.toMutableList().stream())
+            DynamicContainer.dynamicContainer(suiteName + " (${dynamicTests.size} tests)", dynamicTests.stream())
         }
 
         return tests.iterator()
+    }
+
+    data class TestSuite(val name: String, val tests: List<ContractTest>)
+
+    private fun groupScenariosBySuite(testScenarios: List<ContractTest>): List<TestSuite> =
+        testScenarios.groupBy {
+            it.suiteName
+        }.let { testSuites ->
+            val specifiedSuiteList = csvPropertyToList(SUITE_LIST).map {
+                suiteCodeToNameMap[it] ?: throw ContractException("Suite \"$it\" is not supported")
+            }.ifEmpty {
+                listOf(WITHIN_BOUNDS_TEST_SUITE, OUTSIDE_BOUNDS_TEST_SUITE, GENERATED_WITHOUT_EXAMPLES_SUITE)
+            }
+
+            testSuites.filter { (suiteName, _) ->
+                suiteName in specifiedSuiteList
+            }.map {
+                TestSuite(it.key, it.value)
+            }
+        }
+
+    private fun csvPropertyToList(propertyName: String): List<String> {
+        val propertyValue = (System.getProperty(propertyName) ?: "").trim()
+
+        if(propertyValue.isBlank())
+            return emptyList()
+
+        return propertyValue.split(",").map { it.trim() }
     }
 
     private fun getSpecmaticJson(): SpecmaticConfigJson? {
@@ -380,3 +407,9 @@ fun <T> selectTestsToRun(
 
     return filteredByNotName
 }
+
+val suiteCodeToNameMap = mapOf(
+    "W" to WITHIN_BOUNDS_TEST_SUITE,
+    "O" to OUTSIDE_BOUNDS_TEST_SUITE,
+    "WG" to GENERATED_WITHOUT_EXAMPLES_SUITE
+)

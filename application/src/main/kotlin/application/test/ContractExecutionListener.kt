@@ -206,7 +206,7 @@ class ContractExecutionListener : TestExecutionListener {
             listOf(it.name, it.successCount.toString(), it.failedCount.toString(), it.skippedCount.toString())
         }, null)
 
-        logger.log(table.asPrintableString())
+        logger.log(table.render())
     }
 
     fun exitProcess() {

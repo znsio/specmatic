@@ -1,7 +1,7 @@
 package `in`.specmatic.test.reports.renderers
 
 class Table(private val title: String, private val header: List<String>, private val rows: List<List<String>>, private val summary: String?) {
-    fun asPrintableString(): String {
+    fun render(): String {
         val columnCount = (listOf(header.size) + rows.map { it.size }).max()
         val columnWidths = (0 until columnCount).map { columnIndex ->
             (listOf(header.getOrNull(columnIndex)?.length ?: 0) + rows.map { it.getOrNull(columnIndex)?.length ?: 0 }).max()

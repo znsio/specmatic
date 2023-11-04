@@ -73,8 +73,6 @@ class ResponseBuilder(val scenario: Scenario, val serverState: Map<String, Value
     }
 }
 
-const val OUTSIDE_BOUNDS_TEST_SUITE = "Outside-bounds tests"
-
 data class Feature(
     val scenarios: List<Scenario> = emptyList(),
     private var serverState: Map<String, Value> = emptyMap(),

@@ -20,6 +20,18 @@ private fun colorIsRequested() = System.getenv("SPECMATIC_COLOR") == "1"
 
 private fun stdOutIsRedirected() = System.console() == null
 
+data class Test(val name: String, var status: String = "DID NOT RUN") {
+    constructor(identifier: TestIdentifier): this(identifier.displayName)
+}
+
+data class TestId(private val id: String) {
+    constructor(identifier: TestIdentifier): this(identifier.uniqueId)
+}
+
+data class TestSuite(val name: String, private val identifier: String, val tests: MutableMap<TestId, Test> = linkedMapOf()) {
+    constructor(identifier: TestIdentifier): this(identifier.displayName, identifier.uniqueId)
+}
+
 class ContractExecutionListener : TestExecutionListener {
     private var success: Int = 0
     private var failure: Int = 0
@@ -31,8 +43,52 @@ class ContractExecutionListener : TestExecutionListener {
 
     private val colorPrinter: ContractExecutionPrinter = getContractExecutionPrinter()
 
+    private val testSuites = linkedMapOf<TestId, TestSuite>()
+    private var currentTestSuite: TestSuite? = null
+
+    override fun dynamicTestRegistered(testIdentifier: TestIdentifier?) {
+        super.dynamicTestRegistered(testIdentifier)
+
+        if(testIdentifier == null)
+            return
+
+        if(testIdentifier.isContainer) {
+            val testSuite = TestSuite(testIdentifier)
+
+            testSuites[TestId(testIdentifier)] = testSuite
+            currentTestSuite = testSuite
+        }
+
+        if(testIdentifier.isTest)
+            currentTestSuite?.let {
+                it.tests[TestId(testIdentifier)] = Test(testIdentifier)
+            }
+    }
+
+    override fun executionStarted(testIdentifier: TestIdentifier?) {
+        super.executionStarted(testIdentifier)
+
+        if(testIdentifier == null)
+            return
+
+        if(testIdentifier.isContainer)
+            currentTestSuite = testSuites[TestId(testIdentifier)]
+    }
+
     override fun executionSkipped(testIdentifier: TestIdentifier?, reason: String?) {
         super.executionSkipped(testIdentifier, reason)
+
+        if(testIdentifier == null)
+            return
+
+        if(testIdentifier.isTest) {
+            currentTestSuite?.let {
+                val test = it.tests[TestId(testIdentifier)]
+
+                if(test != null)
+                    test.status = "SKIPPED"
+            }
+        }
     }
 
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
@@ -45,7 +101,15 @@ class ContractExecutionListener : TestExecutionListener {
                     return
         }
 
+        if(testIdentifier == null)
+            return
+
+        if(testIdentifier.isContainer)
+            return
+
         colorPrinter.printTestSummary(testIdentifier, testExecutionResult)
+
+        updateTestStatus(testIdentifier, testExecutionResult)
 
         when(testExecutionResult?.status) {
             TestExecutionResult.Status.SUCCESSFUL ->  {
@@ -61,8 +125,18 @@ class ContractExecutionListener : TestExecutionListener {
                 printAndLogFailure(testExecutionResult, testIdentifier)
             }
             else -> {
-                logger.debug("A test called \"${testIdentifier?.displayName}\" ran but the test execution result was null. Please inform the Specmatic developer.")
+                logger.debug("A test called \"${testIdentifier.displayName}\" ran but the test execution result was null. Please inform the Specmatic developer.")
             }
+        }
+    }
+
+    private fun updateTestStatus(testIdentifier: TestIdentifier, testExecutionResult: TestExecutionResult?) {
+        if(testExecutionResult == null)
+            return
+
+        currentTestSuite?.let {
+            val test = it.tests[TestId(testIdentifier)] ?: return
+            test.status = testExecutionResult.status.name
         }
     }
 

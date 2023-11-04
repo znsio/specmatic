@@ -11,6 +11,10 @@ import `in`.specmatic.test.ScenarioTest
 import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 
+const val WITHIN_BOUNDS_TEST_SUITE = "Within bounds"
+const val GENERATED_WITHOUT_EXAMPLES_SUITE = "Generated (no examples existed)"
+const val OUTSIDE_BOUNDS_TEST_SUITE = "Outside bounds"
+
 object ContractAndStubMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
         return "Contract expected $expected but stub contained $actual"
@@ -34,10 +38,6 @@ interface ScenarioDetailsForResult {
 
     fun testDescription(): String
 }
-
-const val WITHIN_BOUNDS_TEST_SUITE = "Within-bounds tests"
-
-const val GENERATED_WITHOUT_EXAMPLES_SUITE = "Within-bounds tests (no examples existed)"
 
 data class Scenario(
     override val name: String,
@@ -469,9 +469,9 @@ data class Scenario(
         val path = this.httpRequestPattern.urlMatcher?.path ?: ""
         val responseStatus = this.httpResponsePattern.status
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | ${exampleName.trim()}" }
-        val testType = if(isNegative) "-ve " else if (generativeTestingEnabled) "+ve " else ""
+        val prefix = suiteName?.let { "$it | " } ?: ""
 
-        return "${testType}Scenario: $method $path -> $responseStatus$exampleIdentifier"
+        return "${prefix}Scenario: $method $path -> $responseStatus$exampleIdentifier"
     }
 
     fun withSuggestions(suggestions: Scenario): Scenario =

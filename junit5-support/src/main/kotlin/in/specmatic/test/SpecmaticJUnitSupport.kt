@@ -209,12 +209,12 @@ open class SpecmaticJUnitSupport {
         val tests: List<DynamicContainer> = testSuites.map { (suiteName, testScenarios) ->
             val dynamicTests: List<DynamicTest> = testScenarios.map { testScenario ->
                 DynamicTest.dynamicTest(testScenario.testDescription()) {
-                    if(!checkedAPIs) {
+                    if (!checkedAPIs) {
                         checkedAPIs = true
 
                         try {
                             queryActuator()
-                        } catch(exception: Throwable) {
+                        } catch (exception: Throwable) {
                             logger.log(exception, "Failed to query actuator with error")
                         }
                     }
@@ -225,19 +225,29 @@ open class SpecmaticJUnitSupport {
                         val result: Result = invoker.execute(testScenario, timeout)
                         openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result))
 
-                        if(result is Result.Success && result.isPartialSuccess()) {
+                        if (result is Result.Success && result.isPartialSuccess()) {
                             partialSuccesses.add(result)
                         }
 
                         when {
                             result.shouldBeIgnored() -> {
-                                val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${result.toReport().toText().prependIndent("  ")}"
+                                val message =
+                                    "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${
+                                        result.toReport().toText().prependIndent("  ")
+                                    }"
                                 throw TestAbortedException(message)
                             }
+
                             else -> ResultAssert.assertThat(result).isSuccess()
                         }
-                    } catch(e: Throwable) {
-                        openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
+                    } catch (e: Throwable) {
+                        openApiCoverageReportInput.addTestReportRecords(
+                            testScenario.testResultRecord(
+                                Result.Failure(
+                                    exceptionCauseMessage(e)
+                                )
+                            )
+                        )
                         throw e
                     }
                 }

@@ -263,18 +263,18 @@ open class SpecmaticJUnitSupport {
 
     private fun groupScenariosBySuite(testScenarios: List<ContractTest>): List<TestSuite> =
         testScenarios.groupBy {
-            it.suiteName
+            it.testSuiteType
         }.let { testSuites ->
             val specifiedSuiteList = csvPropertyToList(SUITE_LIST).map {
                 suiteCodeToNameMap[it] ?: throw ContractException("Suite \"$it\" is not supported")
             }.ifEmpty {
-                listOf(WITHIN_BOUNDS_TEST_SUITE, OUTSIDE_BOUNDS_TEST_SUITE, GENERATED_WITHOUT_EXAMPLES_SUITE)
+                TestSuiteType.entries.toList()
             }
 
-            testSuites.filter { (suiteName, _) ->
-                suiteName in specifiedSuiteList
+            testSuites.filter { (testSuite, _) ->
+                testSuite in specifiedSuiteList
             }.map {
-                TestSuite(it.key, it.value)
+                TestSuite(it.key.suiteName, it.value)
             }
         }
 
@@ -418,8 +418,4 @@ fun <T> selectTestsToRun(
     return filteredByNotName
 }
 
-val suiteCodeToNameMap = mapOf(
-    "W" to WITHIN_BOUNDS_TEST_SUITE,
-    "O" to OUTSIDE_BOUNDS_TEST_SUITE,
-    "WG" to GENERATED_WITHOUT_EXAMPLES_SUITE
-)
+val suiteCodeToNameMap: Map<String, TestSuiteType> = TestSuiteType.entries.associateBy { it.shortCode }

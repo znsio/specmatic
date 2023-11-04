@@ -1,9 +1,7 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.GENERATED_WITHOUT_EXAMPLES_SUITE
-import `in`.specmatic.core.OUTSIDE_BOUNDS_TEST_SUITE
-import `in`.specmatic.core.WITHIN_BOUNDS_TEST_SUITE
+import `in`.specmatic.core.TestSuiteType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -221,8 +219,8 @@ paths:
 
         println(contractTests.size)
 
-        val suites = contractTests.groupBy { it.suiteName }.keys.sorted()
-        assertThat(suites).isEqualTo(listOf(WITHIN_BOUNDS_TEST_SUITE, OUTSIDE_BOUNDS_TEST_SUITE).sorted())
+        val suites = contractTests.groupBy { it.testSuiteType }.keys.sorted()
+        assertThat(suites).isEqualTo(listOf(TestSuiteType.WITHIN_BOUNDS, TestSuiteType.OUTSIDE_BOUNDS).sorted())
     }
 
     @Test
@@ -260,7 +258,7 @@ paths:
 
         println(contractTests.size)
 
-        val suites = contractTests.groupBy { it.suiteName }.keys.sorted()
-        assertThat(suites).isEqualTo(listOf(GENERATED_WITHOUT_EXAMPLES_SUITE, OUTSIDE_BOUNDS_TEST_SUITE).sorted())
+        val suites = contractTests.groupBy { it.testSuiteType }.keys.sorted()
+        assertThat(suites).isEqualTo(listOf(TestSuiteType.GENERATED, TestSuiteType.OUTSIDE_BOUNDS).sorted())
     }
 }

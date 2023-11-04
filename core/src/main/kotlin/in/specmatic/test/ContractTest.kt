@@ -2,6 +2,7 @@ package `in`.specmatic.test
 
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.TestResult
+import `in`.specmatic.core.TestSuiteType
 
 data class TestResultRecord(
     val path: String,
@@ -24,5 +25,5 @@ interface ContractTest {
     fun runTest(host: String?, port: String?, timeout: Int): Result
     fun runTest(testBaseURL: String?, timeOut: Int): Result
 
-    val suiteName: String
+    val testSuiteType: TestSuiteType
 }

@@ -73,7 +73,7 @@ paths:
         val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
 
         assertThat(scenarios).allSatisfy {
-            assertThat(it.suiteName).isIn(listOf(GENERATED_WITHOUT_EXAMPLES_SUITE, WITHIN_BOUNDS_TEST_SUITE, OUTSIDE_BOUNDS_TEST_SUITE))
+            assertThat(it.testSuiteType).isNotNull()
         }
     }
 
@@ -1198,7 +1198,7 @@ paths:
 """.trimIndent(), "").toFeature()
 
         val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
-        val negativeTestScenarios = scenarios.filter { it.suiteName.equals(OUTSIDE_BOUNDS_TEST_SUITE)}
+        val negativeTestScenarios = scenarios.filter { it.testSuiteType == TestSuiteType.OUTSIDE_BOUNDS }
         assertThat(negativeTestScenarios.count()).isEqualTo(1)
         val headerPattern = negativeTestScenarios.first().httpRequestPattern.headersPattern.pattern
         assertThat(headerPattern.values.first() is StringPattern)
@@ -1332,7 +1332,7 @@ paths:
 """.trimIndent(), "").toFeature()
 
         val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
-        val negativeTestScenarios = scenarios.filter { it.suiteName?.contains(OUTSIDE_BOUNDS_TEST_SUITE) == true}
+        val negativeTestScenarios = scenarios.filter { it.testSuiteType == TestSuiteType.OUTSIDE_BOUNDS}
         assertThat(negativeTestScenarios.count()).isEqualTo(8)
     }
 

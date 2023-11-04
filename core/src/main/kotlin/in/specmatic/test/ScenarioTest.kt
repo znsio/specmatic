@@ -1,10 +1,7 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.conversions.convertPathParameterStyle
-import `in`.specmatic.core.Result
-import `in`.specmatic.core.Scenario
-import `in`.specmatic.core.TestResult
-import `in`.specmatic.core.executeTest
+import `in`.specmatic.core.*
 
 class ScenarioTest(
     val scenario: Scenario,
@@ -40,8 +37,8 @@ class ScenarioTest(
         return executeTest(scenario, httpClient).updateScenario(scenario)
     }
 
-    override val suiteName: String
-        get() = scenario.suiteName ?: "Other tests"
+    override val testSuiteType: TestSuiteType
+        get() = scenario.testSuiteType
 
     private fun runHttpTest(timeout: Int, host: String, port: String, testScenario: Scenario): Result {
         val protocol = System.getProperty("protocol") ?: "http"

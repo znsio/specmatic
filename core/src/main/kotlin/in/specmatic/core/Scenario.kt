@@ -11,9 +11,12 @@ import `in`.specmatic.test.ScenarioTest
 import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 
-const val WITHIN_BOUNDS_TEST_SUITE = "Within bounds"
-const val GENERATED_WITHOUT_EXAMPLES_SUITE = "Generated"
-const val OUTSIDE_BOUNDS_TEST_SUITE = "Outside bounds"
+enum class TestSuiteType(val suiteName: String, val shortCode: String) {
+    WITHIN_BOUNDS("Within bounds", "W"),
+    GENERATED("Generated", "WG"),
+    OUTSIDE_BOUNDS("Outside bounds", "O"),
+    UNKNOWN("Unclassified test", "")
+}
 
 object ContractAndStubMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
@@ -61,7 +64,7 @@ data class Scenario(
     val sourceRepositoryBranch:String? = null,
     val specification:String? = null,
     val serviceType:String? = null,
-    val suiteName: String? = null
+    val testSuiteType: TestSuiteType = TestSuiteType.UNKNOWN
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -346,15 +349,15 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             when (examples.size) {
-                0 -> listOf(RowWithTestDescription(Row(), GENERATED_WITHOUT_EXAMPLES_SUITE))
+                0 -> listOf(RowWithTestDescription(Row(), TestSuiteType.GENERATED))
                 else -> examples.flatMap {
                     it.rows.map { row ->
-                        RowWithTestDescription(row.copy(variables = variables, references = referencesWithBaseURLs), WITHIN_BOUNDS_TEST_SUITE)
+                        RowWithTestDescription(row.copy(variables = variables, references = referencesWithBaseURLs), TestSuiteType.WITHIN_BOUNDS)
                     }
                 }
             }.flatMap { row ->
                 newBasedOn(row.row, enableGenerativeTesting).map {
-                    it.copy(suiteName = row.testDescription)
+                    it.copy(testSuiteType = row.testSuiteType)
                 }
             }
         }
@@ -371,16 +374,16 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             when (examples.size) {
-                0 -> listOf(RowWithTestDescription(Row(), GENERATED_WITHOUT_EXAMPLES_SUITE))
+                0 -> listOf(RowWithTestDescription(Row(), TestSuiteType.GENERATED))
                 else -> examples.flatMap {
                     it.rows.map { row ->
-                        RowWithTestDescription(row.copy(variables = variables, references = referencesWithBaseURLs), WITHIN_BOUNDS_TEST_SUITE)
+                        RowWithTestDescription(row.copy(variables = variables, references = referencesWithBaseURLs), TestSuiteType.WITHIN_BOUNDS)
                     }
                 }
             }.flatMap { row ->
                 try {
                     newBasedOn(row.row, generativeTestingEnabled).map {
-                        it.copy(suiteName = row.testDescription)
+                        it.copy(testSuiteType = row.testSuiteType)
                     }.map { ScenarioTest(it, generativeTestingEnabled) }
                 } catch (e: Throwable) {
                     listOf(ScenarioTestGenerationFailure(this, e))
@@ -469,7 +472,7 @@ data class Scenario(
         val path = this.httpRequestPattern.urlMatcher?.path ?: ""
         val responseStatus = this.httpResponsePattern.status
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | ${exampleName.trim()}" }
-        val prefix = suiteName?.let { "$it | " } ?: ""
+        val prefix = testSuiteType?.let { "$it | " } ?: ""
 
         return "${prefix}Scenario: $method $path -> $responseStatus$exampleIdentifier"
     }
@@ -520,7 +523,7 @@ data class Scenario(
         sourceRepositoryBranch = sourceRepositoryBranch,
         specification = specification,
         serviceType = serviceType,
-        suiteName = "Beyond-boundary tests"
+        testSuiteType = TestSuiteType.OUTSIDE_BOUNDS
     )
 }
 

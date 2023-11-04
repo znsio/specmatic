@@ -327,7 +327,7 @@ data class Feature(
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
                 scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
             }.map {
-                it.copy(suiteName = OUTSIDE_BOUNDS_TEST_SUITE)
+                it.copy(testSuiteType = TestSuiteType.OUTSIDE_BOUNDS)
             }
 
         }.flatten()

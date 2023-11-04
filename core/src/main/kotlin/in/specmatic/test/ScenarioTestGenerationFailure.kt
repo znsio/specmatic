@@ -4,6 +4,7 @@ import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.Scenario
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.TestSuiteType
 
 class ScenarioTestGenerationFailure(val scenario: Scenario, val e: Throwable) : ContractTest {
     override fun testResultRecord(result: Result): TestResultRecord {
@@ -26,6 +27,6 @@ class ScenarioTestGenerationFailure(val scenario: Scenario, val e: Throwable) : 
         return Result.Failure(exceptionCauseMessage(e)).updateScenario(scenario)
     }
 
-    override val suiteName: String
-        get() = scenario.suiteName ?: "Other tests"
+    override val testSuiteType: TestSuiteType
+        get() = scenario.testSuiteType
 }

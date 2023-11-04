@@ -26,6 +26,6 @@ class ScenarioTestGenerationFailure(val scenario: Scenario, val e: Throwable) : 
         return Result.Failure(exceptionCauseMessage(e)).updateScenario(scenario)
     }
 
-    override val suitName: String
+    override val suiteName: String
         get() = scenario.suiteName ?: "Other tests"
 }

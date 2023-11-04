@@ -204,7 +204,7 @@ open class SpecmaticJUnitSupport {
         var checkedAPIs = false
 
         val testSuites: Map<String, List<ContractTest>> = testScenarios.groupBy {
-            it.suitName
+            it.suiteName
         }
 
         val tests: List<DynamicContainer> = testSuites.entries.map { (suiteName, testScenarios) ->

@@ -35,6 +35,10 @@ interface ScenarioDetailsForResult {
     fun testDescription(): String
 }
 
+const val WITHIN_BOUNDS_TEST_SUITE = "Within-bounds tests"
+
+const val GENERATED_WITHOUT_EXAMPLES_SUITE = "Within-bounds tests (no examples existed)"
+
 data class Scenario(
     override val name: String,
     val httpRequestPattern: HttpRequestPattern,
@@ -342,10 +346,10 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             when (examples.size) {
-                0 -> listOf(RowWithTestDescription(Row(), "Generated without examples"))
+                0 -> listOf(RowWithTestDescription(Row(), GENERATED_WITHOUT_EXAMPLES_SUITE))
                 else -> examples.flatMap {
                     it.rows.map { row ->
-                        RowWithTestDescription(row.copy(variables = variables, references = referencesWithBaseURLs), "Using examples")
+                        RowWithTestDescription(row.copy(variables = variables, references = referencesWithBaseURLs), WITHIN_BOUNDS_TEST_SUITE)
                     }
                 }
             }.flatMap { row ->
@@ -367,10 +371,10 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             when (examples.size) {
-                0 -> listOf(RowWithTestDescription(Row(), "Generated without examples"))
+                0 -> listOf(RowWithTestDescription(Row(), GENERATED_WITHOUT_EXAMPLES_SUITE))
                 else -> examples.flatMap {
                     it.rows.map { row ->
-                        RowWithTestDescription(row.copy(variables = variables, references = referencesWithBaseURLs), "Using examples")
+                        RowWithTestDescription(row.copy(variables = variables, references = referencesWithBaseURLs), WITHIN_BOUNDS_TEST_SUITE)
                     }
                 }
             }.flatMap { row ->

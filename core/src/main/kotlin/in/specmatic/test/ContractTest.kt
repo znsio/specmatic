@@ -24,5 +24,5 @@ interface ContractTest {
     fun runTest(host: String?, port: String?, timeout: Int): Result
     fun runTest(testBaseURL: String?, timeOut: Int): Result
 
-    val suitName: String
+    val suiteName: String
 }

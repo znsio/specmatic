@@ -40,7 +40,7 @@ class ScenarioTest(
         return executeTest(scenario, httpClient).updateScenario(scenario)
     }
 
-    override val suitName: String
+    override val suiteName: String
         get() = scenario.suiteName ?: "Other tests"
 
     private fun runHttpTest(timeout: Int, host: String, port: String, testScenario: Scenario): Result {

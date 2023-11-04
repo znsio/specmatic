@@ -1,6 +1,9 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.core.GENERATED_WITHOUT_EXAMPLES_SUITE
+import `in`.specmatic.core.OUTSIDE_BOUNDS_TEST_SUITE
+import `in`.specmatic.core.WITHIN_BOUNDS_TEST_SUITE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -174,5 +177,90 @@ paths:
         assertThat(descriptions[0]).contains("TEST1")
         assertThat(descriptions[1]).contains("TEST2")
         assertThat(descriptions[2]).contains("TEST3")
+    }
+
+    @Test
+    fun `when example are present tests should be grouped by suite`() {
+        val specification = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+              required:
+                - data
+            examples:
+              SUCCESS:
+                value:
+                  data: abc
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                SUCCESS:
+                  value: 10
+              schema:
+                type: number
+        """.trimIndent(), "").toFeature()
+
+        val contractTests = specification.copy(generativeTestingEnabled = true).generateContractTests(emptyList())
+
+        println(contractTests.size)
+
+        val suites = contractTests.groupBy { it.suiteName }.keys.sorted()
+        assertThat(suites).isEqualTo(listOf(WITHIN_BOUNDS_TEST_SUITE, OUTSIDE_BOUNDS_TEST_SUITE).sorted())
+    }
+
+    @Test
+    fun `when example are absent tests should be grouped by suite`() {
+        val specification = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+        """.trimIndent(), "").toFeature()
+
+        val contractTests = specification.copy(generativeTestingEnabled = true).generateContractTests(emptyList())
+
+        println(contractTests.size)
+
+        val suites = contractTests.groupBy { it.suiteName }.keys.sorted()
+        assertThat(suites).isEqualTo(listOf(GENERATED_WITHOUT_EXAMPLES_SUITE, OUTSIDE_BOUNDS_TEST_SUITE).sorted())
     }
 }

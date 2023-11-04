@@ -73,6 +73,8 @@ class ResponseBuilder(val scenario: Scenario, val serverState: Map<String, Value
     }
 }
 
+const val OUTSIDE_BOUNDS_TEST_SUITE = "Outside-bounds tests"
+
 data class Feature(
     val scenarios: List<Scenario> = emptyList(),
     private var serverState: Map<String, Value> = emptyMap(),
@@ -327,7 +329,7 @@ data class Feature(
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
                 scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
             }.map {
-                it.copy(suiteName = "Mutation tests")
+                it.copy(suiteName = OUTSIDE_BOUNDS_TEST_SUITE)
             }
 
         }.flatten()

@@ -26,6 +26,23 @@ class TableTest {
     }
 
     @Test
+    fun `should generate a table with no last line if the summary is missing`() {
+        val table = Table("Prices", listOf("Region", "Apples", "Oranges"), listOf(listOf("North", "10", "20"), listOf("South", "100", "120")), null)
+        assertThat(table.asPrintableString()).isEqualTo(
+            """
+                |---------------------------|
+                | Prices                    |
+                |---------------------------|
+                | Region | Apples | Oranges |
+                |--------+--------+---------|
+                | North  | 10     | 20      |
+                | South  | 100    | 120     |
+                |---------------------------|
+            """.trimIndent()
+        )
+    }
+
+    @Test
     fun `should handle columns of differing lengths`() {
         val table = Table("Prices", listOf("Region", "Apples", "Oranges", "Pears"), listOf(listOf("North", "10", "20"), listOf("South", "100", "120"), listOf("East", "100", "50", "300")), "Summary")
         assertThat(table.asPrintableString()).isEqualTo(

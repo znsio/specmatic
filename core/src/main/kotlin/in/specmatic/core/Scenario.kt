@@ -12,7 +12,7 @@ import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 
 const val WITHIN_BOUNDS_TEST_SUITE = "Within bounds"
-const val GENERATED_WITHOUT_EXAMPLES_SUITE = "Generated (no examples existed)"
+const val GENERATED_WITHOUT_EXAMPLES_SUITE = "Generated"
 const val OUTSIDE_BOUNDS_TEST_SUITE = "Outside bounds"
 
 object ContractAndStubMismatchMessages : MismatchMessages {

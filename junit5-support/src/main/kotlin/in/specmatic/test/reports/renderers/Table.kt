@@ -18,9 +18,6 @@ class Table(private val title: String, private val header: List<String>, private
         val tableTitle = "| ${"%-${headerTitleSize}s".format(title)} |"
         val titleSeparator = "|-${"-".repeat(headerTitleSize)}-|"
 
-        val summaryRowFormatter = "%-${headerTitleSize}s"
-        val summaryRow = "| ${summaryRowFormatter.format(summary)} |"
-
         val header: List<String> = listOf(titleSeparator, tableTitle, titleSeparator, tableHeader, headerSeparator)
         val rowsWithEqualizedLength = rows.map { row ->
             row + (0 until (columnCount - row.size)).map { "" }
@@ -30,7 +27,13 @@ class Table(private val title: String, private val header: List<String>, private
                 "%-${columnWidths[index]}s".format(column)
             }.joinToString(" | ", prefix = "| ", postfix = " |")
         }
-        val footer: List<String> = listOf(titleSeparator, summaryRow, titleSeparator)
+
+        val footer: List<String> = summary?.let {
+            val summaryRowFormatter = "%-${headerTitleSize}s"
+            val summaryRow = "| ${summaryRowFormatter.format(summary)} |"
+
+            listOf(titleSeparator, summaryRow, titleSeparator)
+        } ?: listOf(titleSeparator)
 
         val coveredAPIsTable =  (header + tableBody + footer).joinToString(System.lineSeparator())
 

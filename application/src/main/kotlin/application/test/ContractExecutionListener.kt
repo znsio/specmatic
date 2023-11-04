@@ -2,6 +2,7 @@ package application.test
 
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.test.SpecmaticJUnitSupport
+import `in`.specmatic.test.reports.renderers.Table
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
@@ -180,7 +181,32 @@ class ContractExecutionListener : TestExecutionListener {
             println()
         }
 
-        colorPrinter.printFinalSummary(TestSummary(success, SpecmaticJUnitSupport.partialSuccesses.size, aborted, failure))
+        val oneSummaryRowPerTestSuite = testSuites.map {
+            val successCount = it.value.tests.values.count { test -> test.status == "SUCCESSFUL" }
+            val failedCount = it.value.tests.values.count { test -> test.status == "FAILED" }
+            val skippedCount = it.value.tests.values.count { test -> test.status == "SKIPPED" }
+
+            TestSuiteSummary(it.value.name, successCount, failedCount, skippedCount)
+        }
+
+        val summaryOfAllTestSuites = oneSummaryRowPerTestSuite.reduce { acc, testSuiteSummary ->
+            TestSuiteSummary(
+                "All Test Suites",
+                acc.successCount + testSuiteSummary.successCount,
+                acc.failedCount + testSuiteSummary.failedCount,
+                acc.skippedCount + testSuiteSummary.skippedCount
+            )
+        }
+
+        printTestSuiteSummaryAsTable(oneSummaryRowPerTestSuite + listOf(summaryOfAllTestSuites))
+    }
+
+    private fun printTestSuiteSummaryAsTable(testSuiteSummaries: List<TestSuiteSummary>) {
+        val table = Table("Summary", listOf("Suite Name", "Succeeded", "Failed", "Skipped"), testSuiteSummaries.map {
+            listOf(it.name, it.successCount.toString(), it.failedCount.toString(), it.skippedCount.toString())
+        }, null)
+
+        logger.log(table.asPrintableString())
     }
 
     fun exitProcess() {
@@ -192,3 +218,5 @@ class ContractExecutionListener : TestExecutionListener {
         exitProcess(exitStatus)
     }
 }
+
+data class TestSuiteSummary(val name: String, val successCount: Int, val failedCount: Int, val skippedCount: Int)

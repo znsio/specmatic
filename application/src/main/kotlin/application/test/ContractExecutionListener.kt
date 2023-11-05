@@ -160,12 +160,12 @@ class ContractExecutionListener : TestExecutionListener {
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
         org.fusesource.jansi.AnsiConsole.systemInstall()
 
-        if(SpecmaticJUnitSupport.partialSuccesses.isNotEmpty()) {
+        if (SpecmaticJUnitSupport.partialSuccesses.isNotEmpty()) {
             println()
             colorPrinter.printFailureTitle("Partial Successes:")
             println()
 
-            SpecmaticJUnitSupport.partialSuccesses.filter { it.partialSuccessMessage != null} .forEach { result ->
+            SpecmaticJUnitSupport.partialSuccesses.filter { it.partialSuccessMessage != null }.forEach { result ->
                 println("  " + (result.scenario?.testDescription() ?: "Unknown Scenario"))
                 println("    " + result.partialSuccessMessage!!)
                 println()
@@ -189,16 +189,20 @@ class ContractExecutionListener : TestExecutionListener {
             TestSuiteSummary(it.value.name, successCount, failedCount, skippedCount)
         }
 
-        val summaryOfAllTestSuites = oneSummaryRowPerTestSuite.reduce { acc, testSuiteSummary ->
-            TestSuiteSummary(
-                "All Test Suites",
-                acc.successCount + testSuiteSummary.successCount,
-                acc.failedCount + testSuiteSummary.failedCount,
-                acc.skippedCount + testSuiteSummary.skippedCount
-            )
+        val summaryOfAllTestSuites = if (testSuites.size > 1) {
+            listOf(oneSummaryRowPerTestSuite.reduce { acc, testSuiteSummary ->
+                TestSuiteSummary(
+                    "All Test Suites",
+                    acc.successCount + testSuiteSummary.successCount,
+                    acc.failedCount + testSuiteSummary.failedCount,
+                    acc.skippedCount + testSuiteSummary.skippedCount
+                )
+            })
+        } else {
+            emptyList()
         }
 
-        printTestSuiteSummaryAsTable(oneSummaryRowPerTestSuite + listOf(summaryOfAllTestSuites))
+        printTestSuiteSummaryAsTable(oneSummaryRowPerTestSuite + summaryOfAllTestSuites)
     }
 
     private fun printTestSuiteSummaryAsTable(testSuiteSummaries: List<TestSuiteSummary>) {

@@ -28,6 +28,8 @@ class Configuration {
 
             }
 
+        var testNamePrefix: (TestSuiteType) -> String = { _ -> "" }
+
         private var _config: SpecmaticConfigJson? =
             if(File(_globalConfigFileName).exists())
                 loadSpecmaticJsonConfig(_globalConfigFileName)

@@ -472,7 +472,7 @@ data class Scenario(
         val path = this.httpRequestPattern.urlMatcher?.path ?: ""
         val responseStatus = this.httpResponsePattern.status
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | ${exampleName.trim()}" }
-        val prefix = testSuiteType?.let { "$it | " } ?: ""
+        val prefix = Configuration.testNamePrefix(testSuiteType)
 
         return "${prefix}Scenario: $method $path -> $responseStatus$exampleIdentifier"
     }

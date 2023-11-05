@@ -3,6 +3,7 @@ package application
 import application.test.ContractExecutionListener
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.Configuration
+import `in`.specmatic.core.TestSuiteType
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
@@ -127,6 +128,8 @@ class TestCommand : Callable<Unit> {
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
         System.setProperty(SUITE_LIST, suites)
+
+        Configuration.testNamePrefix = { testSuiteType: TestSuiteType -> testSuiteType.suiteName + " | " }
 
         if(filterName.isNotBlank()) {
             System.setProperty(FILTER_NAME, filterName)

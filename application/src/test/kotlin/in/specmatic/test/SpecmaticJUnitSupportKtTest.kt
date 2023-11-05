@@ -179,7 +179,7 @@ paths:
 
     @Test
     fun `when example are present tests should be grouped by suite`() {
-        val specification = OpenApiSpecification.fromYAML("""
+        val specificationHavingExamples = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
   title: Sample API
@@ -215,17 +215,17 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-        val contractTests = specification.copy(generativeTestingEnabled = true).generateContractTests(emptyList())
+        val contractTests = specificationHavingExamples.copy(generativeTestingEnabled = true).generateContractTests(emptyList())
 
-        println(contractTests.size)
+        val actualSuitesOfGeneratedTests = contractTests.groupBy { it.testSuiteType }.keys.sorted()
+        val expectedTestSuites = listOf(TestSuiteType.WITHIN_BOUNDS, TestSuiteType.OUTSIDE_BOUNDS).sorted()
 
-        val suites = contractTests.groupBy { it.testSuiteType }.keys.sorted()
-        assertThat(suites).isEqualTo(listOf(TestSuiteType.WITHIN_BOUNDS, TestSuiteType.OUTSIDE_BOUNDS).sorted())
+        assertThat(actualSuitesOfGeneratedTests).isEqualTo(expectedTestSuites)
     }
 
     @Test
     fun `when example are absent tests should be grouped by suite`() {
-        val specification = OpenApiSpecification.fromYAML("""
+        val specificationHavingNoExamples = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
   title: Sample API
@@ -254,11 +254,11 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-        val contractTests = specification.copy(generativeTestingEnabled = true).generateContractTests(emptyList())
+        val contractTests = specificationHavingNoExamples.copy(generativeTestingEnabled = true).generateContractTests(emptyList())
 
-        println(contractTests.size)
+        val actualSuitesOfGeneratedTests = contractTests.groupBy { it.testSuiteType }.keys.sorted()
+        val expectedSuites = listOf(TestSuiteType.GENERATED, TestSuiteType.OUTSIDE_BOUNDS).sorted()
 
-        val suites = contractTests.groupBy { it.testSuiteType }.keys.sorted()
-        assertThat(suites).isEqualTo(listOf(TestSuiteType.GENERATED, TestSuiteType.OUTSIDE_BOUNDS).sorted())
+        assertThat(actualSuitesOfGeneratedTests).isEqualTo(expectedSuites)
     }
 }

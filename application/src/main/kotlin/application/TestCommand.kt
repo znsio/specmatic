@@ -130,6 +130,7 @@ class TestCommand : Callable<Unit> {
         System.setProperty(SUITE_LIST, suites)
 
         Configuration.testNamePrefix = { testSuiteType: TestSuiteType -> testSuiteType.suiteName + " | " }
+        Configuration.testCountSuffix = { _ -> "" }
 
         if(filterName.isNotBlank()) {
             System.setProperty(FILTER_NAME, filterName)

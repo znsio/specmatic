@@ -253,7 +253,7 @@ open class SpecmaticJUnitSupport {
                 }
             }
 
-            DynamicContainer.dynamicContainer(suiteName + " (${dynamicTests.size} tests)", dynamicTests.stream())
+            DynamicContainer.dynamicContainer(suiteName + Configuration.testCountSuffix(dynamicTests.size), dynamicTests.stream())
         }
 
         return tests.iterator()

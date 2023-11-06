@@ -47,6 +47,6 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
         if(report.notImplementedAPICount > 0) {
             missingAPIsMessageRows.add("${report.notImplementedAPICount} out of ${report.totalEndpointsCount} endpoints have not been completely implemented.")
         }
-        return coveredAPIsTable + System.lineSeparator()  + missingAPIsMessageRows.joinToString(System.lineSeparator())
+        return coveredAPIsTable + System.lineSeparator()  + missingAPIsMessageRows.joinToString(System.lineSeparator()) + "\n"
     }
 }

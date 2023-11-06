@@ -29,6 +29,7 @@ class Configuration {
             }
 
         var testNamePrefix: (TestSuiteType) -> String = { _ -> "" }
+        var testCountSuffix: (Int) -> String = { count -> " ($count tests)" }
 
         private var _config: SpecmaticConfigJson? =
             if(File(_globalConfigFileName).exists())

@@ -304,9 +304,16 @@ data class Feature(
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
         return if (generativeTestingEnabled)
-            positiveTestScenarios(suggestions) + negativeTestScenarios()
+            positiveTestScenarios(suggestions) + negativeTestScenariosUnlessDisabled()
         else
             positiveTestScenarios(suggestions)
+    }
+
+    private fun negativeTestScenariosUnlessDisabled(): List<Scenario> {
+        return if (System.getenv("ONLY_POSITIVE") == "true")
+            emptyList()
+        else
+            negativeTestScenarios()
     }
 
     fun positiveTestScenarios(suggestions: List<Scenario>) =

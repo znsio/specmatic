@@ -49,10 +49,8 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
-            specmaticConfigJson?.let {
-                val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
-                reportProcessors.forEach { it.process(getReportConfiguration()) }
-            }
+            val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
+            reportProcessors.forEach { it.process(getReportConfiguration()) }
         }
 
         private fun getReportConfiguration(): ReportConfiguration {

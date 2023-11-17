@@ -32,10 +32,12 @@ import io.swagger.v3.parser.core.models.SwaggerParseResult
 import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
+private const val SPECMATIC_OAUTH2_TOKEN = "SPECMATIC_OAUTH2_TOKEN"
 private const val SERVICE_TYPE_HTTP = "HTTP"
 
 private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
 private const val testDirectoryProperty = "specmaticTestsDirectory"
+
 
 class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
     ApiSpecification {
@@ -769,11 +771,15 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             BEARER_SECURITY_SCHEME, SecurityScheme.Type.OAUTH2.toString() ->
                 securitySchemeConfiguration?.let {
                     (it as SecuritySchemeWithOAuthToken).token
-                }
+                } ?: getBearerTokenFromEnvironment()
 
             else -> throw ContractException("Cannot use the Bearer Security Scheme implementation for scheme type: $type")
         }
         return BearerSecurityScheme(token)
+    }
+
+    private fun getBearerTokenFromEnvironment(): String? {
+        return System.getenv(SPECMATIC_OAUTH2_TOKEN)
     }
 
     private fun toFormFields(mediaType: MediaType) =

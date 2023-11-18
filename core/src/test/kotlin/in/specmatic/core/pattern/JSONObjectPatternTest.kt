@@ -6,6 +6,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.value.*
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
@@ -405,48 +406,126 @@ internal class JSONObjectPatternTest {
     }
 
     @Nested
-    inner class MinProperties {
-        private val basePattern = JSONObjectPattern(
-            mapOf(
-                "id" to NumberPattern(),
-                "name?" to StringPattern(),
-                "address?" to StringPattern(),
-                "department?" to StringPattern(),
+    inner class MinAndMaxProperties {
+        @Nested
+        inner class MatchingValuesToPatterns {
+            private val basePattern = JSONObjectPattern(
+                mapOf(
+                    "id" to NumberPattern(),
+                    "name?" to StringPattern(),
+                    "address?" to StringPattern(),
+                    "department?" to StringPattern(),
+                )
             )
-        )
 
-        @ParameterizedTest
-        @CsvSource(value = [
-            """result | min | max | obj """,
-            """fail   | 2   |     | {"id": 10}""",
-            """pass   | 2   |     | {"id": 10, "name": "Jill"}""",
-            """pass   | 2   |     | {"id": 10, "name": "Jill", "address": "Baker street"}""",
-            """pass   |     | 2   | {"id": 10, "name": "Jill"}""",
-            """fail   |     | 2   | {"id": 10, "name": "Jill", "address": "Baker street"}""",
-            """pass   | 2   | 3   | {"id": 10, "name": "Jill", "address": "Baker street"}""",
-            """fail   | 2   | 3   | {"id": 10, "name": "Jill", "address": "Baker street", "department": "HR"}""",
-            """fail   | 2   | 3   | {"id": 10}""",
-        ],
-        delimiter = '|',
-        useHeadersInDisplayName = true,
-        ignoreLeadingAndTrailingWhitespace = true)
-        fun cases(result: String, minProperties: String?, maxProperties: String?, obj: String) {
-            val json = parsedJSONObject(obj)
+            @ParameterizedTest
+            @CsvSource(
+                value = [
+                    """result | min | max | obj """,
+                    """fail   | 2   |     | {"id": 10}""",
+                    """pass   | 2   |     | {"id": 10, "name": "Jill"}""",
+                    """pass   | 2   |     | {"id": 10, "name": "Jill", "address": "Baker street"}""",
+                    """pass   |     | 2   | {"id": 10, "name": "Jill"}""",
+                    """fail   |     | 2   | {"id": 10, "name": "Jill", "address": "Baker street"}""",
+                    """pass   | 2   | 3   | {"id": 10, "name": "Jill", "address": "Baker street"}""",
+                    """fail   | 2   | 3   | {"id": 10, "name": "Jill", "address": "Baker street", "department": "HR"}""",
+                    """fail   | 2   | 3   | {"id": 10}""",
+                ],
+                delimiter = '|',
+                useHeadersInDisplayName = true,
+                ignoreLeadingAndTrailingWhitespace = true
+            )
+            fun cases(result: String, minProperties: String?, maxProperties: String?, obj: String) {
+                val json = parsedJSONObject(obj)
 
-            val pattern = (
-                minProperties?.let { basePattern.copy(minProperties = it.toInt()) } ?: basePattern
-            ).let { withMin ->
-                maxProperties?.let { withMin.copy(maxProperties = it.toInt()) } ?: withMin
+                val pattern = (
+                        minProperties?.let { basePattern.copy(minProperties = it.toInt()) } ?: basePattern
+                        ).let { withMin ->
+                        maxProperties?.let { withMin.copy(maxProperties = it.toInt()) } ?: withMin
+                    }
+
+                when (result) {
+                    "fail" -> assertThat(pattern.matches(json, Resolver())).isInstanceOf(Result.Failure::class.java)
+                    "pass" -> assertThat(pattern.matches(json, Resolver())).isInstanceOf(Result.Success::class.java)
+                    else -> throw Exception("Unknown result $result")
+                }
+            }
+        }
+
+        @Nested
+        inner class GeneratingValues {
+            @Test
+            fun `should generate a value with at least the minimum number of properties`() {
+                val pattern = JSONObjectPattern(
+                    mapOf(
+                        "id" to NumberPattern(),
+                        "name?" to StringPattern(),
+                        "address?" to StringPattern(),
+                        "department?" to StringPattern(),
+                    ),
+                    minProperties = 2
+                )
+
+                val value: JSONObjectValue = pattern.generate(Resolver())
+
+                assertThat(value.jsonObject.keys).hasSizeGreaterThanOrEqualTo(2)
             }
 
-            when(result) {
-                "fail" -> assertThat(pattern.matches(json, Resolver())).isInstanceOf(Result.Failure::class.java)
-                "pass" -> assertThat(pattern.matches(json, Resolver())).isInstanceOf(Result.Success::class.java)
-                else -> throw Exception("Unknown result $result")
+            @Test
+            fun `generation should fail when available properties are less than minimum`() {
+                val pattern = JSONObjectPattern(
+                    mapOf(
+                        "id" to NumberPattern(),
+                        "name?" to StringPattern()
+                    ),
+                    minProperties = 3
+                )
+
+                assertThatThrownBy { pattern.generate(Resolver()) }.isInstanceOf(ContractException::class.java)
+            }
+
+            @Test
+            fun `should generate a value with at most the maximum number of properties`() {
+                val pattern = JSONObjectPattern(
+                    mapOf(
+                        "id" to NumberPattern(),
+                        "name?" to StringPattern(),
+                        "address?" to StringPattern(),
+                        "department?" to StringPattern(),
+                    ),
+                    maxProperties = 2
+                )
+
+                val value: JSONObjectValue = pattern.generate(Resolver())
+
+                assertThat(value.jsonObject.keys).hasSizeLessThanOrEqualTo(2)
+            }
+
+            @Test
+            fun `generation should fail when the count of mandatory properties is greater than maxProperties`() {
+                val pattern = JSONObjectPattern(
+                    mapOf(
+                        "id" to NumberPattern(),
+                        "name" to StringPattern(),
+                        "address" to StringPattern(),
+                    ),
+                    maxProperties = 2
+                )
+
+                assertThatThrownBy { pattern.generate(Resolver()) }.isInstanceOf(ContractException::class.java)
+            }
+        }
+
+        @Nested
+        inner class GeneratingTests {
+            @Test
+            fun `when generating tests the properties should be within the min and max limits`() {
+
             }
         }
     }
 
-// generation
-// backward compatibility
+// newBasedOn
+// backward compatibility (encompass)
+// integration test
 }

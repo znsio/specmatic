@@ -316,11 +316,32 @@ fun <ValueType> forEachKeyCombinationIn(
 fun <ValueType> allOrNothingCombinationIn(
     patternMap: Map<String, ValueType>,
     row: Row = Row(),
+    minPropertiesOrNull: Int? = null,
+    maxPropertiesOrNull: Int? = null,
     creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
 ): List<Map<String, ValueType>> {
     val keyLists = if (patternMap.keys.any { isOptional(it) }) {
-        val nothingList: Set<String> = patternMap.keys.filter { k -> !isOptional(k) || row.containsField(withoutOptionality(k)) }.toSet()
-        val allList: Set<String> = patternMap.keys
+        val nothingList: Set<String> = patternMap.keys.filter { k -> !isOptional(k) || row.containsField(withoutOptionality(k)) }.toSet().let { propertyNames ->
+            minPropertiesOrNull?.let { minProperties ->
+                if (propertyNames.size >= minProperties)
+                    propertyNames
+                else {
+                    val remainingPropertyNames = patternMap.keys.minus(propertyNames)
+                    propertyNames + remainingPropertyNames.shuffled().toList().take(minProperties - propertyNames.size).toSet()
+                }
+            } ?: propertyNames
+        }
+
+        val allList: Set<String> = patternMap.keys.let { propertyNames ->
+            maxPropertiesOrNull?.let { maxProperties ->
+                if (propertyNames.size <= maxProperties)
+                    propertyNames
+                else {
+                    val remainingPropertyNames = patternMap.keys.minus(nothingList)
+                    nothingList + remainingPropertyNames.shuffled().toList().take(maxProperties - nothingList.size).toSet()
+                }
+            } ?: propertyNames
+        }
 
         listOf(allList, nothingList).distinct()
     } else {

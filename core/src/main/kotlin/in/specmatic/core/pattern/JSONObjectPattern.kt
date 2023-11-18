@@ -92,7 +92,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> =
-        allOrNothingCombinationIn(pattern.minus("..."), if(resolver.generativeTestingEnabled) Row() else row) { pattern ->
+        allOrNothingCombinationIn(pattern.minus("..."), if(resolver.generativeTestingEnabled) Row() else row, minProperties, maxProperties) { pattern ->
             newBasedOn(pattern, row, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it.mapKeys { (key, _) ->
             withoutOptionality(key)
@@ -172,6 +172,9 @@ private fun selectAtMostMaxProperties(
     maxProperties: Int?
 ) = if (maxProperties != null) {
     val mandatoryKeys = properties.keys.filter { !isOptional(it) }
+    if(mandatoryKeys.size > maxProperties)
+        throw ContractException("Cannot generate a JSON object with at most $maxProperties properties as there are ${mandatoryKeys.size} mandatory properties in the specification.")
+
     val optionalKeys = properties.keys.filter { isOptional(it) }
     val countOfOptionalKeysToPick = maxProperties - mandatoryKeys.size
     val selectedOptionalKeys = optionalKeys.shuffled().take(countOfOptionalKeysToPick)

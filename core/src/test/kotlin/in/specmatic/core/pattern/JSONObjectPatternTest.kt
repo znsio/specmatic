@@ -525,7 +525,30 @@ internal class JSONObjectPatternTest {
         }
     }
 
-// newBasedOn
+    @Nested
+    inner class TestGeneration {
+        @Test
+        fun `objects generated for tests should have a min of minProperties keys and a max of maxProperties keys`() {
+            val pattern = JSONObjectPattern(
+                mapOf(
+                    "id" to NumberPattern(),
+                    "name?" to StringPattern(),
+                    "address?" to StringPattern(),
+                    "department?" to StringPattern(),
+                ),
+                minProperties = 2,
+                maxProperties = 3
+            )
+
+            val newPatterns: List<JSONObjectPattern> = pattern.newBasedOn(Row(), Resolver())
+
+            assertThat(newPatterns).allSatisfy {
+                assertThat(it.pattern.keys).hasSizeGreaterThanOrEqualTo(2)
+                assertThat(it.pattern.keys).hasSizeLessThanOrEqualTo(3)
+            }
+        }
+    }
+
 // backward compatibility (encompass)
 // integration test
 }

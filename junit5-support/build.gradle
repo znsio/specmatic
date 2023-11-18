@@ -11,7 +11,7 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.5"
+def ktor_version = "2.3.6"
 def junit_version = "5.10.0"
 
 dependencies {

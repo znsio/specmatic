@@ -547,8 +547,87 @@ internal class JSONObjectPatternTest {
                 assertThat(it.pattern.keys).hasSizeLessThanOrEqualTo(3)
             }
         }
+
+        @Nested
+        inner class BackwardCompatibility {
+            @ParameterizedTest
+            @CsvSource(
+                value = [
+                    """old | new | compatible""",
+                    """3   | 2   | false""",
+                    """3   | 4   | true""",
+                ],
+                delimiter = '|',
+                useHeadersInDisplayName = true,
+                ignoreLeadingAndTrailingWhitespace = true
+            )
+            fun `min cases`(old: Int, new: Int, compatible: Boolean) {
+                val older = JSONObjectPattern(
+                    mapOf(
+                        "id" to NumberPattern(),
+                        "name?" to StringPattern(),
+                        "address?" to StringPattern(),
+                        "department?" to StringPattern(),
+                    ),
+                    minProperties = old
+                )
+                val newer = JSONObjectPattern(
+                    mapOf(
+                        "id" to NumberPattern(),
+                        "name?" to StringPattern(),
+                        "address?" to StringPattern(),
+                        "department?" to StringPattern(),
+                    ),
+                    minProperties = new
+                )
+
+                val result = newer.encompasses(older, Resolver(), Resolver())
+
+                when(compatible) {
+                    true -> assertThat(result).isInstanceOf(Result.Success::class.java)
+                    false -> assertThat(result).isInstanceOf(Result.Failure::class.java)
+                }
+            }
+
+            @ParameterizedTest
+            @CsvSource(
+                value = [
+                    """old | new | compatible""",
+                    """3   | 2   | true""",
+                    """3   | 4   | false""",
+                ],
+                delimiter = '|',
+                useHeadersInDisplayName = true,
+                ignoreLeadingAndTrailingWhitespace = true
+            )
+            fun `max cases`(old: Int, new: Int, compatible: Boolean) {
+                val older = JSONObjectPattern(
+                    mapOf(
+                        "id" to NumberPattern(),
+                        "name?" to StringPattern(),
+                        "address?" to StringPattern(),
+                        "department?" to StringPattern(),
+                    ),
+                    maxProperties = old
+                )
+                val newer = JSONObjectPattern(
+                    mapOf(
+                        "id" to NumberPattern(),
+                        "name?" to StringPattern(),
+                        "address?" to StringPattern(),
+                        "department?" to StringPattern(),
+                    ),
+                    maxProperties = new
+                )
+
+                val result = newer.encompasses(older, Resolver(), Resolver())
+
+                when(compatible) {
+                    true -> assertThat(result).isInstanceOf(Result.Success::class.java)
+                    false -> assertThat(result).isInstanceOf(Result.Failure::class.java)
+                }            }
+        }
     }
 
-// backward compatibility (encompass)
 // integration test
 }

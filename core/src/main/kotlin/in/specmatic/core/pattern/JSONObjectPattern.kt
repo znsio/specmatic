@@ -32,10 +32,29 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
         return when (otherPattern) {
             is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
-            is TabularPattern -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
-            is JSONObjectPattern -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
+            is TabularPattern -> {
+                mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
+            }
+            is JSONObjectPattern -> {
+                val propertyLimitResults: List<Result.Failure> = olderPropertyLimitsEncompassNewer(this, otherPattern)
+                mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack, propertyLimitResults)
+            }
             else -> Result.Failure("Expected json type, got ${otherPattern.typeName}")
         }
+    }
+
+    private fun olderPropertyLimitsEncompassNewer(newer: JSONObjectPattern, older: JSONObjectPattern): List<Result.Failure> {
+        val minPropertiesResult = if(older.minProperties != null && newer.minProperties != null && older.minProperties > newer.minProperties)
+            Result.Failure("Expected at least ${older.minProperties} properties, got ${newer.minProperties}")
+        else
+            Result.Success()
+
+        val maxPropertiesResult = if(older.maxProperties != null && newer.maxProperties != null && older.maxProperties < newer.maxProperties)
+            Result.Failure("Expected at most ${older.maxProperties} properties, got ${newer.maxProperties}")
+        else
+            Result.Success()
+
+        return listOf(minPropertiesResult, maxPropertiesResult).filterIsInstance<Result.Failure>()
     }
 
     override fun generateWithAll(resolver: Resolver): Value {
@@ -147,24 +166,26 @@ private fun selectPropertiesWithinMaxAndMin(
 private fun selectAtMostMinProperties(
     properties: Map<String, Pattern>,
     minProperties: Int?
-) = if (minProperties != null) {
-    val mandatoryKeys = properties.keys.filter { !isOptional(it) }
-    val optionalKeys = properties.keys.filter { isOptional(it) }
+): Map<String, Pattern> {
+    return if (minProperties != null) {
+        val mandatoryKeys = properties.keys.filter { !isOptional(it) }
+        val optionalKeys = properties.keys.filter { isOptional(it) }
 
-    if (mandatoryKeys.size >= minProperties)
-        properties.filterKeys { it in mandatoryKeys }
-    else {
-        val countOfOptionalKeysToPick = minProperties - mandatoryKeys.size
-        val selectedOptionalKeys = optionalKeys.shuffled().take(countOfOptionalKeysToPick)
-        val selectedKeys = mandatoryKeys + selectedOptionalKeys
+        if (mandatoryKeys.size >= minProperties)
+            properties.filterKeys { it in mandatoryKeys }
+        else {
+            val countOfOptionalKeysToPick = minProperties - mandatoryKeys.size
+            val selectedOptionalKeys = optionalKeys.shuffled().take(countOfOptionalKeysToPick)
+            val selectedKeys = mandatoryKeys + selectedOptionalKeys
 
-        if(selectedKeys.size < minProperties)
-            throw ContractException("Cannot generate a JSON object with at least $minProperties properties as there are only ${selectedKeys.size} properties in the specification.")
+            if(selectedKeys.size < minProperties)
+                throw ContractException("Cannot generate a JSON object with at least $minProperties properties as there are only ${selectedKeys.size} properties in the specification.")
 
-        properties.filterKeys { it in selectedKeys }
-    }
-} else
-    properties
+            properties.filterKeys { it in selectedKeys }
+        }
+    } else
+        properties
+}
 
 
 private fun selectAtMostMaxProperties(
@@ -184,7 +205,7 @@ private fun selectAtMostMaxProperties(
 } else
     properties
 
-internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<String, Pattern>, thisResolverWithNullType: Resolver, otherResolverWithNullType: Resolver, typeStack: TypeStack = emptySet()): Result {
+internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<String, Pattern>, thisResolverWithNullType: Resolver, otherResolverWithNullType: Resolver, typeStack: TypeStack = emptySet(), previousResults: List<Result.Failure> = emptyList()): Result {
     val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
     val otherRequiredKeys = otherPattern.keys.filter { !isOptional(it) }
 
@@ -202,5 +223,5 @@ internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<
         }
     }
 
-    return Result.fromResults(missingFixedKeyErrors.plus(keyErrors))
+    return Result.fromResults(previousResults + missingFixedKeyErrors + keyErrors)
 }

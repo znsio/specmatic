@@ -3,6 +3,7 @@ package `in`.specmatic.conversions
 import com.google.common.net.HttpHeaders
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
@@ -10,6 +11,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
 
 class OpenApiIntegrationTest {
@@ -677,5 +680,68 @@ Feature: Authenticated
                 )
             )
         )
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        value = [
+        """pass | {"name": "John", "surname": "James"}""",
+        """fail | {}""",
+        """fail | {"name": "John", "surname": "James", "fathers_name": "James"}""",
+        ],
+        delimiter = '|',
+        ignoreLeadingAndTrailingWhitespace = true
+    )
+    fun `minProperties and maxProperties should be honored`(expectedResult: String, requestBody: String) {
+        val yamlContent = """
+            openapi: 3.0.1
+            info:
+              title: API
+              version: 1
+            paths:
+              /name:
+                post:
+                  summary: Post name
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            surname:
+                              type: string
+                            fathers_name:
+                              type: string
+                          minProperties: 1
+                          maxProperties: 2
+                          required:
+                            - name
+                  responses:
+                    '200':
+                      description: Successful response
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              message:
+                                type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(yamlContent, "").toFeature()
+        val result = feature.scenarios.first().httpRequestPattern.matches(
+            HttpRequest(
+                "POST",
+                "/name",
+                body = parsedJSONObject(requestBody)
+            ), Resolver()
+        )
+
+        when(expectedResult) {
+            "pass" -> assertThat(result).isInstanceOf(Result.Success::class.java)
+            "fail" -> assertThat(result).isInstanceOf(Result.Failure::class.java)
+        }
     }
 }

@@ -20,7 +20,7 @@ fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String? = null): J
     return JSONObjectPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
-data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap(), private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
+data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap(), private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null, val minProperties: Int = 0, val maxProperties: Int = Int.MAX_VALUE) : Pattern {
     override fun equals(other: Any?): Boolean = when (other) {
         is JSONObjectPattern -> this.pattern == other.pattern
         else -> false
@@ -59,6 +59,16 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)
 
+        val minCountErrors: List<Result.Failure> = if(sampleData.jsonObject.keys.size < minProperties)
+            listOf(Result.Failure("Expected at least $minProperties properties, got ${sampleData.jsonObject.keys.size}"))
+        else
+            emptyList()
+
+        val maxCountErrors: List<Result.Failure> = if(sampleData.jsonObject.keys.size > maxProperties)
+            listOf(Result.Failure("Expected at most $maxProperties properties, got ${sampleData.jsonObject.keys.size}"))
+        else
+            emptyList()
+
         val keyErrors: List<Result.Failure> = resolverWithNullType.findKeyErrorList(pattern, sampleData.jsonObject).map {
             it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
         }
@@ -67,7 +77,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
             resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
         }.filterIsInstance<Result.Failure>()
 
-        val failures = keyErrors.plus(results)
+        val failures: List<Result.Failure> = minCountErrors + maxCountErrors + keyErrors + results
 
         return if(failures.isEmpty())
             Result.Success()

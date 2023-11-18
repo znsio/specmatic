@@ -9,6 +9,8 @@ import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.util.function.Consumer
 
 internal class JSONObjectPatternTest {
@@ -401,4 +403,50 @@ internal class JSONObjectPatternTest {
             assertThat(reportText.indexOf(">> address")).isLessThan(reportText.indexOf(">> id"))
         }
     }
+
+    @Nested
+    inner class MinProperties {
+        private val basePattern = JSONObjectPattern(
+            mapOf(
+                "id" to NumberPattern(),
+                "name?" to StringPattern(),
+                "address?" to StringPattern(),
+                "department?" to StringPattern(),
+            )
+        )
+
+        @ParameterizedTest
+        @CsvSource(value = [
+            """result | min | max | obj """,
+            """fail   | 2   |     | {"id": 10}""",
+            """pass   | 2   |     | {"id": 10, "name": "Jill"}""",
+            """pass   | 2   |     | {"id": 10, "name": "Jill", "address": "Baker street"}""",
+            """pass   |     | 2   | {"id": 10, "name": "Jill"}""",
+            """fail   |     | 2   | {"id": 10, "name": "Jill", "address": "Baker street"}""",
+            """pass   | 2   | 3   | {"id": 10, "name": "Jill", "address": "Baker street"}""",
+            """fail   | 2   | 3   | {"id": 10, "name": "Jill", "address": "Baker street", "department": "HR"}""",
+            """fail   | 2   | 3   | {"id": 10}""",
+        ],
+        delimiter = '|',
+        useHeadersInDisplayName = true,
+        ignoreLeadingAndTrailingWhitespace = true)
+        fun cases(result: String, minProperties: String?, maxProperties: String?, obj: String) {
+            val json = parsedJSONObject(obj)
+
+            val pattern = (
+                minProperties?.let { basePattern.copy(minProperties = it.toInt()) } ?: basePattern
+            ).let { withMin ->
+                maxProperties?.let { withMin.copy(maxProperties = it.toInt()) } ?: withMin
+            }
+
+            when(result) {
+                "fail" -> assertThat(pattern.matches(json, Resolver())).isInstanceOf(Result.Failure::class.java)
+                "pass" -> assertThat(pattern.matches(json, Resolver())).isInstanceOf(Result.Success::class.java)
+                else -> throw Exception("Unknown result $result")
+            }
+        }
+    }
+
+// generation
+// backward compatibility
 }

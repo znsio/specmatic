@@ -1116,7 +1116,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     ): JSONObjectPattern {
         val requiredFields = schema.required.orEmpty()
         val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack)
-        val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
+        val minProperties: Int? = schema.minProperties
+        val maxProperties: Int? = schema.maxProperties
+        val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})").copy(
+            minProperties = minProperties,
+            maxProperties = maxProperties
+        )
         return cacheComponentPattern(patternName, jsonObjectPattern)
     }
 

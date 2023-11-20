@@ -804,6 +804,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return schema.allOf.flatMap { constituentSchema ->
             if (constituentSchema.`$ref` != null) {
                 val (_, referredSchema) = resolveReferenceToSchema(constituentSchema.`$ref`)
+
                 resolveDeepAllOfs(referredSchema)
             } else listOf(constituentSchema)
         }
@@ -857,23 +858,31 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                         val requiredFields = schemaToProcess.required.orEmpty()
                         toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack)
                     }.fold(emptyMap<String, Pattern>()) { propertiesAcc, propertiesEntry ->
-                        val updatedPropertiesAcc: Map<String, Pattern> =
-                            propertiesEntry.entries.fold(propertiesAcc) { acc, propertyEntry ->
-                                when (val keyWithoutOptionality = withoutOptionality(propertyEntry.key)) {
-                                    in acc ->
-                                        acc
-                                    propertyEntry.key ->
-                                        acc.minus("$keyWithoutOptionality?").plus(propertyEntry.key to propertyEntry.value)
-                                    else ->
-                                        acc.plus(propertyEntry.key to propertyEntry.value)
-                                }
-                            }
-
-                        updatedPropertiesAcc
+                        combine(propertiesEntry, propertiesAcc)
                     }
 
-                    val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})")
-                    jsonObjectPattern
+                    val schemasWithOneOf = deepListOfAllOfs.filter {
+                        it.oneOf != null
+                    }
+
+                    val oneOfs = schemasWithOneOf.map { schema ->
+                        schema.oneOf.map {
+                            val (componentName, schemaToProcess) = resolveReferenceToSchema(it.`$ref`)
+                            val requiredFields = schemaToProcess.required.orEmpty()
+                            componentName to toSchemaProperties(schemaToProcess, requiredFields, componentName, typeStack)
+                        }.map { (componentName, properties) ->
+                            componentName to combine(schemaProperties, properties)
+                        }
+                    }.flatten().map { (componentName, properties) ->
+                        toJSONObjectPattern(properties, "(${componentName})")
+                    }
+
+                    if(oneOfs.size == 1)
+                        oneOfs.single()
+                    else if(oneOfs.size > 1)
+                        AnyPattern(oneOfs)
+                    else
+                        toJSONObjectPattern(schemaProperties, "(${patternName})")
                 } else if (schema.oneOf != null) {
                     val candidatePatterns = schema.oneOf.filterNot { nullableEmptyObject(it) } .map { componentSchema ->
                         val (componentName, schemaToProcess) =
@@ -935,6 +944,27 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 else -> AnyPattern(listOf(NullPattern, pattern))
             }
         }
+    }
+
+    private fun combine(
+        propertiesEntry: Map<String, Pattern>,
+        propertiesAcc: Map<String, Pattern>
+    ): Map<String, Pattern> {
+        val updatedPropertiesAcc: Map<String, Pattern> =
+            propertiesEntry.entries.fold(propertiesAcc) { acc, propertyEntry ->
+                when (val keyWithoutOptionality = withoutOptionality(propertyEntry.key)) {
+                    in acc ->
+                        acc
+
+                    propertyEntry.key ->
+                        acc.minus("$keyWithoutOptionality?").plus(propertyEntry.key to propertyEntry.value)
+
+                    else ->
+                        acc.plus(propertyEntry.key to propertyEntry.value)
+                }
+            }
+
+        return updatedPropertiesAcc
     }
 
     private fun <T : Pattern> cacheComponentPattern(componentName: String, pattern: T): T {

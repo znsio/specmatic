@@ -1,5 +1,6 @@
 package `in`.specmatic.conversions
 
+import com.fasterxml.jackson.databind.node.ArrayNode
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.log.LogStrategy
@@ -848,7 +849,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     toXMLPattern(schema, typeStack = typeStack)
                 } else {
 
-                    ListPattern(toSpecmaticPattern(schema.items, typeStack))
+                    ListPattern(toSpecmaticPattern(
+                        schema.items, typeStack),
+                        example = toListExample(schema.example))
                 }
             }
             is ComposedSchema -> {
@@ -943,6 +946,24 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 NullPattern -> pattern
                 is AnyPattern -> pattern.copy(example = schema.example?.toString())
                 else -> AnyPattern(listOf(NullPattern, pattern), example = schema.example?.toString())
+            }
+        }
+    }
+
+    private fun toListExample(example: Any?): List<String?>? {
+        if(example == null)
+            return null
+
+        if(example !is ArrayNode)
+            return null
+
+        return example.toList().map {
+            when {
+                it.isNull -> null
+                it.isNumber -> it.numberValue().toString()
+                it.isBoolean -> it.booleanValue().toString()
+                it.isTextual -> it.textValue()
+                else -> throw ContractException("Unsupported example type: ${it.nodeType}")
             }
         }
     }

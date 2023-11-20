@@ -70,10 +70,19 @@ class DefaultValuesInOpenapiSpecification {
                       items:
                         type: number
                         example: 1000
+                    years_employed:
+                      type: array
+                      items:
+                        type: number
+                      example:
+                        - 2021
+                        - 2022
+                        - 2023
                   required:
                     - name
                     - age
                     - salary
+                    - years_employed
             """.trimIndent(), "").toFeature()
 
         val withGenerativeTestsEnabled = specification.copy(generativeTestingEnabled = true)
@@ -88,10 +97,14 @@ class DefaultValuesInOpenapiSpecification {
             assertThat(it.pattern["name"]).isEqualTo(StringValue("Jane Doe"))
             assertThat(it.pattern["age"]).isEqualTo(NumberValue(35))
             assertThat(it.pattern["salary"]).isEqualTo(NumberValue(50000))
+
             val salaryHistory = it.pattern["salary_history"] as JSONArrayValue
             assertThat(salaryHistory.list).allSatisfy {
                 assertThat(it).isEqualTo(NumberValue(1000))
             }
+
+            val yearsEmployed = it.pattern["years_employed"] as JSONArrayValue
+            assertThat(yearsEmployed.list).isEqualTo(JSONArrayValue(listOf(NumberValue(2021), NumberValue(2022), NumberValue(2023))))
         }
     }
 

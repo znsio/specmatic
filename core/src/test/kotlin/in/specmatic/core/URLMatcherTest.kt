@@ -209,7 +209,7 @@ internal class URLMatcherTest {
         val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets/(status:boolean)"))
         val matchers = matcher.newBasedOn(Row(), Resolver())
         assertThat(matchers).hasSize(1)
-        assertThat(matchers.single()).isEqualTo(URLMatcher(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets"))), URLPathPattern(BooleanPattern, "status")), "/pets/(status:boolean)"))
+        assertThat(matchers.single()).isEqualTo(URLMatcher(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets"))), URLPathPattern(BooleanPattern(), "status")), "/pets/(status:boolean)"))
     }
 
     @Test
@@ -221,7 +221,7 @@ internal class URLMatcherTest {
         val matcherWithoutQueryParams = URLMatcher(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
         assertThat(matchers).contains(matcherWithoutQueryParams)
 
-        val matcherWithQueryParams = URLMatcher(mapOf("available" to BooleanPattern), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
+        val matcherWithQueryParams = URLMatcher(mapOf("available" to BooleanPattern()), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
         assertThat(matchers).contains(matcherWithQueryParams)
     }
 

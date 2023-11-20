@@ -29,7 +29,7 @@ internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
 internal val builtInPatterns = mapOf(
     "(number)" to NumberPattern(),
     "(string)" to StringPattern(),
-    "(boolean)" to BooleanPattern,
+    "(boolean)" to BooleanPattern(),
     "(null)" to NullPattern,
     "(empty)" to EmptyStringPattern,
     "(date)" to DatePattern,

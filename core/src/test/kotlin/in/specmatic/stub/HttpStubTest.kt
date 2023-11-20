@@ -10,7 +10,6 @@ import `in`.specmatic.mock.DELAY_IN_SECONDS
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.test.HttpClient
-import io.ktor.client.request.*
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat

@@ -190,7 +190,7 @@ internal class AnyPatternTest {
     fun `values for negative tests`() {
         val negativeTypes = AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver())
 
-        val expectedTypes = listOf(NumberPattern(), BooleanPattern)
+        val expectedTypes = listOf(NumberPattern(), BooleanPattern())
 
         assertThat(negativeTypes).containsAll(expectedTypes)
         assertThat(negativeTypes).hasSize(expectedTypes.size)

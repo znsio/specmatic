@@ -1,6 +1,7 @@
 package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.ScalarValue
@@ -9,7 +10,8 @@ import `in`.specmatic.core.value.Value
 data class AnyPattern(
     override val pattern: List<Pattern>,
     val key: String? = null,
-    override val typeAlias: String? = null
+    override val typeAlias: String? = null,
+    val example: String? = null
 ) : Pattern {
     override fun equals(other: Any?): Boolean = other is AnyPattern && other.pattern == this.pattern
 
@@ -61,18 +63,43 @@ data class AnyPattern(
 
     private fun isEmpty(it: Pattern) = it.typeAlias == "(empty)" || it is NullPattern
 
+    private fun matchingExample(): Value? {
+        if(example == null)
+            return example
+
+        val matchResults = pattern.asSequence().map {
+            try{
+                val value = this.parse(example, Resolver())
+                Pair(this.matches(value, Resolver()), value)
+            } catch(e: Throwable) {
+                Pair(Result.Failure(exceptionCauseMessage(e)), null)
+            }
+        }
+
+        return matchResults.firstOrNull() { it.first.isSuccess() }?.second
+            ?: throw ContractException("Example \"$example\" does not match:\n${Result.fromResults(matchResults.map { it.first }.toList()).reportString()}")
+    }
+
     override fun generate(resolver: Resolver): Value {
+        return matchingExample() ?: generateRandomValue(resolver)
+    }
+
+    private fun generateRandomValue(resolver: Resolver): Value {
         val randomPattern = pattern.random()
-        val isNullable = pattern.any {it is NullPattern}
+        val isNullable = pattern.any { it is NullPattern }
         return resolver.withCyclePrevention(randomPattern, isNullable) { cyclePreventedResolver ->
             when (key) {
                 null -> randomPattern.generate(cyclePreventedResolver)
                 else -> cyclePreventedResolver.generate(key, randomPattern)
             }
-        }?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
+        } ?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        matchingExample()?.let {
+            return listOf(ExactValuePattern(it))
+        }
+
         val isNullable = pattern.any { it is NullPattern }
         val patternResults: List<Pair<List<Pattern>?, Throwable?>> =
             pattern.sortedBy { it is NullPattern }.map { innerPattern ->

@@ -57,19 +57,7 @@ data class StringPattern(
             else -> 5
         }
     
-    override fun generate(resolver: Resolver): Value = matchingExample() ?: StringValue(randomString(randomStringLength))
-
-    private fun matchingExample(): Value? {
-        if(example == null)
-            return example
-
-        val exampleMatchResult = this.matches(StringValue(example), Resolver())
-
-        if(exampleMatchResult.isSuccess())
-            return StringValue(example)
-
-        throw ContractException("Example \"$example\" does not match $typeName type")
-    }
+    override fun generate(resolver: Resolver): Value = matchingExample(example, this) ?: StringValue(randomString(randomStringLength))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)

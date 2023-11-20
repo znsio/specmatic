@@ -17,20 +17,7 @@ data class BooleanPattern(val example: String? = null) : Pattern, ScalarType {
         }
 
     override fun generate(resolver: Resolver): Value =
-        matchingExample() ?: randomBoolean()
-
-    private fun matchingExample(): Value? {
-        if(example == null)
-            return example
-
-        val value = this.parse(example, Resolver())
-        val exampleMatchResult = this.matches(value, Resolver())
-
-        if(exampleMatchResult.isSuccess())
-            return value
-
-        throw ContractException("Example \"$example\" does not match $typeName type")
-    }
+        matchingExample(example, this) ?: randomBoolean()
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
@@ -61,4 +48,17 @@ data class BooleanPattern(val example: String? = null) : Pattern, ScalarType {
 fun randomBoolean() = when (Random().nextInt(2)) {
     0 -> BooleanValue(false)
     else -> BooleanValue(true)
+}
+
+fun matchingExample(example: String?, pattern: Pattern): Value? {
+    if(example == null)
+        return example
+
+    val value = pattern.parse(example, Resolver())
+    val exampleMatchResult = pattern.matches(value, Resolver())
+
+    if(exampleMatchResult.isSuccess())
+        return value
+
+    throw ContractException("Example \"$example\" does not match ${pattern.typeName} type")
 }

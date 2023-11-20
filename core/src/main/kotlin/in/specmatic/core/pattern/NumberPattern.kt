@@ -39,21 +39,8 @@ data class NumberPattern(
     }
 
     override fun generate(resolver: Resolver): Value =
-        matchingExample() ?:
+        matchingExample(example, this) ?:
             NumberValue(randomNumber(minLength ?: 3))
-
-    private fun matchingExample(): Value? {
-        if(example == null)
-            return example
-
-        val value = this.parse(example, Resolver())
-        val exampleMatchResult = this.matches(value, Resolver())
-
-        if(exampleMatchResult.isSuccess())
-            return value
-
-        throw ContractException("Example \"$example\" does not match $typeName type")
-    }
 
     private fun randomNumber(minLength: Int): Int {
         val first = randomPositiveDigit().toString()

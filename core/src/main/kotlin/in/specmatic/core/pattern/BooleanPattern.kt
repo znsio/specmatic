@@ -49,16 +49,3 @@ fun randomBoolean() = when (Random().nextInt(2)) {
     0 -> BooleanValue(false)
     else -> BooleanValue(true)
 }
-
-fun matchingExample(example: String?, pattern: Pattern): Value? {
-    if(example == null)
-        return example
-
-    val value = pattern.parse(example, Resolver())
-    val exampleMatchResult = pattern.matches(value, Resolver())
-
-    if(exampleMatchResult.isSuccess())
-        return value
-
-    throw ContractException("Example \"$example\" does not match ${pattern.typeName} type")
-}

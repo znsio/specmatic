@@ -6,9 +6,26 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class DefaultValuesInOpenapiSpecification {
+    companion object {
+        @BeforeAll
+        @JvmStatic
+        fun setup() {
+            System.setProperty("SCHEMA_EXAMPLE_DEFAULT", "true")
+        }
+
+        @AfterAll
+        @JvmStatic
+        fun tearDown() {
+            System.setProperty("SCHEMA_EXAMPLE_DEFAULT", "false")
+        }
+    }
+
     @Test
     fun `schema examples should be used as default values`() {
         val specification = OpenApiSpecification.fromYAML("""

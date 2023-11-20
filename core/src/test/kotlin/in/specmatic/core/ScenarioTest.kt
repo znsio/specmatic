@@ -2,14 +2,12 @@ package `in`.specmatic.core
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.test.TestExecutor
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
 import java.util.*

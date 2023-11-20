@@ -5,13 +5,15 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.NumberValue
+import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import java.util.*
 
 data class NumberPattern(
     override val typeAlias: String? = null,
     val minLength: Int? = null,
-    val maxLength: Int? = null
+    val maxLength: Int? = null,
+    val example: String? = null
 ) : Pattern, ScalarType {
     init {
         require(minLength?.let { minLength > 0 } ?: true) {"minLength cannot be less than 1"}
@@ -36,7 +38,9 @@ data class NumberPattern(
         }
     }
 
-    override fun generate(resolver: Resolver): Value = NumberValue(randomNumber(minLength ?: 3))
+    override fun generate(resolver: Resolver): Value =
+        matchingExample(example, this) ?:
+            NumberValue(randomNumber(minLength ?: 3))
 
     private fun randomNumber(minLength: Int): Int {
         val first = randomPositiveDigit().toString()

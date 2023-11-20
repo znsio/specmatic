@@ -1,5 +1,6 @@
 package `in`.specmatic.conversions
 
+import com.fasterxml.jackson.databind.node.ArrayNode
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.log.LogStrategy
@@ -821,19 +822,19 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
         else when (schema) {
             is StringSchema -> when (schema.enum) {
-                null -> StringPattern(minLength = schema.minLength, maxLength = schema.maxLength)
-                else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }
+                null -> StringPattern(minLength = schema.minLength, maxLength = schema.maxLength, example = schema.example?.toString())
+                else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }.copy(example = schema.example?.toString())
             }
             is IntegerSchema -> when (schema.enum) {
-                null -> NumberPattern()
-                else -> toEnum(schema, patternName) { enumValue -> NumberValue(enumValue.toString().toInt()) }
+                null -> NumberPattern(example = schema.example?.toString())
+                else -> toEnum(schema, patternName) { enumValue -> NumberValue(enumValue.toString().toInt()) }.copy(example = schema.example?.toString())
             }
             is BinarySchema -> BinaryPattern()
-            is NumberSchema -> NumberPattern()
+            is NumberSchema -> NumberPattern(example = schema.example?.toString())
             is UUIDSchema -> UUIDPattern
             is DateTimeSchema -> DateTimePattern
             is DateSchema -> DatePattern
-            is BooleanSchema -> BooleanPattern
+            is BooleanSchema -> BooleanPattern(example = schema.example?.toString())
             is ObjectSchema -> {
                 if (schema.additionalProperties is Schema<*>) {
                     toDictionaryPattern(schema, typeStack, patternName)
@@ -848,7 +849,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     toXMLPattern(schema, typeStack = typeStack)
                 } else {
 
-                    ListPattern(toSpecmaticPattern(schema.items, typeStack))
+                    ListPattern(toSpecmaticPattern(
+                        schema.items, typeStack),
+                        example = toListExample(schema.example))
                 }
             }
             is ComposedSchema -> {
@@ -940,8 +943,27 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return when (schema.nullable != true) {
             true -> pattern
             else -> when (pattern) {
-                is AnyPattern, NullPattern -> pattern
-                else -> AnyPattern(listOf(NullPattern, pattern))
+                NullPattern -> pattern
+                is AnyPattern -> pattern.copy(example = schema.example?.toString())
+                else -> AnyPattern(listOf(NullPattern, pattern), example = schema.example?.toString())
+            }
+        }
+    }
+
+    private fun toListExample(example: Any?): List<String?>? {
+        if(example == null)
+            return null
+
+        if(example !is ArrayNode)
+            return null
+
+        return example.toList().map {
+            when {
+                it.isNull -> null
+                it.isNumber -> it.numberValue().toString()
+                it.isBoolean -> it.booleanValue().toString()
+                it.isTextual -> it.textValue()
+                else -> throw ContractException("Unsupported example type: ${it.nodeType}")
             }
         }
     }

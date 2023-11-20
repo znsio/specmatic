@@ -12,7 +12,8 @@ import java.util.*
 data class StringPattern(
     override val typeAlias: String? = null,
     val minLength: Int? = null,
-    val maxLength: Int? = null
+    val maxLength: Int? = null,
+    val example: String? = null
 ) : Pattern, ScalarType {
     init {
         require(minLength?.let { maxLength?.let { minLength <= maxLength } }
@@ -56,12 +57,12 @@ data class StringPattern(
             else -> 5
         }
     
-    override fun generate(resolver: Resolver): Value = StringValue(randomString(randomStringLength))
+    override fun generate(resolver: Resolver): Value = matchingExample(example, this) ?: StringValue(randomString(randomStringLength))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern, NumberPattern(), BooleanPattern)
+        return listOf(NullPattern, NumberPattern(), BooleanPattern())
     }
 
     override fun parse(value: String, resolver: Resolver): Value = StringValue(value)

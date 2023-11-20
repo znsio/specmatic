@@ -16,7 +16,7 @@ internal class PatternInStringPatternTest {
 
     @Test
     fun `should match a boolean in string`() {
-        StringValue("true") shouldMatch PatternInStringPattern(BooleanPattern)
+        StringValue("true") shouldMatch PatternInStringPattern(BooleanPattern())
     }
 
     @Test
@@ -64,7 +64,7 @@ internal class PatternInStringPatternTest {
 
         assertThat(pattern1.encompasses(pattern2, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
 
-        val pattern3 = PatternInStringPattern(BooleanPattern)
+        val pattern3 = PatternInStringPattern(BooleanPattern())
         assertThat(pattern1.encompasses(pattern3, Resolver(), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 

@@ -214,7 +214,7 @@ class PatternDefinitionTests {
     @Test
     fun `(boolean) should match a boolean value`() {
         val boolValue = true
-        val boolPattern = BooleanPattern
+        val boolPattern = BooleanPattern()
 
         BooleanValue(boolValue) shouldMatch  boolPattern
     }

@@ -1,6 +1,5 @@
 package `in`.specmatic.conversions
 
-import `in`.specmatic.core.jsonObject
 import `in`.specmatic.core.pattern.JSONObjectPattern
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue

@@ -21,6 +21,8 @@ private fun colorIsRequested() = System.getenv("SPECMATIC_COLOR") == "1"
 private fun stdOutIsRedirected() = System.console() == null
 
 class ContractExecutionListener : TestExecutionListener {
+    private var totalRun: Int = 0
+
     private var success: Int = 0
     private var failure: Int = 0
     private var aborted: Int = 0
@@ -44,6 +46,11 @@ class ContractExecutionListener : TestExecutionListener {
 
                     return
         }
+
+        totalRun += 1
+        logger.newLine()
+        logger.log(progressUpdate(totalRun, SpecmaticJUnitSupport.totalTestCount))
+        logger.newLine()
 
         colorPrinter.printTestSummary(testIdentifier, testExecutionResult)
 
@@ -117,4 +124,15 @@ class ContractExecutionListener : TestExecutionListener {
 
         exitProcess(exitStatus)
     }
+}
+
+private fun progressUpdate(totalTestsRun: Int, countOfTests: Int): String {
+    return "Tests run: $totalTestsRun/$countOfTests (${percentage(totalTestsRun, countOfTests)}%)"
+}
+
+private fun percentage(totalTestsRun: Int, countOfTests: Int): String {
+    return if(countOfTests == 0)
+        "0"
+    else
+        ((totalTestsRun.toDouble() / countOfTests.toDouble()) * 100).toInt().toString()
 }

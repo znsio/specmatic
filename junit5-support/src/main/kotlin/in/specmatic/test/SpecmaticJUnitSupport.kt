@@ -46,6 +46,9 @@ open class SpecmaticJUnitSupport {
         private var specmaticConfigJson: SpecmaticConfigJson? = null
         private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
+        var totalTestCount: Int = 0
+
+
         @AfterAll
         @JvmStatic
         fun report() {
@@ -202,7 +205,9 @@ open class SpecmaticJUnitSupport {
         }
 
         var checkedAPIs = false
-        var totalRun = 0
+        totalTestCount = testScenarios.size
+
+        logger.log("Executing $totalTestCount tests")
 
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {
@@ -236,24 +241,9 @@ open class SpecmaticJUnitSupport {
                 } catch(e: Throwable) {
                     openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
                     throw e
-                } finally {
-                    totalRun += 1
-                    logger.newLine()
-                    logger.log(progressUpdate(totalRun, testScenarios.size))
                 }
             }
         }.toList()
-    }
-
-    private fun progressUpdate(totalTestsRun: Int, countOfTests: Int): String {
-        return "Tests run: $totalTestsRun/$countOfTests (${percentage(totalTestsRun, countOfTests)}%)"
-    }
-
-    private fun percentage(totalTestsRun: Int, countOfTests: Int): String {
-        return if(countOfTests == 0)
-            "0"
-        else
-            ((totalTestsRun.toDouble() / countOfTests.toDouble()) * 100).toInt().toString()
     }
 
     private fun getSpecmaticJson(): SpecmaticConfigJson? {

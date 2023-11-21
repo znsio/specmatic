@@ -310,7 +310,7 @@ data class Feature(
     }
 
     private fun negativeTestScenariosUnlessDisabled(): List<Scenario> {
-        return if (System.getenv("ONLY_POSITIVE") == "true")
+        return if (Flags.onlyPositive())
             emptyList()
         else
             negativeTestScenarios()

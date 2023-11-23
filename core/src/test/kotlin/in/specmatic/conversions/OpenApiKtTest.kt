@@ -2488,6 +2488,56 @@ components:
             assertThat(it).endsWith("/")
         }
     }
+
+    @Test
+    fun `should handle omit correctly when it is a default value in the parameter section if the schemaExampleDefault flag is set`() {
+        try {
+            System.setProperty(Flags.schemaExampleDefault, "true")
+
+            val feature =
+                OpenApiSpecification.fromFile("src/test/resources/openapi/helloWithOmitAsDefault.yaml").toFeature()
+
+            val results = feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.queryParams).doesNotContainKey("id")
+                    assertThat(request.headers).doesNotContainKey("traceId")
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(results.hasFailures()).isFalse()
+            assertThat(results.success()).isTrue()
+        } finally {
+            System.clearProperty(Flags.schemaExampleDefault)
+        }
+    }
+
+    @Test
+    fun `should ignore omit when it is a default value in the parameter section if the schemaExampleDefault flag NOT set`() {
+        val feature =
+            OpenApiSpecification.fromFile("src/test/resources/openapi/helloWithOmitAsDefault.yaml").toFeature()
+
+        val queryParamsSeen = mutableListOf<String>()
+        val headersSeen = mutableListOf<String>()
+
+        feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                queryParamsSeen.addAll(request.queryParams.keys)
+                headersSeen.addAll(request.headers.keys)
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(queryParamsSeen.sorted().distinct()).isEqualTo(listOf("id", "name"))
+        assertThat(headersSeen.sorted().distinct()).isEqualTo(listOf("traceId"))
+    }
 }
 
 data class CycleRoot(

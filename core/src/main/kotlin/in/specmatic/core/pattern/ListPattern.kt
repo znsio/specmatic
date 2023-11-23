@@ -9,7 +9,7 @@ import `in`.specmatic.core.value.ListValue
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 
-data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null, val example: List<String?>? = null) : Pattern, SequenceType {
+data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null, override val example: List<String?>? = null) : Pattern, SequenceType, HasDefaultExample {
 
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)

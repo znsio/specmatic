@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.core.Flags
 import `in`.specmatic.core.OMIT
 import `in`.specmatic.core.References
 import `in`.specmatic.core.jsonObjectToValues
@@ -63,5 +64,27 @@ data class Row(
 
     fun withoutOmittedKeys(keys: Map<String, Pattern>) = keys.filter {
         !this.containsField(withoutOptionality(it.key)) || this.getField(withoutOptionality(it.key)) !in OMIT
+    }.filter {
+        thisFieldHasAnExample(it) || theDefaultExampleForThisKeyIsNotOmit(it.value)
     }
+
+    private fun theDefaultExampleForThisKeyIsNotOmit(valuePattern: Pattern): Boolean {
+        if(!Flags.schemaExampleDefaultEnabled())
+            return true
+
+        return if(valuePattern is HasDefaultExample) {
+            val example = valuePattern.example
+
+            if(example is String) {
+                example !in OMIT
+            }
+            else
+               true
+        }
+        else
+            true
+    }
+
+    private fun thisFieldHasAnExample(it: Map.Entry<String, Pattern>) =
+        this.containsField(withoutOptionality(it.key))
 }

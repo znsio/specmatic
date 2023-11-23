@@ -46,6 +46,9 @@ open class SpecmaticJUnitSupport {
         private var specmaticConfigJson: SpecmaticConfigJson? = null
         private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
+        var totalTestCount: Int = 0
+
+
         @AfterAll
         @JvmStatic
         fun report() {
@@ -202,6 +205,9 @@ open class SpecmaticJUnitSupport {
         }
 
         var checkedAPIs = false
+        totalTestCount = testScenarios.size
+
+        logger.log("Executing $totalTestCount tests")
 
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {

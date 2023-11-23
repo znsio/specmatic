@@ -31,7 +31,7 @@ class ContractExecutionListener : TestExecutionListener {
 
     private var couldNotStart = false;
 
-    private val colorPrinter: ContractExecutionPrinter = getContractExecutionPrinter()
+    private val printer: ContractExecutionPrinter = getContractExecutionPrinter()
 
     override fun executionSkipped(testIdentifier: TestIdentifier?, reason: String?) {
         super.executionSkipped(testIdentifier, reason)
@@ -52,7 +52,7 @@ class ContractExecutionListener : TestExecutionListener {
         logger.log(progressUpdate(totalRun, SpecmaticJUnitSupport.totalTestCount))
         logger.newLine()
 
-        colorPrinter.printTestSummary(testIdentifier, testExecutionResult)
+        printer.printTestSummary(testIdentifier, testExecutionResult)
 
         when(testExecutionResult?.status) {
             TestExecutionResult.Status.SUCCESSFUL ->  {
@@ -94,7 +94,7 @@ class ContractExecutionListener : TestExecutionListener {
 
         if(SpecmaticJUnitSupport.partialSuccesses.isNotEmpty()) {
             println()
-            colorPrinter.printFailureTitle("Partial Successes:")
+            printer.printFailureTitle("Partial Successes:")
             println()
 
             SpecmaticJUnitSupport.partialSuccesses.filter { it.partialSuccessMessage != null} .forEach { result ->
@@ -108,12 +108,12 @@ class ContractExecutionListener : TestExecutionListener {
 
         if (failedLog.isNotEmpty()) {
             println()
-            colorPrinter.printFailureTitle("Unsuccessful Scenarios:")
+            printer.printFailureTitle("Unsuccessful Scenarios:")
             println(failedLog.joinToString(System.lineSeparator()) { it.prependIndent("  ") })
             println()
         }
 
-        colorPrinter.printFinalSummary(TestSummary(success, SpecmaticJUnitSupport.partialSuccesses.size, aborted, failure))
+        printer.printFinalSummary(TestSummary(success, SpecmaticJUnitSupport.partialSuccesses.size, aborted, failure))
     }
 
     fun exitProcess() {

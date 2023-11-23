@@ -19,10 +19,6 @@ class ColorPrinter: ContractExecutionPrinter {
         println("Tests ran at ${currentDateAndTime()}")
     }
 
-    private fun currentDateAndTime(): String {
-        return java.time.LocalDateTime.now().toString()
-    }
-
     override fun printTestSummary(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
         val color: Ansi = when(testExecutionResult?.status) {
             TestExecutionResult.Status.SUCCESSFUL -> Ansi.ansi().fgGreen()

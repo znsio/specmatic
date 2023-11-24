@@ -1,10 +1,11 @@
 package `in`.specmatic.conversions
 
+import `in`.specmatic.core.Flags
+import `in`.specmatic.core.HttpRequest
+import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.JSONObjectPattern
-import `in`.specmatic.core.value.JSONArrayValue
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.value.*
+import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -28,7 +29,8 @@ class DefaultValuesInOpenapiSpecification {
 
     @Test
     fun `schema examples should be used as default values`() {
-        val specification = OpenApiSpecification.fromYAML("""
+        val specification = OpenApiSpecification.fromYAML(
+            """
             openapi: 3.0.1
             info:
               title: Employee API
@@ -83,7 +85,8 @@ class DefaultValuesInOpenapiSpecification {
                     - age
                     - salary
                     - years_employed
-            """.trimIndent(), "").toFeature()
+            """.trimIndent(), ""
+        ).toFeature()
 
         val withGenerativeTestsEnabled = specification.copy(generativeTestingEnabled = true)
 
@@ -104,13 +107,22 @@ class DefaultValuesInOpenapiSpecification {
             }
 
             val yearsEmployed = it.pattern["years_employed"] as JSONArrayValue
-            assertThat(yearsEmployed.list).isEqualTo(JSONArrayValue(listOf(NumberValue(2021), NumberValue(2022), NumberValue(2023))))
+            assertThat(yearsEmployed.list).isEqualTo(
+                JSONArrayValue(
+                    listOf(
+                        NumberValue(2021),
+                        NumberValue(2022),
+                        NumberValue(2023)
+                    )
+                )
+            )
         }
     }
 
     @Test
     fun `named examples should be given preference over schema examples`() {
-        val specification = OpenApiSpecification.fromYAML("""
+        val specification = OpenApiSpecification.fromYAML(
+            """
             openapi: 3.0.1
             info:
               title: Employee API
@@ -158,7 +170,8 @@ class DefaultValuesInOpenapiSpecification {
                   required:
                     - name
                     - age
-            """.trimIndent(), "").toFeature()
+            """.trimIndent(), ""
+        ).toFeature()
 
         val withGenerativeTestsEnabled = specification.copy(generativeTestingEnabled = true)
 
@@ -180,9 +193,80 @@ class DefaultValuesInOpenapiSpecification {
             assertThat(it.jsonObject["name"]).isEqualTo(StringValue("John Doe"))
             assertThat(it.jsonObject["age"]).isEqualTo(NumberValue(30))
 
-            if("salary" in it.jsonObject) {
+            if ("salary" in it.jsonObject) {
                 assertThat(it.jsonObject["salary"]).isEqualTo(NumberValue(50000))
             }
+        }
+
+        @Test
+        fun `named examples should be given preference over schema examples`() {
+            val specification = OpenApiSpecification.fromYAML(
+                """
+            openapi: 3.0.1
+            info:
+              title: Employee API
+              version: 1.0.0
+            paths:
+              /employees:
+                post:
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - names
+                          properties:
+                            addresses:
+                              type: array
+                              example:
+                                - street: 'Baker Street'
+                              item:
+                                type: object
+                                properties:
+                                  street:
+                                    type: string
+                                    example: '10 Bergen Street'
+                            name:
+                              type: string
+                        examples:
+                          SUCCESS:
+                             value:
+                               name: "Jill"
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SUCCESS:
+                              value: 'success'
+            """.trimIndent(), "").toFeature()
+
+            val namesSeen = mutableListOf<String>()
+
+            try {
+                System.setProperty(Flags.schemaExampleDefault, "true")
+
+                specification.executeTests(object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        val json = request.body as JSONObjectValue
+                        val names = json.jsonObject.getValue("names") as JSONArrayValue
+                        namesSeen.addAll(names.list.map { it.toStringLiteral() })
+                        return HttpResponse.OK("success")
+                    }
+
+                    override fun setServerState(serverState: Map<String, Value>) {
+                    }
+                })
+            } finally {
+                System.clearProperty(Flags.schemaExampleDefault)
+            }
+
+            assertThat(namesSeen).isNotEmpty
+            assertThat(namesSeen.distinct()).isEqualTo(listOf("10 Bergen Street"))
         }
     }
 }

@@ -889,8 +889,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 } else if (schema.oneOf != null) {
                     val candidatePatterns = schema.oneOf.filterNot { nullableEmptyObject(it) } .map { componentSchema ->
                         val (componentName, schemaToProcess) =
-                            if (componentSchema.`$ref` != null) resolveReferenceToSchema(componentSchema.`$ref`)
-                            else patternName to componentSchema
+                            if (componentSchema.`$ref` != null)
+                                resolveReferenceToSchema(componentSchema.`$ref`)
+                            else
+                                "" to componentSchema
+
                         toSpecmaticPattern(schemaToProcess, typeStack.plus(componentName), componentName)
                     }
 

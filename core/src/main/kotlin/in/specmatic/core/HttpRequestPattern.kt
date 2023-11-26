@@ -417,7 +417,7 @@ data class HttpRequestPattern(
 
                             val requestsFromFlattenedRow: List<Pattern> =
                                 resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                                    body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
+                                    body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
                                 }
 
                             if(requestsFromFlattenedRow.none { p -> p.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Success}) {

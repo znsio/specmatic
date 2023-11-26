@@ -110,12 +110,13 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         }
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> =
-        allOrNothingCombinationIn(pattern.minus("..."), if(resolver.generativeTestingEnabled) Row() else row, minProperties, maxProperties) { pattern ->
+    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> {
+        return allOrNothingCombinationIn(pattern.minus("..."), if(resolver.generativeTestingEnabled) Row() else row, minProperties, maxProperties) { pattern ->
             newBasedOn(pattern, row, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it.mapKeys { (key, _) ->
             withoutOptionality(key)
         }) }
+    }
 
     override fun newBasedOn(resolver: Resolver): List<JSONObjectPattern> =
         allOrNothingCombinationIn(pattern.minus("...")) { pattern ->

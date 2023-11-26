@@ -4,9 +4,18 @@ import `in`.specmatic.core.OMIT
 import `in`.specmatic.core.References
 import `in`.specmatic.core.jsonObjectToValues
 import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.ScalarValue
 
 const val DEREFERENCE_PREFIX = "$"
 const val FILENAME_PREFIX = "@"
+
+data class JSONObjectExample(val jsonObject: JSONObjectValue, val originalRow: Row) {
+    fun containsKey(key: String): Boolean =
+        jsonObject.jsonObject[key] is ScalarValue
+
+    fun getValueFromTopLevelKeys(columnName: String): String? =
+        jsonObject.jsonObject[columnName]?.toStringLiteral()
+}
 
 data class Row(
     val columnNames: List<String> = emptyList(),
@@ -14,9 +23,23 @@ data class Row(
     val variables: Map<String, String> = emptyMap(),
     val references: Map<String, References> = emptyMap(),
     val name: String = "",
-    val fileSource: String? = null
+    val fileSource: String? = null,
+    val jsonObjectExample: JSONObjectExample? = null
 ) {
     private val cells = columnNames.zip(values.map { it }).toMap().toMutableMap()
+
+    fun noteRequestBody(): Row {
+        if(!this.containsField("(REQUEST-BODY)"))
+            return this
+
+        val requestBody = this.getField("(REQUEST-BODY)").trim()
+
+        return try {
+            this.copy(jsonObjectExample = JSONObjectExample(parsedJSONObject(requestBody), this))
+        } catch (e: ContractException) {
+            this
+        }
+    }
 
     fun flattenRequestBodyIntoRow(): Row {
         val jsonValue = parsedJSON(this.getField("(REQUEST-BODY)"))
@@ -39,7 +62,7 @@ data class Row(
     }
 
     private fun getValue(columnName: String): RowValue {
-        val value = cells.getValue(columnName)
+        val value = if(columnName in cells) cells.getValue(columnName) else jsonObjectExample?.getValueFromTopLevelKeys(columnName) ?: ""
 
         return when {
             isContextValue(value) && isReferenceValue(value) -> ReferenceValue(ValueReference(value), references)
@@ -59,9 +82,23 @@ data class Row(
         return isPatternToken(value) && withoutPatternDelimiters(value).trim().startsWith(DEREFERENCE_PREFIX)
     }
 
-    fun containsField(key: String): Boolean = cells.containsKey(key)
+    fun containsField(key: String): Boolean = jsonObjectExample?.containsKey(key) == true || cells.containsKey(key)
 
     fun withoutOmittedKeys(keys: Map<String, Pattern>) = keys.filter {
         !this.containsField(withoutOptionality(it.key)) || this.getField(withoutOptionality(it.key)) !in OMIT
     }
+
+    fun dropDownTo(key: String): Row {
+        if(jsonObjectExample == null)
+            return this
+
+        val value = jsonObjectExample.jsonObject.findFirstChildByPath(withoutOptionality(key)) ?: return withNoJSONObjectExample()
+
+        if(value !is JSONObjectValue)
+            return withNoJSONObjectExample()
+
+        return this.copy(jsonObjectExample = JSONObjectExample(value, jsonObjectExample.originalRow))
+    }
+
+    private fun withNoJSONObjectExample() = this.copy(jsonObjectExample = null)
 }

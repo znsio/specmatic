@@ -77,14 +77,16 @@ class GenerativeTests {
                               value: OK
         """.trimIndent(), "").toFeature()
 
-        val building = mutableListOf<Any>()
+        val building = mutableListOf<String>()
 
         try {
             System.setProperty(Flags.onlyPositive, "true")
+//            val results = feature.executeTests(object : TestExecutor {
             val results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
-                    building.add(body.findFirstChildByPath("person.address.building")!!.toStringValue())
+                    building.add(body.findFirstChildByPath("person.address.building")!!.toStringLiteral())
+                    building.add(body.findFirstChildByPath("company.address.building")!!.toStringLiteral())
                     return HttpResponse.OK("OK")
                 }
 
@@ -94,7 +96,10 @@ class GenerativeTests {
 
             println(results.report())
 
-            assertThat(building).contains("1", "Bldg no 1")
+            assertThat(results.failureCount).isEqualTo(0)
+            assertThat(results.successCount).isGreaterThan(0)
+
+            assertThat(building.toList().toSet()).isEqualTo(setOf("1", "Bldg no 1"))
         } catch(e: ContractException) {
             fail("Should not have got this error:\n${e.report()}")
         } finally {

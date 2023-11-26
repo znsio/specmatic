@@ -13,8 +13,8 @@ data class JSONObjectExample(val jsonObject: JSONObjectValue, val originalRow: R
     fun containsKey(key: String): Boolean =
         jsonObject.jsonObject[key] is ScalarValue
 
-    fun getValueFromTopLevelKeys(columnName: String): String? =
-        jsonObject.jsonObject[columnName]?.toStringLiteral()
+    fun getValueFromTopLevelKeys(columnName: String): String =
+        jsonObject.jsonObject.getValue(columnName).toStringLiteral()
 }
 
 data class Row(
@@ -62,7 +62,11 @@ data class Row(
     }
 
     private fun getValue(columnName: String): RowValue {
-        val value = if(columnName in cells) cells.getValue(columnName) else jsonObjectExample?.getValueFromTopLevelKeys(columnName) ?: ""
+        val value = if(jsonObjectExample != null) {
+            jsonObjectExample.getValueFromTopLevelKeys(columnName)
+        } else {
+            cells.getValue(columnName)
+        }
 
         return when {
             isContextValue(value) && isReferenceValue(value) -> ReferenceValue(ValueReference(value), references)
@@ -82,7 +86,7 @@ data class Row(
         return isPatternToken(value) && withoutPatternDelimiters(value).trim().startsWith(DEREFERENCE_PREFIX)
     }
 
-    fun containsField(key: String): Boolean = jsonObjectExample?.containsKey(key) == true || cells.containsKey(key)
+    fun containsField(key: String): Boolean = jsonObjectExample?.containsKey(key) ?: cells.containsKey(key)
 
     fun withoutOmittedKeys(keys: Map<String, Pattern>) = keys.filter {
         !this.containsField(withoutOptionality(it.key)) || this.getField(withoutOptionality(it.key)) !in OMIT

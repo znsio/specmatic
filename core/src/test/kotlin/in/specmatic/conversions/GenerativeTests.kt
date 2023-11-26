@@ -4,6 +4,7 @@ import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.BooleanValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NullValue
@@ -286,5 +287,74 @@ class GenerativeTests {
         } catch(e: ContractException) {
             fail("Should not have got this error:\n${e.report()}")
         }
+    }
+
+
+    @Test
+    fun `generative positive-only tests with REQUEST-BODY example`() {
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: "Get person by id"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        examples:
+                          SUCCESS:
+                            value:
+                              address:
+                                - street: "1"
+
+                        schema:
+                          required:
+                          - "address"
+                          properties:
+                            address:
+                              type: "array"
+                              items:
+                                ${'$'}ref: "#/components/schemas/Address"
+                  responses:
+                    200:
+                      description: "Get person by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+                          examples:
+                            SUCCESS:
+                              value: success
+            components:
+              schemas:
+                Address:
+                  required:
+                  - "street"
+                  properties:
+                    street:
+                      type: "string"
+        """, "").toFeature()
+
+        val requestBodiesSeen = mutableListOf<Value>()
+
+        val results = specification.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.body)
+                requestBodiesSeen.add(request.body)
+                return HttpResponse.OK("success")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+        println(results.report())
+
+        assertThat(requestBodiesSeen).hasSize(2)
+        assertThat(parsedJSONObject("""{"address": [{"street": "1"}]}""")).isIn(requestBodiesSeen)
+        assertThat(parsedJSONObject("""{"address": null}""")).isIn(requestBodiesSeen)
     }
 }

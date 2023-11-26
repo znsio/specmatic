@@ -81,7 +81,6 @@ class GenerativeTests {
 
         try {
             System.setProperty(Flags.onlyPositive, "true")
-//            val results = feature.executeTests(object : TestExecutor {
             val results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue

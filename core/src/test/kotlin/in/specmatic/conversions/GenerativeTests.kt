@@ -154,15 +154,15 @@ class GenerativeTests {
                               value: OK
         """.trimIndent(), "").toFeature()
 
-        val building = mutableListOf<String>()
+        val statusValuesSeen = mutableSetOf<String>()
 
         try {
             System.setProperty(Flags.onlyPositive, "true")
             val results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
-                    building.add(body.findFirstChildByPath("status")!!.toStringLiteral() + " in body")
-                    building.add(request.headers.getValue("status") + " in headers")
+                    statusValuesSeen.add(body.findFirstChildByPath("status")!!.toStringLiteral() + " in body")
+                    statusValuesSeen.add(request.headers.getValue("status") + " in headers")
                     return HttpResponse.OK("OK")
                 }
 
@@ -175,7 +175,8 @@ class GenerativeTests {
             assertThat(results.failureCount).isEqualTo(0)
             assertThat(results.successCount).isGreaterThan(0)
 
-            assertThat(building.toList().toSet()).isEqualTo(setOf("true in headers", "success in body"))
+            val expectedStatusValues = setOf("true in headers", "success in body")
+            assertThat(statusValuesSeen).isEqualTo(expectedStatusValues)
         } catch(e: ContractException) {
             fail("Should not have got this error:\n${e.report()}")
         } finally {
@@ -189,10 +190,10 @@ class GenerativeTests {
             """
             openapi: 3.0.0
             info:
-              title: Result
+              title: Addresses
               version: 1.0.0
             paths:
-              /result:
+              /addresses:
                 post:
                   requestBody:
                     content:
@@ -200,14 +201,42 @@ class GenerativeTests {
                         examples:
                           SUCCESS:
                             value:
-                              status: true
+                              person:
+                                address:
+                                  building: 1
+                              company:
+                                address:
+                                  building: "Bldg no 1"
                         schema:
                           type: object
                           required:
-                            - status
+                            - person
+                            - company
                           properties:
-                            status:
-                              type: boolean
+                            person:
+                              type: object
+                              required:
+                                - address
+                              properties:
+                                address:
+                                  type: object
+                                  required:
+                                    - building
+                                  properties:
+                                    building:
+                                      type: integer
+                            company:
+                              type: object
+                              required:
+                                - address
+                              properties:
+                                address:
+                                  type: object
+                                  required:
+                                    - building
+                                  properties:
+                                    building:
+                                      type: string
                   responses:
                     '200':
                       description: OK
@@ -218,12 +247,6 @@ class GenerativeTests {
                           examples:
                             SUCCESS:
                               value: OK
-                    '400':
-                      description: Bad Request
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
         """.trimIndent(), "").toFeature()
 
         val buildingValuesSeen = mutableSetOf<String>()
@@ -232,17 +255,21 @@ class GenerativeTests {
             val results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
-                    val status = body.findFirstChildByPath("status")!!
+                    val personBuilding = body.findFirstChildByPath("person.address.building")!!
 
-                    if(status is NullValue)
+                    if(personBuilding is NullValue)
                         buildingValuesSeen.add("null")
                     else
-                        buildingValuesSeen.add(status.toStringLiteral())
+                        buildingValuesSeen.add(personBuilding.toStringLiteral())
 
-                    return if(status == BooleanValue(true))
-                        HttpResponse.OK("OK")
+                    val companyBuilding = body.findFirstChildByPath("company.address.building")!!
+
+                    if(companyBuilding is NullValue)
+                        buildingValuesSeen.add("null")
                     else
-                        HttpResponse(400, "Bad Request")
+                        buildingValuesSeen.add(companyBuilding.toStringLiteral())
+
+                    return HttpResponse.OK("OK")
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {
@@ -251,8 +278,11 @@ class GenerativeTests {
 
             println(results.report())
 
-            val expectedBuildingValues = setOf("null", "true")
-            assertThat(buildingValuesSeen).isEqualTo(expectedBuildingValues)
+            assertThat("1").isIn(buildingValuesSeen)
+            assertThat("null").isIn(buildingValuesSeen)
+            assertThat("Bldg no 1").isIn(buildingValuesSeen)
+            assertThat(buildingValuesSeen).containsAnyOf("true", "false")
+            assertThat(buildingValuesSeen.size).isEqualTo(6)
         } catch(e: ContractException) {
             fail("Should not have got this error:\n${e.report()}")
         }

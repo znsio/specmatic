@@ -570,13 +570,7 @@ data class HttpRequestPattern(
                             throw ContractException(result.toFailureReport())
 
                         val originalRequest = if(value is JSONObjectValue) {
-                            val jsonValues = jsonObjectToValues(value)
-                            val jsonValueRow = Row(
-                                columnNames = jsonValues.map { entry -> entry.first }.toList(),
-                                values = jsonValues.map { entry -> entry.second }.toList(),
-                                name = row.name)
-
-                            body.negativeBasedOn(jsonValueRow, resolver)
+                            body.negativeBasedOn(row.noteRequestBody(), resolver)
                         } else {
                             listOf(ExactValuePattern(value))
                         }

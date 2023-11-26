@@ -11,7 +11,7 @@ const val FILENAME_PREFIX = "@"
 
 data class JSONObjectExample(val jsonObject: JSONObjectValue, val originalRow: Row) {
     fun containsKey(key: String): Boolean =
-        jsonObject.jsonObject[key] is ScalarValue
+        jsonObject.jsonObject[key]?.let { it !is JSONObjectValue } == true
 
     fun getValueFromTopLevelKeys(columnName: String): String =
         jsonObject.jsonObject.getValue(columnName).toStringLiteral()

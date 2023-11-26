@@ -4,9 +4,12 @@ import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.value.BooleanValue
 import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.TestExecutor
+import io.mockk.InternalPlatformDsl.toStr
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.Test
@@ -177,6 +180,81 @@ class GenerativeTests {
             fail("Should not have got this error:\n${e.report()}")
         } finally {
             System.clearProperty(Flags.onlyPositive)
+        }
+    }
+
+    @Test
+    fun `negative testing should directly use a given request payload`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.0
+            info:
+              title: Result
+              version: 1.0.0
+            paths:
+              /result:
+                post:
+                  requestBody:
+                    content:
+                      application/json:
+                        examples:
+                          SUCCESS:
+                            value:
+                              status: true
+                        schema:
+                          type: object
+                          required:
+                            - status
+                          properties:
+                            status:
+                              type: boolean
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SUCCESS:
+                              value: OK
+                    '400':
+                      description: Bad Request
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val buildingValuesSeen = mutableSetOf<String>()
+
+        try {
+            val results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val body = request.body as JSONObjectValue
+                    val status = body.findFirstChildByPath("status")!!
+
+                    if(status is NullValue)
+                        buildingValuesSeen.add("null")
+                    else
+                        buildingValuesSeen.add(status.toStringLiteral())
+
+                    return if(status == BooleanValue(true))
+                        HttpResponse.OK("OK")
+                    else
+                        HttpResponse(400, "Bad Request")
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            println(results.report())
+
+            val expectedBuildingValues = setOf("null", "true")
+            assertThat(buildingValuesSeen).isEqualTo(expectedBuildingValues)
+        } catch(e: ContractException) {
+            fail("Should not have got this error:\n${e.report()}")
         }
     }
 }

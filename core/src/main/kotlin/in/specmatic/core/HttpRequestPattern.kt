@@ -582,12 +582,12 @@ data class HttpRequestPattern(
                         }
 
                         val flattenedRequests: List<Pattern> = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                            body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
+                            body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
                         }
 
                         flattenedRequests.plus(originalRequest)
 
-                        body.negativeBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+                        body.negativeBasedOn(row.noteRequestBody(), resolver)
                     } else {
                         body.negativeBasedOn(row, resolver)
                     }

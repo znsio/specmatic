@@ -45,7 +45,7 @@ data class AnyPattern(
             val ordinal = index + 1
 
             pattern.typeAlias?.let {
-                if(it.isBlank())
+                if(it.isBlank() || it == "()")
                     failure.breadCrumb("(~~~object $ordinal)")
                 else
                     failure.breadCrumb("(~~~${withoutPatternDelimiters(it)} object)")

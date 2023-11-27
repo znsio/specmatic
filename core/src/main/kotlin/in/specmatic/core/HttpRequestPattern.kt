@@ -633,21 +633,6 @@ data class HttpRequestPattern(
     }
 }
 
-fun jsonObjectToValues(value: JSONObjectValue): List<Pair<String, String>> {
-    val valueMap = value.jsonObject
-
-    return valueMap.entries.map { (key, value) ->
-        when(value) {
-            is JSONObjectValue -> {
-                jsonObjectToValues(value)
-            }
-            else -> {
-                listOf(Pair(key, value.toStringLiteral()))
-            }
-        }
-    }.flatten()
-}
-
 fun missingParam(missingValue: String): ContractException {
     return ContractException("$missingValue is missing. Can't generate the contract test.")
 }

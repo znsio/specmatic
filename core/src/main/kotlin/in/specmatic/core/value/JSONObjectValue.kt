@@ -4,7 +4,7 @@ import `in`.specmatic.core.ExampleDeclarations
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.*
 
-data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Value {
+data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Value, JSONComposite {
     override val httpContentType = "application/json"
 
     override fun valueErrorSnippet(): String {

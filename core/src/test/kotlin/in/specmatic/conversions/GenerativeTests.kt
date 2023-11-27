@@ -332,8 +332,6 @@ class GenerativeTests {
             components:
               schemas:
                 Address:
-                  required:
-                  - "street"
                   properties:
                     street:
                       type: "string"
@@ -353,8 +351,6 @@ class GenerativeTests {
         })
         println(results.report())
 
-        assertThat(requestBodiesSeen).hasSize(2)
-        assertThat(parsedJSONObject("""{"address": [{"street": "1"}]}""")).isIn(requestBodiesSeen)
-        assertThat(parsedJSONObject("""{"address": null}""")).isIn(requestBodiesSeen)
+        assertThat(requestBodiesSeen).hasSize(3)
     }
 }

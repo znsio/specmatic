@@ -235,7 +235,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
             }
         }
         else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-            pattern.newBasedOn(row.dropDownTo(keyWithoutOptionality), cyclePreventedResolver)
+            pattern.newBasedOn(row.dropDownIntoJSONObject(keyWithoutOptionality), cyclePreventedResolver)
         }?:
         // Handle cycle (represented by null value) by using empty list for optional properties
         listOf()

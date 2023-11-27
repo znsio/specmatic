@@ -10,7 +10,6 @@ import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 
 data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null, val example: List<String?>? = null) : Pattern, SequenceType {
-
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
@@ -52,8 +51,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
             }
         }
 
-        // Cycle prevention handled in listOf, so not duplicating it here.
-        return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
+        return pattern.listOf(0.until(randomNumber(3)).mapIndexed { index, _ ->
             attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolverWithEmptyType) }
         }, resolverWithEmptyType)
     }
@@ -62,7 +60,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
         return attempt(breadCrumb = "[]") {
             resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
-                pattern.newBasedOn(row, cyclePreventedResolver).map { ListPattern(it) }
+                pattern.newBasedOn(row.dropDownIntoList(), cyclePreventedResolver).map { ListPattern(it) }
             }
         }
     }

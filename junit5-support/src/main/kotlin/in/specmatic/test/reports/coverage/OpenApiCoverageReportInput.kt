@@ -54,8 +54,7 @@ class OpenApiCoverageReportInput(
                     if (routeAPIRows.isEmpty()) {
                         routeAPIRows.add(topLevelCoverageRow)
                     } else {
-                        val lastCoverageRow = routeAPIRows.last()
-                        val rowMethod = if (method != lastCoverageRow.method) method else ""
+                        val rowMethod = if (routeAPIRows.none { it.method == method }) method else ""
                         routeAPIRows.add(
                             topLevelCoverageRow.copy(
                                 method = rowMethod,

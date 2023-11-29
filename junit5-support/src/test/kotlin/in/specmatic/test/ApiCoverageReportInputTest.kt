@@ -287,6 +287,8 @@ class ApiCoverageReportInputTest {
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 401, TestResult.Success),
             TestResultRecord("/route2", "GET", 200, TestResult.Success),
+            TestResultRecord("/route2", "GET", 404, TestResult.Success),
+            TestResultRecord("/route2", "POST", 500, TestResult.Success),
         )
         val applicationAPIs = mutableListOf(
             API("GET", "/route1"),
@@ -310,8 +312,10 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "", "200", "1", 0, Remarks.Covered),
                     OpenApiCoverageConsoleRow("", "", "401", "1", 0, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("", "", 400, 0, 0, Remarks.DidNotRun)
+                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 75, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 400, 0, 0, Remarks.DidNotRun),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "", 500, 1, 0, Remarks.Covered)
                 ),
                 2, 0, 0, 0, 0
             )

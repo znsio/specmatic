@@ -6,9 +6,19 @@ data class OpenAPICoverageConsoleReport(
     val rows: List<OpenApiCoverageConsoleRow>,
     val totalEndpointsCount: Int,
     val missedEndpointsCount: Int,
-    val notImplementedAPICount: Int
+    val notImplementedAPICount: Int,
+    val partiallyMissedEndpointsCount: Int,
+    val partiallyNotImplementedAPICount: Int
 ) {
-    val totalCoveragePercentage: Int = if (totalEndpointsCount > 0) (coveragePercentageSum(rows) / totalEndpointsCount).toDouble().roundToInt() else 0
+    val totalCoveragePercentage: Int = calculateTotalCoveragePercentage()
 
-    private fun coveragePercentageSum(rows: List<OpenApiCoverageConsoleRow>) = rows.sumOf { it.coveragePercentage }
+    private fun calculateTotalCoveragePercentage(): Int {
+        if (totalEndpointsCount == 0) return 0
+
+        val totalCountOfEndpointsWithResponseStatuses = rows.count()
+        val totalCountOfCoveredEndpointsWithResponseStatuses = rows.count { it.remarks == Remarks.Covered }
+
+        return ((totalCountOfCoveredEndpointsWithResponseStatuses * 100) / totalCountOfEndpointsWithResponseStatuses).toDouble()
+            .roundToInt()
+    }
 }

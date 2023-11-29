@@ -464,7 +464,7 @@ data class Scenario(
         val method = this.httpRequestPattern.method
         val path = this.httpRequestPattern.urlMatcher?.path ?: ""
         val responseStatus = this.httpResponsePattern.status
-        val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | ${exampleName.trim()}" }
+        val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | EX:${exampleName.trim()}" }
 
         val generativePrefix = if(this.generativeTestingEnabled)
             if(this.isNegative) "-ve " else "+ve "

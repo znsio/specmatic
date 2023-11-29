@@ -12,4 +12,16 @@ interface ContractExecutionPrinter {
 fun testStatusMessage(
     testIdentifier: TestIdentifier?,
     testExecutionResult: TestExecutionResult?
-) = "${testIdentifier?.displayName} ${testExecutionResult?.status}"
+): String {
+    val status: TestExecutionResult.Status? = testExecutionResult?.status
+
+    val statusToMessage = mapOf(
+        TestExecutionResult.Status.SUCCESSFUL to "has SUCCEEDED",
+        TestExecutionResult.Status.FAILED to "has FAILED",
+        TestExecutionResult.Status.ABORTED to "was ABORTED"
+    )
+
+    val displayStatus: String = statusToMessage[status] ?: status?.name ?: "is UNKNOWN"
+
+    return "${testIdentifier?.displayName} $displayStatus"
+}

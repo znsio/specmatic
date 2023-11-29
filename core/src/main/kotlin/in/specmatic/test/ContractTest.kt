@@ -14,7 +14,7 @@ data class TestResultRecord(
     val specification: String? = null,
     val serviceType: String? = null
 ) {
-    val includeForCoverage = result !in listOf(TestResult.Skipped, TestResult.NotImplemented)
+    val includeForCoverage = result !in listOf(TestResult.Skipped, TestResult.NotImplemented, TestResult.DidNotRun)
 }
 
 interface ContractTest {

@@ -12,6 +12,7 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.stub.isYAML
 import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
+import `in`.specmatic.test.reports.coverage.Endpoint
 import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterAll
@@ -163,9 +164,9 @@ open class SpecmaticJUnitSupport {
             return loadExceptionAsTestError(e)
         }
         val testScenarios = try {
-            val testScenarios = when {
+            val (testScenarios, allEndpoints) = when {
                 contractPaths != null -> {
-                    contractPaths.split(",").flatMap {
+                    val testScenariosAndEndpointsPairList = contractPaths.split(",").map {
                         loadTestScenarios(
                             it,
                             suggestionsPath,
@@ -176,6 +177,9 @@ open class SpecmaticJUnitSupport {
                             filterNotName = filterNotName
                         )
                     }
+                    val tests: List<ContractTest> = testScenariosAndEndpointsPairList.flatMap { it.first }
+                    val endpoints: List<Endpoint> = testScenariosAndEndpointsPairList.flatMap { it.second }
+                    Pair(tests, endpoints)
                 }
                 else -> {
                     val configFile = configFile
@@ -188,10 +192,16 @@ open class SpecmaticJUnitSupport {
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
-                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
+                    val testScenariosAndEndpointsPairList = contractFilePaths.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
+
+                    val tests: List<ContractTest> = testScenariosAndEndpointsPairList.flatMap { it.first }
+
+                    val endpoints: List<Endpoint> = testScenariosAndEndpointsPairList.flatMap { it.second }
+
+                    Pair(tests, endpoints)
                 }
             }
-
+            openApiCoverageReportInput.addEndpoints(allEndpoints)
             selectTestsToRun(testScenarios, filterName, filterNotName) { it.testDescription() }
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
@@ -271,9 +281,9 @@ open class SpecmaticJUnitSupport {
         securityConfiguration: SecurityConfiguration? = null,
         filterName: String?,
         filterNotName: String?
-    ): List<ContractTest> {
+    ): Pair<List<ContractTest>, List<Endpoint>> {
         if(isYAML(path) && !isOpenAPI(path))
-            return emptyList()
+            return Pair(emptyList(), emptyList())
 
         val contractFile = File(path)
         val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
@@ -283,7 +293,20 @@ open class SpecmaticJUnitSupport {
             else -> emptyList()
         }
 
-        return feature
+        val allEndpoints: List<Endpoint> = feature.scenarios.map { scenario ->
+            Endpoint(
+                scenario.path,
+                scenario.method,
+                scenario.httpResponsePattern.status,
+                scenario.sourceProvider,
+                scenario.sourceRepository,
+                scenario.sourceRepositoryBranch,
+                scenario.specification,
+                scenario.serviceType
+            )
+        }
+
+        val tests: List<ContractTest> = feature
             .copy(scenarios = selectTestsToRun(feature.scenarios, filterName, filterNotName) { it.testDescription() })
             .also {
                 if (it.scenarios.isEmpty())
@@ -294,6 +317,8 @@ open class SpecmaticJUnitSupport {
                 }
             }
             .generateContractTests(suggestions)
+
+        return Pair(tests, allEndpoints)
     }
 
     private fun suggestionsFromFile(suggestionsPath: String): List<Scenario> {

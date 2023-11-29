@@ -16,7 +16,7 @@ class ScenarioTest(
     private val serviceType: String? = null
 ) : ContractTest {
     override fun testResultRecord(result: Result): TestResultRecord {
-        val resultStatus = if (scenario.generatedFromExamples) result.testResult() else TestResult.Skipped
+        val resultStatus = result.testResult()
         return TestResultRecord(convertPathParameterStyle(scenario.path), scenario.method, scenario.status, resultStatus, sourceProvider, sourceRepository, sourceRepositoryBranch, specification, serviceType)
     }
 

@@ -280,4 +280,42 @@ class ApiCoverageReportInputTest {
         )
 
     }
+
+    @Test
+    fun `test generates api coverage report with endpoints present in spec but not tested`() {
+        val testReportRecords = mutableListOf(
+            TestResultRecord("/route1", "GET", 200, TestResult.Success),
+            TestResultRecord("/route1", "POST", 200, TestResult.Success),
+            TestResultRecord("/route1", "POST", 401, TestResult.Success),
+            TestResultRecord("/route2", "GET", 200, TestResult.Success),
+        )
+        val applicationAPIs = mutableListOf(
+            API("GET", "/route1"),
+            API("POST", "/route1"),
+            API("GET", "/route2")
+        )
+
+        val allEndpoints = mutableListOf(
+            Endpoint("/route1", "GET", 200),
+            Endpoint("/route1", "POST", 200),
+            Endpoint("/route1", "POST", 401),
+            Endpoint("/route2", "GET", 200),
+            Endpoint("/route2", "GET", 400)
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, allEndpoints = allEndpoints).generate()
+        println(CoverageReportTextRenderer().render(apiCoverageReport))
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "", "200", "1", 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", "401", "1", 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 50, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 400, 0, 0, Remarks.DidNotRun)
+                ),
+                2, 1, 0
+            )
+        )
+    }
 }

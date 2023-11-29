@@ -18,7 +18,8 @@ class OpenApiCoverageReportInput(
     private var configFilePath:String,
     private val testResultRecords: MutableList<TestResultRecord> = mutableListOf(),
     private val applicationAPIs: MutableList<API> = mutableListOf(),
-    private val excludedAPIs: MutableList<String> = mutableListOf()
+    private val excludedAPIs: MutableList<String> = mutableListOf(),
+    private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testResultRecords.add(testResultRecord)
@@ -32,10 +33,15 @@ class OpenApiCoverageReportInput(
         excludedAPIs.addAll(apis)
     }
 
+    fun addEndpoints(endpoints: List<Endpoint>) {
+        allEndpoints.addAll(endpoints)
+    }
+
     fun generate(): OpenAPICoverageConsoleReport {
         val testResults = testResultRecords.filter { testResult -> excludedAPIs.none { it == testResult.path } }
         val testResultsWithNotImplementedEndpoints = identifyTestsThatFailedBecauseOfEndpointsThatWereNotImplemented(testResults)
         var allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
+        allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
         allTests = sortByPathMethodResponseStatus(allTests)
 
         val apiTestsGrouped = groupTestsByPathMethodAndResponseStatus(allTests)
@@ -67,9 +73,26 @@ class OpenApiCoverageReportInput(
         }
 
         val totalAPICount = apiTestsGrouped.keys.size
-        val missedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.Skipped } }.size
+        val missedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.Skipped || it.result == TestResult.DidNotRun } }.size
         val notImplementedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.NotImplemented } }.size
         return OpenAPICoverageConsoleReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount)
+    }
+
+    private fun addTestResultsForTestsNotGeneratedBySpecmatic(allTests: List<TestResultRecord>, allEndpoints: List<Endpoint>): List<TestResultRecord> {
+        val missedEndpoints = allEndpoints.filter { endpoint -> allTests.none { it.path == endpoint.path && it.method == endpoint.method && it.responseStatus == endpoint.responseStatus  } }
+        return allTests.plus(
+            missedEndpoints.map { endpoint ->  TestResultRecord(
+                endpoint.path,
+                endpoint.method,
+                endpoint.responseStatus,
+                TestResult.DidNotRun,
+                endpoint.sourceProvider,
+                endpoint.sourceRepository,
+                endpoint.sourceRepositoryBranch,
+                endpoint.specification,
+                endpoint.serviceType
+            ) }
+        )
     }
 
     fun generateJsonReport(): OpenApiCoverageJsonReport {
@@ -175,6 +198,7 @@ class OpenApiCoverageReportInput(
             true -> when (testResultRecords.first().result) {
                 TestResult.Skipped -> Remarks.Missed
                 TestResult.NotImplemented -> Remarks.NotImplemented
+                TestResult.DidNotRun -> Remarks.DidNotRun
                 else -> throw ContractException("Cannot determine remarks for unknown test result: ${testResultRecords.first().result}")
             }
 
@@ -196,4 +220,15 @@ data class CoverageGroupKey(
     val sourceRepositoryBranch: String?,
     val specification: String?,
     val serviceType: String?
+)
+
+data class Endpoint(
+    val path: String,
+    val method: String,
+    val responseStatus: Int,
+    val sourceProvider: String? = null,
+    val sourceRepository: String? = null,
+    val sourceRepositoryBranch: String? = null,
+    val specification: String? = null,
+    val serviceType: String? = null
 )

@@ -228,10 +228,15 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
                     resolver.parse(pattern, rowValue)
                 }
 
-                when (val matchResult = resolver.matchesPattern(null, pattern, parsedRowValue)) {
-                    is Result.Failure -> throw ContractException(matchResult.toFailureReport())
-                    else -> listOf(ExactValuePattern(parsedRowValue))
-                }
+                val exactValuePattern =
+                    when (val matchResult = resolver.matchesPattern(null, pattern, parsedRowValue)) {
+                        is Result.Failure -> throw ContractException(matchResult.toFailureReport())
+                        else -> ExactValuePattern(parsedRowValue)
+                    }
+
+                val generativeTests: List<Pattern> = resolver.generatedPatternsForGenerativeTests(pattern, key)
+
+                listOf(exactValuePattern) + generativeTests.filterNot { it == exactValuePattern }
             }
         }
         else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->

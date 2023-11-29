@@ -233,9 +233,10 @@ open class SpecmaticJUnitSupport {
 
                 testsNames.add(testScenario.testDescription())
 
+                lateinit var result:Result
+
                 try {
-                    val result: Result = invoker.execute(testScenario, timeout)
-                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result))
+                    result = invoker.execute(testScenario, timeout)
 
                     if(result is Result.Success && result.isPartialSuccess()) {
                         partialSuccesses.add(result)
@@ -248,9 +249,14 @@ open class SpecmaticJUnitSupport {
                         }
                         else -> ResultAssert.assertThat(result).isSuccess()
                     }
+
                 } catch(e: Throwable) {
-                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
+                    result = Result.Failure(exceptionCauseMessage(e))
                     throw e
+                }
+                finally {
+                    logger.log("Adding test: ${testScenario.testDescription()} to coverage")
+                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result))
                 }
             }
         }.toList()

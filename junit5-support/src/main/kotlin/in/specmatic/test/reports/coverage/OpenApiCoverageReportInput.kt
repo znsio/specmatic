@@ -73,9 +73,22 @@ class OpenApiCoverageReportInput(
         }
 
         val totalAPICount = apiTestsGrouped.keys.size
-        val missedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.Skipped || it.result == TestResult.DidNotRun } }.size
-        val notImplementedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.NotImplemented } }.size
-        return OpenAPICoverageConsoleReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount)
+
+        val missedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.all { it.result == TestResult.Skipped  } }.size
+
+        val notImplementedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.all { it.result in setOf(TestResult.NotImplemented,  TestResult.DidNotRun) } }.size
+
+        val partiallyMissedAPICount = allTests.groupBy { it.path }
+            .count { (_, tests) ->
+                tests.any { it.result == TestResult.Skipped } && tests.any {it.result != TestResult.Skipped }
+            }
+
+        val partiallyNotImplementedAPICount = allTests.groupBy { it.path }
+            .count { (_, tests) ->
+                tests.any { it.result == TestResult.NotImplemented } && tests.any {it.result in setOf(TestResult.Success , TestResult.Skipped, TestResult.Failed) }
+            }
+
+        return OpenAPICoverageConsoleReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
     }
 
     private fun addTestResultsForTestsNotGeneratedBySpecmatic(allTests: List<TestResultRecord>, allEndpoints: List<Endpoint>): List<TestResultRecord> {

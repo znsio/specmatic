@@ -481,8 +481,8 @@ Background:
             System.clearProperty(Flags.negativeTestingFlag)
         }
 
-        assertThat(results.results.size).isEqualTo(9)
-        assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(1)
+        assertThat(results.results.size).isEqualTo(13)
+        assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(5)
         assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(8)
     }
 
@@ -526,9 +526,9 @@ Background:
             }
         )
 
-        assertThat(results.results.size).isEqualTo(16)
+        assertThat(results.results.size).isEqualTo(17)
         assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(4)
-        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(12)
+        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(13)
     }
 
     @Test

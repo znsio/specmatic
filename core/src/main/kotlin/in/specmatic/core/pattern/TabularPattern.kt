@@ -236,7 +236,9 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
 
                 val generativeTests: List<Pattern> = resolver.generatedPatternsForGenerativeTests(pattern, key)
 
-                listOf(exactValuePattern) + generativeTests.filterNot { it == exactValuePattern }
+                listOf(exactValuePattern) + generativeTests.filterNot {
+                    it.encompasses(exactValuePattern, resolver, resolver) is Result.Success
+                }
             }
         }
         else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
@@ -310,6 +312,18 @@ private fun <ValueType> keyCombinations(
 fun <ValueType> forEachKeyCombinationIn(
     patternMap: Map<String, ValueType>,
     row: Row,
+    resolver: Resolver,
+    creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
+): List<Map<String, ValueType>> =
+    keySets(patternMap.keys.toList(), row, resolver).map { keySet ->
+        patternMap.filterKeys { key -> key in keySet }
+    }.map { newPattern ->
+        creator(newPattern)
+    }.flatten()
+
+fun <ValueType> forEachKeyCombinationIn(
+    patternMap: Map<String, ValueType>,
+    row: Row,
     creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
 ): List<Map<String, ValueType>> =
     keySets(patternMap.keys.toList(), row).map { keySet ->
@@ -364,6 +378,25 @@ fun <ValueType> allOrNothingCombinationIn(
     val flatten: List<Map<String, ValueType>> = keySetValues.flatten()
 
     return flatten
+}
+
+internal fun keySets(listOfKeys: List<String>, row: Row, resolver: Resolver): List<List<String>> {
+    if (listOfKeys.isEmpty())
+        return listOf(listOfKeys)
+
+    val key = listOfKeys.last()
+    val subLists = keySets(listOfKeys.dropLast(1), row)
+
+    return subLists.flatMap { subList ->
+        when {
+            row.containsField(withoutOptionality(key)) ->
+                if(resolver.generativeTestingEnabled && isOptional(key)) {
+                    listOf(subList, subList + key)
+                } else listOf(subList + key)
+            isOptional(key) -> listOf(subList, subList + key)
+            else -> listOf(subList + key)
+        }
+    }
 }
 
 internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {

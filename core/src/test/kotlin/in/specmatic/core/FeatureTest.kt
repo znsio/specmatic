@@ -1249,7 +1249,7 @@ paths:
 
         val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
-        assertThat(negativeTestScenarios.count()).isEqualTo(1)
+        assertThat(negativeTestScenarios.count()).isEqualTo(2)
         val headerPattern = negativeTestScenarios.first().httpRequestPattern.headersPattern.pattern
         assertThat(headerPattern.values.first() is StringPattern)
     }
@@ -1383,7 +1383,7 @@ paths:
 
         val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
-        assertThat(negativeTestScenarios.count()).isEqualTo(8)
+        assertThat(negativeTestScenarios.count()).isEqualTo(10)
     }
 
 

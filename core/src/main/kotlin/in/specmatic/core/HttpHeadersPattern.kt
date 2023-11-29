@@ -151,12 +151,12 @@ data class HttpHeadersPattern(
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> =
-        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row) { pattern ->
+        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row, resolver) { pattern ->
             newBasedOn(pattern, row, resolver)
         }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
 
     fun negativeBasedOn(row: Row, resolver: Resolver) =
-        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row) { pattern ->
+        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row, resolver) { pattern ->
             negativeBasedOn(pattern, row, resolver, true)
         }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
 

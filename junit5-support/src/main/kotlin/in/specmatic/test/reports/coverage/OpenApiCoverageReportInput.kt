@@ -60,7 +60,7 @@ class OpenApiCoverageReportInput(
                                 method = rowMethod,
                                 path ="",
                                 responseStatus = responseStatus.toString(),
-                                count = testResults.count{it.includeForCoverage}.toString(),
+                                count = testResults.count{it.isExercised}.toString(),
                                 coveragePercentage = 0,
                                 remarks = getRemarks(testResults)
                             )
@@ -128,7 +128,7 @@ class OpenApiCoverageReportInput(
                         path = operationGroup.first,
                         method = operationGroup.second,
                         responseCode = operationGroup.third,
-                        count = operationRows.count{it.includeForCoverage},
+                        count = operationRows.count{it.isExercised},
                         coverageStatus = getRemarks(operationRows).toString()
                     )
                 }
@@ -181,13 +181,13 @@ class OpenApiCoverageReportInput(
         val method = methodMap.keys.first()
         val responseStatus = methodMap[method]?.keys?.first()
         val remarks = getRemarks(methodMap[method]?.get(responseStatus)!!)
-        val count = methodMap[method]?.get(responseStatus)?.count { it.includeForCoverage }
+        val exercisedCount = methodMap[method]?.get(responseStatus)?.count { it.isExercised }
 
         val totalMethodResponseCodeCount = methodMap.values.sumOf { it.keys.size }
         var totalMethodResponseCodeCoveredCount = 0
         methodMap.forEach { (_, responses) ->
             responses.forEach { (_, testResults) ->
-                val increment = min(testResults.count { it.includeForCoverage }, 1)
+                val increment = min(testResults.count { it.isCovered }, 1)
                 totalMethodResponseCodeCoveredCount += increment
             }
         }
@@ -198,23 +198,30 @@ class OpenApiCoverageReportInput(
             method,
             route,
             responseStatus!!,
-            count!!,
+            exercisedCount!!,
             coveragePercentage,
             remarks
         )
     }
 
     private fun getRemarks(testResultRecords: List<TestResultRecord>): Remarks {
-        val coveredCount = testResultRecords.count { it.includeForCoverage }
-        return when (coveredCount == 0) {
-            true -> when (testResultRecords.first().result) {
-                TestResult.Skipped -> Remarks.Missed
-                TestResult.NotImplemented -> Remarks.NotImplemented
-                TestResult.DidNotRun -> Remarks.DidNotRun
-                else -> throw ContractException("Cannot determine remarks for unknown test result: ${testResultRecords.first().result}")
+        val exerciseCount = testResultRecords.count { it.isExercised }
+        return when (exerciseCount == 0) {
+            true -> {
+                when (val result = testResultRecords.first().result) {
+                    TestResult.Skipped -> Remarks.Missed
+                    TestResult.NotImplemented -> Remarks.NotImplemented
+                    TestResult.DidNotRun -> Remarks.DidNotRun
+                    else -> throw ContractException("Cannot determine remarks for unknown test result: $result")
+                }
             }
 
-            else -> Remarks.Covered
+            else -> {
+                when(testResultRecords.first().result) {
+                    TestResult.NotImplemented -> Remarks.NotImplemented
+                    else -> Remarks.Covered
+                }
+            }
         }
     }
 

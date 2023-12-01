@@ -182,8 +182,8 @@ class ApiCoverageReportInputTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100,  Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 0, 0,  Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("POST", "", 200, 0, 0,  Remarks.NotImplemented)
+                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 0,  Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.NotImplemented)
                 ),
                 2, 0, 1, 0, 0
             )
@@ -215,7 +215,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100,  Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 50,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "", 200, 0, 0,  Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.NotImplemented),
                     OpenApiCoverageConsoleRow("GET", "/route3/{route_id}", 0, 0, 0,  Remarks.Missed),
                     OpenApiCoverageConsoleRow("POST", "", 0, 0, 0,  Remarks.Missed)
                 ),
@@ -264,7 +264,7 @@ class ApiCoverageReportInputTest {
                         "HTTP",
                         listOf(
                             OpenApiCoverageOperation( "/route2", "GET",200, 1, Remarks.Covered.toString()),
-                            OpenApiCoverageOperation( "/route2", "POST",200, 0, Remarks.NotImplemented.toString())
+                            OpenApiCoverageOperation( "/route2", "POST",200, 1, Remarks.NotImplemented.toString())
                         )
                     ),
                     OpenApiCoverageJsonRow(

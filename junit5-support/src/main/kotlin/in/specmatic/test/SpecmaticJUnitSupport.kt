@@ -255,7 +255,6 @@ open class SpecmaticJUnitSupport {
                     throw e
                 }
                 finally {
-                    logger.log("Adding test: ${testScenario.testDescription()} to coverage")
                     openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result))
                 }
             }

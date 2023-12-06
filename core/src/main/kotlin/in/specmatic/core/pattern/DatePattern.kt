@@ -6,9 +6,6 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-
-private const val RFC3339_DATETIME_FORMAT = "yyyy-MM-dd"
 
 object DatePattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result = when (sampleData) {
@@ -30,7 +27,7 @@ object DatePattern : Pattern, ScalarType {
 
     override fun parse(value: String, resolver: Resolver): StringValue =
         attempt {
-            DateTimeFormatter.ISO_DATE.parse(value)
+            RFC3339.dateFormatter.parse(value)
             StringValue(value)
         }
 
@@ -54,8 +51,6 @@ object DatePattern : Pattern, ScalarType {
 
 private fun currentDateInRFC3339Format() = StringValue(
     LocalDateTime.now().format(
-        DateTimeFormatter.ofPattern(
-            RFC3339_DATETIME_FORMAT
-        )
+        RFC3339.dateFormatter
     )
 )

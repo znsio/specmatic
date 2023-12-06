@@ -8,6 +8,8 @@ import `in`.specmatic.core.value.Value
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+private const val RFC3339_DATETIME_FORMAT = "yyyy-MM-dd"
+
 object DatePattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result = when (sampleData) {
         is StringValue -> resultOf {
@@ -17,7 +19,7 @@ object DatePattern : Pattern, ScalarType {
         else -> Result.Failure("Date types can only be represented using strings")
     }
 
-    override fun generate(resolver: Resolver): StringValue = currentDateTime()
+    override fun generate(resolver: Resolver): StringValue = currentDateInRFC3339Format()
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<DatePattern> = listOf(this)
 
@@ -50,4 +52,10 @@ object DatePattern : Pattern, ScalarType {
     override fun toString() = pattern
 }
 
-private fun currentDateTime() = StringValue(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE))
+private fun currentDateInRFC3339Format() = StringValue(
+    LocalDateTime.now().format(
+        DateTimeFormatter.ofPattern(
+            RFC3339_DATETIME_FORMAT
+        )
+    )
+)

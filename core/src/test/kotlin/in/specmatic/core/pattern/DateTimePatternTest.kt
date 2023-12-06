@@ -8,13 +8,11 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 internal class DateTimePatternTest {
     @Test
     fun `should parse a valid datetime value`() {
-        val dateString = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
+        val dateString = currentDateTimeInRFC339Format().string
         val dateValue = DateTimePattern.parse(dateString, Resolver())
 
         assertEquals(dateString, dateValue.string)
@@ -48,9 +46,9 @@ internal class DateTimePatternTest {
     }
 
     @Test
-    fun `should match this date time format`() {
-        val date1 = StringValue("2020-04-12T00:00:00")
-        val date2 = StringValue("2020-04-22T23:59:59")
+    fun `should match RFC3339 date time format`() {
+        val date1 = StringValue("2020-04-12T00:00:00+05:30")
+        val date2 = StringValue("2014-12-03T10:05:59+08:00")
 
         assertThat(DateTimePattern.matches(date1, Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(DateTimePattern.matches(date2, Resolver())).isInstanceOf(Result.Success::class.java)

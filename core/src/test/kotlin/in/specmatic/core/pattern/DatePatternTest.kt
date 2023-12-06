@@ -15,7 +15,7 @@ internal class DatePatternTest {
         val dateString = LocalDate.now().format(RFC3339.dateFormatter)
         val dateValue = DatePattern.parse(dateString, Resolver())
 
-        assertThat(dateString).isEqualTo(dateValue.string)
+        assertThat(dateValue.string).isEqualTo(dateString)
     }
 
     @Test
@@ -23,7 +23,7 @@ internal class DatePatternTest {
         val valueGenerated = DatePattern.generate(Resolver())
         val valueParsed = DatePattern.parse(valueGenerated.string, Resolver())
 
-        assertThat(valueGenerated).isEqualTo(valueParsed)
+        assertThat(valueParsed).isEqualTo(valueGenerated)
     }
 
     @Test
@@ -41,8 +41,8 @@ internal class DatePatternTest {
     @Test
     fun `should return itself when generating a new pattern based on a row`() {
         val datePatterns = DatePattern.newBasedOn(Row(), Resolver())
-        assertThat(1).isEqualTo(datePatterns.size)
-        assertThat(DatePattern).isEqualTo(datePatterns.first())
+        assertThat(datePatterns.size).isEqualTo(1)
+        assertThat(datePatterns.first() ).isEqualTo(DatePattern)
     }
 
     @Test

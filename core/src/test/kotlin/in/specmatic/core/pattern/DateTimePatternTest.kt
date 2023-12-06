@@ -11,10 +11,10 @@ import org.junit.jupiter.api.Test
 internal class DateTimePatternTest {
     @Test
     fun `should parse a valid datetime value`() {
-        val dateString = currentDateTimeInRFC339Format().string
+        val dateString = RFC3339.currentDateTime()
         val dateValue = DateTimePattern.parse(dateString, Resolver())
 
-        assertThat(dateString).isEqualTo(dateValue.string)
+        assertThat(dateValue.string).isEqualTo(dateString)
     }
 
     @Test
@@ -22,7 +22,7 @@ internal class DateTimePatternTest {
         val valueGenerated = DateTimePattern.generate(Resolver())
         val valueParsed = DateTimePattern.parse(valueGenerated.string, Resolver())
 
-        assertThat(valueGenerated).isEqualTo(valueParsed)
+        assertThat(valueParsed).isEqualTo(valueGenerated)
     }
 
     @Test
@@ -40,8 +40,8 @@ internal class DateTimePatternTest {
     @Test
     fun `should return itself when generating a new pattern based on a row`() {
         val datePatterns = DateTimePattern.newBasedOn(Row(), Resolver())
-        assertThat(1).isEqualTo(datePatterns.size)
-        assertThat(DateTimePattern).isEqualTo(datePatterns.first())
+        assertThat(datePatterns.size).isEqualTo(1)
+        assertThat(datePatterns.first()).isEqualTo(DateTimePattern)
     }
 
     @Test

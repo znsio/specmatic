@@ -48,7 +48,7 @@ internal class DatePatternTest {
     }
 
     @Test
-    fun `should match this date format`() {
+    fun `should match RFC3339 date format`() {
         val date1 = StringValue("2020-04-12")
         val date2 = StringValue("2020-04-22")
 

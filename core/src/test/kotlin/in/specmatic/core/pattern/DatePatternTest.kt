@@ -6,18 +6,16 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 internal class DatePatternTest {
     @Test
     fun `should parse a valid date value`() {
-        val dateString = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+        val dateString = LocalDate.now().format(RFC3339.dateFormatter)
         val dateValue = DatePattern.parse(dateString, Resolver())
 
-        assertEquals(dateString, dateValue.string)
+        assertThat(dateString).isEqualTo(dateValue.string)
     }
 
     @Test
@@ -25,7 +23,7 @@ internal class DatePatternTest {
         val valueGenerated = DatePattern.generate(Resolver())
         val valueParsed = DatePattern.parse(valueGenerated.string, Resolver())
 
-        assertEquals(valueGenerated, valueParsed)
+        assertThat(valueGenerated).isEqualTo(valueParsed)
     }
 
     @Test
@@ -43,8 +41,8 @@ internal class DatePatternTest {
     @Test
     fun `should return itself when generating a new pattern based on a row`() {
         val datePatterns = DatePattern.newBasedOn(Row(), Resolver())
-        assertEquals(1, datePatterns.size)
-        assertEquals(DatePattern, datePatterns.first())
+        assertThat(1).isEqualTo(datePatterns.size)
+        assertThat(DatePattern).isEqualTo(datePatterns.first())
     }
 
     @Test

@@ -8,9 +8,7 @@ import `in`.specmatic.core.value.Value
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 
-private const val RFC3339_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX"
 
 object DateTimePattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result = when (sampleData) {
@@ -32,7 +30,7 @@ object DateTimePattern : Pattern, ScalarType {
 
     override fun parse(value: String, resolver: Resolver): StringValue =
             attempt {
-                DateTimeFormatter.ofPattern(RFC3339_DATETIME_FORMAT).parse(value)
+                RFC3339.dateTimeFormatter.parse(value)
                 StringValue(value)
             }
 
@@ -56,6 +54,5 @@ object DateTimePattern : Pattern, ScalarType {
 
 fun currentDateTimeInRFC339Format(): StringValue {
     val dateTimeWithSystemOffset = ZonedDateTime.of(LocalDateTime.now(),  ZoneId.systemDefault())
-    val formatter = DateTimeFormatter.ofPattern(RFC3339_DATETIME_FORMAT)
-    return StringValue(dateTimeWithSystemOffset.format(formatter))
+    return StringValue(dateTimeWithSystemOffset.format(RFC3339.dateTimeFormatter))
 }

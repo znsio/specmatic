@@ -1,13 +1,12 @@
 package `in`.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 internal class DateTimePatternTest {
     @Test
@@ -15,7 +14,7 @@ internal class DateTimePatternTest {
         val dateString = currentDateTimeInRFC339Format().string
         val dateValue = DateTimePattern.parse(dateString, Resolver())
 
-        assertEquals(dateString, dateValue.string)
+        assertThat(dateString).isEqualTo(dateValue.string)
     }
 
     @Test
@@ -23,7 +22,7 @@ internal class DateTimePatternTest {
         val valueGenerated = DateTimePattern.generate(Resolver())
         val valueParsed = DateTimePattern.parse(valueGenerated.string, Resolver())
 
-        assertEquals(valueGenerated, valueParsed)
+        assertThat(valueGenerated).isEqualTo(valueParsed)
     }
 
     @Test
@@ -41,8 +40,8 @@ internal class DateTimePatternTest {
     @Test
     fun `should return itself when generating a new pattern based on a row`() {
         val datePatterns = DateTimePattern.newBasedOn(Row(), Resolver())
-        assertEquals(1, datePatterns.size)
-        assertEquals(DateTimePattern, datePatterns.first())
+        assertThat(1).isEqualTo(datePatterns.size)
+        assertThat(DateTimePattern).isEqualTo(datePatterns.first())
     }
 
     @Test

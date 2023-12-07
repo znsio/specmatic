@@ -13,6 +13,7 @@ class CentralContractRepoReport {
         val searchPath = currentWorkingDir.takeIf { it.isNotEmpty() } ?: File("").canonicalPath
         logger.log("Searching for specification files at: $searchPath")
         val specifications = findSpecifications(searchPath)
+        specifications.sort();
         return CentralContractRepoReportJson(getSpecificationRows(specifications, searchPath))
     }
 
@@ -51,7 +52,7 @@ class CentralContractRepoReport {
     }
 
 
-    private fun findSpecifications(currentDirectoryPath: String): List<File> {
+    private fun findSpecifications(currentDirectoryPath: String): MutableList<File> {
         val currentDirectory = File(currentDirectoryPath)
         val specifications = mutableListOf<File>()
         val allFiles = currentDirectory.listFiles() ?: emptyArray()

@@ -3716,6 +3716,88 @@ paths:
         }
     }
 
+    @Nested
+    inner class WhenAdditionalPropertiesIsOfTypeObjectWithNoPropertiesDefined {
+        @Test
+        fun `payload with string keys and json object values should meet the specification`() {
+            val spec =
+                """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+                  additionalProperties:
+                    type: object
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            val request =
+                HttpRequest("POST", "/data", body = parsedValue(""" { "payload" : {"data" : { "id": 10, "name": "John" } } } """))
+            val response = HttpResponse.OK
+
+            val stub: HttpStubData = feature.matchingStub(request, response)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `payload with string keys and json object values should meet the specification also when additional properties is set as true`() {
+            val spec =
+                """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    additionalProperties: true
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            val request =
+                HttpRequest("POST", "/data", body = parsedValue(""" { "payload" : {"data1" : { "id": 10, "name": "John" }, "data2" : { "id": 10, "Age": 20 } } } """))
+            val response = HttpResponse.OK
+
+            val stub: HttpStubData = feature.matchingStub(request, response)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
     @Test
     fun `conversion supports dictionary type`() {
         val gherkin = """

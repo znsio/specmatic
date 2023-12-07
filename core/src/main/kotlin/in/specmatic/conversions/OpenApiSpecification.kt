@@ -838,7 +838,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             is ObjectSchema -> {
                 if (schema.additionalProperties is Schema<*>) {
                     toDictionaryPattern(schema, typeStack, patternName)
-                } else if (schema.xml?.name != null) {
+                }
+                if(noPropertiesDefinedInSchema(schema)) {
+                    toFreeFormDictionaryWithStringKeysPattern()
+                }
+                else if (schema.xml?.name != null) {
                     toXMLPattern(schema, typeStack = typeStack)
                 } else {
                     toJsonObjectPattern(schema, patternName, typeStack)
@@ -1155,6 +1159,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             StringPattern(), toSpecmaticPattern(valueSchema, typeStack, valueSchemaTypeName, false)
         )
     }
+
+    private fun noPropertiesDefinedInSchema(valueSchema: Schema<Any>) = valueSchema.properties == null
 
     private fun toFreeFormDictionaryWithStringKeysPattern(): DictionaryPattern {
         return DictionaryPattern(

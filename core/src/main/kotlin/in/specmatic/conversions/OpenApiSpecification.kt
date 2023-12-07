@@ -839,7 +839,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 if (schema.additionalProperties is Schema<*>) {
                     toDictionaryPattern(schema, typeStack, patternName)
                 }
-                if(noPropertiesDefinedInSchema(schema)) {
+                else if (noPropertiesDefinedInSchema(schema)) {
                     toFreeFormDictionaryWithStringKeysPattern()
                 }
                 else if (schema.xml?.name != null) {

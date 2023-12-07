@@ -257,6 +257,25 @@ class GenerativeTests {
         }
     }
 
+    @Test
+    fun temp() {
+        val feature =
+            OpenApiSpecification
+                .fromFile("src/test/resources/openapi/helloWithOneQueryParam.yaml")
+                .toFeature()
+                .copy(generativeTestingEnabled = true)
+
+        feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.queryParams)
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+    }
+
     private fun runGenerativeTests(feature: Feature, generative: Boolean = true, onlyPositive: Boolean = false): Results {
         try {
             if (onlyPositive) {

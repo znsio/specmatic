@@ -158,7 +158,14 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
                     when (key == keyToNegate) {
                         true ->
                             attempt(breadCrumb = "Setting $key to $negativePattern for negative test scenario") {
-                                newBasedOn(Row(), key, negativePattern, resolver)
+                                if (stringlyCheck && patternIsEnum(pattern, resolver)) {
+                                    val enumPattern = pattern as AnyPattern
+                                    val firstEnumOption = enumPattern.pattern.first() as ExactValuePattern
+                                    val valueOfFirstEnumOption = firstEnumOption.pattern
+                                    val patternOfFirstValue = valueOfFirstEnumOption.type()
+                                    listOf(patternOfFirstValue)
+                                } else
+                                    newBasedOn(Row(), key, negativePattern, resolver)
                             }
                         else -> newBasedOn(row, key, pattern, resolver)
                     }
@@ -171,6 +178,12 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
     return modifiedPatternMap.values.map { list: List<Map<String, List<Pattern>>> ->
         list.toList().map { patternList(it) }.flatten()
     }.flatten()
+}
+
+fun patternIsEnum(pattern: Pattern, resolver: Resolver): Boolean {
+    val resolvedPattern = resolvedHop(pattern, resolver)
+
+    return resolvedPattern is AnyPattern && resolvedPattern.isEnum(resolver)
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<String, Pattern>> {

@@ -547,7 +547,7 @@ data class HttpRequestPattern(
 
     fun negativeBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
         return attempt(breadCrumb = "REQUEST") {
-            val newURLMatchers = urlMatcher?.newBasedOn(row, resolver) ?: listOf<URLMatcher?>(null)
+            val newURLMatchers = urlMatcher?.negativeBasedOn(row, resolver) ?: listOf<URLMatcher?>(null)
             val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
                 body.let {
                     if(it is DeferredPattern && row.containsField(it.pattern)) {

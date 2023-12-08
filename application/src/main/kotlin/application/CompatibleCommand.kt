@@ -339,8 +339,8 @@ internal fun generateCommitBackwardCompatibleTests(
 
 internal fun parseContract(content: String, path: String): Feature {
     return when(val extension = File(path).extension) {
-        "yaml", "json", "yml" -> OpenApiSpecification.fromYAML(content, path).toFeature()
-        "wsdl" -> wsdlContentToFeature(content, path)
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(content, path).toFeature()
+        WSDL -> wsdlContentToFeature(content, path)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(content, path)
         else -> throw ContractException("Current file extension is $extension, but supported extensions are ${CONTRACT_EXTENSIONS.joinToString(", ")}")
     }

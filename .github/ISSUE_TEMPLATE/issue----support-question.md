@@ -1,6 +1,6 @@
 ---
 name: 'Issue: ❓ Support Question'
-about: "\U0001F6D1 If you have a question \U0001F4AC, please reach us on our https://github.com/znsio/specmatic/discussions forum or reach us through https://specmatic.in/contact-us/! If this doesn’t look right, choose a different type."
+about: "\U0001F6D1 If you have a question \U0001F4AC, please reach us on our https://github.com/znsio/specmatic/discussions forum or reach us through https://specmatic.in/contact-us/"
 title: ''
 labels: ''
 assignees: ''

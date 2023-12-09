@@ -19,17 +19,6 @@ class CentralContractRepoReportTest {
             CentralContractRepoReportJson(
                 listOf(
                     SpecificationRow(
-                        "service2/service2.yaml",
-                        "HTTP",
-                        listOf(
-                            SpecificationOperation(
-                                "/products/{id}",
-                                "GET",
-                                200
-                            )
-                        )
-                    ),
-                    SpecificationRow(
                         "service1/service1.yaml",
                         "HTTP",
                         listOf(
@@ -49,7 +38,18 @@ class CentralContractRepoReportTest {
                                 400
                             )
                         )
-                    )
+                    ),
+                    SpecificationRow(
+                        "service2/service2.yaml",
+                        "HTTP",
+                        listOf(
+                            SpecificationOperation(
+                                "/products/{id}",
+                                "GET",
+                                200
+                            )
+                        )
+                    ),
                 )
             )
         )

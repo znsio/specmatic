@@ -5,8 +5,7 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+
 
 object DateTimePattern : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result = when (sampleData) {
@@ -17,7 +16,7 @@ object DateTimePattern : Pattern, ScalarType {
         else -> Result.Failure("DateTime types can only be represented using strings")
     }
 
-    override fun generate(resolver: Resolver): StringValue = currentDateTime()
+    override fun generate(resolver: Resolver): StringValue = StringValue(RFC3339.currentDateTime())
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<DateTimePattern> = listOf(this)
 
@@ -28,7 +27,7 @@ object DateTimePattern : Pattern, ScalarType {
 
     override fun parse(value: String, resolver: Resolver): StringValue =
             attempt {
-                DateTimeFormatter.ISO_DATE_TIME.parse(value)
+                RFC3339.dateTimeFormatter.parse(value)
                 StringValue(value)
             }
 
@@ -49,5 +48,3 @@ object DateTimePattern : Pattern, ScalarType {
 
     override fun toString() = pattern
 }
-
-private fun currentDateTime() = StringValue(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME))

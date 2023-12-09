@@ -313,42 +313,97 @@ class FeatureKtTest {
         val gherkin = toGherkinFeature("New Feature", stubs)
         val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
         assertThat(Yaml.pretty(openApi).trim()).isEqualTo("""
+          openapi: 3.0.1
+          info:
+            title: New Feature
+            version: "1"
+          paths:
+            /body:
+              post:
+                summary: stub0
+                parameters: []
+                requestBody:
+                  content:
+                    application/json:
+                      schema:
+                        ${"$"}ref: '#/components/schemas/Body_RequestBody'
+                responses:
+                  "200":
+                    description: stub0
+          components:
+            schemas:
+              Addresses:
+                required:
+                - street
+                properties:
+                  street:
+                    type: string
+              Body_RequestBody:
+                required:
+                - addresses
+                - id
+                properties:
+                  id:
+                    type: number
+                  addresses:
+                    type: array
+                    items:
+                      ${"$"}ref: '#/components/schemas/Addresses'
+        """.trimIndent())
+    }
+
+    @Test
+    fun `Scenario and description of a GET should not contain the query param section`() {
+        val requestBody =
+            parsedJSONObject("""{id: 10, addresses: [{"street": "Shaeffer Street"}, {"street": "Ransom Street"}]}""")
+
+        val stubs = listOf(
+            NamedStub("http://localhost?a=b", ScenarioStub(HttpRequest("GET", "/data", queryParams = mapOf("id" to "10"), body = requestBody), HttpResponse.OK))
+        )
+
+        val gherkin = toGherkinFeature("New Feature", stubs)
+        val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
+        assertThat(Yaml.pretty(openApi).trim()).isEqualTo("""
             openapi: 3.0.1
-            info:
-              title: New Feature
-              version: "1"
-            paths:
-              /body:
-                post:
-                  summary: stub0
-                  parameters: []
-                  requestBody:
-                    content:
-                      application/json:
-                        schema:
-                          ${"$"}ref: '#/components/schemas/Body_RequestBody'
-                  responses:
-                    "200":
-                      description: stub0
-            components:
-              schemas:
-                Addresses:
-                  required:
-                  - street
-                  properties:
-                    street:
-                      type: string
-                Body_RequestBody:
-                  required:
-                  - addresses
-                  - id
-                  properties:
-                    id:
-                      type: number
-                    addresses:
-                      type: array
-                      items:
-                        ${"$"}ref: '#/components/schemas/Addresses'
+              info:
+                title: New Feature
+                version: "1"
+              paths:
+                /data:
+                  get:
+                    summary: http://localhost
+                    parameters:
+                    - name: id
+                      in: query
+                      schema:
+                        type: number
+                    requestBody:
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Data_RequestBody'
+                    responses:
+                      "200":
+                        description: http://localhost
+              components:
+                schemas:
+                  Addresses:
+                    required:
+                    - street
+                    properties:
+                      street:
+                        type: string
+                  Data_RequestBody:
+                    required:
+                    - addresses
+                    - id
+                    properties:
+                      id:
+                        type: number
+                      addresses:
+                        type: array
+                        items:
+                          ${"$"}ref: '#/components/schemas/Addresses'
         """.trimIndent())
     }
 

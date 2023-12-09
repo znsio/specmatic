@@ -703,7 +703,7 @@ data class Feature(
                 "DELETE" -> pathItem.delete
                 else -> TODO("Method \"${scenario.httpRequestPattern.method}\" in scenario ${scenario.name}")
             } ?: Operation().apply {
-                this.summary = scenario.name
+                this.summary = withoutQueryParams(scenario.name)
             }
 
             val pathParameters = scenario.httpRequestPattern.urlMatcher.pathParameters()
@@ -747,7 +747,7 @@ data class Feature(
 
             val apiResponse = ApiResponse()
 
-            apiResponse.description = scenario.name
+            apiResponse.description = withoutQueryParams(scenario.name)
 
             val openApiResponseHeaders = scenario.httpResponsePattern.headersPattern.pattern.map { (key, pattern) ->
                 val header = Header()
@@ -832,6 +832,10 @@ data class Feature(
         }
 
         return openAPI
+    }
+
+    private fun withoutQueryParams(name: String): String {
+        return name.replace(Regex("""\?.*$"""), "")
     }
 
     private fun numberTemplatized(urlMatcher: URLMatcher?): URLMatcher {

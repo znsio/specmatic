@@ -364,7 +364,7 @@ class FeatureKtTest {
         val gherkin = toGherkinFeature("New Feature", stubs)
         val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
         assertThat(Yaml.pretty(openApi).trim()).isEqualTo("""
-            openapi: 3.0.1
+              openapi: 3.0.1
               info:
                 title: New Feature
                 version: "1"

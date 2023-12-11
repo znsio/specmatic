@@ -57,9 +57,21 @@ fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourc
         in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration).toFeature()
         WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
-        else -> throw ContractException("File extension of ${file.path} not recognized")
+        else -> throw unsupportedFileExtensionContractException(file.path, file.extension)
     }
 }
+
+fun unsupportedFileExtensionContractException(
+    path: String,
+    extension: String
+) =
+    ContractException(
+        "Current file $path has an unsupported extension $extension. Supported extensions are ${
+            CONTRACT_EXTENSIONS.joinToString(
+                ", "
+            )
+        }."
+    )
 
 fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""): Feature {
     val gherkinDocument = parseGherkinString(gherkinData, sourceFilePath)

@@ -342,7 +342,7 @@ internal fun parseContract(content: String, path: String): Feature {
         in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(content, path).toFeature()
         WSDL -> wsdlContentToFeature(content, path)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(content, path)
-        else -> throw ContractException("Current file extension is $extension, but supported extensions are ${CONTRACT_EXTENSIONS.joinToString(", ")}")
+        else -> throw unsupportedFileExtensionContractException(path, extension)
     }
 }
 

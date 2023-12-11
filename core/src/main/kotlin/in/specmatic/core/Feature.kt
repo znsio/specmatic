@@ -498,16 +498,34 @@ data class Feature(
         newPayload: Pattern,
         scenarioName: String,
         updateConverged: (Pattern) -> Scenario
-    ): Scenario = if (basePayload is TabularPattern && newPayload is TabularPattern) {
-        val converged = TabularPattern(convergePatternMap(basePayload.pattern, newPayload.pattern))
+    ): Scenario {
+        return updateConverged(converge(basePayload, newPayload, scenarioName))
+    }
 
-        updateConverged(converged)
-    } else if (bothAreIdenticalDeferreds(basePayload, newPayload)) {
-        updateConverged(basePayload)
-    } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
-        updateConverged(basePayload)
-    } else {
-        throw ContractException("Payload definitions with different names found (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName}, ${newPayload.typeAlias ?: newPayload.typeName})")
+    fun converge(
+        basePayload: Pattern,
+        newPayload: Pattern,
+        scenarioName: String,
+    ): Pattern {
+        return if (basePayload is TabularPattern && newPayload is TabularPattern) {
+            TabularPattern(convergePatternMap(basePayload.pattern, newPayload.pattern))
+        } else if (basePayload is ListPattern && newPayload is JSONArrayPattern) {
+            val convergedNewPattern: Pattern = newPayload.pattern.fold(basePayload.pattern) { acc, newPattern ->
+                converge(acc, newPattern, scenarioName)
+            }
+
+            ListPattern(convergedNewPattern)
+        } else if (basePayload is ListPattern && newPayload is ListPattern) {
+            val convergedNewPattern: Pattern = converge(basePayload.pattern, newPayload.pattern, scenarioName)
+
+            ListPattern(convergedNewPattern)
+        } else if (bothAreIdenticalDeferreds(basePayload, newPayload)) {
+            basePayload
+        } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
+            basePayload
+        } else {
+            throw ContractException("Payload definitions could not be converged (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName}, ${newPayload.typeAlias ?: newPayload.typeName})")
+        }
     }
 
     private fun bothAreTheSamePrimitive(
@@ -697,7 +715,7 @@ data class Feature(
                 "DELETE" -> pathItem.delete
                 else -> TODO("Method \"${scenario.httpRequestPattern.method}\" in scenario ${scenario.name}")
             } ?: Operation().apply {
-                this.summary = scenario.name
+                this.summary = withoutQueryParams(scenario.name)
             }
 
             val pathParameters = scenario.httpRequestPattern.urlMatcher.pathParameters()
@@ -741,7 +759,7 @@ data class Feature(
 
             val apiResponse = ApiResponse()
 
-            apiResponse.description = scenario.name
+            apiResponse.description = withoutQueryParams(scenario.name)
 
             val openApiResponseHeaders = scenario.httpResponsePattern.headersPattern.pattern.map { (key, pattern) ->
                 val header = Header()
@@ -826,6 +844,10 @@ data class Feature(
         }
 
         return openAPI
+    }
+
+    private fun withoutQueryParams(name: String): String {
+        return name.replace(Regex("""\?.*$"""), "")
     }
 
     private fun numberTemplatized(urlMatcher: URLMatcher?): URLMatcher {

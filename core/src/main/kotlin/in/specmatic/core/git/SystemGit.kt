@@ -78,10 +78,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
             return execute(Configuration.gitCommand, "check-ignore", path)
         }
         catch (nonZeroExitError:NonZeroExitError) {
-            if(nonZeroExitError.exitCode == 1) {
-                return ""
-            }
-            throw nonZeroExitError
+            return ""
         }
     }
 

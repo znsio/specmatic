@@ -751,6 +751,16 @@ paths:
         }
     }
 
+    @Test
+    fun `should parse equivalent json and yaml representation of an API`() {
+        val yamlSpec = parseContractFileToFeature("src/test/resources/openapi/jsonAndYamlEquivalence/openapi.yaml")
+        val jsonSpec = parseContractFileToFeature("src/test/resources/openapi/jsonAndYamlEquivalence/openapi.json")
+        val yamlToJson = testBackwardCompatibility(yamlSpec, jsonSpec)
+        assertThat(yamlToJson.success()).withFailMessage(yamlToJson.report()).isTrue
+        val jsonToYAml = testBackwardCompatibility(jsonSpec, yamlSpec)
+        assertThat(jsonToYAml.success()).withFailMessage(jsonToYAml.report()).isTrue
+    }
+
     fun String.toFeatureString(): String {
         val parsedJSONValue = parsedJSON(this) as JSONObjectValue
         return toGherkinFeature(NamedStub("Test Feature", mockFromJSON(parsedJSONValue.jsonObject)))

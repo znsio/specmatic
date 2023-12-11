@@ -37,4 +37,17 @@ internal class ExternalCommandTest {
             ExternalCommand(arrayOf("echo", "hello"), ".", emptyArray()).executeAsSeparateProcess()
         assertThat(commandOutput).isEqualTo("hello\n")
     }
+    
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun `should inherit parent process env`() {
+        val commandOutput =
+            ExternalCommand("env", ".", listOf("myVar1=myVal")).executeAsSeparateProcess()
+        assertThat(commandOutput).contains("myVar1=myVal")
+
+        val parentProcessEnv = System.getenv()
+        parentProcessEnv.forEach { (key, value) ->
+            assertThat(commandOutput).contains("$key=$value")
+        }
+    }
 }

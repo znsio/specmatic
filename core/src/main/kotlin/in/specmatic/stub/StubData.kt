@@ -29,7 +29,7 @@ data class HttpStubData(
     private fun invokeExternalCommand(httpRequest: HttpRequest): HttpStubData {
         val result = executeExternalCommand(
             response.externalisedResponseCommand,
-            """SPECMATIC_REQUEST='${httpRequest.toJSON().toUnformattedStringLiteral()}'"""
+            mapOf("SPECMATIC_REQUEST" to """'${httpRequest.toJSON().toUnformattedStringLiteral()}'"""),
         )
         val responseMap = jsonStringToValueMap(result)
         val externalCommandResponse = HttpResponse.fromJSON(responseMap)
@@ -48,9 +48,9 @@ data class HttpStubData(
     }
 }
 
-fun executeExternalCommand(command: String, envParam: String): String {
-    logger.debug("Executing: $command with EnvParam: $envParam")
-    return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf(envParam)).executeAsSeparateProcess()
+fun executeExternalCommand(command: String, envParams: Map<String, String>): String {
+    logger.debug("Executing: $command with EnvParams: $envParams")
+    return ExternalCommand(command, ".", envParams).executeAsSeparateProcess()
 }
 
 data class StubDataItems(val http: List<HttpStubData> = emptyList())

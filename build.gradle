@@ -61,7 +61,7 @@ sonarqube {
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "1.8"
     }
 }
 
@@ -75,7 +75,7 @@ repositories {
 
 compileKotlin {
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "1.8"
         freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
     }
 }

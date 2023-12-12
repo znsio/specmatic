@@ -4,14 +4,14 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 JAVA_VERSION=$(java -version 2>&1)
 
-if [[ "$JAVA_VERSION" == *'17.0'* ]]
+if [[ "$JAVA_VERSION" == *'1.8.0'* ]]
 then
-	echo √ Using JDK17
+	echo √ Using JDK8
 else
   echo
-  echo Error: JDK version is not 17
+  echo Error: JDK version is not 8
   echo
-  echo To fix this, ensure that the result of "java -version" shows java 17.0.*
+  echo To fix this, ensure that the result of "java -version" shows java 1.8.
   exit 1
 fi
 

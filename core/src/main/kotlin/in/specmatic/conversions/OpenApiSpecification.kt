@@ -284,11 +284,25 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     acc.plus(map)
                 }
 
-                val responseExamples = httpResponsePatterns.map { it.examples }
+                val responseExamplesList = httpResponsePatterns.map { it.examples }
 
-                val examples = responseExamples.map {
-                    it.map { (key, responseExample) ->
-                        if(key in requestExamples) key to (requestExamples.getValue(key) to responseExample) else null
+                val responseExampleNames = responseExamplesList.map { it.keys }.flatten().toSet()
+                val securitySchemes = httpRequestPatterns.map { it.first.securitySchemes }.flatten().toSet()
+
+                val requestExamplesWithSecuritySchemes = requestExamples.map { (name, request) ->
+                    if(name in responseExampleNames) {
+                        Pair(name, securitySchemes.firstOrNull()?.addTo(request) ?: request)
+                    } else {
+                        Pair(name, request)
+                    }
+                }.toMap()
+
+                val examples = responseExamplesList.map { responseExamples ->
+                    responseExamples.map { (key, responseExample) ->
+                        if(key in requestExamplesWithSecuritySchemes)
+                            key to (requestExamplesWithSecuritySchemes.getValue(key) to responseExample)
+                        else
+                            null
                     }
                 }.flatten().filterNotNull().toMap()
 
@@ -385,14 +399,17 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun rowsToExamples(specmaticExampleRows: List<Row>): List<Examples> =
-        if(specmaticExampleRows.isNotEmpty()) listOf(
-            Examples(
-                specmaticExampleRows.first().columnNames,
-                specmaticExampleRows
-            )
-        )
-        else
-            emptyList()
+        when(specmaticExampleRows) {
+            emptyList<Row>() -> emptyList()
+            else -> {
+                val examples = Examples(
+                    specmaticExampleRows.first().columnNames,
+                    specmaticExampleRows
+                )
+
+                listOf(examples)
+            }
+        }
 
     private fun testRowsFromExamples(
         responseExamples: Map<String, Example>,
@@ -402,7 +419,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
 
         val requestBodyExample: Map<String, Any> =
-            requestBodyExample(requestBody, exampleName, operation?.summary)
+            requestBodyExample(requestBody, exampleName, operation.summary)
 
         val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
             if (value.toString().contains("externalValue")) "${key}_filename" to value

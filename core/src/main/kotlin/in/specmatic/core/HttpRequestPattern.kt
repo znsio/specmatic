@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.NoSecurityScheme
 import `in`.specmatic.conversions.OpenAPISecurityScheme
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
@@ -23,7 +24,7 @@ data class HttpRequestPattern(
     val body: Pattern = EmptyStringPattern,
     val formFieldsPattern: Map<String, Pattern> = emptyMap(),
     val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList(),
-    val securitySchemes: List<OpenAPISecurityScheme> = emptyList()
+    val securitySchemes: List<OpenAPISecurityScheme> = listOf(NoSecurityScheme())
 ) {
     fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null, requestBodyReqex: Regex? = null): Result {
         val result = incomingHttpRequest to resolver to
@@ -56,9 +57,6 @@ data class HttpRequestPattern(
 
     private fun matchSecurityScheme(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
-
-        if(securitySchemes.isEmpty())
-            return MatchSuccess(Triple(httpRequest, resolver, failures))
 
         val matchFailures = mutableListOf<Failure>()
         val matchingSecurityScheme: OpenAPISecurityScheme = securitySchemes.firstOrNull {
@@ -475,17 +473,13 @@ data class HttpRequestPattern(
                                     multiPartFormDataPattern = newFormDataPartList
                                 )
 
-                                if(securitySchemes.isEmpty()) {
-                                    listOf(newRequestPattern)
-                                } else {
-                                    val schemeInRow = securitySchemes.find { it.isInRow(row) }
+                                val schemeInRow = securitySchemes.find { it.isInRow(row) }
 
-                                    if(schemeInRow != null) {
-                                        listOf(schemeInRow.addTo(newRequestPattern, row))
-                                    } else {
-                                        securitySchemes.map {
-                                            newRequestPattern.copy(securitySchemes = listOf(it))
-                                        }
+                                if(schemeInRow != null) {
+                                    listOf(schemeInRow.addTo(newRequestPattern, row))
+                                } else {
+                                    securitySchemes.map {
+                                        newRequestPattern.copy(securitySchemes = listOf(it))
                                     }
                                 }
                             }
@@ -527,11 +521,8 @@ data class HttpRequestPattern(
                                     multiPartFormDataPattern = newFormDataPartList
                                 )
 
-                                when(securitySchemes) {
-                                    emptyList<OpenAPISecurityScheme>() -> listOf(newRequestPattern)
-                                    else -> securitySchemes.map {
-                                        newRequestPattern.copy(securitySchemes = listOf(it))
-                                    }
+                                securitySchemes.map {
+                                    newRequestPattern.copy(securitySchemes = listOf(it))
                                 }
                             }
                         }
@@ -629,11 +620,8 @@ data class HttpRequestPattern(
             }
             // If security schemes are present, for now we'll just take the first scheme and assign it to each negative request pattern.
             // Ideally we should generate negative patterns from the security schemes and use them.
-            when (securitySchemes.isEmpty()) {
-                true -> negativeRequestPatterns
-                false -> negativeRequestPatterns.map {
-                    it.copy(securitySchemes = listOf(securitySchemes.first()))
-                }
+            negativeRequestPatterns.map {
+                it.copy(securitySchemes = listOf(securitySchemes.first()))
             }
         }
     }

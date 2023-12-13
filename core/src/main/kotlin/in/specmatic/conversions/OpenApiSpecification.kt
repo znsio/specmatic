@@ -40,6 +40,8 @@ private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
 private const val testDirectoryProperty = "specmaticTestsDirectory"
 
 
+const val NO_SECURITY_SCHEM_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
+
 class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
     ApiSpecification {
     companion object {
@@ -655,7 +657,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         val contractSecuritySchemes: Map<String, OpenAPISecurityScheme> =
             openApi.components?.securitySchemes?.mapValues { (schemeName, scheme) ->
                 toSecurityScheme(schemeName, scheme)
-            } ?: emptyMap()
+            } ?: mapOf(NO_SECURITY_SCHEM_IN_SPECIFICATION to NoSecurityScheme())
 
         val parameters = operation.parameters
 
@@ -754,7 +756,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             globalSecurityRequirements.plus(operationSecurityRequirements).distinct()
         val operationSecuritySchemes: List<OpenAPISecurityScheme> =
             contractSecuritySchemes.filter { (name, scheme) -> name in operationSecurityRequirementsSuperSet }.values.toList()
-        return operationSecuritySchemes
+        return operationSecuritySchemes.ifEmpty { listOf(NoSecurityScheme()) }
     }
 
     private fun toSecurityScheme(schemeName: String, securityScheme: SecurityScheme): OpenAPISecurityScheme {

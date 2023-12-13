@@ -11,7 +11,7 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.6"
+def ktor_version = "2.3.7"
 def junit_version = "5.10.1"
 
 dependencies {
@@ -28,7 +28,7 @@ dependencies {
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 }
 

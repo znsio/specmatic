@@ -2,10 +2,7 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.value.EmptyString
-import `in`.specmatic.core.value.NullValue
-import `in`.specmatic.core.value.ScalarValue
-import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.*
 
 data class AnyPattern(
     override val pattern: List<Pattern>,
@@ -230,6 +227,27 @@ data class AnyPattern(
             } else
                 "(${pattern.joinToString(" or ") { inner -> withoutPatternDelimiters(inner.typeName).let { if(it == "null") "\"null\"" else it}  }})"
         }
+
+    fun isEnum(
+        resolver: Resolver
+    ): Boolean {
+        if(pattern.isEmpty())
+            return false
+
+        val resolveEnumOptions = pattern.map { resolvedHop(it, resolver) }
+
+        if(resolveEnumOptions.any { it !is ExactValuePattern })
+            return false
+
+        val exactValuePatterns = resolveEnumOptions.filterIsInstance<ExactValuePattern>()
+
+        val values = exactValuePatterns.map { it.pattern }
+
+        if(values.any { it !is ScalarValue })
+            return false
+
+        return values.map { it.displayableType() }.distinct().size == 1
+    }
 }
 
 private fun failedToFindAny(expected: String, actual: Value?, results: List<Result.Failure>, mismatchMessages: MismatchMessages): Result.Failure =

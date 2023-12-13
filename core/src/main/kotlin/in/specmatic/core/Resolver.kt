@@ -155,4 +155,13 @@ data class Resolver(
     fun invalidRequestResolver(): Resolver {
         return this.copy(patternMatchStrategy = matchAnything, parseStrategy = alwaysReturnStringValue)
     }
+
+    fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): List<Pattern> =
+        if(generativeTestingEnabled) {
+            withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
+                pattern.newBasedOn(Row(), cyclePreventedResolver)
+            } ?: emptyList()
+        } else {
+            emptyList()
+        }
 }

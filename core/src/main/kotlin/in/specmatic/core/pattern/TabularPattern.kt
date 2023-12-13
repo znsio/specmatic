@@ -146,10 +146,13 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
             emptyList()
         } else if (stringlyCheck && pattern is ScalarType) {
             pattern.negativeBasedOn(row, resolver).filterNot { it is NullPattern }
+        } else if (stringlyCheck && patternIsEnum(pattern, resolver)) {
+            shortCircuitStringlyEnumGenerationToOneEnumValue(pattern, resolver)
         } else {
             pattern.negativeBasedOn(row, resolver)
         }
     }
+
     val modifiedPatternMap: Map<String, List<Map<String, List<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
         val negativePatterns = negativePatternsMap[keyToNegate]
         negativePatterns!!.map { negativePattern ->
@@ -158,7 +161,10 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
                     when (key == keyToNegate) {
                         true ->
                             attempt(breadCrumb = "Setting $key to $negativePattern for negative test scenario") {
-                                newBasedOn(Row(), key, negativePattern, resolver)
+                                if (stringlyCheck && patternIsEnum(negativePattern, resolver)) {
+                                    negativeBasedOnForEnum(negativePattern)
+                                } else
+                                    newBasedOn(Row(), key, negativePattern, resolver)
                             }
                         else -> newBasedOn(row, key, pattern, resolver)
                     }
@@ -171,6 +177,30 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
     return modifiedPatternMap.values.map { list: List<Map<String, List<Pattern>>> ->
         list.toList().map { patternList(it) }.flatten()
     }.flatten()
+}
+
+private fun negativeBasedOnForEnum(pattern: Pattern): List<Pattern> {
+    val enumPattern = pattern as AnyPattern
+    val firstEnumOption = enumPattern.pattern.first() as ExactValuePattern
+    val valueOfFirstEnumOption = firstEnumOption.pattern
+    val patternOfFirstValue = valueOfFirstEnumOption.type()
+    return listOf(patternOfFirstValue)
+}
+
+private fun shortCircuitStringlyEnumGenerationToOneEnumValue(
+    pattern: Pattern,
+    resolver: Resolver
+): List<AnyPattern> {
+    val resolvedAnyPattern = resolvedHop(pattern, resolver) as AnyPattern
+    val firstEnumValue = resolvedAnyPattern.pattern.first() as ExactValuePattern
+
+    return listOf(AnyPattern(listOf(firstEnumValue)))
+}
+
+fun patternIsEnum(pattern: Pattern, resolver: Resolver): Boolean {
+    val resolvedPattern = resolvedHop(pattern, resolver)
+
+    return resolvedPattern is AnyPattern && resolvedPattern.isEnum(resolver)
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<String, Pattern>> {
@@ -228,9 +258,16 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
                     resolver.parse(pattern, rowValue)
                 }
 
-                when (val matchResult = resolver.matchesPattern(null, pattern, parsedRowValue)) {
-                    is Result.Failure -> throw ContractException(matchResult.toFailureReport())
-                    else -> listOf(ExactValuePattern(parsedRowValue))
+                val exactValuePattern =
+                    when (val matchResult = resolver.matchesPattern(null, pattern, parsedRowValue)) {
+                        is Result.Failure -> throw ContractException(matchResult.toFailureReport())
+                        else -> ExactValuePattern(parsedRowValue)
+                    }
+
+                val generativeTests: List<Pattern> = resolver.generatedPatternsForGenerativeTests(pattern, key)
+
+                listOf(exactValuePattern) + generativeTests.filterNot {
+                    it.encompasses(exactValuePattern, resolver, resolver) is Result.Success
                 }
             }
         }
@@ -305,6 +342,18 @@ private fun <ValueType> keyCombinations(
 fun <ValueType> forEachKeyCombinationIn(
     patternMap: Map<String, ValueType>,
     row: Row,
+    resolver: Resolver,
+    creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
+): List<Map<String, ValueType>> =
+    keySets(patternMap.keys.toList(), row, resolver).map { keySet ->
+        patternMap.filterKeys { key -> key in keySet }
+    }.map { newPattern ->
+        creator(newPattern)
+    }.flatten()
+
+fun <ValueType> forEachKeyCombinationIn(
+    patternMap: Map<String, ValueType>,
+    row: Row,
     creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
 ): List<Map<String, ValueType>> =
     keySets(patternMap.keys.toList(), row).map { keySet ->
@@ -359,6 +408,25 @@ fun <ValueType> allOrNothingCombinationIn(
     val flatten: List<Map<String, ValueType>> = keySetValues.flatten()
 
     return flatten
+}
+
+internal fun keySets(listOfKeys: List<String>, row: Row, resolver: Resolver): List<List<String>> {
+    if (listOfKeys.isEmpty())
+        return listOf(listOfKeys)
+
+    val key = listOfKeys.last()
+    val subLists = keySets(listOfKeys.dropLast(1), row)
+
+    return subLists.flatMap { subList ->
+        when {
+            row.containsField(withoutOptionality(key)) ->
+                if(resolver.generativeTestingEnabled && isOptional(key)) {
+                    listOf(subList, subList + key)
+                } else listOf(subList + key)
+            isOptional(key) -> listOf(subList, subList + key)
+            else -> listOf(subList + key)
+        }
+    }
 }
 
 internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {

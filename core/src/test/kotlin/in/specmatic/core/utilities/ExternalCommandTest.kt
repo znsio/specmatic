@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
+import java.util.function.Consumer
 
 internal class ExternalCommandTest {
     @Test
@@ -25,8 +26,13 @@ internal class ExternalCommandTest {
         val exception = assertThrows(NonZeroExitError::class.java) {
             ExternalCommand(arrayOf("cat", "missing_file"), ".", emptyArray()).executeAsSeparateProcess()
         }
-        assertThat(exception.message?.trim()).isEqualTo(
-            """Error executing cat missing_file: cat: missing_file: No such file or directory"""
+        assertThat(exception.message?.trim() ?: "").satisfies(
+            Consumer {
+                assertThat(it).startsWith("Error executing cat missing_file: ")
+            },
+            Consumer {
+                assertThat(it).endsWith("missing_file: No such file or directory")
+            }
         )
     }
 

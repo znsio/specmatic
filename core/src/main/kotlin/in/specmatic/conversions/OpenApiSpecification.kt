@@ -7,10 +7,7 @@ import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.readEnvVarOrProperty
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
@@ -844,11 +841,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         else when (schema) {
             is StringSchema -> when (schema.enum) {
                 null -> StringPattern(minLength = schema.minLength, maxLength = schema.maxLength, example = schema.example?.toString())
-                else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }.copy(example = schema.example?.toString())
+                else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }.withExample(schema.example?.toString())
             }
             is IntegerSchema -> when (schema.enum) {
                 null -> NumberPattern(example = schema.example?.toString())
-                else -> toEnum(schema, patternName) { enumValue -> NumberValue(enumValue.toString().toInt()) }.copy(example = schema.example?.toString())
+                else -> toEnum(schema, patternName) { enumValue -> NumberValue(enumValue.toString().toInt()) }.withExample(schema.example?.toString())
             }
             is BinarySchema -> BinaryPattern()
             is NumberSchema -> NumberPattern(example = schema.example?.toString())
@@ -1215,15 +1212,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
     }.toMap()
 
-    private fun toEnum(schema: Schema<*>, patternName: String, toSpecmaticValue: (Any) -> Value) =
-        AnyPattern(schema.enum.map<Any, Pattern> { enumValue ->
+    private fun toEnum(schema: Schema<*>, patternName: String, toSpecmaticValue: (Any) -> Value): EnumPattern {
+        val specmaticValues = schema.enum.map<Any?, Value> { enumValue ->
             when (enumValue) {
-                null -> NullPattern
-                else -> ExactValuePattern(toSpecmaticValue(enumValue))
+                null -> NullValue
+                else -> toSpecmaticValue(enumValue)
             }
-        }.toList(), typeAlias = patternName).also {
+        }
+
+        return EnumPattern(specmaticValues, typeAlias = patternName).also {
             cacheComponentPattern(patternName, it)
         }
+    }
 
     private fun toSpecmaticParamName(optional: Boolean, name: String) = when (optional) {
         true -> "${name}?"

@@ -77,28 +77,30 @@ class HttpStub(
     private fun staticHttpStubData(_httpStubs: List<HttpStubData>): MutableList<HttpStubData> {
         val staticStubs = _httpStubs.filter { it.stubToken == null }.toMutableList()
         val stubsFromSpecificationExamples: List<HttpStubData> = features.map { feature ->
-            feature.stubsFromExamples.entries.mapNotNull {
-                val (request, response) = it.value
-                try {
-                    val matchResult: HttpStubData =
-                        feature.matchingStub(request, response, ContractAndStubMismatchMessages)
-                    if (matchResult.matchFailure) {
-                        logger.log(matchResult.response.body.toStringLiteral())
-                        null
-                    } else {
-                        matchResult
-                    }
-                } catch(e: Throwable) {
-                    when(e) {
-                        is ContractException, is NoMatchingScenario -> {
-                            logger.log(e)
+            feature.stubsFromExamples.entries.map {
+                it.value.mapNotNull { (request, response) ->
+                    try {
+                        val matchResult: HttpStubData =
+                            feature.matchingStub(request, response, ContractAndStubMismatchMessages)
+                        if (matchResult.matchFailure) {
+                            logger.log(matchResult.response.body.toStringLiteral())
                             null
+                        } else {
+                            matchResult
                         }
-                        else -> throw e
+                    } catch (e: Throwable) {
+                        when (e) {
+                            is ContractException, is NoMatchingScenario -> {
+                                logger.log(e)
+                                null
+                            }
+
+                            else -> throw e
+                        }
                     }
                 }
             }
-        }.flatten()
+        }.flatten().flatten()
 
         return staticStubs.plus(stubsFromSpecificationExamples).toMutableList()
     }

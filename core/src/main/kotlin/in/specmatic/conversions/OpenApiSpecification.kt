@@ -116,11 +116,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         )
     }
 
-    override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>> {
+    override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
         val scenarioInfosWithExamples = toScenarioInfosWithExamples()
         val (
             openApitoScenarioInfosFromSpecification: List<ScenarioInfo>,
-            examplesAsStubs: Map<String, Pair<HttpRequest, HttpResponse>>
+            examplesAsStubs: Map<String, List<Pair<HttpRequest, HttpResponse>>>
         ) = openApitoScenarioInfos()
 
         val combinedScenariosFromSpecificationAndWrapper = openApitoScenarioInfosFromSpecification.filter { scenarioInfo ->
@@ -247,12 +247,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         })
     }
 
-    private fun openApitoScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>> {
-        val data: List<Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>>> = openApiPaths().map { (openApiPath, pathItem) ->
+    private fun openApitoScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
+        val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> = openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
                 val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
-                val httpRequestPatterns: List<Pair<HttpRequestPattern, Map<String, HttpRequest>>> =
+                val httpRequestPatterns: List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> =
                     toHttpRequestPatterns(
                         specmaticPath, httpMethod, operation
                     )
@@ -282,27 +282,16 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                 val requestExamples = httpRequestPatterns.map {
                     it.second
-                }.foldRight(emptyMap<String, HttpRequest>()) { acc, map ->
+                }.foldRight(emptyMap<String, List<HttpRequest>>()) { acc, map ->
                     acc.plus(map)
                 }
 
                 val responseExamplesList = httpResponsePatterns.map { it.examples }
 
-                val responseExampleNames = responseExamplesList.map { it.keys }.flatten().toSet()
-                val securitySchemes = httpRequestPatterns.map { it.first.securitySchemes }.flatten().toSet()
-
-                val requestExamplesWithSecuritySchemes = requestExamples.map { (name, request) ->
-                    if(name in responseExampleNames) {
-                        Pair(name, securitySchemes.firstOrNull()?.addTo(request) ?: request)
-                    } else {
-                        Pair(name, request)
-                    }
-                }.toMap()
-
                 val examples = responseExamplesList.map { responseExamples ->
                     responseExamples.map { (key, responseExample) ->
-                        if(key in requestExamplesWithSecuritySchemes)
-                            key to (requestExamplesWithSecuritySchemes.getValue(key) to responseExample)
+                        if(key in requestExamples)
+                            key to requestExamples.getValue(key).map { it to responseExample }
                         else
                             null
                     }
@@ -313,7 +302,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }.flatten()
 
         val scenarioInfos = data.map { it.first }.flatten()
-        val examples: Map<String, Pair<HttpRequest, HttpResponse>> = data.map { it.second }.foldRight(emptyMap()) {
+        val examples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = data.map { it.second }.foldRight(emptyMap()) {
             acc, map -> acc.plus(map)
         }
 
@@ -652,9 +641,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     private fun toHttpRequestPatterns(
         urlMatcher: URLMatcher, httpMethod: String, operation: Operation
-    ): List<Pair<HttpRequestPattern, Map<String, HttpRequest>>> {
+    ): List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> {
 
-        val contractSecuritySchemes: Map<String, OpenAPISecurityScheme> =
+        val securitySchemes: Map<String, OpenAPISecurityScheme> =
             openApi.components?.securitySchemes?.mapValues { (schemeName, scheme) ->
                 toSecurityScheme(schemeName, scheme)
             } ?: mapOf(NO_SECURITY_SCHEM_IN_SPECIFICATION to NoSecurityScheme())
@@ -670,7 +659,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             urlMatcher = urlMatcher,
             method = httpMethod,
             headersPattern = headersPattern,
-            securitySchemes = operationSecuritySchemes(operation, contractSecuritySchemes)
+            securitySchemes = operationSecuritySchemes(operation, securitySchemes)
         )
 
         return when (val requestBody = resolveRequestBody(operation)) {
@@ -723,12 +712,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 it.value?.value?.toString()
                             } ?: emptyMap()
 
-                            val examples: Map<String, HttpRequest> = exampleBodies.map {
-                                it.key to HttpRequest(
+                            val examples: Map<String, List<HttpRequest>> = exampleBodies.map {
+                                val httpRequest = HttpRequest(
                                     method = httpMethod,
                                     path = urlMatcher.path,
                                     body = parsedValue(it.value ?: "")
                                 )
+
+                                val requestsWithSecurityParams = securitySchemes.map { (_, securityScheme) ->
+                                    securityScheme.addTo(httpRequest)
+                                }
+
+                                it.key to requestsWithSecurityParams
                             }.toMap()
 
                             Pair(requestPattern.copy(body = toSpecmaticPattern(mediaType)), examples)

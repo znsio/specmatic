@@ -288,14 +288,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                 val responseExamplesList = httpResponsePatterns.map { it.examples }
 
-                val examples = responseExamplesList.map { responseExamples ->
-                    responseExamples.map { (key, responseExample) ->
-                        if(key in requestExamples)
-                            key to requestExamples.getValue(key).map { it to responseExample }
-                        else
-                            null
-                    }
-                }.flatten().filterNotNull().toMap()
+                val examples =
+                    collateExamplesForExpectations(requestExamples, responseExamplesList)
 
                 scenarioInfos to examples
             }
@@ -307,6 +301,19 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
 
         return scenarioInfos to examples
+    }
+
+    private fun collateExamplesForExpectations(
+        requestExamples: Map<String, List<HttpRequest>>,
+        responseExamplesList: List<Map<String, HttpResponse>>
+    ): Map<String, List<Pair<HttpRequest, HttpResponse>>> {
+        return responseExamplesList.flatMap { responseExamples ->
+            responseExamples.filter { (key, _) ->
+                key in requestExamples
+            }.map { (key, responseExample) ->
+                key to requestExamples.getValue(key).map { it to responseExample }
+            }
+        }.toMap()
     }
 
     private fun scenarioName(

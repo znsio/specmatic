@@ -965,13 +965,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
         }
 
-        return when (schema.nullable != true) {
-            true -> pattern
-            else -> when (pattern) {
+        return when (schema.nullable) {
+            true -> when (pattern) {
                 NullPattern -> pattern
                 is AnyPattern -> pattern.copy(example = schema.example?.toString())
                 else -> AnyPattern(listOf(NullPattern, pattern), example = schema.example?.toString())
             }
+            else -> pattern
         }
     }
 

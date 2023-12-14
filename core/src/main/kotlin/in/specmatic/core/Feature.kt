@@ -98,7 +98,7 @@ data class Feature(
     val sourceRepositoryBranch:String? = null,
     val specification:String? = null,
     val serviceType:String? = null,
-    val stubsFromExamples: Map<String, Pair<HttpRequest, HttpResponse>> = emptyMap()
+    val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap()
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {

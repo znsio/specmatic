@@ -15,7 +15,7 @@ def ktor_version = "2.3.7"
 def junit_version = "5.10.1"
 
 dependencies {
-    implementation project(':core')
+    api project(':core')
     implementation "org.junit.jupiter:junit-jupiter-engine:${junit_version}"
     implementation 'org.jetbrains.kotlin:kotlin-maven-serialization'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2'

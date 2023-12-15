@@ -10,6 +10,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.util.function.Consumer
@@ -629,5 +630,24 @@ internal class JSONObjectPatternTest {
         }
     }
 
-// integration test
+    @Tag("generative")
+    @Test
+    fun `negative tests for JSON object`() {
+        val pattern = JSONObjectPattern(
+            mapOf(
+                "address?" to StringPattern(),
+            )
+        )
+
+        val negativePatterns: List<Pattern> = pattern.negativeBasedOn(Row(), Resolver())
+
+        val jsonInternalPatterns = negativePatterns.filterIsInstance<JSONObjectPattern>().map { it.pattern }
+
+        assertThat(jsonInternalPatterns).containsExactlyInAnyOrder(
+            emptyMap(),
+            mapOf("address?" to NullPattern),
+            mapOf("address?" to NumberPattern()),
+            mapOf("address?" to BooleanPattern())
+        )
+    }
 }

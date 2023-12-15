@@ -180,7 +180,7 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
 }
 
 private fun negativeBasedOnForEnum(pattern: Pattern): List<Pattern> {
-    val enumPattern = pattern as AnyPattern
+    val enumPattern = (pattern as EnumPattern).pattern
     val firstEnumOption = enumPattern.pattern.first() as ExactValuePattern
     val valueOfFirstEnumOption = firstEnumOption.pattern
     val patternOfFirstValue = valueOfFirstEnumOption.type()
@@ -191,7 +191,7 @@ private fun shortCircuitStringlyEnumGenerationToOneEnumValue(
     pattern: Pattern,
     resolver: Resolver
 ): List<AnyPattern> {
-    val resolvedAnyPattern = resolvedHop(pattern, resolver) as AnyPattern
+    val resolvedAnyPattern = (resolvedHop(pattern, resolver) as EnumPattern).pattern
     val firstEnumValue = resolvedAnyPattern.pattern.first() as ExactValuePattern
 
     return listOf(AnyPattern(listOf(firstEnumValue)))
@@ -200,7 +200,7 @@ private fun shortCircuitStringlyEnumGenerationToOneEnumValue(
 fun patternIsEnum(pattern: Pattern, resolver: Resolver): Boolean {
     val resolvedPattern = resolvedHop(pattern, resolver)
 
-    return resolvedPattern is AnyPattern && resolvedPattern.isEnum(resolver)
+    return resolvedPattern is EnumPattern
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<String, Pattern>> {

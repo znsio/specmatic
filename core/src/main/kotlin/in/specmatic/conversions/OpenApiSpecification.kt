@@ -965,7 +965,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         return when (schema.nullable != true) {
             true -> pattern
             else -> when (pattern) {
-                NullPattern -> pattern
+                NullPattern, is EnumPattern -> pattern
                 is AnyPattern -> pattern.copy(example = schema.example?.toString())
                 else -> AnyPattern(listOf(NullPattern, pattern), example = schema.example?.toString())
             }
@@ -1220,7 +1220,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
         }
 
-        return EnumPattern(specmaticValues, typeAlias = patternName).also {
+        if(schema.nullable != true && NullValue in specmaticValues)
+            throw ContractException("Enum values cannot contain null since the schema $patternName is not nullable")
+
+        if(schema.nullable == true && NullValue !in specmaticValues)
+            throw ContractException("Enum values must contain null since the schema $patternName is nullable")
+
+        return EnumPattern(specmaticValues, nullable = schema.nullable == true, typeAlias = patternName).also {
             cacheComponentPattern(patternName, it)
         }
     }

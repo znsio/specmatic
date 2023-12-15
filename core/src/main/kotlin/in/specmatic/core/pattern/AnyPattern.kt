@@ -228,27 +228,6 @@ data class AnyPattern(
                 "(${pattern.joinToString(" or ") { inner -> withoutPatternDelimiters(inner.typeName).let { if(it == "null") "\"null\"" else it}  }})"
         }
 
-    fun isEnum(
-        resolver: Resolver
-    ): Boolean {
-        if(pattern.isEmpty())
-            return false
-
-        val resolveEnumOptions = pattern.map { resolvedHop(it, resolver) }
-
-        if(resolveEnumOptions.any { it !is ExactValuePattern })
-            return false
-
-        val exactValuePatterns = resolveEnumOptions.filterIsInstance<ExactValuePattern>()
-
-        val values = exactValuePatterns.map { it.pattern }
-
-        if(values.any { it !is ScalarValue })
-            return false
-
-        return values.map { it.displayableType() }.distinct().size == 1
-    }
-
     override fun toNullable(defaultValue: String?): Pattern {
         return this
     }

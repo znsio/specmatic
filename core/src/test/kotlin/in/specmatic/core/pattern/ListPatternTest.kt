@@ -10,6 +10,7 @@ import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Tag
 
 internal class ListPatternTest {
     @Test
@@ -106,5 +107,14 @@ Feature: Recursive test
             assertThat(resultText).contains("[2]")
             assertThat(resultText).contains("elementC")
         }
+    }
+
+    @Tag("generative")
+    @Test
+    fun `negative pattern generation`() {
+        val negativePatterns = ListPattern(StringPattern()).negativeBasedOn(Row(), Resolver())
+        assertThat(negativePatterns.map { it.typeName }).containsExactlyInAnyOrder(
+            "null"
+        )
     }
 }

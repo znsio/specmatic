@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.core.Flags
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
@@ -119,5 +120,26 @@ internal class StringPatternTest {
 
         println(result.reportString())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `it should use the example if provided when generating`() {
+        try {
+            System.setProperty(Flags.schemaExampleDefault, "true")
+            val generated = StringPattern(example = "sample data").generate(Resolver())
+            assertThat(generated).isEqualTo(StringValue("sample data"))
+        } finally {
+            System.clearProperty(Flags.schemaExampleDefault)
+        }
+    }
+
+    @Test
+    fun `negative values should be generated`() {
+        val result = StringPattern().negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null",
+            "number",
+            "boolean"
+        )
     }
 }

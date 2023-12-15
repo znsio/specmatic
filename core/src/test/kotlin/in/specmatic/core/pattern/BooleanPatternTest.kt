@@ -8,6 +8,7 @@ import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.shouldNotMatch
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
 
 internal class BooleanPatternTest {
     @Test
@@ -27,6 +28,7 @@ internal class BooleanPatternTest {
     }
 
     @Test
+    @Tag("generative")
     fun `negative values should be generated`() {
         val result = BooleanPattern().negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(

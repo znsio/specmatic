@@ -11,7 +11,7 @@ import org.assertj.core.api.Assertions.assertThat
 
 internal class BooleanPatternTest {
     @Test
-    fun `should fail to match nulls graceully`() {
+    fun `should fail to match nulls gracefully`() {
         NullValue shouldNotMatch BooleanPattern()
     }
 

@@ -8,6 +8,7 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldNotMatch
 import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -78,6 +79,7 @@ internal class NumberPatternTest {
     }
 
     @Test
+    @Tag("generative")
     fun `negative values should be generated`() {
         val result = NumberPattern().negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(

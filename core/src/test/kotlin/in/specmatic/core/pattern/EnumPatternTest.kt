@@ -8,6 +8,7 @@ import `in`.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -65,6 +66,7 @@ class EnumPatternTest {
     }
 
     @Nested
+    @Tag("generative")
     inner class TestGeneration {
         @Test
         fun `it should generate new patterns for all enum values when the row is empty`() {

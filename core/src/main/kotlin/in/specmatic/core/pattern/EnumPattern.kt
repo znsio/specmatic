@@ -44,4 +44,8 @@ data class EnumPattern(
     override fun equals(other: Any?): Boolean = other is EnumPattern && other.pattern == this.pattern
 
     override fun hashCode(): Int = pattern.hashCode()
+
+    override fun toNullable(defaultValue: String?): Pattern {
+        return this
+    }
 }

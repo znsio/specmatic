@@ -248,6 +248,10 @@ data class AnyPattern(
 
         return values.map { it.displayableType() }.distinct().size == 1
     }
+
+    override fun toNullable(defaultValue: String?): Pattern {
+        return this
+    }
 }
 
 private fun failedToFindAny(expected: String, actual: Value?, results: List<Result.Failure>, mismatchMessages: MismatchMessages): Result.Failure =

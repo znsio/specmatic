@@ -17,7 +17,7 @@ class CommandHook(private val name: HookName): Hook {
 
         return command?.let {
             logger.log("  Invoking hook $name when loading contract $path")
-            ExternalCommand(it, ".", listOf("CONTRACT_FILE=$path")).executeAsSeparateProcess()
+            ExternalCommand(it, ".", mapOf("CONTRACT_FILE" to path)).executeAsSeparateProcess()
         } ?: File(path).readText()
     }
 }

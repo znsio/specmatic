@@ -5,7 +5,6 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.values
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Nested
@@ -80,7 +79,7 @@ class EnumPatternTest {
         }
 
         @Test
-        fun `it should only pick the value in the row when the row is NOT empty when generative testing is off`() {
+        fun `it should only pick the value in the row when the row is NOT empty`() {
             val jsonPattern = JSONObjectPattern(mapOf("type" to EnumPattern(listOf(StringValue("01"), StringValue("02")))))
 
             val newPatterns = jsonPattern.newBasedOn(Row(listOf("type"), values = listOf("01")), Resolver())
@@ -89,8 +88,18 @@ class EnumPatternTest {
 
             val strings = values.map { it.jsonObject.getValue("type") as StringValue }
 
-            assertThat(strings).containsExactlyInAnyOrder(
+            assertThat(strings).containsExactly(
                 StringValue("01")
+            )
+        }
+
+        @Test
+        fun `it should use the inline example if present`() {
+            val enum = EnumPattern(listOf(StringValue("01"), StringValue("02")), example = "01")
+            val patterns = enum.newBasedOn(Row(), Resolver())
+
+            assertThat(patterns).containsExactly(
+                ExactValuePattern(StringValue("01"))
             )
         }
 

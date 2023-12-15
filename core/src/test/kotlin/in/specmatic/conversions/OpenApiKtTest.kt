@@ -1277,6 +1277,7 @@ Background:
                             )
 
                             "PATCH" -> {
+                                println(request.toLogString())
                                 HttpResponse(
                                     200,
                                     ObjectMapper().writeValueAsString(pet),

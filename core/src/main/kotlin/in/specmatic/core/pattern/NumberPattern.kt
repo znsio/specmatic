@@ -109,5 +109,8 @@ fun encompasses(
             else
                 Result.Failure.fromFailures(failures)
         }
+        otherPattern is EnumPattern -> {
+            encompasses(thisPattern, otherPattern.pattern, thisResolver, otherResolver, typeStack)
+        }
         else -> mismatchResult(thisPattern, otherPattern, thisResolver.mismatchMessages)
     }

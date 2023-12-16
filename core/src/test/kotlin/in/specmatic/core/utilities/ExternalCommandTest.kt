@@ -53,7 +53,15 @@ internal class ExternalCommandTest {
 
         val parentProcessEnv = System.getenv()
         parentProcessEnv.forEach { (key, value) ->
-            assertThat(commandOutput).contains("$key=$value")
+            if(valueMayChangeInChildProcess(key)) {
+                assertThat(commandOutput).contains("$key=")
+            } else {
+                assertThat(commandOutput).contains("$key=$value")
+            }
         }
+    }
+
+    private fun valueMayChangeInChildProcess(key: String): Boolean {
+        return key.startsWith("CODEQL_")
     }
 }

@@ -142,14 +142,15 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
 fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver, stringlyCheck: Boolean=false): List<Map<String, Pattern>> {
     val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
     val negativePatternsMap = patternMap.mapValues { (_, pattern) ->
-        if (stringlyCheck && pattern is StringPattern) {
+        val resolvedPattern = resolvedHop(pattern, resolver)
+        if (stringlyCheck && resolvedPattern is StringPattern) {
             emptyList()
-        } else if (stringlyCheck && pattern is ScalarType) {
-            pattern.negativeBasedOn(row, resolver).filterNot { it is NullPattern }
-        } else if (stringlyCheck && patternIsEnum(pattern, resolver)) {
-            shortCircuitStringlyEnumGenerationToOneEnumValue(pattern, resolver)
+        } else if (stringlyCheck && resolvedPattern is ScalarType) {
+            resolvedPattern.negativeBasedOn(row, resolver).filterNot { it is NullPattern }
+        } else if (stringlyCheck && patternIsEnum(resolvedPattern, resolver)) {
+            shortCircuitStringlyEnumGenerationToOneEnumValue(resolvedPattern, resolver)
         } else {
-            pattern.negativeBasedOn(row, resolver)
+            resolvedPattern.negativeBasedOn(row, resolver)
         }
     }
 
@@ -216,14 +217,15 @@ fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<S
 fun negativeBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver, stringlyCheck:Boolean=false): List<Map<String, Pattern>> {
     val patternCollection = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) {
-            if(stringlyCheck && pattern is StringPattern) {
+            val resolvedPattern = resolvedHop(pattern, resolver)
+            if(stringlyCheck && resolvedPattern is StringPattern) {
                 emptyList()
             }
-            else if (stringlyCheck && pattern is ScalarType) {
-                negativeBasedOn(key, pattern, resolver).filterNot { it is NullPattern  }
+            else if (stringlyCheck && resolvedPattern is ScalarType) {
+                negativeBasedOn(key, resolvedPattern, resolver).filterNot { it is NullPattern  }
             }
             else {
-                negativeBasedOn(key, pattern, resolver)
+                negativeBasedOn(key, resolvedPattern, resolver)
             }
         }
     }

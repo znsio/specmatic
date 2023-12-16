@@ -337,10 +337,10 @@ data class Scenario(
     }
 
     fun generateTestScenarios(
+        resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
         enableGenerativeTesting: Boolean = false,
-        resolverStrategies: ResolverStrategies = DefaultStrategies
     ): List<Scenario> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)

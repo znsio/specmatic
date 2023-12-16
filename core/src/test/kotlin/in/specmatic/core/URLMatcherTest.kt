@@ -232,6 +232,25 @@ internal class URLMatcherTest {
         assertThat(matchers).contains(matcherWithQueryParams)
     }
 
+    @Tag(GENERATIVE)
+    @Test
+    fun `should generate negative values for a string`() {
+        val urlMatchers = toURLMatcherWithOptionalQueryParams(URI("/pets?name=(string)")).negativeBasedOn(Row(), Resolver())!!
+        assertThat(urlMatchers).containsExactly(URLMatcher(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets"))
+    }
+
+    @Tag(GENERATIVE)
+    @Test
+    fun `should generate negative values for a number`() {
+        val headers = HttpHeadersPattern(mapOf("X-TraceID" to NumberPattern()))
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver())
+
+        assertThat(newHeaders).containsExactlyInAnyOrder(
+            HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),
+            HttpHeadersPattern(mapOf("X-TraceID" to BooleanPattern())),
+        )
+    }
+
     @Test
     fun `url matcher with a non optional query param should not match empty query params`() {
         val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern()), pathToPattern("/"), "/")

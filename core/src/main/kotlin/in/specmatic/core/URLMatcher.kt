@@ -230,7 +230,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         return pathPattern.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): List<URLMatcher?>? {
+    fun negativeBasedOn(row: Row, resolver: Resolver): List<URLMatcher?> {
         val newPathPartsList: List<List<Pattern>> = newBasedOn(pathPattern.mapIndexed { index, urlPathPattern ->
             val key = urlPathPattern.key
 

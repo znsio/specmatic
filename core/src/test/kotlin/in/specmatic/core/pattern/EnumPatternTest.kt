@@ -4,6 +4,7 @@ import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.UseDefaultExample
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -99,18 +100,12 @@ class EnumPatternTest {
 
         @Test
         fun `it should use the inline example if present`() {
-            try {
-                System.setProperty(Flags.schemaExampleDefault, "true")
+            val enum = EnumPattern(listOf(StringValue("01"), StringValue("02")), example = "01")
+            val patterns = enum.newBasedOn(Row(), Resolver(defaultExampleResolver = UseDefaultExample()))
 
-                val enum = EnumPattern(listOf(StringValue("01"), StringValue("02")), example = "01")
-                val patterns = enum.newBasedOn(Row(), Resolver())
-
-                assertThat(patterns).containsExactly(
-                    ExactValuePattern(StringValue("01"))
-                )
-            } finally {
-                System.clearProperty(Flags.schemaExampleDefault)
-            }
+            assertThat(patterns).containsExactly(
+                ExactValuePattern(StringValue("01"))
+            )
         }
 
         @Test

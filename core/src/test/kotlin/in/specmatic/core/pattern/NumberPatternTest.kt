@@ -3,6 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.UseDefaultExample
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -70,13 +71,8 @@ internal class NumberPatternTest {
 
     @Test
     fun `it should use the example if provided when generating`() {
-        try {
-            System.setProperty(Flags.schemaExampleDefault, "true")
-            val generated = NumberPattern(example = "10").generate(Resolver())
-            assertThat(generated).isEqualTo(NumberValue(10))
-        } finally {
-            System.clearProperty(Flags.schemaExampleDefault)
-        }
+        val generated = NumberPattern(example = "10").generate(Resolver(defaultExampleResolver = UseDefaultExample()))
+        assertThat(generated).isEqualTo(NumberValue(10))
     }
 
     @Test

@@ -3,6 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.UseDefaultExample
 import `in`.specmatic.core.value.BooleanValue
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.NullValue
@@ -19,7 +20,7 @@ internal class BooleanPatternTest {
 
     @Test
     fun `it should use the example if provided when generating`() {
-        val generated = BooleanPattern(example = "true").generate(Resolver())
+        val generated = BooleanPattern(example = "true").generate(Resolver(defaultExampleResolver = UseDefaultExample()))
         assertThat(generated).isEqualTo(BooleanValue(true))
     }
 

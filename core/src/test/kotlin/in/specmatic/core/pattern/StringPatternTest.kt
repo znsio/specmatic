@@ -3,6 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.UseDefaultExample
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldNotMatch
@@ -126,13 +127,8 @@ internal class StringPatternTest {
 
     @Test
     fun `it should use the example if provided when generating`() {
-        try {
-            System.setProperty(Flags.schemaExampleDefault, "true")
-            val generated = StringPattern(example = "sample data").generate(Resolver())
-            assertThat(generated).isEqualTo(StringValue("sample data"))
-        } finally {
-            System.clearProperty(Flags.schemaExampleDefault)
-        }
+        val generated = StringPattern(example = "sample data").generate(Resolver(defaultExampleResolver = UseDefaultExample()))
+        assertThat(generated).isEqualTo(StringValue("sample data"))
     }
 
     @Test

@@ -29,7 +29,7 @@ internal class BooleanPatternTest {
 
     @Test
     @Tag("generative")
-    fun `negative values should be generated`() {
+    fun `negative patterns should be generated`() {
         val result = BooleanPattern().negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null"

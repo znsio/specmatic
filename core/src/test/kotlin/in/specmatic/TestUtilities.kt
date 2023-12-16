@@ -154,3 +154,7 @@ const val GENERATIVE = "generative"
 infix fun <E> List<E>.shouldContainInAnyOrder(elementList: List<E>) {
     assertThat(this).containsExactlyInAnyOrderElementsOf(elementList)
 }
+
+val DefaultStrategies = ResolverStrategies (
+    DoNotUseDefaultExample()
+)

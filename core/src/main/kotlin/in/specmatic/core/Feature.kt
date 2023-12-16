@@ -85,17 +85,6 @@ class ResponseBuilder(val scenario: Scenario, val serverState: Map<String, Value
     }
 }
 
-data class ResolverStrategies(val defaultExampleResolver: DefaultExampleResolver) {
-}
-
-val StrategiesFromFlags = ResolverStrategies(
-    if(Flags.schemaExampleDefaultEnabled()) UseDefaultExample() else DoNotUseDefaultExample()
-)
-
-val DefaultStrategies = ResolverStrategies (
-    DoNotUseDefaultExample()
-)
-
 data class Feature(
     val scenarios: List<Scenario> = emptyList(),
     private var serverState: Map<String, Value> = emptyMap(),

@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.DefaultStrategies
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.*

@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.NullValue
@@ -66,7 +67,7 @@ class EnumPatternTest {
     }
 
     @Nested
-    @Tag("generative")
+    @Tag(GENERATIVE)
     inner class TestGeneration {
         @Test
         fun `it should generate new patterns for all enum values when the row is empty`() {

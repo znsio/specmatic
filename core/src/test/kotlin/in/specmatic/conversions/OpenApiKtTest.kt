@@ -16,6 +16,7 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.jsonBody
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -70,11 +71,6 @@ import kotlin.collections.sum
 import kotlin.collections.toList
 import kotlin.collections.toMap
 import kotlin.collections.withDefault
-
-private val HttpRequest.jsonBody: JSONObjectValue
-    get() {
-        return this.body as JSONObjectValue
-    }
 
 internal class OpenApiKtTest {
     companion object {

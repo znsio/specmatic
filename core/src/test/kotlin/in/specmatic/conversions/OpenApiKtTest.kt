@@ -9,6 +9,7 @@ import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.JSONObjectPattern
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONObjectValue
@@ -69,6 +70,11 @@ import kotlin.collections.sum
 import kotlin.collections.toList
 import kotlin.collections.toMap
 import kotlin.collections.withDefault
+
+private val HttpRequest.jsonBody: JSONObjectValue
+    get() {
+        return this.body as JSONObjectValue
+    }
 
 internal class OpenApiKtTest {
     companion object {
@@ -963,7 +969,6 @@ Background:
         assertThat(body).contains("Invalid pattern cycle")
     }
 
-    @Test
     @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
     fun `should validate and generate with indirect optional non-nullable cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
@@ -994,7 +999,6 @@ Background:
         assertThat(deserialized).isNotNull
     }
 
-    @Test
     @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
     fun `should validate and generate with indirect nullable cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
@@ -2403,6 +2407,7 @@ components:
         })
     }
 
+    @Test
     fun `should preserve trailing slash`() {
         val contract = OpenApiSpecification.fromYAML(
             """
@@ -2488,6 +2493,71 @@ components:
         assertThat(paths).allSatisfy {
             assertThat(it).endsWith("/")
         }
+    }
+
+    @Test
+    fun `should load an inline example in the schema when generating`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+    openapi: "3.0.3"
+    info:
+      version: 1.0.0
+      title: Petstore
+      description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+      license:
+        name: Apache 2.0
+        url: https://www.apache.org/licenses/LICENSE-2.0.html
+    paths:
+      /pets/:
+        post:
+          summary: create a pet
+          description: Creates a new pet in the store. Duplicates are allowed
+          operationId: addPet
+          requestBody:
+            description: Pet to add to the store
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      example: 'Archie'
+          responses:
+            '200':
+              description: new pet record
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    required:
+                      - id
+                    properties:
+                      id:
+                        type: integer
+                  examples:
+                    SUCCESS:
+                      value:
+                        id: 10
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.jsonBody.findFirstChildByName("name")?.toStringLiteral()).isEqualTo("Archie")
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        assertThat(result.results).isNotEmpty
     }
 }
 

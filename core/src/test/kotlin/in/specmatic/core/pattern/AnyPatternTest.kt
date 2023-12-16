@@ -10,6 +10,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 internal class AnyPatternTest {
@@ -187,13 +188,14 @@ internal class AnyPatternTest {
     }
 
     @Test
+    @Tag("generative")
     fun `values for negative tests`() {
         val negativeTypes = AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver())
 
-        val expectedTypes = listOf(NumberPattern(), BooleanPattern())
-
-        assertThat(negativeTypes).containsAll(expectedTypes)
-        assertThat(negativeTypes).hasSize(expectedTypes.size)
+        assertThat(negativeTypes).containsExactlyInAnyOrder(
+            NumberPattern(),
+            BooleanPattern()
+        )
     }
 
     @Test

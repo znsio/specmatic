@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue
@@ -57,7 +58,7 @@ internal class UUIDPatternTest {
     }
 
     @Test
-    @Tag("generative")
+    @Tag(GENERATIVE)
     fun `negative values should be generated`() {
         val result = UUIDPattern.negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(

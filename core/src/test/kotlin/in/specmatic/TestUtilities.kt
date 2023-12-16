@@ -6,6 +6,7 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.DeferredPattern
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
@@ -141,4 +142,15 @@ private class TestHttpStubData(val oldContract: String, val stubs: List<TestHttp
             stub.shouldWorkWith(newContract)
         }
     }
+}
+
+val HttpRequest.jsonBody: JSONObjectValue
+    get() {
+        return this.body as JSONObjectValue
+    }
+
+const val GENERATIVE = "generative"
+
+infix fun <E> List<E>.shouldContainInAnyOrder(elementList: List<E>) {
+    assertThat(this).containsExactlyInAnyOrderElementsOf(elementList)
 }

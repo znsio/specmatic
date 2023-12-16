@@ -1,10 +1,12 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.*
 import `in`.specmatic.emptyPattern
+import `in`.specmatic.shouldContainInAnyOrder
 import `in`.specmatic.shouldMatch
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -57,7 +59,15 @@ internal class AnyPatternTest {
     }
 
     @Test
-    @Tag("generative")
+    @Tag(GENERATIVE)
+    fun `should generate new patterns for all available types`() {
+        AnyPattern(listOf(NumberPattern(), EnumPattern(listOf(StringValue("one"), StringValue("two"))))).newBasedOn(Row(), Resolver()).let {
+            it.map { it.typeName } shouldContainInAnyOrder listOf("number", "\"one\"", "\"two\"")
+        }
+    }
+
+    @Test
+    @Tag(GENERATIVE)
     fun `should create a new pattern based on the given row`() {
         val pattern = AnyPattern(listOf(parsedPattern("""{"id": "(number)"}""")))
         val row = Row(listOf("id"), listOf("10"))
@@ -74,7 +84,7 @@ internal class AnyPatternTest {
     }
 
     @Test
-    @Tag("generative")
+    @Tag(GENERATIVE)
     fun `should create new patterns when the row has no values`() {
         val pattern = AnyPattern(listOf(parsedPattern("""{"id": "(number)"}""")))
         val value = pattern.newBasedOn(Row(), Resolver()).first().generate(Resolver())
@@ -202,7 +212,7 @@ internal class AnyPatternTest {
     }
 
     @Test
-    @Tag("generative")
+    @Tag(GENERATIVE)
     fun `values for negative tests`() {
         val negativeTypes = AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver())
 

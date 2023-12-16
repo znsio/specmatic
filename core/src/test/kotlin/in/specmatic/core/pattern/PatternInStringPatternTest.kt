@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -90,7 +91,7 @@ internal class PatternInStringPatternTest {
     }
 
     @Test
-    @Tag("generative")
+    @Tag(GENERATIVE)
     fun `negative values should be generated`() {
         val result = PatternInStringPattern().negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(

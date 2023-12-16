@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -109,7 +110,7 @@ Feature: Recursive test
         }
     }
 
-    @Tag("generative")
+    @Tag(GENERATIVE)
     @Test
     fun `negative pattern generation`() {
         val negativePatterns = ListPattern(StringPattern()).negativeBasedOn(Row(), Resolver())

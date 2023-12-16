@@ -265,9 +265,15 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false): List<Scenario> {
+    private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false, strategiesFromFlags: ResolverStrategies): List<Scenario> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
-        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndRowValueMismatch, generativeTestingEnabled = generativeTestingEnabled)
+        val resolver =
+            Resolver(expectedFacts, false, patterns)
+            .copy(
+                mismatchMessages = ContractAndRowValueMismatch,
+                generativeTestingEnabled = generativeTestingEnabled,
+                defaultExampleResolver = strategiesFromFlags.defaultExampleResolver
+            )
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
@@ -333,7 +339,8 @@ data class Scenario(
     fun generateTestScenarios(
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-        enableGenerativeTesting: Boolean = false
+        enableGenerativeTesting: Boolean = false,
+        resolverStrategies: ResolverStrategies = DefaultStrategies
     ): List<Scenario> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -353,15 +360,16 @@ data class Scenario(
                         rows
                 }
             }.flatMap { row ->
-                newBasedOn(row, enableGenerativeTesting)
+                newBasedOn(row, enableGenerativeTesting, resolverStrategies)
             }
         }
     }
 
     fun generateContractTests(
+        resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-        generativeTestingEnabled: Boolean = false
+        generativeTestingEnabled: Boolean = false,
     ): List<ContractTest> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -377,7 +385,7 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 try {
-                    newBasedOn(row, generativeTestingEnabled).map { ScenarioTest(it, generativeTestingEnabled) }
+                    newBasedOn(row, generativeTestingEnabled, resolverStrategies).map { ScenarioTest(it, resolverStrategies, generativeTestingEnabled) }
                 } catch (e: Throwable) {
                     listOf(ScenarioTestGenerationFailure(this, e))
                 }

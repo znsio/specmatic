@@ -19,13 +19,8 @@ internal class BooleanPatternTest {
 
     @Test
     fun `it should use the example if provided when generating`() {
-        try {
-            System.setProperty(Flags.schemaExampleDefault, "true")
-            val generated = BooleanPattern(example = "true").generate(Resolver())
-            assertThat(generated).isEqualTo(BooleanValue(true))
-        } finally {
-            System.clearProperty(Flags.schemaExampleDefault)
-        }
+        val generated = BooleanPattern(example = "true").generate(Resolver())
+        assertThat(generated).isEqualTo(BooleanValue(true))
     }
 
     @Test

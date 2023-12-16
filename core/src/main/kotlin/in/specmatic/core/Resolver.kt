@@ -35,7 +35,7 @@ data class Resolver(
     val parseStrategy: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = actualParse,
     val generativeTestingEnabled: Boolean = false,
     val cyclePreventionStack: List<Pattern> = listOf(),
-    val schemaDefaultResolver: DefaultExampleResolver = if(Flags.schemaExampleDefaultEnabled()) UseDefaultExample() else DoNotUseDefaultExample()
+    val defaultExampleResolver: DefaultExampleResolver = if(Flags.schemaExampleDefaultEnabled()) UseDefaultExample() else DoNotUseDefaultExample()
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -169,55 +169,15 @@ data class Resolver(
         }
 
     fun resolveExample(example: String?, pattern: Pattern): Value? {
-        if(!Flags.schemaExampleDefaultEnabled())
-            return null
-
-        if(example == null)
-            return null
-
-        val value = pattern.parse(example, this)
-        val exampleMatchResult = pattern.matches(value, Resolver())
-
-        if(exampleMatchResult.isSuccess())
-            return value
-
-        throw ContractException("Example \"$example\" does not match ${pattern.typeName} type")
+        return defaultExampleResolver.resolveExample(example, pattern, this)
     }
 
     fun resolveExample(example: String?, pattern: List<Pattern>): Value? {
-        if(!Flags.schemaExampleDefaultEnabled())
-            return null
-
-        if(example == null)
-            return null
-
-        val matchResults = pattern.asSequence().map {
-            try {
-                val value = it.parse(example, Resolver())
-                Pair(it.matches(value, Resolver()), value)
-            } catch(e: Throwable) {
-                Pair(Result.Failure(exceptionCauseMessage(e)), null)
-            }
-        }
-
-        return matchResults.firstOrNull { it.first.isSuccess() }?.second
-            ?: throw ContractException("Example \"$example\" does not match:\n${Result.fromResults(matchResults.map { it.first }.toList()).reportString()}")
+        return defaultExampleResolver.resolveExample(example, pattern, this)
     }
 
     fun resolveExample(example: List<String?>?, pattern: Pattern): JSONArrayValue? {
-        if(!Flags.schemaExampleDefaultEnabled())
-            return null
-
-        if(example == null)
-            return null
-
-        val items = example.mapIndexed { index, s ->
-            attempt(breadCrumb = "[$index (example)]") {
-                pattern.parse(s ?: "", this)
-            }
-        }
-
-        return JSONArrayValue(items)
+        return defaultExampleResolver.resolveExample(example, pattern, this)
     }
 }
 

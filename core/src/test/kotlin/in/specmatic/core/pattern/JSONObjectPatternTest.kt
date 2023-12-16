@@ -628,28 +628,28 @@ internal class JSONObjectPatternTest {
                 when(compatible) {
                     true -> assertThat(result).isInstanceOf(Result.Success::class.java)
                     false -> assertThat(result).isInstanceOf(Result.Failure::class.java)
-                }            }
+                }
+            }
         }
-    }
 
-    @Tag(GENERATIVE)
-    @Test
-    fun `should generative negative patterns based on negative patterns of the values`() {
-        val pattern = JSONObjectPattern(
-            mapOf(
-                "address?" to StringPattern(),
+        @Test
+        fun `should generative negative patterns based on negative patterns of the values`() {
+            val pattern = JSONObjectPattern(
+                mapOf(
+                    "address?" to StringPattern(),
+                )
             )
-        )
 
-        val negativePatterns: List<Pattern> = pattern.negativeBasedOn(Row(), Resolver())
+            val negativePatterns: List<Pattern> = pattern.negativeBasedOn(Row(), Resolver())
 
-        val jsonInternalPatterns = negativePatterns.filterIsInstance<JSONObjectPattern>().map { it.pattern }
+            val jsonInternalPatterns = negativePatterns.filterIsInstance<JSONObjectPattern>().map { it.pattern }
 
-        assertThat(jsonInternalPatterns).containsExactlyInAnyOrder(
-            emptyMap(),
-            mapOf("address?" to NullPattern),
-            mapOf("address?" to NumberPattern()),
-            mapOf("address?" to BooleanPattern())
-        )
+            assertThat(jsonInternalPatterns).containsExactlyInAnyOrder(
+                emptyMap(),
+                mapOf("address?" to NullPattern),
+                mapOf("address?" to NumberPattern()),
+                mapOf("address?" to BooleanPattern())
+            )
+        }
     }
 }

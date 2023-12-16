@@ -15,15 +15,6 @@ import org.junit.jupiter.api.Tag
 
 internal class ListPatternTest {
     @Test
-    fun `should generate a list of patterns each of which is a list pattern`() {
-        val patterns = ListPattern(NumberPattern()).newBasedOn(Row(), Resolver())
-
-        for(pattern in patterns) {
-            assertTrue(pattern is ListPattern)
-        }
-    }
-
-    @Test
     fun `should fail to match nulls gracefully`() {
         NullValue shouldNotMatch ListPattern(StringPattern())
     }
@@ -118,4 +109,15 @@ Feature: Recursive test
             "null"
         )
     }
+
+    @Tag(GENERATIVE)
+    @Test
+    fun `should generate a list of patterns each of which is a list pattern`() {
+        val patterns = ListPattern(NumberPattern()).newBasedOn(Row(), Resolver())
+
+        for(pattern in patterns) {
+            assertTrue(pattern is ListPattern)
+        }
+    }
+
 }

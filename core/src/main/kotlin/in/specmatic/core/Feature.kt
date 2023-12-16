@@ -344,7 +344,7 @@ data class Feature(
         scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap {
-            it.generateTestScenarios(testVariables, testBaseURLs, generativeTestingEnabled, resolverStrategies)
+            it.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs, generativeTestingEnabled)
         }
 
     fun negativeTestScenarios() =
@@ -352,7 +352,7 @@ data class Feature(
             it.isA2xxScenario()
         }.map { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
-            val negativeTestScenarios = negativeScenario.generateTestScenarios(testVariables, testBaseURLs, true, resolverStrategies)
+            val negativeTestScenarios = negativeScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs, true)
 
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)

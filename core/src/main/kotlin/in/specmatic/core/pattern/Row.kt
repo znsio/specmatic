@@ -16,6 +16,8 @@ data class Row(
     val name: String = "",
     val fileSource: String? = null
 ) {
+    constructor(examples: Map<String, String>) :this(examples.keys.toList(), examples.values.toList())
+
     private val cells = columnNames.zip(values.map { it }).toMap().toMutableMap()
 
     fun flattenRequestBodyIntoRow(): Row {

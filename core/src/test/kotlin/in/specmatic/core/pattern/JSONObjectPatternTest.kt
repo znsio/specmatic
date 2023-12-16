@@ -634,7 +634,7 @@ internal class JSONObjectPatternTest {
 
     @Tag(GENERATIVE)
     @Test
-    fun `negative tests for JSON object`() {
+    fun `should generative negative patterns based on negative patterns of the values`() {
         val pattern = JSONObjectPattern(
             mapOf(
                 "address?" to StringPattern(),

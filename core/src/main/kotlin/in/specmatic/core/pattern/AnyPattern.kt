@@ -60,25 +60,8 @@ data class AnyPattern(
 
     private fun isEmpty(it: Pattern) = it.typeAlias == "(empty)" || it is NullPattern
 
-    private fun matchingExample(): Value? {
-        if(example == null)
-            return example
-
-        val matchResults = pattern.asSequence().map {
-            try{
-                val value = this.parse(example, Resolver())
-                Pair(this.matches(value, Resolver()), value)
-            } catch(e: Throwable) {
-                Pair(Result.Failure(exceptionCauseMessage(e)), null)
-            }
-        }
-
-        return matchResults.firstOrNull() { it.first.isSuccess() }?.second
-            ?: throw ContractException("Example \"$example\" does not match:\n${Result.fromResults(matchResults.map { it.first }.toList()).reportString()}")
-    }
-
     override fun generate(resolver: Resolver): Value {
-        return matchingExample() ?: generateRandomValue(resolver)
+        return resolver.resolveExample(example, pattern) ?: generateRandomValue(resolver)
     }
 
     private fun generateRandomValue(resolver: Resolver): Value {
@@ -93,7 +76,7 @@ data class AnyPattern(
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        matchingExample()?.let {
+        resolver.resolveExample(example, pattern)?.let {
             return listOf(ExactValuePattern(it))
         }
 

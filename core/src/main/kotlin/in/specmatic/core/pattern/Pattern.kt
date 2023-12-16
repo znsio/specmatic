@@ -66,19 +66,3 @@ interface Pattern {
     val typeName: String
     val pattern: Any
 }
-
-fun matchingExample(example: String?, pattern: Pattern): Value? {
-    if(!Flags.schemaExampleDefaultEnabled())
-        return null
-
-    if(example == null)
-        return example
-
-    val value = pattern.parse(example, Resolver())
-    val exampleMatchResult = pattern.matches(value, Resolver())
-
-    if(exampleMatchResult.isSuccess())
-        return value
-
-    throw ContractException("Example \"$example\" does not match ${pattern.typeName} type")
-}

@@ -1,14 +1,13 @@
 package `in`.specmatic.core.pattern
 
 import `in`.specmatic.GENERATIVE
+import `in`.specmatic.core.*
+import `in`.specmatic.core.value.JSONArrayValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.Resolver
-import `in`.specmatic.core.Result
-import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.value.NullValue
+import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
@@ -120,4 +119,16 @@ Feature: Recursive test
         }
     }
 
+    @Tag(GENERATIVE)
+    @Test
+    fun `should use the inline example for generation of values`() {
+        try {
+            System.setProperty(Flags.schemaExampleDefault, "true")
+
+            val value = ListPattern(NumberPattern(), example = listOf("1", "2", "3")).generate(Resolver())
+            assertThat(value).isEqualTo(JSONArrayValue(listOf(NumberValue(1), NumberValue(2), NumberValue(3))))
+        } finally {
+            System.clearProperty(Flags.schemaExampleDefault)
+        }
+    }
 }

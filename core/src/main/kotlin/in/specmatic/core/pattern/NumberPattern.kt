@@ -5,7 +5,6 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import java.util.*
 
@@ -39,7 +38,7 @@ data class NumberPattern(
     }
 
     override fun generate(resolver: Resolver): Value =
-        matchingExample(example, this) ?:
+        resolver.resolveExample(example, this) ?:
             NumberValue(randomNumber(minLength ?: 3))
 
     private fun randomNumber(minLength: Int): Int {

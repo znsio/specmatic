@@ -1,6 +1,8 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.True
 import `in`.specmatic.core.value.Value
@@ -164,4 +166,56 @@ data class Resolver(
         } else {
             emptyList()
         }
+
+    fun resolveExample(example: String?, pattern: Pattern): Value? {
+        if(!Flags.schemaExampleDefaultEnabled())
+            return null
+
+        if(example == null)
+            return null
+
+        val value = pattern.parse(example, this)
+        val exampleMatchResult = pattern.matches(value, Resolver())
+
+        if(exampleMatchResult.isSuccess())
+            return value
+
+        throw ContractException("Example \"$example\" does not match ${pattern.typeName} type")
+    }
+
+    fun resolveExample(example: String?, pattern: List<Pattern>): Value? {
+        if(!Flags.schemaExampleDefaultEnabled())
+            return null
+
+        if(example == null)
+            return null
+
+        val matchResults = pattern.asSequence().map {
+            try {
+                val value = it.parse(example, Resolver())
+                Pair(it.matches(value, Resolver()), value)
+            } catch(e: Throwable) {
+                Pair(Result.Failure(exceptionCauseMessage(e)), null)
+            }
+        }
+
+        return matchResults.firstOrNull { it.first.isSuccess() }?.second
+            ?: throw ContractException("Example \"$example\" does not match:\n${Result.fromResults(matchResults.map { it.first }.toList()).reportString()}")
+    }
+
+    fun resolveExample(example: List<String?>?, pattern: Pattern): JSONArrayValue? {
+        if(!Flags.schemaExampleDefaultEnabled())
+            return null
+
+        if(example == null)
+            return null
+
+        val items = example.mapIndexed { index, s ->
+            attempt(breadCrumb = "[$index (example)]") {
+                pattern.parse(s ?: "", this)
+            }
+        }
+
+        return JSONArrayValue(items)
+    }
 }

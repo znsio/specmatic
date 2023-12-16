@@ -114,6 +114,7 @@ class EnumPatternTest {
         }
 
         @Test
+        @Tag(GENERATIVE)
         fun `it should generate negative values for what is in the row`() {
             val jsonPattern = EnumPattern(listOf(StringValue("01"), StringValue("02")))
 

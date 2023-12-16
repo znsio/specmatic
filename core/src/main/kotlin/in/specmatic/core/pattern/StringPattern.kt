@@ -57,7 +57,7 @@ data class StringPattern(
             else -> 5
         }
     
-    override fun generate(resolver: Resolver): Value = matchingExample(example, this) ?: StringValue(randomString(randomStringLength))
+    override fun generate(resolver: Resolver): Value = resolver.resolveExample(example, this) ?: StringValue(randomString(randomStringLength))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)

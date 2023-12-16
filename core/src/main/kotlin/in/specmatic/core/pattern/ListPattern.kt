@@ -1,12 +1,10 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.core.Flags
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.ListValue
-import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 
 data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null, val example: List<String?>? = null) : Pattern, SequenceType {
@@ -42,20 +40,13 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     override fun generate(resolver: Resolver): Value {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
 
-        if(Flags.schemaExampleDefaultEnabled()) {
-            example?.mapIndexed { index, s ->
-                attempt(breadCrumb = "[$index (example)]") {
-                    pattern.parse(s ?: "", resolverWithEmptyType)
-                }
-            }?.let {
-                return JSONArrayValue(it)
-            }
-        }
+        return resolver.resolveExample(example, pattern) ?: generateRandomValue(resolverWithEmptyType)
+    }
 
-        // Cycle prevention handled in listOf, so not duplicating it here.
+    private fun generateRandomValue(resolver: Resolver): Value {
         return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
-            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolverWithEmptyType) }
-        }, resolverWithEmptyType)
+            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolver) }
+        }, resolver)
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {

@@ -122,13 +122,7 @@ Feature: Recursive test
     @Tag(GENERATIVE)
     @Test
     fun `should use the inline example for generation of values`() {
-        try {
-            System.setProperty(Flags.schemaExampleDefault, "true")
-
-            val value = ListPattern(NumberPattern(), example = listOf("1", "2", "3")).generate(Resolver())
-            assertThat(value).isEqualTo(JSONArrayValue(listOf(NumberValue(1), NumberValue(2), NumberValue(3))))
-        } finally {
-            System.clearProperty(Flags.schemaExampleDefault)
-        }
+        val value = ListPattern(NumberPattern(), example = listOf("1", "2", "3")).generate(Resolver(defaultExampleResolver = UseDefaultExample()))
+        assertThat(value).isEqualTo(JSONArrayValue(listOf(NumberValue(1), NumberValue(2), NumberValue(3))))
     }
 }

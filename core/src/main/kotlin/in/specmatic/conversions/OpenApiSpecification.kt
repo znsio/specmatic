@@ -905,7 +905,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                     if(oneOfs.size == 1)
                         oneOfs.single()
                     else if(oneOfs.size > 1)
-                        AnyPattern(oneOfs, example = schema.example?.toString())
+                        AnyPattern(oneOfs)
                     else
                         toJSONObjectPattern(schemaProperties, "(${patternName})")
                 } else if (schema.oneOf != null) {
@@ -918,7 +918,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                     val nullable = if(schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
 
-                    AnyPattern(candidatePatterns.plus(nullable), example = schema.example?.toString())
+                    AnyPattern(candidatePatterns.plus(nullable))
                 } else if (schema.anyOf != null) {
                     throw UnsupportedOperationException("Specmatic does not support anyOf")
                 } else {

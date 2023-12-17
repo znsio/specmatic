@@ -70,7 +70,7 @@ data class TabularPattern(
     }
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
-        return allOrNothingCombinationIn(pattern, if(resolver.generativeTestingEnabled) Row() else row) { pattern ->
+        return allOrNothingCombinationIn(pattern, resolver.resolveRow(row)) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
         }.map {
             toTabularPattern(it.mapKeys { (key, _) ->
@@ -422,9 +422,7 @@ internal fun keySets(listOfKeys: List<String>, row: Row, resolver: Resolver): Li
     return subLists.flatMap { subList ->
         when {
             row.containsField(withoutOptionality(key)) ->
-                if(resolver.generativeTestingEnabled && isOptional(key)) {
-                    listOf(subList, subList + key)
-                } else listOf(subList + key)
+                resolver.generateKeySubLists(key, subList)
             isOptional(key) -> listOf(subList, subList + key)
             else -> listOf(subList + key)
         }

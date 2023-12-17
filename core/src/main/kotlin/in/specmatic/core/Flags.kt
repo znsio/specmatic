@@ -7,7 +7,6 @@ object Flags {
     const val negativeTestingFlag = "SPECMATIC_GENERATIVE_TESTS"
     const val maxTestRequestCombinationsFlag = "MAX_TEST_REQUEST_COMBINATIONS"
     const val schemaExampleDefault = "SCHEMA_EXAMPLE_DEFAULT"
-    const val generateOnlyFromFirst = "GENERATE_ONLY_FROM_FIRST"
     const val onlyPositive = "ONLY_POSITIVE"
 
     private fun flagValue(flagName: String): String? {
@@ -30,10 +29,6 @@ object Flags {
 
     fun maxTestRequestCombinations(): Int {
         return flagValue(maxTestRequestCombinationsFlag)?.toInt() ?: Int.MAX_VALUE
-    }
-
-    fun generateOnlyFromFirst(): Boolean {
-        return booleanFlag(generateOnlyFromFirst)
     }
 
     fun onlyPositive(): Boolean {

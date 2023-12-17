@@ -351,11 +351,6 @@ data class Scenario(
                     it.rows.map { row ->
                         row.copy(variables = variables, references = referencesWithBaseURLs)
                     }
-                }.let { rows ->
-                    if(generativeTestingEnabled && Flags.generateOnlyFromFirst() && rows.isNotEmpty())
-                        rows.take(1)
-                    else
-                        rows
                 }
             }.flatMap { row ->
                 newBasedOn(row, enableGenerativeTesting, resolverStrategies)

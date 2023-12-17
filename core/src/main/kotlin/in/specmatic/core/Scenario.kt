@@ -265,15 +265,14 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false, strategiesFromFlags: ResolverStrategies): List<Scenario> {
+    private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false, resolverStrategies: ResolverStrategies): List<Scenario> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver =
             Resolver(expectedFacts, false, patterns)
             .copy(
                 mismatchMessages = ContractAndRowValueMismatch,
-                generativeTestingEnabled = generativeTestingEnabled,
-                defaultExampleResolver = strategiesFromFlags.defaultExampleResolver
-            )
+                generativeTestingEnabled = generativeTestingEnabled
+            ).let { resolverStrategies.update(it) }
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 

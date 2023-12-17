@@ -409,48 +409,11 @@ data class HttpRequestPattern(
                                 throw ContractException(result.toFailureReport())
                         }
 
-                        if(resolver.generativeTestingEnabled) {
-                            val requestBodyAsIs = ExactValuePattern(value)
-                            val rowWithRequestBodyAsIs = listOf(requestBodyAsIs)
+                        val requestBodyAsIs = ExactValuePattern(value)
 
-                            val requestsFromFlattenedRow: List<Pattern> =
-                                resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                                    body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
-                                }
-
-                            if(requestsFromFlattenedRow.none { p -> p.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Success}) {
-                                requestsFromFlattenedRow.plus(rowWithRequestBodyAsIs)
-                            } else {
-                                requestsFromFlattenedRow
-                            }
-                        } else {
-                            listOf(ExactValuePattern(value))
-                        }
+                        resolver.generateHttpRequests(body, row, requestBodyAsIs, value)
                     } else {
-
-                        if(resolver.generativeTestingEnabled) {
-                            val vanilla = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                                body.newBasedOn(Row(), cyclePreventedResolver)
-                            }
-                            val fromExamples = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                                body.newBasedOn(row, cyclePreventedResolver)
-                            }
-                            val remainingVanilla = vanilla.filterNot { vanillaType ->
-                                fromExamples.any { typeFromExamples ->
-                                    vanillaType.encompasses(
-                                        typeFromExamples,
-                                        resolver,
-                                        resolver
-                                    ).isSuccess()
-                                }
-                            }
-
-                            fromExamples.plus(remainingVanilla)
-                        } else {
-                            resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                                body.newBasedOn(row, cyclePreventedResolver)
-                            }
-                        }
+                        resolver.generateHttpRequests(body, row)
                     }
                 }
             }

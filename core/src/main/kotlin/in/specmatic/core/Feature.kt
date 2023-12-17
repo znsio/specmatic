@@ -37,8 +37,8 @@ class BadRequestOrDefault(private val badRequestResponses: Map<Int, HttpResponse
             else -> defaultResponse?.matches(httpResponse, resolver)?.partialSuccess("The response matched the default response, but the contract should declare a ${httpResponse.status} response.") ?: Result.Failure("Neither is the status code declared nor is there a default response.")
         }
 
-    fun supports(httpResponse: HttpResponse): Boolean =
-        httpResponse.status in badRequestResponses || defaultResponse != null
+    fun supports(httpStatus: Int): Boolean =
+        httpStatus in badRequestResponses || defaultResponse != null
 }
 
 fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null): Feature {

@@ -229,7 +229,7 @@ data class Scenario(
 
         if (this.isNegative) {
             return if (is4xxResponse(httpResponse)) {
-                if(badRequestOrDefault != null && badRequestOrDefault.supports(httpResponse))
+                if(badRequestOrDefault != null && badRequestOrDefault.supports(httpResponse.status))
                     badRequestOrDefault.matches(httpResponse, resolver).updateScenario(this)
                 else
                     Result.Failure("Received ${httpResponse.status}, but the specification does not contain a 4xx response, hence unable to verify this response", breadCrumb = "RESPONSE.STATUS").updateScenario(this)

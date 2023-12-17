@@ -160,6 +160,7 @@ data class Resolver(
     }
 
     fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): List<Pattern> =
+        // TODO generate value outside
         if(generativeTestingEnabled) {
             withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
                 pattern.newBasedOn(Row(), cyclePreventedResolver)
@@ -178,6 +179,62 @@ data class Resolver(
 
     fun resolveExample(example: List<String?>?, pattern: Pattern): JSONArrayValue? {
         return defaultExampleResolver.resolveExample(example, pattern, this)
+    }
+
+    fun generateHttpRequests(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): List<Pattern> {
+        // TODO generate value outside
+        return if(this.generativeTestingEnabled) {
+            val requestsFromFlattenedRow: List<Pattern> =
+                this.withCyclePrevention(body) { cyclePreventedResolver ->
+                    body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
+                }
+
+            if(requestsFromFlattenedRow.none { p -> p.encompasses(requestBodyAsIs, this, this, emptySet()) is Result.Success }) {
+                requestsFromFlattenedRow.plus(listOf(requestBodyAsIs))
+            } else {
+                requestsFromFlattenedRow
+            }
+        } else {
+            listOf(ExactValuePattern(value))
+        }
+    }
+
+    fun generateHttpRequests(body: Pattern, row: Row): List<Pattern> {
+        // TODO generate value outside
+        return if(this.generativeTestingEnabled) {
+            val vanilla = this.withCyclePrevention(body) { cyclePreventedResolver ->
+                body.newBasedOn(Row(), cyclePreventedResolver)
+            }
+            val fromExamples = this.withCyclePrevention(body) { cyclePreventedResolver ->
+                body.newBasedOn(row, cyclePreventedResolver)
+            }
+            val remainingVanilla = vanilla.filterNot { vanillaType ->
+                fromExamples.any { typeFromExamples ->
+                    vanillaType.encompasses(
+                        typeFromExamples,
+                        this,
+                        this
+                    ).isSuccess()
+                }
+            }
+
+            fromExamples.plus(remainingVanilla)
+        } else {
+            this.withCyclePrevention(body) { cyclePreventedResolver ->
+                body.newBasedOn(row, cyclePreventedResolver)
+            }
+        }
+
+    }
+
+    fun resolveRow(row: Row): Row {
+        return if(this.generativeTestingEnabled) Row() else row
+    }
+
+    fun generateKeySubLists(key: String, subList: List<String>): List<List<String>> {
+        return if(this.generativeTestingEnabled && isOptional(key)) {
+            listOf(subList, subList + key)
+        } else listOf(subList + key)
     }
 }
 

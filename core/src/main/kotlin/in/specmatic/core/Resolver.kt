@@ -35,7 +35,7 @@ data class Resolver(
     val parseStrategy: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = actualParse,
     val generativeTestingEnabled: Boolean = false,
     val cyclePreventionStack: List<Pattern> = listOf(),
-    val defaultExampleResolver: DefaultExampleResolver = if(Flags.schemaExampleDefaultEnabled()) UseDefaultExample() else DoNotUseDefaultExample()
+    val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample()
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)

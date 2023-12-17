@@ -1,5 +1,6 @@
 package `in`.specmatic.conversions
 
+import `in`.specmatic.DefaultStrategies
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.JSONObjectValue
@@ -54,7 +55,7 @@ class GenerativeTests {
         val statusesSeen = mutableSetOf<String>()
 
         try {
-            feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
+            feature.copy(generativeTestingEnabled = true, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
                     println(body.toStringLiteral())
@@ -282,7 +283,7 @@ class GenerativeTests {
                 System.setProperty(Flags.onlyPositive, "true")
             }
 
-            return feature.copy(generativeTestingEnabled = generative).executeTests(object : TestExecutor {
+            return feature.copy(generativeTestingEnabled = generative, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     println(request.toLogString())
                     return HttpResponse.OK

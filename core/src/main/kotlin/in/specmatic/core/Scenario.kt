@@ -270,8 +270,7 @@ data class Scenario(
         val resolver =
             Resolver(expectedFacts, false, patterns)
             .copy(
-                mismatchMessages = ContractAndRowValueMismatch,
-                generativeTestingEnabled = generativeTestingEnabled
+                mismatchMessages = ContractAndRowValueMismatch
             ).let { resolverStrategies.update(it) }
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)

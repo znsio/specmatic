@@ -33,9 +33,9 @@ data class Resolver(
     val isNegative: Boolean = false,
     val patternMatchStrategy: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = actualMatch,
     val parseStrategy: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = actualParse,
-    val generativeTestingEnabled: Boolean = false,
     val cyclePreventionStack: List<Pattern> = listOf(),
-    val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample()
+    val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample(),
+    val generation: GenerationStrategies = NonGenerativeTests()
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -159,15 +159,9 @@ data class Resolver(
         return this.copy(patternMatchStrategy = matchAnything, parseStrategy = alwaysReturnStringValue)
     }
 
-    fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): List<Pattern> =
-        // TODO generate value outside
-        if(generativeTestingEnabled) {
-            withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-                pattern.newBasedOn(Row(), cyclePreventedResolver)
-            } ?: emptyList()
-        } else {
-            emptyList()
-        }
+    fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): List<Pattern> {
+        return generation.generatedPatternsForGenerativeTests(this, pattern, key)
+    }
 
     fun resolveExample(example: String?, pattern: Pattern): Value? {
         return defaultExampleResolver.resolveExample(example, pattern, this)
@@ -182,59 +176,19 @@ data class Resolver(
     }
 
     fun generateHttpRequests(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): List<Pattern> {
-        // TODO generate value outside
-        return if(this.generativeTestingEnabled) {
-            val requestsFromFlattenedRow: List<Pattern> =
-                this.withCyclePrevention(body) { cyclePreventedResolver ->
-                    body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
-                }
-
-            if(requestsFromFlattenedRow.none { p -> p.encompasses(requestBodyAsIs, this, this, emptySet()) is Result.Success }) {
-                requestsFromFlattenedRow.plus(listOf(requestBodyAsIs))
-            } else {
-                requestsFromFlattenedRow
-            }
-        } else {
-            listOf(ExactValuePattern(value))
-        }
+        return generation.generateHttpRequests(this, body, row, requestBodyAsIs, value)
     }
 
     fun generateHttpRequests(body: Pattern, row: Row): List<Pattern> {
-        // TODO generate value outside
-        return if(this.generativeTestingEnabled) {
-            val vanilla = this.withCyclePrevention(body) { cyclePreventedResolver ->
-                body.newBasedOn(Row(), cyclePreventedResolver)
-            }
-            val fromExamples = this.withCyclePrevention(body) { cyclePreventedResolver ->
-                body.newBasedOn(row, cyclePreventedResolver)
-            }
-            val remainingVanilla = vanilla.filterNot { vanillaType ->
-                fromExamples.any { typeFromExamples ->
-                    vanillaType.encompasses(
-                        typeFromExamples,
-                        this,
-                        this
-                    ).isSuccess()
-                }
-            }
-
-            fromExamples.plus(remainingVanilla)
-        } else {
-            this.withCyclePrevention(body) { cyclePreventedResolver ->
-                body.newBasedOn(row, cyclePreventedResolver)
-            }
-        }
-
+        return generation.generateHttpRequests(this, body, row)
     }
 
     fun resolveRow(row: Row): Row {
-        return if(this.generativeTestingEnabled) Row() else row
+        return generation.resolveRow(this, row)
     }
 
     fun generateKeySubLists(key: String, subList: List<String>): List<List<String>> {
-        return if(this.generativeTestingEnabled && isOptional(key)) {
-            listOf(subList, subList + key)
-        } else listOf(subList + key)
+        return generation.generateKeySubLists(this, key, subList)
     }
 }
 

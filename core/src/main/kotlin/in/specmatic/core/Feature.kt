@@ -30,17 +30,6 @@ import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
 import java.net.URI
 
-class BadRequestOrDefault(private val badRequestResponses: Map<Int, HttpResponsePattern>, private val defaultResponse: HttpResponsePattern?) {
-    fun matches(httpResponse: HttpResponse, resolver: Resolver): Result =
-        when(httpResponse.status) {
-            in badRequestResponses -> badRequestResponses.getValue(httpResponse.status).matches(httpResponse, resolver)
-            else -> defaultResponse?.matches(httpResponse, resolver)?.partialSuccess("The response matched the default response, but the contract should declare a ${httpResponse.status} response.") ?: Result.Failure("Neither is the status code declared nor is there a default response.")
-        }
-
-    fun supports(httpStatus: Int): Boolean =
-        httpStatus in badRequestResponses || defaultResponse != null
-}
-
 fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null): Feature {
     return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration)
 }
@@ -77,12 +66,6 @@ fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""
     val gherkinDocument = parseGherkinString(gherkinData, sourceFilePath)
     val (name, scenarios) = lex(gherkinDocument, sourceFilePath)
     return Feature(scenarios = scenarios, name = name, path = sourceFilePath)
-}
-
-class ResponseBuilder(val scenario: Scenario, val serverState: Map<String, Value>) {
-    fun build(): HttpResponse {
-        return scenario.generateHttpResponse(serverState)
-    }
 }
 
 data class Feature(

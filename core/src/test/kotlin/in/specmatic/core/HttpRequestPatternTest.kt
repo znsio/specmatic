@@ -423,7 +423,7 @@ internal class HttpRequestPatternTest {
         val pattern = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("http://helloworld.com/data"), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
 
         val row = Row(listOf("(REQUEST-BODY)"), listOf("""{ "id": 10 }"""))
-        val patterns = pattern.newBasedOn(row, Resolver(generativeTestingEnabled = true))
+        val patterns = pattern.newBasedOn(row, Resolver(generation = GenerativeTestsEnabled()))
 
         assertThat(patterns).hasSize(1)
     }

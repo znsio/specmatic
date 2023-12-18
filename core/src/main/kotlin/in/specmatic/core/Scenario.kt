@@ -281,26 +281,11 @@ data class Scenario(
                     false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
                     else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
                 }.map { newHttpRequestPattern ->
-                    Scenario(
-                        name,
-                        newHttpRequestPattern,
-                        httpResponsePattern,
-                        newExpectedServerState,
-                        examples,
-                        patterns,
-                        fixtures,
-                        ignoreFailure,
-                        references,
-                        bindings,
-                        isGherkinScenario,
-                        isNegative,
-                        badRequestOrDefault,
-                        row.name,
-                        sourceProvider = sourceProvider,
-                        sourceRepository = sourceRepository,
-                        sourceRepositoryBranch = sourceRepositoryBranch,
-                        specification = specification,
-                        serviceType = serviceType
+                    this.copy(
+                        httpRequestPattern = newHttpRequestPattern,
+                        expectedFacts = newExpectedServerState,
+                        ignoreFailure = ignoreFailure,
+                        exampleName = row.name
                     )
                 }
             }
@@ -313,22 +298,9 @@ data class Scenario(
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
         return httpRequestPattern.newBasedOn(resolver).map { newHttpRequestPattern ->
-            Scenario(
-                name,
-                newHttpRequestPattern,
-                httpResponsePattern,
-                newExpectedServerState,
-                examples,
-                patterns,
-                fixtures,
-                ignoreFailure,
-                references,
-                bindings,
-                sourceProvider = sourceProvider,
-                sourceRepository = sourceRepository,
-                sourceRepositoryBranch = sourceRepositoryBranch,
-                specification = specification,
-                serviceType = serviceType
+            this.copy(
+                httpRequestPattern = newHttpRequestPattern,
+                expectedFacts = newExpectedServerState
             )
         }
     }
@@ -471,54 +443,23 @@ data class Scenario(
         return "$generativePrefix Scenario: $method $path -> $responseStatus$exampleIdentifier"
     }
 
-    fun newBasedOn(scenario: Scenario): Scenario =
-        Scenario(
-            this.name,
-            this.httpRequestPattern,
-            this.httpResponsePattern,
-            this.expectedFacts,
-            scenario.examples,
-            this.patterns,
-            this.fixtures,
-            this.ignoreFailure,
-            scenario.references,
-            bindings,
-            isGherkinScenario,
-            isNegative,
-            sourceProvider = sourceProvider,
-            sourceRepository = sourceRepository,
-            sourceRepositoryBranch = sourceRepositoryBranch,
-            specification = specification,
-            serviceType = serviceType,
-            generativePrefix = this.generativePrefix
+    fun newBasedOn(scenario: Scenario): Scenario {
+        return this.copy(
+            examples = scenario.examples,
+            references = scenario.references
         )
+    }
 
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
-    fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?) = Scenario(
-        this.name,
-        this.httpRequestPattern,
-        this.httpResponsePattern,
-        this.expectedFacts,
-        this.examples,
-        this.patterns,
-        this.fixtures,
-        this.ignoreFailure,
-        this.references,
-        bindings,
-        this.isGherkinScenario,
-        isNegative = true,
-        badRequestOrDefault,
-        exampleName,
-        sourceProvider = sourceProvider,
-        sourceRepository = sourceRepository,
-        sourceRepositoryBranch = sourceRepositoryBranch,
-        specification = specification,
-        serviceType = serviceType,
-        generativePrefix = this.generativePrefix
-    )
+    fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {
+        return this.copy(
+            isNegative = true,
+            badRequestOrDefault = badRequestOrDefault
+        )
+    }
 }
 
 fun newExpectedServerStateBasedOn(

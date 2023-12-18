@@ -6,7 +6,6 @@ import `in`.specmatic.core.*
 class ScenarioTest(
     val scenario: Scenario,
     private val resolverStrategies: ResolverStrategies,
-    private val generativeTestingEnabled: Boolean = false,
     private val sourceProvider: String? = null,
     private val sourceRepository: String? = null,
     private val sourceRepositoryBranch: String? = null,
@@ -22,7 +21,7 @@ class ScenarioTest(
         testVariables: Map<String, String>,
         testBaseURLs: Map<String, String>
     ): List<ContractTest> {
-        return scenario.generateContractTests(resolverStrategies, testVariables, testBaseURLs, generativeTestingEnabled)
+        return scenario.generateContractTests(resolverStrategies, testVariables, testBaseURLs)
     }
 
     override fun testDescription(): String {

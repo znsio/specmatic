@@ -17,6 +17,8 @@ interface GenerationStrategies {
     fun generateHttpRequests(resolver: Resolver, body: Pattern, row: Row): List<Pattern>
     fun resolveRow(resolver: Resolver, row: Row): Row
     fun generateKeySubLists(resolver: Resolver, key: String, subList: List<String>): List<List<String>>
+    fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario>
+    fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario>
 }
 
 class GenerativeTestsEnabled : GenerationStrategies {
@@ -75,6 +77,14 @@ class GenerativeTestsEnabled : GenerationStrategies {
         } else
             listOf(subList + key)
     }
+
+    override fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
+        return feature.positiveTestScenarios(suggestions)
+    }
+
+    override fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
+        return feature.negativeTestScenariosUnlessDisabled()
+    }
 }
 
 class NonGenerativeTests : GenerationStrategies {
@@ -101,5 +111,13 @@ class NonGenerativeTests : GenerationStrategies {
 
     override fun generateKeySubLists(resolver: Resolver, key: String, subList: List<String>): List<List<String>> {
         return listOf(subList + key)
+    }
+
+    override fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
+        return feature.positiveTestScenarios(suggestions)
+    }
+
+    override fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
+        return emptyList()
     }
 }

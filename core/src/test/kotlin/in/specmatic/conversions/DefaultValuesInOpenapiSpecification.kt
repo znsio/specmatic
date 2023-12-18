@@ -92,10 +92,7 @@ class DefaultValuesInOpenapiSpecification {
             """.trimIndent(), ""
             ).toFeature()
 
-            val withGenerativeTestsEnabled = specification.copy(
-                generativeTestingEnabled = true,
-                resolverStrategies = specification.resolverStrategies.copy(generation = GenerativeTestsEnabled())
-            )
+            val withGenerativeTestsEnabled = specification.enableGenerativeTesting()
 
             val testTypes = mutableListOf<String>()
 
@@ -263,10 +260,7 @@ class DefaultValuesInOpenapiSpecification {
             """.trimIndent(), ""
             ).toFeature()
 
-            val withGenerativeTestsEnabled = specification.copy(
-                generativeTestingEnabled = true,
-                resolverStrategies = specification.resolverStrategies.copy(generation = GenerativeTestsEnabled())
-            )
+            val withGenerativeTestsEnabled = specification.enableGenerativeTesting()
 
             val testTypes = mutableListOf<String>()
 

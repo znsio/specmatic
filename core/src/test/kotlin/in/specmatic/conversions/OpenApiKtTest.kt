@@ -402,7 +402,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.copy(generativeTestingEnabled = true).executeTests(
+        val results = feature.enableGenerativeTesting().executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["${request.path} executed"] = true
@@ -458,7 +458,7 @@ Background:
         val results = try {
             System.setProperty(Flags.negativeTestingFlag, "true")
 
-            feature.copy(generativeTestingEnabled = true, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(
+            feature.enableGenerativeTesting().executeTests(
                 object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         flags["${request.path} executed"] = true
@@ -510,7 +510,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.copy(generativeTestingEnabled = true).executeTests(
+        val results = feature.enableGenerativeTesting().executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     flags["${request.path} executed"] = true
@@ -1397,7 +1397,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = feature.copy(generativeTestingEnabled = false).executeTests(
+        val results = feature.enableGenerativeTesting().executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val flagKey = "${request.path} ${request.method} executed"
@@ -1748,7 +1748,7 @@ Scenario: zero should return not found
 
         val queryParameters: MutableList<Map<String, String>> = mutableListOf()
 
-        val results = feature.copy(generativeTestingEnabled = true).executeTests(
+        val results = feature.enableGenerativeTesting().executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     queryParameters.add(request.queryParams)
@@ -1811,7 +1811,7 @@ Scenario: zero should return not found
         try {
             System.setProperty(Flags.negativeTestingFlag, "true")
 
-            val results: Results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
+            val results: Results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
                     if (jsonBody.jsonObject["id"]?.toStringLiteral()?.toIntOrNull() != null)
@@ -2290,7 +2290,7 @@ components:
         try {
             System.setProperty(Flags.negativeTestingFlag, "true")
 
-            val results: Results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
+            val results: Results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val jsonBody = request.body as JSONObjectValue
                     if (jsonBody.jsonObject["id"]?.toStringLiteral()?.toIntOrNull() != null)

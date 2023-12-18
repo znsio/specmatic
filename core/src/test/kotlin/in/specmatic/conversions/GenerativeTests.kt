@@ -1,10 +1,8 @@
 package `in`.specmatic.conversions
 
-import `in`.specmatic.DefaultStrategies
 import `in`.specmatic.GENERATION
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.*
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions
@@ -60,10 +58,7 @@ class GenerativeTests {
         val statusesSeen = mutableSetOf<String>()
 
         try {
-            feature.copy(
-                generativeTestingEnabled = true,
-                resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())
-            ).executeTests(object : TestExecutor {
+            feature.enableGenerativeTesting().executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
                     println(body.toStringLiteral())
@@ -323,10 +318,7 @@ class GenerativeTests {
 
         try {
             System.setProperty(Flags.onlyPositive, "true")
-            val results = feature.copy(
-                generativeTestingEnabled = true,
-                resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())
-            ).executeTests(object : TestExecutor {
+            val results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
                     println(body.toStringLiteral())
@@ -433,10 +425,7 @@ class GenerativeTests {
         val buildingValuesSeen = mutableSetOf<String>()
 
         try {
-            val results = feature.copy(
-                generativeTestingEnabled = true,
-                resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())
-            ).executeTests(object : TestExecutor {
+            val results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
                     val personBuilding = body.findFirstChildByPath("person.address.building")!!
@@ -536,10 +525,7 @@ class GenerativeTests {
 
         val requestBodiesSeen = mutableListOf<Value>()
 
-        val results = specification.copy(
-            generativeTestingEnabled = true,
-            resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())
-        ).executeTests(object : TestExecutor {
+        val results = specification.enableGenerativeTesting().executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 println(request.body)
                 requestBodiesSeen.add(request.body)
@@ -606,12 +592,7 @@ class GenerativeTests {
 
             val seenRequestBodies = mutableListOf<Value>()
 
-            val updatedFeature = feature.copy(
-                generativeTestingEnabled = true,
-                resolverStrategies = feature.resolverStrategies.copy(
-                    generation = GenerativeTestsEnabled()
-                )
-            )
+            val updatedFeature = feature.enableGenerativeTesting()
 
             val results = updatedFeature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
@@ -641,10 +622,7 @@ class GenerativeTests {
                 System.setProperty(Flags.onlyPositive, "true")
             }
 
-            return feature.copy(
-                generativeTestingEnabled = generative,
-                resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())
-            ).executeTests(object : TestExecutor {
+            return feature.enableGenerativeTesting().executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     println(request.toLogString())
                     return HttpResponse.OK

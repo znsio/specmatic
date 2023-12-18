@@ -75,7 +75,6 @@ data class Feature(
     val testVariables: Map<String, String> = emptyMap(),
     val testBaseURLs: Map<String, String> = emptyMap(),
     val path: String = "",
-    val generativeTestingEnabled: Boolean = Flags.generativeTestingEnabled(),
     val sourceProvider:String? = null,
     val sourceRepository:String? = null,
     val sourceRepositoryBranch:String? = null,
@@ -84,6 +83,14 @@ data class Feature(
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val resolverStrategies: ResolverStrategies = StrategiesFromFlags
 ) {
+    fun enableGenerativeTesting(): Feature {
+        return this.copy(resolverStrategies = this.resolverStrategies.copy(generation = GenerativeTestsEnabled()))
+    }
+
+    fun enableSchemaExampleDefault(): Feature {
+        return this.copy(resolverStrategies = this.resolverStrategies.copy(defaultExampleResolver = UseDefaultExample()))
+    }
+
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
             val resultList = lookupScenario(httpRequest, scenarios)
@@ -278,7 +285,8 @@ data class Feature(
 
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
         generateContractTestScenarios(suggestions).map {
-            ScenarioTest(it, resolverStrategies, generativeTestingEnabled, it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
+            ScenarioTest(it, resolverStrategies,
+                it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
         }
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
@@ -299,24 +307,23 @@ data class Feature(
     }
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
-        return if (generativeTestingEnabled)
-            positiveTestScenarios(suggestions, resolverStrategies) + negativeTestScenariosUnlessDisabled()
-        else
-            positiveTestScenarios(suggestions, resolverStrategies)
+        return resolverStrategies.generation.let {
+            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this, suggestions)
+        }
     }
 
-    private fun negativeTestScenariosUnlessDisabled(): List<Scenario> {
+    fun negativeTestScenariosUnlessDisabled(): List<Scenario> {
         return if (Flags.onlyPositive())
             emptyList()
         else
             negativeTestScenarios()
     }
 
-    fun positiveTestScenarios(suggestions: List<Scenario>, resolverStrategies: ResolverStrategies) =
+    fun positiveTestScenarios(suggestions: List<Scenario>) =
         scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap {
-            it.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs, generativeTestingEnabled)
+            it.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
         }
 
     fun negativeTestScenarios() =
@@ -325,7 +332,7 @@ data class Feature(
         }.flatMap { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
 
-            val negativeTestScenarios = negativeScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs, true)
+            val negativeTestScenarios = negativeScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
 
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)

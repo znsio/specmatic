@@ -50,7 +50,6 @@ data class Scenario(
     val isNegative: Boolean = false,
     val badRequestOrDefault: BadRequestOrDefault? = null,
     val exampleName: String? = null,
-    val generativeTestingEnabled: Boolean = false,
     val generatedFromExamples: Boolean = examples.isNotEmpty(),
     val sourceProvider:String? = null,
     val sourceRepository:String? = null,
@@ -266,7 +265,7 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false, resolverStrategies: ResolverStrategies): List<Scenario> {
+    private fun newBasedOn(row: Row, resolverStrategies: ResolverStrategies): List<Scenario> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver =
             Resolver(expectedFacts, false, patterns)
@@ -297,7 +296,6 @@ data class Scenario(
                         isNegative,
                         badRequestOrDefault,
                         row.name,
-                        generativeTestingEnabled,
                         sourceProvider = sourceProvider,
                         sourceRepository = sourceRepository,
                         sourceRepositoryBranch = sourceRepositoryBranch,
@@ -339,7 +337,6 @@ data class Scenario(
         resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-        enableGenerativeTesting: Boolean = false,
     ): List<Scenario> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -354,7 +351,7 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOn(row, enableGenerativeTesting, resolverStrategies)
+                newBasedOn(row, resolverStrategies)
             }.map {
                 it.copy(generativePrefix = resolverStrategies.generation.positivePrefix)
             }
@@ -365,7 +362,6 @@ data class Scenario(
         resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-        generativeTestingEnabled: Boolean = false,
     ): List<ContractTest> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -381,7 +377,7 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 try {
-                    newBasedOn(row, generativeTestingEnabled, resolverStrategies).map { ScenarioTest(it, resolverStrategies, generativeTestingEnabled) }
+                    newBasedOn(row, resolverStrategies).map { ScenarioTest(it, resolverStrategies) }
                 } catch (e: Throwable) {
                     listOf(ScenarioTestGenerationFailure(this, e))
                 }
@@ -516,7 +512,6 @@ data class Scenario(
         isNegative = true,
         badRequestOrDefault,
         exampleName,
-        generativeTestingEnabled,
         sourceProvider = sourceProvider,
         sourceRepository = sourceRepository,
         sourceRepositoryBranch = sourceRepositoryBranch,

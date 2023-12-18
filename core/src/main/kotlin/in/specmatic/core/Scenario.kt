@@ -56,7 +56,8 @@ data class Scenario(
     val sourceRepository:String? = null,
     val sourceRepositoryBranch:String? = null,
     val specification:String? = null,
-    val serviceType:String? = null
+    val serviceType:String? = null,
+    val generativePrefix: String = ""
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -354,6 +355,8 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 newBasedOn(row, enableGenerativeTesting, resolverStrategies)
+            }.map {
+                it.copy(generativePrefix = resolverStrategies.generation.positivePrefix)
             }
         }
     }
@@ -467,10 +470,7 @@ data class Scenario(
         val responseStatus = this.httpResponsePattern.status
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | EX:${exampleName.trim()}" }
 
-        val generativePrefix = if(this.generativeTestingEnabled)
-            if(this.isNegative) "-ve " else "+ve "
-        else
-            ""
+        val generativePrefix = this.generativePrefix
 
         return "$generativePrefix Scenario: $method $path -> $responseStatus$exampleIdentifier"
     }
@@ -493,7 +493,8 @@ data class Scenario(
             sourceRepository = sourceRepository,
             sourceRepositoryBranch = sourceRepositoryBranch,
             specification = specification,
-            serviceType = serviceType
+            serviceType = serviceType,
+            generativePrefix = this.generativePrefix
         )
 
     fun newBasedOn(suggestions: List<Scenario>) =
@@ -520,7 +521,8 @@ data class Scenario(
         sourceRepository = sourceRepository,
         sourceRepositoryBranch = sourceRepositoryBranch,
         specification = specification,
-        serviceType = serviceType
+        serviceType = serviceType,
+        generativePrefix = this.generativePrefix
     )
 }
 

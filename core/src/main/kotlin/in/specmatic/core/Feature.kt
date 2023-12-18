@@ -322,16 +322,16 @@ data class Feature(
     fun negativeTestScenarios() =
         scenarios.filter {
             it.isA2xxScenario()
-        }.map { scenario ->
+        }.flatMap { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
+
             val negativeTestScenarios = negativeScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs, true)
 
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
                 scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
-            }
-
-        }.flatten()
+            }.map { it.copy(generativePrefix = resolverStrategies.generation.negativePrefix) }
+        }
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->

@@ -120,7 +120,7 @@ paths:
                     type: integer
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true, resolverStrategies = contract.resolverStrategies.copy(generation = GenerativeTestsEnabled())).generateContractTestScenarios(emptyList())
 
         assertThat(scenarios.map { it.testDescription() }).allSatisfy {
             assertThat(it).containsAnyOf("+ve", "-ve")
@@ -1247,7 +1247,7 @@ paths:
                     type: string
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true, resolverStrategies = contract.resolverStrategies.copy(generation = GenerativeTestsEnabled())).generateContractTestScenarios(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
         assertThat(negativeTestScenarios.count()).isEqualTo(2)
         val headerPattern = negativeTestScenarios.first().httpRequestPattern.headersPattern.pattern
@@ -1381,7 +1381,7 @@ paths:
                     type: string
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true, resolverStrategies = contract.resolverStrategies.copy(generation = GenerativeTestsEnabled())).generateContractTestScenarios(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
         assertThat(negativeTestScenarios.count()).isEqualTo(10)
     }

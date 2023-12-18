@@ -1,6 +1,7 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.DefaultStrategies
+import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.JSONObjectValue
@@ -10,8 +11,10 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
+@Tag(GENERATIVE)
 class GenerativeTests {
     @Test
     fun `generative tests for enums when an example is provided`() {

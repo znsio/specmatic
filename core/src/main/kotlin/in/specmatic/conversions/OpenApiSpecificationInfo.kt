@@ -24,17 +24,19 @@ class OpenApiSpecificationInfo(private val openApiFilePath: String, private val 
             }
         }.flatten().toList().let { info.append("No of API Operations: ${it.size}\n") }
 
-        val components = parsedOpenApi.components
-        info.append("API Components:\n")
-        info.append("  Schemas: ${components.schemas?.keys}\n")
-        info.append("  Responses: ${components.responses?.keys}\n")
-        info.append("  Parameters: ${components.parameters?.keys}\n")
-        info.append("  Examples: ${components.examples?.keys}\n")
-        info.append("  Request Bodies: ${components.requestBodies?.keys}\n")
-        info.append("  Headers: ${components.headers?.keys}\n")
-        info.append("  Security Schemes: ${components.securitySchemes?.keys}\n")
-        info.append("  Links: ${components.links?.keys}\n")
-        info.append("  Callbacks: ${components.callbacks?.keys}\n")
+        val components = parsedOpenApi.components?.let {
+            info.append("API Components:\n")
+            info.append("  Schemas: ${it.schemas?.keys}\n")
+            info.append("  Responses: ${it.responses?.keys}\n")
+            info.append("  Parameters: ${it.parameters?.keys}\n")
+            info.append("  Examples: ${it.examples?.keys}\n")
+            info.append("  Request Bodies: ${it.requestBodies?.keys}\n")
+            info.append("  Headers: ${it.headers?.keys}\n")
+            info.append("  Security Schemes: ${it.securitySchemes?.keys}\n")
+            info.append("  Links: ${it.links?.keys}\n")
+            info.append("  Callbacks: ${it.callbacks?.keys}\n")
+        }
+
         info.append("========================================\n")
 
         return info.toString()

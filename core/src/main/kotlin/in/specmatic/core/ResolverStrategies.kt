@@ -16,3 +16,8 @@ val StrategiesFromFlags = ResolverStrategies(
     defaultExampleResolver = if(Flags.schemaExampleDefaultEnabled()) UseDefaultExample() else DoNotUseDefaultExample(),
     generation = if(Flags.generativeTestingEnabled()) GenerativeTestsEnabled() else NonGenerativeTests()
 )
+
+val DefaultStrategies = ResolverStrategies (
+    DoNotUseDefaultExample(),
+    NonGenerativeTests()
+)

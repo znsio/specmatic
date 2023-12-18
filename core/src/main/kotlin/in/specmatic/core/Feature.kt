@@ -184,7 +184,7 @@ data class Feature(
         val testScenarios = generateContractTestScenarios(suggestions)
 
         return testScenarios.fold(Results()) { results, scenario ->
-            Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
+            Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)).toMutableList())
         }
     }
 
@@ -196,7 +196,7 @@ data class Feature(
         generateContractTestScenarios(suggestions)
             .filter { scenarioNames.contains(it.name) }
             .fold(Results()) { results, scenario ->
-                Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
+                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)).toMutableList())
             }
 
     fun setServerState(serverState: Map<String, Value>) {

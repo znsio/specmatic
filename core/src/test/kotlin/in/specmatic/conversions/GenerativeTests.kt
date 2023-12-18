@@ -4,6 +4,7 @@ import `in`.specmatic.DefaultStrategies
 import `in`.specmatic.GENERATION
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.*
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions
@@ -15,7 +16,8 @@ import org.junit.jupiter.api.Test
 class GenerativeTests {
     @Test
     fun `generative tests for enums when an example is provided`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -52,12 +54,16 @@ class GenerativeTests {
                             CREATE_PERSON:
                               value:
                                 "Person record created"
-            """.trimIndent(), "").toFeature()
+            """.trimIndent(), ""
+        ).toFeature()
 
         val statusesSeen = mutableSetOf<String>()
 
         try {
-            feature.copy(generativeTestingEnabled = true, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(object : TestExecutor {
+            feature.copy(
+                generativeTestingEnabled = true,
+                resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())
+            ).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
                     println(body.toStringLiteral())
@@ -82,7 +88,8 @@ class GenerativeTests {
 
     @Test
     fun `generative tests for an optional key given a payload example without the optional key`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -118,7 +125,8 @@ class GenerativeTests {
                             CREATE_PERSON:
                               value:
                                 "Person record created"
-            """.trimIndent(), "").toFeature()
+            """.trimIndent(), ""
+        ).toFeature()
 
         val fromExample = 1
         val positiveGenerated = 1
@@ -129,10 +137,11 @@ class GenerativeTests {
         try {
             val results = runGenerativeTests(feature)
 
-            val expectedCountOfTests = fromExample + positiveGenerated + negativeGenerativeAll + negativeGenerativeNothing
+            val expectedCountOfTests =
+                fromExample + positiveGenerated + negativeGenerativeAll + negativeGenerativeNothing
 
             assertThat(results.results).hasSize(expectedCountOfTests)
-        } catch(e: ContractException) {
+        } catch (e: ContractException) {
             println(e.report())
 
             throw e
@@ -141,7 +150,8 @@ class GenerativeTests {
 
     @Test
     fun `generative tests for headers`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -189,12 +199,13 @@ class GenerativeTests {
                             CREATE_PERSON:
                               value:
                                 id: 123
-            """.trimIndent(), "").toFeature()
+            """.trimIndent(), ""
+        ).toFeature()
 
         try {
             val results = runGenerativeTests(feature)
             assertThat(results.results).hasSize(6)
-        } catch(e: ContractException) {
+        } catch (e: ContractException) {
             println(e.report())
             throw e
         }
@@ -202,7 +213,8 @@ class GenerativeTests {
 
     @Test
     fun `generative tests for headers that are optional`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -249,12 +261,13 @@ class GenerativeTests {
                             CREATE_PERSON:
                               value:
                                 id: 123
-            """.trimIndent(), "").toFeature()
+            """.trimIndent(), ""
+        ).toFeature()
 
         try {
             val results = runGenerativeTests(feature)
             assertThat(results.results).hasSize(7)
-        } catch(e: ContractException) {
+        } catch (e: ContractException) {
             println(e.report())
             throw e
         }
@@ -303,18 +316,22 @@ class GenerativeTests {
                           examples:
                             SUCCESS:
                               value: OK
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         val statusValuesSeen = mutableSetOf<String>()
 
         try {
             System.setProperty(Flags.onlyPositive, "true")
-            val results = feature.copy(generativeTestingEnabled = true, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(object : TestExecutor {
+            val results = feature.copy(
+                generativeTestingEnabled = true,
+                resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())
+            ).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
                     println(body.toStringLiteral())
                     statusValuesSeen.add(body.findFirstChildByPath("status")!!.toStringLiteral() + " in body")
-                    statusValuesSeen.add(request.headers["status"]?.let { "$it in headers" } ?: "status not in headers" )
+                    statusValuesSeen.add(request.headers["status"]?.let { "$it in headers" } ?: "status not in headers")
 
                     return HttpResponse.OK("OK")
                 }
@@ -323,14 +340,18 @@ class GenerativeTests {
                 }
             })
 
-            if(results.failureCount > 0)
+            if (results.failureCount > 0)
                 println(results.report())
 
             assertThat(results.failureCount).isEqualTo(0)
             assertThat(results.successCount).isGreaterThan(0)
 
-            assertThat(statusValuesSeen).containsExactlyInAnyOrder("true in headers", "status not in headers", "success in body")
-        } catch(e: ContractException) {
+            assertThat(statusValuesSeen).containsExactlyInAnyOrder(
+                "true in headers",
+                "status not in headers",
+                "success in body"
+            )
+        } catch (e: ContractException) {
             Assertions.fail("Should not have got this error:\n${e.report()}")
         } finally {
             System.clearProperty(Flags.onlyPositive)
@@ -406,17 +427,21 @@ class GenerativeTests {
                         text/plain:
                           schema:
                             type: string
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         val buildingValuesSeen = mutableSetOf<String>()
 
         try {
-            val results = feature.copy(generativeTestingEnabled = true, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(object : TestExecutor {
+            val results = feature.copy(
+                generativeTestingEnabled = true,
+                resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())
+            ).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
                     val personBuilding = body.findFirstChildByPath("person.address.building")!!
 
-                    if(personBuilding is NullValue)
+                    if (personBuilding is NullValue)
                         buildingValuesSeen.add("null in person.address.building")
                     else if (personBuilding is NumberValue)
                         buildingValuesSeen.add("Value ${personBuilding.toStringLiteral()} in person.address.building")
@@ -425,15 +450,16 @@ class GenerativeTests {
 
                     val companyBuilding = body.findFirstChildByPath("company.address.building")!!
 
-                    if(companyBuilding is NullValue)
+                    if (companyBuilding is NullValue)
                         buildingValuesSeen.add("null in company.address.building")
-                    else if(companyBuilding is StringValue)
+                    else if (companyBuilding is StringValue)
                         buildingValuesSeen.add("Value ${companyBuilding.toStringLiteral()} in company.address.building")
                     else
                         buildingValuesSeen.add("Value type ${companyBuilding.displayableType()} in company.address.building")
 
-                    if(body.findFirstChildByPath("person.address.building")!! !is NumberValue ||
-                        body.findFirstChildByPath("company.address.building")!! !is StringValue)
+                    if (body.findFirstChildByPath("person.address.building")!! !is NumberValue ||
+                        body.findFirstChildByPath("company.address.building")!! !is StringValue
+                    )
                         return HttpResponse.ERROR_400
 
                     return HttpResponse.OK("OK")
@@ -453,7 +479,7 @@ class GenerativeTests {
                 "Value type number in company.address.building",
                 "Value type boolean in company.address.building"
             )
-        } catch(e: ContractException) {
+        } catch (e: ContractException) {
             Assertions.fail("Should not have got this error:\n${e.report()}")
         }
     }
@@ -461,7 +487,8 @@ class GenerativeTests {
 
     @Test
     fun `generative positive-only tests with REQUEST-BODY example`() {
-        val specification = OpenApiSpecification.fromYAML("""
+        val specification = OpenApiSpecification.fromYAML(
+            """
             openapi: "3.0.1"
             info:
               title: "Person API"
@@ -504,11 +531,15 @@ class GenerativeTests {
                   properties:
                     street:
                       type: "string"
-        """, "").toFeature()
+        """, ""
+        ).toFeature()
 
         val requestBodiesSeen = mutableListOf<Value>()
 
-        val results = specification.copy(generativeTestingEnabled = true, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(object : TestExecutor {
+        val results = specification.copy(
+            generativeTestingEnabled = true,
+            resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())
+        ).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 println(request.body)
                 requestBodiesSeen.add(request.body)
@@ -523,13 +554,97 @@ class GenerativeTests {
         assertThat(requestBodiesSeen).hasSize(3)
     }
 
-    private fun runGenerativeTests(feature: Feature, generative: Boolean = true, onlyPositive: Boolean = false): Results {
+    @Test
+    fun `specification with 2 levels of depth having inline examples and only one of the keys optional`() {
+        try {
+            System.setProperty(Flags.schemaExampleDefault, "true")
+
+            val feature = OpenApiSpecification.fromYAML(
+                """
+            openapi: 3.0.0
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products:
+                post:
+                  summary: Create a new product
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - productDetails
+                          properties:
+                            productDetails:
+                              type: object
+                              required:
+                                - productId
+                              properties:
+                                productId:
+                                  type: string
+                                  example: 'product123'
+                            discountCoupons:
+                              type: array
+                              items:
+                                type: string
+                                example: 'coupon890'
+                  responses:
+                    '200':
+                      description: Product created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '400':
+                      description: Invalid request payload
+                    '500':
+                      description: Internal server error
+        """.trimIndent(), ""
+            ).toFeature()
+
+            val seenRequestBodies = mutableListOf<Value>()
+
+            val updatedFeature = feature.copy(
+                generativeTestingEnabled = true,
+                resolverStrategies = feature.resolverStrategies.copy(
+                    generation = GenerativeTestsEnabled()
+                )
+            )
+
+            val results = updatedFeature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.body)
+                    seenRequestBodies.add(request.body)
+
+                    return HttpResponse.OK("success")
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(results.results).hasSize(9)
+        } finally {
+            System.clearProperty(Flags.schemaExampleDefault)
+        }
+    }
+
+    private fun runGenerativeTests(
+        feature: Feature,
+        generative: Boolean = true,
+        onlyPositive: Boolean = false
+    ): Results {
         try {
             if (onlyPositive) {
                 System.setProperty(Flags.onlyPositive, "true")
             }
 
-            return feature.copy(generativeTestingEnabled = generative, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(object : TestExecutor {
+            return feature.copy(
+                generativeTestingEnabled = generative,
+                resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())
+            ).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     println(request.toLogString())
                     return HttpResponse.OK

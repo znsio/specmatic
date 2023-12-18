@@ -1,6 +1,6 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.GENERATIVE
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import org.assertj.core.api.Assertions.assertThat
@@ -168,7 +168,7 @@ internal class HttpHeadersPatternTest {
         assertThat(expectedHeaders.matches(actualHeaders, Resolver(findKeyErrorCheck = DefaultKeyCheck.disableOverrideUnexpectedKeycheck()))).isInstanceOf(Result.Failure::class.java)
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `should generate new header objects given an empty row`() {
         val headers = HttpHeadersPattern(mapOf("Content-Type" to stringToPattern("(string)", "Content-Type")))
@@ -176,7 +176,7 @@ internal class HttpHeadersPatternTest {
         assertEquals("(string)", newHeaders[0].pattern.getValue("Content-Type").toString())
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `should generate new header object with the value of the example in the given row`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
@@ -184,7 +184,7 @@ internal class HttpHeadersPatternTest {
         assertThat(newHeaders[0].pattern.getValue("X-TraceID")).isEqualTo(ExactValuePattern(StringValue("123")))
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `should generate two header object given one optional header and an empty row`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern(), "X-Identifier?" to StringPattern()))
@@ -196,7 +196,7 @@ internal class HttpHeadersPatternTest {
         )
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `should generate two header object given one optional header an example of the mandatory header`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern(), "X-Identifier?" to StringPattern()))
@@ -208,7 +208,7 @@ internal class HttpHeadersPatternTest {
         )
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `should generate one header object given one optional header an example of the optional header`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
@@ -216,7 +216,7 @@ internal class HttpHeadersPatternTest {
         assertThat(newHeaders[0].pattern.getValue("X-TraceID")).isEqualTo(ExactValuePattern(StringValue("123")))
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `should generate negative values for a string`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
@@ -225,7 +225,7 @@ internal class HttpHeadersPatternTest {
         assertThat(newHeaders).isEmpty()
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `should generate negative values for a number`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to NumberPattern()))
@@ -261,7 +261,7 @@ internal class HttpHeadersPatternTest {
         assertThat(pattern.matches(headers, Resolver())).isInstanceOf(Result.Success::class.java)
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `an optional header should result in 2 new header patterns for newBasedOn`() {
         val pattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))

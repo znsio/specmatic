@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATIVE
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.*
 import `in`.specmatic.core.value.JSONArrayValue
 import org.assertj.core.api.Assertions.assertThat
@@ -100,7 +100,7 @@ Feature: Recursive test
         }
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `negative pattern generation`() {
         val negativePatterns = ListPattern(StringPattern()).negativeBasedOn(Row(), Resolver())
@@ -109,7 +109,7 @@ Feature: Recursive test
         )
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `should generate a list of patterns each of which is a list pattern`() {
         val patterns = ListPattern(NumberPattern()).newBasedOn(Row(), Resolver())
@@ -119,7 +119,7 @@ Feature: Recursive test
         }
     }
 
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     @Test
     fun `should use the inline example for generation of values`() {
         val value = ListPattern(NumberPattern(), example = listOf("1", "2", "3")).generate(Resolver(defaultExampleResolver = UseDefaultExample()))

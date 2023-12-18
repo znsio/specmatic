@@ -149,7 +149,7 @@ val HttpRequest.jsonBody: JSONObjectValue
         return this.body as JSONObjectValue
     }
 
-const val GENERATIVE = "generative"
+const val GENERATION = "generation"
 
 infix fun <E> List<E>.shouldContainInAnyOrder(elementList: List<E>) {
     assertThat(this).containsExactlyInAnyOrderElementsOf(elementList)

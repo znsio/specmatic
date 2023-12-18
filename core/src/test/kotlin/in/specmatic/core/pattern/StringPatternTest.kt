@@ -1,7 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATIVE
-import `in`.specmatic.core.Flags
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.UseDefaultExample
 import `in`.specmatic.core.value.NullValue
@@ -132,7 +131,7 @@ internal class StringPatternTest {
     }
 
     @Test
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     fun `negative values should be generated`() {
         val result = StringPattern().negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(

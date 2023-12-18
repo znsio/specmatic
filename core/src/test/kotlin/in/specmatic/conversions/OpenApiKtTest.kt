@@ -455,9 +455,7 @@ Background:
         """.trimIndent(), sourceSpecPath
         )
 
-        val results = try {
-            System.setProperty(Flags.negativeTestingFlag, "true")
-
+        val results =
             feature.enableGenerativeTesting().executeTests(
                 object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
@@ -480,9 +478,6 @@ Background:
                     }
                 }
             )
-        } finally {
-            System.clearProperty(Flags.negativeTestingFlag)
-        }
 
         assertThat(results.results.size).isEqualTo(13)
         assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(5)
@@ -1026,7 +1021,6 @@ Background:
         assertThat(deserialized).isNotNull
     }
 
-    @Test
     @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
     fun `should validate and generate with polymorphic cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
@@ -1808,28 +1802,22 @@ Scenario: zero should return not found
 
         val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
 
-        try {
-            System.setProperty(Flags.negativeTestingFlag, "true")
+        val results: Results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonBody = request.body as JSONObjectValue
+                if (jsonBody.jsonObject["id"]?.toStringLiteral()?.toIntOrNull() != null)
+                    return HttpResponse(200, body = StringValue("it worked"))
 
-            val results: Results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val jsonBody = request.body as JSONObjectValue
-                    if (jsonBody.jsonObject["id"]?.toStringLiteral()?.toIntOrNull() != null)
-                        return HttpResponse(200, body = StringValue("it worked"))
+                return HttpResponse(400, body = parsedJSONObject("""{"data": "information"}"""))
+            }
 
-                    return HttpResponse(400, body = parsedJSONObject("""{"data": "information"}"""))
-                }
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
+        println(results.report())
 
-            println(results.report())
-
-            assertThat(results.success()).isTrue
-        } finally {
-            System.clearProperty(Flags.negativeTestingFlag)
-        }
+        assertThat(results.success()).isTrue
     }
 
     @Test
@@ -1959,25 +1947,21 @@ components:
 
         var contractInvalidValueReceived = false
 
-        try {
-            contract.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val jsonBody = request.body as JSONObjectValue
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonBody = request.body as JSONObjectValue
 
-                    if (jsonBody.jsonObject["name"] is NumberValue)
-                        contractInvalidValueReceived = true
+                if (jsonBody.jsonObject["name"] is NumberValue)
+                    contractInvalidValueReceived = true
 
-                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
-                }
+                return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
+            }
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
-            assertThat(contractInvalidValueReceived).isTrue
-        } finally {
-            System.clearProperty(Flags.negativeTestingFlag)
-        }
+        assertThat(contractInvalidValueReceived).isTrue
     }
 
     @Test
@@ -2078,25 +2062,21 @@ components:
 
         var contractInvalidValueReceived = false
 
-        try {
-            contract.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val dataHeaderValue: String? = request.headers["data"]
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val dataHeaderValue: String? = request.headers["data"]
 
-                    if (dataHeaderValue == "hello")
-                        contractInvalidValueReceived = true
+                if (dataHeaderValue == "hello")
+                    contractInvalidValueReceived = true
 
-                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
-                }
+                return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
+            }
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
-            assertThat(contractInvalidValueReceived).isTrue
-        } finally {
-            System.clearProperty(Flags.negativeTestingFlag)
-        }
+        assertThat(contractInvalidValueReceived).isTrue
     }
 
     @Test
@@ -2182,25 +2162,21 @@ components:
 
         var contractInvalidValueReceived = false
 
-        try {
-            contract.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val dataHeaderValue: String? = request.queryParams["data"]
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val dataHeaderValue: String? = request.queryParams["data"]
 
-                    if (dataHeaderValue == "hello")
-                        contractInvalidValueReceived = true
+                if (dataHeaderValue == "hello")
+                    contractInvalidValueReceived = true
 
-                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
-                }
+                return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
+            }
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
-            assertThat(contractInvalidValueReceived).isTrue
-        } finally {
-            System.clearProperty(Flags.negativeTestingFlag)
-        }
+        assertThat(contractInvalidValueReceived).isTrue
     }
 
     @Test
@@ -2287,28 +2263,22 @@ components:
 
         val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
 
-        try {
-            System.setProperty(Flags.negativeTestingFlag, "true")
+        val results: Results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonBody = request.body as JSONObjectValue
+                if (jsonBody.jsonObject["id"]?.toStringLiteral()?.toIntOrNull() != null)
+                    return HttpResponse(200, body = StringValue("it worked"))
 
-            val results: Results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val jsonBody = request.body as JSONObjectValue
-                    if (jsonBody.jsonObject["id"]?.toStringLiteral()?.toIntOrNull() != null)
-                        return HttpResponse(200, body = StringValue("it worked"))
+                return HttpResponse(400, body = parsedJSONObject("""{"error_in_400": "message"}"""))
+            }
 
-                    return HttpResponse(400, body = parsedJSONObject("""{"error_in_400": "message"}"""))
-                }
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
+        println(results.report())
 
-            println(results.report())
-
-            assertThat(results.success()).isTrue
-        } finally {
-            System.clearProperty(Flags.negativeTestingFlag)
-        }
+        assertThat(results.success()).isTrue
     }
 
     @Test

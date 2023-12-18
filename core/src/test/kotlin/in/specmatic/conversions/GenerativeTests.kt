@@ -542,74 +542,68 @@ class GenerativeTests {
 
     @Test
     fun `specification with 2 levels of depth having inline examples and only one of the keys optional`() {
-        try {
-            System.setProperty(Flags.schemaExampleDefault, "true")
-
-            val feature = OpenApiSpecification.fromYAML(
-                """
-            openapi: 3.0.0
-            info:
-              title: Product API
-              version: 1.0.0
-            paths:
-              /products:
-                post:
-                  summary: Create a new product
-                  requestBody:
-                    content:
-                      application/json:
-                        schema:
+        val feature = OpenApiSpecification.fromYAML(
+            """
+        openapi: 3.0.0
+        info:
+          title: Product API
+          version: 1.0.0
+        paths:
+          /products:
+            post:
+              summary: Create a new product
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      required:
+                        - productDetails
+                      properties:
+                        productDetails:
                           type: object
                           required:
-                            - productDetails
+                            - productId
                           properties:
-                            productDetails:
-                              type: object
-                              required:
-                                - productId
-                              properties:
-                                productId:
-                                  type: string
-                                  example: 'product123'
-                            discountCoupons:
-                              type: array
-                              items:
-                                type: string
-                                example: 'coupon890'
-                  responses:
-                    '200':
-                      description: Product created successfully
-                      content:
-                        text/plain:
-                          schema:
+                            productId:
+                              type: string
+                              example: 'product123'
+                        discountCoupons:
+                          type: array
+                          items:
                             type: string
-                    '400':
-                      description: Invalid request payload
-                    '500':
-                      description: Internal server error
-        """.trimIndent(), ""
-            ).toFeature()
+                            example: 'coupon890'
+              responses:
+                '200':
+                  description: Product created successfully
+                  content:
+                    text/plain:
+                      schema:
+                        type: string
+                '400':
+                  description: Invalid request payload
+                '500':
+                  description: Internal server error
+    """.trimIndent(), ""
+        ).toFeature()
 
-            val seenRequestBodies = mutableListOf<Value>()
+        val seenRequestBodies = mutableListOf<Value>()
 
-            val updatedFeature = feature.enableGenerativeTesting()
+        val updatedFeature = feature.enableGenerativeTesting().enableSchemaExampleDefault()
 
-            val results = updatedFeature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    println(request.body)
-                    seenRequestBodies.add(request.body)
+        val results = updatedFeature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.body)
+                seenRequestBodies.add(request.body)
 
-                    return HttpResponse.OK("success")
-                }
+                return HttpResponse.OK("success")
+            }
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
-            assertThat(results.results).hasSize(9)
-        } finally {
-            System.clearProperty(Flags.schemaExampleDefault)
-        }
+        assertThat(results.results).hasSize(9)
     }
 
     private fun runGenerativeTests(

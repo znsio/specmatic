@@ -10,7 +10,7 @@ import `in`.specmatic.core.value.ScalarValue
 const val DEREFERENCE_PREFIX = "$"
 const val FILENAME_PREFIX = "@"
 
-data class JSONObjectExample(val jsonObject: JSONComposite, val originalRow: Row) {
+data class JSONExample(val jsonObject: JSONComposite, val originalRow: Row) {
     fun containsKey(key: String): Boolean {
         return jsonObject.let {
             when(it) {
@@ -35,7 +35,7 @@ data class Row(
     val references: Map<String, References> = emptyMap(),
     val name: String = "",
     val fileSource: String? = null,
-    val jsonExample: JSONObjectExample? = null
+    val jsonExample: JSONExample? = null
 ) {
     constructor(examples: Map<String, String>) :this(examples.keys.toList(), examples.values.toList())
 
@@ -48,7 +48,12 @@ data class Row(
         val requestBody = this.getField("(REQUEST-BODY)").trim()
 
         return try {
-            this.copy(jsonExample = JSONObjectExample(parsedJSON(requestBody) as JSONComposite, this))
+            val parsed = parsedJSON(requestBody)
+
+            if(parsed is JSONComposite)
+                this.copy(jsonExample = JSONExample(parsed, this))
+            else
+                this
         } catch (e: ContractException) {
             this
         }
@@ -103,7 +108,7 @@ data class Row(
         if(value !is JSONComposite)
             return withNoJSONObjectExample()
 
-        return this.copy(jsonExample = JSONObjectExample(value, jsonExample.originalRow))
+        return this.copy(jsonExample = JSONExample(value, jsonExample.originalRow))
     }
 
     private fun withNoJSONObjectExample() = this.copy(jsonExample = null)
@@ -119,7 +124,7 @@ data class Row(
 
         val firstValue = list.firstOrNull()
         if(firstValue is JSONComposite)
-            return this.copy(jsonExample = JSONObjectExample(firstValue as JSONComposite, jsonExample.originalRow))
+            return this.copy(jsonExample = JSONExample(firstValue as JSONComposite, jsonExample.originalRow))
 
         return this.copy(jsonExample = null)
     }

@@ -36,10 +36,10 @@ private const val SERVICE_TYPE_HTTP = "HTTP"
 private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
 private const val testDirectoryProperty = "specmaticTestsDirectory"
 
+const val NO_SECURITY_SCHEMA_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
 
-const val NO_SECURITY_SCHEM_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
+class OpenApiSpecification(private val openApiFilePath: String, private val parsedOpenApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
 
-class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
     ApiSpecification {
     companion object {
         fun fromFile(openApiFilePath: String, relativeTo: String = ""): OpenApiSpecification {
@@ -54,29 +54,29 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             return fromFile(openApiFile.canonicalPath)
         }
 
-        fun fromFile(openApiFile: String): OpenApiSpecification {
-            val openApi = OpenAPIV3Parser().read(openApiFile, null, resolveExternalReferences())
-            return OpenApiSpecification(openApiFile, openApi)
+        fun fromFile(openApiFilePath: String): OpenApiSpecification {
+            val parsedOpenApi = OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences())
+            return OpenApiSpecification(openApiFilePath, parsedOpenApi)
         }
 
-        fun fromYAML(yamlContent: String, filePath: String,  loggerForErrors: LogStrategy = logger, sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null): OpenApiSpecification {
+        fun fromYAML(yamlContent: String, openApiFilePath: String, loggerForErrors: LogStrategy = logger, sourceProvider:String? = null, sourceRepository:String? = null, sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
-                OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), filePath)
-            val openApi: OpenAPI? = parseResult.openAPI
+                OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), openApiFilePath)
+            val parsedOpenApi: OpenAPI? = parseResult.openAPI
 
-            if (openApi == null) {
-                logger.debug("Failed to parse OpenAPI from file $filePath\n\n$yamlContent")
+            if (parsedOpenApi == null) {
+                logger.debug("Failed to parse OpenAPI from file $openApiFilePath\n\n$yamlContent")
 
-                printMessages(parseResult, filePath, loggerForErrors)
+                printMessages(parseResult, openApiFilePath, loggerForErrors)
 
-                throw ContractException("Could not parse contract $filePath, please validate the syntax using https://editor.swagger.io")
+                throw ContractException("Could not parse contract $openApiFilePath, please validate the syntax using https://editor.swagger.io")
             } else if (parseResult.messages?.isNotEmpty() == true) {
-                logger.log("The OpenAPI file $filePath was read successfully but with some issues")
+                logger.log("The OpenAPI file $openApiFilePath was read successfully but with some issues")
 
-                printMessages(parseResult, filePath, loggerForErrors)
+                printMessages(parseResult, openApiFilePath, loggerForErrors)
             }
 
-            return OpenApiSpecification(filePath, openApi, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration)
+            return OpenApiSpecification(openApiFilePath, parsedOpenApi, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration)
         }
 
         private fun printMessages(parseResult: SwaggerParseResult, filePath: String, loggerForErrors: LogStrategy) {
@@ -95,16 +95,16 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     val patterns = mutableMapOf<String, Pattern>()
 
     fun isOpenAPI31(): Boolean {
-        return openApi.openapi.startsWith("3.1")
+        return parsedOpenApi.openapi.startsWith("3.1")
     }
 
     fun toFeature(): Feature {
-        val name = File(openApiFile).name
+        val name = File(openApiFilePath).name
 
         val (scenarioInfos, stubsFromExamples) = toScenarioInfos()
 
         return Feature(
-            scenarioInfos.map { Scenario(it) }, name = name, path = openApiFile, sourceProvider = sourceProvider,
+            scenarioInfos.map { Scenario(it) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
             sourceRepository = sourceRepository,
             sourceRepositoryBranch = sourceRepositoryBranch,
             specification = specificationPath,
@@ -118,7 +118,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         val (
             openApitoScenarioInfosFromSpecification: List<ScenarioInfo>,
             examplesAsStubs: Map<String, List<Pair<HttpRequest, HttpResponse>>>
-        ) = openApitoScenarioInfos()
+        ) = openApiToScenarioInfos()
 
         val combinedScenariosFromSpecificationAndWrapper = openApitoScenarioInfosFromSpecification.filter { scenarioInfo ->
             scenarioInfosWithExamples.none { scenarioInfoWithExample ->
@@ -132,7 +132,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo, steps: List<Step>
     ): List<ScenarioInfo> {
-        val (openApiScenarioInfos, _) = openApitoScenarioInfos()
+        val (openApiScenarioInfos, _) = openApiToScenarioInfos()
         if (openApiScenarioInfos.isEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to ::matchesPath then ::matchesMethod then ::matchesStatus then ::updateUrlMatcher otherwise ::handleError
@@ -244,7 +244,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         })
     }
 
-    private fun openApitoScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
+    private fun openApiToScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
         val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> = openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
                 val specmaticPath = toSpecmaticPath(openApiPath, operation)
@@ -509,10 +509,10 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun testDirectoryFileFromSpecificationPath(): File? {
-        if(openApiFile.isBlank())
+        if(openApiFilePath.isBlank())
             return null
 
-        return File(openApiFile).canonicalFile.let {
+        return File(openApiFilePath).canonicalFile.let {
             it.parentFile.resolve(it.nameWithoutExtension + "_tests")
         }
     }
@@ -547,7 +547,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun resolveExample(example: Example?): Example? {
         return example?.`$ref`?.let {
             val exampleName = it.substringAfterLast("/")
-            openApi.components?.examples?.get(exampleName)
+            parsedOpenApi.components?.examples?.get(exampleName)
         } ?: example
     }
 
@@ -564,7 +564,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             it.name to (resolveExample(exampleValue)?.value ?: "")
         }
 
-    private fun openApiPaths() = openApi.paths.orEmpty()
+    private fun openApiPaths() = parsedOpenApi.paths.orEmpty()
 
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<ResponseData> {
         return responses.orEmpty().map { (status, response) ->
@@ -593,7 +593,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     private fun resolveResponseHeader(header: Header): Header? {
         return if(header.`$ref` != null) {
             val headerComponentName = header.`$ref`.substringAfterLast("/")
-            openApi.components?.headers?.get(headerComponentName)
+            parsedOpenApi.components?.headers?.get(headerComponentName)
         } else {
             header
         }
@@ -648,9 +648,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     ): List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> {
 
         val securitySchemes: Map<String, OpenAPISecurityScheme> =
-            openApi.components?.securitySchemes?.mapValues { (schemeName, scheme) ->
+            parsedOpenApi.components?.securitySchemes?.mapValues { (schemeName, scheme) ->
                 toSecurityScheme(schemeName, scheme)
-            } ?: mapOf(NO_SECURITY_SCHEM_IN_SPECIFICATION to NoSecurityScheme())
+            } ?: mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
 
         val parameters = operation.parameters
 
@@ -748,7 +748,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         contractSecuritySchemes: Map<String, OpenAPISecurityScheme>
     ): List<OpenAPISecurityScheme> {
         val globalSecurityRequirements: List<String> =
-            openApi.security?.map { it.keys.toList() }?.flatten() ?: emptyList()
+            parsedOpenApi.security?.map { it.keys.toList() }?.flatten() ?: emptyList()
         val operationSecurityRequirements: List<String> =
             operation.security?.map { it.keys.toList() }?.flatten() ?: emptyList()
         val operationSecurityRequirementsSuperSet: List<String> =
@@ -1234,14 +1234,14 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     private fun resolveReferenceToSchema(component: String): Pair<String, Schema<Any>> {
         val componentName = extractComponentName(component)
-        val schema = openApi.components.schemas[componentName] ?: ObjectSchema().also { it.properties = emptyMap() }
+        val schema = parsedOpenApi.components.schemas[componentName] ?: ObjectSchema().also { it.properties = emptyMap() }
 
         return componentName to schema as Schema<Any>
     }
 
     private fun resolveReferenceToRequestBody(component: String): Pair<String, RequestBody> {
         val componentName = extractComponentName(component)
-        val requestBody = openApi.components.requestBodies[componentName] ?: RequestBody()
+        val requestBody = parsedOpenApi.components.requestBodies[componentName] ?: RequestBody()
 
         return componentName to requestBody
     }

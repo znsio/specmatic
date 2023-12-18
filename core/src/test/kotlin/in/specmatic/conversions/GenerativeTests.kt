@@ -4,10 +4,7 @@ import `in`.specmatic.DefaultStrategies
 import `in`.specmatic.GENERATION
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.NullValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.*
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
@@ -403,27 +400,41 @@ class GenerativeTests {
                           examples:
                             SUCCESS:
                               value: OK
+                    '400':
+                      description: Bad Request
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
         """.trimIndent(), "").toFeature()
 
         val buildingValuesSeen = mutableSetOf<String>()
 
         try {
-            val results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
+            val results = feature.copy(generativeTestingEnabled = true, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
                     val personBuilding = body.findFirstChildByPath("person.address.building")!!
 
                     if(personBuilding is NullValue)
-                        buildingValuesSeen.add("null")
+                        buildingValuesSeen.add("null in person.address.building")
+                    else if (personBuilding is NumberValue)
+                        buildingValuesSeen.add("Value ${personBuilding.toStringLiteral()} in person.address.building")
                     else
-                        buildingValuesSeen.add(personBuilding.toStringLiteral())
+                        buildingValuesSeen.add("Value type ${personBuilding.displayableType()} in person.address.building")
 
                     val companyBuilding = body.findFirstChildByPath("company.address.building")!!
 
                     if(companyBuilding is NullValue)
-                        buildingValuesSeen.add("null")
+                        buildingValuesSeen.add("null in company.address.building")
+                    else if(companyBuilding is StringValue)
+                        buildingValuesSeen.add("Value ${companyBuilding.toStringLiteral()} in company.address.building")
                     else
-                        buildingValuesSeen.add(companyBuilding.toStringLiteral())
+                        buildingValuesSeen.add("Value type ${companyBuilding.displayableType()} in company.address.building")
+
+                    if(body.findFirstChildByPath("person.address.building")!! !is NumberValue ||
+                        body.findFirstChildByPath("company.address.building")!! !is StringValue)
+                        return HttpResponse.ERROR_400
 
                     return HttpResponse.OK("OK")
                 }
@@ -432,13 +443,16 @@ class GenerativeTests {
                 }
             })
 
-            println(results.report())
-
-            assertThat("1").isIn(buildingValuesSeen)
-            assertThat("null").isIn(buildingValuesSeen)
-            assertThat("Bldg no 1").isIn(buildingValuesSeen)
-            assertThat(buildingValuesSeen).containsAnyOf("true", "false")
-            assertThat(buildingValuesSeen.size).isEqualTo(6)
+            assertThat(buildingValuesSeen).containsExactlyInAnyOrder(
+                "Value 1 in person.address.building",
+                "null in person.address.building",
+                "Value type boolean in person.address.building",
+                "Value type string in person.address.building",
+                "Value Bldg no 1 in company.address.building",
+                "null in company.address.building",
+                "Value type number in company.address.building",
+                "Value type boolean in company.address.building"
+            )
         } catch(e: ContractException) {
             Assertions.fail("Should not have got this error:\n${e.report()}")
         }

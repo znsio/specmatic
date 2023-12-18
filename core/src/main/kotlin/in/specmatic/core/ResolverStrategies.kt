@@ -12,12 +12,12 @@ data class ResolverStrategies(
     }
 }
 
-val StrategiesFromFlags = ResolverStrategies(
-    defaultExampleResolver = if(Flags.schemaExampleDefaultEnabled()) UseDefaultExample() else DoNotUseDefaultExample(),
-    generation = if(Flags.generativeTestingEnabled()) GenerativeTestsEnabled() else NonGenerativeTests()
+fun strategiesFromFlags() = ResolverStrategies(
+    defaultExampleResolver = if(Flags.schemaExampleDefaultEnabled()) UseDefaultExample else DoNotUseDefaultExample,
+    generation = if(Flags.generativeTestingEnabled()) GenerativeTestsEnabled() else NonGenerativeTests
 )
 
 val DefaultStrategies = ResolverStrategies (
-    DoNotUseDefaultExample(),
-    NonGenerativeTests()
+    DoNotUseDefaultExample,
+    NonGenerativeTests
 )

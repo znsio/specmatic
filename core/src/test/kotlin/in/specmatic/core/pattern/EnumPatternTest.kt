@@ -100,7 +100,7 @@ class EnumPatternTest {
         @Test
         fun `it should use the inline example if present`() {
             val enum = EnumPattern(listOf(StringValue("01"), StringValue("02")), example = "01")
-            val patterns = enum.newBasedOn(Row(), Resolver(defaultExampleResolver = UseDefaultExample()))
+            val patterns = enum.newBasedOn(Row(), Resolver(defaultExampleResolver = UseDefaultExample))
 
             assertThat(patterns).containsExactly(
                 ExactValuePattern(StringValue("01"))

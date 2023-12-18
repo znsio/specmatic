@@ -21,7 +21,7 @@ interface GenerationStrategies {
     fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario>
 }
 
-class GenerativeTestsEnabled : GenerationStrategies {
+data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.onlyPositive()) : GenerationStrategies {
     override val negativePrefix: String = "-ve "
     override val positivePrefix: String = "+ve "
 
@@ -83,11 +83,14 @@ class GenerativeTestsEnabled : GenerationStrategies {
     }
 
     override fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
-        return feature.negativeTestScenariosUnlessDisabled()
+        return if(positiveOnly)
+            emptyList()
+        else
+            feature.negativeTestScenarios()
     }
 }
 
-class NonGenerativeTests : GenerationStrategies {
+object NonGenerativeTests : GenerationStrategies {
     override val negativePrefix: String = ""
     override val positivePrefix: String = ""
 

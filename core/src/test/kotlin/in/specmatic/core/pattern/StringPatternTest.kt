@@ -126,7 +126,7 @@ internal class StringPatternTest {
 
     @Test
     fun `it should use the example if provided when generating`() {
-        val generated = StringPattern(example = "sample data").generate(Resolver(defaultExampleResolver = UseDefaultExample()))
+        val generated = StringPattern(example = "sample data").generate(Resolver(defaultExampleResolver = UseDefaultExample))
         assertThat(generated).isEqualTo(StringValue("sample data"))
     }
 

@@ -69,7 +69,7 @@ internal class NumberPatternTest {
 
     @Test
     fun `it should use the example if provided when generating`() {
-        val generated = NumberPattern(example = "10").generate(Resolver(defaultExampleResolver = UseDefaultExample()))
+        val generated = NumberPattern(example = "10").generate(Resolver(defaultExampleResolver = UseDefaultExample))
         assertThat(generated).isEqualTo(NumberValue(10))
     }
 

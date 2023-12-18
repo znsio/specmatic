@@ -57,26 +57,22 @@ class GenerativeTests {
 
         val statusesSeen = mutableSetOf<String>()
 
-        try {
-            feature.enableGenerativeTesting().executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val body = request.body as JSONObjectValue
-                    println(body.toStringLiteral())
+        feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body as JSONObjectValue
+                println(body.toStringLiteral())
 
-                    when (body.jsonObject["status"]!!) {
-                        is StringValue -> statusesSeen.add(body.jsonObject["status"]!!.toStringLiteral())
-                        else -> statusesSeen.add(body.jsonObject["status"]!!.displayableType())
-                    }
-
-                    return HttpResponse.OK
+                when (body.jsonObject["status"]!!) {
+                    is StringValue -> statusesSeen.add(body.jsonObject["status"]!!.toStringLiteral())
+                    else -> statusesSeen.add(body.jsonObject["status"]!!.displayableType())
                 }
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
-        } finally {
-            System.clearProperty(Flags.onlyPositive)
-        }
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
         assertThat(statusesSeen).isEqualTo(setOf("active", "inactive", "null", "boolean", "number"))
     }
@@ -316,38 +312,31 @@ class GenerativeTests {
 
         val statusValuesSeen = mutableSetOf<String>()
 
-        try {
-            System.setProperty(Flags.onlyPositive, "true")
-            val results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val body = request.body as JSONObjectValue
-                    println(body.toStringLiteral())
-                    statusValuesSeen.add(body.findFirstChildByPath("status")!!.toStringLiteral() + " in body")
-                    statusValuesSeen.add(request.headers["status"]?.let { "$it in headers" } ?: "status not in headers")
+        val results = feature.enableGenerativeTesting(onlyPositive = true).executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body as JSONObjectValue
+                println(body.toStringLiteral())
+                statusValuesSeen.add(body.findFirstChildByPath("status")!!.toStringLiteral() + " in body")
+                statusValuesSeen.add(request.headers["status"]?.let { "$it in headers" } ?: "status not in headers")
 
-                    return HttpResponse.OK("OK")
-                }
+                return HttpResponse.OK("OK")
+            }
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
-            if (results.failureCount > 0)
-                println(results.report())
+        if (results.failureCount > 0)
+            println(results.report())
 
-            assertThat(results.failureCount).isEqualTo(0)
-            assertThat(results.successCount).isGreaterThan(0)
+        assertThat(results.failureCount).isEqualTo(0)
+        assertThat(results.successCount).isGreaterThan(0)
 
-            assertThat(statusValuesSeen).containsExactlyInAnyOrder(
-                "true in headers",
-                "status not in headers",
-                "success in body"
-            )
-        } catch (e: ContractException) {
-            Assertions.fail("Should not have got this error:\n${e.report()}")
-        } finally {
-            System.clearProperty(Flags.onlyPositive)
-        }
+        assertThat(statusValuesSeen).containsExactlyInAnyOrder(
+            "true in headers",
+            "status not in headers",
+            "success in body"
+        )
     }
 
     @Test
@@ -607,15 +596,9 @@ class GenerativeTests {
     }
 
     private fun runGenerativeTests(
-        feature: Feature,
-        generative: Boolean = true,
-        onlyPositive: Boolean = false
+        feature: Feature
     ): Results {
         try {
-            if (onlyPositive) {
-                System.setProperty(Flags.onlyPositive, "true")
-            }
-
             return feature.enableGenerativeTesting().executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     println(request.toLogString())
@@ -699,12 +682,114 @@ class GenerativeTests {
                 }
             })
 
-            assertThat(testType).containsExactlyInAnyOrder("name not mutated", "name mutated to null", "name mutated to boolean", "name mutated to number")
+            assertThat(testType).containsExactlyInAnyOrder(
+                "name not mutated",
+                "name mutated to null",
+                "name mutated to boolean",
+                "name mutated to number"
+            )
+
+            assertThat(results.failureCount).isEqualTo(0)
+
+            assertThat(results.results).hasSize(testType.size)
+        } finally {
+            System.clearProperty(Flags.negativeTestingFlag)
+        }
+    }
+
+    @Test
+    fun `the flag ONLY_POSITIVE should be used`() {
+        try {
+            System.setProperty(Flags.negativeTestingFlag, "true")
+            System.setProperty(Flags.onlyPositive, "true")
+
+            val feature = OpenApiSpecification.fromYAML(
+                """
+                openapi: 3.0.0
+                info:
+                  version: 1.0.0
+                  title: Product API
+                  description: API for creating a product
+                paths:
+                  /products:
+                    post:
+                      summary: Create a product
+                      requestBody:
+                        required: true
+                        content:
+                          application/json:
+                            schema:
+                              ${"$"}ref: '#/components/schemas/Product'
+                            examples:
+                              SUCCESS:
+                                value:
+                                  name: 'Soap'
+                      responses:
+                        '200':
+                          description: Product created successfully
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                SUCCESS:
+                                  value: 'Product created successfully'
+                components:
+                  schemas:
+                    Product:
+                      type: object
+                      required:
+                        - name
+                      properties:
+                        name:
+                          type: string
+                          description: The name of the product
+                          example: 'Soap'
+                        price:
+                          type: number
+                          description: The price of the product
+                    """, "").toFeature()
+
+            val testType = mutableListOf<String>()
+
+            val results = feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val body = request.body as JSONObjectValue
+
+                    if(body.jsonObject["name"] !is StringValue) {
+                        testType.add("name mutated to " + body.jsonObject["name"]!!.displayableType())
+                        return HttpResponse.ERROR_400
+                    }
+
+                    if("price" in body.jsonObject && body.jsonObject["price"] !is NumberValue) {
+                        testType.add("price mutated to " + body.jsonObject["price"]!!.displayableType())
+                        return HttpResponse.ERROR_400
+                    }
+
+                    if("price" in body.jsonObject)
+                        testType.add("price is present")
+                    else
+                        testType.add("price is absent")
+
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+
+                }
+            })
+
+            assertThat(testType).containsExactlyInAnyOrder(
+                "price is present", "price is absent"
+            )
+
+            assertThat(results.results).hasSize(testType.size)
 
             assertThat(results.failureCount).isEqualTo(0)
 
         } finally {
             System.clearProperty(Flags.negativeTestingFlag)
+            System.clearProperty(Flags.onlyPositive)
         }
     }
 }

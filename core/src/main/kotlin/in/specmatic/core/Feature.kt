@@ -81,14 +81,14 @@ data class Feature(
     val specification:String? = null,
     val serviceType:String? = null,
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
-    val resolverStrategies: ResolverStrategies = StrategiesFromFlags
+    val resolverStrategies: ResolverStrategies = strategiesFromFlags()
 ) {
-    fun enableGenerativeTesting(): Feature {
-        return this.copy(resolverStrategies = this.resolverStrategies.copy(generation = GenerativeTestsEnabled()))
+    fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
+        return this.copy(resolverStrategies = this.resolverStrategies.copy(generation = GenerativeTestsEnabled(onlyPositive)))
     }
 
     fun enableSchemaExampleDefault(): Feature {
-        return this.copy(resolverStrategies = this.resolverStrategies.copy(defaultExampleResolver = UseDefaultExample()))
+        return this.copy(resolverStrategies = this.resolverStrategies.copy(defaultExampleResolver = UseDefaultExample))
     }
 
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
@@ -310,13 +310,6 @@ data class Feature(
         return resolverStrategies.generation.let {
             it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this, suggestions)
         }
-    }
-
-    fun negativeTestScenariosUnlessDisabled(): List<Scenario> {
-        return if (Flags.onlyPositive())
-            emptyList()
-        else
-            negativeTestScenarios()
     }
 
     fun positiveTestScenarios(suggestions: List<Scenario>) =

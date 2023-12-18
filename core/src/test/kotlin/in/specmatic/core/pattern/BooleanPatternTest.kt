@@ -18,7 +18,7 @@ internal class BooleanPatternTest {
 
     @Test
     fun `it should use the example if provided when generating`() {
-        val generated = BooleanPattern(example = "true").generate(Resolver(defaultExampleResolver = UseDefaultExample()))
+        val generated = BooleanPattern(example = "true").generate(Resolver(defaultExampleResolver = UseDefaultExample))
         assertThat(generated).isEqualTo(BooleanValue(true))
     }
 

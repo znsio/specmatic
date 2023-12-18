@@ -34,8 +34,8 @@ data class Resolver(
     val patternMatchStrategy: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = actualMatch,
     val parseStrategy: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = actualParse,
     val cyclePreventionStack: List<Pattern> = listOf(),
-    val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample(),
-    val generation: GenerationStrategies = NonGenerativeTests()
+    val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample,
+    val generation: GenerationStrategies = NonGenerativeTests
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -198,7 +198,7 @@ interface DefaultExampleResolver {
     fun resolveExample(example: String?, pattern: List<Pattern>, resolver: Resolver): Value?
 }
 
-class UseDefaultExample : DefaultExampleResolver {
+object UseDefaultExample : DefaultExampleResolver {
     override fun resolveExample(example: String?, pattern: Pattern, resolver: Resolver): Value? {
         if(example == null)
             return null
@@ -243,7 +243,7 @@ class UseDefaultExample : DefaultExampleResolver {
     }
 }
 
-class DoNotUseDefaultExample : DefaultExampleResolver {
+object DoNotUseDefaultExample : DefaultExampleResolver {
     override fun resolveExample(example: String?, pattern: Pattern, resolver: Resolver): Value? {
         return null
     }

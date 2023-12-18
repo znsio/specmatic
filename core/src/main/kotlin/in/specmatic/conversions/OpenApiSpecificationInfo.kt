@@ -10,21 +10,23 @@ class OpenApiSpecificationInfo(private val openApiFilePath: String, private val 
         info.append("Loaded OpenAPI File: $openApiFilePath\n")
         info.append("OpenAPI Version: ${parsedOpenApi.openapi}\n")
 
-        val apiInfo = parsedOpenApi.info
-        info.append("API Info:\n")
-        info.append("  Title: ${apiInfo.title}\n")
-        info.append("  Version: ${apiInfo.version}\n")
-        info.append("  Description: ${apiInfo.description}\n")
+        parsedOpenApi.info?.let {
+            info.append("API Info:\n")
+            info.append("  Title: ${it.title}\n")
+            info.append("  Version: ${it.version}\n")
+            info.append("  Description: ${it.description}\n")
+        }
 
-        val paths = parsedOpenApi.paths
-        info.append("No of API Paths: ${paths.size}\n")
-        paths.map { (_, pathItem) ->
-            pathItem.readOperationsMap().map { (_, operation) ->
-                operation.operationId
-            }
-        }.flatten().toList().let { info.append("No of API Operations: ${it.size}\n") }
+        parsedOpenApi.paths?.let {
+            info.append("No of API Paths: ${it.size}\n")
+            it.map { (_, pathItem) ->
+                pathItem.readOperationsMap().map { (_, operation) ->
+                    operation.operationId
+                }
+            }.flatten().toList().let { info.append("No of API Operations: ${it.size}\n") }
+        }
 
-        val components = parsedOpenApi.components?.let {
+        parsedOpenApi.components?.let {
             info.append("API Components:\n")
             info.append("  Schemas: ${it.schemas?.keys}\n")
             info.append("  Responses: ${it.responses?.keys}\n")

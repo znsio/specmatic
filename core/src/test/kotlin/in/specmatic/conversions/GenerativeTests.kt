@@ -4,13 +4,10 @@ import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.parsedJSONObject
-import `in`.specmatic.core.value.BooleanValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.TestExecutor
-import io.mockk.InternalPlatformDsl.toStr
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.Test

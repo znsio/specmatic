@@ -1,11 +1,16 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
+import `in`.specmatic.core.Flags
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.UseDefaultExample
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.NumberValue
+import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldNotMatch
 import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -62,5 +67,22 @@ internal class NumberPatternTest {
         val result = NumberPattern(maxLength = 3).matches(NumberValue(1234), Resolver())
         assertThat(result.isSuccess()).isFalse
         assertThat(result.reportString()).isEqualTo("""Expected number with maxLength 3, actual was 1234 (number)""")
+    }
+
+    @Test
+    fun `it should use the example if provided when generating`() {
+        val generated = NumberPattern(example = "10").generate(Resolver(defaultExampleResolver = UseDefaultExample()))
+        assertThat(generated).isEqualTo(NumberValue(10))
+    }
+
+    @Test
+    @Tag(GENERATIVE)
+    fun `negative values should be generated`() {
+        val result = NumberPattern().negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null",
+            "string",
+            "boolean"
+        )
     }
 }

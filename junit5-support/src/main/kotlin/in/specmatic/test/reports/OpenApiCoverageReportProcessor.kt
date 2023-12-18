@@ -18,8 +18,9 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
         const val JSON_REPORT_PATH = "./build/reports/specmatic"
         const val JSON_REPORT_FILE_NAME = "coverage_report.json"
     }
+
     override fun process(reportConfiguration: ReportConfiguration) {
-        openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints)
+        openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints + excludedEndpointsFromEnv())
         val openAPICoverageReport = openApiCoverageReportInput.generate()
         if (openAPICoverageReport.rows.isEmpty()) {
             logger.log("The Open API coverage report generated is blank.\nThis can happen if you have included all the endpoints in the 'excludedEndpoints' array in the report section in specmatic.json, or if your open api specification does not have any paths documented.")
@@ -32,6 +33,10 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
         }
         assertSuccessCriteria(reportConfiguration,openAPICoverageReport)
     }
+
+    private fun excludedEndpointsFromEnv() = System.getenv("SPECMATIC_EXCLUDED_ENDPOINTS")?.let { excludedEndpoints ->
+        excludedEndpoints.split(",").map { it.trim() }
+    } ?: emptyList()
 
     private fun saveAsJson(openApiCoverageJsonReport: OpenApiCoverageJsonReport) {
         println("Saving Open API Coverage Report json to $JSON_REPORT_PATH ...")

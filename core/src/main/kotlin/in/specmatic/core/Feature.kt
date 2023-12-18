@@ -30,17 +30,6 @@ import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
 import java.net.URI
 
-class BadRequestOrDefault(private val badRequestResponses: Map<Int, HttpResponsePattern>, private val defaultResponse: HttpResponsePattern?) {
-    fun matches(httpResponse: HttpResponse, resolver: Resolver): Result =
-        when(httpResponse.status) {
-            in badRequestResponses -> badRequestResponses.getValue(httpResponse.status).matches(httpResponse, resolver)
-            else -> defaultResponse?.matches(httpResponse, resolver)?.partialSuccess("The response matched the default response, but the contract should declare a ${httpResponse.status} response.") ?: Result.Failure("Neither is the status code declared nor is there a default response.")
-        }
-
-    fun supports(httpResponse: HttpResponse): Boolean =
-        httpResponse.status in badRequestResponses || defaultResponse != null
-}
-
 fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null): Feature {
     return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration)
 }
@@ -54,23 +43,29 @@ fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourc
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
-        "yaml" -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration).toFeature()
-        "wsdl" -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration).toFeature()
+        WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
-        else -> throw ContractException("File extension of ${file.path} not recognized")
+        else -> throw unsupportedFileExtensionContractException(file.path, file.extension)
     }
 }
+
+fun unsupportedFileExtensionContractException(
+    path: String,
+    extension: String
+) =
+    ContractException(
+        "Current file $path has an unsupported extension $extension. Supported extensions are ${
+            CONTRACT_EXTENSIONS.joinToString(
+                ", "
+            )
+        }."
+    )
 
 fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""): Feature {
     val gherkinDocument = parseGherkinString(gherkinData, sourceFilePath)
     val (name, scenarios) = lex(gherkinDocument, sourceFilePath)
     return Feature(scenarios = scenarios, name = name, path = sourceFilePath)
-}
-
-class ResponseBuilder(val scenario: Scenario, val serverState: Map<String, Value>) {
-    fun build(): HttpResponse {
-        return scenario.generateHttpResponse(serverState)
-    }
 }
 
 data class Feature(
@@ -86,7 +81,8 @@ data class Feature(
     val sourceRepositoryBranch:String? = null,
     val specification:String? = null,
     val serviceType:String? = null,
-    val stubsFromExamples: Map<String, Pair<HttpRequest, HttpResponse>> = emptyMap()
+    val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
+    val resolverStrategies: ResolverStrategies = StrategiesFromFlags
 ) {
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
@@ -282,7 +278,7 @@ data class Feature(
 
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
         generateContractTestScenarios(suggestions).map {
-            ScenarioTest(it, generativeTestingEnabled, it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
+            ScenarioTest(it, resolverStrategies, generativeTestingEnabled, it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
         }
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
@@ -304,9 +300,9 @@ data class Feature(
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
         return if (generativeTestingEnabled)
-            positiveTestScenarios(suggestions) + negativeTestScenariosUnlessDisabled()
+            positiveTestScenarios(suggestions, resolverStrategies) + negativeTestScenariosUnlessDisabled()
         else
-            positiveTestScenarios(suggestions)
+            positiveTestScenarios(suggestions, resolverStrategies)
     }
 
     private fun negativeTestScenariosUnlessDisabled(): List<Scenario> {
@@ -316,11 +312,11 @@ data class Feature(
             negativeTestScenarios()
     }
 
-    fun positiveTestScenarios(suggestions: List<Scenario>) =
+    fun positiveTestScenarios(suggestions: List<Scenario>, resolverStrategies: ResolverStrategies) =
         scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap {
-            it.generateTestScenarios(testVariables, testBaseURLs, generativeTestingEnabled)
+            it.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs, generativeTestingEnabled)
         }
 
     fun negativeTestScenarios() =
@@ -328,7 +324,7 @@ data class Feature(
             it.isA2xxScenario()
         }.map { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
-            val negativeTestScenarios = negativeScenario.generateTestScenarios(testVariables, testBaseURLs, true)
+            val negativeTestScenarios = negativeScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs, true)
 
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
@@ -486,16 +482,34 @@ data class Feature(
         newPayload: Pattern,
         scenarioName: String,
         updateConverged: (Pattern) -> Scenario
-    ): Scenario = if (basePayload is TabularPattern && newPayload is TabularPattern) {
-        val converged = TabularPattern(convergePatternMap(basePayload.pattern, newPayload.pattern))
+    ): Scenario {
+        return updateConverged(converge(basePayload, newPayload, scenarioName))
+    }
 
-        updateConverged(converged)
-    } else if (bothAreIdenticalDeferreds(basePayload, newPayload)) {
-        updateConverged(basePayload)
-    } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
-        updateConverged(basePayload)
-    } else {
-        throw ContractException("Payload definitions with different names found (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName}, ${newPayload.typeAlias ?: newPayload.typeName})")
+    fun converge(
+        basePayload: Pattern,
+        newPayload: Pattern,
+        scenarioName: String,
+    ): Pattern {
+        return if (basePayload is TabularPattern && newPayload is TabularPattern) {
+            TabularPattern(convergePatternMap(basePayload.pattern, newPayload.pattern))
+        } else if (basePayload is ListPattern && newPayload is JSONArrayPattern) {
+            val convergedNewPattern: Pattern = newPayload.pattern.fold(basePayload.pattern) { acc, newPattern ->
+                converge(acc, newPattern, scenarioName)
+            }
+
+            ListPattern(convergedNewPattern)
+        } else if (basePayload is ListPattern && newPayload is ListPattern) {
+            val convergedNewPattern: Pattern = converge(basePayload.pattern, newPayload.pattern, scenarioName)
+
+            ListPattern(convergedNewPattern)
+        } else if (bothAreIdenticalDeferreds(basePayload, newPayload)) {
+            basePayload
+        } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
+            basePayload
+        } else {
+            throw ContractException("Payload definitions could not be converged (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName}, ${newPayload.typeAlias ?: newPayload.typeName})")
+        }
     }
 
     private fun bothAreTheSamePrimitive(
@@ -685,7 +699,7 @@ data class Feature(
                 "DELETE" -> pathItem.delete
                 else -> TODO("Method \"${scenario.httpRequestPattern.method}\" in scenario ${scenario.name}")
             } ?: Operation().apply {
-                this.summary = scenario.name
+                this.summary = withoutQueryParams(scenario.name)
             }
 
             val pathParameters = scenario.httpRequestPattern.urlMatcher.pathParameters()
@@ -729,7 +743,7 @@ data class Feature(
 
             val apiResponse = ApiResponse()
 
-            apiResponse.description = scenario.name
+            apiResponse.description = withoutQueryParams(scenario.name)
 
             val openApiResponseHeaders = scenario.httpResponsePattern.headersPattern.pattern.map { (key, pattern) ->
                 val header = Header()
@@ -814,6 +828,10 @@ data class Feature(
         }
 
         return openAPI
+    }
+
+    private fun withoutQueryParams(name: String): String {
+        return name.replace(Regex("""\?.*$"""), "")
     }
 
     private fun numberTemplatized(urlMatcher: URLMatcher?): URLMatcher {

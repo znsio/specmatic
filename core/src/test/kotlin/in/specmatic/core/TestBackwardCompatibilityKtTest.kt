@@ -1069,8 +1069,8 @@ Then status 200
     }
 
     @Nested
-    inner class EnumStringIsBackardCompatibleWithString {
-        val olderContract: Feature =
+    inner class EnumStringIsBackwardCompatibleWithString {
+        val specWithStringInResponse: Feature =
             """
         openapi: 3.0.0
         info:
@@ -1097,7 +1097,7 @@ Then status 200
                             type: string
             """.trimIndent().openAPIToContract()
 
-        val newerContract: Feature =
+        val specWithEnumInResponse: Feature =
             """
         openapi: 3.0.0
         info:
@@ -1130,14 +1130,18 @@ Then status 200
 
         @Test
         fun `new should be should be backward compatible with old`() {
-            val results: Results = testBackwardCompatibility(olderContract, newerContract)
+            val results: Results = testBackwardCompatibility(specWithStringInResponse, specWithEnumInResponse)
+
+            println(results.report())
 
             assertThat(results.success()).isTrue
         }
 
         @Test
         fun `old should be backward incompatible with new`() {
-            val results: Results = testBackwardCompatibility(newerContract, olderContract)
+            val results: Results = testBackwardCompatibility(specWithEnumInResponse, specWithStringInResponse)
+
+            println(results.report())
 
             assertThat(results.hasFailures()).isTrue
         }

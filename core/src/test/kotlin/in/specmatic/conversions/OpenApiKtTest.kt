@@ -4,17 +4,20 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.ObjectMapper
+import `in`.specmatic.DefaultStrategies
 import `in`.specmatic.core.*
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.JSONObjectPattern
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.jsonBody
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -455,7 +458,7 @@ Background:
         val results = try {
             System.setProperty(Flags.negativeTestingFlag, "true")
 
-            feature.copy(generativeTestingEnabled = true).executeTests(
+            feature.copy(generativeTestingEnabled = true, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(
                 object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         flags["${request.path} executed"] = true
@@ -481,8 +484,8 @@ Background:
             System.clearProperty(Flags.negativeTestingFlag)
         }
 
-        assertThat(results.results.size).isEqualTo(9)
-        assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(1)
+        assertThat(results.results.size).isEqualTo(13)
+        assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(5)
         assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(8)
     }
 
@@ -526,9 +529,9 @@ Background:
             }
         )
 
-        assertThat(results.results.size).isEqualTo(16)
+        assertThat(results.results.size).isEqualTo(17)
         assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(4)
-        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(12)
+        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(13)
     }
 
     @Test
@@ -963,7 +966,6 @@ Background:
         assertThat(body).contains("Invalid pattern cycle")
     }
 
-    @Test
     @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
     fun `should validate and generate with indirect optional non-nullable cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
@@ -994,7 +996,6 @@ Background:
         assertThat(deserialized).isNotNull
     }
 
-    @Test
     @RepeatedTest(10) // Try to exercise all outcomes of AnyPattern.generate() which randomly selects from its options
     fun `should validate and generate with indirect nullable cyclic reference in open api`() {
         val feature = parseGherkinStringToFeature(
@@ -1277,6 +1278,7 @@ Background:
                             )
 
                             "PATCH" -> {
+                                println(request.toLogString())
                                 HttpResponse(
                                     200,
                                     ObjectMapper().writeValueAsString(pet),
@@ -2402,6 +2404,7 @@ components:
         })
     }
 
+    @Test
     fun `should preserve trailing slash`() {
         val contract = OpenApiSpecification.fromYAML(
             """
@@ -2487,6 +2490,71 @@ components:
         assertThat(paths).allSatisfy {
             assertThat(it).endsWith("/")
         }
+    }
+
+    @Test
+    fun `should load an inline example in the schema when generating`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+    openapi: "3.0.3"
+    info:
+      version: 1.0.0
+      title: Petstore
+      description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+      license:
+        name: Apache 2.0
+        url: https://www.apache.org/licenses/LICENSE-2.0.html
+    paths:
+      /pets/:
+        post:
+          summary: create a pet
+          description: Creates a new pet in the store. Duplicates are allowed
+          operationId: addPet
+          requestBody:
+            description: Pet to add to the store
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      example: 'Archie'
+          responses:
+            '200':
+              description: new pet record
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    required:
+                      - id
+                    properties:
+                      id:
+                        type: integer
+                  examples:
+                    SUCCESS:
+                      value:
+                        id: 10
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.jsonBody.findFirstChildByName("name")?.toStringLiteral()).isEqualTo("Archie")
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        assertThat(result.results).isNotEmpty
     }
 }
 

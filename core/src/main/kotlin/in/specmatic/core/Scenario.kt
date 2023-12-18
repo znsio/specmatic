@@ -229,7 +229,7 @@ data class Scenario(
 
         if (this.isNegative) {
             return if (is4xxResponse(httpResponse)) {
-                if(badRequestOrDefault != null && badRequestOrDefault.supports(httpResponse))
+                if(badRequestOrDefault != null && badRequestOrDefault.supports(httpResponse.status))
                     badRequestOrDefault.matches(httpResponse, resolver).updateScenario(this)
                 else
                     Result.Failure("Received ${httpResponse.status}, but the specification does not contain a 4xx response, hence unable to verify this response", breadCrumb = "RESPONSE.STATUS").updateScenario(this)
@@ -265,9 +265,13 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false): List<Scenario> {
+    private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false, resolverStrategies: ResolverStrategies): List<Scenario> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
-        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndRowValueMismatch, generativeTestingEnabled = generativeTestingEnabled)
+        val resolver =
+            Resolver(expectedFacts, false, patterns)
+            .copy(
+                mismatchMessages = ContractAndRowValueMismatch
+            ).let { resolverStrategies.update(it) }
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
@@ -331,9 +335,10 @@ data class Scenario(
     }
 
     fun generateTestScenarios(
+        resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-        enableGenerativeTesting: Boolean = false
+        enableGenerativeTesting: Boolean = false,
     ): List<Scenario> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -346,22 +351,18 @@ data class Scenario(
                     it.rows.map { row ->
                         row.copy(variables = variables, references = referencesWithBaseURLs)
                     }
-                }.let { rows ->
-                    if(generativeTestingEnabled && Flags.generateOnlyFromFirst() && rows.isNotEmpty())
-                        rows.take(1)
-                    else
-                        rows
                 }
             }.flatMap { row ->
-                newBasedOn(row, enableGenerativeTesting)
+                newBasedOn(row, enableGenerativeTesting, resolverStrategies)
             }
         }
     }
 
     fun generateContractTests(
+        resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-        generativeTestingEnabled: Boolean = false
+        generativeTestingEnabled: Boolean = false,
     ): List<ContractTest> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -377,7 +378,7 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 try {
-                    newBasedOn(row, generativeTestingEnabled).map { ScenarioTest(it, generativeTestingEnabled) }
+                    newBasedOn(row, generativeTestingEnabled, resolverStrategies).map { ScenarioTest(it, resolverStrategies, generativeTestingEnabled) }
                 } catch (e: Throwable) {
                     listOf(ScenarioTestGenerationFailure(this, e))
                 }
@@ -464,7 +465,7 @@ data class Scenario(
         val method = this.httpRequestPattern.method
         val path = this.httpRequestPattern.urlMatcher?.path ?: ""
         val responseStatus = this.httpResponsePattern.status
-        val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | ${exampleName.trim()}" }
+        val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | EX:${exampleName.trim()}" }
 
         val generativePrefix = if(this.generativeTestingEnabled)
             if(this.isNegative) "-ve " else "+ve "

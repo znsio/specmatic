@@ -1,23 +1,22 @@
 package `in`.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
+import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 
 internal class DateTimePatternTest {
     @Test
     fun `should parse a valid datetime value`() {
-        val dateString = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
+        val dateString = RFC3339.currentDateTime()
         val dateValue = DateTimePattern.parse(dateString, Resolver())
 
-        assertEquals(dateString, dateValue.string)
+        assertThat(dateValue.string).isEqualTo(dateString)
     }
 
     @Test
@@ -25,7 +24,7 @@ internal class DateTimePatternTest {
         val valueGenerated = DateTimePattern.generate(Resolver())
         val valueParsed = DateTimePattern.parse(valueGenerated.string, Resolver())
 
-        assertEquals(valueGenerated, valueParsed)
+        assertThat(valueParsed).isEqualTo(valueGenerated)
     }
 
     @Test
@@ -43,16 +42,26 @@ internal class DateTimePatternTest {
     @Test
     fun `should return itself when generating a new pattern based on a row`() {
         val datePatterns = DateTimePattern.newBasedOn(Row(), Resolver())
-        assertEquals(1, datePatterns.size)
-        assertEquals(DateTimePattern, datePatterns.first())
+        assertThat(datePatterns.size).isEqualTo(1)
+        assertThat(datePatterns.first()).isEqualTo(DateTimePattern)
     }
 
     @Test
-    fun `should match this date time format`() {
-        val date1 = StringValue("2020-04-12T00:00:00")
-        val date2 = StringValue("2020-04-22T23:59:59")
+    fun `should match RFC3339 date time format`() {
+        val date1 = StringValue("2020-04-12T00:00:00+05:30")
+        val date2 = StringValue("2014-12-03T10:05:59+08:00")
 
         assertThat(DateTimePattern.matches(date1, Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(DateTimePattern.matches(date2, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+
+    @Test
+    @Tag(GENERATIVE)
+    fun `negative patterns should be generated`() {
+        val result = BooleanPattern().negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null"
+        )
     }
 }

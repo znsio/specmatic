@@ -1,15 +1,18 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.*
 import `in`.specmatic.emptyPattern
+import `in`.specmatic.shouldContainInAnyOrder
 import `in`.specmatic.shouldMatch
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 internal class AnyPatternTest {
@@ -56,6 +59,15 @@ internal class AnyPatternTest {
     }
 
     @Test
+    @Tag(GENERATIVE)
+    fun `should generate new patterns for all available types`() {
+        AnyPattern(listOf(NumberPattern(), EnumPattern(listOf(StringValue("one"), StringValue("two"))))).newBasedOn(Row(), Resolver()).let {
+            it.map { it.typeName } shouldContainInAnyOrder listOf("number", "\"one\"", "\"two\"")
+        }
+    }
+
+    @Test
+    @Tag(GENERATIVE)
     fun `should create a new pattern based on the given row`() {
         val pattern = AnyPattern(listOf(parsedPattern("""{"id": "(number)"}""")))
         val row = Row(listOf("id"), listOf("10"))
@@ -69,6 +81,19 @@ internal class AnyPatternTest {
                 assertEquals(10, id.number)
             else fail("Expected NumberValue")
         } else fail("Expected JSONObjectValue")
+    }
+
+    @Test
+    @Tag(GENERATIVE)
+    fun `should create new patterns when the row has no values`() {
+        val pattern = AnyPattern(listOf(parsedPattern("""{"id": "(number)"}""")))
+        val value = pattern.newBasedOn(Row(), Resolver()).first().generate(Resolver())
+
+        value as JSONObjectValue
+
+        val id = value.jsonObject.getValue("id")
+
+        assertThat(id).isInstanceOf(NumberValue::class.java)
     }
 
     @Test
@@ -187,13 +212,14 @@ internal class AnyPatternTest {
     }
 
     @Test
+    @Tag(GENERATIVE)
     fun `values for negative tests`() {
         val negativeTypes = AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver())
 
-        val expectedTypes = listOf(NumberPattern(), BooleanPattern())
-
-        assertThat(negativeTypes).containsAll(expectedTypes)
-        assertThat(negativeTypes).hasSize(expectedTypes.size)
+        assertThat(negativeTypes).containsExactlyInAnyOrder(
+            NumberPattern(),
+            BooleanPattern()
+        )
     }
 
     @Test

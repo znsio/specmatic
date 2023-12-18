@@ -1,26 +1,18 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
+import `in`.specmatic.core.*
+import `in`.specmatic.core.value.JSONArrayValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.Resolver
-import `in`.specmatic.core.Result
-import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.value.NullValue
+import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Tag
 
 internal class ListPatternTest {
-    @Test
-    fun `should generate a list of patterns each of which is a list pattern`() {
-        val patterns = ListPattern(NumberPattern()).newBasedOn(Row(), Resolver())
-
-        for(pattern in patterns) {
-            assertTrue(pattern is ListPattern)
-        }
-    }
-
     @Test
     fun `should fail to match nulls gracefully`() {
         NullValue shouldNotMatch ListPattern(StringPattern())
@@ -106,5 +98,31 @@ Feature: Recursive test
             assertThat(resultText).contains("[2]")
             assertThat(resultText).contains("elementC")
         }
+    }
+
+    @Tag(GENERATIVE)
+    @Test
+    fun `negative pattern generation`() {
+        val negativePatterns = ListPattern(StringPattern()).negativeBasedOn(Row(), Resolver())
+        assertThat(negativePatterns.map { it.typeName }).containsExactlyInAnyOrder(
+            "null"
+        )
+    }
+
+    @Tag(GENERATIVE)
+    @Test
+    fun `should generate a list of patterns each of which is a list pattern`() {
+        val patterns = ListPattern(NumberPattern()).newBasedOn(Row(), Resolver())
+
+        for(pattern in patterns) {
+            assertTrue(pattern is ListPattern)
+        }
+    }
+
+    @Tag(GENERATIVE)
+    @Test
+    fun `should use the inline example for generation of values`() {
+        val value = ListPattern(NumberPattern(), example = listOf("1", "2", "3")).generate(Resolver(defaultExampleResolver = UseDefaultExample()))
+        assertThat(value).isEqualTo(JSONArrayValue(listOf(NumberValue(1), NumberValue(2), NumberValue(3))))
     }
 }

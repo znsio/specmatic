@@ -96,7 +96,7 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
         }
     }
 
-    override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>> {
+    override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
         return scenarioInfos(wsdlToFeatureChildren(wsdlFile), "") to emptyMap()
     }
 

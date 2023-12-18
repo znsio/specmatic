@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
@@ -10,6 +11,7 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import java.util.function.Consumer
@@ -214,5 +216,17 @@ paths:
         val result = testBackwardCompatibility(contract, newContract)
 
         assertThat(result.success()).isFalse()
+    }
+
+
+    @Test
+    @Tag(GENERATIVE)
+    fun `negative patterns should be generated`() {
+        val result = StringPattern().negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null",
+            "number",
+            "boolean"
+        )
     }
 }

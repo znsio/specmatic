@@ -1,11 +1,15 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
+import `in`.specmatic.core.Flags
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.UseDefaultExample
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldNotMatch
 import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -119,5 +123,22 @@ internal class StringPatternTest {
 
         println(result.reportString())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `it should use the example if provided when generating`() {
+        val generated = StringPattern(example = "sample data").generate(Resolver(defaultExampleResolver = UseDefaultExample()))
+        assertThat(generated).isEqualTo(StringValue("sample data"))
+    }
+
+    @Test
+    @Tag(GENERATIVE)
+    fun `negative values should be generated`() {
+        val result = StringPattern().negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null",
+            "number",
+            "boolean"
+        )
     }
 }

@@ -1,11 +1,13 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATIVE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.shouldNotMatch
+import org.junit.jupiter.api.Tag
 
 internal class DeferredPatternTest {
     @Test
@@ -17,5 +19,17 @@ internal class DeferredPatternTest {
     fun `should encompass itself`() {
         val deferredPattern = DeferredPattern("(string)")
         assertThat(deferredPattern.encompasses(deferredPattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+
+    @Test
+    @Tag(GENERATIVE)
+    fun `negative patterns should be generated`() {
+        val result = DeferredPattern("(string)").negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null",
+            "number",
+            "boolean"
+        )
     }
 }

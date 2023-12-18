@@ -37,6 +37,8 @@ data class Row(
     val fileSource: String? = null,
     val jsonExample: JSONObjectExample? = null
 ) {
+    constructor(examples: Map<String, String>) :this(examples.keys.toList(), examples.values.toList())
+
     private val cells = columnNames.zip(values.map { it }).toMap().toMutableMap()
 
     fun noteRequestBody(): Row {

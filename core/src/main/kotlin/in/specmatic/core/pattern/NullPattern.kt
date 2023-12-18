@@ -42,6 +42,10 @@ object NullPattern : Pattern, ScalarType {
         return JSONArrayValue(valueList)
     }
 
+    override fun toNullable(defaultValue: String?): Pattern {
+        return this
+    }
+
     override val typeAlias: String?
         get() = null
 

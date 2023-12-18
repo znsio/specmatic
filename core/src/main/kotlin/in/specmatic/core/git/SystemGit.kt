@@ -31,7 +31,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return ExternalCommand(
             command,
             workingDirectory,
-            listOf("GIT_SSL_NO_VERIFY=true").toTypedArray()
+            mapOf("GIT_SSL_NO_VERIFY" to "true")
         ).executeAsSeparateProcess()
     }
 

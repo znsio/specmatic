@@ -5,7 +5,6 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.BooleanValue
 import `in`.specmatic.core.value.JSONArrayValue
-import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import java.util.*
 
@@ -17,7 +16,7 @@ data class BooleanPattern(val example: String? = null) : Pattern, ScalarType {
         }
 
     override fun generate(resolver: Resolver): Value =
-        matchingExample(example, this) ?: randomBoolean()
+        resolver.resolveExample(example, this) ?: randomBoolean()
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)

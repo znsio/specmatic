@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.GENERATIVE
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import io.mockk.every
@@ -8,6 +9,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.*
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Tag
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
@@ -115,6 +117,7 @@ internal class URLMatcherTest {
     }
 
     @Test
+    @Tag(GENERATIVE)
     fun `should pick up facts`() {
         val urlPattern = toURLMatcherWithOptionalQueryParams(URI("/pets/(id:number)"))
         val resolver = Resolver(mapOf("id" to StringValue("10")))
@@ -125,6 +128,7 @@ internal class URLMatcherTest {
     }
 
     @Test
+    @Tag(GENERATIVE)
     fun `should create 2^n matchers on an empty Row`() {
         val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets?status=(string)&type=(string)"))
         val matchers = matcher.newBasedOn(Row(), Resolver())
@@ -134,6 +138,7 @@ internal class URLMatcherTest {
     }
 
     @Test
+    @Tag(GENERATIVE)
     fun `should generate a valid query string when there is a single row with matching columns`() {
         val row = Row(listOf("status", "type"), listOf("available", "dog"))
         val resolver = Resolver()
@@ -205,6 +210,7 @@ internal class URLMatcherTest {
     }
 
     @Test
+    @Tag(GENERATIVE)
     fun `should generate a path with a concrete value given a path pattern with newBasedOn`() {
         val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets/(status:boolean)"))
         val matchers = matcher.newBasedOn(Row(), Resolver())
@@ -213,6 +219,7 @@ internal class URLMatcherTest {
     }
 
     @Test
+    @Tag(GENERATIVE)
     fun `should generate a path with a concrete value given a query param with newBasedOn`() {
         val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets?available=(boolean)"))
         val matchers = matcher.newBasedOn(Row(), Resolver())
@@ -223,6 +230,25 @@ internal class URLMatcherTest {
 
         val matcherWithQueryParams = URLMatcher(mapOf("available" to BooleanPattern()), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
         assertThat(matchers).contains(matcherWithQueryParams)
+    }
+
+    @Tag(GENERATIVE)
+    @Test
+    fun `should generate negative values for a string`() {
+        val urlMatchers = toURLMatcherWithOptionalQueryParams(URI("/pets?name=(string)")).negativeBasedOn(Row(), Resolver())!!
+        assertThat(urlMatchers).containsExactly(URLMatcher(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets"))
+    }
+
+    @Tag(GENERATIVE)
+    @Test
+    fun `should generate negative values for a number`() {
+        val headers = HttpHeadersPattern(mapOf("X-TraceID" to NumberPattern()))
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver())
+
+        assertThat(newHeaders).containsExactlyInAnyOrder(
+            HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),
+            HttpHeadersPattern(mapOf("X-TraceID" to BooleanPattern())),
+        )
     }
 
     @Test

@@ -1,6 +1,8 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.True
 import `in`.specmatic.core.value.Value
@@ -31,8 +33,9 @@ data class Resolver(
     val isNegative: Boolean = false,
     val patternMatchStrategy: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = actualMatch,
     val parseStrategy: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = actualParse,
-    val generativeTestingEnabled: Boolean = false,
     val cyclePreventionStack: List<Pattern> = listOf(),
+    val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample(),
+    val generation: GenerationStrategies = NonGenerativeTests()
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -155,4 +158,102 @@ data class Resolver(
     fun invalidRequestResolver(): Resolver {
         return this.copy(patternMatchStrategy = matchAnything, parseStrategy = alwaysReturnStringValue)
     }
+
+    fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): List<Pattern> {
+        return generation.generatedPatternsForGenerativeTests(this, pattern, key)
+    }
+
+    fun resolveExample(example: String?, pattern: Pattern): Value? {
+        return defaultExampleResolver.resolveExample(example, pattern, this)
+    }
+
+    fun resolveExample(example: String?, pattern: List<Pattern>): Value? {
+        return defaultExampleResolver.resolveExample(example, pattern, this)
+    }
+
+    fun resolveExample(example: List<String?>?, pattern: Pattern): JSONArrayValue? {
+        return defaultExampleResolver.resolveExample(example, pattern, this)
+    }
+
+    fun generateHttpRequests(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): List<Pattern> {
+        return generation.generateHttpRequests(this, body, row, requestBodyAsIs, value)
+    }
+
+    fun generateHttpRequests(body: Pattern, row: Row): List<Pattern> {
+        return generation.generateHttpRequests(this, body, row)
+    }
+
+    fun resolveRow(row: Row): Row {
+        return generation.resolveRow(this, row)
+    }
+
+    fun generateKeySubLists(key: String, subList: List<String>): List<List<String>> {
+        return generation.generateKeySubLists(this, key, subList)
+    }
+}
+
+interface DefaultExampleResolver {
+    fun resolveExample(example: String?, pattern: Pattern, resolver: Resolver): Value?
+    fun resolveExample(example: List<String?>?, pattern: Pattern, resolver: Resolver): JSONArrayValue?
+    fun resolveExample(example: String?, pattern: List<Pattern>, resolver: Resolver): Value?
+}
+
+class UseDefaultExample : DefaultExampleResolver {
+    override fun resolveExample(example: String?, pattern: Pattern, resolver: Resolver): Value? {
+        if(example == null)
+            return null
+
+        val value = pattern.parse(example, resolver)
+        val exampleMatchResult = pattern.matches(value, Resolver())
+
+        if(exampleMatchResult.isSuccess())
+            return value
+
+        throw ContractException("Example \"$example\" does not match ${pattern.typeName} type")
+    }
+
+    override fun resolveExample(example: String?, pattern: List<Pattern>, resolver: Resolver): Value? {
+        if(example == null)
+            return null
+
+        val matchResults = pattern.asSequence().map {
+            try {
+                val value = it.parse(example, Resolver())
+                Pair(it.matches(value, Resolver()), value)
+            } catch(e: Throwable) {
+                Pair(Result.Failure(exceptionCauseMessage(e)), null)
+            }
+        }
+
+        return matchResults.firstOrNull { it.first.isSuccess() }?.second
+            ?: throw ContractException("Example \"$example\" does not match:\n${Result.fromResults(matchResults.map { it.first }.toList()).reportString()}")
+    }
+
+    override fun resolveExample(example: List<String?>?, pattern: Pattern, resolver: Resolver): JSONArrayValue? {
+        if(example == null)
+            return null
+
+        val items = example.mapIndexed { index, s ->
+            attempt(breadCrumb = "[$index (example)]") {
+                pattern.parse(s ?: "", resolver)
+            }
+        }
+
+        return JSONArrayValue(items)
+    }
+}
+
+class DoNotUseDefaultExample : DefaultExampleResolver {
+    override fun resolveExample(example: String?, pattern: Pattern, resolver: Resolver): Value? {
+        return null
+    }
+
+    override fun resolveExample(example: List<String?>?, pattern: Pattern, resolver: Resolver): JSONArrayValue? {
+        return null
+    }
+
+    override fun resolveExample(example: String?, pattern: List<Pattern>, resolver: Resolver): Value? {
+        return null
+    }
+
 }

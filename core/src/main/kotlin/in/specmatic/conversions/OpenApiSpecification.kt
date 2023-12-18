@@ -7,10 +7,7 @@ import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.readEnvVarOrProperty
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
@@ -39,6 +36,8 @@ private const val SERVICE_TYPE_HTTP = "HTTP"
 private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
 private const val testDirectoryProperty = "specmaticTestsDirectory"
 
+
+const val NO_SECURITY_SCHEM_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
 
 class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
     ApiSpecification {
@@ -114,11 +113,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         )
     }
 
-    override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>> {
+    override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
         val scenarioInfosWithExamples = toScenarioInfosWithExamples()
         val (
             openApitoScenarioInfosFromSpecification: List<ScenarioInfo>,
-            examplesAsStubs: Map<String, Pair<HttpRequest, HttpResponse>>
+            examplesAsStubs: Map<String, List<Pair<HttpRequest, HttpResponse>>>
         ) = openApitoScenarioInfos()
 
         val combinedScenariosFromSpecificationAndWrapper = openApitoScenarioInfosFromSpecification.filter { scenarioInfo ->
@@ -245,12 +244,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         })
     }
 
-    private fun openApitoScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>> {
-        val data: List<Pair<List<ScenarioInfo>, Map<String, Pair<HttpRequest, HttpResponse>>>> = openApiPaths().map { (openApiPath, pathItem) ->
+    private fun openApitoScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
+        val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> = openApiPaths().map { (openApiPath, pathItem) ->
             openApiOperations(pathItem).map { (httpMethod, operation) ->
                 val specmaticPath = toSpecmaticPath(openApiPath, operation)
 
-                val httpRequestPatterns: List<Pair<HttpRequestPattern, Map<String, HttpRequest>>> =
+                val httpRequestPatterns: List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> =
                     toHttpRequestPatterns(
                         specmaticPath, httpMethod, operation
                     )
@@ -280,28 +279,38 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
                 val requestExamples = httpRequestPatterns.map {
                     it.second
-                }.foldRight(emptyMap<String, HttpRequest>()) { acc, map ->
+                }.foldRight(emptyMap<String, List<HttpRequest>>()) { acc, map ->
                     acc.plus(map)
                 }
 
-                val responseExamples = httpResponsePatterns.map { it.examples }
+                val responseExamplesList = httpResponsePatterns.map { it.examples }
 
-                val examples = responseExamples.map {
-                    it.map { (key, responseExample) ->
-                        if(key in requestExamples) key to (requestExamples.getValue(key) to responseExample) else null
-                    }
-                }.flatten().filterNotNull().toMap()
+                val examples =
+                    collateExamplesForExpectations(requestExamples, responseExamplesList)
 
                 scenarioInfos to examples
             }
         }.flatten()
 
         val scenarioInfos = data.map { it.first }.flatten()
-        val examples: Map<String, Pair<HttpRequest, HttpResponse>> = data.map { it.second }.foldRight(emptyMap()) {
+        val examples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = data.map { it.second }.foldRight(emptyMap()) {
             acc, map -> acc.plus(map)
         }
 
         return scenarioInfos to examples
+    }
+
+    private fun collateExamplesForExpectations(
+        requestExamples: Map<String, List<HttpRequest>>,
+        responseExamplesList: List<Map<String, HttpResponse>>
+    ): Map<String, List<Pair<HttpRequest, HttpResponse>>> {
+        return responseExamplesList.flatMap { responseExamples ->
+            responseExamples.filter { (key, _) ->
+                key in requestExamples
+            }.map { (key, responseExample) ->
+                key to requestExamples.getValue(key).map { it to responseExample }
+            }
+        }.toMap()
     }
 
     private fun scenarioName(
@@ -385,14 +394,17 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
     }
 
     private fun rowsToExamples(specmaticExampleRows: List<Row>): List<Examples> =
-        if(specmaticExampleRows.isNotEmpty()) listOf(
-            Examples(
-                specmaticExampleRows.first().columnNames,
-                specmaticExampleRows
-            )
-        )
-        else
-            emptyList()
+        when(specmaticExampleRows) {
+            emptyList<Row>() -> emptyList()
+            else -> {
+                val examples = Examples(
+                    specmaticExampleRows.first().columnNames,
+                    specmaticExampleRows
+                )
+
+                listOf(examples)
+            }
+        }
 
     private fun testRowsFromExamples(
         responseExamples: Map<String, Example>,
@@ -402,7 +414,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
 
         val requestBodyExample: Map<String, Any> =
-            requestBodyExample(requestBody, exampleName, operation?.summary)
+            requestBodyExample(requestBody, exampleName, operation.summary)
 
         val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
             if (value.toString().contains("externalValue")) "${key}_filename" to value
@@ -633,12 +645,12 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
 
     private fun toHttpRequestPatterns(
         urlMatcher: URLMatcher, httpMethod: String, operation: Operation
-    ): List<Pair<HttpRequestPattern, Map<String, HttpRequest>>> {
+    ): List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> {
 
-        val contractSecuritySchemes: Map<String, OpenAPISecurityScheme> =
+        val securitySchemes: Map<String, OpenAPISecurityScheme> =
             openApi.components?.securitySchemes?.mapValues { (schemeName, scheme) ->
                 toSecurityScheme(schemeName, scheme)
-            } ?: emptyMap()
+            } ?: mapOf(NO_SECURITY_SCHEM_IN_SPECIFICATION to NoSecurityScheme())
 
         val parameters = operation.parameters
 
@@ -651,7 +663,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             urlMatcher = urlMatcher,
             method = httpMethod,
             headersPattern = headersPattern,
-            securitySchemes = operationSecuritySchemes(operation, contractSecuritySchemes)
+            securitySchemes = operationSecuritySchemes(operation, securitySchemes)
         )
 
         return when (val requestBody = resolveRequestBody(operation)) {
@@ -704,12 +716,18 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                                 it.value?.value?.toString()
                             } ?: emptyMap()
 
-                            val examples: Map<String, HttpRequest> = exampleBodies.map {
-                                it.key to HttpRequest(
+                            val examples: Map<String, List<HttpRequest>> = exampleBodies.map {
+                                val httpRequest = HttpRequest(
                                     method = httpMethod,
                                     path = urlMatcher.path,
                                     body = parsedValue(it.value ?: "")
                                 )
+
+                                val requestsWithSecurityParams = securitySchemes.map { (_, securityScheme) ->
+                                    securityScheme.addTo(httpRequest)
+                                }
+
+                                it.key to requestsWithSecurityParams
                             }.toMap()
 
                             Pair(requestPattern.copy(body = toSpecmaticPattern(mediaType)), examples)
@@ -737,7 +755,7 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             globalSecurityRequirements.plus(operationSecurityRequirements).distinct()
         val operationSecuritySchemes: List<OpenAPISecurityScheme> =
             contractSecuritySchemes.filter { (name, scheme) -> name in operationSecurityRequirementsSuperSet }.values.toList()
-        return operationSecuritySchemes
+        return operationSecuritySchemes.ifEmpty { listOf(NoSecurityScheme()) }
     }
 
     private fun toSecurityScheme(schemeName: String, securityScheme: SecurityScheme): OpenAPISecurityScheme {
@@ -823,11 +841,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         else when (schema) {
             is StringSchema -> when (schema.enum) {
                 null -> StringPattern(minLength = schema.minLength, maxLength = schema.maxLength, example = schema.example?.toString())
-                else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }.copy(example = schema.example?.toString())
+                else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }.withExample(schema.example?.toString())
             }
             is IntegerSchema -> when (schema.enum) {
                 null -> NumberPattern(example = schema.example?.toString())
-                else -> toEnum(schema, patternName) { enumValue -> NumberValue(enumValue.toString().toInt()) }.copy(example = schema.example?.toString())
+                else -> toEnum(schema, patternName) { enumValue -> NumberValue(enumValue.toString().toInt()) }.withExample(schema.example?.toString())
             }
             is BinarySchema -> BinaryPattern()
             is NumberSchema -> NumberPattern(example = schema.example?.toString())
@@ -838,7 +856,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             is ObjectSchema -> {
                 if (schema.additionalProperties is Schema<*>) {
                     toDictionaryPattern(schema, typeStack, patternName)
-                } else if (schema.xml?.name != null) {
+                }
+                else if (noPropertiesDefinedInSchema(schema)) {
+                    toFreeFormDictionaryWithStringKeysPattern()
+                }
+                else if (schema.xml?.name != null) {
                     toXMLPattern(schema, typeStack = typeStack)
                 } else {
                     toJsonObjectPattern(schema, patternName, typeStack)
@@ -943,13 +965,9 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
             }
         }
 
-        return when (schema.nullable != true) {
-            true -> pattern
-            else -> when (pattern) {
-                NullPattern -> pattern
-                is AnyPattern -> pattern.copy(example = schema.example?.toString())
-                else -> AnyPattern(listOf(NullPattern, pattern), example = schema.example?.toString())
-            }
+        return when (schema.nullable) {
+            false, null -> pattern
+            true -> pattern.toNullable(schema.example?.toString())
         }
     }
 
@@ -1159,6 +1177,8 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         )
     }
 
+    private fun noPropertiesDefinedInSchema(valueSchema: Schema<Any>) = valueSchema.properties == null
+
     private fun toFreeFormDictionaryWithStringKeysPattern(): DictionaryPattern {
         return DictionaryPattern(
             StringPattern(), AnythingPattern
@@ -1191,15 +1211,24 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         }
     }.toMap()
 
-    private fun toEnum(schema: Schema<*>, patternName: String, toSpecmaticValue: (Any) -> Value) =
-        AnyPattern(schema.enum.map<Any, Pattern> { enumValue ->
+    private fun toEnum(schema: Schema<*>, patternName: String, toSpecmaticValue: (Any) -> Value): EnumPattern {
+        val specmaticValues = schema.enum.map<Any?, Value> { enumValue ->
             when (enumValue) {
-                null -> NullPattern
-                else -> ExactValuePattern(toSpecmaticValue(enumValue))
+                null -> NullValue
+                else -> toSpecmaticValue(enumValue)
             }
-        }.toList(), typeAlias = patternName).also {
+        }
+
+        if(schema.nullable != true && NullValue in specmaticValues)
+            throw ContractException("Enum values cannot contain null since the schema $patternName is not nullable")
+
+        if(schema.nullable == true && NullValue !in specmaticValues)
+            throw ContractException("Enum values must contain null since the schema $patternName is nullable")
+
+        return EnumPattern(specmaticValues, nullable = schema.nullable == true, typeAlias = patternName).also {
             cacheComponentPattern(patternName, it)
         }
+    }
 
     private fun toSpecmaticParamName(optional: Boolean, name: String) = when (optional) {
         true -> "${name}?"

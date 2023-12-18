@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.DefaultStrategies
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.*
@@ -25,7 +26,7 @@ internal class ScenarioTest {
             HashMap(),
             HashMap(),
         )
-        scenario.generateTestScenarios().let {
+        scenario.generateTestScenarios(DefaultStrategies).let {
             assertThat(it.size).isEqualTo(1)
         }
     }
@@ -42,7 +43,7 @@ internal class ScenarioTest {
             HashMap(),
             HashMap(),
         )
-        scenario.generateTestScenarios().let {
+        scenario.generateTestScenarios(DefaultStrategies).let {
             assertThat(it.size).isEqualTo(2)
         }
     }
@@ -92,7 +93,7 @@ internal class ScenarioTest {
             HashMap(),
         )
 
-        val testScenarios = scenario.generateTestScenarios()
+        val testScenarios = scenario.generateTestScenarios(DefaultStrategies)
         val newState = testScenarios.first().expectedFacts
 
         assertThat(newState.getValue("id").toStringLiteral()).isNotEqualTo("(string)")
@@ -431,7 +432,7 @@ And response-body (number)
                 it.value.copy(contractCache = mockCache)
             }
 
-            scenario.copy(references = updatedReferences).generateTestScenarios(variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl"))
+            scenario.copy(references = updatedReferences).generateTestScenarios(DefaultStrategies, variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl"))
         }.flatten()
 
         assertThat(testScenarios).allSatisfy(Consumer {

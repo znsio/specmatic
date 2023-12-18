@@ -15,6 +15,8 @@ class ColorPrinter: ContractExecutionPrinter {
         }
 
         println(color.a(testSummary.message).reset())
+        println()
+        println("Tests ran at ${currentDateAndTime()}")
     }
 
     override fun printTestSummary(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {

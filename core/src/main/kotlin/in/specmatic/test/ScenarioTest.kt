@@ -1,22 +1,20 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.conversions.convertPathParameterStyle
-import `in`.specmatic.core.Result
-import `in`.specmatic.core.Scenario
-import `in`.specmatic.core.TestResult
-import `in`.specmatic.core.executeTest
+import `in`.specmatic.core.*
 
 class ScenarioTest(
     val scenario: Scenario,
+    private val resolverStrategies: ResolverStrategies,
     private val generativeTestingEnabled: Boolean = false,
     private val sourceProvider: String? = null,
     private val sourceRepository: String? = null,
     private val sourceRepositoryBranch: String? = null,
     private val specification: String? = null,
-    private val serviceType: String? = null
+    private val serviceType: String? = null,
 ) : ContractTest {
     override fun testResultRecord(result: Result): TestResultRecord {
-        val resultStatus = if (scenario.generatedFromExamples) result.testResult() else TestResult.Skipped
+        val resultStatus = result.testResult()
         return TestResultRecord(convertPathParameterStyle(scenario.path), scenario.method, scenario.status, resultStatus, sourceProvider, sourceRepository, sourceRepositoryBranch, specification, serviceType)
     }
 
@@ -24,7 +22,7 @@ class ScenarioTest(
         testVariables: Map<String, String>,
         testBaseURLs: Map<String, String>
     ): List<ContractTest> {
-        return scenario.generateContractTests(testVariables, testBaseURLs, generativeTestingEnabled)
+        return scenario.generateContractTests(resolverStrategies, testVariables, testBaseURLs, generativeTestingEnabled)
     }
 
     override fun testDescription(): String {

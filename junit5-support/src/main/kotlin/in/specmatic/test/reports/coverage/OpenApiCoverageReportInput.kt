@@ -18,7 +18,8 @@ class OpenApiCoverageReportInput(
     private var configFilePath:String,
     private val testResultRecords: MutableList<TestResultRecord> = mutableListOf(),
     private val applicationAPIs: MutableList<API> = mutableListOf(),
-    private val excludedAPIs: MutableList<String> = mutableListOf()
+    private val excludedAPIs: MutableList<String> = mutableListOf(),
+    private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testResultRecords.add(testResultRecord)
@@ -32,10 +33,15 @@ class OpenApiCoverageReportInput(
         excludedAPIs.addAll(apis)
     }
 
+    fun addEndpoints(endpoints: List<Endpoint>) {
+        allEndpoints.addAll(endpoints)
+    }
+
     fun generate(): OpenAPICoverageConsoleReport {
         val testResults = testResultRecords.filter { testResult -> excludedAPIs.none { it == testResult.path } }
         val testResultsWithNotImplementedEndpoints = identifyTestsThatFailedBecauseOfEndpointsThatWereNotImplemented(testResults)
         var allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
+        allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
         allTests = sortByPathMethodResponseStatus(allTests)
 
         val apiTestsGrouped = groupTestsByPathMethodAndResponseStatus(allTests)
@@ -48,14 +54,13 @@ class OpenApiCoverageReportInput(
                     if (routeAPIRows.isEmpty()) {
                         routeAPIRows.add(topLevelCoverageRow)
                     } else {
-                        val lastCoverageRow = routeAPIRows.last()
-                        val rowMethod = if (method != lastCoverageRow.method) method else ""
+                        val rowMethod = if (routeAPIRows.none { it.method == method }) method else ""
                         routeAPIRows.add(
                             topLevelCoverageRow.copy(
                                 method = rowMethod,
                                 path ="",
                                 responseStatus = responseStatus.toString(),
-                                count = testResults.count{it.includeForCoverage}.toString(),
+                                count = testResults.count{it.isExercised}.toString(),
                                 coveragePercentage = 0,
                                 remarks = getRemarks(testResults)
                             )
@@ -67,9 +72,39 @@ class OpenApiCoverageReportInput(
         }
 
         val totalAPICount = apiTestsGrouped.keys.size
-        val missedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.Skipped } }.size
-        val notImplementedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.any { it.result == TestResult.NotImplemented } }.size
-        return OpenAPICoverageConsoleReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount)
+
+        val missedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.all { it.result == TestResult.Skipped  } }.size
+
+        val notImplementedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.all { it.result in setOf(TestResult.NotImplemented,  TestResult.DidNotRun) } }.size
+
+        val partiallyMissedAPICount = allTests.groupBy { it.path }
+            .count { (_, tests) ->
+                tests.any { it.result == TestResult.Skipped } && tests.any {it.result != TestResult.Skipped }
+            }
+
+        val partiallyNotImplementedAPICount = allTests.groupBy { it.path }
+            .count { (_, tests) ->
+                tests.any { it.result == TestResult.NotImplemented } && tests.any {it.result in setOf(TestResult.Success , TestResult.Skipped, TestResult.Failed) }
+            }
+
+        return OpenAPICoverageConsoleReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
+    }
+
+    private fun addTestResultsForTestsNotGeneratedBySpecmatic(allTests: List<TestResultRecord>, allEndpoints: List<Endpoint>): List<TestResultRecord> {
+        val missedEndpoints = allEndpoints.filter { endpoint -> allTests.none { it.path == endpoint.path && it.method == endpoint.method && it.responseStatus == endpoint.responseStatus  } }
+        return allTests.plus(
+            missedEndpoints.map { endpoint ->  TestResultRecord(
+                endpoint.path,
+                endpoint.method,
+                endpoint.responseStatus,
+                TestResult.DidNotRun,
+                endpoint.sourceProvider,
+                endpoint.sourceRepository,
+                endpoint.sourceRepositoryBranch,
+                endpoint.specification,
+                endpoint.serviceType
+            ) }
+        )
     }
 
     fun generateJsonReport(): OpenApiCoverageJsonReport {
@@ -93,7 +128,7 @@ class OpenApiCoverageReportInput(
                         path = operationGroup.first,
                         method = operationGroup.second,
                         responseCode = operationGroup.third,
-                        count = operationRows.count{it.includeForCoverage},
+                        count = operationRows.count{it.isExercised},
                         coverageStatus = getRemarks(operationRows).toString()
                     )
                 }
@@ -146,13 +181,13 @@ class OpenApiCoverageReportInput(
         val method = methodMap.keys.first()
         val responseStatus = methodMap[method]?.keys?.first()
         val remarks = getRemarks(methodMap[method]?.get(responseStatus)!!)
-        val count = methodMap[method]?.get(responseStatus)?.count { it.includeForCoverage }
+        val exercisedCount = methodMap[method]?.get(responseStatus)?.count { it.isExercised }
 
         val totalMethodResponseCodeCount = methodMap.values.sumOf { it.keys.size }
         var totalMethodResponseCodeCoveredCount = 0
         methodMap.forEach { (_, responses) ->
             responses.forEach { (_, testResults) ->
-                val increment = min(testResults.count { it.includeForCoverage }, 1)
+                val increment = min(testResults.count { it.isCovered }, 1)
                 totalMethodResponseCodeCoveredCount += increment
             }
         }
@@ -163,22 +198,30 @@ class OpenApiCoverageReportInput(
             method,
             route,
             responseStatus!!,
-            count!!,
+            exercisedCount!!,
             coveragePercentage,
             remarks
         )
     }
 
     private fun getRemarks(testResultRecords: List<TestResultRecord>): Remarks {
-        val coveredCount = testResultRecords.count { it.includeForCoverage }
-        return when (coveredCount == 0) {
-            true -> when (testResultRecords.first().result) {
-                TestResult.Skipped -> Remarks.Missed
-                TestResult.NotImplemented -> Remarks.NotImplemented
-                else -> throw ContractException("Cannot determine remarks for unknown test result: ${testResultRecords.first().result}")
+        val exerciseCount = testResultRecords.count { it.isExercised }
+        return when (exerciseCount == 0) {
+            true -> {
+                when (val result = testResultRecords.first().result) {
+                    TestResult.Skipped -> Remarks.Missed
+                    TestResult.NotImplemented -> Remarks.NotImplemented
+                    TestResult.DidNotRun -> Remarks.DidNotRun
+                    else -> throw ContractException("Cannot determine remarks for unknown test result: $result")
+                }
             }
 
-            else -> Remarks.Covered
+            else -> {
+                when(testResultRecords.first().result) {
+                    TestResult.NotImplemented -> Remarks.NotImplemented
+                    else -> Remarks.Covered
+                }
+            }
         }
     }
 
@@ -196,4 +239,15 @@ data class CoverageGroupKey(
     val sourceRepositoryBranch: String?,
     val specification: String?,
     val serviceType: String?
+)
+
+data class Endpoint(
+    val path: String,
+    val method: String,
+    val responseStatus: Int,
+    val sourceProvider: String? = null,
+    val sourceRepository: String? = null,
+    val sourceRepositoryBranch: String? = null,
+    val specification: String? = null,
+    val serviceType: String? = null
 )

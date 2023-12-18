@@ -309,11 +309,13 @@ class GenerativeTests {
 
         try {
             System.setProperty(Flags.onlyPositive, "true")
-            val results = feature.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
+            val results = feature.copy(generativeTestingEnabled = true, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
+                    println(body.toStringLiteral())
                     statusValuesSeen.add(body.findFirstChildByPath("status")!!.toStringLiteral() + " in body")
-                    statusValuesSeen.add(request.headers.getValue("status") + " in headers")
+                    statusValuesSeen.add(request.headers["status"]?.let { "$it in headers" } ?: "status not in headers" )
+
                     return HttpResponse.OK("OK")
                 }
 
@@ -321,13 +323,13 @@ class GenerativeTests {
                 }
             })
 
-            println(results.report())
+            if(results.failureCount > 0)
+                println(results.report())
 
             assertThat(results.failureCount).isEqualTo(0)
             assertThat(results.successCount).isGreaterThan(0)
 
-            val expectedStatusValues = setOf("true in headers", "success in body")
-            assertThat(statusValuesSeen).isEqualTo(expectedStatusValues)
+            assertThat(statusValuesSeen).containsExactlyInAnyOrder("true in headers", "status not in headers", "success in body")
         } catch(e: ContractException) {
             Assertions.fail("Should not have got this error:\n${e.report()}")
         } finally {
@@ -489,7 +491,7 @@ class GenerativeTests {
 
         val requestBodiesSeen = mutableListOf<Value>()
 
-        val results = specification.copy(generativeTestingEnabled = true).executeTests(object : TestExecutor {
+        val results = specification.copy(generativeTestingEnabled = true, resolverStrategies = DefaultStrategies.copy(generation = GenerativeTestsEnabled())).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 println(request.body)
                 requestBodiesSeen.add(request.body)

@@ -38,9 +38,11 @@ private const val testDirectoryProperty = "specmaticTestsDirectory"
 
 const val NO_SECURITY_SCHEMA_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
 
-class OpenApiSpecification(private val openApiFilePath: String, private val parsedOpenApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification,
+class OpenApiSpecification(private val openApiFilePath: String, private val parsedOpenApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification, ApiSpecification {
+    init {
+        logger.log(OpenApiSpecificationInfo(openApiFilePath, parsedOpenApi).toString())
+    }
 
-    ApiSpecification {
     companion object {
         fun fromFile(openApiFilePath: String, relativeTo: String = ""): OpenApiSpecification {
             val openApiFile = File(openApiFilePath).let { openApiFile ->

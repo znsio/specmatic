@@ -5,11 +5,12 @@ import `in`.specmatic.core.SecuritySchemeConfiguration
 
 data class ApiKeySecurityToken(
     private val securitySchemeConfiguration: SecuritySchemeConfiguration?,
-    private val environment: Environment = DefaultEnvironment()
+    private val environmentVariable: String,
+    private val environment: Environment
 ) : SecurityToken {
     override fun resolve(): String? {
-        return securitySchemeConfiguration?.let {
+        return environment.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
             (it as APIKeySecuritySchemeConfiguration).value
-        } ?: environment.getEnvironmentVariable(SPECMATIC_API_KEY)
+        }
     }
 }

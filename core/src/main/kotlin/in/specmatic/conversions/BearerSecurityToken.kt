@@ -9,15 +9,15 @@ data class BearerSecurityToken(
     private val type: String,
     private val securitySchemeConfiguration: SecuritySchemeConfiguration?,
     private val environmentVariable: String,
-    private val environment: Environment = DefaultEnvironment()
+    private val environment: Environment
 ) :
     SecurityToken {
     override fun resolve(): String? {
         return when (type) {
             BEARER_SECURITY_SCHEME, SecurityScheme.Type.OAUTH2.toString() ->
-                securitySchemeConfiguration?.let {
+                environment.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
                     (it as SecuritySchemeWithOAuthToken).token
-                } ?: environment.getEnvironmentVariable(environmentVariable)
+                }
 
             else -> throw ContractException("Cannot use the Bearer Security Scheme implementation for scheme type: $type")
         }

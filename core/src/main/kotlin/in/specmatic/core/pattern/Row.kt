@@ -11,12 +11,9 @@ const val DEREFERENCE_PREFIX = "$"
 const val FILENAME_PREFIX = "@"
 
 data class JSONExample(val jsonObject: JSONComposite, val originalRow: Row) {
-    fun containsKey(key: String): Boolean {
+    fun hasScalarValueForKey(key: String): Boolean {
         return jsonObject.let {
-            when(it) {
-                is JSONObjectValue -> it.jsonObject[key] is ScalarValue
-                is JSONArrayValue -> false
-            }
+            it is JSONObjectValue && it.jsonObject[key] is ScalarValue
         }
     }
 
@@ -90,7 +87,7 @@ data class Row(
         return isPatternToken(value) && withoutPatternDelimiters(value).trim().startsWith(DEREFERENCE_PREFIX)
     }
 
-    fun containsField(key: String): Boolean = requestBodyJSONExample?.containsKey(key) ?: cells.containsKey(key)
+    fun containsField(key: String): Boolean = requestBodyJSONExample?.hasScalarValueForKey(key) ?: cells.containsKey(key)
 
     fun withoutOmittedKeys(keys: Map<String, Pattern>) = keys.filter {
         !this.containsField(withoutOptionality(it.key)) || this.getField(withoutOptionality(it.key)) !in OMIT

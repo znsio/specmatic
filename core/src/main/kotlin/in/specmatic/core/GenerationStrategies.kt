@@ -9,14 +9,22 @@ import `in`.specmatic.core.value.Value
 import kotlin.Result
 
 interface GenerationStrategies {
+    val negativePrefix: String
+    val positivePrefix: String
+
     fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): List<Pattern>
     fun generateHttpRequests(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): List<Pattern>
     fun generateHttpRequests(resolver: Resolver, body: Pattern, row: Row): List<Pattern>
     fun resolveRow(resolver: Resolver, row: Row): Row
     fun generateKeySubLists(resolver: Resolver, key: String, subList: List<String>): List<List<String>>
+    fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario>
+    fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario>
 }
 
-class GenerativeTestsEnabled : GenerationStrategies {
+data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.onlyPositive()) : GenerationStrategies {
+    override val negativePrefix: String = "-ve "
+    override val positivePrefix: String = "+ve "
+
     override fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): List<Pattern> {
         // TODO generate value outside
         return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
@@ -28,7 +36,7 @@ class GenerativeTestsEnabled : GenerationStrategies {
         // TODO generate value outside
         val requestsFromFlattenedRow: List<Pattern> =
             resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
+                body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
             }
 
         return if(requestsFromFlattenedRow.none { p -> p.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Success }) {
@@ -69,9 +77,23 @@ class GenerativeTestsEnabled : GenerationStrategies {
         } else
             listOf(subList + key)
     }
+
+    override fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
+        return feature.positiveTestScenarios(suggestions)
+    }
+
+    override fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
+        return if(positiveOnly)
+            emptyList()
+        else
+            feature.negativeTestScenarios()
+    }
 }
 
-class NonGenerativeTests : GenerationStrategies {
+object NonGenerativeTests : GenerationStrategies {
+    override val negativePrefix: String = ""
+    override val positivePrefix: String = ""
+
     override fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): List<Pattern> {
         return emptyList()
     }
@@ -92,5 +114,13 @@ class NonGenerativeTests : GenerationStrategies {
 
     override fun generateKeySubLists(resolver: Resolver, key: String, subList: List<String>): List<List<String>> {
         return listOf(subList + key)
+    }
+
+    override fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
+        return feature.positiveTestScenarios(suggestions)
+    }
+
+    override fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
+        return emptyList()
     }
 }

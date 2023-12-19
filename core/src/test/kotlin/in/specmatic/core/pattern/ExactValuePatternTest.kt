@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATIVE
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.NullValue
@@ -17,7 +17,7 @@ internal class ExactValuePatternTest {
     }
 
     @Test
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     fun `negative patterns should be generated`() {
         val result = ExactValuePattern(StringValue("data")).negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(

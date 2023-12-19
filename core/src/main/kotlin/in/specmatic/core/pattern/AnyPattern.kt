@@ -38,9 +38,14 @@ data class AnyPattern(
 
         val failuresWithUpdatedBreadcrumbs = matchResults.map {
             Pair(it.pattern, it.result as Result.Failure)
-        }.map { (pattern, failure) ->
+        }.mapIndexed { index, (pattern, failure) ->
+            val ordinal = index + 1
+
             pattern.typeAlias?.let {
-                failure.breadCrumb("(~~~${withoutPatternDelimiters(it)} object)")
+                if(it.isBlank() || it == "()")
+                    failure.breadCrumb("(~~~object $ordinal)")
+                else
+                    failure.breadCrumb("(~~~${withoutPatternDelimiters(it)} object)")
             } ?:
             failure
         }

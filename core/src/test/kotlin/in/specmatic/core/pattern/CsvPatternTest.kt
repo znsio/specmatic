@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATIVE
+import `in`.specmatic.GENERATION
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
@@ -220,7 +220,7 @@ paths:
 
 
     @Test
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     fun `negative patterns should be generated`() {
         val result = StringPattern().negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(

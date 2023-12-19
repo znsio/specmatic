@@ -1,12 +1,10 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATIVE
-import `in`.specmatic.core.Flags
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.UseDefaultExample
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldNotMatch
 import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
@@ -71,12 +69,12 @@ internal class NumberPatternTest {
 
     @Test
     fun `it should use the example if provided when generating`() {
-        val generated = NumberPattern(example = "10").generate(Resolver(defaultExampleResolver = UseDefaultExample()))
+        val generated = NumberPattern(example = "10").generate(Resolver(defaultExampleResolver = UseDefaultExample))
         assertThat(generated).isEqualTo(NumberValue(10))
     }
 
     @Test
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     fun `negative values should be generated`() {
         val result = NumberPattern().negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(

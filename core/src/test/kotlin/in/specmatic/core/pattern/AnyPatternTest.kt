@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATIVE
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.withNullPattern
@@ -59,7 +59,7 @@ internal class AnyPatternTest {
     }
 
     @Test
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     fun `should generate new patterns for all available types`() {
         AnyPattern(listOf(NumberPattern(), EnumPattern(listOf(StringValue("one"), StringValue("two"))))).newBasedOn(Row(), Resolver()).let {
             it.map { it.typeName } shouldContainInAnyOrder listOf("number", "\"one\"", "\"two\"")
@@ -67,7 +67,7 @@ internal class AnyPatternTest {
     }
 
     @Test
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     fun `should create a new pattern based on the given row`() {
         val pattern = AnyPattern(listOf(parsedPattern("""{"id": "(number)"}""")))
         val row = Row(listOf("id"), listOf("10"))
@@ -84,7 +84,7 @@ internal class AnyPatternTest {
     }
 
     @Test
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     fun `should create new patterns when the row has no values`() {
         val pattern = AnyPattern(listOf(parsedPattern("""{"id": "(number)"}""")))
         val value = pattern.newBasedOn(Row(), Resolver()).first().generate(Resolver())
@@ -212,7 +212,7 @@ internal class AnyPatternTest {
     }
 
     @Test
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     fun `values for negative tests`() {
         val negativeTypes = AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver())
 

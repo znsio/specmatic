@@ -40,7 +40,7 @@ const val NO_SECURITY_SCHEMA_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICA
 
 class OpenApiSpecification(private val openApiFilePath: String, private val parsedOpenApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification, ApiSpecification {
     init {
-        logger.log(OpenApiSpecificationInfo(openApiFilePath, parsedOpenApi).toString())
+        logger.log(openApiSpecificationInfo(openApiFilePath, parsedOpenApi))
     }
 
     companion object {

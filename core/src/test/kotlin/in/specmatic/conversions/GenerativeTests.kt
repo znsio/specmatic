@@ -837,6 +837,11 @@ class GenerativeTests {
                                       type: string
                                 street:
                                   type: string
+                                propertyType:
+                                  type: string
+                                  enum:
+                                    - residential
+                                    - commercial
                   responses:
                     200:
                       description: Person record created
@@ -848,18 +853,24 @@ class GenerativeTests {
                             CREATE_PERSON:
                               value:
                                 "Person record created"
+                    400:
+                      description: Bad Request
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
             """.trimIndent(), ""
         ).toFeature()
 
-        val notes = mutableSetOf<String>()
+        val notes = mutableListOf<String>()
 
-        feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+        val results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val body = request.body as JSONObjectValue
                 println(body.toStringLiteral())
 
                 body.findFirstChildByPath("name")?.let {
-                    if(it !is StringValue) {
+                    if (it !is StringValue) {
                         notes.add("name mutated to ${it.displayableType()}")
                         return HttpResponse.ERROR_400
                     }
@@ -867,24 +878,8 @@ class GenerativeTests {
                     assertThat(it).isEqualTo(StringValue("John Doe"))
                 }
 
-                body.findFirstChildByPath("address")?.let {
-                    it as JSONObjectValue
-
-                    if(it.jsonObject.isEmpty()) {
-                        notes.add("address object is empty")
-                    }
-                }
-
-                body.findFirstChildByPath("building")?.let {
-                    it as JSONObjectValue
-
-                    if(it.jsonObject.isEmpty()) {
-                        notes.add("building object is empty")
-                    }
-                }
-
                 body.findFirstChildByPath("address.building.name")?.let {
-                    if(it !is StringValue) {
+                    if (it !is StringValue) {
                         notes.add("address.building.name mutated to ${it.displayableType()}")
                         return HttpResponse.ERROR_400
                     }
@@ -893,7 +888,7 @@ class GenerativeTests {
                 }
 
                 body.findFirstChildByPath("address.building.flat")?.let {
-                    if(it !is NumberValue) {
+                    if (it !is NumberValue) {
                         notes.add("address.building.flat mutated to ${it.displayableType()}")
                         return HttpResponse.ERROR_400
                     }
@@ -902,13 +897,40 @@ class GenerativeTests {
                 }
 
                 body.findFirstChildByPath("address.street")?.let {
-                    if(it !is StringValue) {
+                    if (it !is StringValue) {
                         notes.add("address.street mutated to ${it.displayableType()}")
                         return HttpResponse.ERROR_400
                     }
 
-                    assertThat(it).isEqualTo(StringValue("Mason Street"))
+                    assertThat(it).isEqualTo(StringValue("1st Street"))
                 }
+
+                body.findFirstChildByPath("address.propertyType")?.let {
+                    if (it == StringValue("residential") || it == StringValue("commercial")) {
+                        notes.add("address.propertyType is ${it.toStringLiteral()}")
+                    } else {
+                        notes.add("address.propertyType mutated to ${it.displayableType()}")
+                        return HttpResponse.ERROR_400
+                    }
+                }
+
+                body.findFirstChildByPath("address")?.let {
+                    it as JSONObjectValue
+
+                    if (it.jsonObject.isEmpty()) {
+                        notes.add("address object is empty")
+                    }
+                }
+
+                body.findFirstChildByPath("building")?.let {
+                    it as JSONObjectValue
+
+                    if (it.jsonObject.isEmpty()) {
+                        notes.add("building object is empty")
+                    }
+                }
+
+                notes.add("request matches the specification")
 
                 return HttpResponse.OK
             }
@@ -917,20 +939,66 @@ class GenerativeTests {
             }
         })
 
+        if(results.failureCount > 0)
+            println(results.report())
+
         assertThat(notes.sorted()).isEqualTo(listOf(
             "address object is empty",
-            "name mutated to null",
-            "name mutated to number",
-            "name mutated to boolean",
-            "address.building.flat mutated to null",
             "address.building.flat mutated to boolean",
+            "address.building.flat mutated to boolean",
+            "address.building.flat mutated to null",
+            "address.building.flat mutated to null",
             "address.building.flat mutated to string",
+            "address.building.flat mutated to string",
+            "address.building.name mutated to boolean",
+            "address.building.name mutated to boolean",
+            "address.building.name mutated to null",
             "address.building.name mutated to null",
             "address.building.name mutated to number",
-            "address.building.name mutated to boolean",
+            "address.building.name mutated to number",
+            "address.propertyType is commercial",
+            "address.propertyType is commercial",
+            "address.propertyType is residential",
+            "address.propertyType is residential",
+            "address.propertyType mutated to boolean",
+            "address.propertyType mutated to boolean",
+            "address.propertyType mutated to null",
+            "address.propertyType mutated to null",
+            "address.propertyType mutated to number",
+            "address.propertyType mutated to number",
+            "address.street mutated to boolean",
+            "address.street mutated to boolean",
+            "address.street mutated to boolean",
+            "address.street mutated to boolean",
+            "address.street mutated to null",
+            "address.street mutated to null",
+            "address.street mutated to null",
             "address.street mutated to null",
             "address.street mutated to number",
-            "address.street mutated to boolean"
+            "address.street mutated to number",
+            "address.street mutated to number",
+            "address.street mutated to number",
+            "name mutated to boolean",
+            "name mutated to boolean",
+            "name mutated to boolean",
+            "name mutated to boolean",
+            "name mutated to boolean",
+            "name mutated to null",
+            "name mutated to null",
+            "name mutated to null",
+            "name mutated to null",
+            "name mutated to null",
+            "name mutated to number",
+            "name mutated to number",
+            "name mutated to number",
+            "name mutated to number",
+            "name mutated to number",
+            "request matches the specification",
+            "request matches the specification",
+            "request matches the specification",
+            "request matches the specification",
+            "request matches the specification",
+            "request matches the specification"
         ).sorted())
     }
 }

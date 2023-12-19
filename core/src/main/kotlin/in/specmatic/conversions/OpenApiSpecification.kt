@@ -29,8 +29,10 @@ import io.swagger.v3.parser.core.models.ParseOptions
 import io.swagger.v3.parser.core.models.SwaggerParseResult
 import java.io.File
 
-private const val BEARER_SECURITY_SCHEME = "bearer"
-private const val SPECMATIC_OAUTH2_TOKEN = "SPECMATIC_OAUTH2_TOKEN"
+const val BEARER_SECURITY_SCHEME = "bearer"
+const val SPECMATIC_OAUTH2_TOKEN = "SPECMATIC_OAUTH2_TOKEN"
+const val SPECMATIC_BEARER_TOKEN = "SPECMATIC_BEARER_TOKEN"
+const val SPECMATIC_API_KEY = "SPECMATIC_API_KEY"
 private const val SERVICE_TYPE_HTTP = "HTTP"
 
 private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
@@ -763,17 +765,15 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
     private fun toSecurityScheme(schemeName: String, securityScheme: SecurityScheme): OpenAPISecurityScheme {
         val securitySchemeConfiguration = securityConfiguration?.OpenAPI?.securitySchemes?.get(schemeName)
         if (securityScheme.scheme == BEARER_SECURITY_SCHEME) {
-            return toBearerSecurityScheme(securityScheme.scheme, securitySchemeConfiguration)
+            return toBearerSecurityScheme(securityScheme.scheme, securitySchemeConfiguration, SPECMATIC_BEARER_TOKEN)
         }
 
         if (securityScheme.type == SecurityScheme.Type.OAUTH2) {
-            return toBearerSecurityScheme(securityScheme.type.toString(), securitySchemeConfiguration)
+            return toBearerSecurityScheme(securityScheme.type.toString(), securitySchemeConfiguration, SPECMATIC_OAUTH2_TOKEN)
         }
 
         if (securityScheme.type == SecurityScheme.Type.APIKEY) {
-            val apiKey = securitySchemeConfiguration?.let{
-                (it as APIKeySecuritySchemeConfiguration).value
-            }
+            val apiKey = ApiKeySecurityToken(securitySchemeConfiguration).resolve()
             if (securityScheme.`in` == SecurityScheme.In.HEADER)
                 return APIKeyInHeaderSecurityScheme(securityScheme.name, apiKey)
 
@@ -786,21 +786,11 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
 
     private fun toBearerSecurityScheme(
         type: String,
-        securitySchemeConfiguration: SecuritySchemeConfiguration?
+        securitySchemeConfiguration: SecuritySchemeConfiguration?,
+        environmentVariable: String,
     ): BearerSecurityScheme {
-        val token = when (type) {
-            BEARER_SECURITY_SCHEME, SecurityScheme.Type.OAUTH2.toString() ->
-                securitySchemeConfiguration?.let {
-                    (it as SecuritySchemeWithOAuthToken).token
-                } ?: getBearerTokenFromEnvironment()
-
-            else -> throw ContractException("Cannot use the Bearer Security Scheme implementation for scheme type: $type")
-        }
+        val token = BearerSecurityToken(type, securitySchemeConfiguration, environmentVariable).resolve()
         return BearerSecurityScheme(token)
-    }
-
-    private fun getBearerTokenFromEnvironment(): String? {
-        return System.getenv(SPECMATIC_OAUTH2_TOKEN)
     }
 
     private fun toFormFields(mediaType: MediaType) =

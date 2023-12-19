@@ -794,7 +794,7 @@ class GenerativeTests {
     }
 
     @Test
-    fun `generative tests when the example 2 levels deep`() {
+    fun `generative tests when the example goes 2 levels deep`() {
         val feature = OpenApiSpecification.fromYAML(
             """
             ---

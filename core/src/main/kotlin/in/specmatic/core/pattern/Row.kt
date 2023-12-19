@@ -35,7 +35,7 @@ data class Row(
     val references: Map<String, References> = emptyMap(),
     val name: String = "",
     val fileSource: String? = null,
-    val jsonExample: JSONExample? = null
+    val requestBodyJSONExample: JSONExample? = null
 ) {
     constructor(examples: Map<String, String>) :this(examples.keys.toList(), examples.values.toList())
 
@@ -51,7 +51,7 @@ data class Row(
             val parsed = parsedJSON(requestBody)
 
             if(parsed is JSONComposite)
-                this.copy(jsonExample = JSONExample(parsed, this))
+                this.copy(requestBodyJSONExample = JSONExample(parsed, this))
             else
                 this
         } catch (e: ContractException) {
@@ -70,7 +70,7 @@ data class Row(
     }
 
     private fun getValue(columnName: String): RowValue {
-        val value = jsonExample?.getValueFromTopLevelKeys(columnName) ?: cells.getValue(columnName)
+        val value = requestBodyJSONExample?.getValueFromTopLevelKeys(columnName) ?: cells.getValue(columnName)
 
         return when {
             isContextValue(value) && isReferenceValue(value) -> ReferenceValue(ValueReference(value), references)
@@ -90,42 +90,42 @@ data class Row(
         return isPatternToken(value) && withoutPatternDelimiters(value).trim().startsWith(DEREFERENCE_PREFIX)
     }
 
-    fun containsField(key: String): Boolean = jsonExample?.containsKey(key) ?: cells.containsKey(key)
+    fun containsField(key: String): Boolean = requestBodyJSONExample?.containsKey(key) ?: cells.containsKey(key)
 
     fun withoutOmittedKeys(keys: Map<String, Pattern>) = keys.filter {
         !this.containsField(withoutOptionality(it.key)) || this.getField(withoutOptionality(it.key)) !in OMIT
     }
 
-    fun dropDownIntoJSONObject(key: String): Row {
-        if(jsonExample == null)
+    fun stepDownOneLevelInJSONHierarchy(key: String): Row {
+        if(requestBodyJSONExample == null)
             return this
 
-        if(jsonExample.jsonObject !is JSONObjectValue)
+        if(requestBodyJSONExample.jsonObject !is JSONObjectValue)
             throw ContractException("Example provided is a JSON array, which can't contain key $key")
 
-        val value = jsonExample.jsonObject.findFirstChildByPath(withoutOptionality(key)) ?: return withNoJSONObjectExample()
+        val value = requestBodyJSONExample.jsonObject.findFirstChildByPath(withoutOptionality(key)) ?: return withNoJSONObjectExample()
 
         if(value !is JSONComposite)
             return withNoJSONObjectExample()
 
-        return this.copy(jsonExample = JSONExample(value, jsonExample.originalRow))
+        return this.copy(requestBodyJSONExample = JSONExample(value, requestBodyJSONExample.originalRow))
     }
 
-    private fun withNoJSONObjectExample() = this.copy(jsonExample = null)
+    private fun withNoJSONObjectExample() = this.copy(requestBodyJSONExample = null)
 
     fun dropDownIntoList(): Row {
-        if(jsonExample == null)
+        if(requestBodyJSONExample == null)
             return this
 
-        if(jsonExample.jsonObject !is JSONArrayValue)
+        if(requestBodyJSONExample.jsonObject !is JSONArrayValue)
             throw ContractException("The example provided is a JSON object, while the specification expects a list")
 
-        val list = jsonExample.jsonObject.list
+        val list = requestBodyJSONExample.jsonObject.list
 
         val firstValue = list.firstOrNull()
         if(firstValue is JSONComposite)
-            return this.copy(jsonExample = JSONExample(firstValue as JSONComposite, jsonExample.originalRow))
+            return this.copy(requestBodyJSONExample = JSONExample(firstValue as JSONComposite, requestBodyJSONExample.originalRow))
 
-        return this.copy(jsonExample = null)
+        return this.copy(requestBodyJSONExample = null)
     }
 }

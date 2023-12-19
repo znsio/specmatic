@@ -792,4 +792,145 @@ class GenerativeTests {
             System.clearProperty(Flags.onlyPositive)
         }
     }
+
+    @Test
+    fun `generative tests when the example 2 levels deep`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: Create person record
+                  requestBody:
+                    content:
+                      application/json:
+                        examples:
+                          CREATE_PERSON:
+                            value:
+                              name: "John Doe"
+                              address:
+                                building:
+                                  flat: 10
+                                  name: "Mason Apartments"
+                                street: "1st Street"
+                        schema:
+                          required:
+                          - name
+                          - address
+                          properties:
+                            name:
+                              type: string
+                            address:
+                              type: object
+                              properties:
+                                building:
+                                  type: object
+                                  properties:
+                                    flat:
+                                      type: integer
+                                    name:
+                                      type: string
+                                street:
+                                  type: string
+                  responses:
+                    200:
+                      description: Person record created
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+                          examples:
+                            CREATE_PERSON:
+                              value:
+                                "Person record created"
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val notes = mutableSetOf<String>()
+
+        feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body as JSONObjectValue
+                println(body.toStringLiteral())
+
+                body.findFirstChildByPath("name")?.let {
+                    if(it !is StringValue) {
+                        notes.add("name mutated to ${it.displayableType()}")
+                        return HttpResponse.ERROR_400
+                    }
+
+                    assertThat(it).isEqualTo(StringValue("John Doe"))
+                }
+
+                body.findFirstChildByPath("address")?.let {
+                    it as JSONObjectValue
+
+                    if(it.jsonObject.isEmpty()) {
+                        notes.add("address object is empty")
+                    }
+                }
+
+                body.findFirstChildByPath("building")?.let {
+                    it as JSONObjectValue
+
+                    if(it.jsonObject.isEmpty()) {
+                        notes.add("building object is empty")
+                    }
+                }
+
+                body.findFirstChildByPath("address.building.name")?.let {
+                    if(it !is StringValue) {
+                        notes.add("address.building.name mutated to ${it.displayableType()}")
+                        return HttpResponse.ERROR_400
+                    }
+
+                    assertThat(it).isEqualTo(StringValue("Mason Apartments"))
+                }
+
+                body.findFirstChildByPath("address.building.flat")?.let {
+                    if(it !is NumberValue) {
+                        notes.add("address.building.flat mutated to ${it.displayableType()}")
+                        return HttpResponse.ERROR_400
+                    }
+
+                    assertThat(it).isEqualTo(NumberValue(10))
+                }
+
+                body.findFirstChildByPath("address.street")?.let {
+                    if(it !is StringValue) {
+                        notes.add("address.street mutated to ${it.displayableType()}")
+                        return HttpResponse.ERROR_400
+                    }
+
+                    assertThat(it).isEqualTo(StringValue("Mason Street"))
+                }
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(notes.sorted()).isEqualTo(listOf(
+            "address object is empty",
+            "name mutated to null",
+            "name mutated to number",
+            "name mutated to boolean",
+            "address.building.flat mutated to null",
+            "address.building.flat mutated to boolean",
+            "address.building.flat mutated to string",
+            "address.building.name mutated to null",
+            "address.building.name mutated to number",
+            "address.building.name mutated to boolean",
+            "address.street mutated to null",
+            "address.street mutated to number",
+            "address.street mutated to boolean"
+        ).sorted())
+    }
 }

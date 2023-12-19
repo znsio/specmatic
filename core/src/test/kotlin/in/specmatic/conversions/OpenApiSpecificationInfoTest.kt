@@ -33,26 +33,10 @@ class OpenApiSpecificationInfoTest {
 
         // Assert
         val expected = """
-           ========================================
-           Loaded OpenAPI File: testFilePath
-           OpenAPI Version: 3.0.0
-           API Info:
-             Title: Test API
-             Version: 1.0.0
-             Description: This is a test API
-           No of API Paths: 1
-           No of API Operations: 1
-           API Components:
-             Schemas: [testSchema]
-             Responses: null
-             Parameters: null
-             Examples: null
-             Request Bodies: null
-             Headers: null
-             Security Schemes: null
-             Links: null
-             Callbacks: null
-           ========================================
+          API Specification Summary: testFilePath
+            OpenAPI Version: 3.0.0
+            API Paths: 1, API Operations: 1
+            Schema components: 1, Security Schemes: null
 
         """.trimIndent()
 

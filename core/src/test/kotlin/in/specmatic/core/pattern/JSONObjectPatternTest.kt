@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATIVE
+import `in`.specmatic.GENERATION
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.*
@@ -336,7 +336,7 @@ internal class JSONObjectPatternTest {
     }
 
     @Nested
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     inner class TestGeneration {
         @Test
         fun `Given an optional key, the unsuffixed key should be looked up in the row when generating a pattern`() {

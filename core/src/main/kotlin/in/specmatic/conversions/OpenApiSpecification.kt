@@ -911,8 +911,11 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
                 } else if (schema.oneOf != null) {
                     val candidatePatterns = schema.oneOf.filterNot { nullableEmptyObject(it) } .map { componentSchema ->
                         val (componentName, schemaToProcess) =
-                            if (componentSchema.`$ref` != null) resolveReferenceToSchema(componentSchema.`$ref`)
-                            else patternName to componentSchema
+                            if (componentSchema.`$ref` != null)
+                                resolveReferenceToSchema(componentSchema.`$ref`)
+                            else
+                                "" to componentSchema
+
                         toSpecmaticPattern(schemaToProcess, typeStack.plus(componentName), componentName)
                     }
 
@@ -975,13 +978,13 @@ class OpenApiSpecification(private val openApiFile: String, val openApi: OpenAPI
         if(example !is ArrayNode)
             return null
 
-        return example.toList().map {
+        return example.toList().flatMap {
             when {
-                it.isNull -> null
-                it.isNumber -> it.numberValue().toString()
-                it.isBoolean -> it.booleanValue().toString()
-                it.isTextual -> it.textValue()
-                else -> throw ContractException("Unsupported example type: ${it.nodeType}")
+                it.isNull -> listOf(null)
+                it.isNumber -> listOf(it.numberValue().toString())
+                it.isBoolean -> listOf(it.booleanValue().toString())
+                it.isTextual -> listOf(it.textValue())
+                else -> emptyList()
             }
         }
     }

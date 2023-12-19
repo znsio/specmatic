@@ -1,7 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATIVE
-import `in`.specmatic.core.Flags
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.UseDefaultExample
@@ -69,7 +68,7 @@ class EnumPatternTest {
     }
 
     @Nested
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     inner class TestGeneration {
         @Test
         fun `it should generate new patterns for all enum values when the row is empty`() {
@@ -101,7 +100,7 @@ class EnumPatternTest {
         @Test
         fun `it should use the inline example if present`() {
             val enum = EnumPattern(listOf(StringValue("01"), StringValue("02")), example = "01")
-            val patterns = enum.newBasedOn(Row(), Resolver(defaultExampleResolver = UseDefaultExample()))
+            val patterns = enum.newBasedOn(Row(), Resolver(defaultExampleResolver = UseDefaultExample))
 
             assertThat(patterns).containsExactly(
                 ExactValuePattern(StringValue("01"))
@@ -109,7 +108,7 @@ class EnumPatternTest {
         }
 
         @Test
-        @Tag(GENERATIVE)
+        @Tag(GENERATION)
         fun `it should generate negative values for what is in the row`() {
             val jsonPattern = EnumPattern(listOf(StringValue("01"), StringValue("02")))
 

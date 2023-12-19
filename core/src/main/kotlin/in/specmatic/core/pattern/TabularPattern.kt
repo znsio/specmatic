@@ -141,16 +141,16 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
 
 fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver, stringlyCheck: Boolean=false): List<Map<String, Pattern>> {
     val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
-    val negativePatternsMap = patternMap.mapValues { (_, pattern) ->
+    val negativePatternsMap = patternMap.mapValues { (key, pattern) ->
         val resolvedPattern = resolvedHop(pattern, resolver)
         if (stringlyCheck && resolvedPattern is StringPattern) {
             emptyList()
         } else if (stringlyCheck && resolvedPattern is ScalarType) {
-            resolvedPattern.negativeBasedOn(row, resolver).filterNot { it is NullPattern }
+            resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver).filterNot { it is NullPattern }
         } else if (stringlyCheck && patternIsEnum(resolvedPattern, resolver)) {
             shortCircuitStringlyEnumGenerationToOneEnumValue(resolvedPattern, resolver)
         } else {
-            resolvedPattern.negativeBasedOn(row, resolver)
+            resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
         }
     }
 
@@ -274,7 +274,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
             }
         }
         else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-            pattern.newBasedOn(row, cyclePreventedResolver)
+            pattern.newBasedOn(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
         }?:
         // Handle cycle (represented by null value) by using empty list for optional properties
         listOf()

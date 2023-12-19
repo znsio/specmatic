@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATIVE
+import `in`.specmatic.GENERATION
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
@@ -23,7 +23,7 @@ internal class DeferredPatternTest {
 
 
     @Test
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     fun `negative patterns should be generated`() {
         val result = DeferredPattern("(string)").negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(

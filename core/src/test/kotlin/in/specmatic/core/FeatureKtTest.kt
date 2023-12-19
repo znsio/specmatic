@@ -719,7 +719,7 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-        val withGenerativeTestsEnabled = contract.copy(generativeTestingEnabled = true)
+        val withGenerativeTestsEnabled = contract.enableGenerativeTesting()
 
         val tests: List<Scenario> = withGenerativeTestsEnabled.generateContractTestScenarios(emptyList())
 

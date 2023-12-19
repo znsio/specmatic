@@ -524,24 +524,18 @@ data class HttpRequestPattern(
                             throw ContractException(result.toFailureReport())
 
                         val originalRequest = if(value is JSONObjectValue) {
-                            val jsonValues = jsonObjectToValues(value)
-                            val jsonValueRow = Row(
-                                columnNames = jsonValues.map { entry -> entry.first }.toList(),
-                                values = jsonValues.map { entry -> entry.second }.toList(),
-                                name = row.name)
-
-                            body.negativeBasedOn(jsonValueRow, resolver)
+                            body.negativeBasedOn(row.noteRequestBody(), resolver)
                         } else {
                             listOf(ExactValuePattern(value))
                         }
 
                         val flattenedRequests: List<Pattern> = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                            body.newBasedOn(row.flattenRequestBodyIntoRow(), cyclePreventedResolver)
+                            body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
                         }
 
                         flattenedRequests.plus(originalRequest)
 
-                        body.negativeBasedOn(row.flattenRequestBodyIntoRow(), resolver)
+                        body.negativeBasedOn(row.noteRequestBody(), resolver)
                     } else {
                         body.negativeBasedOn(row, resolver)
                     }
@@ -588,21 +582,6 @@ data class HttpRequestPattern(
             }
         }
     }
-}
-
-fun jsonObjectToValues(value: JSONObjectValue): List<Pair<String, String>> {
-    val valueMap = value.jsonObject
-
-    return valueMap.entries.map { (key, value) ->
-        when(value) {
-            is JSONObjectValue -> {
-                jsonObjectToValues(value)
-            }
-            else -> {
-                listOf(Pair(key, value.toStringLiteral()))
-            }
-        }
-    }.flatten()
 }
 
 fun missingParam(missingValue: String): ContractException {

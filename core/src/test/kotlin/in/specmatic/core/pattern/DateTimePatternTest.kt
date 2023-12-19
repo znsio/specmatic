@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATIVE
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue
@@ -57,7 +57,7 @@ internal class DateTimePatternTest {
 
 
     @Test
-    @Tag(GENERATIVE)
+    @Tag(GENERATION)
     fun `negative patterns should be generated`() {
         val result = BooleanPattern().negativeBasedOn(Row(), Resolver())
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(

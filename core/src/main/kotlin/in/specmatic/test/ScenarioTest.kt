@@ -6,7 +6,6 @@ import `in`.specmatic.core.*
 class ScenarioTest(
     val scenario: Scenario,
     private val resolverStrategies: ResolverStrategies,
-    private val generativeTestingEnabled: Boolean = false,
     private val sourceProvider: String? = null,
     private val sourceRepository: String? = null,
     private val sourceRepositoryBranch: String? = null,
@@ -22,7 +21,7 @@ class ScenarioTest(
         testVariables: Map<String, String>,
         testBaseURLs: Map<String, String>
     ): List<ContractTest> {
-        return scenario.generateContractTests(resolverStrategies, testVariables, testBaseURLs, generativeTestingEnabled)
+        return scenario.generateContractTests(resolverStrategies, testVariables, testBaseURLs)
     }
 
     override fun testDescription(): String {
@@ -35,7 +34,7 @@ class ScenarioTest(
 
     override fun runTest(testBaseURL: String?, timeOut: Int): Result {
         val httpClient = HttpClient(testBaseURL!!, timeout = timeOut)
-        return executeTest(scenario, httpClient).updateScenario(scenario)
+        return executeTest(scenario, httpClient, resolverStrategies).updateScenario(scenario)
     }
 
     private fun runHttpTest(timeout: Int, host: String, port: String, testScenario: Scenario): Result {
@@ -46,6 +45,6 @@ class ScenarioTest(
 
     private fun executeTest(protocol: String, host: String?, port: String?, timeout: Int, testScenario: Scenario): Result {
         val httpClient = HttpClient("$protocol://$host:$port", timeout = timeout)
-        return executeTest(testScenario, httpClient)
+        return executeTest(testScenario, httpClient, resolverStrategies)
     }
 }

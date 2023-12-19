@@ -2,6 +2,7 @@ package `in`.specmatic.conversions
 
 import com.fasterxml.jackson.databind.node.ArrayNode
 import `in`.specmatic.core.*
+import `in`.specmatic.conversions.Environment
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.log.logger
@@ -31,8 +32,6 @@ import java.io.File
 
 const val BEARER_SECURITY_SCHEME = "bearer"
 const val SPECMATIC_OAUTH2_TOKEN = "SPECMATIC_OAUTH2_TOKEN"
-const val SPECMATIC_BEARER_TOKEN = "SPECMATIC_BEARER_TOKEN"
-const val SPECMATIC_API_KEY = "SPECMATIC_API_KEY"
 private const val SERVICE_TYPE_HTTP = "HTTP"
 
 private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
@@ -40,7 +39,7 @@ private const val testDirectoryProperty = "specmaticTestsDirectory"
 
 const val NO_SECURITY_SCHEMA_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
 
-class OpenApiSpecification(private val openApiFilePath: String, private val parsedOpenApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null) : IncludedSpecification, ApiSpecification {
+class OpenApiSpecification(private val openApiFilePath: String, private val parsedOpenApi: OpenAPI, private val sourceProvider:String? = null, private val sourceRepository:String? = null, private val sourceRepositoryBranch:String? = null, private val specificationPath:String? = null, private val securityConfiguration:SecurityConfiguration? = null, private val environment: Environment = DefaultEnvironment()) : IncludedSpecification, ApiSpecification {
     init {
         logger.log(openApiSpecificationInfo(openApiFilePath, parsedOpenApi))
     }
@@ -63,7 +62,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
             return OpenApiSpecification(openApiFilePath, parsedOpenApi)
         }
 
-        fun fromYAML(yamlContent: String, openApiFilePath: String, loggerForErrors: LogStrategy = logger, sourceProvider:String? = null, sourceRepository:String? = null, sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null): OpenApiSpecification {
+        fun fromYAML(yamlContent: String, openApiFilePath: String, loggerForErrors: LogStrategy = logger, sourceProvider:String? = null, sourceRepository:String? = null, sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null,  environment: Environment = DefaultEnvironment()): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), openApiFilePath)
             val parsedOpenApi: OpenAPI? = parseResult.openAPI
@@ -80,7 +79,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                 printMessages(parseResult, openApiFilePath, loggerForErrors)
             }
 
-            return OpenApiSpecification(openApiFilePath, parsedOpenApi, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration)
+            return OpenApiSpecification(openApiFilePath, parsedOpenApi, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration, environment)
         }
 
         private fun printMessages(parseResult: SwaggerParseResult, filePath: String, loggerForErrors: LogStrategy) {
@@ -765,15 +764,15 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
     private fun toSecurityScheme(schemeName: String, securityScheme: SecurityScheme): OpenAPISecurityScheme {
         val securitySchemeConfiguration = securityConfiguration?.OpenAPI?.securitySchemes?.get(schemeName)
         if (securityScheme.scheme == BEARER_SECURITY_SCHEME) {
-            return toBearerSecurityScheme(securityScheme.scheme, securitySchemeConfiguration, SPECMATIC_BEARER_TOKEN)
+            return toBearerSecurityScheme(securityScheme.scheme, securitySchemeConfiguration, schemeName)
         }
 
         if (securityScheme.type == SecurityScheme.Type.OAUTH2) {
-            return toBearerSecurityScheme(securityScheme.type.toString(), securitySchemeConfiguration, SPECMATIC_OAUTH2_TOKEN)
+            return toBearerSecurityScheme(securityScheme.type.toString(), securitySchemeConfiguration, schemeName)
         }
 
         if (securityScheme.type == SecurityScheme.Type.APIKEY) {
-            val apiKey = ApiKeySecurityToken(securitySchemeConfiguration).resolve()
+            val apiKey = ApiKeySecurityToken(securitySchemeConfiguration, schemeName, environment).resolve()
             if (securityScheme.`in` == SecurityScheme.In.HEADER)
                 return APIKeyInHeaderSecurityScheme(securityScheme.name, apiKey)
 
@@ -789,7 +788,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
         securitySchemeConfiguration: SecuritySchemeConfiguration?,
         environmentVariable: String,
     ): BearerSecurityScheme {
-        val token = BearerSecurityToken(type, securitySchemeConfiguration, environmentVariable).resolve()
+        val token = BearerSecurityToken(type, securitySchemeConfiguration, environmentVariable, environment).resolve()
         return BearerSecurityScheme(token)
     }
 

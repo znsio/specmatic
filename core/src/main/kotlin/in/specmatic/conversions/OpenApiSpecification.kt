@@ -764,15 +764,15 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
     private fun toSecurityScheme(schemeName: String, securityScheme: SecurityScheme): OpenAPISecurityScheme {
         val securitySchemeConfiguration = securityConfiguration?.OpenAPI?.securitySchemes?.get(schemeName)
         if (securityScheme.scheme == BEARER_SECURITY_SCHEME) {
-            return toBearerSecurityScheme(securityScheme.scheme, securitySchemeConfiguration, schemeName)
+            return toBearerSecurityScheme(securitySchemeConfiguration, schemeName)
         }
 
         if (securityScheme.type == SecurityScheme.Type.OAUTH2) {
-            return toBearerSecurityScheme(securityScheme.type.toString(), securitySchemeConfiguration, schemeName)
+            return toBearerSecurityScheme(securitySchemeConfiguration, schemeName)
         }
 
         if (securityScheme.type == SecurityScheme.Type.APIKEY) {
-            val apiKey = ApiKeySecurityToken(securitySchemeConfiguration, schemeName, environment).resolve()
+            val apiKey = getSecurityTokenForApiKeyScheme(securitySchemeConfiguration, schemeName, environment)
             if (securityScheme.`in` == SecurityScheme.In.HEADER)
                 return APIKeyInHeaderSecurityScheme(securityScheme.name, apiKey)
 
@@ -784,11 +784,10 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
     }
 
     private fun toBearerSecurityScheme(
-        type: String,
         securitySchemeConfiguration: SecuritySchemeConfiguration?,
         environmentVariable: String,
     ): BearerSecurityScheme {
-        val token = BearerSecurityToken(type, securitySchemeConfiguration, environmentVariable, environment).resolve()
+        val token = getSecurityTokenForBearerScheme(securitySchemeConfiguration, environmentVariable, environment)
         return BearerSecurityScheme(token)
     }
 

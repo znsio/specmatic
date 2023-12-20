@@ -29,7 +29,7 @@ import io.swagger.v3.parser.core.models.ParseOptions
 import io.swagger.v3.parser.core.models.SwaggerParseResult
 import java.io.File
 
-const val BEARER_SECURITY_SCHEME = "bearer"
+private const val BEARER_SECURITY_SCHEME = "bearer"
 private const val SERVICE_TYPE_HTTP = "HTTP"
 
 private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"

@@ -2,7 +2,6 @@ package `in`.specmatic.conversions
 
 import com.fasterxml.jackson.databind.node.ArrayNode
 import `in`.specmatic.core.*
-import `in`.specmatic.conversions.Environment
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.log.logger
@@ -31,7 +30,6 @@ import io.swagger.v3.parser.core.models.SwaggerParseResult
 import java.io.File
 
 const val BEARER_SECURITY_SCHEME = "bearer"
-const val SPECMATIC_OAUTH2_TOKEN = "SPECMATIC_OAUTH2_TOKEN"
 private const val SERVICE_TYPE_HTTP = "HTTP"
 
 private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"

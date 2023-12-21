@@ -999,7 +999,7 @@ paths:
             httpStub.use { stub ->
                 val response = stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
                 assertThat(response.status).isEqualTo(400)
-                assertThat(response.body).isEqualTo(StringValue("No valid specifications loaded"))
+                assertThat(response.body).isEqualTo(StringValue("No matching stubs found"))
             }
         }
     }

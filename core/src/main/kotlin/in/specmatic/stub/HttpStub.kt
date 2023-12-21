@@ -809,7 +809,7 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
 
             when {
                 httpFailureResponse != null -> NotStubbed(HttpStubResponse(httpFailureResponse))
-                else -> NotStubbed(HttpStubResponse(HttpResponse(400, "No valid specifications loaded")))
+                else -> NotStubbed(HttpStubResponse(HttpResponse(400, "No matching stubs found")))
             }
         }
 

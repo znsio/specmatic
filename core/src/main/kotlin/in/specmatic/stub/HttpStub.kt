@@ -36,7 +36,13 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
 
-data class HttpStubResponse(val response: HttpResponse, val delayInSeconds: Int? = null, val contractPath: String = "", val feature:Feature? = null, val scenario:Scenario? = null)
+data class HttpStubResponse(
+    val response: HttpResponse,
+    val delayInSeconds: Int? = null,
+    val contractPath: String = "",
+    val feature: Feature? = null,
+    val scenario: Scenario? = null
+)
 
 class HttpStub(
     private val features: List<Feature>,
@@ -49,7 +55,7 @@ class HttpStub(
     val passThroughTargetBase: String = "",
     val httpClientFactory: HttpClientFactory = HttpClientFactory(),
     val workingDirectory: WorkingDirectory? = null,
-    val specmaticConfigPath:String? = null
+    val specmaticConfigPath: String? = null
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -105,7 +111,8 @@ class HttpStub(
         return staticStubs.plus(stubsFromSpecificationExamples).toMutableList()
     }
 
-    private val threadSafeHttpStubQueue = ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
+    private val threadSafeHttpStubQueue =
+        ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
 
     private val _logs: MutableList<StubEndpoint> = Collections.synchronizedList(ArrayList())
     private val _allEndpoints: List<StubEndpoint> = extractALlEndpoints()
@@ -185,13 +192,23 @@ class HttpStub(
 
                             broadcastChannels.remove(broadcastChannel)
 
-                            close(events, channel, "Events handle was already closed after handling all events", "Channel was already handled after handling all events")
-                        } catch(e: Throwable) {
+                            close(
+                                events,
+                                channel,
+                                "Events handle was already closed after handling all events",
+                                "Channel was already handled after handling all events"
+                            )
+                        } catch (e: Throwable) {
                             logger.log(e, "Exception in the SSE module")
 
                             broadcastChannels.remove(broadcastChannel)
 
-                            close(events, channel, "Events handle threw an exception on closing", "Channel through an exception on closing")
+                            close(
+                                events,
+                                channel,
+                                "Events handle threw an exception on closing",
+                                "Channel through an exception on closing"
+                            )
                         }
                     } else {
                         respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
@@ -224,6 +241,7 @@ class HttpStub(
                 this.host = host
                 this.port = port
             }
+
             else -> sslConnector(
                 keyStore = keyData.keyStore,
                 keyAlias = keyData.keyAlias,
@@ -366,9 +384,9 @@ class HttpStub(
         return try {
             val sseEvent: SseEvent? = ObjectMapper().readValue(httpRequest.bodyString, SseEvent::class.java)
 
-            if(sseEvent == null) {
+            if (sseEvent == null) {
                 logger.debug("No Sse Event was found in the request:\n${httpRequest.toLogString("  ")}")
-            } else if(sseEvent.bufferIndex == null) {
+            } else if (sseEvent.bufferIndex == null) {
                 logger.debug("Broadcasting event: $sseEvent")
 
                 for (channel in broadcastChannels) {
@@ -380,7 +398,7 @@ class HttpStub(
             }
 
             HttpStubResponse(HttpResponse.OK, contractPath = "")
-        } catch(e: ContractException) {
+        } catch (e: ContractException) {
             HttpStubResponse(
                 HttpResponse(
                     status = 400,
@@ -388,8 +406,7 @@ class HttpStub(
                     body = exceptionCauseMessage(e)
                 )
             )
-        }
-        catch (e: Throwable) {
+        } catch (e: Throwable) {
             HttpStubResponse(
                 HttpResponse(
                     status = 500,
@@ -434,12 +451,13 @@ class HttpStub(
                 val failureResults = Results(failures).withoutFluff()
                 throw NoMatchingScenario(failureResults, cachedMessage = failureResults.report(stub.request))
             }
+
             else -> {
                 val requestBodyRegex = parseRegex(stub.requestBodyRegex)
                 val stubData = firstResult.second.copy(requestBodyRegex = requestBodyRegex)
                 val resultWithRequestBodyRegex = Pair(firstResult.first, stubData)
 
-                if(stub.stubToken != null) {
+                if (stub.stubToken != null) {
                     threadSafeHttpStubQueue.addToStub(resultWithRequestBodyRegex, stub)
                 } else {
                     threadSafeHttpStubs.addToStub(resultWithRequestBodyRegex, stub)
@@ -454,7 +472,7 @@ class HttpStub(
         return regex?.let {
             try {
                 Regex(it)
-            } catch(e: Throwable) {
+            } catch (e: Throwable) {
                 throw ContractException("Couldn't parse regex $regex", exceptionCause = e)
             }
         }
@@ -503,7 +521,7 @@ class HttpStub(
 
     private fun printUsageReport() {
         specmaticConfigPath?.let {
-            val stubUsageReport = StubUsageReport(specmaticConfigPath, _allEndpoints, _logs )
+            val stubUsageReport = StubUsageReport(specmaticConfigPath, _allEndpoints, _logs)
             println("Saving Stub Usage Report json to $JSON_REPORT_PATH ...")
             val json = Json {
                 encodeDefaults = false
@@ -514,7 +532,7 @@ class HttpStub(
     }
 }
 
-class CouldNotParseRequest(val innerException: Throwable): Exception(exceptionCauseMessage(innerException))
+class CouldNotParseRequest(val innerException: Throwable) : Exception(exceptionCauseMessage(innerException))
 
 internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
     try {
@@ -531,7 +549,7 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
             formFields = formFields,
             multiPartFormData = multiPartFormData
         )
-    } catch(e: Throwable) {
+    } catch (e: Throwable) {
         throw CouldNotParseRequest(e)
     }
 }
@@ -544,6 +562,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
             call.receiveParameters().toMap().mapValues { (_, values) -> values.first() },
             emptyList()
         )
+
         call.request.isMultipart() -> {
             val multiPartData = call.receiveMultipart()
             val boundary = call.request.contentType().parameter("boundary") ?: "boundary"
@@ -563,6 +582,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             boundary
                         )
                     }
+
                     is PartData.FormItem -> {
                         MultiPartContentValue(
                             it.name ?: "",
@@ -571,6 +591,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             specifiedContentType = it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
                         )
                     }
+
                     is PartData.BinaryItem -> {
                         val content = it.provider().asStream().use { input ->
                             val output = ByteArrayOutputStream()
@@ -585,6 +606,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                             specifiedContentType = it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
                         )
                     }
+
                     else -> {
                         throw UnsupportedOperationException("Unhandled PartData")
                     }
@@ -593,22 +615,27 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
 
             Triple(EmptyString, emptyMap(), parts)
         }
+
         else -> Triple(parsedValue(receiveText(call)), emptyMap(), emptyList())
     }
 }
 
 suspend fun receiveText(call: ApplicationCall): String {
-    return if(call.request.contentCharset() == null) {
-            val byteArray: ByteArray = call.receive()
-            String(byteArray, Charset.forName("UTF-8"))
-        } else {
-            call.receiveText()
-        }
+    return if (call.request.contentCharset() == null) {
+        val byteArray: ByteArray = call.receive()
+        String(byteArray, Charset.forName("UTF-8"))
+    } else {
+        call.receiveText()
+    }
 }
 
 internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
 
-internal suspend fun respondToKtorHttpResponse(call: ApplicationCall, httpResponse: HttpResponse, delayInSeconds: Int? = null) {
+internal suspend fun respondToKtorHttpResponse(
+    call: ApplicationCall,
+    httpResponse: HttpResponse,
+    delayInSeconds: Int? = null
+) {
     val contentType = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
     val textContent = TextContent(
         httpResponse.body.toStringLiteral(),
@@ -691,7 +718,13 @@ private fun stubbedResponse(
 
     val stubResponse = mock?.let {
         val softCastResponse = it.softCastResponseToXML(httpRequest).response
-        HttpStubResponse(softCastResponse, it.delayInSeconds, it.contractPath, scenario = mock.scenario, feature = mock.feature)
+        HttpStubResponse(
+            softCastResponse,
+            it.delayInSeconds,
+            it.contractPath,
+            scenario = mock.scenario,
+            feature = mock.feature
+        )
     }
 
     return Pair(matchResults, stubResponse)
@@ -708,7 +741,8 @@ private fun stubThatMatchesRequest(
             Pair(
                 requestPattern.matches(
                     httpRequest,
-                    resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages),
+                    resolver.disableOverrideUnexpectedKeycheck()
+                        .copy(mismatchMessages = StubAndRequestMismatchMessages),
                     requestBodyReqex = it.requestBodyRegex
                 ), it
             )
@@ -716,7 +750,7 @@ private fun stubThatMatchesRequest(
     }
 
     val queueMock = queueMatchResults.findLast { (result, _) -> result is Result.Success }
-    if(queueMock != null) {
+    if (queueMock != null) {
         transientStubs.remove(queueMock.second)
         return Pair(queueMock.second, queueMatchResults)
     }
@@ -727,7 +761,8 @@ private fun stubThatMatchesRequest(
             Pair(
                 requestPattern.matches(
                     httpRequest,
-                    resolver.disableOverrideUnexpectedKeycheck().copy(mismatchMessages = StubAndRequestMismatchMessages),
+                    resolver.disableOverrideUnexpectedKeycheck()
+                        .copy(mismatchMessages = StubAndRequestMismatchMessages),
                     requestBodyReqex = it.requestBodyRegex
                 ), it
             )
@@ -768,18 +803,24 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
         null -> {
             val failureResults = responses.filter { it.successResponse == null }.map { it.results }
 
-            val httpFailureResponse = failureResults.reduce { first, second ->
+            val httpFailureResponse = failureResults.takeIf { it.isNotEmpty() }?.reduce { first, second ->
                 first.plus(second)
-            }.withoutFluff().generateErrorHttpResponse(httpRequest)
+            }?.withoutFluff()?.generateErrorHttpResponse(httpRequest)
 
-            NotStubbed(HttpStubResponse(httpFailureResponse))
+            when {
+                httpFailureResponse != null -> NotStubbed(HttpStubResponse(httpFailureResponse))
+                else -> NotStubbed(HttpStubResponse(HttpResponse(400, "No valid specifications loaded")))
+            }
         }
-        else -> FoundStubbedResponse(HttpStubResponse(
-            fakeResponse.successResponse?.build()?.withRandomResultHeader()!!,
-            contractPath = fakeResponse.feature.path,
-            feature = fakeResponse.feature,
-            scenario = fakeResponse.successResponse.scenario
-        ))
+
+        else -> FoundStubbedResponse(
+            HttpStubResponse(
+                fakeResponse.successResponse?.build()?.withRandomResultHeader()!!,
+                contractPath = fakeResponse.feature.path,
+                feature = fakeResponse.feature,
+                scenario = fakeResponse.successResponse.scenario
+            )
+        )
     }
 }
 
@@ -817,6 +858,7 @@ fun stubResponse(
                     it.body
                 }.filter { it != EmptyString }.joinToString("\n\n"))
             }
+
             else -> mock.response
         }
     } finally {
@@ -839,7 +881,11 @@ fun badRequest(errorMessage: String?): HttpResponse {
 }
 
 fun internalServerError(errorMessage: String?): HttpResponse {
-    return HttpResponse(HttpStatusCode.InternalServerError.value, errorMessage, mapOf(SPECMATIC_RESULT_HEADER to "failure"))
+    return HttpResponse(
+        HttpStatusCode.InternalServerError.value,
+        errorMessage,
+        mapOf(SPECMATIC_RESULT_HEADER to "failure")
+    )
 }
 
 internal fun httpResponseLog(response: HttpResponse): String =
@@ -894,6 +940,7 @@ fun softCastValueToXML(body: Value): Value {
         } catch (e: Throwable) {
             body
         }
+
         else -> body
     }
 }
@@ -907,9 +954,18 @@ fun stringToMockScenario(text: Value): ScenarioStub {
     return mockFromJSON(mockSpec)
 }
 
-data class SseEvent(val data: String? = "", val event: String? = null, val id: String? = null, val bufferIndex: Int? = null)
+data class SseEvent(
+    val data: String? = "",
+    val event: String? = null,
+    val id: String? = null,
+    val bufferIndex: Int? = null
+)
 
-suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>, sseBuffer: SSEBuffer, httpRequest: HttpRequest) {
+suspend fun ApplicationCall.respondSse(
+    events: ReceiveChannel<SseEvent>,
+    sseBuffer: SSEBuffer,
+    httpRequest: HttpRequest
+) {
     response.cacheControl(CacheControl.NoCache(null))
 
     respondTextWriter(contentType = ContentType.Text.EventStream) {
@@ -940,7 +996,7 @@ fun writeEvent(event: SseEvent, writer: Writer) {
     if (event.event != null) {
         writer.write("event: ${event.event}\n")
     }
-    if(event.data != null) {
+    if (event.data != null) {
         for (dataLine in event.data.lines()) {
             writer.write("data: $dataLine\n")
         }

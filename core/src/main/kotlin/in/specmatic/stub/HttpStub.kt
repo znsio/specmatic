@@ -807,10 +807,8 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
                 first.plus(second)
             }?.withoutFluff()?.generateErrorHttpResponse(httpRequest)
 
-            when {
-                httpFailureResponse != null -> NotStubbed(HttpStubResponse(httpFailureResponse))
-                else -> NotStubbed(HttpStubResponse(HttpResponse(400, "No matching stubs found")))
-            }
+            if (httpFailureResponse != null) NotStubbed(HttpStubResponse(httpFailureResponse))
+            else NotStubbed(HttpStubResponse(HttpResponse(400, "No matching stubs found")))
         }
 
         else -> FoundStubbedResponse(

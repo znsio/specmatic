@@ -153,16 +153,15 @@ Examples:
             }
 
             @Test
-            fun `should match http request with authorization header for spec with oauth2 security scheme with token defined in environment variable`() {
-                val token = "ENV1234"
+            fun `should match http request for spec with oauth2 security scheme with token defined in environment variable even if the token value in the request is different`() {
                 val environment = mockk<Environment>()
-                every { environment.getEnvironmentVariable("oAuth2AuthCode") }.returns(token)
+                every { environment.getEnvironmentVariable("oAuth2AuthCode") }.returns("ENV1234")
                 val feature = parseContractFileToFeature("src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml", environment = environment)
                 val httpRequest = HttpRequest(
                     "GET",
                     "/hello/1",
                     mapOf(
-                        HttpHeaders.AUTHORIZATION to "Bearer $token"
+                        HttpHeaders.AUTHORIZATION to "Bearer ANY_TOKEN"
                     )
                 )
                 val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())
@@ -501,7 +500,7 @@ Background:
         }
 
         @Test
-        fun `should match http request with authorization header for spec with bearer security scheme with token defined in environment variable`() {
+        fun `should match http request for spec with bearer security scheme with token defined in environment variable even if the token value in the request is different`() {
             val token = "ENV1234"
             val environment = mockk<Environment>()
             every { environment.getEnvironmentVariable("BearerAuth") }.returns(token)
@@ -515,7 +514,7 @@ Background:
                 "GET",
                 "/hello/1",
                 mapOf(
-                    HttpHeaders.AUTHORIZATION to "Bearer foo"
+                    HttpHeaders.AUTHORIZATION to "Bearer ANY_TOKEN"
                 )
             )
             val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())
@@ -795,7 +794,7 @@ Feature: Authenticated
         }
 
         @Test
-        fun `should match http request with authorization header for spec with apikey security scheme in header with token defined in environment variable`() {
+        fun `should match http request for spec with apikey security scheme with token defined in environment variable even if the token value in the request is different`() {
             val token = "ENV1234"
             val environment = mockk<Environment>()
             every { environment.getEnvironmentVariable("BearerAuth") }.returns(token)
@@ -809,7 +808,7 @@ Feature: Authenticated
                 "GET",
                 "/hello/1",
                 mapOf(
-                    HttpHeaders.AUTHORIZATION to "Bearer ENV1234"
+                    HttpHeaders.AUTHORIZATION to "Bearer ANY_TOKEN"
                 )
             )
             val result = feature.scenarios.first().httpRequestPattern.matches(httpRequest, Resolver())

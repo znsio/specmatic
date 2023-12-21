@@ -181,7 +181,8 @@ And response-body (string)
         val mock = ScenarioStub(request, HttpResponse(200, "done"))
 
         HttpStub(gherkin, listOf(mock)).use { fake ->
-            val postResponse = RestTemplate().postForEntity<String>(fake.endPoint + "/date", "2020-04-12T00:00:00+05:00")
+            val postResponse =
+                RestTemplate().postForEntity<String>(fake.endPoint + "/date", "2020-04-12T00:00:00+05:00")
             assertThat(postResponse.statusCode.value()).isEqualTo(200)
             assertThat(postResponse.body).isEqualTo("done")
         }
@@ -203,7 +204,10 @@ And response-body (string)
 
         HttpStub(gherkin, listOf(mock)).use { fake ->
             val postResponse =
-                RestTemplate().postForEntity<String>(fake.endPoint + "/date", """{"date": "2020-04-12T00:00:00+05:00"}""")
+                RestTemplate().postForEntity<String>(
+                    fake.endPoint + "/date",
+                    """{"date": "2020-04-12T00:00:00+05:00"}"""
+                )
             assertThat(postResponse.statusCode.value()).isEqualTo(200)
             assertThat(postResponse.body).isEqualTo("done")
         }
@@ -675,7 +679,12 @@ Scenario: Square of a number
             passThroughTargetBase = "http://example.com",
             httpClientFactory = httpClientFactory
         ).use { stub ->
-            stub.setExpectation(ScenarioStub(HttpRequest("POST", "/", body = NumberValue(10)), HttpResponse.OK("success")))
+            stub.setExpectation(
+                ScenarioStub(
+                    HttpRequest("POST", "/", body = NumberValue(10)),
+                    HttpResponse.OK("success")
+                )
+            )
             val client = HttpClient(stub.endPoint)
             val response = client.execute(HttpRequest(method = "POST", path = "/", body = NumberValue(10)))
 
@@ -709,7 +718,8 @@ paths:
             text/plain:
               schema:
                 type: string
-""".trim(), "").toFeature()
+""".trim(), ""
+        ).toFeature()
 
         HttpStub(contract).use { stub ->
             val stubData = """
@@ -769,18 +779,24 @@ paths:
             text/plain:
               schema:
                 type: string
-""".trim(), "").toFeature()
+""".trim(), ""
+        ).toFeature()
 
-        HttpStub(contract, listOf(ScenarioStub(
-            HttpRequest(
-                method = "POST",
-                path = "/",
-                body = StringValue("(string)")
-            ),
-            HttpResponse(
-                status = 200,
-                body = "Hi!"
-            )))).use { stub ->
+        HttpStub(
+            contract, listOf(
+                ScenarioStub(
+                    HttpRequest(
+                        method = "POST",
+                        path = "/",
+                        body = StringValue("(string)")
+                    ),
+                    HttpResponse(
+                        status = 200,
+                        body = "Hi!"
+                    )
+                )
+            )
+        ).use { stub ->
             assertThat(stub.stubCount).isEqualTo(1)
             assertThat(stub.transientStubCount).isEqualTo(0)
         }
@@ -829,61 +845,72 @@ paths:
                 200_OK:
                   value:
                     message: example_expectation
-""".trim(), "").toFeature()
+""".trim(), ""
+        ).toFeature()
 
 
         @Test
         fun `expectations from examples`() {
             HttpStub(feature).use { stub ->
-                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}"""))).let { response ->
-                    assertThat(response.status).isEqualTo(200)
-                    assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"example_expectation"}"""))
-                }
+                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}""")))
+                    .let { response ->
+                        assertThat(response.status).isEqualTo(200)
+                        assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"example_expectation"}"""))
+                    }
             }
         }
 
         @Test
         fun `expectations from examples should have less priority than file expectations`() {
-            HttpStub(feature, listOf(ScenarioStub(
-                HttpRequest(
-                    method = "POST",
-                    path = "/",
-                    body = parsedJSONObject("""{"id": 10}""")
-                ),
-                HttpResponse(
-                    status = 200,
-                    body = parsedJSONObject("""{"message":"file_overrides_example_expectation"}""")
-                )))
+            HttpStub(
+                feature, listOf(
+                    ScenarioStub(
+                        HttpRequest(
+                            method = "POST",
+                            path = "/",
+                            body = parsedJSONObject("""{"id": 10}""")
+                        ),
+                        HttpResponse(
+                            status = 200,
+                            body = parsedJSONObject("""{"message":"file_overrides_example_expectation"}""")
+                        )
+                    )
+                )
             ).use { stub ->
-                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}"""))).let { response ->
-                    assertThat(response.status).isEqualTo(200)
-                    assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"file_overrides_example_expectation"}"""))
-                }
+                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}""")))
+                    .let { response ->
+                        assertThat(response.status).isEqualTo(200)
+                        assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"file_overrides_example_expectation"}"""))
+                    }
             }
         }
 
         @Test
         fun `expectations from examples should have less priority than dynamic expectations`() {
             HttpStub(feature).use { stub ->
-                stub.setExpectation(ScenarioStub(
-                    HttpRequest(
-                        method = "POST",
-                        path = "/",
-                        body = parsedJSONObject("""{"id": 10}""")
-                    ),
-                    HttpResponse(
-                        status = 200,
-                        body = parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}""")
-                    )))
-                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}"""))).let { response ->
-                    assertThat(response.status).isEqualTo(200)
-                    assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}"""))
-                }
+                stub.setExpectation(
+                    ScenarioStub(
+                        HttpRequest(
+                            method = "POST",
+                            path = "/",
+                            body = parsedJSONObject("""{"id": 10}""")
+                        ),
+                        HttpResponse(
+                            status = 200,
+                            body = parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}""")
+                        )
+                    )
+                )
+                stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}""")))
+                    .let { response ->
+                        assertThat(response.status).isEqualTo(200)
+                        assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"dynamic_overrides_example_expectation"}"""))
+                    }
             }
         }
 
         @Test
-        fun `should generate response as a json object with strings keys with values of any type when additional properties is set as true`(){
+        fun `should generate response as a json object with strings keys with values of any type when additional properties is set as true`() {
             val openAPI =
                 """
 ---
@@ -916,7 +943,7 @@ paths:
         }
 
         @Test
-        fun `should return stubbed response based on expectations set when additional properties is set as true`(){
+        fun `should return stubbed response based on expectations set when additional properties is set as true`() {
             val openAPI =
                 """
 ---
@@ -945,23 +972,35 @@ paths:
 """.trimIndent()
             val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
             HttpStub(feature).use { stub ->
-                stub.setExpectation(ScenarioStub(
-                    HttpRequest(
-                        method = "POST",
-                        path = "/data",
-                        body = parsedJSONObject("""{"id": 10}""")
-                    ),
-                    HttpResponse(
-                        status = 200,
-                        body = StringValue("response data")
-                    )))
+                stub.setExpectation(
+                    ScenarioStub(
+                        HttpRequest(
+                            method = "POST",
+                            path = "/data",
+                            body = parsedJSONObject("""{"id": 10}""")
+                        ),
+                        HttpResponse(
+                            status = 200,
+                            body = StringValue("response data")
+                        )
+                    )
+                )
                 stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
                     .let { response ->
                         assertThat(response.status).isEqualTo(200)
-                        assertThat(response.body).isEqualTo( StringValue("response data"))
+                        assertThat(response.body).isEqualTo(StringValue("response data"))
                     }
             }
+        }
 
+        @Test
+        fun `should return descriptive error message when there are no valid specifications loaded`() {
+            val httpStub = HttpStub(emptyList())
+            httpStub.use { stub ->
+                val response = stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
+                assertThat(response.status).isEqualTo(400)
+                assertThat(response.body).isEqualTo(StringValue("No valid specifications loaded"))
+            }
         }
     }
 }

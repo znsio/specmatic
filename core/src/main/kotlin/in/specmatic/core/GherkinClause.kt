@@ -56,7 +56,7 @@ fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
 }
 
 fun headersToGherkin(headers: Map<String, String>, keyword: String, types: Map<String, Pattern>, exampleDeclarationsStore: ExampleDeclarations, section: GherkinSection): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations(stringMapToValueMap(headers.filter { DYNAMIC_HTTP_HEADERS.contains(it.toString()) }), types, exampleDeclarationsStore)
+    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations(stringMapToValueMap(headers.filterKeys { it !in DYNAMIC_HTTP_HEADERS }), types, exampleDeclarationsStore)
 
     val headerClauses = dictionaryTypeMap.entries.map {
         "$keyword ${it.key} ${it.value.pattern}"

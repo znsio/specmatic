@@ -793,6 +793,9 @@ object ContractAndRequestsMismatch : MismatchMessages {
 private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): StubbedResponseResult {
     data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
 
+    if (features.isEmpty())
+       return NotStubbed(HttpStubResponse(HttpResponse(400, "No valid API specifications loaded")))
+
     val responses: List<ResponseDetails> = features.asSequence().map { feature ->
         feature.stubResponse(httpRequest, ContractAndRequestsMismatch).let {
             ResponseDetails(feature, it.first, it.second)
@@ -803,12 +806,11 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
         null -> {
             val failureResults = responses.filter { it.successResponse == null }.map { it.results }
 
-            val httpFailureResponse = failureResults.takeIf { it.isNotEmpty() }?.reduce { first, second ->
+            val httpFailureResponse = failureResults.reduce { first, second ->
                 first.plus(second)
-            }?.withoutFluff()?.generateErrorHttpResponse(httpRequest)
+            }.withoutFluff().generateErrorHttpResponse(httpRequest)
 
-            if (httpFailureResponse != null) NotStubbed(HttpStubResponse(httpFailureResponse))
-            else NotStubbed(HttpStubResponse(HttpResponse(400, "No matching stubs found")))
+            NotStubbed(HttpStubResponse(httpFailureResponse))
         }
 
         else -> FoundStubbedResponse(

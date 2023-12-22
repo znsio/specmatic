@@ -3,12 +3,28 @@ package `in`.specmatic.core
 import `in`.specmatic.core.GherkinSection.*
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.*
+import io.ktor.http.*
 
 data class GherkinClause(val content: String, val section: GherkinSection)
 
 enum class GherkinSection(val prefix: String) {
     Given("Given"), When("When"), Then("Then"), Star("*")
 }
+
+val DYNAMIC_HTTP_HEADERS = listOf(
+    HttpHeaders.Authorization,
+    HttpHeaders.UserAgent,
+    HttpHeaders.Cookie,
+    HttpHeaders.Referrer,
+    HttpHeaders.AcceptLanguage,
+    HttpHeaders.Host,
+    HttpHeaders.IfModifiedSince,
+    HttpHeaders.IfNoneMatch,
+    HttpHeaders.CacheControl,
+    HttpHeaders.ContentLength,
+    HttpHeaders.Range,
+    HttpHeaders.XForwardedFor
+)
 
 fun responseBodyToGherkinClauses(typeName: String, body: Value?, types: Map<String, Pattern>): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations>? {
     if(body == EmptyString)
@@ -40,7 +56,7 @@ fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
 }
 
 fun headersToGherkin(headers: Map<String, String>, keyword: String, types: Map<String, Pattern>, exampleDeclarationsStore: ExampleDeclarations, section: GherkinSection): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations(stringMapToValueMap(headers), types, exampleDeclarationsStore)
+    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations(stringMapToValueMap(headers.filter { DYNAMIC_HTTP_HEADERS.contains(it.toString()) }), types, exampleDeclarationsStore)
 
     val headerClauses = dictionaryTypeMap.entries.map {
         "$keyword ${it.key} ${it.value.pattern}"

@@ -4,6 +4,7 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.stub.HttpStub
+import io.ktor.http.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -13,21 +14,38 @@ import java.io.File
 import java.net.InetSocketAddress
 
 internal class ProxyTest {
-    private val simpleFeature = parseGherkinStringToFeature("""
+    private val dynamicHttpHeaders = listOf(
+        HttpHeaders.Authorization,
+        HttpHeaders.UserAgent,
+        HttpHeaders.Cookie,
+        HttpHeaders.Referrer,
+        HttpHeaders.AcceptLanguage,
+        HttpHeaders.Host,
+        HttpHeaders.IfModifiedSince,
+        HttpHeaders.IfNoneMatch,
+        HttpHeaders.CacheControl,
+        HttpHeaders.ContentLength,
+        HttpHeaders.Range,
+        HttpHeaders.XForwardedFor
+    )
+
+    private val simpleFeature = parseGherkinStringToFeature(
+        """
             Feature: Math
               Scenario: Square
                 When POST /
                 And request-body (number)
                 Then status 200
                 And response-body 100
-        """.trimIndent())
+        """.trimIndent()
+    )
 
     private var fakeFileWriter: FakeFileWriter = FakeFileWriter()
     val generatedContracts = File("./build/generatedContracts")
 
     @BeforeEach
     fun setup() {
-        if(generatedContracts.exists())
+        if (generatedContracts.exists())
             generatedContracts.deleteRecursively()
         generatedContracts.mkdirs()
     }
@@ -48,7 +66,12 @@ internal class ProxyTest {
         }
 
         assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
-        assertThatCode { OpenApiSpecification.fromYAML(fakeFileWriter.receivedContract!!, "") }.doesNotThrowAnyException()
+        assertThatCode {
+            OpenApiSpecification.fromYAML(
+                fakeFileWriter.receivedContract!!,
+                ""
+            )
+        }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
         assertThat(fakeFileWriter.receivedPaths.toList()).isEqualTo(listOf("proxy_generated.yaml", "stub0.json"))
     }
@@ -66,13 +89,38 @@ internal class ProxyTest {
         }
 
         assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
-        assertThatCode { OpenApiSpecification.fromYAML(fakeFileWriter.receivedContract!!, "") }.doesNotThrowAnyException()
+        assertThatCode {
+            OpenApiSpecification.fromYAML(
+                fakeFileWriter.receivedContract!!,
+                ""
+            )
+        }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
         assertThat(fakeFileWriter.receivedPaths).isEqualTo(listOf("proxy_generated.yaml", "stub0.json"))
     }
+
+    @Test
+    fun `should not include standard http headers in the generated specification`() {
+        HttpStub(simpleFeature).use {
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
+                val client = RestTemplate()
+                val response = client.postForEntity("http://localhost:9001/", "10", String::class.java)
+
+                assertThat(response.statusCodeValue).isEqualTo(200)
+                assertThatNoException().isThrownBy { response.body!!.toInt() }
+            }
+        }
+
+        assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
+
+        dynamicHttpHeaders.forEach {
+            assertThat(fakeFileWriter.receivedContract).withFailMessage("Specification should not have contained $it")
+                .doesNotContainIgnoringCase("name: $it")
+        }
+    }
 }
 
-class FakeFileWriter: FileWriter {
+class FakeFileWriter : FileWriter {
     var receivedContract: String? = null
     var receivedStub: String? = null
     val flags = mutableListOf<String>()
@@ -85,7 +133,7 @@ class FakeFileWriter: FileWriter {
     override fun writeText(path: String, content: String) {
         this.receivedPaths.add(path)
 
-        if(path.endsWith(".yaml"))
+        if (path.endsWith(".yaml"))
             this.receivedContract = content
         else
             this.receivedStub = content

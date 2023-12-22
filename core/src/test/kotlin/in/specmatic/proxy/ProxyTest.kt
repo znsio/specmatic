@@ -5,6 +5,7 @@ import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.stub.HttpStub
 import org.assertj.core.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestTemplate
@@ -12,7 +13,7 @@ import java.io.File
 import java.net.InetSocketAddress
 
 internal class ProxyTest {
-    val simpleFeature = parseGherkinStringToFeature("""
+    private val simpleFeature = parseGherkinStringToFeature("""
             Feature: Math
               Scenario: Square
                 When POST /
@@ -21,38 +22,18 @@ internal class ProxyTest {
                 And response-body 100
         """.trimIndent())
 
-    @Test
-    fun `basic test of the proxy`() {
-        val generatedContracts = File("./build/generatedContracts")
+    private var fakeFileWriter: FakeFileWriter = FakeFileWriter()
+    val generatedContracts = File("./build/generatedContracts")
+
+    @BeforeEach
+    fun setup() {
         if(generatedContracts.exists())
             generatedContracts.deleteRecursively()
         generatedContracts.mkdirs()
+    }
 
-        val flags = mutableListOf<String>()
-        var receivedContract: String? = null
-        var receivedStub: String? = null
-        val receivedPaths = mutableListOf<String>()
-
-        val fakeFileWriter = object : FileWriter {
-            override fun createDirectory() {
-                flags.add("createDirectory")
-            }
-
-            override fun writeText(path: String, content: String) {
-                receivedPaths.add(path)
-
-                if(path.endsWith(".yaml"))
-                    receivedContract = content
-                else
-                    receivedStub = content
-            }
-
-            override fun subDirectory(path: String): FileWriter {
-                return this
-            }
-
-        }
-
+    @Test
+    fun `basic test of the proxy`() {
         HttpStub(simpleFeature).use {
             Proxy(host = "localhost", port = 9001, "", fakeFileWriter).use {
                 val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
@@ -66,43 +47,14 @@ internal class ProxyTest {
             }
         }
 
-        assertThat(receivedContract?.trim()).startsWith("openapi:")
-        assertThatCode { OpenApiSpecification.fromYAML(receivedContract!!, "") }.doesNotThrowAnyException()
-        assertThatCode { parsedJSON(receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.yaml", "stub0.json"))
+        assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
+        assertThatCode { OpenApiSpecification.fromYAML(fakeFileWriter.receivedContract!!, "") }.doesNotThrowAnyException()
+        assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
+        assertThat(fakeFileWriter.receivedPaths.toList()).isEqualTo(listOf("proxy_generated.yaml", "stub0.json"))
     }
 
     @Test
     fun `basic test of the reverse proxy`() {
-        val generatedContracts = File("./build/generatedContracts")
-        if(generatedContracts.exists())
-            generatedContracts.deleteRecursively()
-        generatedContracts.mkdirs()
-
-        val flags = mutableListOf<String>()
-        var receivedContract: String? = null
-        var receivedStub: String? = null
-        val receivedPaths = mutableListOf<String>()
-
-        val fakeFileWriter = object : FileWriter {
-            override fun createDirectory() {
-                flags.add("createDirectory")
-            }
-
-            override fun writeText(path: String, content: String) {
-                receivedPaths.add(path)
-
-                if(path.endsWith(".yaml"))
-                    receivedContract = content
-                else
-                    receivedStub = content
-            }
-
-            override fun subDirectory(path: String): FileWriter {
-                return this
-            }
-        }
-
         HttpStub(simpleFeature).use {
             Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val client = RestTemplate()
@@ -113,9 +65,33 @@ internal class ProxyTest {
             }
         }
 
-        assertThat(receivedContract?.trim()).startsWith("openapi:")
-        assertThatCode { OpenApiSpecification.fromYAML(receivedContract!!, "") }.doesNotThrowAnyException()
-        assertThatCode { parsedJSON(receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(receivedPaths.toList()).isEqualTo(listOf("proxy_generated.yaml", "stub0.json"))
+        assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
+        assertThatCode { OpenApiSpecification.fromYAML(fakeFileWriter.receivedContract!!, "") }.doesNotThrowAnyException()
+        assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
+        assertThat(fakeFileWriter.receivedPaths).isEqualTo(listOf("proxy_generated.yaml", "stub0.json"))
+    }
+}
+
+class FakeFileWriter: FileWriter {
+    var receivedContract: String? = null
+    var receivedStub: String? = null
+    val flags = mutableListOf<String>()
+    val receivedPaths = mutableListOf<String>()
+
+    override fun createDirectory() {
+        this.flags.add("createDirectory")
+    }
+
+    override fun writeText(path: String, content: String) {
+        this.receivedPaths.add(path)
+
+        if(path.endsWith(".yaml"))
+            this.receivedContract = content
+        else
+            this.receivedStub = content
+    }
+
+    override fun subDirectory(path: String): FileWriter {
+        return this
     }
 }

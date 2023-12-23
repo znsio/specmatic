@@ -116,6 +116,7 @@ internal class ProxyTest {
         dynamicHttpHeaders.forEach {
             assertThat(fakeFileWriter.receivedContract).withFailMessage("Specification should not have contained $it")
                 .doesNotContainIgnoringCase("name: $it")
+            assertThat(fakeFileWriter.receivedStub).withFailMessage("Stub should not have contained $it")
         }
     }
 }

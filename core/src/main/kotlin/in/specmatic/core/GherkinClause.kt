@@ -11,21 +11,6 @@ enum class GherkinSection(val prefix: String) {
     Given("Given"), When("When"), Then("Then"), Star("*")
 }
 
-val DYNAMIC_HTTP_HEADERS = listOf(
-    HttpHeaders.Authorization,
-    HttpHeaders.UserAgent,
-    HttpHeaders.Cookie,
-    HttpHeaders.Referrer,
-    HttpHeaders.AcceptLanguage,
-    HttpHeaders.Host,
-    HttpHeaders.IfModifiedSince,
-    HttpHeaders.IfNoneMatch,
-    HttpHeaders.CacheControl,
-    HttpHeaders.ContentLength,
-    HttpHeaders.Range,
-    HttpHeaders.XForwardedFor
-)
-
 fun responseBodyToGherkinClauses(typeName: String, body: Value?, types: Map<String, Pattern>): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations>? {
     if(body == EmptyString)
         return Triple(emptyList(), types, DiscardExampleDeclarations())
@@ -56,7 +41,7 @@ fun toGherkinClauses(patterns: Map<String, Pattern>): List<GherkinClause> {
 }
 
 fun headersToGherkin(headers: Map<String, String>, keyword: String, types: Map<String, Pattern>, exampleDeclarationsStore: ExampleDeclarations, section: GherkinSection): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations(stringMapToValueMap(headers.filterKeys { it !in DYNAMIC_HTTP_HEADERS }), types, exampleDeclarationsStore)
+    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations(stringMapToValueMap(headers), types, exampleDeclarationsStore)
 
     val headerClauses = dictionaryTypeMap.entries.map {
         "$keyword ${it.key} ${it.value.pattern}"

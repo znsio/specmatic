@@ -173,7 +173,7 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
             }
             else -> {
                 when {
-                    headers.containsKey("Content-Type") -> TextContent(bodyString, ContentType.parse(headers["Content-Type"] as String))
+                    headers.containsKey(CONTENT_TYPE) -> TextContent(bodyString, ContentType.parse(headers[CONTENT_TYPE] as String))
                     else -> TextContent(bodyString, ContentType.parse(body.httpContentType))
                 }
             }

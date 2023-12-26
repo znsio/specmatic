@@ -57,7 +57,7 @@ class HttpClient(
                 }
 
                 val outboundRequest: HttpRequest =
-                    ktorHttpRequestToHttpRequest(ktorResponse.request, requestWithFileContent)
+                    ktorHttpRequestToHttpRequestForLogging(ktorResponse.request, requestWithFileContent)
                 httpLogMessage.addRequest(outboundRequest)
 
                 ktorResponseToHttpResponse(ktorResponse).also {
@@ -127,7 +127,7 @@ class HttpClient(
     }
 }
 
-private fun ktorHttpRequestToHttpRequest(
+private fun ktorHttpRequestToHttpRequestForLogging(
     request: io.ktor.client.request.HttpRequest,
     specmaticRequest: HttpRequest
 ): HttpRequest {

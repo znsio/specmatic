@@ -141,7 +141,7 @@ private fun ktorHttpRequestToHttpRequestForLogging(
         }
 
     val requestHeaders: Map<String, String> = request.headers.toMap().mapValues { it.value[0] }.plus(
-        CONTENT_TYPE to request.content.contentType.toString()
+        CONTENT_TYPE to (request.content.contentType?.toString() ?: "NOT SENT")
     )
 
     return HttpRequest(

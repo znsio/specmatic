@@ -21,7 +21,7 @@ const val FORM_FIELDS_JSON_KEY = "form-fields"
 const val MULTIPART_FORMDATA_JSON_KEY = "multipart-formdata"
 
 fun urlToQueryParams(uri: URI): Map<String, String> {
-    if(uri.query == null)
+    if (uri.query == null)
         return emptyMap()
 
     return uri.query.split("&").map {
@@ -30,10 +30,19 @@ fun urlToQueryParams(uri: URI): Map<String, String> {
     }.toMap()
 }
 
-data class HttpRequest(val method: String? = null, val path: String? = null, val headers: Map<String, String> = emptyMap(), val body: Value = EmptyString, val queryParams: Map<String, String> = emptyMap(), val formFields: Map<String, String> = emptyMap(), val multiPartFormData: List<MultiPartFormDataValue> = emptyList()) {
-    constructor(method: String, uri: URI): this(method, uri.path, queryParams = urlToQueryParams(uri))
+data class HttpRequest(
+    val method: String? = null,
+    val path: String? = null,
+    val headers: Map<String, String> = emptyMap(),
+    val body: Value = EmptyString,
+    val queryParams: Map<String, String> = emptyMap(),
+    val formFields: Map<String, String> = emptyMap(),
+    val multiPartFormData: List<MultiPartFormDataValue> = emptyList()
+) {
+    constructor(method: String, uri: URI) : this(method, uri.path, queryParams = urlToQueryParams(uri))
 
-    fun updateQueryParams(queryParams: Map<String, String>): HttpRequest = copy(queryParams = queryParams.plus(queryParams))
+    fun updateQueryParams(queryParams: Map<String, String>): HttpRequest =
+        copy(queryParams = queryParams.plus(queryParams))
 
     fun withHost(host: String) = this.copy(headers = this.headers.plus("Host" to host))
 
@@ -82,14 +91,19 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         val requestMap = mutableMapOf<String, Value>()
 
         requestMap["path"] = path?.let { StringValue(it) } ?: StringValue("/")
-        method?.let { requestMap["method"] = StringValue(it) } ?: throw ContractException("Can't serialise the request without a method.")
+        method?.let { requestMap["method"] = StringValue(it) }
+            ?: throw ContractException("Can't serialise the request without a method.")
 
         setIfNotEmpty(requestMap, "query", queryParams)
         setIfNotEmpty(requestMap, "headers", headers)
 
         when {
-            formFields.isNotEmpty() -> requestMap[FORM_FIELDS_JSON_KEY] = JSONObjectValue(formFields.mapValues { StringValue(it.value) })
-            multiPartFormData.isNotEmpty() -> requestMap[MULTIPART_FORMDATA_JSON_KEY] = JSONArrayValue(multiPartFormData.map { it.toJSONObject() })
+            formFields.isNotEmpty() -> requestMap[FORM_FIELDS_JSON_KEY] =
+                JSONObjectValue(formFields.mapValues { StringValue(it.value) })
+
+            multiPartFormData.isNotEmpty() -> requestMap[MULTIPART_FORMDATA_JSON_KEY] =
+                JSONArrayValue(multiPartFormData.map { it.toJSONObject() })
+
             else -> requestMap["body"] = body
         }
 
@@ -102,16 +116,18 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         val methodString = method ?: "NO_METHOD"
 
         val pathString = path ?: "NO_PATH"
-        val queryParamString = queryParams.map { "${it.key}=${it.value}"}.joinToString("&").let { if(it.isNotEmpty()) "?$it" else it }
+        val queryParamString =
+            queryParams.map { "${it.key}=${it.value}" }.joinToString("&").let { if (it.isNotEmpty()) "?$it" else it }
         val urlString = "$pathString$queryParamString"
 
         val firstLine = "$methodString $urlString"
         val headerString = headers.map { "${it.key}: ${it.value}" }.joinToString("\n")
         val bodyString = when {
-            formFields.isNotEmpty() -> formFields.map { "${it.key}=${it.value}"}.joinToString("&")
+            formFields.isNotEmpty() -> formFields.map { "${it.key}=${it.value}" }.joinToString("&")
             multiPartFormData.isNotEmpty() -> {
                 multiPartFormData.joinToString("\n") { part -> part.toDisplayableValue() }
             }
+
             else -> body.toString()
         }
 
@@ -148,56 +164,60 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         val listOfExcludedHeaders: List<String> = listOfExcludedHeaders()
 
         withoutDuplicateHostHeader(headers, url)
-            .map {Triple(it.key.trim(), it.key.trim().lowercase(), it.value.trim())}
+            .map { Triple(it.key.trim(), it.key.trim().lowercase(), it.value.trim()) }
             .filter { (_, loweredKey, _) -> loweredKey !in listOfExcludedHeaders }
             .forEach { (key, _, value) ->
                 httpRequestBuilder.header(key, value)
             }
 
         httpRequestBuilder.url.let {
-            if(it.port == DEFAULT_PORT || it.port == it.protocol.defaultPort)
+            if (it.port == DEFAULT_PORT || it.port == it.protocol.defaultPort)
                 httpRequestBuilder.header("Host", it.authority)
         }
 
-        httpRequestBuilder.setBody(when {
-            formFields.isNotEmpty() -> {
-                val parameters = formFields.mapValues { listOf(it.value) }.toList()
-                FormDataContent(parametersOf(*parameters.toTypedArray()))
-            }
-            multiPartFormData.isNotEmpty() -> {
-                MultiPartFormDataContent(formData {
-                    multiPartFormData.forEach { value ->
-                        value.addTo(this)
+        httpRequestBuilder.setBody(
+            when {
+                formFields.isNotEmpty() -> {
+                    val parameters = formFields.mapValues { listOf(it.value) }.toList()
+                    FormDataContent(parametersOf(*parameters.toTypedArray()))
+                }
+
+                multiPartFormData.isNotEmpty() -> {
+                    MultiPartFormDataContent(formData {
+                        multiPartFormData.forEach { value ->
+                            value.addTo(this)
+                        }
+                    })
+                }
+
+                else -> {
+                    when {
+                        headers.containsKey(CONTENT_TYPE) -> TextContent(bodyString, ContentType.parse(headers[CONTENT_TYPE] as String))
+                        else -> TextContent(bodyString, ContentType.parse(body.httpContentType))
                     }
-                })
-            }
-            else -> {
-                when {
-                    headers.containsKey(CONTENT_TYPE) -> TextContent(bodyString, ContentType.parse(headers[CONTENT_TYPE] as String))
-                    else -> TextContent(bodyString, ContentType.parse(body.httpContentType))
                 }
             }
-        })
+        )
     }
 
     private fun withoutDuplicateHostHeader(headers: Map<String, String>, url: URL?): Map<String, String> {
-        if(url == null)
+        if (url == null)
             return headers
 
-        if(isNotIPAddress(url.host))
+        if (isNotIPAddress(url.host))
             return headers - "Host"
 
         return headers
     }
 
     private fun isNotIPAddress(host: String): Boolean {
-        return ! isIPAddress(host) && host != "localhost"
+        return !isIPAddress(host) && host != "localhost"
     }
 
     private fun isIPAddress(host: String): Boolean {
         return try {
             host.split(".").map { it.toInt() }.isNotEmpty()
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             false
         }
     }
@@ -206,11 +226,11 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         val parts = multiPartFormData
 
         val newMultiPartFormData: List<MultiPartFormDataValue> = parts.map { part ->
-            when(part) {
+            when (part) {
                 is MultiPartContentValue -> part
                 is MultiPartFileValue -> {
                     val partFile = File(part.filename.removePrefix("@"))
-                    val binaryContent = if(partFile.exists()) {
+                    val binaryContent = if (partFile.exists()) {
                         MultiPartContent(partFile)
                     } else {
                         MultiPartContent(StringPattern().generate(Resolver()).toStringLiteral())
@@ -268,8 +288,10 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
         return when {
             this.headers.containsKey(soapActionHeader) ->
                 requestNotRecognizedMessages.soap(this.headers.getValue(soapActionHeader), path)
+
             this.body is XMLNode ->
                 requestNotRecognizedMessages.xmlOverHttp(method, path)
+
             else ->
                 requestNotRecognizedMessages.restful(method, path)
         }
@@ -282,17 +304,19 @@ data class HttpRequest(val method: String? = null, val path: String? = null, val
     fun requestNotRecognizedInStrictMode(): String {
         return requestNotRecognized(StrictRequestNotRecognizedMessages())
     }
+
+    fun withoutDynamicHeaders(): HttpRequest = copy(headers = headers.withoutDynamicHeaders())
 }
 
 private fun setIfNotEmpty(dest: MutableMap<String, Value>, key: String, data: Map<String, String>) {
-    if(data.isNotEmpty())
+    if (data.isNotEmpty())
         dest[key] = JSONObjectValue(data.mapValues { StringValue(it.value) })
 }
 
 fun nativeString(json: Map<String, Value>, key: String): String? {
     val keyValue = json[key] ?: return null
 
-    if(keyValue !is StringValue)
+    if (keyValue !is StringValue)
         throw ContractException("Expected $key to be a string value")
 
     return keyValue.string
@@ -300,59 +324,88 @@ fun nativeString(json: Map<String, Value>, key: String): String? {
 
 fun requestFromJSON(json: Map<String, Value>) =
     HttpRequest()
-        .updateMethod(nativeString(json, "method") ?: throw ContractException("http-request must contain a key named method whose value is the method in the request"))
+        .updateMethod(
+            nativeString(json, "method")
+                ?: throw ContractException("http-request must contain a key named method whose value is the method in the request")
+        )
         .updatePath(nativeString(json, "path") ?: "/")
         .updateQueryParams(nativeStringStringMap(json, "query"))
         .setHeaders(nativeStringStringMap(json, "headers"))
         .let { httpRequest ->
             when {
-                FORM_FIELDS_JSON_KEY in json -> httpRequest.copy(formFields = nativeStringStringMap(json, FORM_FIELDS_JSON_KEY))
+                FORM_FIELDS_JSON_KEY in json -> httpRequest.copy(
+                    formFields = nativeStringStringMap(
+                        json,
+                        FORM_FIELDS_JSON_KEY
+                    )
+                )
+
                 MULTIPART_FORMDATA_JSON_KEY in json -> {
-                    val parts = arrayValue(json.getValue(MULTIPART_FORMDATA_JSON_KEY), "$MULTIPART_FORMDATA_JSON_KEY must be a json array.")
+                    val parts = arrayValue(
+                        json.getValue(MULTIPART_FORMDATA_JSON_KEY),
+                        "$MULTIPART_FORMDATA_JSON_KEY must be a json array."
+                    )
 
                     val multiPartData: List<MultiPartFormDataValue> = parts.list.map {
                         val part = objectValue(it, "All multipart parts must be json object values.")
 
                         val multiPartSpec = part.jsonObject
-                        val name = nativeString(multiPartSpec, "name") ?: throw ContractException("One of the multipart entries does not have a name key")
+                        val name = nativeString(multiPartSpec, "name")
+                            ?: throw ContractException("One of the multipart entries does not have a name key")
 
                         parsePartType(multiPartSpec, name)
                     }
 
                     httpRequest.copy(multiPartFormData = httpRequest.multiPartFormData.plus(multiPartData))
                 }
+
                 "body" in json -> {
-                    val body = notNull(json.getOrDefault("body", NullValue), "Either body should have a value or the key should be absent from http-response")
+                    val body = notNull(
+                        json.getOrDefault("body", NullValue),
+                        "Either body should have a value or the key should be absent from http-response"
+                    )
                     httpRequest.updateBody(body)
                 }
+
                 else -> httpRequest
             }
         }
 
 private fun parsePartType(multiPartSpec: Map<String, Value>, name: String): MultiPartFormDataValue {
     return when {
-        multiPartSpec.containsKey("content") -> MultiPartContentValue(name, multiPartSpec.getValue("content"), specifiedContentType = multiPartSpec["contentType"]?.toStringLiteral())
-        multiPartSpec.containsKey("filename") -> MultiPartFileValue(name, multiPartSpec.getValue("filename").toStringLiteral().removePrefix("@"), multiPartSpec["contentType"]?.toStringLiteral(), multiPartSpec["contentEncoding"]?.toStringLiteral())
+        multiPartSpec.containsKey("content") -> MultiPartContentValue(
+            name,
+            multiPartSpec.getValue("content"),
+            specifiedContentType = multiPartSpec["contentType"]?.toStringLiteral()
+        )
+
+        multiPartSpec.containsKey("filename") -> MultiPartFileValue(
+            name,
+            multiPartSpec.getValue("filename").toStringLiteral().removePrefix("@"),
+            multiPartSpec["contentType"]?.toStringLiteral(),
+            multiPartSpec["contentEncoding"]?.toStringLiteral()
+        )
+
         else -> throw ContractException("Multipart entry $name must have either a content key or a filename key")
     }
 }
 
 fun objectValue(value: Value, errorMessage: String): JSONObjectValue {
-    if(value !is JSONObjectValue)
+    if (value !is JSONObjectValue)
         throw ContractException(errorMessage)
 
     return value
 }
 
 fun arrayValue(value: Value, errorMessage: String): JSONArrayValue {
-    if(value !is JSONArrayValue)
+    if (value !is JSONArrayValue)
         throw ContractException(errorMessage)
 
     return value
 }
 
 fun notNull(value: Value, errorMessage: String): Value {
-    if(value is NullValue)
+    if (value is NullValue)
         throw ContractException(errorMessage)
 
     return value
@@ -361,21 +414,31 @@ fun notNull(value: Value, errorMessage: String): Value {
 internal fun nativeStringStringMap(json: Map<String, Value>, key: String): Map<String, String> {
     val queryValue = json[key] ?: return emptyMap()
 
-    if(queryValue !is JSONObjectValue)
+    if (queryValue !is JSONObjectValue)
         throw ContractException("Expected $key to be a json object")
 
     return queryValue.jsonObject.mapValues { it.value.toString() }
 }
 
 internal fun startLinesWith(str: String, startValue: String) =
-        str.split("\n").joinToString("\n") { "$startValue$it" }
+    str.split("\n").joinToString("\n") { "$startValue$it" }
 
 fun toGherkinClauses(request: HttpRequest): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-    return Triple(emptyList<GherkinClause>(), emptyMap<String, Pattern>(), UseExampleDeclarations()).let { (clauses, types, exampleDeclaration) ->
+    return Triple(
+        emptyList<GherkinClause>(),
+        emptyMap<String, Pattern>(),
+        UseExampleDeclarations()
+    ).let { (clauses, types, exampleDeclaration) ->
         val (newClauses, newTypes, newExamples) = firstLineToGherkin(request, types, exampleDeclaration)
         Triple(clauses.plus(newClauses), newTypes, newExamples)
     }.let { (clauses, types, examples) ->
-        val (newClauses, newTypes, newExamples) = headersToGherkin(request.headers, "request-header", types, examples, When)
+        val (newClauses, newTypes, newExamples) = headersToGherkin(
+            request.headers,
+            "request-header",
+            types,
+            examples,
+            When
+        )
         Triple(clauses.plus(newClauses), newTypes, newExamples)
     }.let { (clauses, types, examples) ->
         val (newClauses, newTypes, newExamples) = bodyToGherkin(request, types, examples)
@@ -386,23 +449,46 @@ fun toGherkinClauses(request: HttpRequest): Triple<List<GherkinClause>, Map<Stri
 }
 
 fun stringMapToValueMap(stringStringMap: Map<String, String>) =
-        stringStringMap.mapValues { guessType(parsedValue(it.value)) }
+    stringStringMap.mapValues { guessType(parsedValue(it.value)) }
 
-fun bodyToGherkin(request: HttpRequest, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+fun bodyToGherkin(
+    request: HttpRequest,
+    types: Map<String, Pattern>,
+    exampleDeclarations: ExampleDeclarations
+): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
     return when {
-        request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(request.multiPartFormData, types, exampleDeclarations)
+        request.multiPartFormData.isNotEmpty() -> multiPartFormDataToGherkin(
+            request.multiPartFormData,
+            types,
+            exampleDeclarations
+        )
+
         request.formFields.isNotEmpty() -> formFieldsToGherkin(request.formFields, types, exampleDeclarations)
         else -> requestBodyToGherkinClauses(request.body, types, exampleDeclarations)
     }
 }
 
-fun multiPartFormDataToGherkin(multiPartFormData: List<MultiPartFormDataValue>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-    return multiPartFormData.fold(Triple(emptyList(), types, exampleDeclarations)) { (clauses, newTypes, examples), part ->
+fun multiPartFormDataToGherkin(
+    multiPartFormData: List<MultiPartFormDataValue>,
+    types: Map<String, Pattern>,
+    exampleDeclarations: ExampleDeclarations
+): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+    return multiPartFormData.fold(
+        Triple(
+            emptyList(),
+            types,
+            exampleDeclarations
+        )
+    ) { (clauses, newTypes, examples), part ->
         part.toClauseData(clauses, newTypes, examples)
     }
 }
 
-fun firstLineToGherkin(request: HttpRequest, types: Map<String, Pattern>, exampleDeclarationsStore: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+fun firstLineToGherkin(
+    request: HttpRequest,
+    types: Map<String, Pattern>,
+    exampleDeclarationsStore: ExampleDeclarations
+): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
     val method = request.method ?: throw ContractException("Can't generate a spec file without the http method.")
 
     if (request.path == null)
@@ -410,11 +496,17 @@ fun firstLineToGherkin(request: HttpRequest, types: Map<String, Pattern>, exampl
 
     val (query, newTypes, newExamples) = when {
         request.queryParams.isNotEmpty() -> {
-            val (dictionaryType, newTypes, examples) = dictionaryToDeclarations(stringMapToValueMap(request.queryParams), types, exampleDeclarationsStore)
+            val (dictionaryType, newTypes, examples) = dictionaryToDeclarations(
+                stringMapToValueMap(request.queryParams),
+                types,
+                exampleDeclarationsStore
+            )
 
-            val query = dictionaryType.entries.joinToString("&") { (key, typeDeclaration) -> "$key=${typeDeclaration.pattern}" }
+            val query =
+                dictionaryType.entries.joinToString("&") { (key, typeDeclaration) -> "$key=${typeDeclaration.pattern}" }
             Triple("?$query", newTypes, examples)
         }
+
         else -> Triple("", emptyMap(), exampleDeclarationsStore)
     }
 
@@ -425,10 +517,19 @@ fun firstLineToGherkin(request: HttpRequest, types: Map<String, Pattern>, exampl
     return Triple(listOf(requestLineGherkin), newTypes, newExamples)
 }
 
-fun formFieldsToGherkin(formFields: Map<String, String>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations(stringMapToValueMap(formFields), types, exampleDeclarations)
+fun formFieldsToGherkin(
+    formFields: Map<String, String>,
+    types: Map<String, Pattern>,
+    exampleDeclarations: ExampleDeclarations
+): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
+    val (dictionaryTypeMap, newTypes, newExamples) = dictionaryToDeclarations(
+        stringMapToValueMap(formFields),
+        types,
+        exampleDeclarations
+    )
 
-    val formFieldClauses = dictionaryTypeMap.entries.map { entry -> GherkinClause("form-field ${entry.key} ${entry.value.pattern}", When) }
+    val formFieldClauses =
+        dictionaryTypeMap.entries.map { entry -> GherkinClause("form-field ${entry.key} ${entry.value.pattern}", When) }
 
     return Triple(formFieldClauses, newTypes, exampleDeclarations.plus(newExamples))
 }

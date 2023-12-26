@@ -3,6 +3,7 @@ package `in`.specmatic.core
 import `in`.specmatic.core.GherkinSection.*
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.*
+import io.ktor.http.*
 
 data class GherkinClause(val content: String, val section: GherkinSection)
 

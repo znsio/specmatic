@@ -4,6 +4,7 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import io.ktor.http.*
 
 data class HttpHeadersPattern(
     val pattern: Map<String, Pattern> = emptyMap(),
@@ -288,3 +289,30 @@ private val standardCommonHTTPHeaders = setOf(
 
 fun isStandardHeader(header: String): Boolean = withoutOptionality(header) in standardCommonHTTPHeaders
 
+fun Map<String, String>.withoutDynamicHeaders(): Map<String, String> =
+    this.filterKeys { key -> key.lowercase() !in DYNAMIC_HTTP_HEADERS.map { it.lowercase() } }
+
+val DYNAMIC_HTTP_HEADERS = listOf(
+    HttpHeaders.Authorization,
+    HttpHeaders.UserAgent,
+    HttpHeaders.Cookie,
+    HttpHeaders.Referrer,
+    HttpHeaders.AcceptLanguage,
+    HttpHeaders.Host,
+    HttpHeaders.IfModifiedSince,
+    HttpHeaders.IfNoneMatch,
+    HttpHeaders.CacheControl,
+    HttpHeaders.ContentLength,
+    HttpHeaders.Range,
+    HttpHeaders.XForwardedFor,
+    HttpHeaders.Date,
+    HttpHeaders.Server,
+    HttpHeaders.Expires,
+    HttpHeaders.LastModified,
+    HttpHeaders.ETag,
+    HttpHeaders.Vary,
+    HttpHeaders.AccessControlAllowCredentials,
+    HttpHeaders.AccessControlMaxAge,
+    HttpHeaders.AccessControlRequestHeaders,
+    HttpHeaders.AccessControlRequestMethod
+)

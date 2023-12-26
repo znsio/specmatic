@@ -66,6 +66,7 @@ data class HttpResponse(
                 this.headers[headerName]
                     ?: throw ContractException("Couldn't find header name $headerName specified in $selector")
             }
+
             selector.startsWith("response-body") -> {
                 val bodySelector = selector.removePrefix("response-body").trim()
                 if (bodySelector.isBlank())
@@ -79,6 +80,7 @@ data class HttpResponse(
                         ?: throw ContractException("JSON selector $selector was not found")
                 }
             }
+
             else -> throw ContractException("Selector $selector is unexpected. It must either start with response-header or response-body.")
         }
     }
@@ -146,6 +148,8 @@ data class HttpResponse(
             )
         }
     }
+
+    fun withoutDynamicHeaders(): HttpResponse = copy(headers = headers.withoutDynamicHeaders())
 }
 
 fun nativeInteger(json: Map<String, Value>, key: String): Int? {

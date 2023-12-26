@@ -8,6 +8,7 @@ import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
+import io.ktor.client.request.HttpRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -143,5 +144,12 @@ internal class HttpResponseTest {
     fun `throws error if export is not found`() {
         val response = HttpResponse.OK(JSONObjectValue(mapOf("token" to NumberValue(10))))
         assertThatThrownBy { response.export(mapOf("token" to "response-body.notfound")) }.isInstanceOf(ContractException::class.java)
+    }
+
+    @Test
+    fun `should exclude dynamic headers`() {
+        HttpResponse.OK.copy(headers = mapOf("Content-Length" to "10").withoutDynamicHeaders()).let {
+            assertThat(it.headers).isEmpty()
+        }
     }
 }

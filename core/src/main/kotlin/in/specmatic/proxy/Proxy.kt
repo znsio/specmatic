@@ -57,7 +57,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
 
                             val name =
                                 "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams)}"
-                            stubs.add(NamedStub(name, ScenarioStub(httpRequest, httpResponse)))
+                            stubs.add(NamedStub(name, ScenarioStub(httpRequest.withoutDynamicHeaders(), httpResponse.withoutDynamicHeaders())))
 
                             respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
                         } catch (e: Throwable) {

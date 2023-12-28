@@ -8,7 +8,7 @@ import `in`.specmatic.test.reports.coverage.console.Remarks
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class CoverageStatusTest {
+class ApiCoverageReportStatusTest {
 
     companion object {
         const val CONFIG_FILE_PATH = "./specmatic.json"

@@ -789,12 +789,15 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
         return BearerSecurityScheme(token)
     }
 
-    private fun toFormFields(mediaType: MediaType) =
-        mediaType.schema.properties.map { (formFieldName, formFieldValue) ->
+    private fun toFormFields(mediaType: MediaType): Map<String, Pattern> {
+        val (_, resolvedSchema) = resolveReferenceToSchema(mediaType.schema.`$ref`)
+
+        return resolvedSchema.properties.map { (formFieldName, formFieldValue) ->
             formFieldName to toSpecmaticPattern(
                 formFieldValue, emptyList(), jsonInFormData = isJsonInString(mediaType, formFieldName)
             )
         }.toMap()
+    }
 
     private fun isJsonInString(
         mediaType: MediaType, formFieldName: String?

@@ -5653,6 +5653,79 @@ paths:
     }
 
     @Test
+    fun `should generate tests for form fields with examples when the fields are in a ref`() {
+        val contractString = """
+                openapi: 3.0.3
+                info:
+                  title: test
+                  version: '1.0'
+                paths:
+                  '/users':
+                    post:
+                      responses:
+                        '200':
+                          description: OK
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                200_OK:
+                                  value:
+                      requestBody:
+                        content:
+                          application/x-www-form-urlencoded:
+                             examples:
+                               200_OK:
+                                 value:
+                                     Data:
+                                       id: abc123
+                             encoding:
+                               Data:
+                                 contentType: application/json
+                             schema:
+                               ${"$"}ref: '#/components/schemas/Data'
+                components:
+                  schemas:
+                    Data:
+                      type: object
+                      properties:
+                        Data:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: string
+            """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
+
+        val results: List<Result> = feature.generateContractTestScenarios(emptyList()).map {
+            executeTest(it, object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.formFields).containsKey("Data")
+
+                    var parsedValue: Value = JSONObjectValue()
+                    assertThatCode { parsedValue = parsedJSON(request.formFields["Data"]!!) }.doesNotThrowAnyException()
+
+                    assertThat((parsedValue as JSONObjectValue).jsonObject).containsEntry("id", StringValue("abc123"))
+                    assertThat(request.formFields).hasSize(1)
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+        }
+
+        assertThat(results).hasSize(1)
+        println(results.single().reportString())
+
+        assertThat(results.single()).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
     fun `should generate tests for multipart fields with examples`() {
         val contractString = """
                 openapi: 3.0.3

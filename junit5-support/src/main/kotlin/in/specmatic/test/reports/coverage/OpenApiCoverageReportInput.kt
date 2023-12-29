@@ -229,7 +229,6 @@ class OpenApiCoverageReportInput(
             true -> {
                 when (val result = testResultRecords.first().result) {
                     TestResult.Skipped -> Remarks.Missed
-                    TestResult.NotImplemented -> Remarks.NotImplemented
                     TestResult.DidNotRun -> Remarks.DidNotRun
                     else -> throw ContractException("Cannot determine remarks for unknown test result: $result")
                 }

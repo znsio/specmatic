@@ -427,4 +427,16 @@ internal class HttpRequestPatternTest {
 
         assertThat(patterns).hasSize(1)
     }
+
+    @Test
+    fun `content-type should be sent when available`() {
+        val httpRequestPattern = HttpRequestPattern(
+            headersPattern = HttpHeadersPattern(contentType = "application/json"),
+            method = "POST",
+            urlMatcher = toURLMatcherWithOptionalQueryParams(URI("/matching_path")),
+            body = StringPattern()
+        )
+        val httpRequest: HttpRequest = httpRequestPattern.generate(Resolver())
+        assertThat(httpRequest.headers[CONTENT_TYPE]).isEqualTo("application/json")
+    }
 }

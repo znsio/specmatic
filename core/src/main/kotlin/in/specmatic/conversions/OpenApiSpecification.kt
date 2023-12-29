@@ -704,13 +704,22 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                                     }
                                 }
 
-                            Pair(requestPattern.copy(multiPartFormDataPattern = parts), emptyMap())
+                            Pair(requestPattern.copy(
+                                multiPartFormDataPattern = parts,
+                                headersPattern = headersPatternWithContentType(requestPattern, contentType)
+                            ), emptyMap())
                         }
                         "application/x-www-form-urlencoded" -> {
-                            Pair(requestPattern.copy(formFieldsPattern = toFormFields(mediaType)), emptyMap())
+                            Pair(requestPattern.copy(
+                                formFieldsPattern = toFormFields(mediaType),
+                                headersPattern = headersPatternWithContentType(requestPattern, contentType)
+                            ), emptyMap())
                         }
                         "application/xml" -> {
-                            Pair(requestPattern.copy(body = toXMLPattern(mediaType)), emptyMap())
+                            Pair(requestPattern.copy(
+                                body = toXMLPattern(mediaType),
+                                headersPattern = headersPatternWithContentType(requestPattern, contentType)
+                            ), emptyMap())
                         }
                         else -> {
                             val exampleBodies: Map<String, String?> = mediaType.examples?.mapValues {
@@ -731,13 +740,23 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                                 it.key to requestsWithSecurityParams
                             }.toMap()
 
-                            Pair(requestPattern.copy(body = toSpecmaticPattern(mediaType)), examples)
+                            Pair(requestPattern.copy(
+                                body = toSpecmaticPattern(mediaType),
+                                headersPattern = headersPatternWithContentType(requestPattern, contentType)
+                            ), examples)
                         }
                     }
                 }
             }
         }
     }
+
+    private fun headersPatternWithContentType(
+        requestPattern: HttpRequestPattern,
+        contentType: String
+    ) = requestPattern.headersPattern.copy(
+        contentType = contentType
+    )
 
     private fun resolveRequestBody(operation: Operation): RequestBody? =
         operation.requestBody?.`$ref`?.let {

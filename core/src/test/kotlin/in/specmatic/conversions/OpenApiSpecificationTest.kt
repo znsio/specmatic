@@ -5678,11 +5678,7 @@ paths:
                              examples:
                                200_OK:
                                  value:
-                                     Data:
-                                       id: abc123
-                             encoding:
-                               Data:
-                                 contentType: application/json
+                                     Data: abc123
                              schema:
                                ${"$"}ref: '#/components/schemas/Data'
                 components:
@@ -5691,12 +5687,7 @@ paths:
                       type: object
                       properties:
                         Data:
-                          type: object
-                          required:
-                            - id
-                          properties:
-                            id:
-                              type: string
+                          type: string
             """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
@@ -5705,12 +5696,9 @@ paths:
             executeTest(it, object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.formFields).containsKey("Data")
-
-                    var parsedValue: Value = JSONObjectValue()
-                    assertThatCode { parsedValue = parsedJSON(request.formFields["Data"]!!) }.doesNotThrowAnyException()
-
-                    assertThat((parsedValue as JSONObjectValue).jsonObject).containsEntry("id", StringValue("abc123"))
+                    assertThat(request.formFields["Data"]).isEqualTo("abc123")
                     assertThat(request.formFields).hasSize(1)
+
                     return HttpResponse.OK
                 }
 

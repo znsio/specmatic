@@ -804,7 +804,7 @@ paths:
 
     @Nested
     inner class ExpectationPriorities {
-        val feature = OpenApiSpecification.fromYAML(
+        val featureWithBodyExamples = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.1
 info:
@@ -848,10 +848,45 @@ paths:
 """.trim(), ""
         ).toFeature()
 
+        val featureWithQueryParamExamples = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.1
+info:
+  title: Data API
+  version: "1"
+paths:
+  /:
+    get:
+      summary: Data
+      parameters:
+        - name: type
+          schema:
+            type: string
+          in: query
+          required: true
+          examples:
+            QUERY_SUCCESS:
+              value: data
+      responses:
+        "200":
+          description: Data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type:
+                    string
+              examples:
+                QUERY_SUCCESS:
+                  value: ["one", "two"]
+""".trim(), ""
+        ).toFeature()
+
 
         @Test
-        fun `expectations from examples`() {
-            HttpStub(feature).use { stub ->
+        fun `expectations for payload from examples`() {
+            HttpStub(featureWithBodyExamples).use { stub ->
                 stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}""")))
                     .let { response ->
                         assertThat(response.status).isEqualTo(200)
@@ -861,9 +896,20 @@ paths:
         }
 
         @Test
+        fun `expectations for query params from examples`() {
+            HttpStub(featureWithQueryParamExamples).use { stub ->
+                stub.client.execute(HttpRequest("GET", "/?type=data"))
+                    .let { response ->
+                        assertThat(response.status).isEqualTo(200)
+                        assertThat(response.body).isEqualTo(parsedJSONArray("""["one", "two"]"""))
+                    }
+            }
+        }
+
+        @Test
         fun `expectations from examples should have less priority than file expectations`() {
             HttpStub(
-                feature, listOf(
+                featureWithBodyExamples, listOf(
                     ScenarioStub(
                         HttpRequest(
                             method = "POST",
@@ -887,7 +933,7 @@ paths:
 
         @Test
         fun `expectations from examples should have less priority than dynamic expectations`() {
-            HttpStub(feature).use { stub ->
+            HttpStub(featureWithBodyExamples).use { stub ->
                 stub.setExpectation(
                     ScenarioStub(
                         HttpRequest(

@@ -667,10 +667,29 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
             securitySchemes = operationSecuritySchemes(operation, securitySchemes)
         )
 
+        val exampleQueryParams = operation.parameters.orEmpty().filterIsInstance<QueryParameter>().fold(emptyMap<String, Map<String, String>>()) {
+            acc, queryParameter ->
+
+            queryParameter
+                .examples.orEmpty()
+                .entries
+                .fold(acc) { acc, (exampleName, example) ->
+                    val exampleValue = example.value?.toString() ?: ""
+                    val exampleMap = acc[exampleName] ?: emptyMap()
+                    acc.plus(exampleName to exampleMap.plus(queryParameter.name to exampleValue))
+                }
+        }
+
         return when (val requestBody = resolveRequestBody(operation)) {
-            null -> listOf(
-                Pair(requestPattern, emptyMap())
-            )
+            null -> {
+                val examples = exampleQueryParams.mapValues {
+                    listOf(HttpRequest(method = httpMethod, path = urlMatcher.path, queryParams = it.value))
+                }
+
+                listOf(
+                    Pair(requestPattern, examples)
+                )
+            }
             else -> {
                 requestBody.content.map { (contentType, mediaType) ->
                     when (contentType.lowercase()) {
@@ -718,9 +737,12 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                             } ?: emptyMap()
 
                             val examples: Map<String, List<HttpRequest>> = exampleBodies.map {
+                                val queryParams = exampleQueryParams[it.key] ?: emptyMap()
+
                                 val httpRequest = HttpRequest(
                                     method = httpMethod,
                                     path = urlMatcher.path,
+                                    queryParams = queryParams,
                                     body = parsedValue(it.value ?: "")
                                 )
 

@@ -667,18 +667,21 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
             securitySchemes = operationSecuritySchemes(operation, securitySchemes)
         )
 
-        val exampleQueryParams = operation.parameters.orEmpty().filterIsInstance<QueryParameter>().fold(emptyMap<String, Map<String, String>>()) {
-            acc, queryParameter ->
+        val exampleQueryParams =
+            operation.parameters.orEmpty()
+            .filterIsInstance<QueryParameter>()
+            .fold(emptyMap<String, Map<String, String>>()) {
+                acc, queryParameter ->
 
-            queryParameter
-                .examples.orEmpty()
-                .entries
-                .fold(acc) { acc, (exampleName, example) ->
-                    val exampleValue = example.value?.toString() ?: ""
-                    val exampleMap = acc[exampleName] ?: emptyMap()
-                    acc.plus(exampleName to exampleMap.plus(queryParameter.name to exampleValue))
-                }
-        }
+                queryParameter
+                    .examples.orEmpty()
+                    .entries
+                    .fold(acc) { acc, (exampleName, example) ->
+                        val exampleValue = example.value?.toString() ?: ""
+                        val exampleMap = acc[exampleName] ?: emptyMap()
+                        acc.plus(exampleName to exampleMap.plus(queryParameter.name to exampleValue))
+                    }
+            }
 
         return when (val requestBody = resolveRequestBody(operation)) {
             null -> {

@@ -768,7 +768,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
 
             parameter
                 .examples.orEmpty()
-                .entries
+                .entries.filter { it.value.value?.toString().orEmpty() !in OMIT }
                 .fold(acc) { acc, (exampleName, example) ->
                     val exampleValue = example.value?.toString() ?: ""
                     val exampleMap = acc[exampleName] ?: emptyMap()

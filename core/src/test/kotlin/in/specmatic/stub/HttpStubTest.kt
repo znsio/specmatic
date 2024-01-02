@@ -803,7 +803,7 @@ paths:
 
     @Nested
     inner class ExpectationPriorities {
-        val featureWithBodyExamples = OpenApiSpecification.fromYAML(
+        private val featureWithBodyExamples = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.1
 info:
@@ -847,7 +847,7 @@ paths:
 """.trim(), ""
         ).toFeature()
 
-        val featureWithQueryParamExamples = OpenApiSpecification.fromYAML(
+        private val featureWithQueryParamExamples = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.1
 info:
@@ -970,6 +970,45 @@ paths:
 """.trim(), ""
         ).toFeature()
 
+        private val featureWithOmittedParamExamples = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.1
+info:
+  title: Header Example API
+  version: "1"
+paths:
+  /hello:
+    get:
+      parameters:
+        - name: userId
+          schema:
+            type: string
+          in: header
+          required: true
+          examples:
+            HEADER_SUCCESS:
+              value: John
+        - name: role
+          schema:
+            type: string
+          in: header
+          required: false
+          examples:
+            HEADER_SUCCESS:
+              value: "(omit)"
+      responses:
+        "200":
+          description: Data
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                HEADER_SUCCESS:
+                  value: "Hello John"
+""".trim(), ""
+        ).toFeature()
+
         @Test
         fun `expectations for payload from examples`() {
             HttpStub(featureWithBodyExamples).use { stub ->
@@ -1020,6 +1059,17 @@ paths:
                     .let { response ->
                         assertThat(response.status).isEqualTo(401)
                         assertThat(response.body.toStringLiteral()).isEqualTo("User Jane not authorized")
+                    }
+            }
+        }
+
+        @Test
+        fun `expectations from examples ignores omitted parameters while matching stub request`() {
+            HttpStub(featureWithOmittedParamExamples).use { stub ->
+                stub.client.execute(HttpRequest("GET", "/hello", headers = mapOf("userId" to "John")))
+                    .let { response ->
+                        assertThat(response.status).isEqualTo(200)
+                        assertThat(response.body.toStringLiteral()).isEqualTo("Hello John")
                     }
             }
         }

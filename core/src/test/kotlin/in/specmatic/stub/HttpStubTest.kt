@@ -883,6 +883,41 @@ paths:
 """.trim(), ""
         ).toFeature()
 
+        val featureWithPathParamExamples = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.1
+info:
+  title: Data API
+  version: "1"
+paths:
+  /{productId}:
+    get:
+      summary: Data
+      parameters:
+        - name: productId
+          schema:
+            type: string
+          in: path
+          required: true
+          examples:
+            QUERY_SUCCESS:
+              value: xyz123
+      responses:
+        "200":
+          description: Data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type:
+                    string
+              examples:
+                QUERY_SUCCESS:
+                  value: ["one", "two"]
+""".trim(), ""
+        ).toFeature()
+
 
         @Test
         fun `expectations for payload from examples`() {
@@ -899,6 +934,17 @@ paths:
         fun `expectations for query params from examples`() {
             HttpStub(featureWithQueryParamExamples).use { stub ->
                 stub.client.execute(HttpRequest("GET", "/?type=data"))
+                    .let { response ->
+                        assertThat(response.status).isEqualTo(200)
+                        assertThat(response.body).isEqualTo(parsedJSONArray("""["one", "two"]"""))
+                    }
+            }
+        }
+
+        @Test
+        fun `expectations for path params from examples`() {
+            HttpStub(featureWithPathParamExamples).use { stub ->
+                stub.client.execute(HttpRequest("GET", "/xyz123"))
                     .let { response ->
                         assertThat(response.status).isEqualTo(200)
                         assertThat(response.body).isEqualTo(parsedJSONArray("""["one", "two"]"""))

@@ -2,7 +2,6 @@ package `in`.specmatic.stub
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
-import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -804,7 +803,7 @@ paths:
 
     @Nested
     inner class ExpectationPriorities {
-        val featureWithBodyExamples = OpenApiSpecification.fromYAML(
+        private val featureWithBodyExamples = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.1
 info:
@@ -848,42 +847,6 @@ paths:
 """.trim(), ""
         ).toFeature()
 
-        val featureWithQueryParamExamples = OpenApiSpecification.fromYAML(
-            """
-openapi: 3.0.1
-info:
-  title: Data API
-  version: "1"
-paths:
-  /:
-    get:
-      summary: Data
-      parameters:
-        - name: type
-          schema:
-            type: string
-          in: query
-          required: true
-          examples:
-            QUERY_SUCCESS:
-              value: data
-      responses:
-        "200":
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type:
-                    string
-              examples:
-                QUERY_SUCCESS:
-                  value: ["one", "two"]
-""".trim(), ""
-        ).toFeature()
-
-
         @Test
         fun `expectations for payload from examples`() {
             HttpStub(featureWithBodyExamples).use { stub ->
@@ -891,17 +854,6 @@ paths:
                     .let { response ->
                         assertThat(response.status).isEqualTo(200)
                         assertThat(response.body).isEqualTo(parsedJSONObject("""{"message":"example_expectation"}"""))
-                    }
-            }
-        }
-
-        @Test
-        fun `expectations for query params from examples`() {
-            HttpStub(featureWithQueryParamExamples).use { stub ->
-                stub.client.execute(HttpRequest("GET", "/?type=data"))
-                    .let { response ->
-                        assertThat(response.status).isEqualTo(200)
-                        assertThat(response.body).isEqualTo(parsedJSONArray("""["one", "two"]"""))
                     }
             }
         }

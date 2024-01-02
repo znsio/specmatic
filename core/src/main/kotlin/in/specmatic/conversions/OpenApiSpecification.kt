@@ -667,27 +667,32 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
             securitySchemes = operationSecuritySchemes(operation, securitySchemes)
         )
 
-        val exampleQueryParams =
-            operation.parameters.orEmpty()
-            .filterIsInstance<QueryParameter>()
-            .fold(emptyMap<String, Map<String, String>>()) {
-                acc, queryParameter ->
+        val exampleQueryParams = namedExampleParams(operation, QueryParameter::class.java)
+        val examplePathParams = namedExampleParams(operation, PathParameter::class.java)
+        val exampleHeaderParams = namedExampleParams(operation, HeaderParameter::class.java)
 
-                queryParameter
-                    .examples.orEmpty()
-                    .entries
-                    .fold(acc) { acc, (exampleName, example) ->
-                        val exampleValue = example.value?.toString() ?: ""
-                        val exampleMap = acc[exampleName] ?: emptyMap()
-                        acc.plus(exampleName to exampleMap.plus(queryParameter.name to exampleValue))
-                    }
-            }
+        val unionOfParameterKeys = (exampleQueryParams.keys + examplePathParams.keys + exampleHeaderParams.keys).distinct()
 
         return when (val requestBody = resolveRequestBody(operation)) {
             null -> {
-                val examples = exampleQueryParams.mapValues {
-                    listOf(HttpRequest(method = httpMethod, path = urlMatcher.path, queryParams = it.value))
-                }
+                val examples: Map<String, List<HttpRequest>> = unionOfParameterKeys.map { exampleName ->
+                    val queryParams = exampleQueryParams[exampleName] ?: emptyMap()
+                    val pathParams = examplePathParams[exampleName] ?: emptyMap()
+                    val headerParams = exampleHeaderParams[exampleName] ?: emptyMap()
+
+                    val path = pathParams.entries.fold(urlMatcher.toOpenApiPath()) { acc, (key, value) ->
+                        acc.replace("{$key}", value)
+                    }
+
+                    val httpRequest =
+                        HttpRequest(method = httpMethod, path = path, queryParams = queryParams, headers = headerParams)
+
+                    val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { (_, securityScheme) ->
+                        securityScheme.addTo(httpRequest)
+                    }
+
+                    exampleName to requestsWithSecurityParams
+                }.toMap()
 
                 listOf(
                     Pair(requestPattern, examples)
@@ -763,6 +768,20 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
             }
         }
     }
+
+    private fun <T: Parameter> namedExampleParams(operation: Operation, parameterType: Class<T>): Map<String, Map<String, String>> = operation.parameters.orEmpty()
+        .filterIsInstance(parameterType)
+        .fold(emptyMap<String, Map<String, String>>()) { acc, parameter ->
+
+            parameter
+                .examples.orEmpty()
+                .entries.filter { it.value.value?.toString().orEmpty() !in OMIT }
+                .fold(acc) { acc, (exampleName, example) ->
+                    val exampleValue = example.value?.toString() ?: ""
+                    val exampleMap = acc[exampleName] ?: emptyMap()
+                    acc.plus(exampleName to exampleMap.plus(parameter.name to exampleValue))
+                }
+        }
 
     private fun resolveRequestBody(operation: Operation): RequestBody? =
         operation.requestBody?.`$ref`?.let {

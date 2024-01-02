@@ -669,20 +669,22 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
 
         val exampleQueryParams = namedExampleParams(operation, QueryParameter::class.java)
         val examplePathParams = namedExampleParams(operation, PathParameter::class.java)
+        val exampleHeaderParams = namedExampleParams(operation, HeaderParameter::class.java)
 
-        val unionOfParameterKeys = exampleQueryParams.keys.union(examplePathParams.keys)
+        val unionOfParameterKeys = (exampleQueryParams.keys + examplePathParams.keys + exampleHeaderParams.keys).distinct()
 
         return when (val requestBody = resolveRequestBody(operation)) {
             null -> {
                 val examples: Map<String, List<HttpRequest>> = unionOfParameterKeys.map { exampleName ->
                     val queryParams = exampleQueryParams[exampleName] ?: emptyMap()
                     val pathParams = examplePathParams[exampleName] ?: emptyMap()
+                    val headerParams = exampleHeaderParams[exampleName] ?: emptyMap()
 
                     val path = pathParams.entries.fold(urlMatcher.toOpenApiPath()) { acc, (key, value) ->
                         acc.replace("{$key}", value)
                     }
 
-                    exampleName to listOf(HttpRequest(method = httpMethod, path = path, queryParams = queryParams))
+                    exampleName to listOf(HttpRequest(method = httpMethod, path = path, queryParams = queryParams, headers = headerParams))
                 }.toMap()
 
                 listOf(

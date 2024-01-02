@@ -928,6 +928,47 @@ paths:
 """.trim(), ""
         ).toFeature()
 
+        private val featureWithHeaderParamExamples = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.1
+info:
+  title: Header Example API
+  version: "1"
+paths:
+  /hello:
+    get:
+      parameters:
+        - name: userId
+          schema:
+            type: string
+          in: header
+          required: true
+          examples:
+            HEADER_SUCCESS:
+              value: John
+            HEADER_FAILURE:
+              value: Jane
+      responses:
+        "200":
+          description: Data
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                HEADER_SUCCESS:
+                  value: "Hello John"
+        "401":
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                HEADER_FAILURE:
+                  value: "User Jane not authorized"
+""".trim(), ""
+        ).toFeature()
 
         @Test
         fun `expectations for payload from examples`() {
@@ -963,6 +1004,22 @@ paths:
                     .let { response ->
                         assertThat(response.status).isEqualTo(404)
                         assertThat(response.body.toStringLiteral()).isEqualTo("Could not find abc123")
+                    }
+            }
+        }
+
+        @Test
+        fun `expectations for header params from examples`() {
+            HttpStub(featureWithHeaderParamExamples).use { stub ->
+                stub.client.execute(HttpRequest("GET", "/hello", headers = mapOf("userId" to "John")))
+                    .let { response ->
+                        assertThat(response.status).isEqualTo(200)
+                        assertThat(response.body.toStringLiteral()).isEqualTo("Hello John")
+                    }
+                stub.client.execute(HttpRequest("GET", "/hello", headers = mapOf("userId" to "Jane")))
+                    .let { response ->
+                        assertThat(response.status).isEqualTo(401)
+                        assertThat(response.body.toStringLiteral()).isEqualTo("User Jane not authorized")
                     }
             }
         }

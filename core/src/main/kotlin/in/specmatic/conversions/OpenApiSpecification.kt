@@ -684,7 +684,14 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                         acc.replace("{$key}", value)
                     }
 
-                    exampleName to listOf(HttpRequest(method = httpMethod, path = path, queryParams = queryParams, headers = headerParams))
+                    val httpRequest =
+                        HttpRequest(method = httpMethod, path = path, queryParams = queryParams, headers = headerParams)
+
+                    val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { (_, securityScheme) ->
+                        securityScheme.addTo(httpRequest)
+                    }
+
+                    exampleName to requestsWithSecurityParams
                 }.toMap()
 
                 listOf(

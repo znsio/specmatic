@@ -2,7 +2,6 @@ package `in`.specmatic.stub
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
-import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -883,7 +882,7 @@ paths:
 """.trim(), ""
         ).toFeature()
 
-        val featureWithPathParamExamples = OpenApiSpecification.fromYAML(
+        private val featureWithPathParamExamples = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.1
 info:
@@ -900,8 +899,10 @@ paths:
           in: path
           required: true
           examples:
-            QUERY_SUCCESS:
+            PATH_SUCCESS:
               value: xyz123
+            PATH_FAILURE:
+              value: abc123
       responses:
         "200":
           description: Data
@@ -913,8 +914,17 @@ paths:
                   type:
                     string
               examples:
-                QUERY_SUCCESS:
+                PATH_SUCCESS:
                   value: ["one", "two"]
+        "404":
+          description: Data not found
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                PATH_FAILURE:
+                  value: "Could not find abc123"
 """.trim(), ""
         ).toFeature()
 
@@ -948,6 +958,11 @@ paths:
                     .let { response ->
                         assertThat(response.status).isEqualTo(200)
                         assertThat(response.body).isEqualTo(parsedJSONArray("""["one", "two"]"""))
+                    }
+                stub.client.execute(HttpRequest("GET", "/abc123"))
+                    .let { response ->
+                        assertThat(response.status).isEqualTo(404)
+                        assertThat(response.body.toStringLiteral()).isEqualTo("Could not find abc123")
                     }
             }
         }

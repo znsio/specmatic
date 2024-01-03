@@ -655,7 +655,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
 
         val parameters = operation.parameters
 
-        val headersMap = parameters.orEmpty().filterIsInstance(HeaderParameter::class.java).associate {
+        val headersMap = parameters.orEmpty().filterIsInstance<HeaderParameter>().associate {
             toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema, emptyList())
         }
 
@@ -671,102 +671,140 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
         val examplePathParams = namedExampleParams(operation, PathParameter::class.java)
         val exampleHeaderParams = namedExampleParams(operation, HeaderParameter::class.java)
 
-        val unionOfParameterKeys = (exampleQueryParams.keys + examplePathParams.keys + exampleHeaderParams.keys).distinct()
+        val allParameterExamples: Map<String, List<HttpRequest>> =
+            parameterExamples(exampleQueryParams, examplePathParams, exampleHeaderParams, urlMatcher, httpMethod)
 
         return when (val requestBody = resolveRequestBody(operation)) {
-            null -> {
-                val examples: Map<String, List<HttpRequest>> = unionOfParameterKeys.map { exampleName ->
-                    val queryParams = exampleQueryParams[exampleName] ?: emptyMap()
-                    val pathParams = examplePathParams[exampleName] ?: emptyMap()
-                    val headerParams = exampleHeaderParams[exampleName] ?: emptyMap()
-
-                    val path = pathParams.entries.fold(urlMatcher.toOpenApiPath()) { acc, (key, value) ->
-                        acc.replace("{$key}", value)
-                    }
-
-                    val httpRequest =
-                        HttpRequest(method = httpMethod, path = path, queryParams = queryParams, headers = headerParams)
-
-                    val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { (_, securityScheme) ->
-                        securityScheme.addTo(httpRequest)
-                    }
-
-                    exampleName to requestsWithSecurityParams
-                }.toMap()
-
-                listOf(
-                    Pair(requestPattern, examples)
-                )
-            }
-            else -> {
-                requestBody.content.map { (contentType, mediaType) ->
+            null -> listOf(Pair(requestPattern, allParameterExamples))
+            else -> requestBody.content.map { (contentType, mediaType) ->
                     when (contentType.lowercase()) {
-                        "multipart/form-data" -> {
-                            val partSchemas = if (mediaType.schema.`$ref` == null) {
-                                mediaType.schema
-                            } else {
-                                resolveReferenceToSchema(mediaType.schema.`$ref`).second
-                            }
-
-                            val parts: List<MultiPartFormDataPattern> =
-                                partSchemas.properties.map { (partName, partSchema) ->
-                                    val partContentType = mediaType.encoding?.get(partName)?.contentType
-                                    val partNameWithPresence = if (partSchemas.required?.contains(partName) == true)
-                                        partName
-                                    else
-                                        "$partName?"
-
-                                    if (partSchema is BinarySchema) {
-                                        MultiPartFilePattern(
-                                            partNameWithPresence,
-                                            toSpecmaticPattern(partSchema, emptyList()),
-                                            partContentType
-                                        )
-                                    } else {
-                                        MultiPartContentPattern(
-                                            partNameWithPresence,
-                                            toSpecmaticPattern(partSchema, emptyList()),
-                                            partContentType
-                                        )
-                                    }
-                                }
-
-                            Pair(requestPattern.copy(multiPartFormDataPattern = parts), emptyMap())
-                        }
-                        "application/x-www-form-urlencoded" -> {
-                            Pair(requestPattern.copy(formFieldsPattern = toFormFields(mediaType)), emptyMap())
-                        }
-                        "application/xml" -> {
-                            Pair(requestPattern.copy(body = toXMLPattern(mediaType)), emptyMap())
-                        }
-                        else -> {
-                            val exampleBodies: Map<String, String?> = mediaType.examples?.mapValues {
-                                it.value?.value?.toString()
-                            } ?: emptyMap()
-
-                            val examples: Map<String, List<HttpRequest>> = exampleBodies.map {
-                                val queryParams = exampleQueryParams[it.key] ?: emptyMap()
-
-                                val httpRequest = HttpRequest(
-                                    method = httpMethod,
-                                    path = urlMatcher.path,
-                                    queryParams = queryParams,
-                                    body = parsedValue(it.value ?: "")
-                                )
-
-                                val requestsWithSecurityParams = securitySchemes.map { (_, securityScheme) ->
-                                    securityScheme.addTo(httpRequest)
-                                }
-
-                                it.key to requestsWithSecurityParams
-                            }.toMap()
-
-                            Pair(requestPattern.copy(body = toSpecmaticPattern(mediaType)), examples)
-                        }
+                        "multipart/form-data" -> multipartFormDataBody(mediaType, requestPattern)
+                        "application/x-www-form-urlencoded" -> formURLEncodedBody(requestPattern, mediaType)
+                        "application/xml" -> xmlBody(requestPattern, mediaType)
+                        else ->
+                            otherPayloadTypeWithExamples(mediaType, allParameterExamples, httpMethod, urlMatcher, requestPattern)
                     }
                 }
+        }.let {
+            it.map { (requestPattern, examples) ->
+                val examplesWithSecurityParams: Map<String, List<HttpRequest>> =
+                    addSecurityParamsToExamples(examples, securitySchemes)
+
+                requestPattern to examplesWithSecurityParams
             }
         }
+    }
+
+    private fun parameterExamples(
+        exampleQueryParams: Map<String, Map<String, String>>,
+        examplePathParams: Map<String, Map<String, String>>,
+        exampleHeaderParams: Map<String, Map<String, String>>,
+        urlMatcher: URLMatcher,
+        httpMethod: String
+    ): Map<String, List<HttpRequest>> {
+        val unionOfParameterKeys =
+            (exampleQueryParams.keys + examplePathParams.keys + exampleHeaderParams.keys).distinct()
+
+        val allParameterExamples: Map<String, List<HttpRequest>> = unionOfParameterKeys.associateWith { exampleName ->
+            val queryParams = exampleQueryParams[exampleName] ?: emptyMap()
+            val pathParams = examplePathParams[exampleName] ?: emptyMap()
+            val headerParams = exampleHeaderParams[exampleName] ?: emptyMap()
+
+            val path = pathParams.entries.fold(urlMatcher.toOpenApiPath()) { acc, (key, value) ->
+                acc.replace("{$key}", value)
+            }
+
+            val httpRequest =
+                HttpRequest(method = httpMethod, path = path, queryParams = queryParams, headers = headerParams)
+
+            listOf(httpRequest)
+        }
+        return allParameterExamples
+    }
+
+    private fun xmlBody(
+        requestPattern: HttpRequestPattern,
+        mediaType: MediaType
+    ): Pair<HttpRequestPattern, Map<String, List<HttpRequest>>> =
+        Pair(requestPattern.copy(body = toXMLPattern(mediaType)), emptyMap())
+
+    private fun formURLEncodedBody(
+        requestPattern: HttpRequestPattern,
+        mediaType: MediaType
+    ): Pair<HttpRequestPattern, Map<String, List<HttpRequest>>> =
+        Pair(requestPattern.copy(formFieldsPattern = toFormFields(mediaType)), emptyMap())
+
+    private fun addSecurityParamsToExamples(
+        examples: Map<String, List<HttpRequest>>,
+        securitySchemes: Map<String, OpenAPISecurityScheme>
+    ) = examples.mapValues { (_, requests) ->
+        requests.flatMap {
+            securitySchemes.map { (_, securityScheme) ->
+                securityScheme.addTo(it)
+            }
+        }
+    }
+
+    private fun otherPayloadTypeWithExamples(
+        mediaType: MediaType,
+        allParameterExamples: Map<String, List<HttpRequest>>,
+        httpMethod: String,
+        urlMatcher: URLMatcher,
+        requestPattern: HttpRequestPattern
+    ): Pair<HttpRequestPattern, Map<String, List<HttpRequest>>> {
+        val bodyExamples: Map<String, String?> = mediaType.examples?.mapValues {
+            it.value?.value?.toString()
+        } ?: emptyMap()
+
+        val examplesWithBodies: Map<String, List<HttpRequest>> = bodyExamples.map { (exampleName, exampleBody) ->
+            val parameterExamples = allParameterExamples[exampleName] ?: emptyList()
+
+            val examplesWithBodies = parameterExamples.ifEmpty {
+                listOf(HttpRequest(method = httpMethod, path = urlMatcher.path))
+            }.map {
+                it.copy(body = parsedValue(exampleBody ?: ""))
+            }
+
+            exampleName to examplesWithBodies
+        }.toMap()
+
+        return Pair(requestPattern.copy(body = toSpecmaticPattern(mediaType)), examplesWithBodies)
+    }
+
+    private fun multipartFormDataBody(
+        mediaType: MediaType,
+        requestPattern: HttpRequestPattern
+    ): Pair<HttpRequestPattern, Map<String, List<HttpRequest>>> {
+        val partSchemas = if (mediaType.schema.`$ref` == null) {
+            mediaType.schema
+        } else {
+            resolveReferenceToSchema(mediaType.schema.`$ref`).second
+        }
+
+        val parts: List<MultiPartFormDataPattern> =
+            partSchemas.properties.map { (partName, partSchema) ->
+                val partContentType = mediaType.encoding?.get(partName)?.contentType
+                val partNameWithPresence = if (partSchemas.required?.contains(partName) == true)
+                    partName
+                else
+                    "$partName?"
+
+                if (partSchema is BinarySchema) {
+                    MultiPartFilePattern(
+                        partNameWithPresence,
+                        toSpecmaticPattern(partSchema, emptyList()),
+                        partContentType
+                    )
+                } else {
+                    MultiPartContentPattern(
+                        partNameWithPresence,
+                        toSpecmaticPattern(partSchema, emptyList()),
+                        partContentType
+                    )
+                }
+            }
+
+        return Pair(requestPattern.copy(multiPartFormDataPattern = parts), emptyMap())
     }
 
     private fun <T: Parameter> namedExampleParams(operation: Operation, parameterType: Class<T>): Map<String, Map<String, String>> = operation.parameters.orEmpty()

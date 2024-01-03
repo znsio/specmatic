@@ -334,7 +334,6 @@ data class HttpRequestPattern(
                 resolver.withCyclePrevention(body) {cyclePreventedResolver ->
                     body.generate(cyclePreventedResolver).let { value ->
                         newRequest = newRequest.updateBody(value)
-                        newRequest = newRequest.updateHeader(CONTENT_TYPE, value.httpContentType)
                     }
                 }
             }

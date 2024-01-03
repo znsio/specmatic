@@ -674,25 +674,33 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
         val allParameterExamples: Map<String, List<HttpRequest>> =
             parameterExamples(exampleQueryParams, examplePathParams, exampleHeaderParams, urlMatcher, httpMethod)
 
-        return when (val requestBody = resolveRequestBody(operation)) {
+        val requestBodyWithExamples = when (val requestBody = resolveRequestBody(operation)) {
             null -> listOf(Pair(requestPattern, allParameterExamples))
             else -> requestBody.content.map { (contentType, mediaType) ->
-                    when (contentType.lowercase()) {
-                        "multipart/form-data" -> multipartFormDataBody(mediaType, requestPattern)
-                        "application/x-www-form-urlencoded" -> formURLEncodedBody(requestPattern, mediaType)
-                        "application/xml" -> xmlBody(requestPattern, mediaType)
-                        else ->
-                            otherPayloadTypeWithExamples(mediaType, allParameterExamples, httpMethod, urlMatcher, requestPattern)
-                    }
+                when (contentType.lowercase()) {
+                    "multipart/form-data" -> multipartFormDataBody(requestPattern, mediaType)
+                    "application/x-www-form-urlencoded" -> formURLEncodedBody(requestPattern, mediaType)
+                    "application/xml" -> xmlBody(requestPattern, mediaType)
+                    else ->
+                        otherPayloadTypeWithExamples(
+                            mediaType,
+                            allParameterExamples,
+                            httpMethod,
+                            urlMatcher,
+                            requestPattern
+                        )
                 }
-        }.let {
-            it.map { (requestPattern, examples) ->
+            }
+        }
+
+        val requestBodyWithExamplesAndSecurityTokens = requestBodyWithExamples.map { (requestPattern, examples) ->
                 val examplesWithSecurityParams: Map<String, List<HttpRequest>> =
                     addSecurityParamsToExamples(examples, securitySchemes)
 
                 requestPattern to examplesWithSecurityParams
             }
-        }
+
+        return requestBodyWithExamplesAndSecurityTokens
     }
 
     private fun parameterExamples(
@@ -772,8 +780,8 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
     }
 
     private fun multipartFormDataBody(
-        mediaType: MediaType,
-        requestPattern: HttpRequestPattern
+        requestPattern: HttpRequestPattern,
+        mediaType: MediaType
     ): Pair<HttpRequestPattern, Map<String, List<HttpRequest>>> {
         val partSchemas = if (mediaType.schema.`$ref` == null) {
             mediaType.schema

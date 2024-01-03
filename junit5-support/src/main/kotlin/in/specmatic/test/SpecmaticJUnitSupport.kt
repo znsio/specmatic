@@ -81,6 +81,8 @@ open class SpecmaticJUnitSupport {
 
                 logger.debug(response.toLogString())
 
+                openApiCoverageReportInput.setEndpointsAPIFlag(true)
+
                 val endpointData = response.body as JSONObjectValue
                 val apis: List<API> = endpointData.getJSONObject("contexts").entries.flatMap {
                     val mappings: JSONArrayValue =

@@ -1,5 +1,6 @@
 package `in`.specmatic.test.reports.coverage
 
+import `in`.specmatic.conversions.SERVICE_TYPE_HTTP
 import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.TestResult
 import `in`.specmatic.core.pattern.ContractException
@@ -20,6 +21,7 @@ class OpenApiCoverageReportInput(
     private val applicationAPIs: MutableList<API> = mutableListOf(),
     private val excludedAPIs: MutableList<String> = mutableListOf(),
     private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
+    private var endpointsAPISet: Boolean = false
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testResultRecords.add(testResultRecord)
@@ -35,6 +37,10 @@ class OpenApiCoverageReportInput(
 
     fun addEndpoints(endpoints: List<Endpoint>) {
         allEndpoints.addAll(endpoints)
+    }
+
+    fun setEndpointsAPIFlag(isSet: Boolean) {
+        endpointsAPISet = isSet
     }
 
     fun generate(): OpenAPICoverageConsoleReport {
@@ -91,9 +97,13 @@ class OpenApiCoverageReportInput(
     }
 
     private fun addTestResultsForTestsNotGeneratedBySpecmatic(allTests: List<TestResultRecord>, allEndpoints: List<Endpoint>): List<TestResultRecord> {
-        val missedEndpoints = allEndpoints.filter { endpoint -> allTests.none { it.path == endpoint.path && it.method == endpoint.method && it.responseStatus == endpoint.responseStatus  } }
+        val endpointsWithoutTests =
+            allEndpoints.filter { endpoint ->
+                allTests.none { it.path == endpoint.path && it.method == endpoint.method && it.responseStatus == endpoint.responseStatus }
+                        && excludedAPIs.none { it == endpoint.path }
+            }
         return allTests.plus(
-            missedEndpoints.map { endpoint ->  TestResultRecord(
+            endpointsWithoutTests.map { endpoint ->  TestResultRecord(
                 endpoint.path,
                 endpoint.method,
                 endpoint.responseStatus,
@@ -165,10 +175,19 @@ class OpenApiCoverageReportInput(
 
     private fun addTestResultsForMissingEndpoints(testResults: List<TestResultRecord>): List<TestResultRecord> {
         val testReportRecordsIncludingMissingAPIs = testResults.toMutableList()
-        applicationAPIs.forEach { api ->
-            if (testResults.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
-                val testResult = testResults.first()
-                testReportRecordsIncludingMissingAPIs.add(TestResultRecord(api.path, api.method, 0, TestResult.Skipped, serviceType = testResult.serviceType))
+        if(endpointsAPISet) {
+            applicationAPIs.forEach { api ->
+                if (allEndpoints.none { it.path == api.path && it.method == api.method } && excludedAPIs.none { it == api.path }) {
+                    testReportRecordsIncludingMissingAPIs.add(
+                        TestResultRecord(
+                            api.path,
+                            api.method,
+                            0,
+                            TestResult.Skipped,
+                            serviceType = SERVICE_TYPE_HTTP
+                        )
+                    )
+                }
             }
         }
         return testReportRecordsIncludingMissingAPIs
@@ -210,7 +229,6 @@ class OpenApiCoverageReportInput(
             true -> {
                 when (val result = testResultRecords.first().result) {
                     TestResult.Skipped -> Remarks.Missed
-                    TestResult.NotImplemented -> Remarks.NotImplemented
                     TestResult.DidNotRun -> Remarks.DidNotRun
                     else -> throw ContractException("Cannot determine remarks for unknown test result: $result")
                 }
@@ -227,7 +245,7 @@ class OpenApiCoverageReportInput(
 
     private fun identifyTestsThatFailedBecauseOfEndpointsThatWereNotImplemented(testResults: List<TestResultRecord>): List<TestResultRecord> {
         val notImplementedTests =
-            testResults.filter { it.result == TestResult.Failed && applicationAPIs.none { api -> api.path == it.path && api.method == it.method } }
+            testResults.filter { it.result == TestResult.Failed && (endpointsAPISet && applicationAPIs.none { api -> api.path == it.path && api.method == it.method }) }
         return testResults.minus(notImplementedTests.toSet())
             .plus(notImplementedTests.map { it.copy(result = TestResult.NotImplemented) })
     }

@@ -30,7 +30,7 @@ import io.swagger.v3.parser.core.models.SwaggerParseResult
 import java.io.File
 
 private const val BEARER_SECURITY_SCHEME = "bearer"
-private const val SERVICE_TYPE_HTTP = "HTTP"
+const val SERVICE_TYPE_HTTP = "HTTP"
 
 private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
 private const val testDirectoryProperty = "specmaticTestsDirectory"
@@ -667,10 +667,37 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
             securitySchemes = operationSecuritySchemes(operation, securitySchemes)
         )
 
+        val exampleQueryParams = namedExampleParams(operation, QueryParameter::class.java)
+        val examplePathParams = namedExampleParams(operation, PathParameter::class.java)
+        val exampleHeaderParams = namedExampleParams(operation, HeaderParameter::class.java)
+
+        val unionOfParameterKeys = (exampleQueryParams.keys + examplePathParams.keys + exampleHeaderParams.keys).distinct()
+
         return when (val requestBody = resolveRequestBody(operation)) {
-            null -> listOf(
-                Pair(requestPattern, emptyMap())
-            )
+            null -> {
+                val examples: Map<String, List<HttpRequest>> = unionOfParameterKeys.map { exampleName ->
+                    val queryParams = exampleQueryParams[exampleName] ?: emptyMap()
+                    val pathParams = examplePathParams[exampleName] ?: emptyMap()
+                    val headerParams = exampleHeaderParams[exampleName] ?: emptyMap()
+
+                    val path = pathParams.entries.fold(urlMatcher.toOpenApiPath()) { acc, (key, value) ->
+                        acc.replace("{$key}", value)
+                    }
+
+                    val httpRequest =
+                        HttpRequest(method = httpMethod, path = path, queryParams = queryParams, headers = headerParams)
+
+                    val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { (_, securityScheme) ->
+                        securityScheme.addTo(httpRequest)
+                    }
+
+                    exampleName to requestsWithSecurityParams
+                }.toMap()
+
+                listOf(
+                    Pair(requestPattern, examples)
+                )
+            }
             else -> {
                 requestBody.content.map { (contentType, mediaType) ->
                     when (contentType.lowercase()) {
@@ -727,9 +754,12 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                             } ?: emptyMap()
 
                             val examples: Map<String, List<HttpRequest>> = exampleBodies.map {
+                                val queryParams = exampleQueryParams[it.key] ?: emptyMap()
+
                                 val httpRequest = HttpRequest(
                                     method = httpMethod,
                                     path = urlMatcher.path,
+                                    queryParams = queryParams,
                                     body = parsedValue(it.value ?: "")
                                 )
 
@@ -757,6 +787,20 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
     ) = requestPattern.headersPattern.copy(
         contentType = contentType
     )
+
+    private fun <T: Parameter> namedExampleParams(operation: Operation, parameterType: Class<T>): Map<String, Map<String, String>> = operation.parameters.orEmpty()
+        .filterIsInstance(parameterType)
+        .fold(emptyMap<String, Map<String, String>>()) { acc, parameter ->
+
+            parameter
+                .examples.orEmpty()
+                .entries.filter { it.value.value?.toString().orEmpty() !in OMIT }
+                .fold(acc) { acc, (exampleName, example) ->
+                    val exampleValue = example.value?.toString() ?: ""
+                    val exampleMap = acc[exampleName] ?: emptyMap()
+                    acc.plus(exampleName to exampleMap.plus(parameter.name to exampleValue))
+                }
+        }
 
     private fun resolveRequestBody(operation: Operation): RequestBody? =
         operation.requestBody?.`$ref`?.let {
@@ -808,12 +852,18 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
         return BearerSecurityScheme(token)
     }
 
-    private fun toFormFields(mediaType: MediaType) =
-        mediaType.schema.properties.map { (formFieldName, formFieldValue) ->
+    private fun toFormFields(mediaType: MediaType): Map<String, Pattern> {
+        val schema = mediaType.schema.`$ref`?.let {
+            val (_, resolvedSchema) = resolveReferenceToSchema(mediaType.schema.`$ref`)
+            resolvedSchema
+        } ?: mediaType.schema
+
+        return schema.properties.map { (formFieldName, formFieldValue) ->
             formFieldName to toSpecmaticPattern(
                 formFieldValue, emptyList(), jsonInFormData = isJsonInString(mediaType, formFieldName)
             )
         }.toMap()
+    }
 
     private fun isJsonInString(
         mediaType: MediaType, formFieldName: String?

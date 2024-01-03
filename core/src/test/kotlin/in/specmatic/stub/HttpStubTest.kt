@@ -2,7 +2,6 @@ package `in`.specmatic.stub
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
-import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
@@ -804,7 +803,7 @@ paths:
 
     @Nested
     inner class ExpectationPriorities {
-        val feature = OpenApiSpecification.fromYAML(
+        private val featureWithBodyExamples = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.1
 info:
@@ -848,10 +847,9 @@ paths:
 """.trim(), ""
         ).toFeature()
 
-
         @Test
-        fun `expectations from examples`() {
-            HttpStub(feature).use { stub ->
+        fun `expectations for payload from examples`() {
+            HttpStub(featureWithBodyExamples).use { stub ->
                 stub.client.execute(HttpRequest("POST", "/", emptyMap(), parsedJSONObject("""{"id": 10}""")))
                     .let { response ->
                         assertThat(response.status).isEqualTo(200)
@@ -863,7 +861,7 @@ paths:
         @Test
         fun `expectations from examples should have less priority than file expectations`() {
             HttpStub(
-                feature, listOf(
+                featureWithBodyExamples, listOf(
                     ScenarioStub(
                         HttpRequest(
                             method = "POST",
@@ -887,7 +885,7 @@ paths:
 
         @Test
         fun `expectations from examples should have less priority than dynamic expectations`() {
-            HttpStub(feature).use { stub ->
+            HttpStub(featureWithBodyExamples).use { stub ->
                 stub.setExpectation(
                     ScenarioStub(
                         HttpRequest(

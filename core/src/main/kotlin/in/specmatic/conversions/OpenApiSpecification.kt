@@ -616,12 +616,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
 
         val headerExamples =
             response.headers.orEmpty().entries.fold(emptyMap<String, Map<String, String>>()) { acc, (headerName, header) ->
-                header.examples.orEmpty()
-                    .entries.fold(acc) { acc, (exampleName, example) ->
-                        val exampleValue = resolveExample(example)?.value?.toString() ?: ""
-                        val exampleMap = acc[exampleName] ?: emptyMap()
-                        acc.plus(exampleName to exampleMap.plus(headerName to exampleValue))
-                    }
+                extractExamples(header.examples, headerName, acc)
             }
 
         return response.content.map { (contentType, mediaType) ->
@@ -782,16 +777,22 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
     private fun <T: Parameter> namedExampleParams(operation: Operation, parameterType: Class<T>): Map<String, Map<String, String>> = operation.parameters.orEmpty()
         .filterIsInstance(parameterType)
         .fold(emptyMap<String, Map<String, String>>()) { acc, parameter ->
-
-            parameter
-                .examples.orEmpty()
-                .entries.filter { it.value.value?.toString().orEmpty() !in OMIT }
-                .fold(acc) { acc, (exampleName, example) ->
-                    val exampleValue =  resolveExample(example)?.value?.toString() ?: ""
-                    val exampleMap = acc[exampleName] ?: emptyMap()
-                    acc.plus(exampleName to exampleMap.plus(parameter.name to exampleValue))
-                }
+            extractExamples(parameter.examples, parameter.name, acc)
         }
+
+    private fun extractExamples(
+        examples: Map<String, Example>?,
+        parameterName: String,
+        acc: Map<String, Map<String, String>>
+    ): Map<String, Map<String, String>> {
+        return examples.orEmpty()
+            .entries.filter { it.value.value?.toString().orEmpty() !in OMIT }
+            .fold(acc) { acc, (exampleName, example) ->
+                val exampleValue = resolveExample(example)?.value?.toString() ?: ""
+                val exampleMap = acc[exampleName] ?: emptyMap()
+                acc.plus(exampleName to exampleMap.plus(parameterName to exampleValue))
+            }
+    }
 
     private fun resolveRequestBody(operation: Operation): RequestBody? =
         operation.requestBody?.`$ref`?.let {

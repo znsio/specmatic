@@ -614,6 +614,16 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
             return listOf(ResponseData(response, MediaType(), responsePattern, emptyMap()))
         }
 
+        val headerExamples =
+            response.headers.orEmpty().entries.fold(emptyMap<String, Map<String, String>>()) { acc, (headerName, header) ->
+                header.examples.orEmpty()
+                    .entries.fold(acc) { acc, (exampleName, example) ->
+                        val exampleValue = resolveExample(example)?.value?.toString() ?: ""
+                        val exampleMap = acc[exampleName] ?: emptyMap()
+                        acc.plus(exampleName to exampleMap.plus(headerName to exampleValue))
+                    }
+            }
+
         return response.content.map { (contentType, mediaType) ->
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap),
@@ -625,7 +635,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
             )
 
             val exampleBodies: Map<String, String?> = mediaType.examples?.mapValues {
-                it.value?.value?.toString()
+                resolveExample(it.value)?.value?.toString() ?: ""
             } ?: emptyMap()
 
             val examples: Map<String, HttpResponse> =
@@ -635,7 +645,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                         it.key to HttpResponse(
                             status.toInt(),
                             body = it.value ?: "",
-                            headers = emptyMap()
+                            headers = headerExamples[it.key] ?: emptyMap()
                         )
                     }.toMap()
                 }
@@ -741,7 +751,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                         }
                         else -> {
                             val exampleBodies: Map<String, String?> = mediaType.examples?.mapValues {
-                                it.value?.value?.toString()
+                                resolveExample(it.value)?.value?.toString() ?: ""
                             } ?: emptyMap()
 
                             val examples: Map<String, List<HttpRequest>> = exampleBodies.map {
@@ -777,7 +787,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                 .examples.orEmpty()
                 .entries.filter { it.value.value?.toString().orEmpty() !in OMIT }
                 .fold(acc) { acc, (exampleName, example) ->
-                    val exampleValue = example.value?.toString() ?: ""
+                    val exampleValue =  resolveExample(example)?.value?.toString() ?: ""
                     val exampleMap = acc[exampleName] ?: emptyMap()
                     acc.plus(exampleName to exampleMap.plus(parameter.name to exampleValue))
                 }

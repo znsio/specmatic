@@ -8,7 +8,8 @@ import io.ktor.http.*
 
 data class HttpHeadersPattern(
     val pattern: Map<String, Pattern> = emptyMap(),
-    val ancestorHeaders: Map<String, Pattern>? = null
+    val ancestorHeaders: Map<String, Pattern>? = null,
+    val contentType: String? = null
 ) {
     init {
         val uniqueHeaders = pattern.keys.map { it.lowercase() }.distinct()
@@ -127,13 +128,17 @@ data class HttpHeadersPattern(
     }
 
     fun generate(resolver: Resolver): Map<String, String> {
-        return attempt(breadCrumb = "HEADERS") {
+        val headers = attempt(breadCrumb = "HEADERS") {
             pattern.mapValues { (key, pattern) ->
                 attempt(breadCrumb = key) {
                     toStringLiteral(resolver.withCyclePrevention(pattern) { it.generate(key, pattern) })
                 }
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
+        return when {
+            !contentType.isNullOrBlank() -> headers.plus(CONTENT_TYPE to contentType)
+            else -> headers
+        }
     }
 
     private fun toStringLiteral(headerValue: Value) = when (headerValue) {
@@ -154,17 +159,17 @@ data class HttpHeadersPattern(
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> =
         forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row, resolver) { pattern ->
             newBasedOn(pattern, row, resolver)
-        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
 
     fun negativeBasedOn(row: Row, resolver: Resolver) =
         forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row, resolver) { pattern ->
             negativeBasedOn(pattern, row, resolver, true)
-        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
 
     fun newBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
         allOrNothingCombinationIn(pattern) { pattern ->
             newBasedOn(pattern, resolver)
-        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
 
     fun negativeBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
         allOrNothingCombinationIn(pattern) { pattern ->

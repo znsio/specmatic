@@ -211,11 +211,6 @@ open class SpecmaticJUnitSupport {
             return loadExceptionAsTestError(e)
         }
 
-        val invoker = when(val testBaseURL = System.getProperty(TEST_BASE_URL)) {
-            null -> TargetHostAndPort(System.getProperty(HOST), System.getProperty(PORT))
-            else -> TargetBaseURL(testBaseURL)
-        }
-
         var checkedAPIs = false
         totalTestCount = testScenarios.size
 
@@ -238,17 +233,24 @@ open class SpecmaticJUnitSupport {
                 lateinit var result:Result
 
                 try {
-                    result = invoker.execute(testScenario, timeout)
+                    val protocol = System.getProperty("protocol") ?: "http"
+                    val testBaseURL = System.getProperty(TEST_BASE_URL)
+                        ?: "$protocol://${System.getProperty(HOST)}:${System.getProperty(PORT)}"
+                    result = testScenario.runTest(testBaseURL, timeout)
 
-                    if(result is Result.Success && result.isPartialSuccess()) {
+                    if (result is Result.Success && result.isPartialSuccess()) {
                         partialSuccesses.add(result)
                     }
 
                     when {
                         result.shouldBeIgnored() -> {
-                            val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${result.toReport().toText().prependIndent("  ")}"
+                            val message =
+                                "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${
+                                    result.toReport().toText().prependIndent("  ")
+                                }"
                             throw TestAbortedException(message)
                         }
+
                         else -> ResultAssert.assertThat(result).isSuccess()
                     }
 

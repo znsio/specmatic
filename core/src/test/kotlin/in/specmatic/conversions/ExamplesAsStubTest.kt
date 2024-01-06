@@ -403,4 +403,82 @@ security:
                 }
         }
     }
+
+    @Test
+    fun `expectations from inline example in response headers`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Product API
+  version: 0.1.9
+paths:
+  /products:
+    post:
+      summary: create product
+      description: create product
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+            examples:
+              REQUEST_BODY_REF_200:
+                value:
+                  name: 'Macbook'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: Request limit per hour.
+              examples:
+                REQUEST_BODY_REF_200:
+                  value:
+                    100
+          content:
+            application/json:
+              schema:
+                ${'$'}ref: '#/components/schemas/ProductId'
+              examples:
+                REQUEST_BODY_REF_200:
+                  value:
+                    id: 10
+components:
+  schemas:
+    ProductId:
+      title: Product Id
+      type: object
+      properties:
+        id:
+          type: integer
+      required:
+        - id
+  examples:
+    NAME_200:
+      value:
+        name: 'Macbook'""".trimIndent()
+
+        val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        HttpStub(contract).use { stub ->
+            stub.client.execute(HttpRequest("POST", "/products", emptyMap(), parsedJSONObject("""{"name": "Macbook"}""")))
+                .let { response ->
+                    assertThat(response.status).isEqualTo(200)
+                    assertThat(response.headers["X-RateLimit-Limit"]).isEqualTo("100")
+                    assertThat(response.body).isEqualTo(
+                        parsedJSONObject("""
+                        {
+                            "id": 10
+                        }
+                    """.trimIndent())
+                    )
+                }
+        }
+    }
 }

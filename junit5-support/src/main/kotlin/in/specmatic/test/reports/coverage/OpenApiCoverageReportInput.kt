@@ -3,15 +3,12 @@ package `in`.specmatic.test.reports.coverage
 import `in`.specmatic.conversions.SERVICE_TYPE_HTTP
 import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.TestResult
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.test.API
 import `in`.specmatic.test.TestResultRecord
 import `in`.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import `in`.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
 import `in`.specmatic.test.reports.coverage.console.Remarks
 import `in`.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport
-import `in`.specmatic.test.reports.coverage.json.OpenApiCoverageJsonRow
-import `in`.specmatic.test.reports.coverage.json.OpenApiCoverageOperation
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -68,7 +65,7 @@ class OpenApiCoverageReportInput(
                                 responseStatus = responseStatus.toString(),
                                 count = testResults.count{it.isExercised}.toString(),
                                 coveragePercentage = 0,
-                                remarks = getRemarks(testResults)
+                                remarks = Remarks.resolve(testResults)
                             )
                         )
                     }
@@ -121,30 +118,7 @@ class OpenApiCoverageReportInput(
         val testResults = testResultRecords.filter { testResult -> excludedAPIs.none { it == testResult.path } }
         val testResultsWithNotImplementedEndpoints = identifyTestsThatFailedBecauseOfEndpointsThatWereNotImplemented(testResults)
         val allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
-
-        val openApiCoverageJsonRows = allTests.groupBy {
-            CoverageGroupKey(it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
-        }.map { (key, recordsOfGroup) ->
-            OpenApiCoverageJsonRow(
-                type = key.sourceProvider,
-                repository = key.sourceRepository,
-                branch = key.sourceRepositoryBranch,
-                specification = key.specification,
-                serviceType = key.serviceType,
-                operations = recordsOfGroup.groupBy {
-                    Triple(it.path, it.method, it.responseStatus)
-                }.map { (operationGroup, operationRows) ->
-                    OpenApiCoverageOperation(
-                        path = operationGroup.first,
-                        method = operationGroup.second,
-                        responseCode = operationGroup.third,
-                        count = operationRows.count{it.isExercised},
-                        coverageStatus = getRemarks(operationRows).toString()
-                    )
-                }
-            )
-        }
-        return OpenApiCoverageJsonReport(configFilePath, apiCoverage = openApiCoverageJsonRows)
+        return OpenApiCoverageJsonReport(configFilePath, allTests)
     }
 
     private fun groupTestsByPathMethodAndResponseStatus(allAPITests: List<TestResultRecord>): MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> {
@@ -199,7 +173,7 @@ class OpenApiCoverageReportInput(
     ): OpenApiCoverageConsoleRow {
         val method = methodMap.keys.first()
         val responseStatus = methodMap[method]?.keys?.first()
-        val remarks = getRemarks(methodMap[method]?.get(responseStatus)!!)
+        val remarks = Remarks.resolve(methodMap[method]?.get(responseStatus)!!)
         val exercisedCount = methodMap[method]?.get(responseStatus)?.count { it.isExercised }
 
         val totalMethodResponseCodeCount = methodMap.values.sumOf { it.keys.size }
@@ -221,26 +195,6 @@ class OpenApiCoverageReportInput(
             coveragePercentage,
             remarks
         )
-    }
-
-    private fun getRemarks(testResultRecords: List<TestResultRecord>): Remarks {
-        val exerciseCount = testResultRecords.count { it.isExercised }
-        return when (exerciseCount == 0) {
-            true -> {
-                when (val result = testResultRecords.first().result) {
-                    TestResult.Skipped -> Remarks.Missed
-                    TestResult.DidNotRun -> Remarks.DidNotRun
-                    else -> throw ContractException("Cannot determine remarks for unknown test result: $result")
-                }
-            }
-
-            else -> {
-                when(testResultRecords.first().result) {
-                    TestResult.NotImplemented -> Remarks.NotImplemented
-                    else -> Remarks.Covered
-                }
-            }
-        }
     }
 
     private fun identifyTestsThatFailedBecauseOfEndpointsThatWereNotImplemented(testResults: List<TestResultRecord>): List<TestResultRecord> {

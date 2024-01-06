@@ -1,14 +1,14 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.core.TestResult
-import `in`.specmatic.test.reports.coverage.*
+import `in`.specmatic.test.reports.coverage.Endpoint
+import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import `in`.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import `in`.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
 import `in`.specmatic.test.reports.coverage.console.Remarks
-import `in`.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport
-import `in`.specmatic.test.reports.coverage.json.OpenApiCoverageJsonRow
-import `in`.specmatic.test.reports.coverage.json.OpenApiCoverageOperation
 import `in`.specmatic.test.reports.renderers.CoverageReportTextRenderer
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -294,42 +294,11 @@ class ApiCoverageReportInputTest {
         )
 
         val openApiCoverageJsonReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, allEndpoints = endpointsInSpec, endpointsAPISet = true).generateJsonReport()
-        assertThat(openApiCoverageJsonReport).isEqualTo(
-            OpenApiCoverageJsonReport(
-                CONFIG_FILE_PATH, listOf(
-                    OpenApiCoverageJsonRow(
-                        "git",
-                        "https://github.com/znsio/specmatic-order-contracts.git",
-                        "main",
-                        "in/specmatic/examples/store/route1.yaml",
-                        "HTTP",
-                        listOf(
-                            OpenApiCoverageOperation("/route1", "GET",200, 1, Remarks.Covered.toString()),
-                            OpenApiCoverageOperation( "/route1", "POST",200, 1, Remarks.Covered.toString())
-                        )
-                    ),
-                    OpenApiCoverageJsonRow(
-                        "git",
-                        "https://github.com/znsio/specmatic-order-contracts.git",
-                        "main",
-                        "in/specmatic/examples/store/route2.yaml",
-                        "HTTP",
-                        listOf(
-                            OpenApiCoverageOperation( "/route2", "GET",200, 1, Remarks.Covered.toString()),
-                            OpenApiCoverageOperation( "/route2", "POST",200, 1, Remarks.NotImplemented.toString())
-                        )
-                    ),
-                    OpenApiCoverageJsonRow(
-                        serviceType = "HTTP",
-                        operations = listOf(
-                            OpenApiCoverageOperation( "/route3/{route_id}", "GET",0, 0, Remarks.Missed.toString()),
-                            OpenApiCoverageOperation( "/route3/{route_id}", "POST",0, 0, Remarks.Missed.toString()      )
-                        )
-                    )
-                )
-            )
-        )
-
+        val json = Json {
+            encodeDefaults = false
+        }
+        val reportJson = json.encodeToString(openApiCoverageJsonReport)
+        assertThat(reportJson.trimIndent()).isEqualTo("""{"specmaticConfigPath":"./specmatic.json","apiCoverage":[{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route1.yaml","serviceType":"HTTP","operations":[{"path":"/route1","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route1","method":"POST","responseCode":200,"count":1,"coverageStatus":"covered"}]},{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route2.yaml","serviceType":"HTTP","operations":[{"path":"/route2","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route2","method":"POST","responseCode":200,"count":1,"coverageStatus":"not implemented"}]},{"type":null,"repository":null,"branch":null,"specification":null,"serviceType":"HTTP","operations":[{"path":"/route3/{route_id}","method":"GET","coverageStatus":"missing in spec"},{"path":"/route3/{route_id}","method":"POST","coverageStatus":"missing in spec"}]}]}""")
     }
 
     @Test

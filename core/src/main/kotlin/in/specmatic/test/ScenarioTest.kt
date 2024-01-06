@@ -28,23 +28,9 @@ class ScenarioTest(
         return scenario.testDescription()
     }
 
-    override fun runTest(host: String?, port: String?, timeout: Int): Result {
-        return runHttpTest(timeout, host!!, port!!, scenario)
-    }
-
-    override fun runTest(testBaseURL: String?, timeOut: Int): Result {
-        val httpClient = HttpClient(testBaseURL!!, timeout = timeOut)
+    override fun runTest(testBaseURL: String, timeOut: Int): Result {
+        val httpClient = HttpClient(testBaseURL, timeout = timeOut)
         return executeTest(scenario, httpClient, resolverStrategies).updateScenario(scenario)
     }
 
-    private fun runHttpTest(timeout: Int, host: String, port: String, testScenario: Scenario): Result {
-        val protocol = System.getProperty("protocol") ?: "http"
-
-        return executeTest(protocol, host, port, timeout, testScenario).updateScenario(scenario)
-    }
-
-    private fun executeTest(protocol: String, host: String?, port: String?, timeout: Int, testScenario: Scenario): Result {
-        val httpClient = HttpClient("$protocol://$host:$port", timeout = timeout)
-        return executeTest(testScenario, httpClient, resolverStrategies)
-    }
 }

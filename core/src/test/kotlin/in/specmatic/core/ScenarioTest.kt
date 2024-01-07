@@ -85,7 +85,7 @@ internal class ScenarioTest {
         val state = HashMap(mapOf<String, Value>("id" to True))
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(httpUrlPattern = HttpURLPattern(emptyMap(), emptyList(), path="/")),
+            HttpRequestPattern(httpPathPattern = HttpPathPattern(emptyList(), path="/")),
             HttpResponsePattern(status=200),
             state,
             listOf(example),
@@ -104,7 +104,7 @@ internal class ScenarioTest {
     fun `will not match a mock http request with unexpected request headers`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="GET", httpUrlPattern = HttpURLPattern(emptyMap(), emptyList(), "/"), headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern()))),
+            HttpRequestPattern(method="GET", httpPathPattern = HttpPathPattern(emptyList(), "/"), headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern()))),
             HttpResponsePattern(status = 200),
             emptyMap(),
             emptyList(),
@@ -121,7 +121,7 @@ internal class ScenarioTest {
     fun `will not match a mock http request with unexpected response headers`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="GET", httpUrlPattern = HttpURLPattern(emptyMap(), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap())),
+            HttpRequestPattern(method="GET", httpPathPattern = HttpPathPattern(emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap())),
             HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern()))),
             emptyMap(),
             emptyList(),
@@ -138,7 +138,7 @@ internal class ScenarioTest {
     fun `will not match a mock http request with unexpected query params`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="GET", httpUrlPattern = HttpURLPattern(mapOf("expected" to StringPattern()), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap(), null)),
+            HttpRequestPattern(method="GET", httpPathPattern = HttpPathPattern(emptyList(), "/"), httpQueryParamPattern = HttpQueryParamPattern(mapOf("expected" to StringPattern())), headersPattern = HttpHeadersPattern(emptyMap(), null)),
             HttpResponsePattern(status = 200),
             emptyMap(),
             emptyList(),
@@ -155,7 +155,7 @@ internal class ScenarioTest {
     fun `will not match a mock json body with unexpected keys`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="POST", httpUrlPattern = HttpURLPattern(mapOf("expected" to StringPattern()), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap(), null), body = parsedPattern("""{"expected": "value"}""")),
+            HttpRequestPattern(method="POST", httpPathPattern = HttpPathPattern(emptyList(), "/"), httpQueryParamPattern = HttpQueryParamPattern(mapOf("expected" to StringPattern())), headersPattern = HttpHeadersPattern(emptyMap(), null), body = parsedPattern("""{"expected": "value"}""")),
             HttpResponsePattern(status = 200),
             emptyMap(),
             emptyList(),
@@ -445,7 +445,7 @@ And response-body (number)
 
     @Test
     fun `mock should return match errors across both request and response`() {
-        val requestType = HttpRequestPattern(method = "POST", httpUrlPattern = toURLMatcherWithOptionalQueryParams("http://localhost/data"), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
+        val requestType = HttpRequestPattern(method = "POST", httpPathPattern = buildHttpPathPattern("http://localhost/data"), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
         val responseType = HttpResponsePattern(status = 200, body = JSONObjectPattern(mapOf("id" to NumberPattern())))
 
         val scenario = Scenario(ScenarioInfo("name", requestType, responseType))

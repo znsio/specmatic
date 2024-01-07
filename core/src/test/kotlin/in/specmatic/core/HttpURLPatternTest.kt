@@ -215,7 +215,7 @@ internal class HttpURLPatternTest {
         val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets/(status:boolean)"))
         val matchers = matcher.newBasedOn(Row(), Resolver())
         assertThat(matchers).hasSize(1)
-        assertThat(matchers.single()).isEqualTo(HttpURLPattern(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets"))), URLPathPattern(BooleanPattern(), "status")), "/pets/(status:boolean)"))
+        assertThat(matchers.single()).isEqualTo(HttpURLPattern(emptyMap(), listOf(URLPathSegmentPattern(ExactValuePattern(StringValue("pets"))), URLPathSegmentPattern(BooleanPattern(), "status")), "/pets/(status:boolean)"))
     }
 
     @Test
@@ -225,10 +225,10 @@ internal class HttpURLPatternTest {
         val matchers = matcher.newBasedOn(Row(), Resolver())
         assertThat(matchers).hasSize(2)
 
-        val matcherWithoutQueryParams = HttpURLPattern(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
+        val matcherWithoutQueryParams = HttpURLPattern(emptyMap(), listOf(URLPathSegmentPattern(ExactValuePattern(StringValue("pets")))), "/pets")
         assertThat(matchers).contains(matcherWithoutQueryParams)
 
-        val matcherWithQueryParams = HttpURLPattern(mapOf("available" to BooleanPattern()), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
+        val matcherWithQueryParams = HttpURLPattern(mapOf("available" to BooleanPattern()), listOf(URLPathSegmentPattern(ExactValuePattern(StringValue("pets")))), "/pets")
         assertThat(matchers).contains(matcherWithQueryParams)
     }
 
@@ -236,7 +236,7 @@ internal class HttpURLPatternTest {
     @Test
     fun `should generate negative values for a string`() {
         val urlMatchers = toURLMatcherWithOptionalQueryParams(URI("/pets?name=(string)")).negativeBasedOn(Row(), Resolver())!!
-        assertThat(urlMatchers).containsExactly(HttpURLPattern(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets"))
+        assertThat(urlMatchers).containsExactly(HttpURLPattern(emptyMap(), listOf(URLPathSegmentPattern(ExactValuePattern(StringValue("pets")))), "/pets"))
     }
 
     @Tag(GENERATION)

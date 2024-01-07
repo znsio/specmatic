@@ -13,7 +13,7 @@ val OMIT = listOf("(OMIT)", "(omit)")
 
 data class HttpURLPattern(
     val queryPatterns: Map<String, Pattern>,
-    val pathParamPatterns: List<URLPathPattern>,
+    val pathSegmentPatterns: List<URLPathSegmentPattern>,
     val path: String
 ) {
     fun encompasses(otherHttpURLPattern: HttpURLPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
@@ -21,7 +21,7 @@ data class HttpURLPattern(
             return Success()
 
         val mismatchedPartResults =
-            this.pathParamPatterns.zip(otherHttpURLPattern.pathParamPatterns).map { (thisPathItem, otherPathItem) ->
+            this.pathSegmentPatterns.zip(otherHttpURLPattern.pathSegmentPatterns).map { (thisPathItem, otherPathItem) ->
                 thisPathItem.pattern.encompasses(otherPathItem, thisResolver, otherResolver)
             }
 
@@ -76,13 +76,13 @@ data class HttpURLPattern(
     private fun matchesPath(uri: URI, resolver: Resolver): Result {
         val pathParts = uri.path.split("/".toRegex()).filter { it.isNotEmpty() }.toTypedArray()
 
-        if (pathParamPatterns.size != pathParts.size)
+        if (pathSegmentPatterns.size != pathParts.size)
             return Failure(
-                "Expected $uri (having ${pathParts.size} path segments) to match $path (which has ${pathParamPatterns.size} path segments).",
+                "Expected $uri (having ${pathParts.size} path segments) to match $path (which has ${pathSegmentPatterns.size} path segments).",
                 breadCrumb = "PATH"
             )
 
-        pathParamPatterns.zip(pathParts).forEach { (urlPathPattern, token) ->
+        pathSegmentPatterns.zip(pathParts).forEach { (urlPathPattern, token) ->
             try {
                 val parsedValue = urlPathPattern.tryParse(token, resolver)
                 val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)
@@ -108,7 +108,7 @@ data class HttpURLPattern(
 
     fun generatePath(resolver: Resolver): String {
         return attempt(breadCrumb = "PATH") {
-            ("/" + pathParamPatterns.mapIndexed { index, urlPathPattern ->
+            ("/" + pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
                 attempt(breadCrumb = "[$index]") {
                     val key = urlPathPattern.key
                     resolver.withCyclePrevention(urlPathPattern.pattern) { cyclePreventedResolver ->
@@ -136,7 +136,7 @@ data class HttpURLPattern(
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpURLPattern> {
-        val generatedPathParamPatterns = newBasedOn(pathParamPatterns.mapIndexed { index, urlPathParamPattern ->
+        val generatedPatterns = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathParamPattern ->
             val key = urlPathParamPattern.key
             if (key === null || !row.containsField(key)) return@mapIndexed urlPathParamPattern
             attempt(breadCrumb = "[$index]") {
@@ -157,7 +157,7 @@ data class HttpURLPattern(
                         if (matchResult is Failure)
                             throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
 
-                        URLPathPattern(
+                        URLPathSegmentPattern(
                             ExactValuePattern(
                                 value
                             )
@@ -167,7 +167,8 @@ data class HttpURLPattern(
             }
         }, row, resolver)
 
-        val newURLPathPatternsList = generatedPathParamPatterns.map { list -> list.map { it as URLPathPattern } }
+        //TODO: replace this with Generics
+        val generatedURLPathSegmentPatterns = generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
 
         val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val optionalQueryParams = queryPatterns
@@ -177,21 +178,22 @@ data class HttpURLPattern(
             }
         }
 
-        return newURLPathPatternsList.flatMap { newURLPathPatterns ->
+        return generatedURLPathSegmentPatterns.flatMap { urlPathSegmentPatterns ->
             newQueryParamsList.map { newQueryParams ->
-                HttpURLPattern(newQueryParams, newURLPathPatterns, path)
+                HttpURLPattern(newQueryParams, urlPathSegmentPatterns, path)
             }
         }
     }
 
     fun newBasedOn(resolver: Resolver): List<HttpURLPattern> {
-        val newPathPartsList = newBasedOn(pathParamPatterns.mapIndexed { index, urlPathPattern ->
+        val generatedPatterns = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
             attempt(breadCrumb = "[$index]") {
                 urlPathPattern
             }
         }, resolver)
 
-        val newURLPathPatternsList = newPathPartsList.map { list -> list.map { it as URLPathPattern } }
+        //TODO: replace this with Generics
+        val generatedURLPathSegmentPatterns = generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
 
         val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val optionalQueryParams = queryPatterns
@@ -201,7 +203,7 @@ data class HttpURLPattern(
             }
         }
 
-        return newURLPathPatternsList.flatMap { newURLPathPatterns ->
+        return generatedURLPathSegmentPatterns.flatMap { newURLPathPatterns ->
             newQueryParamsList.map { newQueryParams ->
                 HttpURLPattern(newQueryParams, newURLPathPatterns, path)
             }
@@ -224,12 +226,12 @@ data class HttpURLPattern(
         return this.path.replace("(", "{").replace(""":[a-z,A-Z]*?\)""".toRegex(), "}")
     }
 
-    fun pathParameters(): List<URLPathPattern> {
-        return pathParamPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
+    fun pathParameters(): List<URLPathSegmentPattern> {
+        return pathSegmentPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }
 
     fun negativeBasedOn(row: Row, resolver: Resolver): List<HttpURLPattern?> {
-        val newPathPartsList: List<List<Pattern>> = newBasedOn(pathParamPatterns.mapIndexed { index, urlPathPattern ->
+        val newPathPartsList: List<List<Pattern>> = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
             val key = urlPathPattern.key
 
             attempt(breadCrumb = "[$index]") {
@@ -252,7 +254,7 @@ data class HttpURLPattern(
                                 if (matchResult is Failure)
                                     throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
 
-                                URLPathPattern(
+                                URLPathSegmentPattern(
                                     ExactValuePattern(
                                         value
                                     )
@@ -266,7 +268,7 @@ data class HttpURLPattern(
             }
         }, row, resolver)
 
-        val newURLPathPatternsList = newPathPartsList.map { list -> list.map { it as URLPathPattern } }
+        val newURLPathSegmentPatternsList = newPathPartsList.map { list -> list.map { it as URLPathSegmentPattern } }
 
         val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val optionalQueryParams = queryPatterns
@@ -276,7 +278,7 @@ data class HttpURLPattern(
             }
         }
 
-        return newURLPathPatternsList.flatMap { newURLPathPatterns ->
+        return newURLPathSegmentPatternsList.flatMap { newURLPathPatterns ->
             newQueryParamsList.map { newQueryParams ->
                 HttpURLPattern(newQueryParams, newURLPathPatterns, path)
             }
@@ -311,10 +313,10 @@ internal fun toURLMatcherWithOptionalQueryParams(
         }.toMap().plus(queryParams)
     }
 
-    return HttpURLPattern(queryPatterns = queryPattern, path = path, pathParamPatterns = pathPattern)
+    return HttpURLPattern(queryPatterns = queryPattern, path = path, pathSegmentPatterns = pathPattern)
 }
 
-internal fun pathToPattern(rawPath: String): List<URLPathPattern> =
+internal fun pathToPattern(rawPath: String): List<URLPathSegmentPattern> =
     rawPath.trim('/').split("/").filter { it.isNotEmpty() }.map { part ->
         when {
             isPatternToken(part) -> {
@@ -325,10 +327,10 @@ internal fun pathToPattern(rawPath: String): List<URLPathPattern> =
 
                 val (name, type) = pieces
 
-                URLPathPattern(DeferredPattern(withPatternDelimiters(type)), name)
+                URLPathSegmentPattern(DeferredPattern(withPatternDelimiters(type)), name)
             }
 
-            else -> URLPathPattern(ExactValuePattern(StringValue(part)))
+            else -> URLPathSegmentPattern(ExactValuePattern(StringValue(part)))
         }
     }
 

@@ -27,8 +27,8 @@ data class ScenarioInfo(
 
     fun matchesGherkinWrapperPath(scenarioInfos: List<ScenarioInfo>, apiSpecification: ApiSpecification): List<ScenarioInfo> =
         scenarioInfos.filter { openApiScenarioInfo ->
-            val pathPatternFromOpenApi = openApiScenarioInfo.httpRequestPattern.httpUrlPattern!!.pathParamPatterns
-            val pathPatternFromWrapper = this.httpRequestPattern.httpUrlPattern!!.pathParamPatterns
+            val pathPatternFromOpenApi = openApiScenarioInfo.httpRequestPattern.httpUrlPattern!!.pathSegmentPatterns
+            val pathPatternFromWrapper = this.httpRequestPattern.httpUrlPattern!!.pathSegmentPatterns
 
             if(pathPatternFromOpenApi.size != pathPatternFromWrapper.size)
                 return@filter false
@@ -36,7 +36,7 @@ data class ScenarioInfo(
             val resolver = Resolver(newPatterns = openApiScenarioInfo.patterns)
             val zipped = pathPatternFromOpenApi.zip(pathPatternFromWrapper)
 
-            zipped.all { (openapiURLPart: URLPathPattern, wrapperURLPart: URLPathPattern) ->
+            zipped.all { (openapiURLPart: URLPathSegmentPattern, wrapperURLPart: URLPathSegmentPattern) ->
                 val openapiType = if(openapiURLPart.pattern is ExactValuePattern) "exact" else "pattern"
                 val wrapperType = if(wrapperURLPart.pattern is ExactValuePattern) "exact" else "pattern"
 

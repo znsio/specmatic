@@ -157,7 +157,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
             matchingScenarioInfos.isEmpty() -> MatchFailure(
                 Failure(
                     """Scenario: "${specmaticScenarioInfo.scenarioName}" PATH: "${
-                        specmaticScenarioInfo.httpRequestPattern.urlMatcher!!.generatePath(Resolver())
+                        specmaticScenarioInfo.httpRequestPattern.httpUrlPattern!!.generatePath(Resolver())
                     }" is not as per included wsdl / OpenApi spec"""
                 )
             )
@@ -228,8 +228,8 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
         val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
 
         return MatchSuccess(specmaticScenarioInfo to openApiScenarioInfos.map { openApiScenario ->
-            val queryPattern = openApiScenario.httpRequestPattern.urlMatcher?.queryPattern ?: emptyMap()
-            val zippedPathPatterns = (specmaticScenarioInfo.httpRequestPattern.urlMatcher?.pathPattern ?: emptyList()).zip(openApiScenario.httpRequestPattern.urlMatcher?.pathPattern ?: emptyList())
+            val queryPattern = openApiScenario.httpRequestPattern.httpUrlPattern?.queryPatterns ?: emptyMap()
+            val zippedPathPatterns = (specmaticScenarioInfo.httpRequestPattern.httpUrlPattern?.pathParamPatterns ?: emptyList()).zip(openApiScenario.httpRequestPattern.httpUrlPattern?.pathParamPatterns ?: emptyList())
 
             val pathPatterns = zippedPathPatterns.map { (fromWrapper, fromOpenApi) ->
                 if(fromWrapper.pattern is ExactValuePattern)
@@ -238,9 +238,9 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                     fromOpenApi.copy(key = fromWrapper.key)
             }
 
-            val urlMatcher = URLMatcher(queryPattern, pathPatterns, openApiScenario.httpRequestPattern.urlMatcher?.path ?: "")
+            val httpUrlPattern = HttpURLPattern(queryPattern, pathPatterns, openApiScenario.httpRequestPattern.httpUrlPattern?.path ?: "")
 
-            val httpRequestPattern = openApiScenario.httpRequestPattern.copy(urlMatcher = urlMatcher)
+            val httpRequestPattern = openApiScenario.httpRequestPattern.copy(httpUrlPattern = httpUrlPattern)
             openApiScenario.copy(httpRequestPattern = httpRequestPattern)
         })
     }
@@ -650,7 +650,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
     }
 
     private fun toHttpRequestPatterns(
-        urlMatcher: URLMatcher, httpMethod: String, operation: Operation
+        httpUrlPattern: HttpURLPattern, httpMethod: String, operation: Operation
     ): List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> {
 
         val securitySchemes: Map<String, OpenAPISecurityScheme> =
@@ -666,7 +666,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
 
         val headersPattern = HttpHeadersPattern(headersMap)
         val requestPattern = HttpRequestPattern(
-            urlMatcher = urlMatcher,
+            httpUrlPattern = httpUrlPattern,
             method = httpMethod,
             headersPattern = headersPattern,
             securitySchemes = operationSecuritySchemes(operation, securitySchemes)
@@ -685,7 +685,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                     val pathParams = examplePathParams[exampleName] ?: emptyMap()
                     val headerParams = exampleHeaderParams[exampleName] ?: emptyMap()
 
-                    val path = pathParams.entries.fold(urlMatcher.toOpenApiPath()) { acc, (key, value) ->
+                    val path = pathParams.entries.fold(httpUrlPattern.toOpenApiPath()) { acc, (key, value) ->
                         acc.replace("{$key}", value)
                     }
 
@@ -763,7 +763,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
 
                                 val httpRequest = HttpRequest(
                                     method = httpMethod,
-                                    path = urlMatcher.path,
+                                    path = httpUrlPattern.path,
                                     queryParams = queryParams,
                                     body = parsedValue(it.value ?: "")
                                 )
@@ -1325,7 +1325,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
 
     private fun componentNameFromReference(component: String) = component.substringAfterLast("/")
 
-    private fun toSpecmaticPath(openApiPath: String, operation: Operation): URLMatcher {
+    private fun toSpecmaticPath(openApiPath: String, operation: Operation): HttpURLPattern {
         val parameters = operation.parameters ?: return toURLMatcherWithOptionalQueryParams(openApiPath)
 
         val pathStringParts: List<String> = openApiPath.removePrefix("/").removeSuffix("/").let {
@@ -1362,7 +1362,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
 
         val specmaticPath = toSpecmaticFormattedPathString(parameters, openApiPath)
 
-        return URLMatcher(queryPattern, pathPattern, specmaticPath)
+        return HttpURLPattern(queryPattern, pathPattern, specmaticPath)
     }
 
     private fun toSpecmaticFormattedPathString(

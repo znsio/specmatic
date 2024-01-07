@@ -141,7 +141,7 @@ data class HttpRequest(
 
         return HttpRequestPattern(
             headersPattern = HttpHeadersPattern(mapToPattern(headers)),
-            urlMatcher = URLMatcher(mapToPattern(queryParams), pathToPattern(pathForPattern), pathForPattern),
+            httpUrlPattern = HttpURLPattern(mapToPattern(queryParams), pathToPattern(pathForPattern), pathForPattern),
             method = this.method,
             body = this.body.exactMatchElseType(),
             formFieldsPattern = mapToPattern(formFields),

@@ -15,7 +15,7 @@ import java.net.URI
 import java.net.URISyntaxException
 import java.util.*
 
-internal class URLMatcherTest {
+internal class HttpURLPatternTest {
     @Test
     @Throws(URISyntaxException::class, UnsupportedEncodingException::class)
     fun `should match url with only query parameters`() {
@@ -215,7 +215,7 @@ internal class URLMatcherTest {
         val matcher = toURLMatcherWithOptionalQueryParams(URI("/pets/(status:boolean)"))
         val matchers = matcher.newBasedOn(Row(), Resolver())
         assertThat(matchers).hasSize(1)
-        assertThat(matchers.single()).isEqualTo(URLMatcher(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets"))), URLPathPattern(BooleanPattern(), "status")), "/pets/(status:boolean)"))
+        assertThat(matchers.single()).isEqualTo(HttpURLPattern(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets"))), URLPathPattern(BooleanPattern(), "status")), "/pets/(status:boolean)"))
     }
 
     @Test
@@ -225,10 +225,10 @@ internal class URLMatcherTest {
         val matchers = matcher.newBasedOn(Row(), Resolver())
         assertThat(matchers).hasSize(2)
 
-        val matcherWithoutQueryParams = URLMatcher(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
+        val matcherWithoutQueryParams = HttpURLPattern(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
         assertThat(matchers).contains(matcherWithoutQueryParams)
 
-        val matcherWithQueryParams = URLMatcher(mapOf("available" to BooleanPattern()), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
+        val matcherWithQueryParams = HttpURLPattern(mapOf("available" to BooleanPattern()), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets")
         assertThat(matchers).contains(matcherWithQueryParams)
     }
 
@@ -236,7 +236,7 @@ internal class URLMatcherTest {
     @Test
     fun `should generate negative values for a string`() {
         val urlMatchers = toURLMatcherWithOptionalQueryParams(URI("/pets?name=(string)")).negativeBasedOn(Row(), Resolver())!!
-        assertThat(urlMatchers).containsExactly(URLMatcher(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets"))
+        assertThat(urlMatchers).containsExactly(HttpURLPattern(emptyMap(), listOf(URLPathPattern(ExactValuePattern(StringValue("pets")))), "/pets"))
     }
 
     @Tag(GENERATION)
@@ -253,7 +253,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `url matcher with a non optional query param should not match empty query params`() {
-        val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern()), pathToPattern("/"), "/")
+        val matcher = HttpURLPattern(queryPatterns = mapOf("name" to StringPattern()), pathToPattern("/"), "/")
 
         val result = matcher.matches(URI("/"), emptyMap(), Resolver())
         assertThat(result.isSuccess()).isFalse()
@@ -261,7 +261,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `url matcher with 2 non optional query params should not match a url with just one of the specified query params`() {
-        val matcher = URLMatcher(queryPattern = mapOf("name" to StringPattern(), "string" to StringPattern()), pathToPattern("/"), "/")
+        val matcher = HttpURLPattern(queryPatterns = mapOf("name" to StringPattern(), "string" to StringPattern()), pathToPattern("/"), "/")
 
         val result = matcher.matches(URI("/"), mapOf("name" to "Archie"), Resolver())
         assertThat(result.isSuccess()).isFalse()
@@ -269,7 +269,7 @@ internal class URLMatcherTest {
 
     @Test
     fun `should stringify date time query param to date time pattern`() {
-        val urlMatcher = URLMatcher(mapOf("before" to DateTimePattern), pathToPattern("/pets"), "/pets")
-        assertThat(urlMatcher.toString()).isEqualTo("/pets?before=(datetime)")
+        val httpUrlPattern = HttpURLPattern(mapOf("before" to DateTimePattern), pathToPattern("/pets"), "/pets")
+        assertThat(httpUrlPattern.toString()).isEqualTo("/pets?before=(datetime)")
     }
 }

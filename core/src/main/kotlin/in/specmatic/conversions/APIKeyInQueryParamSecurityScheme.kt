@@ -29,8 +29,8 @@ class APIKeyInQueryParamSecurityScheme(val name: String, private val apiKey:Stri
         }
 
         return requestPattern.copy(
-            urlMatcher = requestPattern.urlMatcher?.copy(
-                queryPattern = requestPattern.urlMatcher.queryPattern.plus(name to queryParamValueType)
+            httpUrlPattern = requestPattern.httpUrlPattern?.copy(
+                queryPatterns = requestPattern.httpUrlPattern.queryPatterns.plus(name to queryParamValueType)
             )
         )
 

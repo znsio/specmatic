@@ -6,7 +6,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
-internal class URLMatcherKtTest {
+internal class HttpURLPatternKtTest {
     @Nested
     inner class ReturnMultipleErrors {
         val urlMatcher = toURLMatcherWithOptionalQueryParams("http://example.com/?hello=(number)")
@@ -31,7 +31,7 @@ internal class URLMatcherKtTest {
 
         @Test
         fun `should correctly stringize a url matching having a query param with an array type`() {
-            val matcher = URLMatcher(mapOf("data" to CsvPattern(NumberPattern())), emptyList(), "/")
+            val matcher = HttpURLPattern(mapOf("data" to CsvPattern(NumberPattern())), emptyList(), "/")
             assertThat(matcher.toString()).isEqualTo("/?data=(csv/number)")
         }
     }
